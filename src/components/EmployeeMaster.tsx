@@ -1,0 +1,814 @@
+import { ArrowLeft, Plus, Trash2, X, Hash, User, Mail, Phone, Briefcase, FileText, Upload, Edit, Eye, Search, ArrowUpRight, Building2, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { ApprovalModal } from './ApprovalModal';
+import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
+import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
+import { useAuth } from '../contexts/AuthContext';
+import { useMasterData } from '../contexts/MasterDataContext';
+import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
+import { MasterFormPage } from './ui/MasterFormPage';
+
+interface Employee {
+  id: string;
+  empCode: string;
+  empName: string;
+  email: string;
+  phone: string;
+  department: string;
+  designation: string;
+  baseEntity: string;
+  baseLocation: string;
+  reportingManager: string;
+  costCenter?: string;
+  profitCenter?: string;
+  status: string;
+  defaultFunctionalContext: string;
+  profilePic?: string;
+  approvalStatus: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  originalData?: Employee; // Store original data for change tracking
+}
+
+interface Change {
+  field: string;
+  oldValue: string;
+  newValue: string;
+}
+
+export function EmployeeMaster() {
+  const navigate = useNavigate();
+  const { refreshSession } = useAuth();
+  const { entities, costCentres, profitCentres, departments } = useMasterData();
+  const [employees, setEmployees, isHydrating, persistEmployees] = useIncrementalMasterRecords<Employee>('employee_master', [
+    { id: '1', empCode: 'EMP001', empName: 'Rajesh Kumar', email: 'rajesh.kumar@procinix.ai', phone: '+91 98765 43210', department: 'Procurement', designation: 'Procurement Manager', baseEntity: 'Subko Coffee Private Limited', baseLocation: 'Mumbai HQ', reportingManager: 'CFO Office', costCenter: 'CC-PROC-001', profitCenter: 'PC-HQ-001', status: 'Active', defaultFunctionalContext: 'Procurement Desk', approvalStatus: 'Approved' },
+    { id: '2', empCode: 'EMP002', empName: 'Priya Sharma', email: 'priya.sharma@procinix.ai', phone: '+91 98765 43211', department: 'Finance', designation: 'Finance Manager', baseEntity: 'Subko Coffee Private Limited', baseLocation: 'Mumbai HQ', reportingManager: 'CFO Office', costCenter: 'CC-FIN-001', profitCenter: 'PC-HQ-001', status: 'Active', defaultFunctionalContext: 'Accounts Payable', approvalStatus: 'Approved' },
+    { id: '3', empCode: 'EMP003', empName: 'Amit Patel', email: 'amit.patel@procinix.ai', phone: '+91 98765 43212', department: 'Warehouse', designation: 'Warehouse Supervisor', baseEntity: 'Subko Coffee Private Limited', baseLocation: 'Bengaluru Warehouse', reportingManager: 'Operations Head', costCenter: 'CC-WH-001', profitCenter: 'PC-SUPPLY-001', status: 'Active', defaultFunctionalContext: 'GRN / SRN', approvalStatus: 'Approved' },
+    { id: '4', empCode: 'EMP004', empName: 'Sneha Verma', email: 'sneha.verma@procinix.ai', phone: '+91 98765 43213', department: 'Quality', designation: 'Quality Analyst', baseEntity: 'Subko Coffee Private Limited', baseLocation: 'Mumbai Roastery', reportingManager: 'Operations Head', costCenter: 'CC-QA-001', profitCenter: 'PC-OPS-001', status: 'Inactive', defaultFunctionalContext: 'Quality Review', approvalStatus: 'Approved' },
+    { id: '5', empCode: 'EMP005', empName: 'Vikram Singh', email: 'vikram.singh@procinix.ai', phone: '+91 98765 43214', department: 'Procurement', designation: 'Buyer', baseEntity: 'Subko Coffee Private Limited', baseLocation: 'Delhi Branch', reportingManager: 'Rajesh Kumar', costCenter: 'CC-PROC-002', profitCenter: 'PC-NORTH-001', status: 'Active', defaultFunctionalContext: 'Purchase Requisition', approvalStatus: 'Pending Approval' }
+  ]);
+
+  const [showForm, setShowForm] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  const [empCode, setEmpCode] = useState('');
+  const [empName, setEmpName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [department, setDepartment] = useState('');
+  const [designation, setDesignation] = useState('');
+  const [baseEntity, setBaseEntity] = useState('');
+  const [baseLocation, setBaseLocation] = useState('');
+  const [reportingManager, setReportingManager] = useState('');
+  const [costCenter, setCostCenter] = useState('');
+  const [profitCenter, setProfitCenter] = useState('');
+  const [status, setStatus] = useState('Active');
+  const [defaultFunctionalContext, setDefaultFunctionalContext] = useState('');
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+
+  // Approval modal state
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [currentReviewRecord, setCurrentReviewRecord] = useState<Employee | null>(null);
+  const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
+  const sortedEmployees = useMemo(() => {
+    const extractCodeNumber = (value: string) => {
+      const match = value.match(/(\d+)/);
+      return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+    };
+
+    return [...employees].sort((left, right) => {
+      const numericDiff = extractCodeNumber(left.empCode) - extractCodeNumber(right.empCode);
+      if (numericDiff !== 0) {
+        return numericDiff;
+      }
+
+      const codeDiff = left.empCode.localeCompare(right.empCode, undefined, { sensitivity: 'base' });
+      if (codeDiff !== 0) {
+        return codeDiff;
+      }
+
+      return left.empName.localeCompare(right.empName, undefined, { sensitivity: 'base' });
+    });
+  }, [employees]);
+
+  const filteredEmployees = useMemo(() => {
+    return sortedEmployees.filter((employee) => {
+      const haystack = [
+        employee.empCode,
+        employee.empName,
+        employee.email,
+        employee.phone,
+        employee.department,
+        employee.designation,
+        employee.baseEntity,
+        employee.baseLocation,
+        employee.reportingManager,
+        employee.costCenter || '',
+        employee.profitCenter || '',
+        employee.defaultFunctionalContext,
+      ].join(' ').toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const matchesDepartment = departmentFilter.length === 0 || departmentFilter.includes(employee.department);
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(employee.status);
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(employee.approvalStatus);
+      return matchesSearch && matchesDepartment && matchesStatus && matchesApproval;
+    });
+  }, [sortedEmployees, searchTerm, departmentFilter, statusFilter, approvalFilter]);
+
+  const hasActiveFilters =
+    searchTerm.trim().length > 0 ||
+    departmentFilter.length > 0 ||
+    statusFilter.length > 0 ||
+    approvalFilter.length > 0;
+
+  const entityOptions = useMemo(() => entities.filter((entity) => entity.isActive).map((entity) => entity.name), [entities]);
+  const departmentOptions = useMemo(() => {
+    const liveDepartments = departments.map((item: any) => item.name || item.departmentName || item.department || '').filter(Boolean);
+    return [...new Set([...liveDepartments, ...sortedEmployees.map((employee) => employee.department)])];
+  }, [departments, sortedEmployees]);
+  const costCenterOptions = useMemo(() => {
+    const liveCostCentres = costCentres.map((item: any) => item.code || item.name || '').filter(Boolean);
+    return [...new Set([...liveCostCentres, ...sortedEmployees.map((employee) => employee.costCenter || '').filter(Boolean)])];
+  }, [costCentres, sortedEmployees]);
+  const profitCenterOptions = useMemo(() => {
+    const liveProfitCentres = profitCentres.map((item: any) => item.code || item.name || '').filter(Boolean);
+    return [...new Set([...liveProfitCentres, ...sortedEmployees.map((employee) => employee.profitCenter || '').filter(Boolean)])];
+  }, [profitCentres, sortedEmployees]);
+  const managerOptions = useMemo(() => [...new Set(sortedEmployees.map((employee) => employee.empName))], [sortedEmployees]);
+  const locationOptions = useMemo(() => [...new Set([
+    'Mumbai HQ',
+    'Mumbai Roastery',
+    'Bengaluru Warehouse',
+    'Delhi Branch',
+    ...entityOptions,
+    ...sortedEmployees.map((employee) => employee.baseLocation),
+  ])], [entityOptions, sortedEmployees]);
+  const functionalContextOptions = useMemo(() => [...new Set([
+    'Chanakya Desk',
+    'Procurement Desk',
+    'Purchase Requisition',
+    'Purchase Orders',
+    'GRN / SRN',
+    'Accounts Payable',
+    'Vendor Advances',
+    'Debit Notes',
+    'Payments',
+    'Quality Review',
+    ...sortedEmployees.map((employee) => employee.defaultFunctionalContext),
+  ])], [sortedEmployees]);
+
+  const handleSubmit = async (approvalStatus: Employee['approvalStatus'] = 'Pending Approval') => {
+    if (!empCode || !empName || !email || !phone || !department || !designation || !baseEntity || !baseLocation || !reportingManager || !defaultFunctionalContext) {
+      alert('Please fill all required employee fields before saving.');
+      return;
+    }
+
+    if (!isEditMode && employees.some((employee) => employee.empCode.trim().toLowerCase() === empCode.trim().toLowerCase())) {
+      alert(`Employee code ${empCode} already exists.`);
+      return;
+    }
+
+    if (!isEditMode && employees.some((employee) => employee.email.trim().toLowerCase() === email.trim().toLowerCase())) {
+      alert(`Employee email ${email} already exists.`);
+      return;
+    }
+
+    let nextEmployees: Employee[];
+    if (isEditMode && editingId) {
+      // Update existing record with pending approval status
+      const originalRecord = employees.find(e => e.id === editingId);
+      
+      const updatedEmployee: Employee = {
+        id: editingId,
+        empCode,
+        empName,
+        email,
+        phone,
+        department,
+        designation,
+        baseEntity,
+        baseLocation,
+        reportingManager,
+        costCenter: costCenter || undefined,
+        profitCenter: profitCenter || undefined,
+        status,
+        defaultFunctionalContext,
+        profilePic: profilePic || undefined,
+        approvalStatus,
+        originalData: originalRecord // Keep original data for comparison
+      };
+      
+      nextEmployees = employees.map(e => e.id === editingId ? updatedEmployee : e);
+    } else {
+      // Create new record with draft status
+      const newEmployee: Employee = {
+        id: Date.now().toString(),
+        empCode,
+        empName,
+        email,
+        phone,
+        department,
+        designation,
+        baseEntity,
+        baseLocation,
+        reportingManager,
+        costCenter: costCenter || undefined,
+        profitCenter: profitCenter || undefined,
+        status,
+        defaultFunctionalContext,
+        profilePic: profilePic || undefined,
+        approvalStatus
+      };
+      nextEmployees = [...employees, newEmployee];
+    }
+
+    setEmployees(nextEmployees);
+    const persisted = await persistEmployees(nextEmployees);
+    if (!persisted) {
+      alert('Employee record could not be saved to the database. Please try again.');
+      return;
+    }
+
+    setShowForm(false);
+    resetForm();
+    window.setTimeout(() => {
+      refreshSession();
+    }, 300);
+  };
+
+  const resetForm = () => {
+    setEmpCode('');
+    setEmpName('');
+    setEmail('');
+    setPhone('');
+    setDepartment('');
+    setDesignation('');
+    setBaseEntity(entities.find((entity) => entity.isActive)?.name || '');
+    setBaseLocation('');
+    setReportingManager('');
+    setCostCenter('');
+    setProfitCenter('');
+    setStatus('Active');
+    setDefaultFunctionalContext('');
+    setProfilePic(null);
+    setIsEditMode(false);
+    setEditingId(null);
+  };
+
+  const handleEdit = (employee: Employee) => {
+    setIsEditMode(true);
+    setEditingId(employee.id);
+    setEmpCode(employee.empCode);
+    setEmpName(employee.empName);
+    setEmail(employee.email);
+    setPhone(employee.phone);
+    setDepartment(employee.department);
+    setDesignation(employee.designation || '');
+    setBaseEntity(employee.baseEntity || '');
+    setBaseLocation(employee.baseLocation || '');
+    setReportingManager(employee.reportingManager || '');
+    setCostCenter(employee.costCenter || '');
+    setProfitCenter(employee.profitCenter || '');
+    setStatus(employee.status);
+    setDefaultFunctionalContext(employee.defaultFunctionalContext || '');
+    setProfilePic(employee.profilePic || null);
+    setShowForm(true);
+  };
+
+  const handleDelete = (id: string) => {
+    const employee = employees.find(e => e.id === id);
+    
+    if (employee?.approvalStatus === 'Approved') {
+      alert('Cannot delete approved/live records. You can only modify them through the approval workflow.');
+      return;
+    }
+    
+    setEmployees(employees.filter(e => e.id !== id));
+  };
+
+  const handleReview = (employee: Employee) => {
+    const changes: Change[] = [];
+    
+    if (employee.originalData) {
+      // Compare with original data
+      const original = employee.originalData;
+      
+      if (original.empCode !== employee.empCode) {
+        changes.push({ field: 'Employee Code', oldValue: original.empCode, newValue: employee.empCode });
+      }
+      if (original.empName !== employee.empName) {
+        changes.push({ field: 'Employee Name', oldValue: original.empName, newValue: employee.empName });
+      }
+      if (original.email !== employee.email) {
+        changes.push({ field: 'Email', oldValue: original.email, newValue: employee.email });
+      }
+      if (original.phone !== employee.phone) {
+        changes.push({ field: 'Phone', oldValue: original.phone, newValue: employee.phone });
+      }
+      if (original.department !== employee.department) {
+        changes.push({ field: 'Department', oldValue: original.department, newValue: employee.department });
+      }
+      if ((original.designation || '') !== (employee.designation || '')) {
+        changes.push({ field: 'Designation', oldValue: original.designation || '-', newValue: employee.designation || '-' });
+      }
+      if ((original.baseEntity || '') !== (employee.baseEntity || '')) {
+        changes.push({ field: 'Base Entity', oldValue: original.baseEntity || '-', newValue: employee.baseEntity || '-' });
+      }
+      if ((original.baseLocation || '') !== (employee.baseLocation || '')) {
+        changes.push({ field: 'Base Location / Branch', oldValue: original.baseLocation || '-', newValue: employee.baseLocation || '-' });
+      }
+      if ((original.reportingManager || '') !== (employee.reportingManager || '')) {
+        changes.push({ field: 'Reporting Manager', oldValue: original.reportingManager || '-', newValue: employee.reportingManager || '-' });
+      }
+      if ((original.costCenter || '') !== (employee.costCenter || '')) {
+        changes.push({ field: 'Cost Center', oldValue: original.costCenter || '-', newValue: employee.costCenter || '-' });
+      }
+      if ((original.profitCenter || '') !== (employee.profitCenter || '')) {
+        changes.push({ field: 'Profit Center', oldValue: original.profitCenter || '-', newValue: employee.profitCenter || '-' });
+      }
+      if ((original.defaultFunctionalContext || '') !== (employee.defaultFunctionalContext || '')) {
+        changes.push({ field: 'Default Functional Context', oldValue: original.defaultFunctionalContext || '-', newValue: employee.defaultFunctionalContext || '-' });
+      }
+      if (original.status !== employee.status) {
+        changes.push({ field: 'Status', oldValue: original.status, newValue: employee.status });
+      }
+    }
+    
+    setCurrentReviewRecord(employee);
+    setDetectedChanges(changes);
+    setShowApprovalModal(true);
+  };
+
+  const handleApprove = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction('employee_master', employees, currentReviewRecord.id, 'approve');
+      setEmployees(nextRecords);
+      window.setTimeout(() => {
+        refreshSession();
+      }, 300);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleReject = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction('employee_master', employees, currentReviewRecord.id, 'reject');
+      setEmployees(nextRecords);
+      window.setTimeout(() => {
+        refreshSession();
+      }, 300);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleRequestInfo = async () => {
+    if (currentReviewRecord) {
+      const comments = window.prompt('Enter comments for the request:', '');
+      if (comments === null) {
+        return;
+      }
+      const nextRecords = await applyMasterApprovalAction('employee_master', employees, currentReviewRecord.id, 'request_info', comments);
+      setEmployees(nextRecords);
+      window.setTimeout(() => {
+        refreshSession();
+      }, 300);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const getStatusBadgeStyle = (approvalStatus: string) => {
+    switch (approvalStatus) {
+      case 'Approved':
+        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+      case 'Pending Approval':
+        return { backgroundColor: '#FFF9E6', color: '#D97706' };
+      case 'Draft':
+        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+      case 'Rejected':
+        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+      default:
+        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+    }
+  };
+
+  return (
+    showForm ? (
+      <MasterFormPage
+        title="Employee Master"
+        subtitle="Manage employee details with approval workflow"
+        modeLabel={isEditMode ? 'Edit Employee' : 'Create Employee'}
+        onBack={() => setShowForm(false)}
+        onCancel={() => setShowForm(false)}
+        onSaveDraft={() => handleSubmit('Draft')}
+        onSubmit={() => handleSubmit('Pending Approval')}
+        submitLabel="Submit"
+        draftLabel="Save Draft"
+      >
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Employee Code <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <input
+                type="text"
+                value={empCode}
+                onChange={(e) => setEmpCode(e.target.value)}
+                placeholder="EMP006"
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Employee Name <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <input
+                type="text"
+                value={empName}
+                onChange={(e) => setEmpName(e.target.value)}
+                placeholder="Full name"
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Email <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@company.com"
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Phone <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+91 xxxxx xxxxx"
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Department <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <select
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              >
+                <option value="">Select department</option>
+                {departmentOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Designation <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <input
+                type="text"
+                value={designation}
+                onChange={(e) => setDesignation(e.target.value)}
+                placeholder="e.g. Finance Manager"
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Base Entity <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <select
+                value={baseEntity}
+                onChange={(e) => setBaseEntity(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              >
+                <option value="">Select entity</option>
+                {entityOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Base Location / Branch <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <input
+                list="employee-base-locations"
+                type="text"
+                value={baseLocation}
+                onChange={(e) => setBaseLocation(e.target.value)}
+                placeholder="Mumbai HQ"
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              />
+              <datalist id="employee-base-locations">
+                {locationOptions.map((option) => (
+                  <option key={option} value={option} />
+                ))}
+              </datalist>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Reporting Manager <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <input
+                list="employee-reporting-managers"
+                type="text"
+                value={reportingManager}
+                onChange={(e) => setReportingManager(e.target.value)}
+                placeholder="Select or type manager"
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              />
+              <datalist id="employee-reporting-managers">
+                {managerOptions.map((option) => (
+                  <option key={option} value={option} />
+                ))}
+              </datalist>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Cost Center</label>
+            <div className="relative">
+              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <select
+                value={costCenter}
+                onChange={(e) => setCostCenter(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              >
+                <option value="">Select cost center</option>
+                {costCenterOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Profit Center</label>
+            <div className="relative">
+              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <select
+                value={profitCenter}
+                onChange={(e) => setProfitCenter(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              >
+                <option value="">Select profit center</option>
+                {profitCenterOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Default Functional Context <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <select
+                value={defaultFunctionalContext}
+                onChange={(e) => setDefaultFunctionalContext(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              >
+                <option value="">Select context</option>
+                {functionalContextOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Profile Picture</label>
+            <div className="relative">
+              <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      setProfilePic(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                className="w-full pl-10 pr-3 py-2 rounded-lg"
+                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+              />
+            </div>
+            {profilePic && (
+              <div className="mt-3 flex items-center gap-3">
+                <img src={profilePic} alt="Profile Preview" className="w-16 h-16 rounded-full object-cover" style={{ border: '2px solid #E1E6EA' }} />
+                <button type="button" onClick={() => setProfilePic(null)} className="text-sm" style={{ color: '#FF4E5B' }}>Remove</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </MasterFormPage>
+    ) : (
+    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Employee Master</h1>
+            <p style={{ color: '#6E7A82' }}>Manage employee details with approval workflow</p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            resetForm();
+            setShowForm(true);
+          }}
+          className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
+          style={{ backgroundColor: '#00A9B7' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          >
+            <Plus className="w-5 h-5" />
+          {isHydrating ? 'Loading...' : 'Add Employee'}
+        </button>
+      </div>
+
+      {/* Approval Modal */}
+      <ApprovalModal
+        isOpen={showApprovalModal}
+        onClose={() => setShowApprovalModal(false)}
+        recordType="Employee Master"
+        recordId={currentReviewRecord?.empCode || ''}
+        changes={detectedChanges}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onRequestInfo={handleRequestInfo}
+      />
+
+      {/* Table */}
+      <div className="rounded-[24px] overflow-hidden bg-white" style={{ border: '1px solid #D7E3EA', boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)' }}>
+        <div className="overflow-x-auto">
+          <div style={{ minWidth: '1320px' }}>
+            <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.3fr 1.8fr 2fr 1.3fr 1.2fr 1fr 1.3fr 0.9fr', borderBottom: '1px solid #E8F0F4' }}>
+              <div className="space-y-2">
+                <div className="relative w-full">
+                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#6E7A82' }} />
+                  <input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search employee..."
+                    className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm"
+                    style={{ backgroundColor: '#F8FBFD', border: '1px solid #D7E3EA', color: '#0A0F14' }}
+                  />
+                </div>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setDepartmentFilter([]);
+                      setStatusFilter([]);
+                      setApprovalFilter([]);
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
+                    style={{ backgroundColor: '#FFF5F5', border: '1px solid #FED7D7', color: '#C53030', fontWeight: 600 }}
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+              <div />
+              <div />
+              <div />
+              <div className="flex items-start">
+                <PremiumFilterMenu
+                  label="Department"
+                  options={[...new Set(sortedEmployees.map((employee) => employee.department))]}
+                  selected={departmentFilter}
+                  onToggle={(value) => setDepartmentFilter((current) => toggleMultiSelect(current, value))}
+                />
+              </div>
+              <div className="flex items-start">
+                <PremiumFilterMenu
+                  label="Status"
+                  options={['Active', 'Inactive']}
+                  selected={statusFilter}
+                  onToggle={(value) => setStatusFilter((current) => toggleMultiSelect(current, value))}
+                />
+              </div>
+              <div className="flex items-start">
+                <PremiumFilterMenu
+                  label="Approval"
+                  options={['Draft', 'Pending Approval', 'Approved', 'Rejected']}
+                  selected={approvalFilter}
+                  onToggle={(value) => setApprovalFilter((current) => toggleMultiSelect(current, value))}
+                />
+              </div>
+              <div />
+            </div>
+
+            <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.3fr 1.8fr 2fr 1.3fr 1.2fr 1fr 1.3fr 0.9fr', background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)', borderBottom: '1px solid #E4EDF2' }}>
+              {['Emp Code', 'Name', 'Email', 'Phone', 'Department', 'Status', 'Approval Status', 'Action'].map((column) => (
+                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: '#6E7A82', fontWeight: 700 }}>
+                  {column}
+                </div>
+              ))}
+            </div>
+
+            <div>
+              {filteredEmployees.map((emp, index) => (
+                <div
+                  key={emp.id}
+                  className="grid gap-4 px-6 py-4"
+                  style={{
+                    gridTemplateColumns: '1.3fr 1.8fr 2fr 1.3fr 1.2fr 1fr 1.3fr 0.9fr',
+                    borderBottom: index === filteredEmployees.length - 1 ? 'none' : '1px solid #EDF3F7',
+                    backgroundColor: '#FFFFFF',
+                  }}
+                >
+                  <div style={{ color: '#0A0F14', fontWeight: 700 }}>{emp.empCode}</div>
+                  <div style={{ color: '#0A0F14' }}>{emp.empName}</div>
+                  <div style={{ color: '#6E7A82' }}>{emp.email}</div>
+                  <div style={{ color: '#6E7A82' }}>{emp.phone}</div>
+                  <div style={{ color: '#6E7A82' }}>{emp.department}</div>
+                  <div>
+                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: emp.status === 'Active' ? '#E8F7F8' : '#FFE8EA', color: emp.status === 'Active' ? '#00A9B7' : '#FF4E5B', fontWeight: 700 }}>
+                      {emp.status}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ ...getStatusBadgeStyle(emp.approvalStatus), fontWeight: 700 }}>
+                      {emp.approvalStatus}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-end gap-2">
+                    {emp.approvalStatus === 'Pending Approval' && (
+                      <PremiumActionButton label="Review employee" icon={<Eye className="w-4 h-4" />} tone="teal" onClick={() => handleReview(emp)} />
+                    )}
+                    <PremiumActionButton label="Edit employee" icon={<Edit className="w-4 h-4" />} tone="violet" onClick={() => handleEdit(emp)} />
+                    <PremiumActionButton label="Open employee" icon={<ArrowUpRight className="w-4 h-4" />} tone="blue" onClick={() => handleEdit(emp)} />
+                    <PremiumActionButton label="Delete employee" icon={<Trash2 className="w-4 h-4" />} tone="amber" onClick={() => handleDelete(emp.id)} />
+                  </div>
+                </div>
+              ))}
+              {filteredEmployees.length === 0 && (
+                <div className="px-8 py-16 text-center">
+                  <p className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: 700 }}>No employees match the current filters</p>
+                  <p className="text-sm" style={{ color: '#6E7A82' }}>Clear one or more filters to bring the full register back.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    )
+  );
+}

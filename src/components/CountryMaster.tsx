@@ -1,0 +1,498 @@
+import { ArrowLeft, Plus, Trash2, X, Hash, Globe, FileText, Edit, Eye, Search, ArrowUpRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { ApprovalModal } from './ApprovalModal';
+import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
+import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
+import { COUNTRY_MASTER_SEED, type CountryMasterRow } from '../lib/countryMasterSeed';
+import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
+import { MasterFormPage } from './ui/MasterFormPage';
+import {
+  formColors,
+  gridFormTwoColGap6,
+  inputStyle,
+  inputStyleIconLeading,
+  labelStyle,
+  selectStyleIconLeading,
+} from './ui/formTokens';
+
+type Country = CountryMasterRow;
+
+interface Change {
+  field: string;
+  oldValue: string;
+  newValue: string;
+}
+
+export function CountryMaster() {
+  const navigate = useNavigate();
+  const [countries, setCountries] = useIncrementalMasterRecords<Country>('country_master', COUNTRY_MASTER_SEED);
+
+  const [showForm, setShowForm] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  const [countryCode, setCountryCode] = useState('');
+  const [countryName, setCountryName] = useState('');
+  const [currency, setCurrency] = useState('');
+  const [status, setStatus] = useState('Active');
+
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [currentReviewRecord, setCurrentReviewRecord] = useState<Country | null>(null);
+  const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currencyFilter, setCurrencyFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
+  const filteredCountries = useMemo(() => {
+    return countries.filter((country) => {
+      const haystack = [country.countryCode, country.countryName, country.currency].join(' ').toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const matchesCurrency = currencyFilter.length === 0 || currencyFilter.includes(country.currency);
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(country.status);
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(country.approvalStatus);
+      return matchesSearch && matchesCurrency && matchesStatus && matchesApproval;
+    });
+  }, [countries, searchTerm, currencyFilter, statusFilter, approvalFilter]);
+
+  const hasActiveFilters =
+    searchTerm.trim().length > 0 ||
+    currencyFilter.length > 0 ||
+    statusFilter.length > 0 ||
+    approvalFilter.length > 0;
+
+  const handleSubmit = (approvalStatus: Country['approvalStatus'] = 'Pending Approval') => {
+    if (isEditMode && editingId) {
+      const originalRecord = countries.find(c => c.id === editingId);
+      
+      const updatedCountry: Country = {
+        id: editingId,
+        countryCode,
+        countryName,
+        currency,
+        status,
+        approvalStatus,
+        originalData: originalRecord
+      };
+      
+      setCountries(countries.map(c => c.id === editingId ? updatedCountry : c));
+    } else {
+      const newCountry: Country = {
+        id: Date.now().toString(),
+        countryCode,
+        countryName,
+        currency,
+        status,
+        approvalStatus
+      };
+      setCountries([...countries, newCountry]);
+    }
+    
+    setShowForm(false);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setCountryCode('');
+    setCountryName('');
+    setCurrency('');
+    setStatus('Active');
+    setIsEditMode(false);
+    setEditingId(null);
+  };
+
+  const handleEdit = (country: Country) => {
+    setIsEditMode(true);
+    setEditingId(country.id);
+    setCountryCode(country.countryCode);
+    setCountryName(country.countryName);
+    setCurrency(country.currency);
+    setStatus(country.status);
+    setShowForm(true);
+  };
+
+  const handleDelete = (id: string) => {
+    const country = countries.find(c => c.id === id);
+    
+    if (country?.approvalStatus === 'Approved') {
+      alert('Cannot delete approved/live records. You can only modify them through the approval workflow.');
+      return;
+    }
+    
+    setCountries(countries.filter(c => c.id !== id));
+  };
+
+  const handleReview = (country: Country) => {
+    const changes: Change[] = [];
+    
+    if (country.originalData) {
+      const original = country.originalData;
+      
+      if (original.countryCode !== country.countryCode) {
+        changes.push({ field: 'Country Code', oldValue: original.countryCode, newValue: country.countryCode });
+      }
+      if (original.countryName !== country.countryName) {
+        changes.push({ field: 'Country Name', oldValue: original.countryName, newValue: country.countryName });
+      }
+      if (original.currency !== country.currency) {
+        changes.push({ field: 'Currency', oldValue: original.currency, newValue: country.currency });
+      }
+      if (original.status !== country.status) {
+        changes.push({ field: 'Status', oldValue: original.status, newValue: country.status });
+      }
+    }
+    
+    setCurrentReviewRecord(country);
+    setDetectedChanges(changes);
+    setShowApprovalModal(true);
+  };
+
+  const handleApprove = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction('country_master', countries, currentReviewRecord.id, 'approve');
+      setCountries(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleReject = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction('country_master', countries, currentReviewRecord.id, 'reject');
+      setCountries(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleRequestInfo = async () => {
+    if (currentReviewRecord) {
+      const comments = window.prompt('Enter comments for the request:', '');
+      if (comments === null) {
+        return;
+      }
+      const nextRecords = await applyMasterApprovalAction('country_master', countries, currentReviewRecord.id, 'request_info', comments);
+      setCountries(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const getStatusBadgeStyle = (approvalStatus: string) => {
+    switch (approvalStatus) {
+      case 'Approved':
+        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+      case 'Pending Approval':
+        return { backgroundColor: '#FFF9E6', color: '#D97706' };
+      case 'Draft':
+        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+      case 'Rejected':
+        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+      default:
+        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+    }
+  };
+
+  if (showForm) {
+    return (
+      <MasterFormPage
+        title="Country Master"
+        subtitle="Manage countries with approval workflow"
+        modeLabel={isEditMode ? 'Edit Country' : 'Create Country'}
+        onBack={() => setShowForm(false)}
+        onCancel={() => setShowForm(false)}
+        onSaveDraft={() => handleSubmit('Draft')}
+        onSubmit={() => handleSubmit('Pending Approval')}
+        submitLabel="Submit"
+        draftLabel="Save Draft"
+      >
+        <div className={gridFormTwoColGap6}>
+          <div className="min-w-0">
+            <label style={labelStyle}>
+              Country Code <span style={{ color: formColors.required }}>*</span>
+            </label>
+            <div className="relative">
+              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: formColors.textMuted }} />
+              <input
+                type="text"
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+                placeholder="e.g., FR"
+                style={inputStyleIconLeading}
+              />
+            </div>
+          </div>
+          <div className="min-w-0">
+            <label style={labelStyle}>
+              Country Name <span style={{ color: formColors.required }}>*</span>
+            </label>
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: formColors.textMuted }} />
+              <input
+                type="text"
+                value={countryName}
+                onChange={(e) => setCountryName(e.target.value)}
+                placeholder="e.g., France"
+                style={inputStyleIconLeading}
+              />
+            </div>
+          </div>
+          <div className="min-w-0">
+            <label style={labelStyle}>Currency</label>
+            <input
+              type="text"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              placeholder="e.g., EUR"
+              style={inputStyle}
+            />
+          </div>
+          <div className="min-w-0">
+            <label style={labelStyle}>
+              Status <span style={{ color: formColors.required }}>*</span>
+            </label>
+            <div className="relative">
+              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: formColors.textMuted }} />
+              <select value={status} onChange={(e) => setStatus(e.target.value)} style={selectStyleIconLeading}>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </MasterFormPage>
+    );
+  }
+
+  return (
+    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Country Master</h1>
+            <p style={{ color: '#6E7A82' }}>Manage countries with approval workflow</p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            resetForm();
+            setShowForm(true);
+          }}
+          className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
+          style={{ backgroundColor: '#00A9B7' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+        >
+          <Plus className="w-5 h-5" />
+          Add Country
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
+              <h2 className="text-xl" style={{ color: '#0A0F14' }}>
+                {isEditMode ? 'Edit Country' : 'Add New Country'}
+              </h2>
+              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div className={gridFormTwoColGap6}>
+                <div className="min-w-0">
+                  <label style={labelStyle}>
+                    Country Code <span style={{ color: formColors.required }}>*</span>
+                  </label>
+                  <div className="relative">
+                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: formColors.textMuted }} />
+                    <input
+                      type="text"
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      placeholder="e.g., FR"
+                      style={inputStyleIconLeading}
+                    />
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <label style={labelStyle}>
+                    Country Name <span style={{ color: formColors.required }}>*</span>
+                  </label>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: formColors.textMuted }} />
+                    <input
+                      type="text"
+                      value={countryName}
+                      onChange={(e) => setCountryName(e.target.value)}
+                      placeholder="e.g., France"
+                      style={inputStyleIconLeading}
+                    />
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <label style={labelStyle}>Currency</label>
+                  <input
+                    type="text"
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    placeholder="e.g., EUR"
+                    style={inputStyle}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label style={labelStyle}>
+                    Status <span style={{ color: formColors.required }}>*</span>
+                  </label>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: formColors.textMuted }} />
+                    <select value={status} onChange={(e) => setStatus(e.target.value)} style={selectStyleIconLeading}>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
+              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid #E1E6EA', color: '#6E7A82', backgroundColor: 'white' }}>
+                Cancel
+              </button>
+              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: '#00A9B7' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}>
+                {isEditMode ? 'Update' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ApprovalModal
+        isOpen={showApprovalModal}
+        onClose={() => setShowApprovalModal(false)}
+        recordType="Country Master"
+        recordId={currentReviewRecord?.countryCode || ''}
+        changes={detectedChanges}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onRequestInfo={handleRequestInfo}
+      />
+
+      <div className="rounded-[24px] overflow-hidden bg-white" style={{ border: '1px solid #D7E3EA', boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)' }}>
+        <div className="overflow-x-auto">
+          <div style={{ minWidth: '1080px' }}>
+            <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.2fr 1.6fr 1fr 1fr 1.3fr 0.9fr', borderBottom: '1px solid #E8F0F4' }}>
+              <div className="space-y-2">
+                <div className="relative w-full">
+                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#6E7A82' }} />
+                  <input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search countries..."
+                    className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm"
+                    style={{ backgroundColor: '#F8FBFD', border: '1px solid #D7E3EA', color: '#0A0F14' }}
+                  />
+                </div>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setCurrencyFilter([]);
+                      setStatusFilter([]);
+                      setApprovalFilter([]);
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
+                    style={{ backgroundColor: '#FFF5F5', border: '1px solid #FED7D7', color: '#C53030', fontWeight: 600 }}
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+              <div />
+              <div className="flex items-start">
+                <PremiumFilterMenu
+                  label="Currency"
+                  options={[...new Set(countries.map((country) => country.currency).filter(Boolean))]}
+                  selected={currencyFilter}
+                  onToggle={(value) => setCurrencyFilter((current) => toggleMultiSelect(current, value))}
+                />
+              </div>
+              <div className="flex items-start">
+                <PremiumFilterMenu
+                  label="Status"
+                  options={['Active', 'Inactive']}
+                  selected={statusFilter}
+                  onToggle={(value) => setStatusFilter((current) => toggleMultiSelect(current, value))}
+                />
+              </div>
+              <div className="flex items-start">
+                <PremiumFilterMenu
+                  label="Approval"
+                  options={['Draft', 'Pending Approval', 'Approved', 'Rejected']}
+                  selected={approvalFilter}
+                  onToggle={(value) => setApprovalFilter((current) => toggleMultiSelect(current, value))}
+                />
+              </div>
+              <div />
+            </div>
+
+            <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.2fr 1.6fr 1fr 1fr 1.3fr 0.9fr', background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)', borderBottom: '1px solid #E4EDF2' }}>
+              {['Country Code', 'Country Name', 'Currency', 'Status', 'Approval Status', 'Action'].map((column) => (
+                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: '#6E7A82', fontWeight: 700 }}>
+                  {column}
+                </div>
+              ))}
+            </div>
+
+            <div>
+              {filteredCountries.map((country, index) => (
+                <div
+                  key={country.id}
+                  className="grid gap-4 px-6 py-4 items-center"
+                  style={{
+                    gridTemplateColumns: '1.2fr 1.6fr 1fr 1fr 1.3fr 0.9fr',
+                    borderBottom: index === filteredCountries.length - 1 ? 'none' : '1px solid #EDF3F7',
+                    backgroundColor: '#FFFFFF',
+                  }}
+                >
+                  <div style={{ color: '#0A0F14', fontWeight: 700 }}>{country.countryCode}</div>
+                  <div style={{ color: '#0A0F14' }}>{country.countryName}</div>
+                  <div style={{ color: '#6E7A82' }}>{country.currency || 'Unassigned'}</div>
+                  <div>
+                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: country.status === 'Active' ? '#E8F7F8' : '#FFE8EA', color: country.status === 'Active' ? '#00A9B7' : '#FF4E5B', fontWeight: 700 }}>
+                      {country.status}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ ...getStatusBadgeStyle(country.approvalStatus), fontWeight: 700 }}>
+                      {country.approvalStatus}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-end gap-2">
+                    {country.approvalStatus === 'Pending Approval' && (
+                      <PremiumActionButton label="Review country" icon={<Eye className="w-4 h-4" />} tone="teal" onClick={() => handleReview(country)} />
+                    )}
+                    <PremiumActionButton label="Edit country" icon={<Edit className="w-4 h-4" />} tone="violet" onClick={() => handleEdit(country)} />
+                    <PremiumActionButton label="Open country" icon={<ArrowUpRight className="w-4 h-4" />} tone="blue" onClick={() => handleEdit(country)} />
+                    <PremiumActionButton label="Delete country" icon={<Trash2 className="w-4 h-4" />} tone="amber" onClick={() => handleDelete(country.id)} />
+                  </div>
+                </div>
+              ))}
+              {filteredCountries.length === 0 && (
+                <div className="px-8 py-16 text-center">
+                  <p className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: 700 }}>No countries match the current filters</p>
+                  <p className="text-sm" style={{ color: '#6E7A82' }}>Clear one or more filters to bring the full register back.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

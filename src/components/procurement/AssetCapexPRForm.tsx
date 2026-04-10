@@ -1,0 +1,311 @@
+import { useState } from 'react';
+import { Building2, Plus, Trash2, ArrowLeft, CheckCircle, AlertTriangle, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useProcurementData, type PurchaseRequestStatus } from '../../contexts/ProcurementDataContext';
+import { useMasterData } from '../../contexts/MasterDataContext';
+import { useAuth } from '../../contexts/AuthContext';
+
+/**
+ * ASSET/CAPEX PR FORM
+ * For high-value capital assets requiring asset tagging and depreciation
+ */
+
+interface AssetItem {
+  id: string;
+  assetCode: string;
+  assetName: string;
+  assetCategory: string;
+  quantity: number;
+  unitPrice: number;
+  vendor: string;
+  location: string;
+  usefulLife: number;
+  depreciationMethod: string;
+  budgetYear: string;
+}
+
+export function AssetCapexPRForm() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { addPurchaseRequest } = useProcurementData();
+  const { vendors, entities, costCentres, currentCompany } = useMasterData();
+  const [assets, setAssets] = useState<AssetItem[]>([]);
+  const [selectedEntity, setSelectedEntity] = useState(currentCompany?.name || entities[0]?.name || '');
+  const [budgetYear, setBudgetYear] = useState('FY 2024-25');
+  const [businessJustification, setBusinessJustification] = useState('');
+
+  const assetCategories = ['Machinery & Equipment', 'Vehicles', 'IT Hardware', 'Infrastructure', 'Furniture & Fixtures'];
+  const depreciationMethods = ['Straight Line', 'Written Down Value', 'Double Declining Balance'];
+  const activeVendors = vendors.filter((vendor) => vendor.status === 'Active').map((vendor) => vendor.name);
+  const locations = entities.filter((entity) => entity.isActive).map((entity) => entity.name);
+
+  const handleAddAsset = () => {
+    const newAsset: AssetItem = {
+      id: `ASSET-${Date.now()}`,
+      assetCode: '',
+      assetName: '',
+      assetCategory: assetCategories[0],
+      quantity: 1,
+      unitPrice: 0,
+      vendor: activeVendors[0] || '',
+      location: locations[0] || '',
+      usefulLife: 5,
+      depreciationMethod: depreciationMethods[0],
+      budgetYear: '2024-25'
+    };
+    setAssets([...assets, newAsset]);
+  };
+
+  const handleRemoveAsset = (id: string) => {
+    setAssets(assets.filter(a => a.id !== id));
+  };
+
+  const handleUpdateAsset = (id: string, field: string, value: any) => {
+    setAssets(assets.map(a => a.id === id ? { ...a, [field]: value } : a));
+  };
+
+  const totalValue = assets.reduce((sum, a) => sum + (a.quantity * a.unitPrice), 0);
+  const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
+
+  const submitPurchaseRequest = (status: PurchaseRequestStatus) => {
+    const timestamp = Date.now();
+    const createdDate = new Date().toISOString().split('T')[0];
+
+    addPurchaseRequest({
+      id: `asset-${timestamp}`,
+      prNumber: `PR-${timestamp}`,
+      type: 'Asset/CAPEX',
+      entity: selectedEntity,
+      requestor: user?.name || 'Current User',
+      department: 'Operations',
+      costCentre: costCentres.find((costCentre) => costCentre.isActive)?.code || '',
+      needByDate: createdDate,
+      deliveryLocation: assets[0]?.location || 'Mumbai Factory',
+      totalAmount: totalValue,
+      currency: 'INR',
+      status,
+      nextApprover: status === 'Draft' ? '—' : 'CFO',
+      aiRiskLevel: totalValue > 5000000 ? 'High' : 'Medium',
+      createdDate,
+      submittedDate: status === 'Draft' ? undefined : createdDate,
+      vendor: assets[0]?.vendor,
+      itemCount: assets.length,
+      justification: businessJustification || `CAPEX request for ${assets.length} asset item(s)`,
+      policyFlags: ['Budget Review', 'Asset Tagging'],
+      lineItems: assets.map((asset) => ({
+        ...asset,
+        budgetYear,
+      }))
+    });
+
+    navigate('/procurement/pr/my-prs');
+  };
+
+  return (
+    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+        <div className="flex items-center gap-3 mb-4">
+          <button onClick={() => navigate('/procurement/pr/create')} className="p-2 rounded-lg hover:bg-gray-100" style={{ color: '#6E7A82' }}>
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-2xl mb-1" style={{ color: '#0A0F14', margin: 0 }}>Asset/CAPEX Purchase Requisition</h1>
+            <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>High-value capital assets requiring asset tagging and depreciation</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              className="px-4 py-2 rounded-lg"
+              style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', color: '#6E7A82' }}
+              onClick={() => submitPurchaseRequest('Draft')}
+            >
+              Save as Draft
+            </button>
+            <button
+              className="px-4 py-2 rounded-lg text-white"
+              style={{ backgroundColor: '#00A9B7' }}
+              onClick={() => submitPurchaseRequest('Pending Approval')}
+            >
+              Submit for CFO Approval
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-8">
+        <div className="grid grid-cols-3 gap-6">
+          <div className="col-span-2 space-y-6">
+            {/* Header */}
+            <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+              <h3 className="text-base mb-4" style={{ color: '#0A0F14', fontWeight: '600' }}>CAPEX Details</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Entity <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <select value={selectedEntity} onChange={(e) => setSelectedEntity(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }}>
+                    {entities.filter((entity) => entity.isActive).map((entity) => (
+                      <option key={entity.id} value={entity.name}>{entity.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Budget Year <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <select value={budgetYear} onChange={(e) => setBudgetYear(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }}>
+                    <option>FY 2024-25</option>
+                    <option>FY 2025-26</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Business Justification <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <textarea value={businessJustification} onChange={(e) => setBusinessJustification(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm" rows={3} placeholder="ROI analysis, production capacity increase, etc..." style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Assets */}
+            <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base" style={{ color: '#0A0F14', fontWeight: '600' }}>Capital Assets</h3>
+                <button onClick={handleAddAsset} className="px-4 py-2 rounded-lg text-white" style={{ backgroundColor: '#00A9B7' }}>
+                  <Plus className="w-4 h-4 inline mr-2" />Add Asset
+                </button>
+              </div>
+
+              {assets.length === 0 ? (
+                <div className="text-center py-12" style={{ backgroundColor: '#F6F9FC', borderRadius: '8px' }}>
+                  <Building2 className="w-12 h-12 mx-auto mb-3" style={{ color: '#6E7A82' }} />
+                  <p className="text-sm" style={{ color: '#6E7A82' }}>No assets added. Click "Add Asset" to start</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {assets.map((asset) => (
+                    <div key={asset.id} className="p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
+                      <div className="flex items-start justify-between mb-3">
+                        <h4 className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>Asset Entry</h4>
+                        <button onClick={() => handleRemoveAsset(asset.id)} className="p-1 rounded hover:bg-red-50">
+                          <Trash2 className="w-4 h-4" style={{ color: '#DC2626' }} />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: '#6E7A82' }}>Asset Name <span style={{ color: '#FF4E5B' }}>*</span></label>
+                          <input type="text" value={asset.assetName} onChange={(e) => handleUpdateAsset(asset.id, 'assetName', e.target.value)} className="w-full px-2 py-1.5 rounded text-sm" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }} />
+                        </div>
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: '#6E7A82' }}>Category <span style={{ color: '#FF4E5B' }}>*</span></label>
+                          <select value={asset.assetCategory} onChange={(e) => handleUpdateAsset(asset.id, 'assetCategory', e.target.value)} className="w-full px-2 py-1.5 rounded text-sm" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }}>
+                            {assetCategories.map(c => <option key={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: '#6E7A82' }}>Vendor <span style={{ color: '#FF4E5B' }}>*</span></label>
+                          <select value={asset.vendor} onChange={(e) => handleUpdateAsset(asset.id, 'vendor', e.target.value)} className="w-full px-2 py-1.5 rounded text-sm" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }}>
+                            {vendors.map(v => <option key={v}>{v}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: '#6E7A82' }}>Quantity</label>
+                          <input type="number" min="1" value={asset.quantity} onChange={(e) => handleUpdateAsset(asset.id, 'quantity', parseInt(e.target.value) || 1)} className="w-full px-2 py-1.5 rounded text-sm" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }} />
+                        </div>
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: '#6E7A82' }}>Unit Price <span style={{ color: '#FF4E5B' }}>*</span></label>
+                          <input type="number" min="0" step="0.01" value={asset.unitPrice} onChange={(e) => handleUpdateAsset(asset.id, 'unitPrice', parseFloat(e.target.value) || 0)} className="w-full px-2 py-1.5 rounded text-sm" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }} />
+                        </div>
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: '#6E7A82' }}>Total</label>
+                          <input type="text" value={formatCurrency(asset.quantity * asset.unitPrice)} disabled className="w-full px-2 py-1.5 rounded text-sm" style={{ border: '1px solid #E1E6EA', backgroundColor: '#F6F9FC', color: '#7B1FA2', fontWeight: '600' }} />
+                        </div>
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: '#6E7A82' }}>Location <span style={{ color: '#FF4E5B' }}>*</span></label>
+                          <select value={asset.location} onChange={(e) => handleUpdateAsset(asset.id, 'location', e.target.value)} className="w-full px-2 py-1.5 rounded text-sm" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }}>
+                            {locations.map(l => <option key={l}>{l}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: '#6E7A82' }}>Useful Life (years) <span style={{ color: '#FF4E5B' }}>*</span></label>
+                          <input type="number" min="1" value={asset.usefulLife} onChange={(e) => handleUpdateAsset(asset.id, 'usefulLife', parseInt(e.target.value) || 5)} className="w-full px-2 py-1.5 rounded text-sm" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }} />
+                        </div>
+                        <div>
+                          <label className="block text-xs mb-1" style={{ color: '#6E7A82' }}>Depreciation Method <span style={{ color: '#FF4E5B' }}>*</span></label>
+                          <select value={asset.depreciationMethod} onChange={(e) => handleUpdateAsset(asset.id, 'depreciationMethod', e.target.value)} className="w-full px-2 py-1.5 rounded text-sm" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }}>
+                            {depreciationMethods.map(m => <option key={m}>{m}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Total */}
+            {assets.length > 0 && (
+              <div className="bg-white p-6 rounded-lg" style={{ border: '2px solid #7B1FA2' }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Total CAPEX Investment</p>
+                    <p className="text-3xl" style={{ color: '#7B1FA2', fontWeight: '600' }}>{formatCurrency(totalValue)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Total Assets</p>
+                    <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: '600' }}>{assets.length}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Panel */}
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+              <div className="flex items-center gap-2 mb-4">
+                <AlertTriangle className="w-5 h-5" style={{ color: '#F57C00' }} />
+                <h3 className="text-base" style={{ color: '#0A0F14', fontWeight: '600' }}>CAPEX Requirements</h3>
+              </div>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 mt-0.5" style={{ color: '#2E7D32' }} />
+                  <span className="text-sm" style={{ color: '#6E7A82' }}>CFO approval <strong>mandatory</strong> for all CAPEX</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 mt-0.5" style={{ color: '#2E7D32' }} />
+                  <span className="text-sm" style={{ color: '#6E7A82' }}>Budget allocation <strong>must exist</strong></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 mt-0.5" style={{ color: '#2E7D32' }} />
+                  <span className="text-sm" style={{ color: '#6E7A82' }}>Asset tagging after GRN</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-4 h-4 mt-0.5" style={{ color: '#2E7D32' }} />
+                  <span className="text-sm" style={{ color: '#6E7A82' }}>Depreciation schedule auto-created</span>
+                </li>
+              </ul>
+            </div>
+
+            {totalValue > 0 && (
+              <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+                <h3 className="text-base mb-4" style={{ color: '#0A0F14', fontWeight: '600' }}>CAPEX Budget Check</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm" style={{ color: '#6E7A82' }}>FY 2024-25 CAPEX Budget</span>
+                    <span className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>₹5.00 Cr</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm" style={{ color: '#6E7A82' }}>PR Amount</span>
+                    <span className="text-sm" style={{ color: '#7B1FA2', fontWeight: '600' }}>{formatCurrency(totalValue)}</span>
+                  </div>
+                  <div className="flex justify-between pt-3" style={{ borderTop: '1px solid #E1E6EA' }}>
+                    <span className="text-sm" style={{ color: '#6E7A82' }}>Remaining</span>
+                    <span className="text-sm" style={{ color: '#2E7D32', fontWeight: '600' }}>{formatCurrency(50000000 - totalValue)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 rounded-lg" style={{ backgroundColor: '#E8F5E9' }}>
+                    <CheckCircle className="w-4 h-4" style={{ color: '#2E7D32' }} />
+                    <span className="text-sm" style={{ color: '#2E7D32' }}>Within Budget</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,410 @@
+import { ArrowLeft, Plus, Trash2, X, Hash, Ruler, FileText, Tag, Edit, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { ApprovalModal } from './ApprovalModal';
+import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
+import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
+import { MasterFormPage } from './ui/MasterFormPage';
+
+interface Size {
+  id: string;
+  sizeCode: string;
+  sizeName: string;
+  sizeCategory: string;
+  sortOrder: string;
+  status: string;
+  approvalStatus: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  originalData?: Size;
+}
+
+interface Change {
+  field: string;
+  oldValue: string;
+  newValue: string;
+}
+
+export function SizeMaster() {
+  const navigate = useNavigate();
+  const [sizes, setSizes] = useIncrementalMasterRecords<Size>('size_master', [
+    { id: '1', sizeCode: '001', sizeName: 'XS', sizeCategory: 'Apparel', sortOrder: '1', status: 'Active', approvalStatus: 'Approved' },
+    { id: '2', sizeCode: '002', sizeName: 'S', sizeCategory: 'Apparel', sortOrder: '2', status: 'Active', approvalStatus: 'Approved' },
+    { id: '3', sizeCode: '003', sizeName: 'M', sizeCategory: 'Apparel', sortOrder: '3', status: 'Active', approvalStatus: 'Pending Approval' },
+    { id: '4', sizeCode: '004', sizeName: 'L', sizeCategory: 'Apparel', sortOrder: '4', status: 'Active', approvalStatus: 'Approved' },
+    { id: '5', sizeCode: '005', sizeName: 'XL', sizeCategory: 'Apparel', sortOrder: '5', status: 'Active', approvalStatus: 'Draft' }
+  ]);
+
+  const [showForm, setShowForm] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  const [sizeCode, setSizeCode] = useState('');
+  const [sizeName, setSizeName] = useState('');
+  const [sizeCategory, setSizeCategory] = useState('');
+  const [sortOrder, setSortOrder] = useState('');
+  const [status, setStatus] = useState('Active');
+
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [currentReviewRecord, setCurrentReviewRecord] = useState<Size | null>(null);
+  const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+
+  const handleSubmit = (approvalStatus: Size['approvalStatus'] = 'Pending Approval') => {
+    if (isEditMode && editingId) {
+      const originalRecord = sizes.find(s => s.id === editingId);
+      
+      const updatedSize: Size = {
+        id: editingId,
+        sizeCode,
+        sizeName,
+        sizeCategory,
+        sortOrder,
+        status,
+        approvalStatus,
+        originalData: originalRecord
+      };
+      
+      setSizes(sizes.map(s => s.id === editingId ? updatedSize : s));
+    } else {
+      const newSize: Size = {
+        id: Date.now().toString(),
+        sizeCode,
+        sizeName,
+        sizeCategory,
+        sortOrder,
+        status,
+        approvalStatus
+      };
+      setSizes([...sizes, newSize]);
+    }
+    
+    setShowForm(false);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setSizeCode('');
+    setSizeName('');
+    setSizeCategory('');
+    setSortOrder('');
+    setStatus('Active');
+    setIsEditMode(false);
+    setEditingId(null);
+  };
+
+  const handleEdit = (size: Size) => {
+    setIsEditMode(true);
+    setEditingId(size.id);
+    setSizeCode(size.sizeCode);
+    setSizeName(size.sizeName);
+    setSizeCategory(size.sizeCategory);
+    setSortOrder(size.sortOrder);
+    setStatus(size.status);
+    setShowForm(true);
+  };
+
+  const handleDelete = (id: string) => {
+    const size = sizes.find(s => s.id === id);
+    
+    if (size?.approvalStatus === 'Approved') {
+      alert('Cannot delete approved/live records. You can only modify them through the approval workflow.');
+      return;
+    }
+    
+    setSizes(sizes.filter(s => s.id !== id));
+  };
+
+  const handleReview = (size: Size) => {
+    const changes: Change[] = [];
+    
+    if (size.originalData) {
+      const original = size.originalData;
+      
+      if (original.sizeCode !== size.sizeCode) {
+        changes.push({ field: 'Size Code', oldValue: original.sizeCode, newValue: size.sizeCode });
+      }
+      if (original.sizeName !== size.sizeName) {
+        changes.push({ field: 'Size Name', oldValue: original.sizeName, newValue: size.sizeName });
+      }
+      if (original.sizeCategory !== size.sizeCategory) {
+        changes.push({ field: 'Size Category', oldValue: original.sizeCategory, newValue: size.sizeCategory });
+      }
+      if (original.sortOrder !== size.sortOrder) {
+        changes.push({ field: 'Sort Order', oldValue: original.sortOrder, newValue: size.sortOrder });
+      }
+      if (original.status !== size.status) {
+        changes.push({ field: 'Status', oldValue: original.status, newValue: size.status });
+      }
+    }
+    
+    setCurrentReviewRecord(size);
+    setDetectedChanges(changes);
+    setShowApprovalModal(true);
+  };
+
+  const handleApprove = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction('size_master', sizes, currentReviewRecord.id, 'approve');
+      setSizes(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleReject = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction('size_master', sizes, currentReviewRecord.id, 'reject');
+      setSizes(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleRequestInfo = async () => {
+    if (currentReviewRecord) {
+      const comments = window.prompt('Enter comments for the request:', '');
+      if (comments === null) {
+        return;
+      }
+      const nextRecords = await applyMasterApprovalAction('size_master', sizes, currentReviewRecord.id, 'request_info', comments);
+      setSizes(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const getStatusBadgeStyle = (approvalStatus: string) => {
+    switch (approvalStatus) {
+      case 'Approved':
+        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+      case 'Pending Approval':
+        return { backgroundColor: '#FFF9E6', color: '#D97706' };
+      case 'Draft':
+        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+      case 'Rejected':
+        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+      default:
+        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+    }
+  };
+
+  if (showForm) {
+    return (
+      <MasterFormPage
+        title={isEditMode ? 'Edit Size' : 'Create Size'}
+        subtitle="Manage size variants with approval workflow"
+        modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
+        onBack={() => setShowForm(false)}
+        onCancel={() => {
+          setShowForm(false);
+          resetForm();
+        }}
+        onSaveDraft={() => handleSubmit('Draft')}
+        onSubmit={() => handleSubmit('Pending Approval')}
+        submitLabel="Submit"
+        draftLabel="Save Draft"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Code <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <input type="text" value={sizeCode} onChange={(e) => setSizeCode(e.target.value)} placeholder="e.g., 006" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Name <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <input type="text" value={sizeName} onChange={(e) => setSizeName(e.target.value)} placeholder="e.g., XXL" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Category</label>
+            <div className="relative">
+              <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <select value={sizeCategory} onChange={(e) => setSizeCategory(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
+                <option value="">Select Category</option>
+                <option value="Apparel">Apparel</option>
+                <option value="Footwear">Footwear</option>
+                <option value="Accessories">Accessories</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Sort Order</label>
+            <input type="text" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} placeholder="e.g., 6" className="w-full px-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
+          </div>
+          <div>
+            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
+            <div className="relative">
+              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </MasterFormPage>
+    );
+  }
+
+  return (
+    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Size Master</h1>
+            <p style={{ color: '#6E7A82' }}>Manage size variants with approval workflow</p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            resetForm();
+            setShowForm(true);
+          }}
+          className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
+          style={{ backgroundColor: '#00A9B7' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+        >
+          <Plus className="w-5 h-5" />
+          Add Size
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
+              <h2 className="text-xl" style={{ color: '#0A0F14' }}>
+                {isEditMode ? 'Edit Size' : 'Add New Size'}
+              </h2>
+              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Code <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <div className="relative">
+                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+                    <input type="text" value={sizeCode} onChange={(e) => setSizeCode(e.target.value)} placeholder="e.g., 006" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Name <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <div className="relative">
+                    <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+                    <input type="text" value={sizeName} onChange={(e) => setSizeName(e.target.value)} placeholder="e.g., XXL" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Category</label>
+                  <div className="relative">
+                    <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+                    <select value={sizeCategory} onChange={(e) => setSizeCategory(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+                      <option value="">Select Category</option>
+                      <option value="Apparel">Apparel</option>
+                      <option value="Footwear">Footwear</option>
+                      <option value="Accessories">Accessories</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Sort Order</label>
+                  <input type="text" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} placeholder="e.g., 6" className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                </div>
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
+                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
+              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid #E1E6EA', color: '#6E7A82', backgroundColor: 'white' }}>
+                Cancel
+              </button>
+              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: '#00A9B7' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}>
+                {isEditMode ? 'Update' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ApprovalModal
+        isOpen={showApprovalModal}
+        onClose={() => setShowApprovalModal(false)}
+        recordType="Size Master"
+        recordId={currentReviewRecord?.sizeCode || ''}
+        changes={detectedChanges}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onRequestInfo={handleRequestInfo}
+      />
+
+      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead style={{ backgroundColor: '#F6F9FC' }}>
+              <tr>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Size Code</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Size Name</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Category</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Sort Order</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Approval Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sizes.map((size, index) => (
+                <tr key={size.id} style={{ borderTop: index === 0 ? 'none' : '1px solid #E1E6EA' }}>
+                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{size.sizeCode}</td>
+                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{size.sizeName}</td>
+                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{size.sizeCategory}</td>
+                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{size.sortOrder}</td>
+                  <td className="px-6 py-4">
+                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: size.status === 'Active' ? '#E8F7F8' : '#FFE8EA', color: size.status === 'Active' ? '#00A9B7' : '#FF4E5B' }}>
+                      {size.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="px-3 py-1 rounded-full text-sm" style={getStatusBadgeStyle(size.approvalStatus)}>
+                      {size.approvalStatus}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      {size.approvalStatus === 'Pending Approval' && (
+                        <button onClick={() => handleReview(size)} className="p-2 rounded-lg transition-colors" style={{ color: '#00A9B7' }} title="Review Changes">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button onClick={() => handleEdit(size)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }} title="Edit">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(size.id)} className="p-2 rounded-lg transition-colors" style={{ color: size.approvalStatus === 'Approved' ? '#C4C4C4' : '#FF4E5B', cursor: size.approvalStatus === 'Approved' ? 'not-allowed' : 'pointer' }} title={size.approvalStatus === 'Approved' ? 'Cannot delete approved records' : 'Delete'} disabled={size.approvalStatus === 'Approved'}>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

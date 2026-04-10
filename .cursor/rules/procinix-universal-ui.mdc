@@ -1,0 +1,34 @@
+---
+description: Procinix Suite universal UI — forms, two-column grid, field sizing, draft/submit, spacing
+alwaysApply: true
+---
+
+# Procinix universal UI (always follow)
+
+Canonical detail lives in **`docs/universal-ui-rules.md`**. When product standards change, update that doc and adjust this rule if needed.
+
+## Forms and pages
+
+- Use **`MasterFormPage`** for full-page master create/edit when the flow matches (see `src/components/ui/MasterFormPage.tsx`).
+- **Footer actions (fixed order):** Cancel → optional Save Draft → primary Submit (teal `#00A9B7`). Wire `onSaveDraft` only when draft behavior exists; do not remove Cancel or invert primary/secondary.
+
+## Two-column layout
+
+- Default field grid: **`grid grid-cols-2 gap-4` or `gap-6`** — choose one per screen and stay consistent within the screen.
+- Wrap fields in **`min-w-0`** columns. Use **`col-span-2`** only for full-width blocks (remarks, tables, long single strips).
+
+## Field dimensions and style
+
+- Inputs/selects: **full width**, **`minHeight: 42px`** (or 38px only inside dense tables, consistently), **padding ~10px 12px**, **border `#E1E6EA`**, **radius 8px**, **font 14px**, **`box-sizing: border-box`**.
+- Read-only mirrors: **background `#F6F9FC`**, **text `#6E7A82`**.
+- Labels: **14px / 500**, **8px** below label; required **`*`** color **`#FF4E5B`**.
+
+## Sections and tables
+
+- Section headings: **15px / 600**, **bottom border `#E1E6EA`**, **~24px** margin between sections.
+- Tables: header **`#F6F9FC`**, row divider **`#E1E6EA`**, **~8px** cell padding, consistent row height.
+
+## Consistency
+
+- Match an existing master (e.g. **CountryMaster**, **UserMaster**) when adding similar screens.
+- Import **`src/components/ui/formTokens.ts`** (`inputStyle`, `labelStyle`, `gridFormTwoColGap4` / `gridFormTwoColGap6`, etc.) instead of redefining borders/heights; extend that file if you need a new variant.

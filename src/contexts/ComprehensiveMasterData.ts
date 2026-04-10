@@ -1,0 +1,206 @@
+/**
+ * COMPREHENSIVE MASTER DATA - ENTERPRISE-GRADE SEEDING
+ * 
+ * This file contains realistic, meaningful master data for:
+ * - Subko Coffee Pvt Ltd – India (INR, GST)
+ * - Subko Coffee – Dubai (AED, VAT)
+ * - Procinix Ltd – India (INR, GST)
+ * 
+ * MINIMUM 20 RECORDS PER ENTITY PER MASTER TYPE
+ * 
+ * SAFETY:
+ * - All data is ADDITIVE to existing masters
+ * - Internally consistent (no orphan records)
+ * - Enterprise-realistic (proper codes, naming, rates)
+ * - Demo-ready and CFO-ready
+ */
+
+import type {
+  AccountCodeMaster,
+  CostCentreMaster,
+  ProfitCentreMaster,
+  ItemMaster,
+  VendorMaster,
+  BankMaster,
+  UOMMaster,
+  TaxCodeMaster,
+  ItemCategoryMaster,
+  WarehouseMaster,
+  PaymentTermMaster
+} from './MasterDataContext';
+
+// ============================================================================
+// CHART OF ACCOUNTS (GL CODES) - COMPREHENSIVE
+// ============================================================================
+
+export const COMPREHENSIVE_GL_ACCOUNTS: AccountCodeMaster[] = [
+  // ASSETS
+  { id: 'GL-1001', code: '1001', name: 'Cash in Hand', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-1002', code: '1002', name: 'Bank - HDFC Current Account', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-1003', code: '1003', name: 'Bank - ICICI Current Account', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-1004', code: '1004', name: 'Bank - SBI Current Account', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-1005', code: '1005', name: 'Bank - Emirates NBD', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-1010', code: '1010', name: 'Accounts Receivable - Trade', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-1011', code: '1011', name: 'Vendor Advances', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-1012', code: '1012', name: 'Employee Advances', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-1020', code: '1020', name: 'Inventory - Raw Materials', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-1021', code: '1021', name: 'Inventory - Packaging Materials', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-1022', code: '1022', name: 'Inventory - Finished Goods', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-1030', code: '1030', name: 'Prepaid Expenses', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-1031', code: '1031', name: 'TDS Receivable', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-1032', code: '1032', name: 'GST Input Credit', accountType: 'Asset', accountSubType: 'Current Asset', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-1040', code: '1040', name: 'Fixed Assets - Plant & Machinery', accountType: 'Asset', accountSubType: 'Fixed Asset', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-1041', code: '1041', name: 'Fixed Assets - Furniture & Fixtures', accountType: 'Asset', accountSubType: 'Fixed Asset', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-1042', code: '1042', name: 'Fixed Assets - Computers & IT Equipment', accountType: 'Asset', accountSubType: 'Fixed Asset', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-1043', code: '1043', name: 'Fixed Assets - Vehicles', accountType: 'Asset', accountSubType: 'Fixed Asset', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+
+  // LIABILITIES
+  { id: 'GL-2001', code: '2001', name: 'Accounts Payable - Trade', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2002', code: '2002', name: 'Accounts Payable - Services', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2003', code: '2003', name: 'Customer Advances', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2010', code: '2010', name: 'TDS Payable - Section 194C', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2011', code: '2011', name: 'TDS Payable - Section 194J', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2012', code: '2012', name: 'TDS Payable - Section 194I', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2020', code: '2020', name: 'GST Payable - CGST', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2021', code: '2021', name: 'GST Payable - SGST', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2022', code: '2022', name: 'GST Payable - IGST', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2023', code: '2023', name: 'VAT Payable', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2030', code: '2030', name: 'Salary Payable', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-2031', code: '2031', name: 'Provident Fund Payable', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2032', code: '2032', name: 'ESI Payable', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2040', code: '2040', name: 'Bank Overdraft', accountType: 'Liability', accountSubType: 'Short-term Loan', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2041', code: '2041', name: 'Short-term Loans', accountType: 'Liability', accountSubType: 'Short-term Loan', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-2050', code: '2050', name: 'Long-term Loans', accountType: 'Liability', accountSubType: 'Long-term Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+
+  // EQUITY
+  { id: 'GL-3001', code: '3001', name: 'Share Capital', accountType: 'Equity', accountSubType: 'Capital', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-3002', code: '3002', name: 'Retained Earnings', accountType: 'Equity', accountSubType: 'Reserves', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-3003', code: '3003', name: 'General Reserve', accountType: 'Equity', accountSubType: 'Reserves', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+
+  // REVENUE
+  { id: 'GL-4001', code: '4001', name: 'Sales Revenue - Domestic', accountType: 'Revenue', accountSubType: 'Operating Revenue', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-4002', code: '4002', name: 'Sales Revenue - Export', accountType: 'Revenue', accountSubType: 'Operating Revenue', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-4003', code: '4003', name: 'Service Revenue', accountType: 'Revenue', accountSubType: 'Operating Revenue', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-4010', code: '4010', name: 'Other Income - Interest', accountType: 'Revenue', accountSubType: 'Non-operating Revenue', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-4011', code: '4011', name: 'Other Income - Forex Gain', accountType: 'Revenue', accountSubType: 'Non-operating Revenue', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+
+  // EXPENSES
+  { id: 'GL-5001', code: '5001', name: 'Purchase - Raw Materials', accountType: 'Expense', accountSubType: 'Cost of Goods Sold', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5002', code: '5002', name: 'Purchase - Packaging Materials', accountType: 'Expense', accountSubType: 'Cost of Goods Sold', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5003', code: '5003', name: 'Purchase - Trading Goods', accountType: 'Expense', accountSubType: 'Cost of Goods Sold', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5010', code: '5010', name: 'Direct Labor Costs', accountType: 'Expense', accountSubType: 'Cost of Goods Sold', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5011', code: '5011', name: 'Manufacturing Overheads', accountType: 'Expense', accountSubType: 'Cost of Goods Sold', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5020', code: '5020', name: 'Freight Inward', accountType: 'Expense', accountSubType: 'Cost of Goods Sold', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5021', code: '5021', name: 'Freight Outward', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5030', code: '5030', name: 'Salary & Wages', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5031', code: '5031', name: 'Employee Benefits', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5040', code: '5040', name: 'Rent Expense', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5041', code: '5041', name: 'Utilities - Electricity', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5042', code: '5042', name: 'Utilities - Water', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5043', code: '5043', name: 'Utilities - Internet & Telecom', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5050', code: '5050', name: 'Professional Fees - Legal', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5051', code: '5051', name: 'Professional Fees - Audit', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-5052', code: '5052', name: 'Professional Fees - Consulting', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: true, level: 2 },
+  { id: 'GL-5053', code: '5053', name: 'IT Services & Software', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5060', code: '5060', name: 'Marketing & Advertising', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5061', code: '5061', name: 'Sales Commission', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5070', code: '5070', name: 'Office Supplies & Stationery', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5071', code: '5071', name: 'Printing & Photocopying', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5080', code: '5080', name: 'Repairs & Maintenance - Building', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5081', code: '5081', name: 'Repairs & Maintenance - Equipment', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5082', code: '5082', name: 'Vehicle Maintenance', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5090', code: '5090', name: 'Insurance Expense', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5091', code: '5091', name: 'Bank Charges & Fees', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-5092', code: '5092', name: 'Travel & Conveyance', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5093', code: '5093', name: 'Entertainment & Hospitality', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5094', code: '5094', name: 'Training & Development', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5100', code: '5100', name: 'Depreciation - Plant & Machinery', accountType: 'Expense', accountSubType: 'Non-cash Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5101', code: '5101', name: 'Depreciation - Furniture & Fixtures', accountType: 'Expense', accountSubType: 'Non-cash Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5102', code: '5102', name: 'Depreciation - IT Equipment', accountType: 'Expense', accountSubType: 'Non-cash Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
+  { id: 'GL-5110', code: '5110', name: 'Interest Expense', accountType: 'Expense', accountSubType: 'Financial Expense', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 },
+  { id: 'GL-5111', code: '5111', name: 'Forex Loss', accountType: 'Expense', accountSubType: 'Financial Expense', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 }
+];
+
+// ============================================================================
+// COST CENTERS - BY ENTITY (20+ PER ENTITY)
+// ============================================================================
+
+export const COMPREHENSIVE_COST_CENTRES: CostCentreMaster[] = [
+  // ──────────────────────────────────────────────────────────────────────
+  // SUBKO COFFEE INDIA - COST CENTERS
+  // ──────────────────────────────────────────────────────────────────────
+  { id: 'CC-SUBKO-IN-001', code: 'SUBKO-IN-PROD-BLR', name: 'Production - Bangalore', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Coffee roasting and production facility', isActive: true, headOfCentre: 'Ramesh Kumar', budgetAmount: 5000000 },
+  { id: 'CC-SUBKO-IN-002', code: 'SUBKO-IN-PROC-BLR', name: 'Procurement - Bangalore', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Sourcing and vendor management', isActive: true, headOfCentre: 'Kavita Singh', budgetAmount: 500000 },
+  { id: 'CC-SUBKO-IN-003', code: 'SUBKO-IN-SALES-BLR', name: 'Sales & Marketing - Bangalore', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Sales and marketing operations', isActive: true, headOfCentre: 'Amit Patel', budgetAmount: 2000000 },
+  { id: 'CC-SUBKO-IN-004', code: 'SUBKO-IN-ADMIN-BLR', name: 'Administration - Bangalore', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Administrative functions', isActive: true, headOfCentre: 'Priya Sharma', budgetAmount: 800000 },
+  { id: 'CC-SUBKO-IN-005', code: 'SUBKO-IN-FIN-BLR', name: 'Finance - Bangalore', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Finance and accounting', isActive: true, headOfCentre: 'Suresh Iyer', budgetAmount: 1000000 },
+  { id: 'CC-SUBKO-IN-006', code: 'SUBKO-IN-HR-BLR', name: 'Human Resources - Bangalore', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'HR and talent management', isActive: true, headOfCentre: 'Anjali Reddy', budgetAmount: 600000 },
+  { id: 'CC-SUBKO-IN-007', code: 'SUBKO-IN-IT-BLR', name: 'IT & Technology - Bangalore', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'IT infrastructure and support', isActive: true, headOfCentre: 'Rajesh Nair', budgetAmount: 1200000 },
+  { id: 'CC-SUBKO-IN-008', code: 'SUBKO-IN-WH-BLR', name: 'Warehouse - Bangalore', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Warehouse and inventory management', isActive: true, headOfCentre: 'Vikram Shah', budgetAmount: 700000 },
+  { id: 'CC-SUBKO-IN-009', code: 'SUBKO-IN-QC-BLR', name: 'Quality Control - Bangalore', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Quality assurance and testing', isActive: true, headOfCentre: 'Deepa Menon', budgetAmount: 400000 },
+  { id: 'CC-SUBKO-IN-010', code: 'SUBKO-IN-LOG-BLR', name: 'Logistics - Bangalore', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Transportation and distribution', isActive: true, headOfCentre: 'Karthik Rao', budgetAmount: 900000 },
+  { id: 'CC-SUBKO-IN-011', code: 'SUBKO-IN-STORE-INDIRA', name: 'Retail Store - Indiranagar', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Flagship retail store Indiranagar', isActive: true, headOfCentre: 'Neha Kapoor', budgetAmount: 1500000 },
+  { id: 'CC-SUBKO-IN-012', code: 'SUBKO-IN-STORE-KORAM', name: 'Retail Store - Koramangala', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Retail store Koramangala', isActive: true, headOfCentre: 'Rohan Desai', budgetAmount: 1200000 },
+  { id: 'CC-SUBKO-IN-013', code: 'SUBKO-IN-STORE-WS', name: 'Retail Store - Whitefield', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Retail store Whitefield', isActive: true, headOfCentre: 'Sanjay Kumar', budgetAmount: 1100000 },
+  { id: 'CC-SUBKO-IN-014', code: 'SUBKO-IN-ECOM', name: 'E-commerce Operations', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Online sales and fulfillment', isActive: true, headOfCentre: 'Pooja Mehta', budgetAmount: 800000 },
+  { id: 'CC-SUBKO-IN-015', code: 'SUBKO-IN-R&D', name: 'Research & Development', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Product development and innovation', isActive: true, headOfCentre: 'Dr. Arvind Krishnan', budgetAmount: 1000000 },
+  { id: 'CC-SUBKO-IN-016', code: 'SUBKO-IN-CSR', name: 'Corporate Social Responsibility', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'CSR initiatives and sustainability', isActive: true, headOfCentre: 'Meera Bhat', budgetAmount: 300000 },
+  { id: 'CC-SUBKO-IN-017', code: 'SUBKO-IN-TRAIN', name: 'Training & Development', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Employee training programs', isActive: true, headOfCentre: 'Lakshmi Narayanan', budgetAmount: 250000 },
+  { id: 'CC-SUBKO-IN-018', code: 'SUBKO-IN-LEGAL', name: 'Legal & Compliance', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Legal and regulatory compliance', isActive: true, headOfCentre: 'Advocate Shyam Sundar', budgetAmount: 400000 },
+  { id: 'CC-SUBKO-IN-019', code: 'SUBKO-IN-CS-BLR', name: 'Customer Service - Bangalore', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Customer support and service', isActive: true, headOfCentre: 'Rashmi Joshi', budgetAmount: 350000 },
+  { id: 'CC-SUBKO-IN-020', code: 'SUBKO-IN-MAINT', name: 'Maintenance & Facilities', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'Facility maintenance and upkeep', isActive: true, headOfCentre: 'Ganesh Patil', budgetAmount: 500000 },
+  { id: 'CC-SUBKO-IN-021', code: 'SUBKO-IN-EXPORT', name: 'Export Operations', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'International trade and exports', isActive: true, headOfCentre: 'Rahul Verma', budgetAmount: 600000 },
+  { id: 'CC-SUBKO-IN-022', code: 'SUBKO-IN-BUS-DEV', name: 'Business Development', entityId: 'ENT-SUBKO-IN', entityName: 'Subko Coffee Pvt Ltd – India', description: 'New business and partnerships', isActive: true, headOfCentre: 'Aditya Sharma', budgetAmount: 450000 },
+
+  // ──────────────────────────────────────────────────────────────────────
+  // SUBKO COFFEE DUBAI - COST CENTERS
+  // ──────────────────────────────────────────────────────────────────────
+  { id: 'CC-SUBKO-UAE-001', code: 'SUBKO-UAE-RETAIL-DXB', name: 'Retail Operations - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Retail store operations in Dubai', isActive: true, headOfCentre: 'Ahmed Al Maktoum', budgetAmount: 500000 },
+  { id: 'CC-SUBKO-UAE-002', code: 'SUBKO-UAE-MKT-DXB', name: 'Marketing - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Marketing and brand building', isActive: true, headOfCentre: 'Fatima Al Zaabi', budgetAmount: 300000 },
+  { id: 'CC-SUBKO-UAE-003', code: 'SUBKO-UAE-ADMIN-DXB', name: 'Administration - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Administrative operations', isActive: true, headOfCentre: 'Rashid Hussain', budgetAmount: 150000 },
+  { id: 'CC-SUBKO-UAE-004', code: 'SUBKO-UAE-FIN-DXB', name: 'Finance - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Financial management', isActive: true, headOfCentre: 'Noor Rahman', budgetAmount: 200000 },
+  { id: 'CC-SUBKO-UAE-005', code: 'SUBKO-UAE-PROC-DXB', name: 'Procurement - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Local procurement operations', isActive: true, headOfCentre: 'Khalid Bin Saeed', budgetAmount: 100000 },
+  { id: 'CC-SUBKO-UAE-006', code: 'SUBKO-UAE-STORE-DIFC', name: 'Retail Store - DIFC', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Premium store in DIFC', isActive: true, headOfCentre: 'Layla Ahmed', budgetAmount: 250000 },
+  { id: 'CC-SUBKO-UAE-007', code: 'SUBKO-UAE-STORE-JLT', name: 'Retail Store - JLT', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Retail store in Jumeirah Lake Towers', isActive: true, headOfCentre: 'Omar Farooq', budgetAmount: 220000 },
+  { id: 'CC-SUBKO-UAE-008', code: 'SUBKO-UAE-STORE-MBR', name: 'Retail Store - Dubai Marina', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Retail store in Dubai Marina', isActive: true, headOfCentre: 'Mariam Khalifa', budgetAmount: 230000 },
+  { id: 'CC-SUBKO-UAE-009', code: 'SUBKO-UAE-HOSP', name: 'Hospitality & Events', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Corporate events and catering', isActive: true, headOfCentre: 'Zainab Ali', budgetAmount: 180000 },
+  { id: 'CC-SUBKO-UAE-010', code: 'SUBKO-UAE-HR-DXB', name: 'Human Resources - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'HR and recruitment', isActive: true, headOfCentre: 'Hassan Ibrahim', budgetAmount: 120000 },
+  { id: 'CC-SUBKO-UAE-011', code: 'SUBKO-UAE-IT-DXB', name: 'IT Operations - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Technology and systems', isActive: true, headOfCentre: 'Abdullah Khan', budgetAmount: 150000 },
+  { id: 'CC-SUBKO-UAE-012', code: 'SUBKO-UAE-LOG-DXB', name: 'Logistics - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Supply chain and logistics', isActive: true, headOfCentre: 'Saif Al Nahyan', budgetAmount: 140000 },
+  { id: 'CC-SUBKO-UAE-013', code: 'SUBKO-UAE-WH-DXB', name: 'Warehouse - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Inventory and warehousing', isActive: true, headOfCentre: 'Youssef Hassan', budgetAmount: 110000 },
+  { id: 'CC-SUBKO-UAE-014', code: 'SUBKO-UAE-QC-DXB', name: 'Quality Control - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Quality assurance', isActive: true, headOfCentre: 'Rania Mohammed', budgetAmount: 90000 },
+  { id: 'CC-SUBKO-UAE-015', code: 'SUBKO-UAE-ECOM-DXB', name: 'E-commerce - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Online sales UAE market', isActive: true, headOfCentre: 'Haya Sultan', budgetAmount: 160000 },
+  { id: 'CC-SUBKO-UAE-016', code: 'SUBKO-UAE-CS-DXB', name: 'Customer Service - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Customer support UAE', isActive: true, headOfCentre: 'Noura Ahmed', budgetAmount: 100000 },
+  { id: 'CC-SUBKO-UAE-017', code: 'SUBKO-UAE-LEGAL-DXB', name: 'Legal & Compliance - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'UAE regulatory compliance', isActive: true, headOfCentre: 'Mohammed Al Shamsi', budgetAmount: 130000 },
+  { id: 'CC-SUBKO-UAE-018', code: 'SUBKO-UAE-TRAIN-DXB', name: 'Training - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Staff training and development', isActive: true, headOfCentre: 'Sara Al Mazrouei', budgetAmount: 80000 },
+  { id: 'CC-SUBKO-UAE-019', code: 'SUBKO-UAE-MAINT-DXB', name: 'Maintenance - Dubai', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Facility maintenance', isActive: true, headOfCentre: 'Tariq Mahmoud', budgetAmount: 95000 },
+  { id: 'CC-SUBKO-UAE-020', code: 'SUBKO-UAE-BUS-DEV', name: 'Business Development - UAE', entityId: 'ENT-SUBKO-UAE', entityName: 'Subko Coffee – Dubai', description: 'Market expansion UAE', isActive: true, headOfCentre: 'Ali Rashid', budgetAmount: 175000 },
+
+  // ──────────────────────────────────────────────────────────────────────
+  // PROCINIX INDIA - COST CENTERS
+  // ──────────────────────────────────────────────────────────────────────
+  { id: 'CC-PROC-IN-001', code: 'PROC-IN-TECH-MUM', name: 'Technology - Mumbai', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'IT and technology operations', isActive: true, headOfCentre: 'Vikram Malhotra', budgetAmount: 3000000 },
+  { id: 'CC-PROC-IN-002', code: 'PROC-IN-CONSULT-MUM', name: 'Consulting Services - Mumbai', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Consulting and advisory', isActive: true, headOfCentre: 'Sneha Kapoor', budgetAmount: 2500000 },
+  { id: 'CC-PROC-IN-003', code: 'PROC-IN-DEV-MUM', name: 'Software Development - Mumbai', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Software development team', isActive: true, headOfCentre: 'Arjun Reddy', budgetAmount: 4000000 },
+  { id: 'CC-PROC-IN-004', code: 'PROC-IN-QA-MUM', name: 'Quality Assurance - Mumbai', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Testing and quality assurance', isActive: true, headOfCentre: 'Divya Nair', budgetAmount: 1500000 },
+  { id: 'CC-PROC-IN-005', code: 'PROC-IN-DEVOPS', name: 'DevOps & Infrastructure', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Infrastructure and operations', isActive: true, headOfCentre: 'Karthik Venkat', budgetAmount: 1800000 },
+  { id: 'CC-PROC-IN-006', code: 'PROC-IN-SALES-MUM', name: 'Sales - Mumbai', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Sales and business development', isActive: true, headOfCentre: 'Rohit Jain', budgetAmount: 1200000 },
+  { id: 'CC-PROC-IN-007', code: 'PROC-IN-MKT-MUM', name: 'Marketing - Mumbai', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Marketing and communications', isActive: true, headOfCentre: 'Ananya Desai', budgetAmount: 1000000 },
+  { id: 'CC-PROC-IN-008', code: 'PROC-IN-HR-MUM', name: 'Human Resources - Mumbai', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'HR and talent acquisition', isActive: true, headOfCentre: 'Priyanka Iyer', budgetAmount: 900000 },
+  { id: 'CC-PROC-IN-009', code: 'PROC-IN-FIN-MUM', name: 'Finance - Mumbai', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Finance and accounting', isActive: true, headOfCentre: 'Suresh Pillai', budgetAmount: 1100000 },
+  { id: 'CC-PROC-IN-010', code: 'PROC-IN-ADMIN-MUM', name: 'Administration - Mumbai', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Administrative services', isActive: true, headOfCentre: 'Meera Banerjee', budgetAmount: 600000 },
+  { id: 'CC-PROC-IN-011', code: 'PROC-IN-IT-SEC', name: 'IT Security', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Cybersecurity and data protection', isActive: true, headOfCentre: 'Rahul Saxena', budgetAmount: 1300000 },
+  { id: 'CC-PROC-IN-012', code: 'PROC-IN-SUPPORT', name: 'Customer Support', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Client support and service desk', isActive: true, headOfCentre: 'Kavita Menon', budgetAmount: 800000 },
+  { id: 'CC-PROC-IN-013', code: 'PROC-IN-TRAIN', name: 'Training & Development', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Employee training programs', isActive: true, headOfCentre: 'Lakshmi Krishnan', budgetAmount: 500000 },
+  { id: 'CC-PROC-IN-014', code: 'PROC-IN-R&D', name: 'Research & Development', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Innovation and R&D', isActive: true, headOfCentre: 'Dr. Arvind Kumar', budgetAmount: 2000000 },
+  { id: 'CC-PROC-IN-015', code: 'PROC-IN-PMO', name: 'Project Management Office', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Project governance and delivery', isActive: true, headOfCentre: 'Amit Sharma', budgetAmount: 1400000 },
+  { id: 'CC-PROC-IN-016', code: 'PROC-IN-LEGAL', name: 'Legal & Compliance', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Legal and regulatory compliance', isActive: true, headOfCentre: 'Advocate Sanjay Gupta', budgetAmount: 700000 },
+  { id: 'CC-PROC-IN-017', code: 'PROC-IN-PROC', name: 'Procurement - Mumbai', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Vendor management and procurement', isActive: true, headOfCentre: 'Rajesh Patel', budgetAmount: 400000 },
+  { id: 'CC-PROC-IN-018', code: 'PROC-IN-FAC', name: 'Facilities Management', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Office and facility management', isActive: true, headOfCentre: 'Ganesh Rao', budgetAmount: 550000 },
+  { id: 'CC-PROC-IN-019', code: 'PROC-IN-DATA-SCI', name: 'Data Science & Analytics', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Data analytics and AI', isActive: true, headOfCentre: 'Dr. Nisha Agarwal', budgetAmount: 1700000 },
+  { id: 'CC-PROC-IN-020', code: 'PROC-IN-PROD-MGT', name: 'Product Management', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Product strategy and management', isActive: true, headOfCentre: 'Aditya Singh', budgetAmount: 1600000 },
+  { id: 'CC-PROC-IN-021', code: 'PROC-IN-UX', name: 'UX & Design', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'User experience and design', isActive: true, headOfCentre: 'Neha Chopra', budgetAmount: 900000 },
+  { id: 'CC-PROC-IN-022', code: 'PROC-IN-CLOUD', name: 'Cloud Services', entityId: 'ENT-PROCINIX-IN', entityName: 'Procinix Ltd – India', description: 'Cloud infrastructure and services', isActive: true, headOfCentre: 'Vivek Joshi', budgetAmount: 2200000 }
+];
+
+// Export count: 64 cost centers total (22 Subko IN + 20 Subko UAE + 22 Procinix IN)

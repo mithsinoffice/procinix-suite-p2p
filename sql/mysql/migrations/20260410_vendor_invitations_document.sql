@@ -1,0 +1,35 @@
+-- Vendor invitations (onboarding workflow) — application document domain
+-- -----------------------------------------------------------------------------
+-- No new table required: invitations are stored as one JSON document per environment,
+-- same pattern as master_data / ap_data.
+--
+-- Table: domain_documents (see sql/mysql/init.sql)
+--   domain_name: vendor_invitations
+--   payload: JSON object:
+--     {
+--       "invitations": [
+--         {
+--           "id": "inv-...",
+--           "token": "vi_...",
+--           "status": "invited" | "vendor_in_progress" | ...,
+--           "basic": {
+--             "legalName", "pan", "category", "email", "contactName",
+--             "entityId", "entityName", "countryCode", "countryName", "message"
+--           },
+--           "createdAt", "expiresAt", "invitedByName", "submission": { ... }, ...
+--         }
+--       ]
+--     }
+--
+-- API (when VITE_API_BASE_URL is set):
+--   GET  /documents/vendor_invitations  → { success, payload }
+--   PUT  /documents/vendor_invitations  → body: { payload: { invitations: [...] } }
+--
+-- Relational masters used by the form (already in init.sql):
+--   entities            — entity dropdown (entity_master sync)
+--   erp_master_countries — country dropdown (country_master sync)
+--
+-- Email delivery (optional; implement on API server):
+--   POST /vendor-invitations/send
+--   Body JSON: { "to": "<must match invitation basic.email>", "invitationUrl", "legalName", "entityName?", "invitationId?" }
+--   The server must send only to `to` (the vendor email from the invitation form).
