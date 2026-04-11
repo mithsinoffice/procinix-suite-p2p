@@ -1,10 +1,11 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Save, Send, FileText, Building2, DollarSign, Package, Calculator,
   MessageSquare, TrendingUp, ChevronLeft, ChevronRight, Upload, CheckCircle,
-  X, Eye, Plus, Trash2, AlertTriangle, Info, Clock, Shield
+  X, Eye, Plus, Trash2, AlertTriangle, Info, Clock, Shield, Loader2, AlertCircle
 } from 'lucide-react';
+import { useMasterData } from '../contexts/MasterDataContext';
 
 /* ═══════════════════════════════════════════════════════════
    TYPES
@@ -623,6 +624,16 @@ function getStateFromGstin(gstin: string): string {
 export function InvoiceFormDirectV2() {
   const navigate = useNavigate();
   const location = useLocation();
+  const {
+    vendors: allVendors,
+    entities: allEntities,
+    departments: allDepartments,
+    currentCompany,
+  } = useMasterData();
+
+  const activeVendors = useMemo(() => allVendors.filter((v: any) => v.status === 'Active' || v.isActive), [allVendors]);
+  const activeEntities = useMemo(() => allEntities.filter((e: any) => e.isActive !== false), [allEntities]);
+  const activeDepartments = useMemo(() => allDepartments.filter((d: any) => d.isActive !== false && (d.status !== 'Inactive')), [allDepartments]);
 
   /* ---- AI invoice hydration state ---- */
   const [aiInvoiceData, setAiInvoiceData] = useState<any>(null);
@@ -1064,42 +1075,85 @@ export function InvoiceFormDirectV2() {
                 <h2 style={S.sectionTitle}>Vendor &amp; Organizational Details</h2>
               </div>
               <div style={S.grid2}>
-                {/* Vendor */}
+                {/* Vendor (dropdown from Vendor Master) */}
                 <div>
                   <div style={S.fieldLabel}><span>Vendor</span><span style={S.required}>*</span> {vendorName && <OcrBadge />}</div>
-                  <input className="px-input" value={vendorName} onChange={(e) => setVendorName(e.target.value)} placeholder="Select or enter vendor..." />
+                  <select
+                    className="px-select"
+                    value={vendorName}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setVendorName(name);
+                      const v = activeVendors.find((vv: any) => (vv.name || vv.legalName) === name);
+                      if (v) {
+                        setVendorGstin((v as any).gstin || (v as any).vendorGstin || '');
+                        setVendorPan((v as any).pan || (v as any).panNumber || '');
+                        setVendorGroup((v as any).group || (v as any).vendorGroup || '');
+                        const gstin = (v as any).gstin || '';
+                        if (gstin.length >= 2) setVendorState(getStateFromGstin(gstin));
+                      }
+                    }}
+                  >
+                    <option value="">Select vendor...</option>
+                    {activeVendors.map((v: any) => (
+                      <option key={v.id} value={v.name || v.legalName}>{v.name || v.legalName}{v.code ? ` (${v.code})` : ''}</option>
+                    ))}
+                    {vendorName && !activeVendors.some((v: any) => (v.name || v.legalName) === vendorName) && (
+                      <option value={vendorName}>{vendorName} (OCR extracted)</option>
+                    )}
+                  </select>
                 </div>
-                {/* Vendor Group */}
+                {/* Vendor Group (auto-filled) */}
                 <div>
                   <div style={S.fieldLabel}><span>Vendor Group</span> <AutoBadge /></div>
                   <input className="px-input-readonly" readOnly value={vendorGroup || '—'} />
                 </div>
-                {/* Entity (Bill-to) */}
+                {/* Bill-to Entity (dropdown from Entity Master) */}
                 <div>
                   <div style={S.fieldLabel}><span>Bill-to Entity</span><span style={S.required}>*</span> {entityName && <OcrBadge />}</div>
-                  <input className="px-input" value={entityName} onChange={(e) => setEntityName(e.target.value)} placeholder="Enter entity..." />
+                  <select
+                    className="px-select"
+                    value={entityName}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setEntityName(name);
+                      const ent = activeEntities.find((ee: any) => (ee.name || ee.legalName) === name);
+                      if (ent) {
+                        setBillToGstin((ent as any).gstin || '');
+                        setBillingLocation((ent as any).name || '');
+                      }
+                    }}
+                  >
+                    <option value="">Select entity...</option>
+                    {activeEntities.map((e: any) => (
+                      <option key={e.id} value={e.name || e.legalName}>{e.name || e.legalName}{e.country ? ` — ${e.country}` : ''}</option>
+                    ))}
+                    {entityName && !activeEntities.some((e: any) => (e.name || e.legalName) === entityName) && (
+                      <option value={entityName}>{entityName} (OCR extracted)</option>
+                    )}
+                  </select>
                 </div>
-                {/* Bill-to GSTIN */}
+                {/* Bill-to GSTIN (auto-filled from entity) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Bill-to GSTIN</span> {billToGstin && <OcrBadge />}</div>
+                  <div style={S.fieldLabel}><span>Bill-to GSTIN</span> {billToGstin && <AutoBadge />}</div>
                   <input className="px-input" value={billToGstin} onChange={(e) => setBillToGstin(e.target.value)} placeholder="e.g. 27AAQCP4516R1ZJ" />
                 </div>
-                {/* Vendor GSTIN */}
+                {/* Vendor GSTIN (auto-filled from vendor) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Vendor GSTIN</span> {vendorGstin && <OcrBadge />}</div>
+                  <div style={S.fieldLabel}><span>Vendor GSTIN</span> {vendorGstin && <AutoBadge />}</div>
                   <input className="px-input" value={vendorGstin} onChange={(e) => setVendorGstin(e.target.value)} placeholder="15-char GST number" />
                 </div>
-                {/* Vendor PAN */}
+                {/* Vendor PAN (auto-filled from vendor) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Vendor PAN</span> {vendorPan && <OcrBadge />}</div>
+                  <div style={S.fieldLabel}><span>Vendor PAN</span> {vendorPan && <AutoBadge />}</div>
                   <input className="px-input" value={vendorPan} onChange={(e) => setVendorPan(e.target.value)} placeholder="e.g. AACCW2231J" />
                 </div>
-                {/* Vendor State */}
+                {/* Vendor State (auto from GSTIN) */}
                 <div>
                   <div style={S.fieldLabel}><span>Vendor State</span> <AutoBadge /></div>
                   <input className="px-input-readonly" readOnly value={vendorState || (vendorGstin ? getStateFromGstin(vendorGstin) : '—')} />
                 </div>
-                {/* Billing Location */}
+                {/* Billing Location (auto from entity) */}
                 <div>
                   <div style={S.fieldLabel}><span>Billing Location</span><span style={S.required}>*</span></div>
                   <input className="px-input" value={billingLocation} onChange={(e) => setBillingLocation(e.target.value)} placeholder="Enter billing location..." />
@@ -1134,22 +1188,22 @@ export function InvoiceFormDirectV2() {
                     <option value="SGD">SGD — Singapore Dollar</option>
                   </select>
                 </div>
-                {/* Department */}
+                {/* Department (from Department Master) */}
                 <div>
                   <div style={S.fieldLabel}><span>Department</span><span style={S.required}>*</span></div>
-                  <select className="px-select" defaultValue="ops">
+                  <select className="px-select" value={department} onChange={(e) => setDepartment(e.target.value)}>
                     <option value="">Select department...</option>
-                    <option value="ops">Operations</option>
-                    <option value="fin">Finance</option>
+                    {activeDepartments.map((d: any) => (
+                      <option key={d.id} value={d.deptName || d.name}>{d.deptName || d.name}{d.deptCode || d.code ? ` (${d.deptCode || d.code})` : ''}</option>
+                    ))}
                   </select>
                 </div>
                 {/* Sub-Department */}
                 <div>
-                  <div style={S.fieldLabel}><span>Sub-Department</span><span style={S.required}>*</span></div>
-                  <select className="px-select" defaultValue="roast">
+                  <div style={S.fieldLabel}><span>Sub-Department</span></div>
+                  <select className="px-select" value={subDepartment} onChange={(e) => setSubDepartment(e.target.value)}>
                     <option value="">Select sub-department...</option>
-                    <option value="roast">Roasting</option>
-                    <option value="pkg">Packaging</option>
+                    <option value="General">General</option>
                   </select>
                 </div>
               </div>
