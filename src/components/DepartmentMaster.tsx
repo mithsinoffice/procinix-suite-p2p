@@ -96,10 +96,10 @@ export function DepartmentMaster() {
   const handleEdit = (dept: Department) => {
     setIsEditMode(true);
     setEditingId(dept.id);
-    setDeptCode(dept.deptCode);
-    setDeptName(dept.deptName);
-    setHeadOfDept(dept.headOfDept);
-    setStatus(dept.status);
+    setDeptCode(dept.deptCode || (dept as any).code || '');
+    setDeptName(dept.deptName || (dept as any).name || '');
+    setHeadOfDept(dept.headOfDept || (dept as any).headOfDepartment || '');
+    setStatus(dept.status || ((dept as any).isActive ? 'Active' : 'Inactive'));
     setEntityMappings(dept.entityMappings || []);
     setShowForm(true);
   };
@@ -353,12 +353,12 @@ export function DepartmentMaster() {
             <tbody>
               {departments.map((dept, index) => (
                 <tr key={dept.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{dept.deptCode}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{dept.deptName}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{dept.headOfDept}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{dept.deptCode || (dept as any).code || ''}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{dept.deptName || (dept as any).name || ''}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{dept.headOfDept || (dept as any).headOfDepartment || ''}</td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: dept.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA', color: dept.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)' }}>
-                      {dept.status}
+                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: (dept.status === 'Active' || (dept as any).isActive) ? 'var(--color-teal-tint)' : '#FFE8EA', color: (dept.status === 'Active' || (dept as any).isActive) ? 'var(--color-teal)' : 'var(--color-error)' }}>
+                      {dept.status || ((dept as any).isActive ? 'Active' : 'Inactive')}
                     </span>
                   </td>
                   <td className="px-6 py-4">
