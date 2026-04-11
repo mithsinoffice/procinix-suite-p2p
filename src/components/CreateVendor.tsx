@@ -1180,22 +1180,20 @@ export function CreateVendor() {
                         <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           Your Entity
                         </label>
-                        <input
-                          type="text"
+                        <select
                           value={mapping.yourEntity}
                           onChange={(e) => {
-                            setEntityMappings(entityMappings.map(m => 
+                            setEntityMappings(entityMappings.map(m =>
                               m.id === mapping.id ? { ...m, yourEntity: e.target.value } : m
                             ));
                           }}
-                          placeholder="e.g., IND"
-                          className="w-full px-3 py-2 rounded-lg"
-                          style={{
-                            border: '1px solid var(--color-silver)',
-                            backgroundColor: 'white',
-                            color: 'var(--color-ink)'
-                          }}
-                        />
+                          className="px-select"
+                        >
+                          <option value="">Select entity...</option>
+                          {entities.filter((ent: any) => ent.isActive !== false).map((ent: any) => (
+                            <option key={ent.id} value={ent.name || ent.legalName}>{ent.name || ent.legalName}</option>
+                          ))}
+                        </select>
                       </div>
 
                       <div>

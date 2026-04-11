@@ -29,7 +29,8 @@ type EntityRecord = {
 
 export function EntityMaster() {
   const navigate = useNavigate();
-  const { entities: baseEntities } = useMasterData();
+  const { entities: baseEntities, currencies: masterCurrencies } = useMasterData();
+  const uniqueCountries = [...new Set(baseEntities.map((e: any) => e.country).filter(Boolean))].sort();
   const [entities, setEntities] = useIncrementalMasterRecords<EntityRecord>('entity_master', baseEntities as EntityRecord[]);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<EntityRecord | null>(null);
@@ -194,10 +195,25 @@ export function EntityMaster() {
             <input type="text" value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="Enter legal entity name" className="px-input" />
           </PxFormField>
           <PxFormField label="Country" required filled={!!country.trim()} hint="Country of incorporation">
-            <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g., India" className="px-input" />
+            <select value={country} onChange={(e) => setCountry(e.target.value)} className="px-select">
+              <option value="">Select country...</option>
+              {uniqueCountries.map((c: string) => <option key={c} value={c}>{c}</option>)}
+              {country && !uniqueCountries.includes(country) && <option value={country}>{country}</option>}
+              <option value="India">India</option>
+              <option value="UAE">UAE</option>
+              <option value="USA">USA</option>
+              <option value="UK">UK</option>
+              <option value="Singapore">Singapore</option>
+            </select>
           </PxFormField>
-          <PxFormField label="Currency" required filled={!!currency.trim()} hint="ISO 4217 code (e.g., INR, USD, AED)">
-            <input type="text" value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="e.g., INR" className="px-input" />
+          <PxFormField label="Currency" required filled={!!currency.trim()} hint="ISO 4217 code">
+            <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="px-select">
+              <option value="">Select currency...</option>
+              {masterCurrencies.filter((c: any) => c.isActive !== false).map((c: any) => (
+                <option key={c.id} value={c.code}>{c.code}{c.name ? ` — ${c.name}` : ''}</option>
+              ))}
+              {currency && !masterCurrencies.some((c: any) => c.code === currency) && <option value={currency}>{currency}</option>}
+            </select>
           </PxFormField>
           <PxFormField label="Tax Regime" required filled={!!taxRegime}>
             <select value={taxRegime} onChange={(e) => setTaxRegime(e.target.value)} className="px-select">

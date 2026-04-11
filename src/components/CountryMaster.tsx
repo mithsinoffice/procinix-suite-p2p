@@ -7,6 +7,7 @@ import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { COUNTRY_MASTER_SEED, type CountryMasterRow } from '../lib/countryMasterSeed';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useMasterData } from '../contexts/MasterDataContext';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { EntityMappingSelector } from './shared/EntityMappingSelector';
 import type { EntityScopeMapping } from '../lib/masters/entityMapping';
@@ -21,6 +22,7 @@ interface Change {
 
 export function CountryMaster() {
   const navigate = useNavigate();
+  const { currencies: masterCurrencies } = useMasterData();
   const [countries, setCountries] = useIncrementalMasterRecords<Country>('country_master', COUNTRY_MASTER_SEED);
 
   const [showForm, setShowForm] = useState(false);
@@ -236,7 +238,7 @@ export function CountryMaster() {
             <input type="text" value={countryName} onChange={(e) => setCountryName(e.target.value)} placeholder="e.g., France" className="px-input" />
           </PxFormField>
           <PxFormField label="Currency" filled={!!currency.trim()} hint="ISO 4217 currency code">
-            <input type="text" value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="e.g., EUR" className="px-input" />
+            <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="px-select"><option value="">Select currency...</option>{masterCurrencies.filter((c: any) => c.isActive !== false).map((c: any) => <option key={c.id} value={c.code}>{c.code}{c.name ? ` — ${c.name}` : ''}</option>)}{currency && !masterCurrencies.some((c: any) => c.code === currency) && <option value={currency}>{currency}</option>}</select>
           </PxFormField>
           <PxFormField label="Status" required filled={!!status.trim()}>
             <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">

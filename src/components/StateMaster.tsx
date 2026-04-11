@@ -6,6 +6,7 @@ import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecord
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useMasterData } from '../contexts/MasterDataContext';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { EntityMappingSelector } from './shared/EntityMappingSelector';
 import type { EntityScopeMapping } from '../lib/masters/entityMapping';
@@ -28,6 +29,8 @@ interface Change {
 
 export function StateMaster() {
   const navigate = useNavigate();
+  const { entities } = useMasterData();
+  const uniqueCountries = [...new Set(entities.map((e: any) => e.country).filter(Boolean)), 'India', 'UAE', 'USA', 'UK', 'Singapore'].filter((v, i, a) => a.indexOf(v) === i).sort();
   const [states, setStates] = useIncrementalMasterRecords<State>('state_master', [
     { id: '1', stateCode: 'MH', stateName: 'Maharashtra', country: 'India', status: 'Active', approvalStatus: 'Approved' },
     { id: '2', stateCode: 'DL', stateName: 'Delhi', country: 'India', status: 'Active', approvalStatus: 'Approved' },
@@ -249,7 +252,7 @@ export function StateMaster() {
             <input type="text" value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="e.g., Uttar Pradesh" className="px-input" />
           </PxFormField>
           <PxFormField label="Country" filled={!!country.trim()} hint="Parent country for this state">
-            <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g., India" className="px-input" />
+            <select value={country} onChange={(e) => setCountry(e.target.value)} className="px-select"><option value="">Select country...</option>{uniqueCountries.map((c: string) => <option key={c} value={c}>{c}</option>)}</select>
           </PxFormField>
           <PxFormField label="Status" required filled={!!status.trim()}>
             <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
