@@ -628,6 +628,7 @@ export function InvoiceFormDirectV2() {
     vendors: allVendors,
     entities: allEntities,
     departments: allDepartments,
+    currencies: allCurrencies,
     currentCompany,
   } = useMasterData();
 
@@ -635,38 +636,6 @@ export function InvoiceFormDirectV2() {
   const activeEntities = useMemo(() => allEntities.filter((e: any) => e.isActive !== false), [allEntities]);
   const activeDepartments = useMemo(() => allDepartments.filter((d: any) => d.isActive !== false && (d.status !== 'Inactive')), [allDepartments]);
 
-  // Derived: selected entity object + entity-filtered data
-  const selectedEntityObj = useMemo(() => activeEntities.find((e: any) => (e.name || e.legalName) === entityName), [activeEntities, entityName]);
-  const selectedEntityId = selectedEntityObj?.id;
-  const selectedEntityCurrency = (selectedEntityObj as any)?.currency;
-
-  const { currencies: allCurrencies } = useMasterData();
-
-  const filteredCurrencies = useMemo(() => {
-    if (!selectedEntityId) return allCurrencies.filter((c: any) => c.isActive !== false);
-    return allCurrencies.filter((c: any) => {
-      if (c.isActive === false) return false;
-      if (c.code === selectedEntityCurrency) return true;
-      const mappings = Array.isArray(c.entityMappings) ? c.entityMappings : [];
-      return mappings.length === 0 || mappings.some((m: any) => m.entityId === selectedEntityId);
-    });
-  }, [allCurrencies, selectedEntityId, selectedEntityCurrency]);
-
-  const filteredVendors = useMemo(() => {
-    if (!selectedEntityId) return activeVendors;
-    return activeVendors.filter((v: any) => {
-      const mappings = Array.isArray(v.entityMappings) ? v.entityMappings : [];
-      return mappings.length === 0 || mappings.some((m: any) => m.entityId === selectedEntityId);
-    });
-  }, [activeVendors, selectedEntityId]);
-
-  const filteredDepartments = useMemo(() => {
-    if (!selectedEntityId) return activeDepartments;
-    return activeDepartments.filter((d: any) => {
-      const mappings = Array.isArray(d.entityMappings) ? d.entityMappings : [];
-      return mappings.length === 0 || mappings.some((m: any) => m.entityId === selectedEntityId);
-    });
-  }, [activeDepartments, selectedEntityId]);
 
   /* ---- AI invoice hydration state ---- */
   const [aiInvoiceData, setAiInvoiceData] = useState<any>(null);
@@ -724,6 +693,37 @@ export function InvoiceFormDirectV2() {
   const [expenseTo, setExpenseTo] = useState('');
   const [narration, setNarration] = useState('');
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
+
+  /* ---- Entity-derived filtering (must be after all useState) ---- */
+  const selectedEntityObj = useMemo(() => activeEntities.find((e: any) => (e.name || e.legalName) === entityName), [activeEntities, entityName]);
+  const selectedEntityId = selectedEntityObj?.id;
+  const selectedEntityCurrency = (selectedEntityObj as any)?.currency;
+
+  const filteredCurrencies = useMemo(() => {
+    if (!selectedEntityId) return allCurrencies.filter((c: any) => c.isActive !== false);
+    return allCurrencies.filter((c: any) => {
+      if (c.isActive === false) return false;
+      if (c.code === selectedEntityCurrency) return true;
+      const mappings = Array.isArray(c.entityMappings) ? c.entityMappings : [];
+      return mappings.length === 0 || mappings.some((m: any) => m.entityId === selectedEntityId);
+    });
+  }, [allCurrencies, selectedEntityId, selectedEntityCurrency]);
+
+  const filteredVendors = useMemo(() => {
+    if (!selectedEntityId) return activeVendors;
+    return activeVendors.filter((v: any) => {
+      const mappings = Array.isArray(v.entityMappings) ? v.entityMappings : [];
+      return mappings.length === 0 || mappings.some((m: any) => m.entityId === selectedEntityId);
+    });
+  }, [activeVendors, selectedEntityId]);
+
+  const filteredDepartments = useMemo(() => {
+    if (!selectedEntityId) return activeDepartments;
+    return activeDepartments.filter((d: any) => {
+      const mappings = Array.isArray(d.entityMappings) ? d.entityMappings : [];
+      return mappings.length === 0 || mappings.some((m: any) => m.entityId === selectedEntityId);
+    });
+  }, [activeDepartments, selectedEntityId]);
 
   /* ---- Hydrate from AI-ingested invoice ---- */
   useEffect(() => {
