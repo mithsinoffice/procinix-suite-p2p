@@ -96,6 +96,8 @@ async function apiFetch<T>(path: string, opts: RequestInit = {}): Promise<T> {
 }
 
 /* ─── Lane badge helpers ────────────────────────────────────────── */
+const LANE_META_FALLBACK = { label: 'Pending', bg: 'var(--color-cloud)', fg: 'var(--color-mercury-grey)', icon: Clock };
+
 const LANE_META: Record<string, { label: string; bg: string; fg: string; icon: typeof CheckCircle }> = {
   green: { label: 'Green', bg: 'var(--color-success-light)', fg: 'var(--color-success-dark)', icon: CheckCircle },
   amber: { label: 'Amber', bg: 'var(--color-warning-light)', fg: 'var(--color-warning-dark)', icon: AlertTriangle },
@@ -140,8 +142,14 @@ export function APValidationWorkbench() {
   /* ── data fetching ──────────────────────────────────────────── */
   const fetchStats = useCallback(async () => {
     try {
-      const data = await apiFetch<DashboardStats>('/api/ap/dashboard/stats');
-      setStats(data);
+      const res = await apiFetch<any>('/api/ap/dashboard/stats');
+      const d = res?.data || res || {};
+      setStats({
+        total_processed: d.total || 0,
+        stp_rate: Number(d.stpRate) || 0,
+        avg_readiness_score: Number(d.avgReadiness) || 0,
+        unresolved_exceptions: d.exceptions || 0,
+      });
     } catch { /* silently fallback to defaults */ }
   }, []);
 
@@ -149,7 +157,8 @@ export function APValidationWorkbench() {
     setLoading(true);
     try {
       const query = lane === 'all' ? '' : `?lane=${lane}`;
-      const data = await apiFetch<InvoiceSummary[]>(`/api/ap/invoices${query}`);
+      const res = await apiFetch<any>(`/api/ap/invoices${query}`);
+      const data = res?.data || res || [];
       setInvoices(Array.isArray(data) ? data : []);
     } catch {
       setInvoices([]);
@@ -161,12 +170,13 @@ export function APValidationWorkbench() {
   const fetchInvoiceDetail = useCallback(async (id: string) => {
     setLoadingDetail(true);
     try {
-      const [detail, decisions] = await Promise.all([
-        apiFetch<InvoiceDetail>(`/api/invoices/${id}`),
-        apiFetch<AgentDecision[]>(`/api/ap/invoices/${id}/decisions`),
+      const [detailRes, decisionsRes] = await Promise.all([
+        apiFetch<any>(`/api/invoices/${id}`),
+        apiFetch<any>(`/api/ap/invoices/${id}/decisions`),
       ]);
-      setSelectedInvoice(detail);
-      setAgentDecisions(Array.isArray(decisions) ? decisions : []);
+      setSelectedInvoice(detailRes?.data || detailRes || null);
+      const decs = decisionsRes?.data?.decisions || decisionsRes?.data || decisionsRes || [];
+      setAgentDecisions(Array.isArray(decs) ? decs : []);
       setViewMode('detail');
     } catch {
       setSelectedInvoice(null);
@@ -179,7 +189,8 @@ export function APValidationWorkbench() {
   const fetchAgentConfig = useCallback(async () => {
     setLoadingConfig(true);
     try {
-      const data = await apiFetch<AgentConfigRow[]>('/api/ap/agent-config');
+      const res = await apiFetch<any>('/api/ap/agent-config');
+      const data = res?.data || res || [];
       setAgentConfig(Array.isArray(data) ? data : []);
     } catch {
       setAgentConfig([]);
@@ -371,7 +382,7 @@ export function APValidationWorkbench() {
               />
             </label>
             <button
-              onClick={() => { setConfigDrawerOpen(true); fetchAgentConfig(); }}
+              onClick={() => navigate('/invoices/agent-config')}
               className="p-2 rounded-lg transition-all"
               style={{ border: '1px solid var(--color-silver)' }}
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-cloud)')}
@@ -389,7 +400,7 @@ export function APValidationWorkbench() {
           {[
             { label: 'Total Processed', value: stats.total_processed, icon: FileText, color: 'var(--color-teal)', bg: 'var(--color-teal-tint)' },
             { label: 'STP Rate', value: `${stats.stp_rate}%`, icon: Zap, color: 'var(--color-success-dark)', bg: 'var(--color-success-light)' },
-            { label: 'Avg Readiness Score', value: stats.avg_readiness_score.toFixed(1), icon: TrendingUp, color: 'var(--color-teal-dark)', bg: 'var(--color-teal-tint)' },
+            { label: 'Avg Readiness Score', value: Number(stats.avg_readiness_score || 0).toFixed(1), icon: TrendingUp, color: 'var(--color-teal-dark)', bg: 'var(--color-teal-tint)' },
             { label: 'Unresolved Exceptions', value: stats.unresolved_exceptions, icon: AlertCircle, color: 'var(--color-error-dark)', bg: 'var(--color-error-light)' },
           ].map((m, i) => (
             <div key={i} className="bg-white rounded-xl p-4 flex items-center gap-4" style={{ border: '1px solid var(--color-silver)' }}>
@@ -467,7 +478,7 @@ export function APValidationWorkbench() {
             </thead>
             <tbody>
               {filtered.map(inv => {
-                const lm = LANE_META[inv.lane];
+                const lm = LANE_META[inv.lane] || LANE_META_FALLBACK;
                 return (
                   <tr
                     key={inv.id}
@@ -741,7 +752,7 @@ export function APValidationWorkbench() {
                     const fails = agentDecisions.filter(d => d.decision === 'fail').length;
                     const flagged = agentDecisions.filter(d => d.decision === 'flagged').length;
                     const lane = fails > 0 ? 'red' : flagged > 0 ? 'amber' : 'green';
-                    const lm = LANE_META[lane];
+                    const lm = LANE_META[lane] || LANE_META_FALLBACK;
                     return (
                       <span
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs"

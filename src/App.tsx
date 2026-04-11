@@ -36,6 +36,7 @@ import { InvoiceFormDirectV2 as InvoiceFormDirect } from './components/InvoiceFo
 import { AIInvoiceCapture } from './components/AIInvoiceCapture';
 import { AIIngestionDashboard } from './components/AIIngestionDashboard';
 import { APValidationWorkbench } from './components/APValidationWorkbench';
+import { AgentConfigEngine } from './components/AgentConfigEngine';
 import { InvoiceDetail } from './components/InvoiceDetail';
 
 // Masters
@@ -286,6 +287,7 @@ function App() {
                       <Route path="invoices/create-direct" element={<InvoiceFormDirect />} />
                       <Route path="invoices/ai-capture" element={<AIInvoiceCapture />} />
                       <Route path="invoices/ai-ingestion" element={<APValidationWorkbench />} />
+                      <Route path="invoices/agent-config" element={<AgentConfigEngine />} />
                       <Route path="invoices/detail/:id" element={<InvoiceDetail />} />
                       <Route path="invoices/edit/:id" element={<InvoiceFormPO />} />
                       

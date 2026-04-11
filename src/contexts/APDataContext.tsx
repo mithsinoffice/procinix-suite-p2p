@@ -1004,13 +1004,11 @@ export function APDataProvider({ children }: { children: ReactNode }) {
           };
         });
 
-        if (mapped.length > 0) {
-          setInvoices((current) => {
-            const existingIds = new Set(current.map((i) => i.id));
-            const newOnes = mapped.filter((m) => !existingIds.has(m.id));
-            return newOnes.length > 0 ? [...newOnes, ...current] : current;
-          });
-        }
+        // Replace all AI-ingested invoices with fresh DB data (removes stale duplicates)
+        setInvoices((current) => {
+          const nonAI = current.filter((i: any) => i._source !== 'ai_ingestion');
+          return [...mapped, ...nonAI];
+        });
       } catch {
         // API may not be running
       }

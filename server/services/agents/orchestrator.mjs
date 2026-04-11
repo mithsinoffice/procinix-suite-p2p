@@ -102,8 +102,27 @@ export async function processInvoiceWithAgents(email) {
         lineItemCount: extraction.extractedData?.line_items?.length || 0,
       };
 
-      // Update invoice with extracted data
+      // ── Hard duplicate block: check invoice_number + vendor_name before proceeding
       const ed = extraction.extractedData;
+      if (ed.invoice_number && ed.vendor_name) {
+        const existingInv = await query(
+          'SELECT id FROM invoices WHERE invoice_number = ? AND vendor_name = ? AND id != ? LIMIT 1',
+          [ed.invoice_number, ed.vendor_name, invoiceId]
+        );
+        if (existingInv.length > 0) {
+          console.log(`[Orchestrator] ⚠ DUPLICATE BLOCKED: ${ed.invoice_number} from ${ed.vendor_name} already exists (${existingInv[0].id})`);
+          // Remove the placeholder invoice
+          await query('DELETE FROM invoices WHERE id = ?', [invoiceId]);
+          pipelineResult.steps.extraction.duplicateBlocked = true;
+          pipelineResult.steps.extraction.existingInvoiceId = existingInv[0].id;
+          pipelineResult.success = true;
+          pipelineResult.error = null;
+          results.push(pipelineResult);
+          continue;
+        }
+      }
+
+      // Update invoice with extracted data
       await query(
         `UPDATE invoices SET
           invoice_number = ?, invoice_date = ?, due_date = ?,
