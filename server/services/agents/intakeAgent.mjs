@@ -86,14 +86,14 @@ export async function processIntake(buffer, filename, mimeType, sourceChannel, s
       const dId = randomUUID();
       await connExecute(conn,
         `INSERT INTO ap_invoice_documents
-           (id, batch_id, filename, mime_type, file_size, document_type, quality_score, content_hash, is_duplicate, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'received', NOW())`,
-        [dId, bId, filename, mimeType, buffer.length, documentType, qualityScore, contentHash, isDuplicate ? 1 : 0]
+           (id, batch_id, filename, mime_type, file_size_bytes, document_type, quality_score, content_hash, status, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'received', NOW())`,
+        [dId, bId, filename, mimeType, buffer.length, documentType, qualityScore, contentHash]
       );
 
       if (!isDuplicate) {
         await connExecute(conn,
-          `INSERT INTO ap_invoice_document_hashes (id, document_id, content_hash, created_at)
+          `INSERT INTO ap_invoice_document_hashes (id, document_id, content_hash, first_seen_at)
            VALUES (?, ?, ?, NOW())`,
           [randomUUID(), dId, contentHash]
         );

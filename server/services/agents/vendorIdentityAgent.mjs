@@ -157,7 +157,7 @@ export async function processVendorMatch(invoiceId, extractedData) {
     await query(
       `INSERT INTO ap_invoice_vendor_matches
          (id, invoice_id, matched_vendor_id, matched_vendor_name, match_confidence,
-          match_method, is_new_vendor, is_suspicious, alternates, explanation, created_at)
+          method, is_new_vendor, is_suspicious, alternate_candidates, explanation, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         vendorMatchId, invoiceId, matchedVendorId, matchedVendorName,

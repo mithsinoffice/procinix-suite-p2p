@@ -10,8 +10,8 @@ async function matchByPOExact(poNumber, entityId) {
   if (!poNumber) return null;
 
   const rows = await query(
-    `SELECT id, po_number, vendor_name, vendor_id, total_amount, currency,
-            gl_code, cost_center, profit_center, status, po_date
+    `SELECT id, po_number, vendor_name, total_amount,
+            status, po_date
      FROM purchase_orders
      WHERE po_number = ? AND entity_id = ?
      LIMIT 1`,
@@ -36,8 +36,8 @@ async function matchByFuzzyPO(vendorName, totalAmount, invoiceDate, entityId) {
   }
 
   const rows = await query(
-    `SELECT id, po_number, vendor_name, vendor_id, total_amount, currency,
-            gl_code, cost_center, profit_center, status, po_date
+    `SELECT id, po_number, vendor_name, total_amount,
+            status, po_date
      FROM purchase_orders
      WHERE vendor_name = ?
        AND total_amount BETWEEN ? AND ?
@@ -141,7 +141,7 @@ export async function processMatch(invoiceId, extractedData, entityId) {
     if (!po) {
       po = await matchByFuzzyPO(vendorName, totalAmount, invoiceDate, entityId);
       if (po) {
-        matchType = 'fuzzy_po';
+        matchType = 'service_po';
         poId = po.id;
         matchedPoNumber = po.po_number;
         matchConfidence = 0.72;
@@ -157,7 +157,7 @@ export async function processMatch(invoiceId, extractedData, entityId) {
     if (!po) {
       const recurringInvoices = await checkRecurringPattern(vendorName, totalAmount);
       if (recurringInvoices) {
-        matchType = 'recurring_pattern';
+        matchType = 'recurring';
         matchConfidence = 0.60;
         explanationParts.push(
           `Recurring pattern detected: ${recurringInvoices.length} invoices from "${vendorName}" ` +
@@ -191,11 +191,11 @@ export async function processMatch(invoiceId, extractedData, entityId) {
       await connExecute(conn,
         `INSERT INTO ap_invoice_match_results
            (id, invoice_id, match_type, po_id, po_number, match_confidence,
-            variances, explanation, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            amount_variance_pct, line_match_details, explanation, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?, NOW())`,
         [
-          matchResultId, invoiceId, matchType, poId, matchedPoNumber,
-          matchConfidence, JSON.stringify(variances), explanation,
+          matchResultId, invoiceId, matchType, poId || null, matchedPoNumber || null,
+          matchConfidence, variances?.amount_variance_pct || 0, JSON.stringify(variances || {}), explanation,
         ]
       );
     });

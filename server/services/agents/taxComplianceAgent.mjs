@@ -215,21 +215,22 @@ export async function processTaxValidation(invoiceId, extractedData) {
     const taxValidationId = randomUUID();
     await query(
       `INSERT INTO ap_invoice_tax_validations
-         (id, invoice_id, score, arithmetic_valid, line_sum_valid, gst_type_valid,
-          expected_gst_type, registration_valid, tax_rates_valid,
-          withholding_applicable, withholding_section, issues, explanation, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+         (id, invoice_id, tax_type, expected_treatment, actual_treatment,
+          arithmetic_valid, gst_type_valid, registration_valid,
+          withholding_applicable, withholding_section, withholding_rate,
+          issues, score, explanation, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?, ?, NOW())`,
       [
-        taxValidationId, invoiceId, score,
+        taxValidationId, invoiceId,
+        'GST', gstTypeResult.expectedType || 'unknown', gstTypeResult.actualType || 'unknown',
         arithmeticResult.pass ? 1 : 0,
-        lineSumResult.pass ? 1 : 0,
         gstTypeResult.pass ? 1 : 0,
-        gstTypeResult.expectedType || null,
         gstinFormatResult.pass ? 1 : 0,
-        taxRateResult.pass ? 1 : 0,
         withholdingResult.applicable ? 1 : 0,
-        withholdingResult.section,
+        withholdingResult.section || null,
+        withholdingResult.rate || null,
         JSON.stringify(issues),
+        score,
         explanation,
       ]
     );

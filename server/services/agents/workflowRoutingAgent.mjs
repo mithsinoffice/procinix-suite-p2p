@@ -218,12 +218,12 @@ export async function processRouting(invoiceId, agentResults) {
       // 1. Store workflow route
       await connExecute(conn,
         `INSERT INTO ap_invoice_workflow_routes
-           (id, invoice_id, lane, lane_reason, posting_readiness_score,
-            confidence_scores, review_type, explanation, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+           (id, invoice_id, lane, lane_reason,
+            confidence_scores, sla_hours, created_at)
+         VALUES (?, ?, ?, ?, CAST(? AS JSON), 24, NOW())`,
         [
-          routeId, invoiceId, lane, laneReason, postingReadiness,
-          JSON.stringify(scores), reviewType, explanation,
+          routeId, invoiceId, lane.toLowerCase(), laneReason,
+          JSON.stringify(scores),
         ]
       );
 
@@ -232,30 +232,30 @@ export async function processRouting(invoiceId, agentResults) {
         `UPDATE invoices
          SET lane = ?, posting_readiness_score = ?, processing_status = ?, updated_at = NOW()
          WHERE id = ?`,
-        [lane, postingReadiness, processingStatus, invoiceId]
+        [lane.toLowerCase(), postingReadiness, processingStatus, invoiceId]
       );
 
       // 3. Lane-specific actions
       if (lane === 'GREEN') {
         await connExecute(conn,
           `INSERT INTO ap_invoice_posting_queue
-             (id, invoice_id, auto_post_flag, posting_readiness_score, created_at)
-           VALUES (?, ?, 1, ?, NOW())`,
-          [randomUUID(), invoiceId, postingReadiness]
+             (id, invoice_id, auto_post_flag, posting_readiness_score, auto_post_reason, status, created_at)
+           VALUES (?, ?, 1, ?, ?, 'queued', NOW())`,
+          [randomUUID(), invoiceId, postingReadiness, laneReason]
         );
       } else if (lane === 'AMBER') {
         await connExecute(conn,
           `INSERT INTO ap_invoice_review_tasks
-             (id, invoice_id, review_type, lane, priority, status, created_at)
-           VALUES (?, ?, ?, 'AMBER', 'medium', 'open', NOW())`,
-          [randomUUID(), invoiceId, reviewType || 'general_review']
+             (id, invoice_id, task_type, status, created_at)
+           VALUES (?, ?, ?, 'open', NOW())`,
+          [randomUUID(), invoiceId, reviewType || 'field_review']
         );
       } else {
         // RED
         await connExecute(conn,
           `INSERT INTO ap_invoice_exception_cases
-             (id, invoice_id, exception_type, lane, priority, status, reason, created_at)
-           VALUES (?, ?, ?, 'RED', 'high', 'open', ?, NOW())`,
+             (id, invoice_id, exception_type, exception_detail, severity, created_at)
+           VALUES (?, ?, ?, ?, 'high', NOW())`,
           [randomUUID(), invoiceId, reviewType || 'exception_review', laneReason]
         );
       }

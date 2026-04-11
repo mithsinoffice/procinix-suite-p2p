@@ -95,13 +95,16 @@ export async function processExtraction(invoiceId, documentId, buffer, mimeType)
       // Extraction record
       await connExecute(conn,
         `INSERT INTO ap_invoice_extractions
-           (id, invoice_id, document_id, provider, raw_response, extracted_data,
-            extraction_score_header, extraction_score_lines, overall_confidence, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+           (id, invoice_id, document_id, provider, model_version, raw_response,
+            extraction_score_header, extraction_score_lines, overall_confidence,
+            field_count, line_item_count, processing_time_ms, status, created_at)
+         VALUES (?, ?, ?, ?, ?, CAST(? AS JSON), ?, ?, ?, ?, ?, ?, 'completed', NOW())`,
         [
-          extractionId, invoiceId, documentId, provider,
-          JSON.stringify(extractedData), JSON.stringify(extractedData),
+          extractionId, invoiceId, documentId, provider, provider,
+          JSON.stringify(extractedData),
           headerScore, linesScore, overallConfidence,
+          Object.keys(fieldConfidences).length, lineItems.length,
+          Date.now() - startTime,
         ]
       );
 

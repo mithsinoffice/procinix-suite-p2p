@@ -36,20 +36,9 @@ async function getVendorHistory(vendorId, vendorName) {
   // Try by vendor_id first, fall back to vendor_name
   let rows = [];
 
-  if (vendorId) {
+  if (vendorName) {
     rows = await query(
-      `SELECT id, gl_code, cost_center, profit_center, metadata
-       FROM invoices
-       WHERE vendor_id = ?
-       ORDER BY created_at DESC
-       LIMIT 5`,
-      [vendorId]
-    );
-  }
-
-  if (rows.length === 0 && vendorName) {
-    rows = await query(
-      `SELECT id, gl_code, cost_center, profit_center, metadata
+      `SELECT id, metadata
        FROM invoices
        WHERE vendor_name = ?
        ORDER BY created_at DESC
@@ -68,9 +57,12 @@ function extractHistoryCoding(historyRows) {
   const profitCenters = {};
 
   for (const row of historyRows) {
-    if (row.gl_code) glCodes[row.gl_code] = (glCodes[row.gl_code] || 0) + 1;
-    if (row.cost_center) costCenters[row.cost_center] = (costCenters[row.cost_center] || 0) + 1;
-    if (row.profit_center) profitCenters[row.profit_center] = (profitCenters[row.profit_center] || 0) + 1;
+    // Try to get coding from ap_invoice_accounting_suggestions via invoice metadata
+    const meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {});
+    const coding = meta?.coding || {};
+    if (coding.glCode) glCodes[coding.glCode] = (glCodes[coding.glCode] || 0) + 1;
+    if (coding.costCenter) costCenters[coding.costCenter] = (costCenters[coding.costCenter] || 0) + 1;
+    if (coding.profitCenter) profitCenters[coding.profitCenter] = (profitCenters[coding.profitCenter] || 0) + 1;
   }
 
   const topGL = Object.entries(glCodes).sort((a, b) => b[1] - a[1])[0];
@@ -102,18 +94,18 @@ export async function processCoding(invoiceId, extractedData, vendorMatchResult,
     // Determine PO-based coding if available
     let poCoding = null;
     if (matchResult && matchResult.poId) {
-      const poRows = await query(
-        `SELECT gl_code, cost_center, profit_center
-         FROM purchase_orders
-         WHERE id = ?
+      // PO table doesn't have GL columns — check accounting suggestions for the PO's invoices
+      const poSuggestions = await query(
+        `SELECT gl_code, cost_center, profit_center FROM ap_invoice_accounting_suggestions
+         WHERE invoice_id IN (SELECT id FROM invoices WHERE po_id = ?)
          LIMIT 1`,
         [matchResult.poId]
       );
-      if (poRows.length > 0 && poRows[0].gl_code) {
+      if (poSuggestions.length > 0 && poSuggestions[0].gl_code) {
         poCoding = {
-          glCode: poRows[0].gl_code,
-          costCenter: poRows[0].cost_center || 'CC-GENERAL',
-          profitCenter: poRows[0].profit_center || 'PC-GENERAL',
+          glCode: poSuggestions[0].gl_code,
+          costCenter: poSuggestions[0].cost_center || 'CC-GENERAL',
+          profitCenter: poSuggestions[0].profit_center || 'PC-GENERAL',
         };
       }
     }
@@ -248,12 +240,13 @@ export async function processCoding(invoiceId, extractedData, vendorMatchResult,
       for (const s of suggestions) {
         await connExecute(conn,
           `INSERT INTO ap_invoice_accounting_suggestions
-             (id, invoice_id, line_number, line_item_id, description, gl_code, gl_name,
-              cost_center, profit_center, confidence, source, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+             (id, invoice_id, line_item_id, gl_code, gl_name,
+              cost_center, profit_center, confidence, source, explanation, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
           [
-            randomUUID(), invoiceId, s.lineNumber, s.lineItemId, s.description,
-            s.glCode, s.glName, s.costCenter, s.profitCenter, s.confidence, s.source,
+            randomUUID(), invoiceId, s.lineItemId || null,
+            s.glCode, s.glName, s.costCenter, s.profitCenter,
+            s.confidence, s.source, s.description || null,
           ]
         );
       }

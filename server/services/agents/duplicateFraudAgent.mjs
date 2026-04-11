@@ -20,9 +20,9 @@ async function checkExactDuplicate(invoiceId, invoiceNumber, vendorName) {
   if (rows.length === 0) return null;
 
   return {
-    check_type: 'exact_duplicate',
+    check_type: 'exact',
     risk_score: 100,
-    matched_invoice_ids: rows.map((r) => r.id),
+    duplicate_invoice_id: rows.map((r) => r.id),
     details: `Exact match: invoice_number="${invoiceNumber}" + vendor="${vendorName}" found in ${rows.length} existing record(s)`,
     matches: rows,
   };
@@ -60,9 +60,9 @@ async function checkFuzzyDuplicate(invoiceId, invoiceNumber, vendorName, totalAm
   if (rows.length === 0) return null;
 
   return {
-    check_type: 'fuzzy_duplicate',
+    check_type: 'fuzzy',
     risk_score: 70,
-    matched_invoice_ids: rows.map((r) => r.id),
+    duplicate_invoice_id: rows.map((r) => r.id),
     details: `Fuzzy match: prefix "${prefix}*" + vendor "${vendorName}" + amount within 1% of ${totalAmount}${invoiceDate ? ` + date within 7 days of ${invoiceDate}` : ''} — ${rows.length} match(es)`,
     matches: rows,
   };
@@ -85,9 +85,9 @@ async function checkHashDuplicate(invoiceId, contentHash) {
   if (others.length === 0) return null;
 
   return {
-    check_type: 'hash_duplicate',
+    check_type: 'hash',
     risk_score: 90,
-    matched_invoice_ids: others.map((r) => r.document_id),
+    duplicate_invoice_id: others.map((r) => r.document_id),
     details: `Content hash ${contentHash.slice(0, 12)}... found on ${others.length} other document(s)`,
     matches: others,
   };
@@ -119,11 +119,13 @@ export async function processDuplicateCheck(invoiceId, extractedData, contentHas
     for (const check of checks) {
       await query(
         `INSERT INTO ap_invoice_duplicate_checks
-           (id, invoice_id, check_type, risk_score, matched_invoice_ids, details, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+           (id, invoice_id, check_type, risk_score, duplicate_invoice_id, match_details, explanation, created_at)
+         VALUES (?, ?, ?, ?, ?, CAST(? AS JSON), ?, NOW())`,
         [
           randomUUID(), invoiceId, check.check_type, check.risk_score,
-          JSON.stringify(check.matched_invoice_ids), check.details,
+          Array.isArray(check.duplicate_invoice_id) ? check.duplicate_invoice_id[0] : (check.duplicate_invoice_id || null),
+          JSON.stringify(check.details || check.matches || {}),
+          check.details || '',
         ]
       );
     }
