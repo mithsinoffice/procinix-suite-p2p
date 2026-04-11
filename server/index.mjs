@@ -17,6 +17,7 @@ import { matchToPO } from './services/invoiceIngestion/poMatcher.mjs';
 import { createInvoiceFromExtraction } from './services/invoiceIngestion/invoiceCreator.mjs';
 import { handleExceptions } from './services/invoiceIngestion/exceptionHandler.mjs';
 import { triggerWorkflow } from './services/invoiceIngestion/workflowTrigger.mjs';
+import { processInvoiceWithAgents } from './services/agents/orchestrator.mjs';
 
 const MASTER_SCHEMA_NAMES = [...new Set(Object.values(MASTER_STORAGE).map((storage) => storage.database))];
 const PENDING_APPROVAL_STATUSES = ['Draft', 'Pending Approval', 'Pending', 'Changes Requested'];
@@ -1371,6 +1372,175 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // ── Agent Config API ──────────────────────────────────
+    if (req.method === 'GET' && pathname === '/api/ap/agent-config') {
+      const agent = url.searchParams.get('agent');
+      let sql = 'SELECT * FROM ap_agent_config WHERE is_active = TRUE';
+      const params = [];
+      if (agent) { sql += ' AND agent_name = ?'; params.push(agent); }
+      sql += ' ORDER BY agent_name, display_order';
+      const rows = await query(sql, params);
+      return sendJson(res, 200, { success: true, data: rows });
+    }
+
+    if (req.method === 'PUT' && pathname === '/api/ap/agent-config') {
+      const body = await readJsonBody(req);
+      const { id, config_value } = body;
+      if (!id || config_value === undefined) return sendJson(res, 400, { success: false, error: 'id and config_value required' });
+      await query('UPDATE ap_agent_config SET config_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [String(config_value), id]);
+      return sendJson(res, 200, { success: true });
+    }
+
+    // ── AP Agentic Invoices API ─────────────────────────
+    if (req.method === 'GET' && pathname === '/api/ap/invoices') {
+      const lane = url.searchParams.get('lane');
+      const status = url.searchParams.get('status');
+      let sql = 'SELECT id, invoice_number, invoice_date, due_date, vendor_name, vendor_gstin, currency, subtotal, tax_amount, total_amount, po_number, po_id, status, source, lane, posting_readiness_score, processing_status, auto_post_flag, human_touched_flag, created_at FROM invoices WHERE source = ?';
+      const params = ['email_ingestion'];
+      if (lane) { sql += ' AND lane = ?'; params.push(lane); }
+      if (status) { sql += ' AND processing_status = ?'; params.push(status); }
+      sql += ' ORDER BY created_at DESC LIMIT 100';
+      const rows = await query(sql, params);
+      return sendJson(res, 200, { success: true, data: rows });
+    }
+
+    if (req.method === 'GET' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/decisions')) {
+      const invoiceId = pathname.split('/')[4];
+      const decisions = await query(
+        'SELECT * FROM ap_invoice_agent_decisions WHERE invoice_id = ? ORDER BY created_at ASC',
+        [invoiceId]
+      );
+      const explanations = await query(
+        'SELECT * FROM ap_invoice_explainability_logs WHERE invoice_id = ? ORDER BY created_at ASC',
+        [invoiceId]
+      );
+      return sendJson(res, 200, { success: true, data: { decisions, explanations } });
+    }
+
+    if (req.method === 'POST' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/approve')) {
+      const invoiceId = pathname.split('/')[4];
+      await query('UPDATE invoices SET status = ?, processing_status = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?', ['Approved', 'posted', invoiceId]);
+      await query(
+        'INSERT INTO ap_invoice_reviewer_actions (id, invoice_id, action_type, actor, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
+        [randomUUID(), invoiceId, 'approve', 'API User']
+      );
+      return sendJson(res, 200, { success: true });
+    }
+
+    if (req.method === 'POST' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/reject')) {
+      const invoiceId = pathname.split('/')[4];
+      await query('UPDATE invoices SET status = ?, processing_status = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?', ['Rejected', 'rejected', invoiceId]);
+      await query(
+        'INSERT INTO ap_invoice_reviewer_actions (id, invoice_id, action_type, actor, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
+        [randomUUID(), invoiceId, 'reject', 'API User']
+      );
+      return sendJson(res, 200, { success: true });
+    }
+
+    if (req.method === 'POST' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/correct')) {
+      const invoiceId = pathname.split('/')[4];
+      const body = await readJsonBody(req);
+      await query(
+        'INSERT INTO ap_invoice_reviewer_actions (id, invoice_id, action_type, field_corrections, comments, actor, created_at) VALUES (?, ?, ?, CAST(? AS JSON), ?, ?, CURRENT_TIMESTAMP)',
+        [randomUUID(), invoiceId, 'correct', JSON.stringify(body.corrections || {}), body.comments || '', 'API User']
+      );
+      // Apply corrections to invoice
+      if (body.corrections) {
+        const corr = body.corrections;
+        const sets = [];
+        const vals = [];
+        for (const [field, value] of Object.entries(corr)) {
+          if (['vendor_name','invoice_number','invoice_date','total_amount','currency','vendor_gstin'].includes(field)) {
+            sets.push(`${field} = ?`);
+            vals.push(value);
+          }
+        }
+        if (sets.length > 0) {
+          sets.push('human_touched_flag = TRUE', 'updated_at = CURRENT_TIMESTAMP');
+          vals.push(invoiceId);
+          await query(`UPDATE invoices SET ${sets.join(', ')} WHERE id = ?`, vals);
+        }
+      }
+      return sendJson(res, 200, { success: true });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/ap/dashboard/stats') {
+      const [lanes] = await query("SELECT lane, COUNT(*) as cnt FROM invoices WHERE source = 'email_ingestion' AND lane IS NOT NULL GROUP BY lane");
+      const [total] = await query("SELECT COUNT(*) as cnt FROM invoices WHERE source = 'email_ingestion'");
+      const [autoPosted] = await query("SELECT COUNT(*) as cnt FROM invoices WHERE source = 'email_ingestion' AND auto_post_flag = TRUE");
+      const [exceptions] = await query("SELECT COUNT(*) as cnt FROM ap_invoice_exception_cases WHERE resolved = FALSE");
+      const [avgReadiness] = await query("SELECT AVG(posting_readiness_score) as avg_score FROM invoices WHERE source = 'email_ingestion' AND posting_readiness_score IS NOT NULL");
+
+      const laneMap = {};
+      if (Array.isArray(lanes)) lanes.forEach(r => { laneMap[r.lane] = r.cnt; });
+
+      return sendJson(res, 200, {
+        success: true,
+        data: {
+          total: total?.cnt || 0,
+          green: laneMap.green || 0,
+          amber: laneMap.amber || 0,
+          red: laneMap.red || 0,
+          autoPosted: autoPosted?.cnt || 0,
+          exceptions: exceptions?.cnt || 0,
+          avgReadiness: avgReadiness?.avg_score ? Number(avgReadiness.avg_score).toFixed(1) : 0,
+          stpRate: total?.cnt > 0 ? ((laneMap.green || 0) / total.cnt * 100).toFixed(1) : 0,
+        },
+      });
+    }
+
+    // ── Agentic Pipeline Trigger ────────────────────────
+    if (req.method === 'POST' && pathname === '/api/ap/process-invoice') {
+      if (!checkAnthropicKey()) {
+        // checkAnthropicKey now checks all providers
+      }
+      const contentType = req.headers['content-type'] || '';
+      let buffer, mimeType, filename;
+
+      if (contentType.includes('multipart/form-data')) {
+        const boundary = contentType.split('boundary=')[1];
+        if (!boundary) return sendJson(res, 400, { success: false, error: 'Missing multipart boundary' });
+        const rawChunks = [];
+        for await (const chunk of req) rawChunks.push(chunk);
+        const raw = Buffer.concat(rawChunks);
+        const parts = parseMultipart(raw, boundary);
+        const filePart = parts.find((p) => p.name === 'invoice' || p.name === 'file');
+        if (!filePart?.data?.length) return sendJson(res, 400, { success: false, error: 'No file in form-data' });
+        buffer = filePart.data;
+        filename = filePart.filename || 'upload.pdf';
+        mimeType = filePart.contentType || 'application/pdf';
+      } else {
+        const body = await readJsonBody(req);
+        if (!body.file) return sendJson(res, 400, { success: false, error: 'file (base64) required' });
+        buffer = Buffer.from(body.file, 'base64');
+        mimeType = body.mimeType || 'application/pdf';
+        filename = body.filename || 'upload.pdf';
+      }
+
+      console.log(`[AP] Processing ${filename} via agentic pipeline...`);
+      const fakeEmail = {
+        messageId: `manual-${randomUUID()}`,
+        senderEmail: 'manual',
+        senderName: 'Manual Upload',
+        subject: filename,
+        date: new Date(),
+        attachments: [{ filename, mimeType, buffer }],
+        _logId: null,
+      };
+
+      // Create ingestion log
+      const logId = randomUUID();
+      await query(
+        `INSERT INTO invoice_ingestion_log (id, message_id, sender_email, sender_name, subject, received_at, attachment_count, status)
+         VALUES (?, ?, 'manual', 'Manual Upload', ?, CURRENT_TIMESTAMP, 1, 'processing')`,
+        [logId, fakeEmail.messageId, filename]
+      );
+      fakeEmail._logId = logId;
+
+      const results = await processInvoiceWithAgents(fakeEmail);
+      return sendJson(res, 201, { success: true, results });
+    }
+
     return sendJson(res, 404, { ok: false, error: 'Route not found' });
   } catch (error) {
     let statusCode = error.statusCode ?? 500;
@@ -1394,7 +1564,7 @@ const port = Number(process.env.APP_PORT ?? 8787);
 server.listen(port, '127.0.0.1', () => {
   console.log(`Azure MySQL API listening on http://127.0.0.1:${port}`);
   checkAnthropicKey();
-  startEmailPoller(processInvoiceEmail);
+  startEmailPoller(processInvoiceWithAgents);
 });
 
 async function gracefulShutdown(signal) {
