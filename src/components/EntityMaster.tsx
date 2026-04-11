@@ -1,11 +1,12 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, Building2, FileText, Edit, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface Change {
   field: string;
@@ -133,8 +134,8 @@ export function EntityMaster() {
 
   const getStatusBadgeStyle = (isActive: boolean) => {
     return isActive
-      ? { backgroundColor: '#E8F7F8', color: '#00A9B7' }
-      : { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+      ? { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }
+      : { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
   };
 
   const getApprovalBadgeStyle = (approvalStatus?: string) => {
@@ -142,85 +143,90 @@ export function EntityMaster() {
       case 'Pending Approval':
         return { backgroundColor: '#FFF9E6', color: '#D97706' };
       case 'Rejected':
-        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+        return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
       case 'Changes Requested':
         return { backgroundColor: '#E0F2FE', color: '#0284C7' };
       case 'Draft':
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
       default:
-        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+        return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
     }
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [code, legalName, country, currency, taxRegime];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [code, legalName, country, currency, taxRegime]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showForm) {
     return (
-      <MasterFormPage
+      <FormShell
         title={editingId ? 'Edit Entity' : 'Create Entity'}
         subtitle="Manage legal entities, companies, and branches"
         modeLabel={editingId ? 'Edit Master Record' : 'Create Master Record'}
+        draftStatus={editingId ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={() => setShowForm(false)}
-        onCancel={() => {
-          setShowForm(false);
-          resetForm();
-        }}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onCancel={() => { setShowForm(false); resetForm(); }}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Entity Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g., SUBKO-IN" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Legal Name <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="Enter legal entity name" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Country <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g., India" className="w-full px-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Currency <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <input type="text" value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="e.g., INR" className="w-full px-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Tax Regime <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select value={taxRegime} onChange={(e) => setTaxRegime(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="GST">GST</option>
-                <option value="VAT">VAT</option>
-                <option value="Sales Tax">Sales Tax</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ border: '1px solid #D7E3EA', backgroundColor: '#FFFFFF' }}>
-            <input id="entity-active" type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-            <label htmlFor="entity-active" style={{ color: '#0A0F14' }}>Entity is active</label>
-          </div>
-        </div>
-      </MasterFormPage>
+        <FormSection title="Entity Details" columns={2}>
+          <PxFormField label="Entity Code" required filled={!!code.trim()} hint="Unique identifier across all entities">
+            <input type="text" value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g., SUBKO-IN" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Legal Name" required filled={!!legalName.trim()}>
+            <input type="text" value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="Enter legal entity name" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Country" required filled={!!country.trim()} hint="Country of incorporation">
+            <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g., India" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Currency" required filled={!!currency.trim()} hint="ISO 4217 code (e.g., INR, USD, AED)">
+            <input type="text" value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="e.g., INR" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Tax Regime" required filled={!!taxRegime}>
+            <select value={taxRegime} onChange={(e) => setTaxRegime(e.target.value)} className="px-select">
+              <option value="GST">GST</option>
+              <option value="VAT">VAT</option>
+              <option value="Sales Tax">Sales Tax</option>
+            </select>
+          </PxFormField>
+          <CheckCard
+            title="Entity is Active"
+            subtitle="Inactive entities are hidden from transaction forms"
+            checked={isActive}
+            onChange={setIsActive}
+          />
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)' }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Entity Master</h1>
-            <p style={{ color: '#6E7A82' }}>Manage legal entities, companies, and branches</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Entity Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage legal entities, companies, and branches</p>
           </div>
         </div>
         <button
@@ -229,38 +235,38 @@ export function EntityMaster() {
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Add Entity
         </button>
       </div>
 
-      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Entity Code</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Legal Name</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Country</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Currency</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Tax Regime</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Approval</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Entity Code</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Legal Name</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Country</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Currency</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Tax Regime</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {entities.map((entity, index) => (
-                <tr key={entity.id} style={{ borderTop: index === 0 ? 'none' : '1px solid #E1E6EA' }}>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14', fontWeight: '600' }}>{entity.code}</td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{entity.legalName}</td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{entity.country}</td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{entity.currency}</td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{entity.taxRegime}</td>
+                <tr key={entity.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{entity.code}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{entity.legalName}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{entity.country}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{entity.currency}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{entity.taxRegime}</td>
                   <td className="px-6 py-4">
                     <span className="px-3 py-1 rounded-full text-sm" style={getStatusBadgeStyle(entity.isActive)}>
                       {entity.isActive ? 'Active' : 'Inactive'}
@@ -275,14 +281,14 @@ export function EntityMaster() {
                     <div className="flex items-center gap-2">
                       <button 
                         className="p-2 rounded-lg transition-colors" 
-                        style={{ color: '#6E7A82' }} 
+                        style={{ color: 'var(--color-mercury-grey)' }} 
                         title="View Details"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button 
                         className="p-2 rounded-lg transition-colors" 
-                        style={{ color: '#6E7A82' }} 
+                        style={{ color: 'var(--color-mercury-grey)' }} 
                         title="Edit"
                         onClick={() => handleEdit(entity)}
                       >
@@ -291,7 +297,7 @@ export function EntityMaster() {
                       {(entity.approvalStatus === 'Pending Approval' || entity.approvalStatus === 'Changes Requested' || entity.approvalStatus === 'Draft') && (
                         <button
                           className="p-2 rounded-lg transition-colors"
-                          style={{ color: '#00A9B7' }}
+                          style={{ color: 'var(--color-teal)' }}
                           title="Review Changes"
                           onClick={() => handleReview(entity)}
                         >
@@ -320,26 +326,26 @@ export function EntityMaster() {
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-xl">
-            <div className="border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: '#E1E6EA' }}>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>{editingId ? 'Edit Entity' : 'Add Entity'}</h2>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg" style={{ color: '#6E7A82' }}><X className="w-5 h-5" /></button>
+            <div className="border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: 'var(--color-silver)' }}>
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>{editingId ? 'Edit Entity' : 'Add Entity'}</h2>
+              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg" style={{ color: 'var(--color-mercury-grey)' }}><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 grid grid-cols-2 gap-4">
-              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Entity Code" className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <input value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="Legal Name" className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Country" className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <input value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} placeholder="Currency" className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <select value={taxRegime} onChange={(e) => setTaxRegime(e.target.value)} className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Entity Code" className="px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)' }} />
+              <input value={legalName} onChange={(e) => setLegalName(e.target.value)} placeholder="Legal Name" className="px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)' }} />
+              <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Country" className="px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)' }} />
+              <input value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} placeholder="Currency" className="px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)' }} />
+              <select value={taxRegime} onChange={(e) => setTaxRegime(e.target.value)} className="px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
                 <option value="GST">GST</option>
                 <option value="VAT">VAT</option>
                 <option value="None">None</option>
               </select>
-              <label className="flex items-center gap-2 text-sm" style={{ color: '#0A0F14' }}><input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />Active</label>
+              <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-ink)' }}><input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />Active</label>
             </div>
-            <div className="border-t px-6 py-4 flex justify-end gap-3" style={{ borderColor: '#E1E6EA' }}>
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#6E7A82' }}>Cancel</button>
+            <div className="border-t px-6 py-4 flex justify-end gap-3" style={{ borderColor: 'var(--color-silver)' }}>
+              <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', backgroundColor: '#FFFFFF', color: 'var(--color-mercury-grey)' }}>Cancel</button>
               <button onClick={() => handleSubmit('Draft')} className="px-4 py-2 rounded-lg" style={{ border: '1px solid #BFE8EC', color: '#0F8A95', backgroundColor: '#ECFEFF', fontWeight: 700 }}>Save Draft</button>
-              <button onClick={() => handleSubmit('Pending Approval')} className="px-4 py-2 rounded-lg text-white" style={{ backgroundColor: '#00A9B7' }}>Submit</button>
+              <button onClick={() => handleSubmit('Pending Approval')} className="px-4 py-2 rounded-lg text-white" style={{ backgroundColor: 'var(--color-teal)' }}>Submit</button>
             </div>
           </div>
         </div>

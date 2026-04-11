@@ -46,15 +46,15 @@ export const roles: Role[] = [
   { id: 'ap-manager', name: 'AP Manager', description: 'Manages AP processes and approvals', color: '#2563EB' },
   { id: 'payments-maker', name: 'Payments Maker', description: 'Creates payment batches', color: '#06B6D4' },
   { id: 'payments-checker', name: 'Payments Checker', description: 'Approves payment batches', color: '#0891B2' },
-  { id: 'vendor-master-admin', name: 'Vendor Master Admin', description: 'Manages vendor master data', color: '#8B5CF6' },
+  { id: 'vendor-master-admin', name: 'Vendor Master Admin', description: 'Manages vendor master data', color: '#007D87' },
   { id: 'ar-executive', name: 'AR Executive', description: 'Handles AR data entry and basic operations', color: '#10B981' },
   { id: 'ar-manager', name: 'AR Manager', description: 'Manages AR processes and approvals', color: '#059669' },
   { id: 'gl-accountant', name: 'GL Accountant', description: 'Posts journal entries and reconciles GL', color: '#F59E0B' },
   { id: 'r2r-manager', name: 'R2R Manager', description: 'Manages record-to-report processes', color: '#D97706' },
   { id: 'cfo', name: 'CFO', description: 'Chief Financial Officer - strategic oversight', color: '#EF4444' },
-  { id: 'ceo', name: 'CEO', description: 'Chief Executive Officer - executive oversight', color: '#DC2626' },
+  { id: 'ceo', name: 'CEO', description: 'Chief Executive Officer - executive oversight', color: 'var(--color-error-dark)' },
   { id: 'auditor', name: 'Auditor', description: 'View-only access for audit purposes', color: '#6B7280' },
-  { id: 'system-admin', name: 'System Admin', description: 'Full system configuration access', color: '#0A0F14' },
+  { id: 'system-admin', name: 'System Admin', description: 'Full system configuration access', color: 'var(--color-ink)' },
 ];
 
 export type PermissionMatrix = {

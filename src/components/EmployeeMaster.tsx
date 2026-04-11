@@ -1,13 +1,14 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, User, Mail, Phone, Briefcase, FileText, Upload, Edit, Eye, Search, ArrowUpRight, Building2, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { useAuth } from '../contexts/AuthContext';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface Employee {
   id: string;
@@ -387,282 +388,184 @@ export function EmployeeMaster() {
   const getStatusBadgeStyle = (approvalStatus: string) => {
     switch (approvalStatus) {
       case 'Approved':
-        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+        return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
       case 'Pending Approval':
         return { backgroundColor: '#FFF9E6', color: '#D97706' };
       case 'Draft':
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
       case 'Rejected':
-        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+        return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
       default:
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
     }
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [empCode, empName, email, phone, department, designation, baseEntity, baseLocation, reportingManager, defaultFunctionalContext, status];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [empCode, empName, email, phone, department, designation, baseEntity, baseLocation, reportingManager, defaultFunctionalContext, status]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   return (
     showForm ? (
-      <MasterFormPage
+      <FormShell
         title="Employee Master"
         subtitle="Manage employee details with approval workflow"
         modeLabel={isEditMode ? 'Edit Employee' : 'Create Employee'}
+        draftStatus={isEditMode ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={() => setShowForm(false)}
         onCancel={() => setShowForm(false)}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Employee Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input
-                type="text"
-                value={empCode}
-                onChange={(e) => setEmpCode(e.target.value)}
-                placeholder="EMP006"
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Employee Name <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input
-                type="text"
-                value={empName}
-                onChange={(e) => setEmpName(e.target.value)}
-                placeholder="Full name"
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Email <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@company.com"
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Phone <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 xxxxx xxxxx"
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Department <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              >
-                <option value="">Select department</option>
-                {departmentOptions.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Designation <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input
-                type="text"
-                value={designation}
-                onChange={(e) => setDesignation(e.target.value)}
-                placeholder="e.g. Finance Manager"
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Base Entity <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select
-                value={baseEntity}
-                onChange={(e) => setBaseEntity(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              >
-                <option value="">Select entity</option>
-                {entityOptions.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Base Location / Branch <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input
-                list="employee-base-locations"
-                type="text"
-                value={baseLocation}
-                onChange={(e) => setBaseLocation(e.target.value)}
-                placeholder="Mumbai HQ"
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              />
-              <datalist id="employee-base-locations">
-                {locationOptions.map((option) => (
-                  <option key={option} value={option} />
-                ))}
-              </datalist>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Reporting Manager <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input
-                list="employee-reporting-managers"
-                type="text"
-                value={reportingManager}
-                onChange={(e) => setReportingManager(e.target.value)}
-                placeholder="Select or type manager"
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              />
-              <datalist id="employee-reporting-managers">
-                {managerOptions.map((option) => (
-                  <option key={option} value={option} />
-                ))}
-              </datalist>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Cost Center</label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select
-                value={costCenter}
-                onChange={(e) => setCostCenter(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              >
-                <option value="">Select cost center</option>
-                {costCenterOptions.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Profit Center</label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select
-                value={profitCenter}
-                onChange={(e) => setProfitCenter(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              >
-                <option value="">Select profit center</option>
-                {profitCenterOptions.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Default Functional Context <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select
-                value={defaultFunctionalContext}
-                onChange={(e) => setDefaultFunctionalContext(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              >
-                <option value="">Select context</option>
-                {functionalContextOptions.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Profile Picture</label>
-            <div className="relative">
-              <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setProfilePic(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
-                className="w-full pl-10 pr-3 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
-              />
-            </div>
+        <FormSection title="Personal Details" columns={2}>
+          <PxFormField label="Employee Code" required filled={!!empCode.trim()} hint="Unique employee identifier">
+            <input type="text" value={empCode} onChange={(e) => setEmpCode(e.target.value)} placeholder="EMP006" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Employee Name" required filled={!!empName.trim()}>
+            <input type="text" value={empName} onChange={(e) => setEmpName(e.target.value)} placeholder="Full name" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Email" required filled={!!email.trim()}>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@company.com" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Phone" required filled={!!phone.trim()}>
+            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 xxxxx xxxxx" className="px-input" />
+          </PxFormField>
+        </FormSection>
+
+        <FormSection title="Organization" columns={2}>
+          <PxFormField label="Department" required filled={!!department}>
+            <select value={department} onChange={(e) => setDepartment(e.target.value)} className="px-select">
+              <option value="">Select department</option>
+              {departmentOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </PxFormField>
+          <PxFormField label="Designation" required filled={!!designation.trim()}>
+            <input type="text" value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. Finance Manager" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Base Entity" required filled={!!baseEntity}>
+            <select value={baseEntity} onChange={(e) => setBaseEntity(e.target.value)} className="px-select">
+              <option value="">Select entity</option>
+              {entityOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </PxFormField>
+          <PxFormField label="Base Location / Branch" required filled={!!baseLocation.trim()}>
+            <input
+              list="employee-base-locations"
+              type="text"
+              value={baseLocation}
+              onChange={(e) => setBaseLocation(e.target.value)}
+              placeholder="Mumbai HQ"
+              className="px-input"
+            />
+            <datalist id="employee-base-locations">
+              {locationOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </PxFormField>
+          <PxFormField label="Reporting Manager" required filled={!!reportingManager.trim()}>
+            <input
+              list="employee-reporting-managers"
+              type="text"
+              value={reportingManager}
+              onChange={(e) => setReportingManager(e.target.value)}
+              placeholder="Select or type manager"
+              className="px-input"
+            />
+            <datalist id="employee-reporting-managers">
+              {managerOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+          </PxFormField>
+          <PxFormField label="Cost Center" filled={!!costCenter}>
+            <select value={costCenter} onChange={(e) => setCostCenter(e.target.value)} className="px-select">
+              <option value="">Select cost center</option>
+              {costCenterOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </PxFormField>
+          <PxFormField label="Profit Center" filled={!!profitCenter}>
+            <select value={profitCenter} onChange={(e) => setProfitCenter(e.target.value)} className="px-select">
+              <option value="">Select profit center</option>
+              {profitCenterOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </PxFormField>
+        </FormSection>
+
+        <FormSection title="Settings" columns={2}>
+          <PxFormField label="Default Functional Context" required filled={!!defaultFunctionalContext}>
+            <select value={defaultFunctionalContext} onChange={(e) => setDefaultFunctionalContext(e.target.value)} className="px-select">
+              <option value="">Select context</option>
+              {functionalContextOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </PxFormField>
+          <PxFormField label="Status" required filled={!!status}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </PxFormField>
+          <PxFormField label="Profile Picture" filled={!!profilePic}>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setProfilePic(reader.result as string);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+              className="px-input"
+            />
             {profilePic && (
               <div className="mt-3 flex items-center gap-3">
-                <img src={profilePic} alt="Profile Preview" className="w-16 h-16 rounded-full object-cover" style={{ border: '2px solid #E1E6EA' }} />
-                <button type="button" onClick={() => setProfilePic(null)} className="text-sm" style={{ color: '#FF4E5B' }}>Remove</button>
+                <img src={profilePic} alt="Profile Preview" className="w-16 h-16 rounded-full object-cover" style={{ border: '2px solid var(--color-silver)' }} />
+                <button type="button" onClick={() => setProfilePic(null)} className="text-sm" style={{ color: 'var(--color-error)' }}>Remove</button>
               </div>
             )}
-          </div>
-        </div>
-      </MasterFormPage>
+          </PxFormField>
+        </FormSection>
+      </FormShell>
     ) : (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Employee Master</h1>
-            <p style={{ color: '#6E7A82' }}>Manage employee details with approval workflow</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Employee Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage employee details with approval workflow</p>
           </div>
         </div>
         <button
@@ -671,9 +574,9 @@ export function EmployeeMaster() {
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
           >
             <Plus className="w-5 h-5" />
           {isHydrating ? 'Loading...' : 'Add Employee'}
@@ -693,19 +596,19 @@ export function EmployeeMaster() {
       />
 
       {/* Table */}
-      <div className="rounded-[24px] overflow-hidden bg-white" style={{ border: '1px solid #D7E3EA', boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)' }}>
+      <div className="rounded-[24px] overflow-hidden bg-white" style={{ border: '1px solid var(--color-fog)', boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)' }}>
         <div className="overflow-x-auto">
           <div style={{ minWidth: '1320px' }}>
             <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.3fr 1.8fr 2fr 1.3fr 1.2fr 1fr 1.3fr 0.9fr', borderBottom: '1px solid #E8F0F4' }}>
               <div className="space-y-2">
                 <div className="relative w-full">
-                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#6E7A82' }} />
+                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
                   <input
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search employee..."
                     className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm"
-                    style={{ backgroundColor: '#F8FBFD', border: '1px solid #D7E3EA', color: '#0A0F14' }}
+                    style={{ backgroundColor: '#F8FBFD', border: '1px solid var(--color-fog)', color: 'var(--color-ink)' }}
                   />
                 </div>
                 {hasActiveFilters && (
@@ -756,7 +659,7 @@ export function EmployeeMaster() {
 
             <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.3fr 1.8fr 2fr 1.3fr 1.2fr 1fr 1.3fr 0.9fr', background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)', borderBottom: '1px solid #E4EDF2' }}>
               {['Emp Code', 'Name', 'Email', 'Phone', 'Department', 'Status', 'Approval Status', 'Action'].map((column) => (
-                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: '#6E7A82', fontWeight: 700 }}>
+                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
                   {column}
                 </div>
               ))}
@@ -773,13 +676,13 @@ export function EmployeeMaster() {
                     backgroundColor: '#FFFFFF',
                   }}
                 >
-                  <div style={{ color: '#0A0F14', fontWeight: 700 }}>{emp.empCode}</div>
-                  <div style={{ color: '#0A0F14' }}>{emp.empName}</div>
-                  <div style={{ color: '#6E7A82' }}>{emp.email}</div>
-                  <div style={{ color: '#6E7A82' }}>{emp.phone}</div>
-                  <div style={{ color: '#6E7A82' }}>{emp.department}</div>
+                  <div style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{emp.empCode}</div>
+                  <div style={{ color: 'var(--color-ink)' }}>{emp.empName}</div>
+                  <div style={{ color: 'var(--color-mercury-grey)' }}>{emp.email}</div>
+                  <div style={{ color: 'var(--color-mercury-grey)' }}>{emp.phone}</div>
+                  <div style={{ color: 'var(--color-mercury-grey)' }}>{emp.department}</div>
                   <div>
-                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: emp.status === 'Active' ? '#E8F7F8' : '#FFE8EA', color: emp.status === 'Active' ? '#00A9B7' : '#FF4E5B', fontWeight: 700 }}>
+                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: emp.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA', color: emp.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)', fontWeight: 700 }}>
                       {emp.status}
                     </span>
                   </div>
@@ -800,8 +703,8 @@ export function EmployeeMaster() {
               ))}
               {filteredEmployees.length === 0 && (
                 <div className="px-8 py-16 text-center">
-                  <p className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: 700 }}>No employees match the current filters</p>
-                  <p className="text-sm" style={{ color: '#6E7A82' }}>Clear one or more filters to bring the full register back.</p>
+                  <p className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>No employees match the current filters</p>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Clear one or more filters to bring the full register back.</p>
                 </div>
               )}
             </div>

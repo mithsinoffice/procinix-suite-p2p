@@ -11,16 +11,16 @@
 export const colors = {
   // Primary Brand Colors
   teal: {
-    primary: '#00A9B7',
-    dark: '#007D87',
+    primary: 'var(--color-teal)',
+    dark: 'var(--color-teal-dark)',
     light: '#00D4E6',
     50: '#E6F9FB',
     100: '#B3EEF3',
     200: '#80E3EB',
     300: '#4DD8E3',
     400: '#1ACDDB',
-    500: '#00A9B7',
-    600: '#007D87',
+    500: 'var(--color-teal)',
+    600: 'var(--color-teal-dark)',
     700: '#006169',
     800: '#00454B',
     900: '#00292D',
@@ -28,26 +28,26 @@ export const colors = {
 
   // Background Colors - Light Theme Only
   background: {
-    opalWhite: '#F6F9FC',
-    silverGrey: '#E1E6EA',
+    opalWhite: 'var(--color-cloud)',
+    silverGrey: 'var(--color-silver)',
     white: '#FFFFFF',
     cardWhite: '#FFFFFF',
   },
 
   // Text Colors
   text: {
-    techBlack: '#0A0F14',      // Primary text
-    mercuryGrey: '#6E7A82',    // Secondary text
+    techBlack: 'var(--color-ink)',      // Primary text
+    mercuryGrey: 'var(--color-mercury-grey)',    // Secondary text
     lightGrey: '#9BA5AD',      // Tertiary text
     mutedGrey: '#C4CCD1',      // Disabled text
   },
 
   // Navigation - Dark Theme Sidebar
   navigation: {
-    background: '#0A0F14',
+    background: 'var(--color-ink)',
     text: '#FFFFFF',
     textMuted: '#9BA5AD',
-    activeBackground: '#00A9B7',
+    activeBackground: 'var(--color-teal)',
     activeText: '#FFFFFF',
     hoverBackground: '#1A2228',
     border: '#1F2931',
@@ -63,7 +63,7 @@ export const colors = {
 
   // Border & Divider
   border: {
-    light: '#E1E6EA',
+    light: 'var(--color-silver)',
     medium: '#C4CCD1',
     dark: '#9BA5AD',
     subtle: 'rgba(0, 0, 0, 0.1)',
@@ -74,7 +74,7 @@ export const colors = {
     hover: 'rgba(0, 169, 183, 0.08)',
     active: 'rgba(0, 169, 183, 0.12)',
     focus: 'rgba(0, 169, 183, 0.16)',
-    disabled: '#F6F9FC',
+    disabled: 'var(--color-cloud)',
   },
 } as const;
 

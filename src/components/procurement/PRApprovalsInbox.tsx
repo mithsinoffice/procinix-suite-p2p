@@ -37,38 +37,38 @@ export function PRApprovalsInbox() {
 
   const getTypeColor = (type: PRType) => {
     switch (type) {
-      case 'Catalogue': return { bg: '#E8F7F8', color: '#00A9B7' };
-      case 'Regular': return { bg: '#E8F5E9', color: '#2E7D32' };
+      case 'Catalogue': return { bg: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
+      case 'Regular': return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)' };
       case 'Service': return { bg: '#E3F2FD', color: '#1976D2' };
       case 'Kit/Bundle': return { bg: '#F3E5F5', color: '#7B1FA2' };
-      case 'Asset/CAPEX': return { bg: '#FFF3E0', color: '#F57C00' };
+      case 'Asset/CAPEX': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' };
       case 'Blanket': return { bg: '#E1F5FE', color: '#0277BD' };
-      default: return { bg: '#F6F9FC', color: '#6E7A82' };
+      default: return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' };
     }
   };
 
   const getRiskColor = (risk: AIRiskLevel) => {
     switch (risk) {
-      case 'Low': return { bg: '#E8F5E9', color: '#2E7D32' };
-      case 'Medium': return { bg: '#FFF3E0', color: '#F57C00' };
-      case 'High': return { bg: '#FEE2E2', color: '#DC2626' };
+      case 'Low': return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)' };
+      case 'Medium': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' };
+      case 'High': return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' };
     }
   };
 
   const getPolicyFlagColor = (flag: PolicyFlag) => {
     switch (flag) {
-      case 'Budget Breach': return { bg: '#FEE2E2', color: '#DC2626' };
-      case 'Vendor Risk': return { bg: '#FFF3E0', color: '#F57C00' };
-      case 'Price Variance': return { bg: '#FFF3E0', color: '#F57C00' };
-      case 'Missing Docs': return { bg: '#FFE5E5', color: '#DC2626' };
-      default: return { bg: '#F6F9FC', color: '#6E7A82' };
+      case 'Budget Breach': return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' };
+      case 'Vendor Risk': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' };
+      case 'Price Variance': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' };
+      case 'Missing Docs': return { bg: '#FFE5E5', color: 'var(--color-error-dark)' };
+      default: return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' };
     }
   };
 
   const getAgingColor = (days: number) => {
-    if (days <= 2) return '#2E7D32';
-    if (days <= 5) return '#F57C00';
-    return '#DC2626';
+    if (days <= 2) return 'var(--color-success-dark)';
+    if (days <= 5) return 'var(--color-warning-dark)';
+    return 'var(--color-error-dark)';
   };
 
   const persistedPendingPRs: PendingPR[] = purchaseRequests
@@ -137,30 +137,30 @@ export function PRApprovalsInbox() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
-      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl mb-2" style={{ color: '#0A0F14', margin: 0 }}>PR Approvals Inbox</h1>
-            <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>Review and approve purchase requisitions</p>
+            <h1 className="text-2xl mb-2" style={{ color: 'var(--color-ink)', margin: 0 }}>PR Approvals Inbox</h1>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>Review and approve purchase requisitions</p>
           </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: '#FFF3E0', border: '1px solid #FFB74D' }}>
-            <Clock className="w-4 h-4" style={{ color: '#F57C00' }} />
-            <span className="text-sm" style={{ color: '#F57C00', fontWeight: '600' }}>{stats.pending} Pending Approval</span>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--color-warning-light)', border: '1px solid #FFB74D' }}>
+            <Clock className="w-4 h-4" style={{ color: 'var(--color-warning-dark)' }} />
+            <span className="text-sm" style={{ color: 'var(--color-warning-dark)', fontWeight: '600' }}>{stats.pending} Pending Approval</span>
           </div>
         </div>
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#6E7A82' }} />
+          <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
           <input
             type="text"
             placeholder="Search by PR ID, requestor, or department..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 rounded-lg text-sm"
-            style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }}
+            style={{ border: '1px solid var(--color-silver)', backgroundColor: '#FFFFFF', color: 'var(--color-ink)' }}
           />
         </div>
       </div>
@@ -168,37 +168,37 @@ export function PRApprovalsInbox() {
       <div className="p-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Pending Approvals</p>
-            <p className="text-2xl" style={{ color: '#F57C00', fontWeight: '600' }}>{stats.pending}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Pending Approvals</p>
+            <p className="text-2xl" style={{ color: 'var(--color-warning-dark)', fontWeight: '600' }}>{stats.pending}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Urgent PRs</p>
-            <p className="text-2xl" style={{ color: '#DC2626', fontWeight: '600' }}>{stats.urgent}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Urgent PRs</p>
+            <p className="text-2xl" style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>{stats.urgent}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>High Risk</p>
-            <p className="text-2xl" style={{ color: '#DC2626', fontWeight: '600' }}>{stats.highRisk}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>High Risk</p>
+            <p className="text-2xl" style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>{stats.highRisk}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Total Value</p>
-            <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: '600' }}>{formatCurrency(stats.totalValue)}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Value</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{formatCurrency(stats.totalValue)}</p>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg mb-6 p-4" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg mb-6 p-4" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4" style={{ color: '#00A9B7' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>Filters:</span>
+              <Filter className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Filters:</span>
             </div>
             
             <select
               value={selectedTypeFilter}
               onChange={(e) => setSelectedTypeFilter(e.target.value as PRType | 'All')}
               className="px-3 py-1.5 rounded-lg text-sm"
-              style={{ border: '1px solid #E1E6EA', backgroundColor: '#F6F9FC', color: '#0A0F14' }}
+              style={{ border: '1px solid var(--color-silver)', backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)' }}
             >
               <option value="All">All Types</option>
               <option>Catalogue</option>
@@ -213,7 +213,7 @@ export function PRApprovalsInbox() {
               value={selectedRiskFilter}
               onChange={(e) => setSelectedRiskFilter(e.target.value as AIRiskLevel | 'All')}
               className="px-3 py-1.5 rounded-lg text-sm"
-              style={{ border: '1px solid #E1E6EA', backgroundColor: '#F6F9FC', color: '#0A0F14' }}
+              style={{ border: '1px solid var(--color-silver)', backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)' }}
             >
               <option value="All">All Risk Levels</option>
               <option>Low</option>
@@ -231,56 +231,56 @@ export function PRApprovalsInbox() {
             const agingColor = getAgingColor(pr.agingDays);
             
             return (
-              <div key={pr.id} className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+              <div key={pr.id} className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-base" style={{ color: '#0A0F14', fontWeight: '600', margin: 0 }}>{pr.id}</h3>
+                      <h3 className="text-base" style={{ color: 'var(--color-ink)', fontWeight: '600', margin: 0 }}>{pr.id}</h3>
                       <span className="px-2 py-1 rounded text-xs" style={typeStyle}>{pr.prType} PR</span>
                       <span className="px-2 py-1 rounded text-xs" style={riskStyle}>
                         <Shield className="w-3 h-3 inline mr-1" />
                         {pr.aiRiskLevel} Risk
                       </span>
                       {pr.agingDays >= 5 && (
-                        <div className="flex items-center gap-1 px-2 py-1 rounded" style={{ backgroundColor: '#FEE2E2' }}>
-                          <Clock className="w-3 h-3" style={{ color: '#DC2626' }} />
-                          <span className="text-xs" style={{ color: '#DC2626', fontWeight: '600' }}>URGENT</span>
+                        <div className="flex items-center gap-1 px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-error-light)' }}>
+                          <Clock className="w-3 h-3" style={{ color: 'var(--color-error-dark)' }} />
+                          <span className="text-xs" style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>URGENT</span>
                         </div>
                       )}
                     </div>
-                    <p className="text-sm mb-3" style={{ color: '#6E7A82' }}>
-                      Requested by <strong style={{ color: '#0A0F14' }}>{pr.requestor}</strong> • {pr.department} • {pr.costCentre}
+                    <p className="text-sm mb-3" style={{ color: 'var(--color-mercury-grey)' }}>
+                      Requested by <strong style={{ color: 'var(--color-ink)' }}>{pr.requestor}</strong> • {pr.department} • {pr.costCentre}
                     </p>
-                    <p className="text-sm mb-4" style={{ color: '#0A0F14' }}>{pr.justification}</p>
+                    <p className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>{pr.justification}</p>
                     
                     {/* Key Details Grid */}
-                    <div className="grid grid-cols-5 gap-4 p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+                    <div className="grid grid-cols-5 gap-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
                       <div>
-                        <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Amount</p>
-                        <p className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>{formatCurrency(pr.totalAmount)}</p>
+                        <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Amount</p>
+                        <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{formatCurrency(pr.totalAmount)}</p>
                       </div>
                       <div>
-                        <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Items</p>
-                        <p className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>{pr.itemCount} line items</p>
+                        <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Items</p>
+                        <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{pr.itemCount} line items</p>
                       </div>
                       <div>
-                        <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Need-by Date</p>
-                        <p className="text-sm" style={{ color: '#DC2626', fontWeight: '600' }}>{pr.needByDate}</p>
+                        <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Need-by Date</p>
+                        <p className="text-sm" style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>{pr.needByDate}</p>
                       </div>
                       <div>
-                        <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Pending Days</p>
+                        <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Pending Days</p>
                         <p className="text-sm" style={{ color: agingColor, fontWeight: '600' }}>{pr.agingDays} days</p>
                       </div>
                       <div>
-                        <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Entity</p>
-                        <p className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>{pr.entity}</p>
+                        <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Entity</p>
+                        <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{pr.entity}</p>
                       </div>
                     </div>
 
                     {/* Policy Flags */}
                     {pr.policyFlags.length > 0 && pr.policyFlags[0] !== 'None' && (
                       <div className="mt-4">
-                        <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>Policy Flags:</p>
+                        <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Policy Flags:</p>
                         <div className="flex flex-wrap gap-2">
                           {pr.policyFlags.map((flag, idx) => {
                             const flagStyle = getPolicyFlagColor(flag);
@@ -298,10 +298,10 @@ export function PRApprovalsInbox() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid #E1E6EA' }}>
+                <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid var(--color-silver)' }}>
                   <button 
                     className="px-4 py-2 rounded-lg text-sm flex items-center gap-2" 
-                    style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', color: '#00A9B7' }}
+                    style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', color: 'var(--color-teal)' }}
                     onClick={() => navigate(`/procurement/pr/detail/${pr.id}`)}
                   >
                     <Eye className="w-4 h-4" />
@@ -311,7 +311,7 @@ export function PRApprovalsInbox() {
                   <div className="flex items-center gap-3">
                     <button
                       className="px-4 py-2 rounded-lg text-sm"
-                      style={{ backgroundColor: '#FFF3E0', border: '1px solid #FFB74D', color: '#F57C00' }}
+                      style={{ backgroundColor: 'var(--color-warning-light)', border: '1px solid #FFB74D', color: 'var(--color-warning-dark)' }}
                       onClick={() => handleAction(pr.id, 'request_info')}
                     >
                       <MessageCircle className="w-4 h-4 inline mr-2" />
@@ -319,7 +319,7 @@ export function PRApprovalsInbox() {
                     </button>
                     <button
                       className="px-4 py-2 rounded-lg text-sm"
-                      style={{ backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5', color: '#DC2626' }}
+                      style={{ backgroundColor: 'var(--color-error-light)', border: '1px solid #FCA5A5', color: 'var(--color-error-dark)' }}
                       onClick={() => handleAction(pr.id, 'reject')}
                     >
                       <X className="w-4 h-4 inline mr-2" />
@@ -327,7 +327,7 @@ export function PRApprovalsInbox() {
                     </button>
                     <button
                       className="px-4 py-2 rounded-lg text-white text-sm"
-                      style={{ backgroundColor: '#2E7D32' }}
+                      style={{ backgroundColor: 'var(--color-success-dark)' }}
                       onClick={() => handleAction(pr.id, 'approve')}
                     >
                       <CheckCircle className="w-4 h-4 inline mr-2" />
@@ -341,10 +341,10 @@ export function PRApprovalsInbox() {
         </div>
 
         {filteredPRs.length === 0 && (
-          <div className="bg-white rounded-lg p-12 text-center" style={{ border: '1px solid #E1E6EA' }}>
-            <CheckCircle className="w-12 h-12 mx-auto mb-4" style={{ color: '#2E7D32' }} />
-            <h3 className="text-base mb-2" style={{ color: '#0A0F14', fontWeight: '600' }}>No Pending Approvals</h3>
-            <p className="text-sm" style={{ color: '#6E7A82' }}>You're all caught up! No PRs require your approval at this time.</p>
+          <div className="bg-white rounded-lg p-12 text-center" style={{ border: '1px solid var(--color-silver)' }}>
+            <CheckCircle className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--color-success-dark)' }} />
+            <h3 className="text-base mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>No Pending Approvals</h3>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>You're all caught up! No PRs require your approval at this time.</p>
           </div>
         )}
       </div>

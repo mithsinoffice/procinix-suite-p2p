@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Plus, Search, Edit, Trash2, X, Shield, Users, Check, AlertCircle, Clock } from 'lucide-react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
+import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface Role {
   id: string;
@@ -204,15 +206,127 @@ export function RolesMaster() {
     );
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [formData.roleCode, formData.roleName, formData.description];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    const permFilled = formData.permissions.length > 0 ? 1 : 0;
+    return { filled: filled + permFilled, total: fields.length + 1 };
+  }, [formData.roleCode, formData.roleName, formData.description, formData.permissions]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    if (selectedRole) {
+      handleUpdate();
+    } else {
+      handleCreate();
+    }
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [selectedRole, handleUpdate, handleCreate]);
+
+  useFormKeyboardSave(showCreateModal ? handleSaveDraft : undefined);
+
+  if (showCreateModal) {
+    return (
+      <FormShell
+        title={selectedRole ? 'Edit Role' : 'Create Role'}
+        subtitle="Define and manage user roles with permissions"
+        modeLabel={selectedRole ? 'Edit Master Record' : 'Create Master Record'}
+        draftStatus={selectedRole ? 'Draft' : 'New'}
+        completeness={completeness}
+        onBack={() => setShowCreateModal(false)}
+        onCancel={() => {
+          setShowCreateModal(false);
+          setSelectedRole(null);
+          setFormData({ roleCode: '', roleName: '', description: '', permissions: [], status: 'Pending Approval' });
+        }}
+        onSaveDraft={handleSaveDraft}
+        onSubmit={selectedRole ? handleUpdate : handleCreate}
+        submitLabel={selectedRole ? 'Update Role' : 'Create Role'}
+        draftLabel="Save Draft"
+        saveStatus={saveStatus}
+      >
+        <FormSection title="Role Details" columns={2}>
+          <PxFormField label="Role Code" required filled={!!formData.roleCode.trim()} hint="Unique role identifier">
+            <input
+              type="text"
+              value={formData.roleCode}
+              onChange={(e) => setFormData({ ...formData, roleCode: e.target.value })}
+              placeholder="e.g., PO_CREATE"
+              className="px-input"
+            />
+          </PxFormField>
+          <PxFormField label="Role Name" required filled={!!formData.roleName.trim()}>
+            <input
+              type="text"
+              value={formData.roleName}
+              onChange={(e) => setFormData({ ...formData, roleName: e.target.value })}
+              placeholder="e.g., PO Creator"
+              className="px-input"
+            />
+          </PxFormField>
+          <PxFormField label="Description" required filled={!!formData.description.trim()}>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter role description"
+              rows={3}
+              className="px-input"
+            />
+          </PxFormField>
+          <PxFormField label="Permissions" required filled={formData.permissions.length > 0} hint={`${formData.permissions.length} selected`}>
+            <div
+              className="rounded-lg grid grid-cols-2 gap-2"
+              style={{
+                border: '1px solid var(--color-silver)',
+                padding: '16px',
+                maxHeight: '300px',
+                overflowY: 'auto'
+              }}
+            >
+              {availablePermissions.map((permission) => (
+                <label
+                  key={permission}
+                  className="flex items-center gap-2 p-2 rounded cursor-pointer transition-all"
+                  style={{
+                    backgroundColor: formData.permissions.includes(permission) ? 'var(--color-teal-tint)' : 'transparent',
+                    border: formData.permissions.includes(permission) ? '1px solid var(--color-teal)' : '1px solid transparent'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.permissions.includes(permission)}
+                    onChange={() => togglePermission(permission)}
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      accentColor: 'var(--color-teal)',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <span style={{ fontSize: '13px', color: 'var(--color-ink)' }}>
+                    {permission}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </PxFormField>
+        </FormSection>
+      </FormShell>
+    );
+  }
+
   return (
-    <div style={{ padding: '24px', backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ padding: '24px', backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div className="flex items-center justify-between" style={{ marginBottom: '24px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
             Roles Master
           </h1>
-          <p style={{ fontSize: '14px', color: '#6E7A82', margin: '4px 0 0 0' }}>
+          <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>
             Define and manage user roles with permissions
           </p>
         </div>
@@ -221,15 +335,15 @@ export function RolesMaster() {
           className="flex items-center gap-2 rounded-lg transition-all"
           style={{
             padding: '12px 20px',
-            backgroundColor: '#00A9B7',
+            backgroundColor: 'var(--color-teal)',
             color: '#FFFFFF',
             border: 'none',
             fontSize: '14px',
             fontWeight: '500',
             cursor: 'pointer'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus style={{ width: '18px', height: '18px' }} />
           Add Role
@@ -237,17 +351,17 @@ export function RolesMaster() {
       </div>
 
       {/* Search */}
-      <div 
-        className="rounded-lg" 
-        style={{ 
-          backgroundColor: '#FFFFFF', 
-          border: '1px solid #E1E6EA',
+      <div
+        className="rounded-lg"
+        style={{
+          backgroundColor: '#FFFFFF',
+          border: '1px solid var(--color-silver)',
           padding: '16px',
           marginBottom: '16px'
         }}
       >
         <div className="flex items-center gap-2" style={{ position: 'relative' }}>
-          <Search style={{ position: 'absolute', left: '12px', width: '18px', height: '18px', color: '#6E7A82' }} />
+          <Search style={{ position: 'absolute', left: '12px', width: '18px', height: '18px', color: 'var(--color-mercury-grey)' }} />
           <input
             type="text"
             placeholder="Search by role name, code, or description..."
@@ -256,10 +370,10 @@ export function RolesMaster() {
             style={{
               flex: 1,
               padding: '10px 10px 10px 40px',
-              border: '1px solid #E1E6EA',
+              border: '1px solid var(--color-silver)',
               borderRadius: '8px',
               fontSize: '14px',
-              color: '#0A0F14',
+              color: 'var(--color-ink)',
               outline: 'none'
             }}
           />
@@ -267,78 +381,78 @@ export function RolesMaster() {
       </div>
 
       {/* Roles Table */}
-      <div 
-        className="rounded-lg" 
-        style={{ 
-          backgroundColor: '#FFFFFF', 
-          border: '1px solid #E1E6EA',
+      <div
+        className="rounded-lg"
+        style={{
+          backgroundColor: '#FFFFFF',
+          border: '1px solid var(--color-silver)',
           overflow: 'hidden'
         }}
       >
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+              <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   Role Code
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   Role Name
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   Description
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   Permissions
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   Users
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   Status
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody>
               {filteredRoles.map((role) => (
-                <tr key={role.id} style={{ borderBottom: '1px solid #E1E6EA' }}>
-                  <td style={{ padding: '16px', fontSize: '14px', color: '#0A0F14', fontWeight: '500' }}>
+                <tr key={role.id} style={{ borderBottom: '1px solid var(--color-silver)' }}>
+                  <td style={{ padding: '16px', fontSize: '14px', color: 'var(--color-ink)', fontWeight: '500' }}>
                     <div className="flex items-center gap-2">
-                      <Shield style={{ width: '16px', height: '16px', color: '#00A9B7' }} />
+                      <Shield style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
                       {role.roleCode}
                     </div>
                   </td>
-                  <td style={{ padding: '16px', fontSize: '14px', color: '#0A0F14' }}>
+                  <td style={{ padding: '16px', fontSize: '14px', color: 'var(--color-ink)' }}>
                     {role.roleName}
                   </td>
-                  <td style={{ padding: '16px', fontSize: '13px', color: '#6E7A82', maxWidth: '250px' }}>
+                  <td style={{ padding: '16px', fontSize: '13px', color: 'var(--color-mercury-grey)', maxWidth: '250px' }}>
                     {role.description}
                   </td>
                   <td style={{ padding: '16px' }}>
                     <div className="flex flex-wrap gap-1">
                       {role.permissions.slice(0, 2).map((perm, idx) => (
-                        <span 
+                        <span
                           key={idx}
                           className="px-2 py-1 rounded"
-                          style={{ backgroundColor: '#E8F7F8', color: '#00A9B7', fontSize: '11px', fontWeight: '500' }}
+                          style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)', fontSize: '11px', fontWeight: '500' }}
                         >
                           {perm}
                         </span>
                       ))}
                       {role.permissions.length > 2 && (
-                        <span 
+                        <span
                           className="px-2 py-1 rounded"
-                          style={{ backgroundColor: '#F6F9FC', color: '#6E7A82', fontSize: '11px', fontWeight: '500' }}
+                          style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', fontSize: '11px', fontWeight: '500' }}
                         >
                           +{role.permissions.length - 2} more
                         </span>
                       )}
                     </div>
                   </td>
-                  <td style={{ padding: '16px', fontSize: '14px', color: '#6E7A82' }}>
+                  <td style={{ padding: '16px', fontSize: '14px', color: 'var(--color-mercury-grey)' }}>
                     <div className="flex items-center gap-2">
                       <Users style={{ width: '16px', height: '16px' }} />
                       {getAssignedUserCount(role)}
@@ -352,21 +466,21 @@ export function RolesMaster() {
                       <button
                         onClick={() => handleEdit(role)}
                         className="p-2 rounded-lg transition-all"
-                        style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', cursor: 'pointer' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E1E6EA'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+                        style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', cursor: 'pointer' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-silver)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
                         title="Edit Role"
                       >
-                        <Edit style={{ width: '16px', height: '16px', color: '#00A9B7' }} />
+                        <Edit style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
                       </button>
                       {role.approvalStatus === 'Approved' && (
                         <button
                           className="p-2 rounded-lg"
-                          style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', cursor: 'not-allowed', opacity: 0.5 }}
+                          style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', cursor: 'not-allowed', opacity: 0.5 }}
                           title="Cannot delete approved role"
                           disabled
                         >
-                          <Trash2 style={{ width: '16px', height: '16px', color: '#6E7A82' }} />
+                          <Trash2 style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
                         </button>
                       )}
                     </div>
@@ -377,193 +491,6 @@ export function RolesMaster() {
           </table>
         </div>
       </div>
-
-      {/* Create/Edit Modal */}
-      {showCreateModal && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
-          onClick={() => setShowCreateModal(false)}
-        >
-          <div 
-            className="rounded-lg"
-            style={{
-              backgroundColor: '#FFFFFF',
-              width: '700px',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.1)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between" style={{ padding: '20px', borderBottom: '1px solid #E1E6EA' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
-                {selectedRole ? 'Edit Role' : 'Add New Role'}
-              </h2>
-              <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                <X style={{ width: '20px', height: '20px', color: '#6E7A82' }} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div style={{ padding: '20px' }}>
-              <div className="grid grid-cols-2 gap-4" style={{ marginBottom: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0A0F14', marginBottom: '8px' }}>
-                    Role Code <span style={{ color: '#FF4E5B' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.roleCode}
-                    onChange={(e) => setFormData({ ...formData, roleCode: e.target.value })}
-                    placeholder="e.g., PO_CREATE"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #E1E6EA',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      color: '#0A0F14',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0A0F14', marginBottom: '8px' }}>
-                    Role Name <span style={{ color: '#FF4E5B' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.roleName}
-                    onChange={(e) => setFormData({ ...formData, roleName: e.target.value })}
-                    placeholder="e.g., PO Creator"
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #E1E6EA',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      color: '#0A0F14',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0A0F14', marginBottom: '8px' }}>
-                  Description <span style={{ color: '#FF4E5B' }}>*</span>
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Enter role description"
-                  rows={3}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #E1E6EA',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    color: '#0A0F14',
-                    outline: 'none',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0A0F14', marginBottom: '12px' }}>
-                  Permissions <span style={{ color: '#FF4E5B' }}>*</span>
-                </label>
-                <div 
-                  className="rounded-lg grid grid-cols-2 gap-2"
-                  style={{ 
-                    border: '1px solid #E1E6EA',
-                    padding: '16px',
-                    maxHeight: '300px',
-                    overflowY: 'auto'
-                  }}
-                >
-                  {availablePermissions.map((permission) => (
-                    <label 
-                      key={permission}
-                      className="flex items-center gap-2 p-2 rounded cursor-pointer transition-all"
-                      style={{ 
-                        backgroundColor: formData.permissions.includes(permission) ? '#E8F7F8' : 'transparent',
-                        border: formData.permissions.includes(permission) ? '1px solid #00A9B7' : '1px solid transparent'
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={formData.permissions.includes(permission)}
-                        onChange={() => togglePermission(permission)}
-                        style={{ 
-                          width: '16px', 
-                          height: '16px',
-                          accentColor: '#00A9B7',
-                          cursor: 'pointer'
-                        }}
-                      />
-                      <span style={{ fontSize: '13px', color: '#0A0F14' }}>
-                        {permission}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3" style={{ padding: '20px', borderTop: '1px solid #E1E6EA' }}>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="px-6 py-2 rounded-lg transition-all"
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid #E1E6EA',
-                  color: '#6E7A82',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={selectedRole ? handleUpdate : handleCreate}
-                className="px-6 py-2 rounded-lg transition-all"
-                style={{
-                  backgroundColor: '#00A9B7',
-                  border: 'none',
-                  color: '#FFFFFF',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
-              >
-                {selectedRole ? 'Update Role' : 'Create Role'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

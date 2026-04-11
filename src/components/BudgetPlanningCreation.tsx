@@ -224,33 +224,33 @@ export function BudgetPlanningCreation() {
   const totalMismatch = Math.abs(calculatedTotal - totalAmount) > 1;
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC]">
+    <div className="min-h-screen bg-[var(--color-cloud)]">
       {/* Header */}
-      <div className="bg-white border-b border-[#E1E6EA]">
+      <div className="bg-white border-b border-[var(--color-silver)]">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-[#0A0F14]">Budget Planning & Creation</h1>
-              <p className="text-[#6E7A82] text-sm">Create new budget with multi-dimensional planning and allocation</p>
+              <h1 className="text-[var(--color-ink)]">Budget Planning & Creation</h1>
+              <p className="text-[var(--color-mercury-grey)] text-sm">Create new budget with multi-dimensional planning and allocation</p>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => navigate('/budgeting/budgets')}
-                className="px-4 py-2 border border-[#E1E6EA] rounded-lg hover:bg-[#F6F9FC] transition-colors flex items-center gap-2"
+                className="px-4 py-2 border border-[var(--color-silver)] rounded-lg hover:bg-[var(--color-cloud)] transition-colors flex items-center gap-2"
               >
                 <X className="w-4 h-4" />
                 Cancel
               </button>
               <button
                 onClick={handleSaveDraft}
-                className="px-4 py-2 border border-[#E1E6EA] rounded-lg hover:bg-[#F6F9FC] transition-colors flex items-center gap-2"
+                className="px-4 py-2 border border-[var(--color-silver)] rounded-lg hover:bg-[var(--color-cloud)] transition-colors flex items-center gap-2"
               >
                 <Save className="w-4 h-4" />
                 Save Draft
               </button>
               <button
                 onClick={handleSubmitForApproval}
-                className="px-4 py-2 bg-[#00A9B7] text-white rounded-lg hover:bg-[#007D87] transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-[var(--color-teal)] text-white rounded-lg hover:bg-[var(--color-teal-dark)] transition-colors flex items-center gap-2"
               >
                 <FileText className="w-4 h-4" />
                 Submit for Approval
@@ -285,30 +285,30 @@ export function BudgetPlanningCreation() {
           {/* Left Panel - Budget Details */}
           <div className="lg:col-span-1 space-y-6">
             {/* Basic Information */}
-            <div className="bg-white rounded-lg border border-[#E1E6EA] p-6">
-              <h2 className="text-[#0A0F14] mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-[#00A9B7]" />
+            <div className="bg-white rounded-lg border border-[var(--color-silver)] p-6">
+              <h2 className="text-[var(--color-ink)] mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[var(--color-teal)]" />
                 Budget Details
               </h2>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Budget Name <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Budget Name <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <input
                     type="text"
                     value={budgetName}
                     onChange={(e) => setBudgetName(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     placeholder="e.g., IT Operating Budget FY2025"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Budget Owner <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Budget Owner <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <select
                     value={budgetOwner}
                     onChange={(e) => setBudgetOwner(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                   >
                     <option value="">Select Owner</option>
                     <option value="Sarah Chen">Sarah Chen</option>
@@ -320,11 +320,11 @@ export function BudgetPlanningCreation() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm text-[#0A0F14] mb-2">Financial Year <span style={{ color: '#FF4E5B' }}>*</span></label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">Financial Year <span style={{ color: 'var(--color-error)' }}>*</span></label>
                     <select
                       value={financialYear}
                       onChange={(e) => setFinancialYear(e.target.value)}
-                      className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                      className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     >
                       <option value="FY2024">FY2024</option>
                       <option value="FY2025">FY2025</option>
@@ -333,11 +333,11 @@ export function BudgetPlanningCreation() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-[#0A0F14] mb-2">Budget Type <span style={{ color: '#FF4E5B' }}>*</span></label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">Budget Type <span style={{ color: 'var(--color-error)' }}>*</span></label>
                     <select
                       value={budgetType}
                       onChange={(e) => setBudgetType(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                      className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     >
                       <option value="Original">Original</option>
                       <option value="Interim">Interim</option>
@@ -349,11 +349,11 @@ export function BudgetPlanningCreation() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm text-[#0A0F14] mb-2">Currency <span style={{ color: '#FF4E5B' }}>*</span></label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">Currency <span style={{ color: 'var(--color-error)' }}>*</span></label>
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
-                      className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                      className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     >
                       <option value="INR">INR</option>
                       <option value="USD">USD</option>
@@ -362,11 +362,11 @@ export function BudgetPlanningCreation() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-[#0A0F14] mb-2">Allocation Period</label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">Allocation Period</label>
                     <select
                       value={allocationPeriod}
                       onChange={(e) => setAllocationPeriod(e.target.value as AllocationPeriod)}
-                      className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                      className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     >
                       <option value="Monthly">Monthly</option>
                       <option value="Quarterly">Quarterly</option>
@@ -376,14 +376,14 @@ export function BudgetPlanningCreation() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Total Budget Amount <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Total Budget Amount <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <div className="relative">
-                    <DollarSign className="w-4 h-4 absolute left-3 top-3 text-[#6E7A82]" />
+                    <DollarSign className="w-4 h-4 absolute left-3 top-3 text-[var(--color-mercury-grey)]" />
                     <input
                       type="number"
                       value={totalAmount || ''}
                       onChange={(e) => setTotalAmount(Number(e.target.value))}
-                      className="w-full pl-10 pr-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                      className="w-full pl-10 pr-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                       placeholder="0"
                     />
                   </div>
@@ -397,19 +397,19 @@ export function BudgetPlanningCreation() {
             </div>
 
             {/* Budget Dimensions */}
-            <div className="bg-white rounded-lg border border-[#E1E6EA] p-6">
-              <h2 className="text-[#0A0F14] mb-4 flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-[#00A9B7]" />
+            <div className="bg-white rounded-lg border border-[var(--color-silver)] p-6">
+              <h2 className="text-[var(--color-ink)] mb-4 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-[var(--color-teal)]" />
                 Budget Dimensions
               </h2>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Department <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Department <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <select
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                   >
                     <option value="">Select Department</option>
                     <option value="IT">IT</option>
@@ -421,11 +421,11 @@ export function BudgetPlanningCreation() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Expense Category</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Expense Category</label>
                   <select
                     value={expenseCategory}
                     onChange={(e) => setExpenseCategory(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                   >
                     <option value="">Select Category</option>
                     <option value="Operating Expenses">Operating Expenses</option>
@@ -436,22 +436,22 @@ export function BudgetPlanningCreation() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">GL Account Code</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">GL Account Code</label>
                   <input
                     type="text"
                     value={glAccountCode}
                     onChange={(e) => setGlAccountCode(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     placeholder="e.g., 5100-001"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Location</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Location</label>
                   <select
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                   >
                     <option value="">Select Location</option>
                     <option value="Bangalore HQ">Bangalore HQ</option>
@@ -462,34 +462,34 @@ export function BudgetPlanningCreation() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Cost Centre</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Cost Centre</label>
                   <input
                     type="text"
                     value={costCentre}
                     onChange={(e) => setCostCentre(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     placeholder="e.g., CC-IT-001"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Profit Centre</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Profit Centre</label>
                   <input
                     type="text"
                     value={profitCentre}
                     onChange={(e) => setProfitCentre(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     placeholder="e.g., PC-001"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Project (Optional)</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Project (Optional)</label>
                   <input
                     type="text"
                     value={project}
                     onChange={(e) => setProject(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     placeholder="e.g., PRJ-2025-001"
                   />
                 </div>
@@ -499,28 +499,28 @@ export function BudgetPlanningCreation() {
 
           {/* Right Panel - Budget Allocation Grid */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg border border-[#E1E6EA]">
-              <div className="px-6 py-4 border-b border-[#E1E6EA]">
+            <div className="bg-white rounded-lg border border-[var(--color-silver)]">
+              <div className="px-6 py-4 border-b border-[var(--color-silver)]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-[#0A0F14]">Budget Allocation - {allocationPeriod}</h2>
-                    <p className="text-sm text-[#6E7A82] mt-1">
+                    <h2 className="text-[var(--color-ink)]">Budget Allocation - {allocationPeriod}</h2>
+                    <p className="text-sm text-[var(--color-mercury-grey)] mt-1">
                       Enter planned budget amounts for each period
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={autoDistribute}
-                      className="px-3 py-2 text-sm border border-[#E1E6EA] rounded-lg hover:bg-[#F6F9FC] transition-colors flex items-center gap-2"
+                      className="px-3 py-2 text-sm border border-[var(--color-silver)] rounded-lg hover:bg-[var(--color-cloud)] transition-colors flex items-center gap-2"
                     >
                       <ChevronDown className="w-4 h-4" />
                       Auto Distribute
                     </button>
-                    <button className="px-3 py-2 text-sm border border-[#E1E6EA] rounded-lg hover:bg-[#F6F9FC] transition-colors flex items-center gap-2">
+                    <button className="px-3 py-2 text-sm border border-[var(--color-silver)] rounded-lg hover:bg-[var(--color-cloud)] transition-colors flex items-center gap-2">
                       <Upload className="w-4 h-4" />
                       Import
                     </button>
-                    <button className="px-3 py-2 text-sm border border-[#E1E6EA] rounded-lg hover:bg-[#F6F9FC] transition-colors flex items-center gap-2">
+                    <button className="px-3 py-2 text-sm border border-[var(--color-silver)] rounded-lg hover:bg-[var(--color-cloud)] transition-colors flex items-center gap-2">
                       <Download className="w-4 h-4" />
                       Export
                     </button>
@@ -531,25 +531,25 @@ export function BudgetPlanningCreation() {
               {/* Spreadsheet Grid */}
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-[#F6F9FC] sticky top-0">
+                  <thead className="bg-[var(--color-cloud)] sticky top-0">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase w-32">Period</th>
-                      <th className="px-4 py-3 text-right text-xs text-[#6E7A82] uppercase w-48">Planned Amount ({currency})</th>
-                      <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Comments</th>
+                      <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase w-32">Period</th>
+                      <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase w-48">Planned Amount ({currency})</th>
+                      <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Comments</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E1E6EA]">
+                  <tbody className="divide-y divide-[var(--color-silver)]">
                     {lineItems.map((item, index) => (
-                      <tr key={index} className="hover:bg-[#F6F9FC]">
+                      <tr key={index} className="hover:bg-[var(--color-cloud)]">
                         <td className="px-4 py-2">
-                          <span className="text-sm text-[#0A0F14]">{item.period}</span>
+                          <span className="text-sm text-[var(--color-ink)]">{item.period}</span>
                         </td>
                         <td className="px-4 py-2">
                           <input
                             type="number"
                             value={item.plannedAmount || ''}
                             onChange={(e) => updateLineItem(index, 'plannedAmount', Number(e.target.value))}
-                            className="w-full px-3 py-2 text-right border border-[#E1E6EA] rounded focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                            className="w-full px-3 py-2 text-right border border-[var(--color-silver)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                             placeholder="0"
                           />
                         </td>
@@ -558,17 +558,17 @@ export function BudgetPlanningCreation() {
                             type="text"
                             value={item.comments || ''}
                             onChange={(e) => updateLineItem(index, 'comments', e.target.value)}
-                            className="w-full px-3 py-2 border border-[#E1E6EA] rounded focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                            className="w-full px-3 py-2 border border-[var(--color-silver)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                             placeholder="Optional notes"
                           />
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-[#F6F9FC] border-t-2 border-[#00A9B7]">
+                  <tfoot className="bg-[var(--color-cloud)] border-t-2 border-[var(--color-teal)]">
                     <tr>
-                      <td className="px-4 py-3 text-[#0A0F14]">Total</td>
-                      <td className="px-4 py-3 text-right text-[#0A0F14]">
+                      <td className="px-4 py-3 text-[var(--color-ink)]">Total</td>
+                      <td className="px-4 py-3 text-right text-[var(--color-ink)]">
                         {currency} {calculatedTotal.toLocaleString()}
                         {totalMismatch && (
                           <span className="ml-2 text-xs text-red-600">
@@ -583,20 +583,20 @@ export function BudgetPlanningCreation() {
               </div>
 
               {/* Summary Footer */}
-              <div className="px-6 py-4 border-t border-[#E1E6EA] bg-[#F6F9FC]">
+              <div className="px-6 py-4 border-t border-[var(--color-silver)] bg-[var(--color-cloud)]">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-xs text-[#6E7A82] mb-1">Budget Amount</p>
-                    <p className="text-[#0A0F14]">{currency} {totalAmount.toLocaleString()}</p>
+                    <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Budget Amount</p>
+                    <p className="text-[var(--color-ink)]">{currency} {totalAmount.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#6E7A82] mb-1">Allocated</p>
-                    <p className={calculatedTotal === totalAmount ? 'text-green-600' : 'text-[#0A0F14]'}>
+                    <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Allocated</p>
+                    <p className={calculatedTotal === totalAmount ? 'text-green-600' : 'text-[var(--color-ink)]'}>
                       {currency} {calculatedTotal.toLocaleString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#6E7A82] mb-1">Difference</p>
+                    <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Difference</p>
                     <p className={Math.abs(calculatedTotal - totalAmount) < 1 ? 'text-green-600' : 'text-red-600'}>
                       {currency} {Math.abs(calculatedTotal - totalAmount).toLocaleString()}
                     </p>

@@ -158,8 +158,8 @@ export function FinanceNavigation() {
             className="w-full flex items-center justify-between px-4 py-2 transition-colors group"
             style={{
               paddingLeft: `${paddingLeft}px`,
-              backgroundColor: isActive ? '#00A9B720' : 'transparent',
-              color: isActive ? '#00A9B7' : '#B8C5CE'
+              backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
+              color: isActive ? 'var(--color-teal)' : '#B8C5CE'
             }}
             onMouseEnter={(e) => {
               if (!isActive) e.currentTarget.style.backgroundColor = '#3a4a52';
@@ -177,7 +177,7 @@ export function FinanceNavigation() {
                 <span 
                   className="px-2 py-0.5 rounded text-xs"
                   style={{ 
-                    backgroundColor: '#8B5CF6',
+                    backgroundColor: '#007D87',
                     color: '#FFFFFF',
                     fontWeight: '600'
                   }}
@@ -208,8 +208,8 @@ export function FinanceNavigation() {
         className="flex items-center gap-3 px-4 py-2 transition-colors group"
         style={{
           paddingLeft: isCollapsed ? '16px' : `${paddingLeft}px`,
-          backgroundColor: isActive ? '#00A9B720' : 'transparent',
-          color: isActive ? '#00A9B7' : '#B8C5CE',
+          backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
+          color: isActive ? 'var(--color-teal)' : '#B8C5CE',
           justifyContent: isCollapsed ? 'center' : 'flex-start'
         }}
         onMouseEnter={(e) => {
@@ -230,7 +230,7 @@ export function FinanceNavigation() {
               <span 
                 className="px-2 py-0.5 rounded text-xs"
                 style={{ 
-                  backgroundColor: '#8B5CF6',
+                  backgroundColor: '#007D87',
                   color: '#FFFFFF',
                   fontWeight: '600'
                 }}
@@ -256,14 +256,14 @@ export function FinanceNavigation() {
       {/* Collapse Toggle */}
       <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid #3a4a52' }}>
         {!isCollapsed && (
-          <span className="text-xs uppercase tracking-wider" style={{ color: '#9AA6AF', fontWeight: '600' }}>
+          <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
             Finance Automation
           </span>
         )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-1.5 rounded-lg transition-colors"
-          style={{ color: '#9AA6AF' }}
+          style={{ color: 'var(--color-slate)' }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a4a52'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           title={isCollapsed ? 'Expand' : 'Collapse'}
@@ -290,7 +290,7 @@ export function FinanceNavigation() {
                 className="w-full flex items-center justify-between px-4 py-3 transition-colors"
                 style={{
                   backgroundColor: isExpanded ? '#3a4a52' : 'transparent',
-                  color: isExpanded ? '#FFFFFF' : '#9AA6AF',
+                  color: isExpanded ? '#FFFFFF' : 'var(--color-slate)',
                   justifyContent: isCollapsed ? 'center' : 'space-between'
                 }}
                 onMouseEnter={(e) => {
@@ -302,7 +302,7 @@ export function FinanceNavigation() {
                 title={isCollapsed ? section.label : ''}
               >
                 <div className="flex items-center gap-3">
-                  <SectionIcon className="w-5 h-5 flex-shrink-0" style={{ color: '#00A9B7' }} />
+                  <SectionIcon className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--color-teal)' }} />
                   {!isCollapsed && (
                     <span style={{ fontWeight: '600', fontSize: '14px' }}>
                       {section.label}
@@ -311,9 +311,9 @@ export function FinanceNavigation() {
                 </div>
                 {!isCollapsed && (
                   isExpanded ? (
-                    <ChevronDown className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : '#9AA6AF' }} />
+                    <ChevronDown className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }} />
                   ) : (
-                    <ChevronRight className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : '#9AA6AF' }} />
+                    <ChevronRight className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }} />
                   )
                 )}
               </button>
@@ -336,7 +336,7 @@ export function FinanceNavigation() {
                   {/* Masters Section */}
                   {!isCollapsed && (
                     <div className="px-4 py-1">
-                      <span className="text-xs uppercase tracking-wider" style={{ color: '#9AA6AF', fontWeight: '600' }}>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
                         Masters
                       </span>
                     </div>
@@ -355,7 +355,7 @@ export function FinanceNavigation() {
                   {/* Reports Section */}
                   {!isCollapsed && (
                     <div className="px-4 py-1">
-                      <span className="text-xs uppercase tracking-wider" style={{ color: '#9AA6AF', fontWeight: '600' }}>
+                      <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
                         Reports
                       </span>
                     </div>
@@ -376,8 +376,8 @@ export function FinanceNavigation() {
           to="/masters"
           className="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors"
           style={{
-            backgroundColor: location.pathname === '/masters' ? '#00A9B720' : 'transparent',
-            color: location.pathname === '/masters' ? '#00A9B7' : '#B8C5CE',
+            backgroundColor: location.pathname === '/masters' ? 'var(--color-teal)20' : 'transparent',
+            color: location.pathname === '/masters' ? 'var(--color-teal)' : '#B8C5CE',
             justifyContent: isCollapsed ? 'center' : 'flex-start'
           }}
           onMouseEnter={(e) => {

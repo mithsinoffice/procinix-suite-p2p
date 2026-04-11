@@ -191,31 +191,31 @@ export function InvoiceForm() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Sticky Action Bar */}
-      <div className="sticky top-0 z-10 bg-white shadow-sm" style={{ borderBottom: '2px solid #E1E6EA' }}>
+      <div className="sticky top-0 z-10 bg-white shadow-sm" style={{ borderBottom: '2px solid var(--color-silver)' }}>
         <div className="px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button 
                 onClick={handleCancel}
                 className="p-2 rounded-lg transition-colors hover:bg-gray-100" 
-                style={{ color: '#6E7A82' }}
+                style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl" style={{ color: '#0A0F14' }}>Create Invoice</h1>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>Capture and process supplier invoice</p>
+                <h1 className="text-2xl" style={{ color: 'var(--color-ink)' }}>Create Invoice</h1>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Capture and process supplier invoice</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleCancel}
                 className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
-                style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}
+                style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#D1D6DA'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#E1E6EA'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-silver)'}
               >
                 <X className="w-4 h-4" />
                 Cancel
@@ -223,9 +223,9 @@ export function InvoiceForm() {
               <button
                 onClick={handleSaveDraft}
                 className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#6E7A82' }}
+                style={{ backgroundColor: 'var(--color-mercury-grey)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#5E6A72'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6E7A82'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-mercury-grey)'}
               >
                 <Save className="w-4 h-4" />
                 Save Draft
@@ -233,9 +233,9 @@ export function InvoiceForm() {
               <button
                 onClick={handleSubmit}
                 className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                style={{ backgroundColor: 'var(--color-teal)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
               >
                 <Send className="w-4 h-4" />
                 Submit for Approval
@@ -248,16 +248,16 @@ export function InvoiceForm() {
       {/* Form Content */}
       <div className="p-8 max-w-7xl mx-auto">
         {/* Invoice Type Selection - At the Top */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-              <CreditCard className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+              <CreditCard className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Invoice Type</h2>
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Invoice Type</h2>
           </div>
 
           <div>
-            <label className="block text-sm mb-3" style={{ color: '#6E7A82' }}>
+            <label className="block text-sm mb-3" style={{ color: 'var(--color-mercury-grey)' }}>
               Select Invoice Type <span style={{ color: '#EF4444' }}>*</span>
             </label>
             <div className="flex items-center gap-4 max-w-2xl">
@@ -267,19 +267,19 @@ export function InvoiceForm() {
                   onClick={() => setInvoiceType(type)}
                   className="flex-1 px-6 py-3 rounded-lg transition-all"
                   style={{
-                    backgroundColor: invoiceType === type ? '#00A9B7' : '#F6F9FC',
-                    color: invoiceType === type ? '#FFFFFF' : '#0A0F14',
-                    border: `2px solid ${invoiceType === type ? '#00A9B7' : '#E1E6EA'}`,
+                    backgroundColor: invoiceType === type ? 'var(--color-teal)' : 'var(--color-cloud)',
+                    color: invoiceType === type ? '#FFFFFF' : 'var(--color-ink)',
+                    border: `2px solid ${invoiceType === type ? 'var(--color-teal)' : 'var(--color-silver)'}`,
                     fontWeight: invoiceType === type ? '600' : '500'
                   }}
                   onMouseEnter={(e) => {
                     if (invoiceType !== type) {
-                      e.currentTarget.style.backgroundColor = '#E1E6EA';
+                      e.currentTarget.style.backgroundColor = 'var(--color-silver)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (invoiceType !== type) {
-                      e.currentTarget.style.backgroundColor = '#F6F9FC';
+                      e.currentTarget.style.backgroundColor = 'var(--color-cloud)';
                     }
                   }}
                 >
@@ -291,24 +291,24 @@ export function InvoiceForm() {
         </div>
 
         {/* Section 1: Invoice Header */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-              <FileText className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+              <FileText className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Invoice Header</h2>
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Invoice Header</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Vendor Name <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <select
                 value={formData.vendorCode}
                 onChange={(e) => handleVendorChange(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 <option value="">Select Vendor</option>
                 {vendors.map(vendor => (
@@ -318,7 +318,7 @@ export function InvoiceForm() {
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Vendor Code
               </label>
               <input
@@ -326,12 +326,12 @@ export function InvoiceForm() {
                 value={formData.vendorCode}
                 disabled
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', backgroundColor: '#F6F9FC', color: '#6E7A82' }}
+                style={{ border: '1px solid var(--color-silver)', backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Invoice Number <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
@@ -340,12 +340,12 @@ export function InvoiceForm() {
                 onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
                 placeholder="INV-2024-001"
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Invoice Date <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
@@ -353,12 +353,12 @@ export function InvoiceForm() {
                 value={formData.invoiceDate}
                 onChange={(e) => setFormData({ ...formData, invoiceDate: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Invoice Amount <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <input
@@ -367,19 +367,19 @@ export function InvoiceForm() {
                 onChange={(e) => setFormData({ ...formData, invoiceAmount: e.target.value })}
                 placeholder="0.00"
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Currency
               </label>
               <select
                 value={formData.currency}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 <option value="INR">INR - Indian Rupee</option>
                 <option value="USD">USD - US Dollar</option>
@@ -388,7 +388,7 @@ export function InvoiceForm() {
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 GST Applicable
               </label>
               <div className="flex items-center gap-3">
@@ -396,9 +396,9 @@ export function InvoiceForm() {
                   onClick={() => setGstApplicable(true)}
                   className="flex-1 px-4 py-2 rounded-lg transition-colors"
                   style={{
-                    backgroundColor: gstApplicable ? '#00A9B7' : '#F6F9FC',
-                    color: gstApplicable ? '#FFFFFF' : '#0A0F14',
-                    border: `1px solid ${gstApplicable ? '#00A9B7' : '#E1E6EA'}`
+                    backgroundColor: gstApplicable ? 'var(--color-teal)' : 'var(--color-cloud)',
+                    color: gstApplicable ? '#FFFFFF' : 'var(--color-ink)',
+                    border: `1px solid ${gstApplicable ? 'var(--color-teal)' : 'var(--color-silver)'}`
                   }}
                 >
                   Yes
@@ -407,9 +407,9 @@ export function InvoiceForm() {
                   onClick={() => setGstApplicable(false)}
                   className="flex-1 px-4 py-2 rounded-lg transition-colors"
                   style={{
-                    backgroundColor: !gstApplicable ? '#00A9B7' : '#F6F9FC',
-                    color: !gstApplicable ? '#FFFFFF' : '#0A0F14',
-                    border: `1px solid ${!gstApplicable ? '#00A9B7' : '#E1E6EA'}`
+                    backgroundColor: !gstApplicable ? 'var(--color-teal)' : 'var(--color-cloud)',
+                    color: !gstApplicable ? '#FFFFFF' : 'var(--color-ink)',
+                    border: `1px solid ${!gstApplicable ? 'var(--color-teal)' : 'var(--color-silver)'}`
                   }}
                 >
                   No
@@ -418,7 +418,7 @@ export function InvoiceForm() {
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 GST Number
               </label>
               <input
@@ -426,7 +426,7 @@ export function InvoiceForm() {
                 value={formData.gstNumber}
                 disabled
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', backgroundColor: '#F6F9FC', color: '#6E7A82' }}
+                style={{ border: '1px solid var(--color-silver)', backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
               />
             </div>
           </div>
@@ -434,24 +434,24 @@ export function InvoiceForm() {
 
         {/* Section 2: PO / GRN Reference (Conditional) */}
         {invoiceType === 'PO' && (
-          <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+          <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-                <Package className="w-5 h-5" style={{ color: '#00A9B7' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+                <Package className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>PO / GRN Reference</h2>
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>PO / GRN Reference</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                   PO Number <span style={{ color: '#EF4444' }}>*</span>
                 </label>
                 <select
                   value={selectedPO}
                   onChange={(e) => setSelectedPO(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg"
-                  style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                  style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option value="">Select PO</option>
                   {purchaseOrders.map(po => (
@@ -463,7 +463,7 @@ export function InvoiceForm() {
               </div>
 
               <div>
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                   Match Type
                 </label>
                 <div className="flex items-center gap-3">
@@ -471,9 +471,9 @@ export function InvoiceForm() {
                     onClick={() => setMatchType('2-way')}
                     className="flex-1 px-4 py-2 rounded-lg transition-colors"
                     style={{
-                      backgroundColor: matchType === '2-way' ? '#00A9B7' : '#F6F9FC',
-                      color: matchType === '2-way' ? '#FFFFFF' : '#0A0F14',
-                      border: `1px solid ${matchType === '2-way' ? '#00A9B7' : '#E1E6EA'}`
+                      backgroundColor: matchType === '2-way' ? 'var(--color-teal)' : 'var(--color-cloud)',
+                      color: matchType === '2-way' ? '#FFFFFF' : 'var(--color-ink)',
+                      border: `1px solid ${matchType === '2-way' ? 'var(--color-teal)' : 'var(--color-silver)'}`
                     }}
                   >
                     2-Way Match
@@ -482,9 +482,9 @@ export function InvoiceForm() {
                     onClick={() => setMatchType('3-way')}
                     className="flex-1 px-4 py-2 rounded-lg transition-colors"
                     style={{
-                      backgroundColor: matchType === '3-way' ? '#00A9B7' : '#F6F9FC',
-                      color: matchType === '3-way' ? '#FFFFFF' : '#0A0F14',
-                      border: `1px solid ${matchType === '3-way' ? '#00A9B7' : '#E1E6EA'}`
+                      backgroundColor: matchType === '3-way' ? 'var(--color-teal)' : 'var(--color-cloud)',
+                      color: matchType === '3-way' ? '#FFFFFF' : 'var(--color-ink)',
+                      border: `1px solid ${matchType === '3-way' ? 'var(--color-teal)' : 'var(--color-silver)'}`
                     }}
                   >
                     3-Way Match
@@ -493,12 +493,12 @@ export function InvoiceForm() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                   GRN Number(s)
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   {grnNumbers.map(grn => (
-                    <label key={grn} className="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer" style={{ border: '1px solid #E1E6EA' }}>
+                    <label key={grn} className="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer" style={{ border: '1px solid var(--color-silver)' }}>
                       <input
                         type="checkbox"
                         checked={selectedGRNs.includes(grn)}
@@ -510,28 +510,28 @@ export function InvoiceForm() {
                           }
                         }}
                         className="w-4 h-4"
-                        style={{ accentColor: '#00A9B7' }}
+                        style={{ accentColor: 'var(--color-teal)' }}
                       />
-                      <span style={{ color: '#0A0F14' }}>{grn}</span>
+                      <span style={{ color: 'var(--color-ink)' }}>{grn}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                   Matched Amount
                 </label>
-                <div className="px-4 py-2 rounded-lg" style={{ backgroundColor: '#00A9B710', border: '1px solid #00A9B730' }}>
-                  <p style={{ color: '#00A9B7', fontWeight: '600' }}>₹1,18,500</p>
+                <div className="px-4 py-2 rounded-lg" style={{ backgroundColor: 'var(--color-teal)10', border: '1px solid var(--color-teal)30' }}>
+                  <p style={{ color: 'var(--color-teal)', fontWeight: '600' }}>₹1,18,500</p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                   Unmatched Amount
                 </label>
-                <div className="px-4 py-2 rounded-lg" style={{ backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5' }}>
+                <div className="px-4 py-2 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)', border: '1px solid #FCA5A5' }}>
                   <p style={{ color: '#EF4444', fontWeight: '600' }}>₹6,500</p>
                 </div>
               </div>
@@ -540,20 +540,20 @@ export function InvoiceForm() {
         )}
 
         {/* Section 3: Line Item Details */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-                <Hash className="w-5 h-5" style={{ color: '#00A9B7' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+                <Hash className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>Line Item Details</h2>
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Line Item Details</h2>
             </div>
             <button
               onClick={addLineItem}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-              style={{ backgroundColor: '#00A9B7' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+              style={{ backgroundColor: 'var(--color-teal)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
             >
               <Plus className="w-4 h-4" />
               Add Line
@@ -562,23 +562,23 @@ export function InvoiceForm() {
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ backgroundColor: '#F6F9FC' }}>
+              <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Description</th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Quantity</th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Unit Price</th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Tax %</th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Line Amount</th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Cost Center</th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>GL Code</th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Department</th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Project</th>
-                  <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Actions</th>
+                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Description</th>
+                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Quantity</th>
+                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Unit Price</th>
+                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Tax %</th>
+                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Line Amount</th>
+                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Cost Center</th>
+                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>GL Code</th>
+                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Department</th>
+                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Project</th>
+                  <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {lineItems.map((item, index) => (
-                  <tr key={item.id} style={{ borderTop: index > 0 ? '1px solid #E1E6EA' : 'none' }}>
+                  <tr key={item.id} style={{ borderTop: index > 0 ? '1px solid var(--color-silver)' : 'none' }}>
                     <td className="px-4 py-3">
                       <input
                         type="text"
@@ -586,7 +586,7 @@ export function InvoiceForm() {
                         onChange={(e) => updateLineItem(item.id, 'itemDescription', e.target.value)}
                         placeholder="Item description"
                         className="w-full px-3 py-2 rounded-lg text-sm"
-                        style={{ border: '1px solid #E1E6EA', color: '#0A0F14', minWidth: '200px' }}
+                        style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', minWidth: '200px' }}
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -596,7 +596,7 @@ export function InvoiceForm() {
                         onChange={(e) => updateLineItem(item.id, 'qty', parseFloat(e.target.value) || 0)}
                         placeholder="0"
                         className="w-full px-3 py-2 rounded-lg text-sm"
-                        style={{ border: '1px solid #E1E6EA', color: '#0A0F14', minWidth: '80px' }}
+                        style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', minWidth: '80px' }}
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -606,7 +606,7 @@ export function InvoiceForm() {
                         onChange={(e) => updateLineItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
                         placeholder="0.00"
                         className="w-full px-3 py-2 rounded-lg text-sm"
-                        style={{ border: '1px solid #E1E6EA', color: '#0A0F14', minWidth: '100px' }}
+                        style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', minWidth: '100px' }}
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -614,7 +614,7 @@ export function InvoiceForm() {
                         value={item.gstPercent}
                         onChange={(e) => updateLineItem(item.id, 'gstPercent', parseFloat(e.target.value))}
                         className="w-full px-3 py-2 rounded-lg text-sm"
-                        style={{ border: '1px solid #E1E6EA', color: '#0A0F14', minWidth: '80px' }}
+                        style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', minWidth: '80px' }}
                       >
                         <option value={0}>0%</option>
                         <option value={5}>5%</option>
@@ -629,7 +629,7 @@ export function InvoiceForm() {
                         value={`₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
                         disabled
                         className="w-full px-3 py-2 rounded-lg text-sm"
-                        style={{ border: '1px solid #E1E6EA', backgroundColor: '#F6F9FC', color: '#0A0F14', minWidth: '120px' }}
+                        style={{ border: '1px solid var(--color-silver)', backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)', minWidth: '120px' }}
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -637,7 +637,7 @@ export function InvoiceForm() {
                         value={item.costCentre}
                         onChange={(e) => updateLineItem(item.id, 'costCentre', e.target.value)}
                         className="w-full px-3 py-2 rounded-lg text-sm"
-                        style={{ border: '1px solid #E1E6EA', color: '#0A0F14', minWidth: '120px' }}
+                        style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', minWidth: '120px' }}
                       >
                         <option value="">Select</option>
                         {costCenters.map(cc => (
@@ -650,7 +650,7 @@ export function InvoiceForm() {
                         value={item.glCode}
                         onChange={(e) => updateLineItem(item.id, 'glCode', e.target.value)}
                         className="w-full px-3 py-2 rounded-lg text-sm"
-                        style={{ border: '1px solid #E1E6EA', color: '#0A0F14', minWidth: '180px' }}
+                        style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', minWidth: '180px' }}
                       >
                         <option value="">Select</option>
                         {glCodes.map(gl => (
@@ -663,7 +663,7 @@ export function InvoiceForm() {
                         value={item.department}
                         onChange={(e) => updateLineItem(item.id, 'department', e.target.value)}
                         className="w-full px-3 py-2 rounded-lg text-sm"
-                        style={{ border: '1px solid #E1E6EA', color: '#0A0F14', minWidth: '140px' }}
+                        style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', minWidth: '140px' }}
                       >
                         <option value="">Select</option>
                         {departments.map(dept => (
@@ -678,7 +678,7 @@ export function InvoiceForm() {
                         onChange={(e) => updateLineItem(item.id, 'project', e.target.value)}
                         placeholder="PRJ-001"
                         className="w-full px-3 py-2 rounded-lg text-sm"
-                        style={{ border: '1px solid #E1E6EA', color: '#0A0F14', minWidth: '100px' }}
+                        style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', minWidth: '100px' }}
                       />
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -699,39 +699,39 @@ export function InvoiceForm() {
         </div>
 
         {/* Section 4: Tax & Charges Summary */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-              <DollarSign className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+              <DollarSign className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Tax & Charges Summary</h2>
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Tax & Charges Summary</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Taxable Value
               </label>
-              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
-                <p style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+                <p style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                   ₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 GST Amount (CGST + SGST / IGST)
               </label>
-              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
-                <p style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+                <p style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                   ₹{calculateTax().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 TDS Applicable
               </label>
               <div className="flex items-center gap-3">
@@ -739,9 +739,9 @@ export function InvoiceForm() {
                   onClick={() => setTdsApplicable(true)}
                   className="flex-1 px-4 py-2 rounded-lg transition-colors"
                   style={{
-                    backgroundColor: tdsApplicable ? '#00A9B7' : '#F6F9FC',
-                    color: tdsApplicable ? '#FFFFFF' : '#0A0F14',
-                    border: `1px solid ${tdsApplicable ? '#00A9B7' : '#E1E6EA'}`
+                    backgroundColor: tdsApplicable ? 'var(--color-teal)' : 'var(--color-cloud)',
+                    color: tdsApplicable ? '#FFFFFF' : 'var(--color-ink)',
+                    border: `1px solid ${tdsApplicable ? 'var(--color-teal)' : 'var(--color-silver)'}`
                   }}
                 >
                   Yes
@@ -750,9 +750,9 @@ export function InvoiceForm() {
                   onClick={() => setTdsApplicable(false)}
                   className="flex-1 px-4 py-2 rounded-lg transition-colors"
                   style={{
-                    backgroundColor: !tdsApplicable ? '#00A9B7' : '#F6F9FC',
-                    color: !tdsApplicable ? '#FFFFFF' : '#0A0F14',
-                    border: `1px solid ${!tdsApplicable ? '#00A9B7' : '#E1E6EA'}`
+                    backgroundColor: !tdsApplicable ? 'var(--color-teal)' : 'var(--color-cloud)',
+                    color: !tdsApplicable ? '#FFFFFF' : 'var(--color-ink)',
+                    border: `1px solid ${!tdsApplicable ? 'var(--color-teal)' : 'var(--color-silver)'}`
                   }}
                 >
                   No
@@ -763,10 +763,10 @@ export function InvoiceForm() {
             {tdsApplicable && (
               <>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     TDS Section
                   </label>
-                  <select className="w-full px-4 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+                  <select className="w-full px-4 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
                     <option value="">Select TDS Section</option>
                     <option value="194C">194C - Contractor Payments</option>
                     <option value="194J">194J - Professional Services</option>
@@ -775,7 +775,7 @@ export function InvoiceForm() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     TDS Amount (2%)
                   </label>
                   <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A' }}>
@@ -788,10 +788,10 @@ export function InvoiceForm() {
             )}
 
             <div className="md:col-span-2">
-              <div className="rounded-lg p-4" style={{ backgroundColor: '#00A9B710', border: '2px solid #00A9B7' }}>
+              <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--color-teal)10', border: '2px solid var(--color-teal)' }}>
                 <div className="flex items-center justify-between">
-                  <span style={{ color: '#0A0F14', fontWeight: '600' }}>Total Invoice Value</span>
-                  <span className="text-2xl" style={{ color: '#00A9B7', fontWeight: '700' }}>
+                  <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Total Invoice Value</span>
+                  <span className="text-2xl" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
                     ₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -801,24 +801,24 @@ export function InvoiceForm() {
         </div>
 
         {/* Section 5: Payment Terms & Cashflow Impact */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-              <Calendar className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+              <Calendar className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Payment Terms & Cashflow Impact</h2>
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Payment Terms & Cashflow Impact</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Payment Terms
               </label>
               <select
                 value={formData.paymentTerms}
                 onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 <option value="Net 15">Net 15 Days</option>
                 <option value="Net 30">Net 30 Days</option>
@@ -829,19 +829,19 @@ export function InvoiceForm() {
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Invoice Due Date
               </label>
               <input
                 type="date"
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', backgroundColor: '#F6F9FC', color: '#6E7A82' }}
+                style={{ border: '1px solid var(--color-silver)', backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
                 disabled
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Early Payment Discount (%)
               </label>
               <input
@@ -850,12 +850,12 @@ export function InvoiceForm() {
                 onChange={(e) => setFormData({ ...formData, earlyPaymentDiscount: e.target.value })}
                 placeholder="0.00"
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Expected Payment Date
               </label>
               <input
@@ -863,24 +863,24 @@ export function InvoiceForm() {
                 value={formData.expectedPaymentDate}
                 onChange={(e) => setFormData({ ...formData, expectedPaymentDate: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Cashflow Month
               </label>
-              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
-                <p style={{ color: '#0A0F14' }}>January 2025</p>
+              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+                <p style={{ color: 'var(--color-ink)' }}>January 2025</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Cashflow Impact
               </label>
-              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5' }}>
+              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)', border: '1px solid #FCA5A5' }}>
                 <p style={{ color: '#EF4444', fontWeight: '600' }}>
                   -₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </p>
@@ -890,45 +890,45 @@ export function InvoiceForm() {
         </div>
 
         {/* Section 6: Attachments & Notes */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-              <Upload className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+              <Upload className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Attachments & Notes</h2>
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Attachments & Notes</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Invoice Document <span style={{ color: '#EF4444' }}>*</span>
               </label>
               <div 
                 className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-                style={{ borderColor: '#E1E6EA' }}
+                style={{ borderColor: 'var(--color-silver)' }}
               >
-                <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: '#6E7A82' }} />
-                <p className="text-sm mb-1" style={{ color: '#0A0F14' }}>Upload Invoice PDF/Image</p>
-                <p className="text-xs" style={{ color: '#6E7A82' }}>PDF, JPG, PNG up to 10MB</p>
+                <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--color-mercury-grey)' }} />
+                <p className="text-sm mb-1" style={{ color: 'var(--color-ink)' }}>Upload Invoice PDF/Image</p>
+                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>PDF, JPG, PNG up to 10MB</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Supporting Documents
               </label>
               <div 
                 className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-                style={{ borderColor: '#E1E6EA' }}
+                style={{ borderColor: 'var(--color-silver)' }}
               >
-                <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: '#6E7A82' }} />
-                <p className="text-sm mb-1" style={{ color: '#0A0F14' }}>Upload Additional Documents</p>
-                <p className="text-xs" style={{ color: '#6E7A82' }}>Optional supporting files</p>
+                <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--color-mercury-grey)' }} />
+                <p className="text-sm mb-1" style={{ color: 'var(--color-ink)' }}>Upload Additional Documents</p>
+                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Optional supporting files</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Internal Notes
               </label>
               <textarea
@@ -937,12 +937,12 @@ export function InvoiceForm() {
                 rows={4}
                 placeholder="Add internal notes for approvers..."
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', resize: 'vertical' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', resize: 'vertical' }}
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Vendor Notes
               </label>
               <textarea
@@ -951,24 +951,24 @@ export function InvoiceForm() {
                 rows={4}
                 placeholder="Add notes from vendor..."
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14', resize: 'vertical' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', resize: 'vertical' }}
               />
             </div>
           </div>
         </div>
 
         {/* Section 7: Approval & Workflow */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-              <Clock className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+              <Clock className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Approval & Workflow</h2>
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Approval & Workflow</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Approval Workflow
               </label>
               <div className="flex items-center gap-3">
@@ -976,9 +976,9 @@ export function InvoiceForm() {
                   onClick={() => setFormData({ ...formData, approvalWorkflow: 'auto' })}
                   className="flex-1 px-4 py-2 rounded-lg transition-colors"
                   style={{
-                    backgroundColor: formData.approvalWorkflow === 'auto' ? '#00A9B7' : '#F6F9FC',
-                    color: formData.approvalWorkflow === 'auto' ? '#FFFFFF' : '#0A0F14',
-                    border: `1px solid ${formData.approvalWorkflow === 'auto' ? '#00A9B7' : '#E1E6EA'}`
+                    backgroundColor: formData.approvalWorkflow === 'auto' ? 'var(--color-teal)' : 'var(--color-cloud)',
+                    color: formData.approvalWorkflow === 'auto' ? '#FFFFFF' : 'var(--color-ink)',
+                    border: `1px solid ${formData.approvalWorkflow === 'auto' ? 'var(--color-teal)' : 'var(--color-silver)'}`
                   }}
                 >
                   Auto
@@ -987,9 +987,9 @@ export function InvoiceForm() {
                   onClick={() => setFormData({ ...formData, approvalWorkflow: 'manual' })}
                   className="flex-1 px-4 py-2 rounded-lg transition-colors"
                   style={{
-                    backgroundColor: formData.approvalWorkflow === 'manual' ? '#00A9B7' : '#F6F9FC',
-                    color: formData.approvalWorkflow === 'manual' ? '#FFFFFF' : '#0A0F14',
-                    border: `1px solid ${formData.approvalWorkflow === 'manual' ? '#00A9B7' : '#E1E6EA'}`
+                    backgroundColor: formData.approvalWorkflow === 'manual' ? 'var(--color-teal)' : 'var(--color-cloud)',
+                    color: formData.approvalWorkflow === 'manual' ? '#FFFFFF' : 'var(--color-ink)',
+                    border: `1px solid ${formData.approvalWorkflow === 'manual' ? 'var(--color-teal)' : 'var(--color-silver)'}`
                   }}
                 >
                   Manual
@@ -998,14 +998,14 @@ export function InvoiceForm() {
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                 Priority Level
               </label>
               <select
                 value={formData.priorityLevel}
                 onChange={(e) => setFormData({ ...formData, priorityLevel: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
@@ -1016,10 +1016,10 @@ export function InvoiceForm() {
 
             {formData.approvalWorkflow === 'manual' && (
               <div className="md:col-span-2">
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                   Select Approver(s)
                 </label>
-                <select className="w-full px-4 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+                <select className="w-full px-4 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
                   <option value="">Select Approver</option>
                   <option value="rajesh">Rajesh Kumar - PO Approver</option>
                   <option value="anjali">Anjali Singh - Finance Manager</option>
@@ -1044,27 +1044,27 @@ export function InvoiceForm() {
         </div>
 
         {/* Validation Summary */}
-        <div className="bg-white rounded-xl p-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-4">
-            <CheckCircle className="w-6 h-6" style={{ color: '#00A9B7' }} />
-            <h3 className="text-lg" style={{ color: '#0A0F14' }}>Validation Summary</h3>
+            <CheckCircle className="w-6 h-6" style={{ color: 'var(--color-teal)' }} />
+            <h3 className="text-lg" style={{ color: 'var(--color-ink)' }}>Validation Summary</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4" style={{ color: '#00A9B7' }} />
-              <span className="text-sm" style={{ color: '#6E7A82' }}>Invoice header complete</span>
+              <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoice header complete</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4" style={{ color: '#00A9B7' }} />
-              <span className="text-sm" style={{ color: '#6E7A82' }}>Line items validated</span>
+              <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Line items validated</span>
             </div>
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4" style={{ color: '#F59E0B' }} />
-              <span className="text-sm" style={{ color: '#6E7A82' }}>Invoice document pending upload</span>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoice document pending upload</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4" style={{ color: '#00A9B7' }} />
-              <span className="text-sm" style={{ color: '#6E7A82' }}>Tax calculations verified</span>
+              <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Tax calculations verified</span>
             </div>
           </div>
         </div>

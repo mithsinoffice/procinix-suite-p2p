@@ -127,10 +127,10 @@ export function CFODesk() {
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
-      case 'Approved': return { bg: '#E8F7F8', text: '#00A9B7' };
+      case 'Approved': return { bg: 'var(--color-teal-tint)', text: 'var(--color-teal)' };
       case 'Pending': return { bg: '#FFF9E6', text: '#F59E0B' };
       case 'Overdue': return { bg: '#FFE8EA', text: '#EF4444' };
-      default: return { bg: '#F6F9FC', text: '#6E7A82' };
+      default: return { bg: 'var(--color-cloud)', text: 'var(--color-mercury-grey)' };
     }
   };
 
@@ -143,25 +143,25 @@ export function CFODesk() {
     const showTrend = trend !== undefined;
 
     return (
-      <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
-            <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>{title}</p>
+            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>{title}</p>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl" style={{ color: isWarning ? '#EF4444' : '#0A0F14' }}>
+              <span className="text-2xl" style={{ color: isWarning ? '#EF4444' : 'var(--color-ink)' }}>
                 {typeof value === 'number' && unit !== '%' ? formatCurrency(value) : `${value}${unit}`}
               </span>
             </div>
             {subtitle && (
-              <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>{subtitle}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>{subtitle}</p>
             )}
           </div>
           {Icon && (
             <div 
               className="w-10 h-10 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: isWarning ? '#FFE8EA' : '#F6F9FC' }}
+              style={{ backgroundColor: isWarning ? '#FFE8EA' : 'var(--color-cloud)' }}
             >
-              <Icon className="w-5 h-5" style={{ color: isWarning ? '#EF4444' : '#00A9B7' }} />
+              <Icon className="w-5 h-5" style={{ color: isWarning ? '#EF4444' : 'var(--color-teal)' }} />
             </div>
           )}
         </div>
@@ -173,7 +173,7 @@ export function CFODesk() {
             ) : (
               <TrendingDown className="w-3 h-3" style={{ color: title.includes('Variance') || title.includes('Commitments') ? '#10B981' : '#EF4444' }} />
             )}
-            <span style={{ color: '#6E7A82' }}>
+            <span style={{ color: 'var(--color-mercury-grey)' }}>
               {Math.abs(trend)}% vs last period
             </span>
           </div>
@@ -195,9 +195,9 @@ export function CFODesk() {
           <div className="flex-1">
             <div className="flex items-baseline gap-2 mb-1">
               <span className="text-2xl" style={{ color }}>{count}</span>
-              <span className="text-xs" style={{ color: '#6E7A82' }}>{title}</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{title}</span>
             </div>
-            <p className="text-xs" style={{ color: '#6E7A82' }}>{description}</p>
+            <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{description}</p>
           </div>
         </div>
       </div>
@@ -209,28 +209,28 @@ export function CFODesk() {
   };
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/reports')} 
             className="p-2 rounded-lg transition-colors hover:bg-white" 
-            style={{ color: '#6E7A82' }}
+            style={{ color: 'var(--color-mercury-grey)' }}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl mb-1" style={{ color: '#0A0F14' }}>CFO Desk</h1>
-            <p className="text-sm" style={{ color: '#6E7A82' }}>Financial Control & Risk Governance • FY 2024-25 • Last updated: {new Date().toLocaleString('en-IN')}</p>
+            <h1 className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>CFO Desk</h1>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Financial Control & Risk Governance • FY 2024-25 • Last updated: {new Date().toLocaleString('en-IN')}</p>
           </div>
         </div>
         <button
           onClick={handleExport}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Download className="w-4 h-4" />
           Export Financial Report
@@ -285,50 +285,50 @@ export function CFODesk() {
 
       {/* Spend Analytics Section */}
       <div className="mb-6">
-        <h2 className="text-lg mb-4" style={{ color: '#0A0F14' }}>Spend Analytics</h2>
+        <h2 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>Spend Analytics</h2>
         
         <div className="grid grid-cols-2 gap-6 mb-6">
           {/* Budget vs Actual vs Committed by Department */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <h3 className="text-sm mb-4" style={{ color: '#0A0F14' }}>Budget vs Actual vs Committed Spend by Department</h3>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>Budget vs Actual vs Committed Spend by Department</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={departmentSpendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="department" stroke="#6E7A82" style={{ fontSize: '12px' }} />
-                <YAxis stroke="#6E7A82" style={{ fontSize: '12px' }} label={{ value: '₹ Crore', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#6E7A82' } }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="department" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
+                <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} label={{ value: '₹ Crore', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' } }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: 'white', border: '1px solid #E1E6EA', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'white', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '12px' }}
                   formatter={(value) => `₹${value} Cr`}
                 />
                 <Legend 
                   formatter={(value) => {
                     const labels: any = { budget: 'Budget', actual: 'Actual Spend', committed: 'Committed' };
-                    return <span style={{ color: '#0A0F14', fontSize: '12px' }}>{labels[value]}</span>;
+                    return <span style={{ color: 'var(--color-ink)', fontSize: '12px' }}>{labels[value]}</span>;
                   }}
                 />
                 <Bar dataKey="budget" stackId="a" fill="#94A3B8" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="actual" stackId="a" fill="#00A9B7" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="actual" stackId="a" fill="var(--color-teal)" radius={[0, 0, 0, 0]} />
                 <Bar dataKey="committed" stackId="a" fill="#F59E0B" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* Monthly Spend Trend */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <h3 className="text-sm mb-4" style={{ color: '#0A0F14' }}>Monthly Spend Trend (FY 2024-25)</h3>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>Monthly Spend Trend (FY 2024-25)</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={monthlySpendTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="month" stroke="#6E7A82" style={{ fontSize: '12px' }} />
-                <YAxis stroke="#6E7A82" style={{ fontSize: '12px' }} label={{ value: '₹ Crore', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#6E7A82' } }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="month" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
+                <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} label={{ value: '₹ Crore', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' } }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: 'white', border: '1px solid #E1E6EA', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'white', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '12px' }}
                   formatter={(value) => `₹${value} Cr`}
                 />
                 <Legend 
                   formatter={(value) => {
                     const labels: any = { spend: 'Actual Spend', budget: 'Budget' };
-                    return <span style={{ color: '#0A0F14', fontSize: '12px' }}>{labels[value]}</span>;
+                    return <span style={{ color: 'var(--color-ink)', fontSize: '12px' }}>{labels[value]}</span>;
                   }}
                 />
                 <Line 
@@ -342,9 +342,9 @@ export function CFODesk() {
                 <Line 
                   type="monotone" 
                   dataKey="spend" 
-                  stroke="#00A9B7" 
+                  stroke="var(--color-teal)" 
                   strokeWidth={3}
-                  dot={{ fill: '#00A9B7', r: 4 }}
+                  dot={{ fill: 'var(--color-teal)', r: 4 }}
                   activeDot={{ r: 6 }}
                 />
               </LineChart>
@@ -354,37 +354,37 @@ export function CFODesk() {
 
         <div className="grid grid-cols-2 gap-6">
           {/* Cash Outflow Forecast */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <h3 className="text-sm mb-4" style={{ color: '#0A0F14' }}>Cash Outflow Forecast from Open POs</h3>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>Cash Outflow Forecast from Open POs</h3>
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={cashOutflowForecast}>
                 <defs>
                   <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00A9B7" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#00A9B7" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--color-teal)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="var(--color-teal)" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorCommitted" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="#F59E0B" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="month" stroke="#6E7A82" style={{ fontSize: '12px' }} />
-                <YAxis stroke="#6E7A82" style={{ fontSize: '12px' }} label={{ value: '₹ Crore', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#6E7A82' } }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="month" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
+                <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} label={{ value: '₹ Crore', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' } }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: 'white', border: '1px solid #E1E6EA', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'white', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '12px' }}
                   formatter={(value) => `₹${value} Cr`}
                 />
                 <Legend 
                   formatter={(value) => {
                     const labels: any = { forecast: 'Forecasted Outflow', committed: 'Committed Outflow' };
-                    return <span style={{ color: '#0A0F14', fontSize: '12px' }}>{labels[value]}</span>;
+                    return <span style={{ color: 'var(--color-ink)', fontSize: '12px' }}>{labels[value]}</span>;
                   }}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="forecast" 
-                  stroke="#00A9B7" 
+                  stroke="var(--color-teal)" 
                   strokeWidth={2}
                   fillOpacity={1} 
                   fill="url(#colorForecast)" 
@@ -402,18 +402,18 @@ export function CFODesk() {
           </div>
 
           {/* Top 10 Vendors by Spend */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <h3 className="text-sm mb-4" style={{ color: '#0A0F14' }}>Top 10 Vendors by Spend (YTD)</h3>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>Top 10 Vendors by Spend (YTD)</h3>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={topVendorsBySpend} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis type="number" stroke="#6E7A82" style={{ fontSize: '12px' }} />
-                <YAxis dataKey="vendor" type="category" width={130} stroke="#6E7A82" style={{ fontSize: '11px' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis type="number" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
+                <YAxis dataKey="vendor" type="category" width={130} stroke="var(--color-mercury-grey)" style={{ fontSize: '11px' }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: 'white', border: '1px solid #E1E6EA', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'white', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '12px' }}
                   formatter={(value) => `₹${value} Cr`}
                 />
-                <Bar dataKey="spend" fill="#00A9B7" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="spend" fill="var(--color-teal)" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -422,7 +422,7 @@ export function CFODesk() {
 
       {/* Risk & Compliance Section */}
       <div className="mb-6">
-        <h2 className="text-lg mb-4" style={{ color: '#0A0F14' }}>Risk & Compliance</h2>
+        <h2 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>Risk & Compliance</h2>
         
         <div className="grid grid-cols-4 gap-4 mb-6">
           <AlertCard 
@@ -457,22 +457,22 @@ export function CFODesk() {
       </div>
 
       {/* Commitments Table */}
-      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-        <div className="px-6 py-4 border-b" style={{ borderColor: '#E1E6EA' }}>
-          <h3 className="text-sm" style={{ color: '#0A0F14' }}>Open PO Commitments & Payment Schedule</h3>
-          <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>Upcoming payments requiring cash flow management • Total: {formatCurrency(commitmentsData.reduce((sum, item) => sum + item.amount, 0))}</p>
+      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--color-silver)' }}>
+          <h3 className="text-sm" style={{ color: 'var(--color-ink)' }}>Open PO Commitments & Payment Schedule</h3>
+          <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>Upcoming payments requiring cash flow management • Total: {formatCurrency(commitmentsData.reduce((sum, item) => sum + item.amount, 0))}</p>
         </div>
         
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82' }}>PO Number</th>
-                <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82' }}>Vendor</th>
-                <th className="px-6 py-3 text-right text-xs" style={{ color: '#6E7A82' }}>Amount</th>
-                <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82' }}>Due Date</th>
-                <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82' }}>Days Until Due</th>
-                <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82' }}>Payment Status</th>
+                <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>PO Number</th>
+                <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</th>
+                <th className="px-6 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Amount</th>
+                <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Due Date</th>
+                <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Days Until Due</th>
+                <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Payment Status</th>
               </tr>
             </thead>
             <tbody>
@@ -484,18 +484,18 @@ export function CFODesk() {
                   const isOverdue = item.daysUntilDue < 0;
                   
                   return (
-                    <tr key={index} style={{ borderTop: '1px solid #E1E6EA' }}>
+                    <tr key={index} style={{ borderTop: '1px solid var(--color-silver)' }}>
                       <td className="px-6 py-4">
-                        <span className="text-sm" style={{ color: '#00A9B7' }}>{item.poNumber}</span>
+                        <span className="text-sm" style={{ color: 'var(--color-teal)' }}>{item.poNumber}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm" style={{ color: '#0A0F14' }}>{item.vendor}</span>
+                        <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.vendor}</span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <span className="text-sm" style={{ color: '#0A0F14' }}>{formatCurrency(item.amount)}</span>
+                        <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{formatCurrency(item.amount)}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm" style={{ color: '#0A0F14' }}>
+                        <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                           {new Date(item.dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
                       </td>
@@ -503,8 +503,8 @@ export function CFODesk() {
                         <span 
                           className="text-sm px-2 py-1 rounded"
                           style={{ 
-                            backgroundColor: isOverdue ? '#FFE8EA' : isUrgent ? '#FFF9E6' : '#F6F9FC',
-                            color: isOverdue ? '#EF4444' : isUrgent ? '#F59E0B' : '#6E7A82'
+                            backgroundColor: isOverdue ? '#FFE8EA' : isUrgent ? '#FFF9E6' : 'var(--color-cloud)',
+                            color: isOverdue ? '#EF4444' : isUrgent ? '#F59E0B' : 'var(--color-mercury-grey)'
                           }}
                         >
                           {isOverdue ? `${Math.abs(item.daysUntilDue)} days overdue` : `${item.daysUntilDue} days`}

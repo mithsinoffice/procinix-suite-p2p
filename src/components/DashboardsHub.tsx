@@ -18,34 +18,34 @@ export function DashboardsHub() {
       name: 'Procurement Desk',
       description: 'Strategic procurement metrics and supplier performance',
       icon: ShoppingCart,
-      color: '#8B5CF6'
+      color: '#007D87'
     },
     {
       id: 'ap' as const,
       name: 'AP Desk Dashboard',
       description: 'Operational metrics for Accounts Payable team',
       icon: Users,
-      color: '#00A9B7'
+      color: 'var(--color-teal)'
     },
     {
       id: 'cfo' as const,
       name: 'CFO Desk Dashboard',
       description: 'Strategic financial metrics and executive insights',
       icon: TrendingUp,
-      color: '#007D87'
+      color: 'var(--color-teal-dark)'
     }
   ];
 
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: '#F6F9FC' }}>
+    <div className="h-full flex flex-col" style={{ backgroundColor: 'var(--color-cloud)' }}>
       {/* Header with Desk Selector */}
-      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>
+            <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
               Dashboards
             </h1>
-            <p className="text-sm" style={{ color: '#6E7A82' }}>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               Advanced analytics and metrics for decision-making
             </p>
           </div>
@@ -63,8 +63,8 @@ export function DashboardsHub() {
                   className="flex items-center gap-3 px-6 py-3 rounded-lg transition-all duration-200"
                   style={{
                     backgroundColor: isSelected ? desk.color : '#FFFFFF',
-                    border: `1px solid ${isSelected ? desk.color : '#E1E6EA'}`,
-                    color: isSelected ? '#FFFFFF' : '#0A0F14',
+                    border: `1px solid ${isSelected ? desk.color : 'var(--color-silver)'}`,
+                    color: isSelected ? '#FFFFFF' : 'var(--color-ink)',
                     cursor: 'pointer'
                   }}
                 >
@@ -76,7 +76,7 @@ export function DashboardsHub() {
                     <div 
                       className="text-xs mt-0.5" 
                       style={{ 
-                        color: isSelected ? 'rgba(255, 255, 255, 0.85)' : '#6E7A82',
+                        color: isSelected ? 'rgba(255, 255, 255, 0.85)' : 'var(--color-mercury-grey)',
                         fontWeight: '400'
                       }}
                     >

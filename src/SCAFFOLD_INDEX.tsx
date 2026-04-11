@@ -223,30 +223,30 @@ NEXT STEPS (NOT IMPLEMENTED):
 
 export default function ScaffoldIndexPage() {
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh', padding: '48px' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh', padding: '48px' }}>
       <div style={{ 
         maxWidth: '1200px', 
         margin: '0 auto',
         backgroundColor: '#FFFFFF',
-        border: '1px solid #E1E6EA',
+        border: '1px solid var(--color-silver)',
         borderRadius: '12px',
         padding: '40px'
       }}>
-        <h1 style={{ fontSize: '32px', color: '#0A0F14', marginBottom: '16px' }}>
+        <h1 style={{ fontSize: '32px', color: 'var(--color-ink)', marginBottom: '16px' }}>
           Desk-Based ERP Scaffold Index
         </h1>
-        <p style={{ fontSize: '16px', color: '#6E7A82', marginBottom: '32px' }}>
+        <p style={{ fontSize: '16px', color: 'var(--color-mercury-grey)', marginBottom: '32px' }}>
           Complete UI structure for multi-entity, role-based ERP system
         </p>
 
         <div style={{ 
           padding: '24px', 
-          backgroundColor: '#F6F9FC', 
-          border: '2px solid #00A9B7',
+          backgroundColor: 'var(--color-cloud)', 
+          border: '2px solid var(--color-teal)',
           borderRadius: '8px',
           marginBottom: '32px'
         }}>
-          <p style={{ fontSize: '14px', color: '#0A0F14', margin: 0 }}>
+          <p style={{ fontSize: '14px', color: 'var(--color-ink)', margin: 0 }}>
             ✓ All scaffold components created successfully<br/>
             ✓ 60+ files organized across 6 logical sections<br/>
             ✓ Zero functional overlap - clean architecture<br/>
@@ -267,18 +267,18 @@ export default function ScaffoldIndexPage() {
               key={section.title}
               style={{ 
                 backgroundColor: '#FFFFFF', 
-                border: '1px solid #E1E6EA',
+                border: '1px solid var(--color-silver)',
                 borderRadius: '8px',
                 padding: '20px'
               }}
             >
-              <h3 style={{ fontSize: '16px', color: '#0A0F14', margin: '0 0 8px 0' }}>
+              <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: '0 0 8px 0' }}>
                 {section.title}
               </h3>
-              <p style={{ fontSize: '13px', color: '#00A9B7', margin: '0 0 8px 0' }}>
+              <p style={{ fontSize: '13px', color: 'var(--color-teal)', margin: '0 0 8px 0' }}>
                 {section.count}
               </p>
-              <p style={{ fontSize: '12px', color: '#6E7A82', margin: 0 }}>
+              <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: 0 }}>
                 {section.desc}
               </p>
             </div>
@@ -288,14 +288,14 @@ export default function ScaffoldIndexPage() {
         <div style={{ 
           marginTop: '40px',
           padding: '24px',
-          backgroundColor: '#F6F9FC',
-          borderLeft: '4px solid #00A9B7',
+          backgroundColor: 'var(--color-cloud)',
+          borderLeft: '4px solid var(--color-teal)',
           borderRadius: '4px'
         }}>
-          <h3 style={{ fontSize: '16px', color: '#0A0F14', margin: '0 0 12px 0' }}>
+          <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: '0 0 12px 0' }}>
             Important Notes
           </h3>
-          <ul style={{ fontSize: '13px', color: '#6E7A82', margin: 0, paddingLeft: '20px' }}>
+          <ul style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: 0, paddingLeft: '20px' }}>
             <li>All components are UI SCAFFOLDS ONLY</li>
             <li>No data bindings or workflows implemented</li>
             <li>No navigation wiring between pages</li>

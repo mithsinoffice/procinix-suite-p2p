@@ -124,7 +124,7 @@ export function MyInvoices() {
       'Submitted': { bg: '#DBEAFE', color: '#1E40AF', icon: Clock },
       'In Review': { bg: '#FEF3C7', color: '#D97706', icon: Clock },
       'Approved': { bg: '#D1FAE5', color: '#047857', icon: CheckCircle },
-      'Rejected': { bg: '#FEE2E2', color: '#DC2626', icon: XCircle },
+      'Rejected': { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)', icon: XCircle },
       'On Hold': { bg: '#FED7AA', color: '#EA580C', icon: AlertTriangle },
       'Ready for Payment': { bg: '#E0E7FF', color: '#4F46E5', icon: DollarSign },
       'Paid': { bg: '#D1FAE5', color: '#059669', icon: CheckCircle }
@@ -136,7 +136,7 @@ export function MyInvoices() {
     const styles = {
       'Low': { bg: '#D1FAE5', color: '#047857' },
       'Medium': { bg: '#FEF3C7', color: '#D97706' },
-      'High': { bg: '#FEE2E2', color: '#DC2626' }
+      'High': { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' }
     };
     return styles[risk];
   };
@@ -178,8 +178,8 @@ export function MyInvoices() {
       label: 'Total Invoices', 
       value: invoices.length, 
       icon: FileText, 
-      color: '#00A9B7',
-      bg: '#00A9B710'
+      color: 'var(--color-teal)',
+      bg: 'var(--color-teal)10'
     },
     { 
       label: 'Pending Approval', 
@@ -205,49 +205,49 @@ export function MyInvoices() {
   ];
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }} className="p-8">
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="p-8">
       <div className="mb-6">
-        <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>My Invoices</h1>
-        <p style={{ color: '#6E7A82' }}>Track and manage invoices you've created</p>
+        <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>My Invoices</h1>
+        <p style={{ color: 'var(--color-mercury-grey)' }}>Track and manage invoices you've created</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white rounded-xl p-4 border-2" style={{ borderColor: '#E1E6EA' }}>
+          <div key={idx} className="bg-white rounded-xl p-4 border-2" style={{ borderColor: 'var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm" style={{ color: '#6E7A82' }}>{stat.label}</span>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{stat.label}</span>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: stat.bg }}>
                 <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
               </div>
             </div>
-            <p className="text-2xl" style={{ color: '#0A0F14' }}>{stat.value}</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)' }}>{stat.value}</p>
           </div>
         ))}
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white rounded-xl border-2 mb-4" style={{ borderColor: '#E1E6EA' }}>
+      <div className="bg-white rounded-xl border-2 mb-4" style={{ borderColor: 'var(--color-silver)' }}>
         <div className="p-4">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: '#6E7A82' }} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
               <input
                 type="text"
                 placeholder="Search by invoice number, vendor, or PO..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 rounded-lg border-2"
-                style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
               />
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors"
               style={{ 
-                borderColor: showFilters ? '#00A9B7' : '#E1E6EA',
-                backgroundColor: showFilters ? '#00A9B710' : 'white',
-                color: showFilters ? '#00A9B7' : '#6E7A82'
+                borderColor: showFilters ? 'var(--color-teal)' : 'var(--color-silver)',
+                backgroundColor: showFilters ? 'var(--color-teal)10' : 'white',
+                color: showFilters ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
               }}
             >
               <Filter className="w-5 h-5" />
@@ -256,9 +256,9 @@ export function MyInvoices() {
             <button
               onClick={() => navigate('/invoices/create')}
               className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-              style={{ backgroundColor: '#00A9B7' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+              style={{ backgroundColor: 'var(--color-teal)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
             >
               <FileText className="w-5 h-5" />
               Create Invoice
@@ -266,14 +266,14 @@ export function MyInvoices() {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t-2" style={{ borderColor: '#E1E6EA' }}>
+            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t-2" style={{ borderColor: 'var(--color-silver)' }}>
               <div>
-                <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>Status</label>
+                <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Status</label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border-2"
-                  style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                  style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>All</option>
                   <option>Draft</option>
@@ -287,12 +287,12 @@ export function MyInvoices() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>AI Risk Level</label>
+                <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>AI Risk Level</label>
                 <select
                   value={riskFilter}
                   onChange={(e) => setRiskFilter(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border-2"
-                  style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                  style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>All</option>
                   <option>Low</option>
@@ -301,12 +301,12 @@ export function MyInvoices() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>Invoice Type</label>
+                <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Type</label>
                 <select
                   value={invoiceTypeFilter}
                   onChange={(e) => setInvoiceTypeFilter(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border-2"
-                  style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                  style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>All</option>
                   <option>PO</option>
@@ -319,20 +319,20 @@ export function MyInvoices() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border-2 overflow-hidden" style={{ borderColor: '#E1E6EA' }}>
+      <div className="bg-white rounded-xl border-2 overflow-hidden" style={{ borderColor: 'var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Invoice Number</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Vendor</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>PO Number</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Invoice Date</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Amount</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Status</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>AI Risk</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Payment</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Number</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>PO Number</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Date</th>
+                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Amount</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>AI Risk</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Payment</th>
+                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -344,25 +344,25 @@ export function MyInvoices() {
                 return (
                   <tr 
                     key={invoice.id} 
-                    className="border-t-2 hover:bg-[#F6F9FC] cursor-pointer transition-colors"
-                    style={{ borderColor: '#E1E6EA' }}
+                    className="border-t-2 hover:bg-[var(--color-cloud)] cursor-pointer transition-colors"
+                    style={{ borderColor: 'var(--color-silver)' }}
                     onClick={() => handleViewInvoice(invoice.id)}
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-[#00A9B7]" />
-                        <span style={{ color: '#0A0F14' }}>{invoice.invoiceNumber}</span>
+                        <FileText className="w-4 h-4 text-[var(--color-teal)]" />
+                        <span style={{ color: 'var(--color-ink)' }}>{invoice.invoiceNumber}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <p style={{ color: '#0A0F14' }}>{invoice.vendorName}</p>
-                        <p className="text-sm" style={{ color: '#6E7A82' }}>{invoice.vendorCode}</p>
+                        <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorName}</p>
+                        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.vendorCode}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{invoice.poNumber}</td>
-                    <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{invoice.invoiceDate}</td>
-                    <td className="px-6 py-4 text-right" style={{ color: '#0A0F14' }}>
+                    <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{invoice.poNumber}</td>
+                    <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{invoice.invoiceDate}</td>
+                    <td className="px-6 py-4 text-right" style={{ color: 'var(--color-ink)' }}>
                       ₹{invoice.invoiceAmount.toLocaleString('en-IN')}
                     </td>
                     <td className="px-6 py-4">
@@ -375,7 +375,7 @@ export function MyInvoices() {
                           {invoice.status}
                         </span>
                         {invoice.daysInStatus > 5 && invoice.status !== 'Paid' && (
-                          <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                          <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--color-error-light)', color: 'var(--color-error-dark)' }}>
                             {invoice.daysInStatus}d
                           </span>
                         )}
@@ -389,39 +389,39 @@ export function MyInvoices() {
                         {invoice.aiRisk}
                       </span>
                     </td>
-                    <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{invoice.paymentStatus}</td>
+                    <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.paymentStatus}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleViewInvoice(invoice.id)}
-                          className="p-2 rounded-lg hover:bg-[#E1E6EA] transition-colors"
+                          className="p-2 rounded-lg hover:bg-[var(--color-silver)] transition-colors"
                           title="View Details"
                         >
-                          <Eye className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                          <Eye className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                         </button>
                         {invoice.status === 'Draft' && (
                           <button
                             onClick={() => handleEditDraft(invoice.id)}
-                            className="p-2 rounded-lg hover:bg-[#E1E6EA] transition-colors"
+                            className="p-2 rounded-lg hover:bg-[var(--color-silver)] transition-colors"
                             title="Edit Draft"
                           >
-                            <Edit2 className="w-4 h-4" style={{ color: '#00A9B7' }} />
+                            <Edit2 className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                           </button>
                         )}
                         <button
                           onClick={() => handleCloneInvoice(invoice.id)}
-                          className="p-2 rounded-lg hover:bg-[#E1E6EA] transition-colors"
+                          className="p-2 rounded-lg hover:bg-[var(--color-silver)] transition-colors"
                           title="Clone Invoice"
                         >
-                          <Copy className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                          <Copy className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                         </button>
                         {(invoice.status === 'Submitted' || invoice.status === 'In Review') && (
                           <button
                             onClick={() => handleWithdraw(invoice.id)}
-                            className="p-2 rounded-lg hover:bg-[#FEE2E2] transition-colors"
+                            className="p-2 rounded-lg hover:bg-[var(--color-error-light)] transition-colors"
                             title="Withdraw"
                           >
-                            <XCircle className="w-4 h-4" style={{ color: '#DC2626' }} />
+                            <XCircle className="w-4 h-4" style={{ color: 'var(--color-error-dark)' }} />
                           </button>
                         )}
                       </div>
@@ -435,8 +435,8 @@ export function MyInvoices() {
 
         {filteredInvoices.length === 0 && (
           <div className="text-center py-12">
-            <FileText className="w-12 h-12 mx-auto mb-3" style={{ color: '#E1E6EA' }} />
-            <p style={{ color: '#6E7A82' }}>No invoices found</p>
+            <FileText className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--color-silver)' }} />
+            <p style={{ color: 'var(--color-mercury-grey)' }}>No invoices found</p>
           </div>
         )}
       </div>

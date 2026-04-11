@@ -1,11 +1,12 @@
 import { ArrowLeft, Plus, Trash2, X, RefreshCw, DollarSign, FileText, Edit, Eye, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface Change {
   field: string;
@@ -91,13 +92,13 @@ export function ExchangeRateMaster() {
       case 'Pending Approval':
         return { backgroundColor: '#FFF9E6', color: '#D97706' };
       case 'Rejected':
-        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+        return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
       case 'Changes Requested':
         return { backgroundColor: '#E0F2FE', color: '#0284C7' };
       case 'Draft':
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
       default:
-        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+        return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
     }
   };
 
@@ -145,85 +146,93 @@ export function ExchangeRateMaster() {
 
   const getStatusBadgeStyle = (isActive: boolean) => {
     return isActive
-      ? { backgroundColor: '#E8F7F8', color: '#00A9B7' }
-      : { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+      ? { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }
+      : { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
   };
 
   const getRateTypeBadgeStyle = (rateType: string) => {
     return rateType === 'Standard'
-      ? { backgroundColor: '#E5E7EB', color: '#6E7A82' }
+      ? { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' }
       : { backgroundColor: '#FFF9E6', color: '#D97706' };
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [fromCurrency, toCurrency, exchangeRate, rateType, effectiveFromDate];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [fromCurrency, toCurrency, exchangeRate, rateType, effectiveFromDate]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showForm) {
     return (
-      <MasterFormPage
+      <FormShell
         title={editingId ? 'Edit Exchange Rate' : 'Create Exchange Rate'}
         subtitle="Manage exchange rates between currencies for multi-entity operations"
         modeLabel={editingId ? 'Edit Master Record' : 'Create Master Record'}
+        draftStatus={editingId ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={() => setShowForm(false)}
         onCancel={() => {
           setShowForm(false);
           resetForm();
         }}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>From Currency <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <input type="text" value={fromCurrency} onChange={(e) => setFromCurrency(e.target.value)} placeholder="e.g., USD" className="w-full px-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>To Currency <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <input type="text" value={toCurrency} onChange={(e) => setToCurrency(e.target.value)} placeholder="e.g., INR" className="w-full px-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Exchange Rate <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="number" step="0.0001" value={exchangeRate} onChange={(e) => setExchangeRate(e.target.value)} placeholder="e.g., 83.1250" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Rate Type <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <RefreshCw className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select value={rateType} onChange={(e) => setRateType(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="Standard">Standard</option>
-                <option value="Closing">Closing</option>
-                <option value="Average">Average</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Effective From <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="date" value={effectiveFromDate} onChange={(e) => setEffectiveFromDate(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ border: '1px solid #D7E3EA', backgroundColor: '#FFFFFF' }}>
-            <input id="exchange-active" type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-            <label htmlFor="exchange-active" style={{ color: '#0A0F14' }}>Rate is active</label>
-          </div>
-        </div>
-      </MasterFormPage>
+        <FormSection title="Rate Details" columns={2}>
+          <PxFormField label="From Currency" required filled={!!fromCurrency.trim()}>
+            <input type="text" value={fromCurrency} onChange={(e) => setFromCurrency(e.target.value)} placeholder="e.g., USD" className="px-input" />
+          </PxFormField>
+          <PxFormField label="To Currency" required filled={!!toCurrency.trim()}>
+            <input type="text" value={toCurrency} onChange={(e) => setToCurrency(e.target.value)} placeholder="e.g., INR" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Exchange Rate" required filled={!!exchangeRate.trim()}>
+            <input type="number" step="0.0001" value={exchangeRate} onChange={(e) => setExchangeRate(e.target.value)} placeholder="e.g., 83.1250" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Rate Type" required filled={!!rateType}>
+            <select value={rateType} onChange={(e) => setRateType(e.target.value)} className="px-select">
+              <option value="Standard">Standard</option>
+              <option value="Closing">Closing</option>
+              <option value="Average">Average</option>
+            </select>
+          </PxFormField>
+          <PxFormField label="Effective From" required filled={!!effectiveFromDate.trim()}>
+            <input type="date" value={effectiveFromDate} onChange={(e) => setEffectiveFromDate(e.target.value)} className="px-input" />
+          </PxFormField>
+          <CheckCard
+            title="Rate is Active"
+            subtitle="Inactive rates are hidden from transaction forms"
+            checked={isActive}
+            onChange={setIsActive}
+          />
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)' }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Exchange Rate Master</h1>
-            <p style={{ color: '#6E7A82' }}>Manage exchange rates between currencies for multi-entity operations</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Exchange Rate Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage exchange rates between currencies for multi-entity operations</p>
           </div>
         </div>
         <button
@@ -232,46 +241,46 @@ export function ExchangeRateMaster() {
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Add Exchange Rate
         </button>
       </div>
 
-      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>From Currency</th>
-                <th className="px-6 py-4 text-center text-sm" style={{ color: '#6E7A82' }}>→</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>To Currency</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Exchange Rate</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Rate Type</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Effective From</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Approval</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>From Currency</th>
+                <th className="px-6 py-4 text-center text-sm" style={{ color: 'var(--color-mercury-grey)' }}>→</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>To Currency</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Exchange Rate</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Rate Type</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Effective From</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {exchangeRates.map((rate, index) => (
-                <tr key={rate.id} style={{ borderTop: index === 0 ? 'none' : '1px solid #E1E6EA' }}>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14', fontWeight: '600' }}>{rate.fromCurrency}</td>
+                <tr key={rate.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{rate.fromCurrency}</td>
                   <td className="px-6 py-4 text-center">
-                    <RefreshCw className="w-4 h-4 inline" style={{ color: '#6E7A82' }} />
+                    <RefreshCw className="w-4 h-4 inline" style={{ color: 'var(--color-mercury-grey)' }} />
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14', fontWeight: '600' }}>{rate.toCurrency}</td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14', fontWeight: '600' }}>{rate.exchangeRate.toFixed(4)}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{rate.toCurrency}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{rate.exchangeRate.toFixed(4)}</td>
                   <td className="px-6 py-4">
                     <span className="px-3 py-1 rounded-full text-sm" style={getRateTypeBadgeStyle(rate.rateType)}>
                       {rate.rateType}
                     </span>
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-3.5 h-3.5" />
                       {rate.effectiveFromDate}
@@ -289,16 +298,16 @@ export function ExchangeRateMaster() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button 
-                        className="p-2 rounded-lg transition-colors" 
-                        style={{ color: '#6E7A82' }} 
+                      <button
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: 'var(--color-mercury-grey)' }}
                         title="View Details"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button 
-                        className="p-2 rounded-lg transition-colors" 
-                        style={{ color: '#6E7A82' }} 
+                      <button
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: 'var(--color-mercury-grey)' }}
                         title="Edit"
                         onClick={() => handleEdit(rate)}
                       >
@@ -307,7 +316,7 @@ export function ExchangeRateMaster() {
                       {(rate.approvalStatus === 'Pending Approval' || rate.approvalStatus === 'Changes Requested' || rate.approvalStatus === 'Draft') && (
                         <button
                           className="p-2 rounded-lg transition-colors"
-                          style={{ color: '#00A9B7' }}
+                          style={{ color: 'var(--color-teal)' }}
                           title="Review Changes"
                           onClick={() => handleReview(rate)}
                         >
@@ -325,7 +334,7 @@ export function ExchangeRateMaster() {
 
       {/* Info Banners */}
       <div className="mt-6 space-y-3">
-        <div 
+        <div
           className="p-4 rounded-lg"
           style={{ backgroundColor: '#FFF9E6', border: '1px solid #FCD34D' }}
         >
@@ -333,41 +342,15 @@ export function ExchangeRateMaster() {
             ℹ️ Exchange rates are used for consolidated reporting and cross-entity analytics only. Not auto-applied to transactions.
           </p>
         </div>
-        <div 
+        <div
           className="p-4 rounded-lg"
-          style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}
+          style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}
         >
-          <p className="text-sm" style={{ color: '#007D87' }}>
+          <p className="text-sm" style={{ color: 'var(--color-teal-dark)' }}>
             💡 Showing {exchangeRates.length} exchange rate mappings. Bidirectional rates available for INR ↔ AED, INR ↔ USD, AED ↔ USD.
           </p>
         </div>
       </div>
-
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-xl">
-            <div className="border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: '#E1E6EA' }}>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>{editingId ? 'Edit Exchange Rate' : 'Add Exchange Rate'}</h2>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg" style={{ color: '#6E7A82' }}><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6 grid grid-cols-2 gap-4">
-              <input value={fromCurrency} onChange={(e) => setFromCurrency(e.target.value.toUpperCase())} placeholder="From Currency" className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <input value={toCurrency} onChange={(e) => setToCurrency(e.target.value.toUpperCase())} placeholder="To Currency" className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <input value={exchangeRate} onChange={(e) => setExchangeRate(e.target.value)} placeholder="Exchange Rate" className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <select value={rateType} onChange={(e) => setRateType(e.target.value)} className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-                <option value="Standard">Standard</option>
-                <option value="Manual">Manual</option>
-              </select>
-              <input type="date" value={effectiveFromDate} onChange={(e) => setEffectiveFromDate(e.target.value)} className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <label className="flex items-center gap-2 text-sm" style={{ color: '#0A0F14' }}><input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />Active</label>
-            </div>
-            <div className="border-t px-6 py-4 flex justify-end gap-3" style={{ borderColor: '#E1E6EA' }}>
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#6E7A82' }}>Cancel</button>
-              <button onClick={handleSubmit} className="px-4 py-2 rounded-lg text-white" style={{ backgroundColor: '#00A9B7' }}>Save</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <ApprovalModal
         isOpen={showApprovalModal}

@@ -61,10 +61,10 @@ export function CFODeskAdvanced() {
 
   // Spend by Category
   const categorySpend = [
-    { category: 'Direct Materials', value: 125.5, percent: 47.3, color: '#00A9B7' },
+    { category: 'Direct Materials', value: 125.5, percent: 47.3, color: 'var(--color-teal)' },
     { category: 'Services', value: 65.2, percent: 24.6, color: '#F59E0B' },
     { category: 'IT & Software', value: 38.8, percent: 14.6, color: '#3B82F6' },
-    { category: 'Professional Fees', value: 22.5, percent: 8.5, color: '#8B5CF6' },
+    { category: 'Professional Fees', value: 22.5, percent: 8.5, color: '#007D87' },
     { category: 'Others', value: 13.5, percent: 5.0, color: '#6B7280' }
   ];
 
@@ -140,7 +140,7 @@ export function CFODeskAdvanced() {
       {/* Executive KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Spend YTD */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#EFF6FF' }}>
               <DollarSign className="w-5 h-5" style={{ color: '#3B82F6' }} />
@@ -149,14 +149,14 @@ export function CFODeskAdvanced() {
               YTD
             </span>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {formatCrores(totalSpendYTD / 10000000)}
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Total Spend YTD
           </div>
           <div className="flex items-center justify-between">
-            <div className="text-xs" style={{ color: '#6E7A82' }}>
+            <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               Budget: {formatCrores(budgetAllocated / 10000000)}
             </div>
             <div className="text-xs flex items-center gap-1" style={{ color: budgetVariance < 0 ? '#10B981' : '#EF4444' }}>
@@ -167,16 +167,16 @@ export function CFODeskAdvanced() {
         </div>
 
         {/* Budget Utilization */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#F3E8FF' }}>
               <Target className="w-5 h-5" style={{ color: '#9333EA' }} />
             </div>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {budgetUtilization.toFixed(1)}%
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Budget Utilization
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
@@ -191,7 +191,7 @@ export function CFODeskAdvanced() {
         </div>
 
         {/* Open Commitments */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
               <Activity className="w-5 h-5" style={{ color: '#F59E0B' }} />
@@ -200,19 +200,19 @@ export function CFODeskAdvanced() {
               Uncommitted
             </span>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {formatCrores(openCommitments / 10000000)}
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Open Commitments
           </div>
-          <div className="text-xs" style={{ color: '#6E7A82' }}>
+          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
             {((openCommitments / budgetAllocated) * 100).toFixed(1)}% of budget
           </div>
         </div>
 
         {/* Compliance Score */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
               <Shield className="w-5 h-5" style={{ color: '#10B981' }} />
@@ -221,10 +221,10 @@ export function CFODeskAdvanced() {
               Healthy
             </span>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {complianceScore.toFixed(1)}%
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Compliance Score
           </div>
           <div className="text-xs flex items-center gap-1" style={{ color: '#10B981' }}>
@@ -236,62 +236,62 @@ export function CFODeskAdvanced() {
 
       {/* Working Capital & Operational Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#DBEAFE' }}>
               <Clock className="w-5 h-5" style={{ color: '#3B82F6' }} />
             </div>
             <div>
-              <div className="text-xs" style={{ color: '#6E7A82' }}>Avg Payment Cycle</div>
-              <div className="text-xl" style={{ color: '#0A0F14', fontWeight: '700' }}>{avgPaymentCycle} days</div>
+              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Avg Payment Cycle</div>
+              <div className="text-xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>{avgPaymentCycle} days</div>
             </div>
           </div>
           <div className="text-xs" style={{ color: '#10B981' }}>↓ 3.2 days vs last quarter</div>
         </div>
 
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
               <BarChart3 className="w-5 h-5" style={{ color: '#F59E0B' }} />
             </div>
             <div>
-              <div className="text-xs" style={{ color: '#6E7A82' }}>Working Capital Days</div>
-              <div className="text-xl" style={{ color: '#0A0F14', fontWeight: '700' }}>{workingCapitalDays} days</div>
+              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Working Capital Days</div>
+              <div className="text-xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>{workingCapitalDays} days</div>
             </div>
           </div>
           <div className="text-xs" style={{ color: '#10B981' }}>↓ 5 days improvement</div>
         </div>
 
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
               <TrendingUp className="w-5 h-5" style={{ color: '#10B981' }} />
             </div>
             <div>
-              <div className="text-xs" style={{ color: '#6E7A82' }}>Savings Potential</div>
-              <div className="text-xl" style={{ color: '#0A0F14', fontWeight: '700' }}>₹22.8Cr</div>
+              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Savings Potential</div>
+              <div className="text-xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>₹22.8Cr</div>
             </div>
           </div>
-          <div className="text-xs" style={{ color: '#6E7A82' }}>8.6% of total spend</div>
+          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>8.6% of total spend</div>
         </div>
       </div>
 
       {/* Charts Row 1 - Strategic Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cash Flow Forecast */}
-        <div className="bg-white rounded-lg p-6 lg:col-span-2" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6 lg:col-span-2" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Cash Flow Forecast (6 Months)
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Projected inflows, outflows, and net position
               </p>
             </div>
             <button 
               className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-2"
-              style={{ backgroundColor: '#00A9B7', color: '#FFFFFF' }}
+              style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF' }}
             >
               <Download className="w-3 h-3" />
               Export
@@ -300,9 +300,9 @@ export function CFODeskAdvanced() {
           <div style={{ height: '320px', minHeight: '320px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={320} debounce={1}>
               <ComposedChart data={cashFlowForecast}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="month" style={{ fontSize: '11px', fill: '#6E7A82' }} />
-                <YAxis style={{ fontSize: '11px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="month" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Bar dataKey="inflow" fill="#10B981" name="Inflow (Cr)" />
@@ -314,13 +314,13 @@ export function CFODeskAdvanced() {
         </div>
 
         {/* Spend by Category */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Spend by Category
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 YTD distribution
               </p>
             </div>
@@ -351,9 +351,9 @@ export function CFODeskAdvanced() {
               <div key={cat.category} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded" style={{ backgroundColor: cat.color }} />
-                  <span style={{ color: '#6E7A82' }}>{cat.category}</span>
+                  <span style={{ color: 'var(--color-mercury-grey)' }}>{cat.category}</span>
                 </div>
-                <span style={{ color: '#0A0F14', fontWeight: '600' }}>{formatCrores(cat.value)}</span>
+                <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{formatCrores(cat.value)}</span>
               </div>
             ))}
           </div>
@@ -363,13 +363,13 @@ export function CFODeskAdvanced() {
       {/* Charts Row 2 - Budget & Spend Analysis */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Budget vs Actual by Department */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Budget vs Actual by Department
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Including committed amounts
               </p>
             </div>
@@ -377,13 +377,13 @@ export function CFODeskAdvanced() {
           <div style={{ height: '320px', minHeight: '320px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={320} minHeight={320}>
               <BarChart data={departmentBudget} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis type="category" dataKey="dept" style={{ fontSize: '11px', fill: '#6E7A82' }} />
-                <YAxis type="number" style={{ fontSize: '11px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis type="category" dataKey="dept" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis type="number" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="budget" fill="#E1E6EA" name="Budget (Cr)" />
-                <Bar dataKey="actual" fill="#00A9B7" name="Actual (Cr)" />
+                <Bar dataKey="budget" fill="var(--color-silver)" name="Budget (Cr)" />
+                <Bar dataKey="actual" fill="var(--color-teal)" name="Actual (Cr)" />
                 <Bar dataKey="committed" fill="#F59E0B" name="Committed (Cr)" />
               </BarChart>
             </ResponsiveContainer>
@@ -391,13 +391,13 @@ export function CFODeskAdvanced() {
         </div>
 
         {/* Monthly Spend Trend */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Monthly Spend Trend (Last 12 Months)
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Actual vs budgeted spend
               </p>
             </div>
@@ -405,13 +405,13 @@ export function CFODeskAdvanced() {
           <div style={{ height: '320px', minHeight: '320px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={320} minHeight={320}>
               <AreaChart data={monthlySpend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="month" style={{ fontSize: '10px', fill: '#6E7A82' }} />
-                <YAxis style={{ fontSize: '11px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="month" style={{ fontSize: '10px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Area type="monotone" dataKey="budget" stroke="#9CA3AF" fill="#E5E7EB" fillOpacity={0.6} name="Budget (Cr)" />
-                <Area type="monotone" dataKey="spend" stroke="#00A9B7" fill="#00A9B7" fillOpacity={0.4} name="Actual Spend (Cr)" />
+                <Area type="monotone" dataKey="spend" stroke="var(--color-teal)" fill="var(--color-teal)" fillOpacity={0.4} name="Actual Spend (Cr)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -421,36 +421,36 @@ export function CFODeskAdvanced() {
       {/* Bottom Row - Tables & Analysis */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Vendors by Spend */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Top Vendors by Spend
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 YTD performance metrics
               </p>
             </div>
           </div>
           <div className="overflow-auto" style={{ maxHeight: '320px' }}>
             <table className="w-full">
-              <thead style={{ backgroundColor: '#F6F9FC', position: 'sticky', top: 0 }}>
-                <tr style={{ borderBottom: '1px solid #E1E6EA' }}>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Vendor</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>YTD Spend</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Invoices</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Avg Days</th>
+              <thead style={{ backgroundColor: 'var(--color-cloud)', position: 'sticky', top: 0 }}>
+                <tr style={{ borderBottom: '1px solid var(--color-silver)' }}>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Vendor</th>
+                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>YTD Spend</th>
+                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Invoices</th>
+                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Avg Days</th>
                 </tr>
               </thead>
               <tbody>
                 {topVendorSpend.map((vendor, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #F6F9FC' }}>
-                    <td className="px-3 py-3 text-xs" style={{ color: '#0A0F14' }}>{vendor.name}</td>
-                    <td className="px-3 py-3 text-xs text-right" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                    <td className="px-3 py-3 text-xs" style={{ color: 'var(--color-ink)' }}>{vendor.name}</td>
+                    <td className="px-3 py-3 text-xs text-right" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                       ₹{vendor.ytdSpend}Cr
                     </td>
-                    <td className="px-3 py-3 text-xs text-right" style={{ color: '#6E7A82' }}>{vendor.invoiceCount}</td>
-                    <td className="px-3 py-3 text-xs text-right" style={{ color: '#6E7A82' }}>{vendor.avgPaymentDays}d</td>
+                    <td className="px-3 py-3 text-xs text-right" style={{ color: 'var(--color-mercury-grey)' }}>{vendor.invoiceCount}</td>
+                    <td className="px-3 py-3 text-xs text-right" style={{ color: 'var(--color-mercury-grey)' }}>{vendor.avgPaymentDays}d</td>
                   </tr>
                 ))}
               </tbody>
@@ -459,13 +459,13 @@ export function CFODeskAdvanced() {
         </div>
 
         {/* Savings Opportunities */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Identified Savings Opportunities
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Potential cost reduction initiatives
               </p>
             </div>
@@ -475,7 +475,7 @@ export function CFODeskAdvanced() {
               const easeColors = {
                 high: { bg: '#D1FAE5', text: '#065F46', border: '#10B981' },
                 medium: { bg: '#FEF3C7', text: '#92400E', border: '#F59E0B' },
-                low: { bg: '#FEE2E2', text: '#991B1B', border: '#EF4444' }
+                low: { bg: 'var(--color-error-light)', text: '#991B1B', border: '#EF4444' }
               };
               const colors = easeColors[opp.ease as keyof typeof easeColors];
 
@@ -483,10 +483,10 @@ export function CFODeskAdvanced() {
                 <div 
                   key={idx}
                   className="flex items-center justify-between p-3 rounded-lg"
-                  style={{ border: `1px solid #E1E6EA`, backgroundColor: '#FAFBFC' }}
+                  style={{ border: `1px solid var(--color-silver)`, backgroundColor: '#FAFBFC' }}
                 >
                   <div className="flex-1">
-                    <div className="text-sm mb-1" style={{ color: '#0A0F14', fontWeight: '500' }}>
+                    <div className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
                       {opp.opportunity}
                     </div>
                     <div className="flex items-center gap-2">
@@ -502,7 +502,7 @@ export function CFODeskAdvanced() {
                     <div className="text-base" style={{ color: '#10B981', fontWeight: '700' }}>
                       ₹{opp.potential}Cr
                     </div>
-                    <div className="text-xs" style={{ color: '#6E7A82' }}>
+                    <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                       potential
                     </div>
                   </div>
@@ -514,13 +514,13 @@ export function CFODeskAdvanced() {
       </div>
 
       {/* Risk & Compliance Section */}
-      <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+            <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
               Risk & Compliance Monitoring
             </h3>
-            <p className="text-xs" style={{ color: '#6E7A82' }}>
+            <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               Key risk indicators and trends
             </p>
           </div>
@@ -528,7 +528,7 @@ export function CFODeskAdvanced() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {riskMetrics.map((risk, idx) => {
             const severityColors = {
-              critical: { bg: '#FEE2E2', icon: '#EF4444', border: '#EF4444' },
+              critical: { bg: 'var(--color-error-light)', icon: '#EF4444', border: '#EF4444' },
               high: { bg: '#FED7AA', icon: '#F97316', border: '#F97316' },
               medium: { bg: '#FEF3C7', icon: '#F59E0B', border: '#F59E0B' },
               low: { bg: '#D1FAE5', icon: '#10B981', border: '#10B981' }
@@ -550,7 +550,7 @@ export function CFODeskAdvanced() {
                     {risk.count}
                   </div>
                 </div>
-                <div className="text-sm mb-2" style={{ color: '#0A0F14', fontWeight: '500' }}>
+                <div className="text-sm mb-2" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
                   {risk.metric}
                 </div>
                 <div className="flex items-center gap-1 text-xs" style={{ color: risk.trend <= 0 ? '#10B981' : '#EF4444' }}>

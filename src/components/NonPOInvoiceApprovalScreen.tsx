@@ -95,34 +95,34 @@ export function NonPOInvoiceApprovalScreen() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }} className="flex flex-col">
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="flex flex-col">
       {/* Sticky Action Bar */}
-      <div className="sticky top-0 z-10 bg-white shadow-sm" style={{ borderBottom: '2px solid #E1E6EA' }}>
+      <div className="sticky top-0 z-10 bg-white shadow-sm" style={{ borderBottom: '2px solid var(--color-silver)' }}>
         <div className="px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => navigate('/ap/invoices-for-approval')}
                 className="p-2 rounded-lg transition-colors hover:bg-gray-100" 
-                style={{ color: '#6E7A82' }}
+                style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl" style={{ color: '#0A0F14' }}>
+                <h1 className="text-2xl" style={{ color: 'var(--color-ink)' }}>
                   Non-PO Invoice Approval
                   <span className="ml-3 px-3 py-1 rounded text-sm" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
                     Non-PO
                   </span>
                 </h1>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>{invoice.invoiceNumber}</p>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.invoiceNumber}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowSendBackModal(true)}
                 className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
-                style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}
+                style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 <MessageSquare className="w-4 h-4" />
                 Send Back
@@ -130,7 +130,7 @@ export function NonPOInvoiceApprovalScreen() {
               <button
                 onClick={() => setShowRejectModal(true)}
                 className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#DC2626' }}
+                style={{ backgroundColor: 'var(--color-error-dark)' }}
               >
                 <XCircle className="w-4 h-4" />
                 Reject
@@ -169,112 +169,112 @@ export function NonPOInvoiceApprovalScreen() {
           </div>
 
           {/* Invoice Header */}
-          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: '#E1E6EA' }}>
-            <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Invoice Details</h2>
+          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: 'var(--color-silver)' }}>
+            <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Invoice Details</h2>
             
             <div className="grid grid-cols-3 gap-6">
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Invoice Number</label>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Number</label>
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-[#00A9B7]" />
-                  <span style={{ color: '#0A0F14' }}>{invoice.invoiceNumber}</span>
+                  <FileText className="w-4 h-4 text-[var(--color-teal)]" />
+                  <span style={{ color: 'var(--color-ink)' }}>{invoice.invoiceNumber}</span>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Vendor</label>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</label>
                 <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                  <Building2 className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   <div>
-                    <p style={{ color: '#0A0F14' }}>{invoice.vendorName}</p>
-                    <p className="text-sm" style={{ color: '#6E7A82' }}>{invoice.vendorCode}</p>
+                    <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorName}</p>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.vendorCode}</p>
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Invoice Date</label>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Date</label>
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                  <span style={{ color: '#0A0F14' }}>{invoice.invoiceDate}</span>
+                  <Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                  <span style={{ color: 'var(--color-ink)' }}>{invoice.invoiceDate}</span>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Entity</label>
-                <span style={{ color: '#0A0F14' }}>{invoice.entity}</span>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Entity</label>
+                <span style={{ color: 'var(--color-ink)' }}>{invoice.entity}</span>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Supply Type</label>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Supply Type</label>
                 <span className="px-2 py-1 rounded text-sm" style={{ backgroundColor: '#DBEAFE', color: '#1E40AF' }}>
                   {invoice.supplyType}
                 </span>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Place of Supply</label>
-                <span style={{ color: '#0A0F14' }}>{invoice.placeOfSupply}</span>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Place of Supply</label>
+                <span style={{ color: 'var(--color-ink)' }}>{invoice.placeOfSupply}</span>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Expense Category</label>
-                <span style={{ color: '#0A0F14' }}>{invoice.expenseCategory}</span>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Expense Category</label>
+                <span style={{ color: 'var(--color-ink)' }}>{invoice.expenseCategory}</span>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Nature of Expense</label>
-                <span style={{ color: '#0A0F14' }}>{invoice.natureOfExpense}</span>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Nature of Expense</label>
+                <span style={{ color: 'var(--color-ink)' }}>{invoice.natureOfExpense}</span>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Payment Terms</label>
-                <span style={{ color: '#0A0F14' }}>{invoice.paymentTerms}</span>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Payment Terms</label>
+                <span style={{ color: 'var(--color-ink)' }}>{invoice.paymentTerms}</span>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Cost Centre</label>
-                <span style={{ color: '#0A0F14' }}>{invoice.costCentre}</span>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Cost Centre</label>
+                <span style={{ color: 'var(--color-ink)' }}>{invoice.costCentre}</span>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Profit Centre</label>
-                <span style={{ color: '#0A0F14' }}>{invoice.profitCentre}</span>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Profit Centre</label>
+                <span style={{ color: 'var(--color-ink)' }}>{invoice.profitCentre}</span>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Account Code</label>
-                <span style={{ color: '#0A0F14' }}>{invoice.accountCode}</span>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Account Code</label>
+                <span style={{ color: 'var(--color-ink)' }}>{invoice.accountCode}</span>
               </div>
             </div>
           </div>
 
           {/* Line Items */}
-          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: '#E1E6EA' }}>
-            <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Line Items</h2>
+          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: 'var(--color-silver)' }}>
+            <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Line Items</h2>
             
             <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: '#F6F9FC' }}>
-                  <th className="px-3 py-3 text-left text-sm" style={{ color: '#6E7A82' }}>Description</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>Qty</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>Rate</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>Base</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>GST</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>TDS</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>Net</th>
+                <tr style={{ backgroundColor: 'var(--color-cloud)' }}>
+                  <th className="px-3 py-3 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Description</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Qty</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Rate</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Base</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>GST</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>TDS</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Net</th>
                 </tr>
               </thead>
               <tbody>
                 {invoice.lineItems.map((item, index) => (
-                  <tr key={index} className="border-t" style={{ borderColor: '#E1E6EA' }}>
-                    <td className="px-3 py-3" style={{ color: '#0A0F14' }}>{item.description}</td>
-                    <td className="px-3 py-3 text-right" style={{ color: '#0A0F14' }}>{item.quantity}</td>
-                    <td className="px-3 py-3 text-right" style={{ color: '#0A0F14' }}>₹{item.unitRate.toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-3 text-right" style={{ color: '#0A0F14' }}>₹{item.baseAmount.toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-3 text-right" style={{ color: '#0A0F14' }}>₹{item.gstAmount.toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-3 text-right" style={{ color: '#DC2626' }}>-₹{item.tdsAmount.toLocaleString('en-IN')}</td>
-                    <td className="px-3 py-3 text-right" style={{ color: '#00A9B7' }}>₹{item.netPayable.toLocaleString('en-IN')}</td>
+                  <tr key={index} className="border-t" style={{ borderColor: 'var(--color-silver)' }}>
+                    <td className="px-3 py-3" style={{ color: 'var(--color-ink)' }}>{item.description}</td>
+                    <td className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)' }}>{item.quantity}</td>
+                    <td className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)' }}>₹{item.unitRate.toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)' }}>₹{item.baseAmount.toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)' }}>₹{item.gstAmount.toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-3 text-right" style={{ color: 'var(--color-error-dark)' }}>-₹{item.tdsAmount.toLocaleString('en-IN')}</td>
+                    <td className="px-3 py-3 text-right" style={{ color: 'var(--color-teal)' }}>₹{item.netPayable.toLocaleString('en-IN')}</td>
                   </tr>
                 ))}
               </tbody>
@@ -282,28 +282,28 @@ export function NonPOInvoiceApprovalScreen() {
           </div>
 
           {/* Amount Breakdown */}
-          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: '#E1E6EA' }}>
-            <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Amount Breakdown</h2>
+          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: 'var(--color-silver)' }}>
+            <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Amount Breakdown</h2>
             
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-                <span style={{ color: '#6E7A82' }}>Base Amount</span>
-                <span className="text-lg" style={{ color: '#0A0F14' }}>₹{invoice.baseAmount.toLocaleString('en-IN')}</span>
+              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>Base Amount</span>
+                <span className="text-lg" style={{ color: 'var(--color-ink)' }}>₹{invoice.baseAmount.toLocaleString('en-IN')}</span>
               </div>
               
-              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-                <span style={{ color: '#6E7A82' }}>GST (CGST: ₹{invoice.cgst.toLocaleString('en-IN')} + SGST: ₹{invoice.sgst.toLocaleString('en-IN')})</span>
-                <span className="text-lg" style={{ color: '#0A0F14' }}>₹{invoice.gstAmount.toLocaleString('en-IN')}</span>
+              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>GST (CGST: ₹{invoice.cgst.toLocaleString('en-IN')} + SGST: ₹{invoice.sgst.toLocaleString('en-IN')})</span>
+                <span className="text-lg" style={{ color: 'var(--color-ink)' }}>₹{invoice.gstAmount.toLocaleString('en-IN')}</span>
               </div>
               
-              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-                <span style={{ color: '#6E7A82' }}>Gross Amount</span>
-                <span className="text-lg" style={{ color: '#0A0F14' }}>₹{invoice.grossAmount.toLocaleString('en-IN')}</span>
+              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>Gross Amount</span>
+                <span className="text-lg" style={{ color: 'var(--color-ink)' }}>₹{invoice.grossAmount.toLocaleString('en-IN')}</span>
               </div>
               
-              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
-                <span style={{ color: '#DC2626' }}>TDS Deducted ({invoice.tdsSection} @ {invoice.tdsRate}%)</span>
-                <span className="text-lg" style={{ color: '#DC2626' }}>-₹{invoice.tdsAmount.toLocaleString('en-IN')}</span>
+              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
+                <span style={{ color: 'var(--color-error-dark)' }}>TDS Deducted ({invoice.tdsSection} @ {invoice.tdsRate}%)</span>
+                <span className="text-lg" style={{ color: 'var(--color-error-dark)' }}>-₹{invoice.tdsAmount.toLocaleString('en-IN')}</span>
               </div>
 
               {invoice.advanceAdjustment > 0 && (
@@ -320,13 +320,13 @@ export function NonPOInvoiceApprovalScreen() {
                 </div>
               )}
               
-              <div className="border-t-2 pt-3" style={{ borderColor: '#E1E6EA' }}>
-                <div className="flex justify-between items-center p-4 rounded-lg" style={{ backgroundColor: '#00A9B710' }}>
+              <div className="border-t-2 pt-3" style={{ borderColor: 'var(--color-silver)' }}>
+                <div className="flex justify-between items-center p-4 rounded-lg" style={{ backgroundColor: 'var(--color-teal)10' }}>
                   <div className="flex items-center gap-2">
-                    <DollarSign className="w-6 h-6 text-[#00A9B7]" />
-                    <span className="text-lg" style={{ color: '#0A0F14' }}>Net Payable</span>
+                    <DollarSign className="w-6 h-6 text-[var(--color-teal)]" />
+                    <span className="text-lg" style={{ color: 'var(--color-ink)' }}>Net Payable</span>
                   </div>
-                  <span className="text-2xl" style={{ color: '#00A9B7' }}>
+                  <span className="text-2xl" style={{ color: 'var(--color-teal)' }}>
                     ₹{invoice.netPayable.toLocaleString('en-IN')}
                   </span>
                 </div>
@@ -335,24 +335,24 @@ export function NonPOInvoiceApprovalScreen() {
           </div>
 
           {/* Attachments */}
-          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: '#E1E6EA' }}>
-            <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Attachments</h2>
+          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: 'var(--color-silver)' }}>
+            <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Attachments</h2>
             {invoice.attachments.map((attachment, index) => (
               <div 
                 key={index}
                 className="flex items-center justify-between p-3 rounded-lg border"
-                style={{ borderColor: '#E1E6EA' }}
+                style={{ borderColor: 'var(--color-silver)' }}
               >
                 <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                  <FileText className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                   <div>
-                    <p style={{ color: '#0A0F14' }}>{attachment.name}</p>
-                    <p className="text-sm" style={{ color: '#6E7A82' }}>
+                    <p style={{ color: 'var(--color-ink)' }}>{attachment.name}</p>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                       {attachment.size} • Uploaded {attachment.uploadedDate}
                     </p>
                   </div>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}>
+                <button className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}>
                   <Eye className="w-4 h-4" />
                   View
                 </button>
@@ -361,14 +361,14 @@ export function NonPOInvoiceApprovalScreen() {
           </div>
 
           {/* Approver Comments */}
-          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: '#E1E6EA' }}>
-            <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Approver Comments</h2>
+          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
+            <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Approver Comments</h2>
             <textarea
               value={comments}
               onChange={(e) => setComments(e.target.value)}
               placeholder="Add your comments here (optional)..."
               className="w-full px-4 py-3 rounded-lg border-2 min-h-[120px]"
-              style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+              style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
             />
           </div>
         </div>
@@ -426,8 +426,8 @@ export function NonPOInvoiceApprovalScreen() {
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Reject Non-PO Invoice</h3>
-            <p className="mb-4" style={{ color: '#6E7A82' }}>
+            <h3 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Reject Non-PO Invoice</h3>
+            <p className="mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
               Please provide a reason for rejecting this invoice:
             </p>
             <textarea
@@ -435,20 +435,20 @@ export function NonPOInvoiceApprovalScreen() {
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="Enter rejection reason..."
               className="w-full px-4 py-3 rounded-lg border-2 min-h-[120px] mb-4"
-              style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+              style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
             />
             <div className="flex gap-3">
               <button
                 onClick={() => setShowRejectModal(false)}
                 className="flex-1 px-4 py-2 rounded-lg border-2"
-                style={{ borderColor: '#E1E6EA', color: '#6E7A82' }}
+                style={{ borderColor: 'var(--color-silver)', color: 'var(--color-mercury-grey)' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleReject}
                 className="flex-1 px-4 py-2 rounded-lg text-white"
-                style={{ backgroundColor: '#DC2626' }}
+                style={{ backgroundColor: 'var(--color-error-dark)' }}
               >
                 Reject Invoice
               </button>
@@ -461,8 +461,8 @@ export function NonPOInvoiceApprovalScreen() {
       {showSendBackModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Send Back Non-PO Invoice</h3>
-            <p className="mb-4" style={{ color: '#6E7A82' }}>
+            <h3 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Send Back Non-PO Invoice</h3>
+            <p className="mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
               Provide comments for the submitter:
             </p>
             <textarea
@@ -470,20 +470,20 @@ export function NonPOInvoiceApprovalScreen() {
               onChange={(e) => setComments(e.target.value)}
               placeholder="Enter your comments..."
               className="w-full px-4 py-3 rounded-lg border-2 min-h-[120px] mb-4"
-              style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+              style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
             />
             <div className="flex gap-3">
               <button
                 onClick={() => setShowSendBackModal(false)}
                 className="flex-1 px-4 py-2 rounded-lg border-2"
-                style={{ borderColor: '#E1E6EA', color: '#6E7A82' }}
+                style={{ borderColor: 'var(--color-silver)', color: 'var(--color-mercury-grey)' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSendBack}
                 className="flex-1 px-4 py-2 rounded-lg text-white"
-                style={{ backgroundColor: '#00A9B7' }}
+                style={{ backgroundColor: 'var(--color-teal)' }}
               >
                 Send Back
               </button>

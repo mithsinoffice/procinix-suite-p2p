@@ -27,7 +27,7 @@ export function AdvancesHub() {
       title: 'Create Advance',
       description: 'Raise new vendor advance request',
       icon: Plus,
-      color: 'bg-[#00A9B7]',
+      color: 'bg-[var(--color-teal)]',
       textColor: 'text-white',
       path: '/ap/advance-request-form',
       stats: null
@@ -37,7 +37,7 @@ export function AdvancesHub() {
       description: 'View and manage all advance requests',
       icon: FileText,
       color: 'bg-white',
-      textColor: 'text-[#0A0F14]',
+      textColor: 'text-[var(--color-ink)]',
       path: '/ap/advance-requests',
       stats: [
         { label: 'Total', value: stats.totalRequests },
@@ -50,7 +50,7 @@ export function AdvancesHub() {
       description: 'Track advance utilization and recovery',
       icon: TrendingUp,
       color: 'bg-white',
-      textColor: 'text-[#0A0F14]',
+      textColor: 'text-[var(--color-ink)]',
       path: '/ap/advance-utilization',
       stats: [
         { label: 'Open Balances', value: stats.utilizationOpen }
@@ -59,13 +59,13 @@ export function AdvancesHub() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC]">
+    <div className="min-h-screen bg-[var(--color-cloud)]">
       {/* Header */}
-      <div className="bg-white border-b border-[#E1E6EA]">
+      <div className="bg-white border-b border-[var(--color-silver)]">
         <div className="px-6 py-4">
           <div>
-            <h1 className="text-[#0A0F14]">Advance Management</h1>
-            <p className="text-[#6E7A82] text-sm">Comprehensive vendor advance request and payment management</p>
+            <h1 className="text-[var(--color-ink)]">Advance Management</h1>
+            <p className="text-[var(--color-mercury-grey)] text-sm">Comprehensive vendor advance request and payment management</p>
           </div>
         </div>
       </div>
@@ -74,36 +74,36 @@ export function AdvancesHub() {
       <div className="p-6 max-w-[1400px] mx-auto">
         {/* Quick Stats */}
         <div className="grid grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Total Requests</span>
-              <FileText className="w-4 h-4 text-[#6E7A82]" />
+              <span className="text-sm text-[var(--color-mercury-grey)]">Total Requests</span>
+              <FileText className="w-4 h-4 text-[var(--color-mercury-grey)]" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.totalRequests}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.totalRequests}</div>
           </div>
           
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Pending Approval</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Pending Approval</span>
               <Clock className="w-4 h-4 text-yellow-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.pending}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.pending}</div>
           </div>
           
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Ready for Payment</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Ready for Payment</span>
               <CheckCircle className="w-4 h-4 text-green-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.readyForPayment}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.readyForPayment}</div>
           </div>
           
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Total Value</span>
-              <DollarSign className="w-4 h-4 text-[#00A9B7]" />
+              <span className="text-sm text-[var(--color-mercury-grey)]">Total Value</span>
+              <DollarSign className="w-4 h-4 text-[var(--color-teal)]" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">₹{stats.totalValue.toLocaleString()}</div>
+            <div className="text-2xl text-[var(--color-ink)]">₹{stats.totalValue.toLocaleString()}</div>
           </div>
         </div>
 
@@ -113,40 +113,40 @@ export function AdvancesHub() {
             <div
               key={index}
               onClick={() => navigate(module.path)}
-              className={`${module.color} rounded-lg border border-[#E1E6EA] p-6 cursor-pointer transition-all hover:shadow-lg group`}
+              className={`${module.color} rounded-lg border border-[var(--color-silver)] p-6 cursor-pointer transition-all hover:shadow-lg group`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 ${
-                    module.color === 'bg-white' ? 'bg-[#00A9B7]/10' : 'bg-white/20'
+                    module.color === 'bg-white' ? 'bg-[var(--color-teal)]/10' : 'bg-white/20'
                   } rounded-lg flex items-center justify-center`}>
                     <module.icon className={`w-6 h-6 ${
-                      module.color === 'bg-white' ? 'text-[#00A9B7]' : 'text-white'
+                      module.color === 'bg-white' ? 'text-[var(--color-teal)]' : 'text-white'
                     }`} />
                   </div>
                   <div>
                     <h2 className={module.textColor}>{module.title}</h2>
                     <p className={`text-sm mt-1 ${
-                      module.color === 'bg-white' ? 'text-[#6E7A82]' : 'text-white/80'
+                      module.color === 'bg-white' ? 'text-[var(--color-mercury-grey)]' : 'text-white/80'
                     }`}>
                       {module.description}
                     </p>
                   </div>
                 </div>
                 <ArrowRight className={`w-5 h-5 ${
-                  module.color === 'bg-white' ? 'text-[#00A9B7]' : 'text-white'
+                  module.color === 'bg-white' ? 'text-[var(--color-teal)]' : 'text-white'
                 } group-hover:translate-x-1 transition-transform`} />
               </div>
 
               {module.stats && (
                 <div className={`pt-4 border-t ${
-                  module.color === 'bg-white' ? 'border-[#E1E6EA]' : 'border-white/20'
+                  module.color === 'bg-white' ? 'border-[var(--color-silver)]' : 'border-white/20'
                 }`}>
                   <div className="flex items-center gap-6">
                     {module.stats.map((stat, idx) => (
                       <div key={idx}>
                         <div className={`text-xs ${
-                          module.color === 'bg-white' ? 'text-[#6E7A82]' : 'text-white/70'
+                          module.color === 'bg-white' ? 'text-[var(--color-mercury-grey)]' : 'text-white/70'
                         } mb-1`}>
                           {stat.label}
                         </div>
@@ -163,37 +163,37 @@ export function AdvancesHub() {
         </div>
 
         {/* Information Panel */}
-        <div className="mt-8 bg-white rounded-lg border border-[#E1E6EA] p-6">
+        <div className="mt-8 bg-white rounded-lg border border-[var(--color-silver)] p-6">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-[#00A9B7] mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-[var(--color-teal)] mt-0.5" />
             <div>
-              <h3 className="text-[#0A0F14] mb-2">About Advance Management</h3>
-              <p className="text-sm text-[#6E7A82] mb-3">
+              <h3 className="text-[var(--color-ink)] mb-2">About Advance Management</h3>
+              <p className="text-sm text-[var(--color-mercury-grey)] mb-3">
                 The Advance Management module enables comprehensive handling of vendor advances with the following capabilities:
               </p>
-              <ul className="space-y-2 text-sm text-[#6E7A82]">
+              <ul className="space-y-2 text-sm text-[var(--color-mercury-grey)]">
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-[#00A9B7] mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="w-4 h-4 text-[var(--color-teal)] mt-0.5 flex-shrink-0" />
                   <span><strong>PO-based Advances:</strong> Request advances against specific PO milestones with automatic eligibility validation</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-[#00A9B7] mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="w-4 h-4 text-[var(--color-teal)] mt-0.5 flex-shrink-0" />
                   <span><strong>On-Account Advances:</strong> Raise general vendor advances without PO linkage</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-[#00A9B7] mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="w-4 h-4 text-[var(--color-teal)] mt-0.5 flex-shrink-0" />
                   <span><strong>TDS Calculation:</strong> Automatic TDS computation with section-wise rate application</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-[#00A9B7] mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="w-4 h-4 text-[var(--color-teal)] mt-0.5 flex-shrink-0" />
                   <span><strong>Approval Workflow:</strong> Configurable approval chains with SLA tracking and escalation</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-[#00A9B7] mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="w-4 h-4 text-[var(--color-teal)] mt-0.5 flex-shrink-0" />
                   <span><strong>Payment Integration:</strong> Seamless flow into payment processing with accounting entry automation</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-[#00A9B7] mt-0.5 flex-shrink-0" />
+                  <CheckCircle className="w-4 h-4 text-[var(--color-teal)] mt-0.5 flex-shrink-0" />
                   <span><strong>Utilization Tracking:</strong> Real-time tracking of advance adjustments against invoices with audit trail</span>
                 </li>
               </ul>

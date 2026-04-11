@@ -90,7 +90,7 @@ export function ReadyForPayment() {
 
   const getPriorityStyle = (priority: ApprovedInvoice['aiPriority']) => {
     const styles = {
-      'High': { bg: '#FEE2E2', color: '#DC2626' },
+      'High': { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' },
       'Medium': { bg: '#FEF3C7', color: '#D97706' },
       'Low': { bg: '#D1FAE5', color: '#047857' }
     };
@@ -118,15 +118,15 @@ export function ReadyForPayment() {
       label: 'Ready for Payment', 
       value: invoices.length, 
       icon: FileText, 
-      color: '#00A9B7',
-      bg: '#00A9B710'
+      color: 'var(--color-teal)',
+      bg: 'var(--color-teal)10'
     },
     { 
       label: 'Total Payable', 
       value: `₹${(totalPayable / 100000).toFixed(1)}L`, 
       icon: DollarSign, 
-      color: '#00A9B7',
-      bg: '#00A9B710'
+      color: 'var(--color-teal)',
+      bg: 'var(--color-teal)10'
     },
     { 
       label: 'Due in 7 Days', 
@@ -139,40 +139,40 @@ export function ReadyForPayment() {
       label: 'MSME Vendors', 
       value: msmeCount, 
       icon: TrendingUp, 
-      color: '#8B5CF6',
+      color: '#007D87',
       bg: '#EDE9FE'
     }
   ];
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }} className="p-8">
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="p-8">
       <div className="mb-6">
-        <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>Ready for Payment</h1>
-        <p style={{ color: '#6E7A82' }}>Approved invoices queued for payment processing</p>
+        <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>Ready for Payment</h1>
+        <p style={{ color: 'var(--color-mercury-grey)' }}>Approved invoices queued for payment processing</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white rounded-xl p-4 border-2" style={{ borderColor: '#E1E6EA' }}>
+          <div key={idx} className="bg-white rounded-xl p-4 border-2" style={{ borderColor: 'var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm" style={{ color: '#6E7A82' }}>{stat.label}</span>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{stat.label}</span>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: stat.bg }}>
                 <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
               </div>
             </div>
-            <p className="text-2xl" style={{ color: '#0A0F14' }}>{stat.value}</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)' }}>{stat.value}</p>
           </div>
         ))}
       </div>
 
       {/* Info Banner */}
-      <div className="bg-white rounded-xl border-2 p-4 mb-6" style={{ borderColor: '#00A9B7', backgroundColor: '#00A9B710' }}>
+      <div className="bg-white rounded-xl border-2 p-4 mb-6" style={{ borderColor: 'var(--color-teal)', backgroundColor: 'var(--color-teal)10' }}>
         <div className="flex items-start gap-3">
-          <Zap className="w-5 h-5 flex-shrink-0 mt-0.5 text-[#00A9B7]" />
+          <Zap className="w-5 h-5 flex-shrink-0 mt-0.5 text-[var(--color-teal)]" />
           <div className="flex-1">
-            <h3 className="mb-1" style={{ color: '#00A9B7' }}>Automatic Payment Queue</h3>
-            <p className="text-sm" style={{ color: '#6E7A82' }}>
+            <h3 className="mb-1" style={{ color: 'var(--color-teal)' }}>Automatic Payment Queue</h3>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               These approved invoices have been automatically transferred to the Payments module. 
               Visit the Payments Dashboard to create payment batches and process payments.
             </p>
@@ -180,9 +180,9 @@ export function ReadyForPayment() {
           <button
             onClick={() => navigate('/ap/payments')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-            style={{ backgroundColor: '#00A9B7' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+            style={{ backgroundColor: 'var(--color-teal)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
           >
             Go to Payments
             <ArrowRight className="w-4 h-4" />
@@ -191,27 +191,27 @@ export function ReadyForPayment() {
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white rounded-xl border-2 mb-4" style={{ borderColor: '#E1E6EA' }}>
+      <div className="bg-white rounded-xl border-2 mb-4" style={{ borderColor: 'var(--color-silver)' }}>
         <div className="p-4">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: '#6E7A82' }} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
               <input
                 type="text"
                 placeholder="Search by invoice number, vendor, or PO..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 rounded-lg border-2"
-                style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
               />
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors"
               style={{ 
-                borderColor: showFilters ? '#00A9B7' : '#E1E6EA',
-                backgroundColor: showFilters ? '#00A9B710' : 'white',
-                color: showFilters ? '#00A9B7' : '#6E7A82'
+                borderColor: showFilters ? 'var(--color-teal)' : 'var(--color-silver)',
+                backgroundColor: showFilters ? 'var(--color-teal)10' : 'white',
+                color: showFilters ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
               }}
             >
               <Filter className="w-5 h-5" />
@@ -220,14 +220,14 @@ export function ReadyForPayment() {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t-2" style={{ borderColor: '#E1E6EA' }}>
+            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t-2" style={{ borderColor: 'var(--color-silver)' }}>
               <div>
-                <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>AI Priority</label>
+                <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>AI Priority</label>
                 <select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border-2"
-                  style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                  style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>All</option>
                   <option>High</option>
@@ -241,19 +241,19 @@ export function ReadyForPayment() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border-2 overflow-hidden" style={{ borderColor: '#E1E6EA' }}>
+      <div className="bg-white rounded-xl border-2 overflow-hidden" style={{ borderColor: 'var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Invoice Number</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Vendor</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>PO Number</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Due Date</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Net Payable</th>
-                <th className="text-center px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>AI Priority</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Payment Method</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Number</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>PO Number</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Due Date</th>
+                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Net Payable</th>
+                <th className="text-center px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>AI Priority</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Payment Method</th>
+                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -264,15 +264,15 @@ export function ReadyForPayment() {
                 return (
                   <tr 
                     key={invoice.id} 
-                    className="border-t-2 hover:bg-[#F6F9FC] transition-colors"
-                    style={{ borderColor: '#E1E6EA' }}
+                    className="border-t-2 hover:bg-[var(--color-cloud)] transition-colors"
+                    style={{ borderColor: 'var(--color-silver)' }}
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-[#00A9B7]" />
+                        <FileText className="w-4 h-4 text-[var(--color-teal)]" />
                         <div>
-                          <p style={{ color: '#0A0F14' }}>{invoice.invoiceNumber}</p>
-                          <p className="text-xs" style={{ color: '#6E7A82' }}>
+                          <p style={{ color: 'var(--color-ink)' }}>{invoice.invoiceNumber}</p>
+                          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                             Approved: {invoice.approvedDate}
                           </p>
                         </div>
@@ -280,13 +280,13 @@ export function ReadyForPayment() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                        <Building2 className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                         <div>
-                          <p style={{ color: '#0A0F14' }}>{invoice.vendorName}</p>
+                          <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorName}</p>
                           <div className="flex items-center gap-2">
-                            <p className="text-sm" style={{ color: '#6E7A82' }}>{invoice.vendorCode}</p>
+                            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.vendorCode}</p>
                             {invoice.msmeVendor && (
-                              <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: '#EDE9FE', color: '#8B5CF6' }}>
+                              <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: '#EDE9FE', color: '#007D87' }}>
                                 MSME
                               </span>
                             )}
@@ -294,13 +294,13 @@ export function ReadyForPayment() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{invoice.poNumber}</td>
+                    <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{invoice.poNumber}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" style={{ color: isDueSoon ? '#DC2626' : '#6E7A82' }} />
+                        <Calendar className="w-4 h-4" style={{ color: isDueSoon ? 'var(--color-error-dark)' : 'var(--color-mercury-grey)' }} />
                         <div>
-                          <p style={{ color: isDueSoon ? '#DC2626' : '#0A0F14' }}>{invoice.dueDate}</p>
-                          <p className="text-xs" style={{ color: isDueSoon ? '#DC2626' : '#6E7A82' }}>
+                          <p style={{ color: isDueSoon ? 'var(--color-error-dark)' : 'var(--color-ink)' }}>{invoice.dueDate}</p>
+                          <p className="text-xs" style={{ color: isDueSoon ? 'var(--color-error-dark)' : 'var(--color-mercury-grey)' }}>
                             {invoice.daysUntilDue} days
                           </p>
                         </div>
@@ -308,9 +308,9 @@ export function ReadyForPayment() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div>
-                        <p style={{ color: '#0A0F14' }}>₹{invoice.netPayable.toLocaleString('en-IN')}</p>
+                        <p style={{ color: 'var(--color-ink)' }}>₹{invoice.netPayable.toLocaleString('en-IN')}</p>
                         {invoice.advanceAdjustment && (
-                          <p className="text-xs" style={{ color: '#6E7A82' }}>
+                          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                             Advance: ₹{invoice.advanceAdjustment.toLocaleString('en-IN')}
                           </p>
                         )}
@@ -324,22 +324,22 @@ export function ReadyForPayment() {
                         {invoice.aiPriority}
                       </span>
                     </td>
-                    <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{invoice.paymentMethod}</td>
+                    <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{invoice.paymentMethod}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => navigate(`/ap/invoice-workflow/${invoice.id}`)}
-                          className="p-2 rounded-lg hover:bg-[#E1E6EA] transition-colors"
+                          className="p-2 rounded-lg hover:bg-[var(--color-silver)] transition-colors"
                           title="View Details"
                         >
-                          <Eye className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                          <Eye className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                         </button>
                         <button
                           onClick={() => navigate('/ap/payments')}
                           className="flex items-center gap-1 px-3 py-1 rounded-lg text-sm text-white transition-colors"
-                          style={{ backgroundColor: '#00A9B7' }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                          style={{ backgroundColor: 'var(--color-teal)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
                         >
                           Process
                           <ArrowRight className="w-3 h-3" />
@@ -355,8 +355,8 @@ export function ReadyForPayment() {
 
         {filteredInvoices.length === 0 && (
           <div className="text-center py-12">
-            <CheckCircle className="w-12 h-12 mx-auto mb-3" style={{ color: '#E1E6EA' }} />
-            <p style={{ color: '#6E7A82' }}>No invoices ready for payment</p>
+            <CheckCircle className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--color-silver)' }} />
+            <p style={{ color: 'var(--color-mercury-grey)' }}>No invoices ready for payment</p>
           </div>
         )}
       </div>

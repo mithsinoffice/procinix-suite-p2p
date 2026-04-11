@@ -40,7 +40,7 @@ export function BudgetDashboard() {
 
   // Budget vs Actual by Category (Materials, Subcontract, Services, Site OPEX)
   const categories = ['Materials', 'Subcontract', 'Services', 'Site Operations'];
-  const categoryColors = ['#00A9B7', '#3B82F6', '#8B5CF6', '#F59E0B'];
+  const categoryColors = ['var(--color-teal)', '#3B82F6', '#007D87', '#F59E0B'];
   const categoryData = categories.map((cat, idx) => {
     const catBudgets = activeBudgets.filter(b => b.dimensions.expenseCategory === cat);
     const total = catBudgets.reduce((sum, b) => sum + b.totalAmount, 0);
@@ -87,20 +87,20 @@ export function BudgetDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC]">
+    <div className="min-h-screen bg-[var(--color-cloud)]">
       {/* Header */}
-      <div className="bg-white border-b border-[#E1E6EA]">
+      <div className="bg-white border-b border-[var(--color-silver)]">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h1 className="text-[#0A0F14]">Project Budget Dashboard</h1>
-              <p className="text-[#6E7A82] text-sm">ACIL - Metro Station Phase 2 | Apr 2025 - Mar 2026 | Delhi NCR</p>
+              <h1 className="text-[var(--color-ink)]">Project Budget Dashboard</h1>
+              <p className="text-[var(--color-mercury-grey)] text-sm">ACIL - Metro Station Phase 2 | Apr 2025 - Mar 2026 | Delhi NCR</p>
             </div>
             <div className="flex gap-3">
               <select 
                 value={timeFilter}
                 onChange={(e) => setTimeFilter(e.target.value)}
-                className="px-4 py-2 border border-[#E1E6EA] rounded-lg text-sm"
+                className="px-4 py-2 border border-[var(--color-silver)] rounded-lg text-sm"
               >
                 <option value="FY2025">FY 2025-26</option>
                 <option value="Q1">Q1 FY2025</option>
@@ -110,20 +110,20 @@ export function BudgetDashboard() {
               </select>
               <button 
                 onClick={() => navigate('/budget-planning-creation')}
-                className="px-4 py-2 bg-[#00A9B7] text-white rounded-lg hover:bg-[#007D87] transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-[var(--color-teal)] text-white rounded-lg hover:bg-[var(--color-teal-dark)] transition-colors flex items-center gap-2"
               >
                 Create Budget
               </button>
-              <button className="px-4 py-2 border border-[#E1E6EA] rounded-lg hover:bg-[#F6F9FC] transition-colors flex items-center gap-2">
+              <button className="px-4 py-2 border border-[var(--color-silver)] rounded-lg hover:bg-[var(--color-cloud)] transition-colors flex items-center gap-2">
                 <Download className="w-4 h-4" />
                 Export
               </button>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-[#6E7A82]">
-            <span className="px-2 py-1 bg-[#F6F9FC] rounded">WBS: ACIL-METRO-P2</span>
-            <span className="px-2 py-1 bg-[#F6F9FC] rounded">Cost Centre: ACIL-METRO-P2</span>
-            <span className="px-2 py-1 bg-[#F6F9FC] rounded">SAP Integration: Active</span>
+          <div className="flex items-center gap-2 text-xs text-[var(--color-mercury-grey)]">
+            <span className="px-2 py-1 bg-[var(--color-cloud)] rounded">WBS: ACIL-METRO-P2</span>
+            <span className="px-2 py-1 bg-[var(--color-cloud)] rounded">Cost Centre: ACIL-METRO-P2</span>
+            <span className="px-2 py-1 bg-[var(--color-cloud)] rounded">SAP Integration: Active</span>
           </div>
         </div>
       </div>
@@ -131,87 +131,87 @@ export function BudgetDashboard() {
       <div className="p-6">
         {/* Key Performance Indicators */}
         <div className="grid grid-cols-6 gap-4 mb-6">
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Total Budget</span>
-              <DollarSign className="w-4 h-4 text-[#6E7A82]" />
+              <span className="text-sm text-[var(--color-mercury-grey)]">Total Budget</span>
+              <DollarSign className="w-4 h-4 text-[var(--color-mercury-grey)]" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">₹{(kpis.totalBudget / 10000000).toFixed(0)} Cr</div>
-            <div className="text-xs text-[#6E7A82] mt-1">Approved Budget</div>
+            <div className="text-2xl text-[var(--color-ink)]">₹{(kpis.totalBudget / 10000000).toFixed(0)} Cr</div>
+            <div className="text-xs text-[var(--color-mercury-grey)] mt-1">Approved Budget</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Committed</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Committed</span>
               <BarChart3 className="w-4 h-4 text-blue-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">₹{(kpis.committed / 10000000).toFixed(1)} Cr</div>
-            <div className="text-xs text-[#6E7A82] mt-1">{((kpis.committed / kpis.totalBudget) * 100).toFixed(1)}% of budget</div>
+            <div className="text-2xl text-[var(--color-ink)]">₹{(kpis.committed / 10000000).toFixed(1)} Cr</div>
+            <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{((kpis.committed / kpis.totalBudget) * 100).toFixed(1)}% of budget</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Actuals</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Actuals</span>
               <TrendingUp className="w-4 h-4 text-green-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">₹{(kpis.actual / 10000000).toFixed(1)} Cr</div>
-            <div className="text-xs text-[#6E7A82] mt-1">{((kpis.actual / kpis.totalBudget) * 100).toFixed(1)}% of budget</div>
+            <div className="text-2xl text-[var(--color-ink)]">₹{(kpis.actual / 10000000).toFixed(1)} Cr</div>
+            <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{((kpis.actual / kpis.totalBudget) * 100).toFixed(1)}% of budget</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Available</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Available</span>
               <CheckCircle className="w-4 h-4 text-green-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">₹{(kpis.available / 10000000).toFixed(1)} Cr</div>
-            <div className="text-xs text-[#6E7A82] mt-1">{((kpis.available / kpis.totalBudget) * 100).toFixed(1)}% remaining</div>
+            <div className="text-2xl text-[var(--color-ink)]">₹{(kpis.available / 10000000).toFixed(1)} Cr</div>
+            <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{((kpis.available / kpis.totalBudget) * 100).toFixed(1)}% remaining</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Forecasted EAC</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Forecasted EAC</span>
               <AlertTriangle className="w-4 h-4 text-orange-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">₹{(forecastedFinalCost / 10000000).toFixed(1)} Cr</div>
+            <div className="text-2xl text-[var(--color-ink)]">₹{(forecastedFinalCost / 10000000).toFixed(1)} Cr</div>
             <div className={`text-xs mt-1 ${costOverrun > 0 ? 'text-red-600' : 'text-green-600'}`}>
               {costOverrun > 0 ? '+' : ''}₹{(costOverrun / 10000000).toFixed(1)} Cr variance
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Next 3M Cash</span>
-              <Calendar className="w-4 h-4 text-purple-500" />
+              <span className="text-sm text-[var(--color-mercury-grey)]">Next 3M Cash</span>
+              <Calendar className="w-4 h-4 text-px-teal-dark" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">₹{(nextThreeMonthsCash / 10000000).toFixed(0)} Cr</div>
-            <div className="text-xs text-[#6E7A82] mt-1">Jun-Aug 2025</div>
+            <div className="text-2xl text-[var(--color-ink)]">₹{(nextThreeMonthsCash / 10000000).toFixed(0)} Cr</div>
+            <div className="text-xs text-[var(--color-mercury-grey)] mt-1">Jun-Aug 2025</div>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-6 mb-6">
           {/* Budget vs Actual by Category */}
-          <div className="col-span-2 bg-white rounded-lg border border-[#E1E6EA] p-6">
-            <h2 className="text-[#0A0F14] mb-4">Budget vs Actual by Category</h2>
+          <div className="col-span-2 bg-white rounded-lg border border-[var(--color-silver)] p-6">
+            <h2 className="text-[var(--color-ink)] mb-4">Budget vs Actual by Category</h2>
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={categoryData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="name" stroke="#6E7A82" style={{ fontSize: '12px' }} />
-                <YAxis stroke="#6E7A82" style={{ fontSize: '12px' }} label={{ value: 'Amount (₹Cr)', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: '#6E7A82' } }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="name" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
+                <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} label={{ value: 'Amount (₹Cr)', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' } }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #E1E6EA', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid var(--color-silver)', borderRadius: '8px' }}
                   formatter={(value: number) => `₹${value.toFixed(2)}Cr`}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="Budget" fill="#00A9B7" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Budget" fill="var(--color-teal)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Committed" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Actual" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Actual" fill="#007D87" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* Budget Distribution */}
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-6">
-            <h2 className="text-[#0A0F14] mb-4">Budget Distribution</h2>
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-6">
+            <h2 className="text-[var(--color-ink)] mb-4">Budget Distribution</h2>
             <ResponsiveContainer width="100%" height={320}>
               <PieChart>
                 <Pie
@@ -236,9 +236,9 @@ export function BudgetDashboard() {
                 <div key={idx} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                    <span className="text-[#0A0F14]">{cat.name}</span>
+                    <span className="text-[var(--color-ink)]">{cat.name}</span>
                   </div>
-                  <span className="text-[#6E7A82]">{cat.value}%</span>
+                  <span className="text-[var(--color-mercury-grey)]">{cat.value}%</span>
                 </div>
               ))}
             </div>
@@ -247,19 +247,19 @@ export function BudgetDashboard() {
 
         <div className="grid grid-cols-3 gap-6 mb-6">
           {/* Burn Rate Trend */}
-          <div className="col-span-2 bg-white rounded-lg border border-[#E1E6EA] p-6">
-            <h2 className="text-[#0A0F14] mb-4">Budget Burn Rate Trend - Cumulative %</h2>
+          <div className="col-span-2 bg-white rounded-lg border border-[var(--color-silver)] p-6">
+            <h2 className="text-[var(--color-ink)] mb-4">Budget Burn Rate Trend - Cumulative %</h2>
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={burnRateData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="month" stroke="#6E7A82" style={{ fontSize: '12px' }} />
-                <YAxis stroke="#6E7A82" style={{ fontSize: '12px' }} domain={[0, 100]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="month" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
+                <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} domain={[0, 100]} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #E1E6EA', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid var(--color-silver)', borderRadius: '8px' }}
                   formatter={(value: number) => `${value.toFixed(1)}%`}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Line type="monotone" dataKey="planned" stroke="#00A9B7" strokeWidth={2} dot={{ fill: '#00A9B7', r: 4 }} name="Planned Burn" />
+                <Line type="monotone" dataKey="planned" stroke="var(--color-teal)" strokeWidth={2} dot={{ fill: 'var(--color-teal)', r: 4 }} name="Planned Burn" />
                 <Line type="monotone" dataKey="actual" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', r: 4 }} name="Actual Burn" />
                 <Line type="monotone" dataKey="forecast" stroke="#FF9900" strokeWidth={2} dot={{ fill: '#FF9900', r: 4 }} name="Forecast Burn" />
               </LineChart>
@@ -267,15 +267,15 @@ export function BudgetDashboard() {
           </div>
 
           {/* Top Overruns */}
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-6">
-            <h2 className="text-[#0A0F14] mb-4">Top Budget Overruns</h2>
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-6">
+            <h2 className="text-[var(--color-ink)] mb-4">Top Budget Overruns</h2>
             <div className="space-y-3">
               {atRiskBudgets.map((budget, idx) => (
-                <div key={budget.id} className="p-3 bg-[#F6F9FC] rounded-lg">
+                <div key={budget.id} className="p-3 bg-[var(--color-cloud)] rounded-lg">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <p className="text-sm text-[#0A0F14] truncate">{budget.budgetName}</p>
-                      <p className="text-xs text-[#6E7A82] mt-0.5">{budget.dimensions.department}</p>
+                      <p className="text-sm text-[var(--color-ink)] truncate">{budget.budgetName}</p>
+                      <p className="text-xs text-[var(--color-mercury-grey)] mt-0.5">{budget.dimensions.department}</p>
                     </div>
                     <span className={`text-sm ${
                       budget.utilizationPercent >= 95 ? 'text-red-600' :
@@ -285,7 +285,7 @@ export function BudgetDashboard() {
                       {budget.utilizationPercent.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="w-full bg-[#E1E6EA] rounded-full h-2">
+                  <div className="w-full bg-[var(--color-silver)] rounded-full h-2">
                     <div 
                       className={`h-2 rounded-full ${
                         budget.utilizationPercent >= 95 ? 'bg-red-500' :
@@ -300,7 +300,7 @@ export function BudgetDashboard() {
             </div>
             <button
               onClick={() => navigate('/budgeting/consumption')}
-              className="w-full mt-4 px-3 py-2 text-sm text-[#00A9B7] border border-[#E1E6EA] rounded-lg hover:bg-[#F6F9FC] transition-colors flex items-center justify-center gap-2"
+              className="w-full mt-4 px-3 py-2 text-sm text-[var(--color-teal)] border border-[var(--color-silver)] rounded-lg hover:bg-[var(--color-cloud)] transition-colors flex items-center justify-center gap-2"
             >
               View All Budgets
               <ArrowRight className="w-4 h-4" />
@@ -309,13 +309,13 @@ export function BudgetDashboard() {
         </div>
 
         {/* Alerts & Budget Breach Warnings */}
-        <div className="bg-white rounded-lg border border-[#E1E6EA]">
-          <div className="px-6 py-4 border-b border-[#E1E6EA]">
-            <h2 className="text-[#0A0F14]">Alerts & Budget Breach Warnings</h2>
+        <div className="bg-white rounded-lg border border-[var(--color-silver)]">
+          <div className="px-6 py-4 border-b border-[var(--color-silver)]">
+            <h2 className="text-[var(--color-ink)]">Alerts & Budget Breach Warnings</h2>
           </div>
-          <div className="divide-y divide-[#E1E6EA]">
+          <div className="divide-y divide-[var(--color-silver)]">
             {atRiskBudgets.map((alert, idx) => (
-              <div key={idx} className="px-6 py-4 hover:bg-[#F6F9FC]">
+              <div key={idx} className="px-6 py-4 hover:bg-[var(--color-cloud)]">
                 <div className="flex items-start gap-4">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                     alert.utilizationPercent >= 90 ? 'bg-red-100' :
@@ -330,7 +330,7 @@ export function BudgetDashboard() {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-1">
-                      <h3 className="text-[#0A0F14]">{alert.budgetName}</h3>
+                      <h3 className="text-[var(--color-ink)]">{alert.budgetName}</h3>
                       <span className={`px-2 py-0.5 rounded text-xs ${
                         alert.utilizationPercent >= 90 ? 'bg-red-100 text-red-700' :
                         alert.utilizationPercent >= 75 ? 'bg-yellow-100 text-yellow-700' :
@@ -341,10 +341,10 @@ export function BudgetDashboard() {
                         'LOW'}
                       </span>
                     </div>
-                    <p className="text-sm text-[#6E7A82] mb-2">Utilization: {alert.utilizationPercent.toFixed(1)}%</p>
-                    <div className="flex items-center gap-4 text-xs text-[#6E7A82]">
+                    <p className="text-sm text-[var(--color-mercury-grey)] mb-2">Utilization: {alert.utilizationPercent.toFixed(1)}%</p>
+                    <div className="flex items-center gap-4 text-xs text-[var(--color-mercury-grey)]">
                       <span>{alert.id}</span>
-                      <button className="text-[#00A9B7] hover:underline">View Details</button>
+                      <button className="text-[var(--color-teal)] hover:underline">View Details</button>
                     </div>
                   </div>
                 </div>
@@ -357,46 +357,46 @@ export function BudgetDashboard() {
         <div className="grid grid-cols-4 gap-4 mt-6">
           <button
             onClick={() => navigate('/budgeting/create')}
-            className="p-4 bg-white border border-[#E1E6EA] rounded-lg hover:border-[#00A9B7] hover:shadow-sm transition-all text-left"
+            className="p-4 bg-white border border-[var(--color-silver)] rounded-lg hover:border-[var(--color-teal)] hover:shadow-sm transition-all text-left"
           >
-            <div className="w-10 h-10 bg-[#00A9B7]/10 rounded-lg flex items-center justify-center mb-3">
-              <DollarSign className="w-5 h-5 text-[#00A9B7]" />
+            <div className="w-10 h-10 bg-[var(--color-teal)]/10 rounded-lg flex items-center justify-center mb-3">
+              <DollarSign className="w-5 h-5 text-[var(--color-teal)]" />
             </div>
-            <h3 className="text-[#0A0F14] mb-1">Create Budget</h3>
-            <p className="text-xs text-[#6E7A82]">Plan new budget allocation</p>
+            <h3 className="text-[var(--color-ink)] mb-1">Create Budget</h3>
+            <p className="text-xs text-[var(--color-mercury-grey)]">Plan new budget allocation</p>
           </button>
 
           <button
             onClick={() => navigate('/budgeting/revisions')}
-            className="p-4 bg-white border border-[#E1E6EA] rounded-lg hover:border-[#00A9B7] hover:shadow-sm transition-all text-left"
+            className="p-4 bg-white border border-[var(--color-silver)] rounded-lg hover:border-[var(--color-teal)] hover:shadow-sm transition-all text-left"
           >
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
               <TrendingUp className="w-5 h-5 text-blue-600" />
             </div>
-            <h3 className="text-[#0A0F14] mb-1">Revise Budgets</h3>
-            <p className="text-xs text-[#6E7A82]">Update approved budgets</p>
+            <h3 className="text-[var(--color-ink)] mb-1">Revise Budgets</h3>
+            <p className="text-xs text-[var(--color-mercury-grey)]">Update approved budgets</p>
           </button>
 
           <button
             onClick={() => navigate('/budgeting/transfers')}
-            className="p-4 bg-white border border-[#E1E6EA] rounded-lg hover:border-[#00A9B7] hover:shadow-sm transition-all text-left"
+            className="p-4 bg-white border border-[var(--color-silver)] rounded-lg hover:border-[var(--color-teal)] hover:shadow-sm transition-all text-left"
           >
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
-              <ArrowRight className="w-5 h-5 text-purple-600" />
+            <div className="w-10 h-10 bg-px-teal-light rounded-lg flex items-center justify-center mb-3">
+              <ArrowRight className="w-5 h-5 text-px-teal-dark" />
             </div>
-            <h3 className="text-[#0A0F14] mb-1">Transfer Budget</h3>
-            <p className="text-xs text-[#6E7A82]">Reallocate between budgets</p>
+            <h3 className="text-[var(--color-ink)] mb-1">Transfer Budget</h3>
+            <p className="text-xs text-[var(--color-mercury-grey)]">Reallocate between budgets</p>
           </button>
 
           <button
             onClick={() => navigate('/budgeting/scenarios')}
-            className="p-4 bg-white border border-[#E1E6EA] rounded-lg hover:border-[#00A9B7] hover:shadow-sm transition-all text-left"
+            className="p-4 bg-white border border-[var(--color-silver)] rounded-lg hover:border-[var(--color-teal)] hover:shadow-sm transition-all text-left"
           >
             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mb-3">
               <BarChart3 className="w-5 h-5 text-green-600" />
             </div>
-            <h3 className="text-[#0A0F14] mb-1">What-If Analysis</h3>
-            <p className="text-xs text-[#6E7A82]">Run budget scenarios</p>
+            <h3 className="text-[var(--color-ink)] mb-1">What-If Analysis</h3>
+            <p className="text-xs text-[var(--color-mercury-grey)]">Run budget scenarios</p>
           </button>
         </div>
       </div>

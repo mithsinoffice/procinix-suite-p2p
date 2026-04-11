@@ -1,10 +1,11 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, Type, FileText, Edit, Calendar, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { ApprovalModal } from './ApprovalModal';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface PaymentTerm {
   id: string;
@@ -32,7 +33,7 @@ export function VendorPaymentTermsMaster() {
   const [showForm, setShowForm] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
+
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
   const [creditDays, setCreditDays] = useState('');
@@ -53,7 +54,7 @@ export function VendorPaymentTermsMaster() {
         approvalStatus,
         originalData: originalRecord
       };
-      
+
       setPaymentTerms(paymentTerms.map(t => t.id === editingId ? updatedTerm : t));
     } else {
       const newTerm: PaymentTerm = {
@@ -66,7 +67,7 @@ export function VendorPaymentTermsMaster() {
       };
       setPaymentTerms([...paymentTerms, newTerm]);
     }
-    
+
     setShowForm(false);
     resetForm();
   };
@@ -146,79 +147,83 @@ export function VendorPaymentTermsMaster() {
       case 'Pending Approval':
         return { backgroundColor: '#FFF9E6', color: '#D97706' };
       case 'Rejected':
-        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+        return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
       case 'Changes Requested':
         return { backgroundColor: '#E0F2FE', color: '#0284C7' };
       case 'Draft':
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
       default:
-        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+        return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
     }
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [code, description, creditDays, status];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [code, description, creditDays, status]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showForm) {
     return (
-      <MasterFormPage
+      <FormShell
         title={isEditMode ? 'Edit Payment Term' : 'Create Payment Term'}
         subtitle="Manage vendor payment terms and credit periods"
         modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
+        draftStatus={isEditMode ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={() => setShowForm(false)}
         onCancel={() => {
           setShowForm(false);
           resetForm();
         }}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Term Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g., NET15" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Credit Days <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="number" value={creditDays} onChange={(e) => setCreditDays(e.target.value)} placeholder="e.g., 15" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Description <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Payment due in 15 days" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </MasterFormPage>
+        <FormSection title="Payment Term Details" columns={2}>
+          <PxFormField label="Term Code" required filled={!!code.trim()}>
+            <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g., NET15" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Credit Days" required filled={!!creditDays.trim()}>
+            <input type="number" value={creditDays} onChange={(e) => setCreditDays(e.target.value)} placeholder="e.g., 15" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Description" required filled={!!description.trim()}>
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Payment due in 15 days" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Status" required filled={!!status}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </PxFormField>
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Vendor Payment Terms Master</h1>
-            <p style={{ color: '#6E7A82' }}>Manage vendor payment terms and credit periods</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Vendor Payment Terms Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage vendor payment terms and credit periods</p>
           </div>
         </div>
         <button
@@ -227,97 +232,36 @@ export function VendorPaymentTermsMaster() {
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Add Payment Term
         </button>
       </div>
 
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>
-                {isEditMode ? 'Edit Payment Term' : 'Add New Payment Term'}
-              </h2>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4 overflow-y-auto flex-1">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Term Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-                  <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g., NET15" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Credit Days <span style={{ color: '#FF4E5B' }}>*</span></label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input type="number" value={creditDays} onChange={(e) => setCreditDays(e.target.value)} placeholder="e.g., 15" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
-                  </div>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Description <span style={{ color: '#FF4E5B' }}>*</span></label>
-                  <div className="relative">
-                    <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Payment due in 15 days" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
-              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid #E1E6EA', color: '#6E7A82', backgroundColor: 'white' }}>
-                Cancel
-              </button>
-              <button onClick={() => handleSubmit('Draft')} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid #BFE8EC', color: '#0F8A95', backgroundColor: '#ECFEFF', fontWeight: 700 }}>
-                Save Draft
-              </button>
-              <button onClick={() => handleSubmit('Pending Approval')} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: '#00A9B7' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}>
-                Submit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Term Code</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Description</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Credit Days</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Approval</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Term Code</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Description</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Credit Days</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {paymentTerms.map((term, index) => (
-                <tr key={term.id} style={{ borderTop: index === 0 ? 'none' : '1px solid #E1E6EA' }}>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{term.code}</td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{term.description}</td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{term.creditDays} days</td>
+                <tr key={term.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{term.code}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{term.description}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{term.creditDays} days</td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: term.status === 'Active' ? '#E8F7F8' : '#E5E7EB', color: term.status === 'Active' ? '#00A9B7' : '#6E7A82' }}>
+                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: term.status === 'Active' ? 'var(--color-teal-tint)' : '#E5E7EB', color: term.status === 'Active' ? 'var(--color-teal)' : 'var(--color-mercury-grey)' }}>
                       {term.status}
                     </span>
                   </td>
@@ -328,15 +272,15 @@ export function VendorPaymentTermsMaster() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => handleEdit(term)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }} title="Edit">
+                      <button onClick={() => handleEdit(term)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }} title="Edit">
                         <Edit className="w-4 h-4" />
                       </button>
                       {(term.approvalStatus === 'Pending Approval' || term.approvalStatus === 'Changes Requested' || term.approvalStatus === 'Draft') && (
-                        <button onClick={() => handleReview(term)} className="p-2 rounded-lg transition-colors" style={{ color: '#00A9B7' }} title="Review Changes">
+                        <button onClick={() => handleReview(term)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-teal)' }} title="Review Changes">
                           <Eye className="w-4 h-4" />
                         </button>
                       )}
-                      <button onClick={() => handleDelete(term.id)} className="p-2 rounded-lg transition-colors" style={{ color: '#FF4E5B' }} title="Delete">
+                      <button onClick={() => handleDelete(term.id)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-error)' }} title="Delete">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

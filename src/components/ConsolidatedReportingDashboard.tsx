@@ -137,14 +137,14 @@ export function ConsolidatedReportingDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC]">
+    <div className="min-h-screen bg-[var(--color-cloud)]">
       {/* Header */}
-      <div className="bg-white border-b border-[#E1E6EA]">
+      <div className="bg-white border-b border-[var(--color-silver)]">
         <div className="px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-[#0A0F14]">Consolidated Reporting</h1>
-              <p className="mt-1 text-sm text-[#6E7A82]">
+              <h1 className="text-2xl font-semibold text-[var(--color-ink)]">Consolidated Reporting</h1>
+              <p className="mt-1 text-sm text-[var(--color-mercury-grey)]">
                 Multi-entity, multi-currency view aggregated to base currency
               </p>
             </div>
@@ -177,103 +177,103 @@ export function ConsolidatedReportingDashboard() {
         {/* Consolidated Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Total Spend */}
-          <div className="bg-white border border-[#E1E6EA] rounded-lg p-6">
+          <div className="bg-white border border-[var(--color-silver)] rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="text-sm text-[#6E7A82]">Total Spend</div>
-                  <div className="text-2xl font-semibold text-[#0A0F14]">
+                  <div className="text-sm text-[var(--color-mercury-grey)]">Total Spend</div>
+                  <div className="text-2xl font-semibold text-[var(--color-ink)]">
                     {formatAmount(consolidated.totalSpend)}
                   </div>
                 </div>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-[#E1E6EA]">
-              <div className="text-xs text-[#6E7A82]">Across all entities</div>
+            <div className="mt-4 pt-4 border-t border-[var(--color-silver)]">
+              <div className="text-xs text-[var(--color-mercury-grey)]">Across all entities</div>
             </div>
           </div>
 
           {/* Total Payables */}
-          <div className="bg-white border border-[#E1E6EA] rounded-lg p-6">
+          <div className="bg-white border border-[var(--color-silver)] rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg">
                   <Wallet className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="text-sm text-[#6E7A82]">Total Payables</div>
-                  <div className="text-2xl font-semibold text-[#0A0F14]">
+                  <div className="text-sm text-[var(--color-mercury-grey)]">Total Payables</div>
+                  <div className="text-2xl font-semibold text-[var(--color-ink)]">
                     {formatAmount(consolidated.totalPayables)}
                   </div>
                 </div>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-[#E1E6EA]">
-              <div className="text-xs text-[#6E7A82]">Outstanding across entities</div>
+            <div className="mt-4 pt-4 border-t border-[var(--color-silver)]">
+              <div className="text-xs text-[var(--color-mercury-grey)]">Outstanding across entities</div>
             </div>
           </div>
 
           {/* Total Payments */}
-          <div className="bg-white border border-[#E1E6EA] rounded-lg p-6">
+          <div className="bg-white border border-[var(--color-silver)] rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg">
                   <CreditCard className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="text-sm text-[#6E7A82]">Total Payments</div>
-                  <div className="text-2xl font-semibold text-[#0A0F14]">
+                  <div className="text-sm text-[var(--color-mercury-grey)]">Total Payments</div>
+                  <div className="text-2xl font-semibold text-[var(--color-ink)]">
                     {formatAmount(consolidated.totalPayments)}
                   </div>
                 </div>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-[#E1E6EA]">
-              <div className="text-xs text-[#6E7A82]">Paid across entities</div>
+            <div className="mt-4 pt-4 border-t border-[var(--color-silver)]">
+              <div className="text-xs text-[var(--color-mercury-grey)]">Paid across entities</div>
             </div>
           </div>
         </div>
 
         {/* Entity-wise Breakdown */}
-        <div className="bg-white border border-[#E1E6EA] rounded-lg">
-          <div className="px-6 py-4 border-b border-[#E1E6EA]">
-            <h2 className="font-semibold text-[#0A0F14]">Entity-wise Breakdown</h2>
-            <p className="text-sm text-[#6E7A82] mt-1">
+        <div className="bg-white border border-[var(--color-silver)] rounded-lg">
+          <div className="px-6 py-4 border-b border-[var(--color-silver)]">
+            <h2 className="font-semibold text-[var(--color-ink)]">Entity-wise Breakdown</h2>
+            <p className="text-sm text-[var(--color-mercury-grey)] mt-1">
               Detailed view with currency conversion to {BASE_CURRENCY}
             </p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-[#F6F9FC] border-b border-[#E1E6EA]">
+              <thead className="bg-[var(--color-cloud)] border-b border-[var(--color-silver)]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#6E7A82] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-mercury-grey)] uppercase tracking-wider">
                     Entity
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#6E7A82] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-mercury-grey)] uppercase tracking-wider">
                     Country
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#6E7A82] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-mercury-grey)] uppercase tracking-wider">
                     Currency
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[#6E7A82] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-mercury-grey)] uppercase tracking-wider">
                     Spend (Original)
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[#6E7A82] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-mercury-grey)] uppercase tracking-wider">
                     Spend ({BASE_CURRENCY})
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[#6E7A82] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-mercury-grey)] uppercase tracking-wider">
                     Payables ({BASE_CURRENCY})
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[#6E7A82] uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-mercury-grey)] uppercase tracking-wider">
                     Payments ({BASE_CURRENCY})
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-[#E1E6EA]">
+              <tbody className="bg-white divide-y divide-[var(--color-silver)]">
                 {entitySpendData.map((entity, index) => {
                   const currency = getCurrencyByCode(entity.currency);
                   const exchangeRate = entity.currency !== BASE_CURRENCY 
@@ -281,37 +281,37 @@ export function ConsolidatedReportingDashboard() {
                     : null;
 
                   return (
-                    <tr key={entity.entityId} className="hover:bg-[#F6F9FC] transition-colors">
+                    <tr key={entity.entityId} className="hover:bg-[var(--color-cloud)] transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-slate-100 to-slate-200 rounded">
                             <Building2 className="w-4 h-4 text-slate-600" />
                           </div>
                           <div>
-                            <div className="font-medium text-[#0A0F14]">{entity.entityName}</div>
+                            <div className="font-medium text-[var(--color-ink)]">{entity.entityName}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-[#6E7A82]">
+                      <td className="px-6 py-4 text-sm text-[var(--color-mercury-grey)]">
                         {entity.country}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <Coins className="w-4 h-4 text-teal-600" />
-                          <span className="font-medium text-[#0A0F14]">
+                          <span className="font-medium text-[var(--color-ink)]">
                             {currency?.symbol} {entity.currency}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right font-medium text-[#0A0F14]">
+                      <td className="px-6 py-4 text-right font-medium text-[var(--color-ink)]">
                         {formatAmount(entity.totalSpend, entity.currency)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="font-medium text-[#0A0F14]">
+                        <div className="font-medium text-[var(--color-ink)]">
                           {formatAmount(convertToBaseCurrency(entity.totalSpend, entity.currency))}
                         </div>
                         {exchangeRate && (
-                          <div className="text-xs text-[#6E7A82] mt-1">
+                          <div className="text-xs text-[var(--color-mercury-grey)] mt-1">
                             @ {exchangeRate.toFixed(4)}
                           </div>
                         )}
@@ -326,12 +326,12 @@ export function ConsolidatedReportingDashboard() {
                   );
                 })}
               </tbody>
-              <tfoot className="bg-gradient-to-r from-slate-50 to-slate-100 border-t-2 border-[#00A9B7]">
+              <tfoot className="bg-gradient-to-r from-slate-50 to-slate-100 border-t-2 border-[var(--color-teal)]">
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-right font-semibold text-[#0A0F14]">
+                  <td colSpan={4} className="px-6 py-4 text-right font-semibold text-[var(--color-ink)]">
                     Consolidated Total ({BASE_CURRENCY})
                   </td>
-                  <td className="px-6 py-4 text-right font-bold text-[#0A0F14] text-lg">
+                  <td className="px-6 py-4 text-right font-bold text-[var(--color-ink)] text-lg">
                     {formatAmount(consolidated.totalSpend)}
                   </td>
                   <td className="px-6 py-4 text-right font-bold text-orange-600 text-lg">
@@ -347,10 +347,10 @@ export function ConsolidatedReportingDashboard() {
         </div>
 
         {/* Exchange Rate Reference */}
-        <div className="bg-white border border-[#E1E6EA] rounded-lg p-6">
+        <div className="bg-white border border-[var(--color-silver)] rounded-lg p-6">
           <div className="flex items-center gap-3 mb-4">
-            <ArrowRightLeft className="w-5 h-5 text-[#00A9B7]" />
-            <h3 className="font-semibold text-[#0A0F14]">Exchange Rates Used</h3>
+            <ArrowRightLeft className="w-5 h-5 text-[var(--color-teal)]" />
+            <h3 className="font-semibold text-[var(--color-ink)]">Exchange Rates Used</h3>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -361,11 +361,11 @@ export function ConsolidatedReportingDashboard() {
                 const currency = getCurrencyByCode(entity.currency);
                 
                 return (
-                  <div key={entity.currency} className="flex items-center gap-3 p-3 bg-[#F6F9FC] rounded-lg border border-[#E1E6EA]">
-                    <div className="text-sm text-[#6E7A82]">
+                  <div key={entity.currency} className="flex items-center gap-3 p-3 bg-[var(--color-cloud)] rounded-lg border border-[var(--color-silver)]">
+                    <div className="text-sm text-[var(--color-mercury-grey)]">
                       1 {currency?.symbol} {entity.currency} =
                     </div>
-                    <div className="font-semibold text-[#0A0F14]">
+                    <div className="font-semibold text-[var(--color-ink)]">
                       {baseCurrencyDetails?.symbol} {rate?.toFixed(4)} {BASE_CURRENCY}
                     </div>
                   </div>
@@ -373,8 +373,8 @@ export function ConsolidatedReportingDashboard() {
               })}
           </div>
 
-          <div className="mt-4 pt-4 border-t border-[#E1E6EA]">
-            <div className="flex items-start gap-2 text-xs text-[#6E7A82]">
+          <div className="mt-4 pt-4 border-t border-[var(--color-silver)]">
+            <div className="flex items-start gap-2 text-xs text-[var(--color-mercury-grey)]">
               <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <div>
                 Exchange rates are sourced from Exchange Rate Master. In production, these would be updated regularly. 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Filter, Plus, Package, X, ChevronDown, MapPin, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { useAPData } from '../contexts/APDataContext';
+import { FormSection, PxFormField } from './ui/form-primitives';
 
 interface GRN {
   id: string;
@@ -49,20 +50,20 @@ const locations = [
 
 const getStatusColor = (status: GRN['status']) => {
   switch (status) {
-    case 'Pending': return '#9AA6AF';
-    case 'Partial': return '#007D87';
-    case 'Complete': return '#00A9B7';
-    default: return '#6E7A82';
+    case 'Pending': return 'var(--color-slate)';
+    case 'Partial': return 'var(--color-teal-dark)';
+    case 'Complete': return 'var(--color-teal)';
+    default: return 'var(--color-mercury-grey)';
   }
 };
 
 const getAllocationStatusColor = (status: GRN['allocationStatus']) => {
   switch (status) {
-    case 'Not Allocated': return '#FF4E5B';
+    case 'Not Allocated': return 'var(--color-error)';
     case 'Partially Allocated': return '#D97706';
-    case 'Fully Allocated': return '#00A9B7';
-    case 'Accepted': return '#00A9B7';
-    default: return '#6E7A82';
+    case 'Fully Allocated': return 'var(--color-teal)';
+    case 'Accepted': return 'var(--color-teal)';
+    default: return 'var(--color-mercury-grey)';
   }
 };
 
@@ -233,19 +234,19 @@ export function GoodsReceipt() {
   };
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Goods Receipt (GRN)</h1>
-          <p style={{ color: '#6E7A82' }}>Record vendor deliveries and manage location allocations</p>
+          <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Goods Receipt (GRN)</h1>
+          <p style={{ color: 'var(--color-mercury-grey)' }}>Record vendor deliveries and manage location allocations</p>
         </div>
         <button 
           onClick={() => setShowCreateModal(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Create GRN from PO
@@ -253,10 +254,10 @@ export function GoodsReceipt() {
       </div>
 
       {/* Search */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="flex gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: '#6E7A82' }} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
             <input
               type="text"
               placeholder="Search by GRN number, PO number, or vendor..."
@@ -264,17 +265,17 @@ export function GoodsReceipt() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg"
               style={{ 
-                border: '1px solid #E1E6EA',
-                backgroundColor: '#F6F9FC',
-                color: '#0A0F14'
+                border: '1px solid var(--color-silver)',
+                backgroundColor: 'var(--color-cloud)',
+                color: 'var(--color-ink)'
               }}
             />
           </div>
           <button 
             className="flex items-center gap-2 px-4 py-2 rounded-lg"
             style={{ 
-              border: '1px solid #E1E6EA',
-              color: '#0A0F14',
+              border: '1px solid var(--color-silver)',
+              color: 'var(--color-ink)',
               backgroundColor: 'white'
             }}
           >
@@ -285,19 +286,19 @@ export function GoodsReceipt() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>GRN Number</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>PO Number</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Vendor</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Receipt Date</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Qty Received</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Amount</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Allocation Status</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>GRN Number</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>PO Number</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Receipt Date</th>
+                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Qty Received</th>
+                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Amount</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Allocation Status</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -305,28 +306,28 @@ export function GoodsReceipt() {
                 <tr 
                   key={grn.id}
                   style={{ 
-                    borderTop: index === 0 ? 'none' : '1px solid #E1E6EA'
+                    borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)'
                   }}
                 >
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     <div className="flex items-center gap-2">
-                      <Package className="w-4 h-4" style={{ color: '#00A9B7' }} />
+                      <Package className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                       {grn.grnNumber}
                     </div>
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
                     {grn.poNumber}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     {grn.vendor}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
                     {new Date(grn.receiptDate).toLocaleDateString('en-IN')}
                   </td>
-                  <td className="px-6 py-4 text-right" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4 text-right" style={{ color: 'var(--color-ink)' }}>
                     {grn.qtyReceived}
                   </td>
-                  <td className="px-6 py-4 text-right" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4 text-right" style={{ color: 'var(--color-ink)' }}>
                     ₹{grn.amount.toLocaleString('en-IN')}
                   </td>
                   <td className="px-6 py-4">
@@ -348,8 +349,8 @@ export function GoodsReceipt() {
                       onClick={() => handleViewAllocations(grn)}
                       className="px-3 py-1 rounded text-sm transition-colors"
                       style={{ 
-                        backgroundColor: '#E8F7F8',
-                        color: '#00A9B7'
+                        backgroundColor: 'var(--color-teal-tint)',
+                        color: 'var(--color-teal)'
                       }}
                     >
                       View Allocations
@@ -367,12 +368,12 @@ export function GoodsReceipt() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
               <div>
-                <h2 className="text-xl" style={{ color: '#0A0F14' }}>
+                <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
                   {currentStep === 'partA' ? 'Part A: Record Physical Receipt' : 'Part B: Allocate to Locations'}
                 </h2>
-                <p className="text-sm mt-1" style={{ color: '#6E7A82' }}>
+                <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                   {currentStep === 'partA' 
                     ? 'Record the actual quantity received from vendor' 
                     : 'Distribute received quantity to multiple locations'}
@@ -386,7 +387,7 @@ export function GoodsReceipt() {
                   setQtyReceived(0);
                   setAllocations([]);
                 }}
-                style={{ color: '#6E7A82' }}
+                style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <X className="w-6 h-6" />
               </button>
@@ -399,26 +400,26 @@ export function GoodsReceipt() {
                   <div 
                     className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
                     style={{ 
-                      backgroundColor: currentStep === 'partA' || currentStep === 'partB' ? '#00A9B7' : '#E1E6EA',
-                      color: currentStep === 'partA' || currentStep === 'partB' ? 'white' : '#6E7A82'
+                      backgroundColor: currentStep === 'partA' || currentStep === 'partB' ? 'var(--color-teal)' : 'var(--color-silver)',
+                      color: currentStep === 'partA' || currentStep === 'partB' ? 'white' : 'var(--color-mercury-grey)'
                     }}
                   >
                     {currentStep === 'partB' ? '✓' : '1'}
                   </div>
-                  <span className="text-sm" style={{ color: '#0A0F14' }}>Physical Receipt</span>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>Physical Receipt</span>
                 </div>
-                <div className="flex-1 h-px" style={{ backgroundColor: '#E1E6EA' }}></div>
+                <div className="flex-1 h-px" style={{ backgroundColor: 'var(--color-silver)' }}></div>
                 <div className="flex items-center gap-2">
                   <div 
                     className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
                     style={{ 
-                      backgroundColor: currentStep === 'partB' ? '#00A9B7' : '#E1E6EA',
-                      color: currentStep === 'partB' ? 'white' : '#6E7A82'
+                      backgroundColor: currentStep === 'partB' ? 'var(--color-teal)' : 'var(--color-silver)',
+                      color: currentStep === 'partB' ? 'white' : 'var(--color-mercury-grey)'
                     }}
                   >
                     2
                   </div>
-                  <span className="text-sm" style={{ color: '#0A0F14' }}>Location Allocation</span>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>Location Allocation</span>
                 </div>
               </div>
             </div>
@@ -428,11 +429,8 @@ export function GoodsReceipt() {
               {currentStep === 'partA' ? (
                 <>
                   {/* Select PO */}
-                  <div className="mb-6">
-                    <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                      Select Purchase Order *
-                    </label>
-                    <div className="relative">
+                  <FormSection title="PO Selection" columns={1}>
+                    <PxFormField label="Select Purchase Order" required>
                       <select
                         value={selectedPO?.id || ''}
                         onChange={(e) => {
@@ -440,12 +438,7 @@ export function GoodsReceipt() {
                           setSelectedPO(po || null);
                           setQtyReceived(0);
                         }}
-                        className="w-full px-4 py-3 rounded-lg appearance-none"
-                        style={{ 
-                          border: '1px solid #E1E6EA',
-                          backgroundColor: '#F6F9FC',
-                          color: '#0A0F14'
-                        }}
+                        className="px-select"
                       >
                         <option value="">Choose a PO...</option>
                         {availablePOItems.map(po => (
@@ -454,41 +447,40 @@ export function GoodsReceipt() {
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: '#6E7A82' }} />
-                    </div>
-                  </div>
+                    </PxFormField>
+                  </FormSection>
 
                   {/* PO Details */}
                   {selectedPO && (
-                    <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
-                      <h3 className="mb-3" style={{ color: '#0A0F14' }}>PO Details</h3>
+                    <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+                      <h3 className="mb-3" style={{ color: 'var(--color-ink)' }}>PO Details</h3>
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Item Name</p>
-                          <p style={{ color: '#0A0F14' }}>{selectedPO.itemName}</p>
+                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Item Name</p>
+                          <p style={{ color: 'var(--color-ink)' }}>{selectedPO.itemName}</p>
                         </div>
                         <div>
-                          <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Vendor</p>
-                          <p style={{ color: '#0A0F14' }}>{selectedPO.vendor}</p>
+                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</p>
+                          <p style={{ color: 'var(--color-ink)' }}>{selectedPO.vendor}</p>
                         </div>
                         <div>
-                          <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Original Delivery Location</p>
-                          <p className="flex items-center gap-1" style={{ color: '#00A9B7' }}>
+                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Original Delivery Location</p>
+                          <p className="flex items-center gap-1" style={{ color: 'var(--color-teal)' }}>
                             <MapPin className="w-4 h-4" />
                             {selectedPO.deliveryLocation}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Order Qty</p>
-                          <p style={{ color: '#0A0F14' }}>{selectedPO.orderQty}</p>
+                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Order Qty</p>
+                          <p style={{ color: 'var(--color-ink)' }}>{selectedPO.orderQty}</p>
                         </div>
                         <div>
-                          <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Already Received</p>
-                          <p style={{ color: '#0A0F14' }}>{selectedPO.receivedQty}</p>
+                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Already Received</p>
+                          <p style={{ color: 'var(--color-ink)' }}>{selectedPO.receivedQty}</p>
                         </div>
                         <div>
-                          <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Remaining Qty</p>
-                          <p style={{ color: '#00A9B7' }}>{selectedPO.remainingQty}</p>
+                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Remaining Qty</p>
+                          <p style={{ color: 'var(--color-teal)' }}>{selectedPO.remainingQty}</p>
                         </div>
                       </div>
                     </div>
@@ -496,28 +488,19 @@ export function GoodsReceipt() {
 
                   {/* Quantity Received */}
                   {selectedPO && (
-                    <div className="mb-6">
-                      <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                        Quantity Received from Vendor *
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max={selectedPO.remainingQty}
-                        value={qtyReceived}
-                        onChange={(e) => setQtyReceived(Math.min(parseInt(e.target.value) || 0, selectedPO.remainingQty))}
-                        className="w-full px-4 py-3 rounded-lg"
-                        style={{ 
-                          border: '1px solid #E1E6EA',
-                          backgroundColor: 'white',
-                          color: '#0A0F14'
-                        }}
-                        placeholder="Enter quantity received"
-                      />
-                      <p className="text-sm mt-1" style={{ color: '#6E7A82' }}>
-                        Max: {selectedPO.remainingQty} units
-                      </p>
-                    </div>
+                    <FormSection title="Receipt Details" columns={1}>
+                      <PxFormField label="Quantity Received from Vendor" required hint={`Max: ${selectedPO.remainingQty} units`}>
+                        <input
+                          type="number"
+                          min="0"
+                          max={selectedPO.remainingQty}
+                          value={qtyReceived}
+                          onChange={(e) => setQtyReceived(Math.min(parseInt(e.target.value) || 0, selectedPO.remainingQty))}
+                          className="px-input"
+                          placeholder="Enter quantity received"
+                        />
+                      </PxFormField>
+                    </FormSection>
                   )}
                 </>
               ) : (
@@ -527,10 +510,10 @@ export function GoodsReceipt() {
                     <div className="flex items-start gap-2">
                       <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: '#D97706' }} />
                       <div>
-                        <p className="text-sm" style={{ color: '#0A0F14' }}>
+                        <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
                           <strong>Total Received: {qtyReceived} units</strong>
                         </p>
-                        <p className="text-sm mt-1" style={{ color: '#6E7A82' }}>
+                        <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                           Allocate the complete quantity to one or more locations. Total allocation must equal {qtyReceived} units.
                         </p>
                       </div>
@@ -540,15 +523,15 @@ export function GoodsReceipt() {
                   {/* Allocation Lines */}
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-3">
-                      <label className="text-sm" style={{ color: '#6E7A82' }}>
+                      <label className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                         Location Allocations
                       </label>
                       <button
                         onClick={addAllocationLine}
                         className="flex items-center gap-1 px-3 py-1 rounded text-sm transition-colors"
                         style={{ 
-                          backgroundColor: '#E8F7F8',
-                          color: '#00A9B7'
+                          backgroundColor: 'var(--color-teal-tint)',
+                          color: 'var(--color-teal)'
                         }}
                       >
                         <Plus className="w-4 h-4" />
@@ -561,52 +544,38 @@ export function GoodsReceipt() {
                         <div 
                           key={allocation.id} 
                           className="p-4 rounded-lg"
-                          style={{ border: '1px solid #E1E6EA', backgroundColor: 'white' }}
+                          style={{ border: '1px solid var(--color-silver)', backgroundColor: 'white' }}
                         >
                           <div className="flex items-center gap-3">
                             <div className="flex-1 grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs mb-1" style={{ color: '#6E7A82' }}>
-                                  Location *
-                                </label>
+                              <PxFormField label="Location" required>
                                 <select
                                   value={allocation.location}
                                   onChange={(e) => updateAllocation(allocation.id, 'location', e.target.value)}
-                                  className="w-full px-3 py-2 rounded text-sm"
-                                  style={{ 
-                                    border: '1px solid #E1E6EA',
-                                    color: '#0A0F14'
-                                  }}
+                                  className="px-select-compact"
                                 >
                                   <option value="">Select location...</option>
                                   {locations.map(loc => (
                                     <option key={loc} value={loc}>{loc}</option>
                                   ))}
                                 </select>
-                              </div>
-                              <div>
-                                <label className="block text-xs mb-1" style={{ color: '#6E7A82' }}>
-                                  Allocated Quantity *
-                                </label>
+                              </PxFormField>
+                              <PxFormField label="Allocated Quantity" required>
                                 <input
                                   type="number"
                                   min="0"
                                   value={allocation.allocatedQty || ''}
                                   onChange={(e) => updateAllocation(allocation.id, 'allocatedQty', parseInt(e.target.value) || 0)}
-                                  className="w-full px-3 py-2 rounded text-sm"
-                                  style={{ 
-                                    border: '1px solid #E1E6EA',
-                                    color: '#0A0F14'
-                                  }}
+                                  className="px-input-compact"
                                   placeholder="Enter quantity"
                                 />
-                              </div>
+                              </PxFormField>
                             </div>
                             {allocations.length > 1 && (
                               <button
                                 onClick={() => removeAllocation(allocation.id)}
                                 className="p-2 rounded transition-colors"
-                                style={{ color: '#FF4E5B' }}
+                                style={{ color: 'var(--color-error)' }}
                                 title="Remove allocation"
                               >
                                 <X className="w-4 h-4" />
@@ -620,22 +589,22 @@ export function GoodsReceipt() {
 
                   {/* Allocation Summary */}
                   <div className="p-4 rounded-lg" style={{ 
-                    backgroundColor: getTotalAllocated() === qtyReceived ? '#E8F7F8' : '#FFE8EA',
-                    border: `1px solid ${getTotalAllocated() === qtyReceived ? '#00A9B7' : '#FF4E5B'}`
+                    backgroundColor: getTotalAllocated() === qtyReceived ? 'var(--color-teal-tint)' : '#FFE8EA',
+                    border: `1px solid ${getTotalAllocated() === qtyReceived ? 'var(--color-teal)' : 'var(--color-error)'}`
                   }}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm" style={{ color: '#0A0F14' }}>
+                        <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
                           Total Allocated: <strong>{getTotalAllocated()} units</strong>
                         </p>
-                        <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+                        <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                           {getTotalAllocated() === qtyReceived 
                             ? '✓ Allocation complete - matches received quantity' 
                             : `${qtyReceived - getTotalAllocated()} units ${getTotalAllocated() > qtyReceived ? 'over' : 'remaining'}`}
                         </p>
                       </div>
                       {getTotalAllocated() === qtyReceived && (
-                        <CheckCircle className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                        <CheckCircle className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                       )}
                     </div>
                   </div>
@@ -644,7 +613,7 @@ export function GoodsReceipt() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex gap-3 p-6" style={{ borderTop: '1px solid #E1E6EA' }}>
+            <div className="flex gap-3 p-6" style={{ borderTop: '1px solid var(--color-silver)' }}>
               <button
                 onClick={() => {
                   if (currentStep === 'partB') {
@@ -659,8 +628,8 @@ export function GoodsReceipt() {
                 }}
                 className="flex-1 px-4 py-3 rounded-lg"
                 style={{ 
-                  border: '1px solid #E1E6EA',
-                  color: '#0A0F14',
+                  border: '1px solid var(--color-silver)',
+                  color: 'var(--color-ink)',
                   backgroundColor: 'white'
                 }}
               >
@@ -671,9 +640,9 @@ export function GoodsReceipt() {
                   onClick={handleCreatePartA}
                   disabled={!selectedPO || qtyReceived === 0}
                   className="flex-1 px-4 py-3 rounded-lg text-white transition-colors disabled:opacity-50"
-                  style={{ backgroundColor: '#00A9B7' }}
-                  onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = '#007D87')}
-                  onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = '#00A9B7')}
+                  style={{ backgroundColor: 'var(--color-teal)' }}
+                  onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+                  onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
                 >
                   Continue to Allocation →
                 </button>
@@ -682,9 +651,9 @@ export function GoodsReceipt() {
                   onClick={handleCreateGRN}
                   disabled={!isAllocationValid()}
                   className="flex-1 px-4 py-3 rounded-lg text-white transition-colors disabled:opacity-50"
-                  style={{ backgroundColor: '#00A9B7' }}
-                  onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = '#007D87')}
-                  onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = '#00A9B7')}
+                  style={{ backgroundColor: 'var(--color-teal)' }}
+                  onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+                  onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
                 >
                   Create GRN & Notify Locations
                 </button>
@@ -698,16 +667,16 @@ export function GoodsReceipt() {
       {showAllocationModal && selectedGRN && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
               <div>
-                <h2 className="text-xl" style={{ color: '#0A0F14' }}>
+                <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
                   GRN Allocations - {selectedGRN.grnNumber}
                 </h2>
-                <p className="text-sm mt-1" style={{ color: '#6E7A82' }}>
+                <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                   Total Received: {selectedGRN.qtyReceived} units
                 </p>
               </div>
-              <button onClick={() => setShowAllocationModal(false)} style={{ color: '#6E7A82' }}>
+              <button onClick={() => setShowAllocationModal(false)} style={{ color: 'var(--color-mercury-grey)' }}>
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -718,14 +687,14 @@ export function GoodsReceipt() {
                   <div 
                     key={allocation.id}
                     className="p-4 rounded-lg"
-                    style={{ border: '1px solid #E1E6EA' }}
+                    style={{ border: '1px solid var(--color-silver)' }}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <MapPin className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                        <MapPin className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                         <div>
-                          <p style={{ color: '#0A0F14' }}>{allocation.location}</p>
-                          <p className="text-sm" style={{ color: '#6E7A82' }}>
+                          <p style={{ color: 'var(--color-ink)' }}>{allocation.location}</p>
+                          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                             Allocated: {allocation.allocatedQty} units
                           </p>
                         </div>
@@ -733,8 +702,8 @@ export function GoodsReceipt() {
                       <span 
                         className="px-3 py-1 rounded-full text-sm"
                         style={{ 
-                          backgroundColor: allocation.status === 'Accepted' ? '#E8F7F8' : '#FFF9E6',
-                          color: allocation.status === 'Accepted' ? '#00A9B7' : '#D97706'
+                          backgroundColor: allocation.status === 'Accepted' ? 'var(--color-teal-tint)' : '#FFF9E6',
+                          color: allocation.status === 'Accepted' ? 'var(--color-teal)' : '#D97706'
                         }}
                       >
                         {allocation.status}
@@ -742,11 +711,11 @@ export function GoodsReceipt() {
                     </div>
 
                     {allocation.status === 'Accepted' && (
-                      <div className="pt-3" style={{ borderTop: '1px solid #E1E6EA' }}>
-                        <p className="text-sm" style={{ color: '#6E7A82' }}>
-                          Accepted by: <strong style={{ color: '#0A0F14' }}>{allocation.acceptedBy}</strong>
+                      <div className="pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
+                        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                          Accepted by: <strong style={{ color: 'var(--color-ink)' }}>{allocation.acceptedBy}</strong>
                         </p>
-                        <p className="text-sm" style={{ color: '#6E7A82' }}>
+                        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                           Date: {allocation.acceptedDate}
                         </p>
                       </div>
@@ -756,9 +725,9 @@ export function GoodsReceipt() {
                       <button
                         onClick={() => handleAcceptAllocation(selectedGRN.id, allocation.id)}
                         className="mt-3 w-full px-4 py-2 rounded-lg text-white transition-colors"
-                        style={{ backgroundColor: '#00A9B7' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                        style={{ backgroundColor: 'var(--color-teal)' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
                       >
                         Accept Allocation
                       </button>

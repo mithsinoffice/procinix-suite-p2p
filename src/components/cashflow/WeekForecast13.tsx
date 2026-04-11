@@ -31,47 +31,47 @@ export function WeekForecast13() {
 
   const getRiskColor = (risk: string) => {
     switch (risk) {
-      case 'low': return { bg: '#E8F5E9', color: '#2E7D32', border: '#81C784' };
-      case 'medium': return { bg: '#FFF3E0', color: '#F57C00', border: '#FFB74D' };
-      case 'high': return { bg: '#FFF3E0', color: '#E65100', border: '#FF9800' };
-      case 'critical': return { bg: '#FEE2E2', color: '#DC2626', border: '#FCA5A5' };
-      default: return { bg: '#F6F9FC', color: '#6E7A82', border: '#E1E6EA' };
+      case 'low': return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)', border: '#81C784' };
+      case 'medium': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)', border: '#FFB74D' };
+      case 'high': return { bg: 'var(--color-warning-light)', color: '#E65100', border: '#FF9800' };
+      case 'critical': return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)', border: '#FCA5A5' };
+      default: return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
     }
   };
 
   const minimumBuffer = 50000000;
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* PAGE HEADER */}
-      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl" style={{ color: '#0A0F14', margin: 0 }}>
+              <h1 className="text-2xl" style={{ color: 'var(--color-ink)', margin: 0 }}>
                 13-Week Cash Forecast
               </h1>
               <span 
                 className="px-3 py-1 rounded-full text-sm"
-                style={{ backgroundColor: '#E8F7F8', color: '#00A9B7', border: '1px solid #00A9B7' }}
+                style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)', border: '1px solid var(--color-teal)' }}
               >
                 DIRECT + AI
               </span>
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded" style={{ backgroundColor: '#F6F9FC' }}>
-                <Sparkles className="w-3.5 h-3.5" style={{ color: '#00A9B7' }} />
-                <span className="text-xs" style={{ color: '#6E7A82' }}>AI-Powered</span>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--color-teal)' }} />
+                <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>AI-Powered</span>
               </div>
             </div>
-            <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
               Short-term operational cash control • Week-by-week projections
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-4 py-2 rounded-lg transition-colors" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+            <button className="px-4 py-2 rounded-lg transition-colors" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
               <Calendar className="w-4 h-4 inline mr-2" />
               Adjust Assumptions
             </button>
-            <button className="px-4 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: '#00A9B7' }}>
+            <button className="px-4 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }}>
               <Download className="w-4 h-4 inline mr-2" />
               Export Forecast
             </button>
@@ -83,58 +83,58 @@ export function WeekForecast13() {
       <div className="p-8">
         {/* KPI Summary */}
         <div className="grid grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Starting Cash</p>
-            <p className="text-2xl" style={{ color: '#0A0F14' }}>{formatCurrency(weeks[0].opening)}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Starting Cash</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)' }}>{formatCurrency(weeks[0].opening)}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Total Inflows</p>
-            <p className="text-2xl" style={{ color: '#2E7D32' }}>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Inflows</p>
+            <p className="text-2xl" style={{ color: 'var(--color-success-dark)' }}>
               {formatCurrency(weeks.reduce((sum, w) => sum + w.inflow, 0))}
             </p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Total Outflows</p>
-            <p className="text-2xl" style={{ color: '#DC2626' }}>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Outflows</p>
+            <p className="text-2xl" style={{ color: 'var(--color-error-dark)' }}>
               {formatCurrency(weeks.reduce((sum, w) => sum + w.outflow, 0))}
             </p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Ending Cash (Week 13)</p>
-            <p className="text-2xl" style={{ color: '#0A0F14' }}>{formatCurrency(weeks[12].closing)}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Ending Cash (Week 13)</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)' }}>{formatCurrency(weeks[12].closing)}</p>
           </div>
         </div>
 
         {/* Week-by-Week Table */}
-        <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-          <div className="p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
-            <h3 className="text-base" style={{ color: '#0A0F14', margin: 0 }}>Week-by-Week Cash Flow</h3>
+        <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <div className="p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+            <h3 className="text-base" style={{ color: 'var(--color-ink)', margin: 0 }}>Week-by-Week Cash Flow</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ backgroundColor: '#F6F9FC' }}>
+              <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Week</th>
-                  <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Period</th>
-                  <th className="px-6 py-3 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Opening Balance</th>
-                  <th className="px-6 py-3 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Inflows</th>
-                  <th className="px-6 py-3 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Outflows</th>
-                  <th className="px-6 py-3 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Closing Balance</th>
-                  <th className="px-6 py-3 text-center text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Risk</th>
+                  <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Week</th>
+                  <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Period</th>
+                  <th className="px-6 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Opening Balance</th>
+                  <th className="px-6 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Inflows</th>
+                  <th className="px-6 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Outflows</th>
+                  <th className="px-6 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Closing Balance</th>
+                  <th className="px-6 py-3 text-center text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Risk</th>
                 </tr>
               </thead>
-              <tbody className="divide-y" style={{ borderColor: '#E1E6EA' }}>
+              <tbody className="divide-y" style={{ borderColor: 'var(--color-silver)' }}>
                 {weeks.map((week) => {
                   const riskStyle = getRiskColor(week.risk);
                   const belowBuffer = week.closing < minimumBuffer;
                   return (
-                    <tr key={week.week} style={{ backgroundColor: belowBuffer ? '#FEE2E2' : '#FFFFFF' }}>
-                      <td className="px-6 py-4 text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>W{week.week}</td>
-                      <td className="px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>{week.startDate} - {week.endDate}</td>
-                      <td className="px-6 py-4 text-sm text-right" style={{ color: '#0A0F14' }}>{formatCurrency(week.opening)}</td>
-                      <td className="px-6 py-4 text-sm text-right" style={{ color: '#2E7D32' }}>+{formatCurrency(week.inflow)}</td>
-                      <td className="px-6 py-4 text-sm text-right" style={{ color: '#DC2626' }}>-{formatCurrency(week.outflow)}</td>
-                      <td className="px-6 py-4 text-sm text-right" style={{ color: belowBuffer ? '#DC2626' : '#0A0F14', fontWeight: '600' }}>
+                    <tr key={week.week} style={{ backgroundColor: belowBuffer ? 'var(--color-error-light)' : '#FFFFFF' }}>
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>W{week.week}</td>
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{week.startDate} - {week.endDate}</td>
+                      <td className="px-6 py-4 text-sm text-right" style={{ color: 'var(--color-ink)' }}>{formatCurrency(week.opening)}</td>
+                      <td className="px-6 py-4 text-sm text-right" style={{ color: 'var(--color-success-dark)' }}>+{formatCurrency(week.inflow)}</td>
+                      <td className="px-6 py-4 text-sm text-right" style={{ color: 'var(--color-error-dark)' }}>-{formatCurrency(week.outflow)}</td>
+                      <td className="px-6 py-4 text-sm text-right" style={{ color: belowBuffer ? 'var(--color-error-dark)' : 'var(--color-ink)', fontWeight: '600' }}>
                         {formatCurrency(week.closing)}
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -151,14 +151,14 @@ export function WeekForecast13() {
         </div>
 
         {/* Critical Week Alert */}
-        <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5' }}>
+        <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)', border: '1px solid #FCA5A5' }}>
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 mt-0.5" style={{ color: '#DC2626' }} />
+            <AlertTriangle className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-error-dark)' }} />
             <div>
-              <h4 className="text-sm mb-2" style={{ color: '#0A0F14', margin: 0, fontWeight: '600' }}>
+              <h4 className="text-sm mb-2" style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}>
                 Critical Cash Alert: Week 7
               </h4>
-              <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
                 Cash drops to {formatCurrency(44820000)} (below minimum buffer of {formatCurrency(minimumBuffer)}) due to GST payment + delayed collections.
                 <br />
                 <strong>AI Recommendation:</strong> Defer non-critical vendor payments or utilize ₹10 Cr overdraft facility.

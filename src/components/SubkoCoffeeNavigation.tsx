@@ -14,6 +14,7 @@ import {
   Users,
   Settings,
   GitBranch,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -123,7 +124,7 @@ export function SubkoCoffeeNavigation() {
     }`;
 
   const linkStyle = (isActive: boolean): CSSProperties => ({
-    backgroundColor: isActive ? '#00A9B7' : 'transparent',
+    backgroundColor: isActive ? 'var(--color-teal)' : 'transparent',
     color: isActive ? '#FFFFFF' : '#C7D0D8',
   });
 
@@ -143,7 +144,7 @@ export function SubkoCoffeeNavigation() {
         >
           Subko Coffee
         </h1>
-        <p className="text-xs mt-1" style={{ color: '#9AA6AF' }}>
+        <p className="text-xs mt-1" style={{ color: 'var(--color-slate)' }}>
           Procurement Suite
         </p>
       </div>
@@ -157,7 +158,7 @@ export function SubkoCoffeeNavigation() {
                 <div key={item.label} className="space-y-1">
                   <div
                     className="flex items-center gap-3 px-4 py-2"
-                    style={{ color: '#9AA6AF' }}
+                    style={{ color: 'var(--color-slate)' }}
                   >
                     <Icon className="w-5 h-5 flex-shrink-0" style={{ strokeWidth: 2 }} />
                     <span className="text-xs font-semibold uppercase tracking-wide">
@@ -245,7 +246,7 @@ export function SubkoCoffeeNavigation() {
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
             style={{
-              backgroundColor: '#00A9B7',
+              backgroundColor: 'var(--color-teal)',
               color: '#FFFFFF',
               fontWeight: '600',
             }}
@@ -259,7 +260,7 @@ export function SubkoCoffeeNavigation() {
             >
               {user?.name || 'Guest User'}
             </p>
-            <p className="text-xs truncate" style={{ color: '#9AA6AF' }}>
+            <p className="text-xs truncate" style={{ color: 'var(--color-slate)' }}>
               {user?.role || 'Guest'}
             </p>
           </div>

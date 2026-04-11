@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, Upload, FileText, Plus, Trash2, AlertCircle, 
+import {
+  ArrowLeft, Upload, FileText, Plus, Trash2, AlertCircle,
   CheckCircle, Save, Send, Eye, Building2, Calendar, DollarSign,
   Package, Target, BookOpen, Receipt, Info
 } from 'lucide-react';
 import { VendorSelector, ItemSelector, EntitySelector, CostCentreSelector, TaxCodeSelector, AccountCodeSelector } from './shared';
 import { useMasterData } from '../contexts/MasterDataContext';
+import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 /**
  * NON-PO INVOICE CREATION FORM
@@ -324,74 +326,51 @@ export function NonPOInvoiceForm() {
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.9) return '#16A34A';
     if (confidence >= 0.7) return '#D97706';
-    return '#DC2626';
+    return 'var(--color-error-dark)';
   };
 
-  return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white shadow-sm" style={{ borderBottom: '2px solid #E1E6EA' }}>
-        <div className="px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => navigate('/ap/dashboard')}
-                className="p-2 rounded-lg transition-colors hover:bg-gray-100" 
-                style={{ color: '#6E7A82' }}
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-2xl" style={{ color: '#0A0F14' }}>Create Non-PO Invoice</h1>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
-                  Invoices without Purchase Order reference
-                  <span className="ml-2 px-2 py-0.5 rounded text-xs" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
-                    Enhanced AI Validation
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSaveDraft}
-                className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
-                style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}
-              >
-                <Save className="w-4 h-4" />
-                Save Draft
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#00A9B7' }}
-              >
-                <Send className="w-4 h-4" />
-                Submit for Approval
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+  // Form completeness
+  const completeness = useMemo(() => {
+    const fields = [vendorId, invoiceNumber, invoiceDate, costCentreId, accountCodeId, expenseCategory];
+    const filled = fields.filter(Boolean).length;
+    return Math.round((filled / fields.length) * 100);
+  }, [vendorId, invoiceNumber, invoiceDate, costCentreId, accountCodeId, expenseCategory]);
 
-      <div className="p-8 max-w-7xl mx-auto">
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const handleKeyboardSave = useCallback(() => handleSaveDraft(), []);
+  useFormKeyboardSave(handleKeyboardSave);
+
+  return (
+    <FormShell
+      title="Create Non-PO Invoice"
+      subtitle="Invoices without Purchase Order reference"
+      variant="transaction"
+      onBack={() => navigate('/ap/dashboard')}
+      onSaveDraft={handleSaveDraft}
+      onSubmit={handleSubmit}
+      submitLabel="Submit for Approval"
+      draftLabel="Save Draft"
+      saveStatus={saveStatus}
+      completeness={completeness}
+    >
         {/* Stage 1: Invoice Upload & OCR */}
-        <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: '#E1E6EA' }}>
+        <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: 'var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-4">
-            <Upload className="w-5 h-5" style={{ color: '#00A9B7' }} />
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Step 1: Upload Invoice Document</h2>
+            <Upload className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Step 1: Upload Invoice Document</h2>
           </div>
 
           {!uploadedFile ? (
             <div 
               className="border-2 border-dashed rounded-xl p-12 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-              style={{ borderColor: '#E1E6EA' }}
+              style={{ borderColor: 'var(--color-silver)' }}
               onClick={() => document.getElementById('fileInput')?.click()}
             >
-              <Upload className="w-12 h-12 mx-auto mb-4" style={{ color: '#6E7A82' }} />
-              <p className="text-lg mb-2" style={{ color: '#0A0F14' }}>
+              <Upload className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--color-mercury-grey)' }} />
+              <p className="text-lg mb-2" style={{ color: 'var(--color-ink)' }}>
                 Drop invoice file here or click to upload
               </p>
-              <p className="text-sm" style={{ color: '#6E7A82' }}>
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                 Supports PDF, PNG, JPG • Max 10MB
               </p>
               <input
@@ -404,12 +383,12 @@ export function NonPOInvoiceForm() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+              <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <div className="flex items-center gap-3">
-                  <FileText className="w-8 h-8" style={{ color: '#00A9B7' }} />
+                  <FileText className="w-8 h-8" style={{ color: 'var(--color-teal)' }} />
                   <div>
-                    <p style={{ color: '#0A0F14' }}>{uploadedFile.name}</p>
-                    <p className="text-sm" style={{ color: '#6E7A82' }}>
+                    <p style={{ color: 'var(--color-ink)' }}>{uploadedFile.name}</p>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                       {(uploadedFile.size / 1024).toFixed(2)} KB
                     </p>
                   </div>
@@ -427,7 +406,7 @@ export function NonPOInvoiceForm() {
                   <button
                     onClick={() => setUploadedFile(null)}
                     className="p-2 rounded-lg hover:bg-red-50"
-                    style={{ color: '#DC2626' }}
+                    style={{ color: 'var(--color-error-dark)' }}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -438,7 +417,7 @@ export function NonPOInvoiceForm() {
                 <button
                   onClick={() => setShowOCRReview(true)}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-white"
-                  style={{ backgroundColor: '#00A9B7' }}
+                  style={{ backgroundColor: 'var(--color-teal)' }}
                 >
                   <Eye className="w-4 h-4" />
                   Review & Apply OCR Data
@@ -452,9 +431,9 @@ export function NonPOInvoiceForm() {
         {showOCRReview && ocrData && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b-2 p-6" style={{ borderColor: '#E1E6EA' }}>
-                <h2 className="text-2xl" style={{ color: '#0A0F14' }}>OCR Extracted Data</h2>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
+              <div className="sticky top-0 bg-white border-b-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
+                <h2 className="text-2xl" style={{ color: 'var(--color-ink)' }}>OCR Extracted Data</h2>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Review confidence scores and edit fields before applying
                 </p>
               </div>
@@ -462,7 +441,7 @@ export function NonPOInvoiceForm() {
               <div className="p-6 space-y-6">
                 {/* Vendor Info */}
                 <div>
-                  <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>
+                  <label className="text-sm mb-2 block" style={{ color: 'var(--color-mercury-grey)' }}>
                     Vendor Name
                     <span 
                       className="ml-2 px-2 py-0.5 rounded text-xs" 
@@ -479,24 +458,24 @@ export function NonPOInvoiceForm() {
                     value={ocrData.vendorName}
                     onChange={(e) => setOcrData({ ...ocrData, vendorName: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border-2"
-                    style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                    style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                   />
                 </div>
 
                 <div>
-                  <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>Vendor GSTIN</label>
+                  <label className="text-sm mb-2 block" style={{ color: 'var(--color-mercury-grey)' }}>Vendor GSTIN</label>
                   <input
                     type="text"
                     value={ocrData.vendorGSTIN}
                     onChange={(e) => setOcrData({ ...ocrData, vendorGSTIN: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border-2"
-                    style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                    style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>
+                    <label className="text-sm mb-2 block" style={{ color: 'var(--color-mercury-grey)' }}>
                       Invoice Number
                       <span 
                         className="ml-2 px-2 py-0.5 rounded text-xs" 
@@ -513,12 +492,12 @@ export function NonPOInvoiceForm() {
                       value={ocrData.invoiceNumber}
                       onChange={(e) => setOcrData({ ...ocrData, invoiceNumber: e.target.value })}
                       className="w-full px-4 py-2 rounded-lg border-2"
-                      style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                      style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                     />
                   </div>
 
                   <div>
-                    <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>
+                    <label className="text-sm mb-2 block" style={{ color: 'var(--color-mercury-grey)' }}>
                       Invoice Date
                       <span 
                         className="ml-2 px-2 py-0.5 rounded text-xs" 
@@ -535,13 +514,13 @@ export function NonPOInvoiceForm() {
                       value={ocrData.invoiceDate}
                       onChange={(e) => setOcrData({ ...ocrData, invoiceDate: e.target.value })}
                       className="w-full px-4 py-2 rounded-lg border-2"
-                      style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                      style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>
+                  <label className="text-sm mb-2 block" style={{ color: 'var(--color-mercury-grey)' }}>
                     Invoice Amount
                     <span 
                       className="ml-2 px-2 py-0.5 rounded text-xs" 
@@ -558,23 +537,23 @@ export function NonPOInvoiceForm() {
                     value={ocrData.invoiceAmount}
                     onChange={(e) => setOcrData({ ...ocrData, invoiceAmount: parseFloat(e.target.value) })}
                     className="w-full px-4 py-2 rounded-lg border-2"
-                    style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                    style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                   />
                 </div>
               </div>
 
-              <div className="sticky bottom-0 bg-white border-t-2 p-6 flex gap-3" style={{ borderColor: '#E1E6EA' }}>
+              <div className="sticky bottom-0 bg-white border-t-2 p-6 flex gap-3" style={{ borderColor: 'var(--color-silver)' }}>
                 <button
                   onClick={() => setShowOCRReview(false)}
                   className="flex-1 px-4 py-2 rounded-lg border-2"
-                  style={{ borderColor: '#E1E6EA', color: '#6E7A82' }}
+                  style={{ borderColor: 'var(--color-silver)', color: 'var(--color-mercury-grey)' }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={applyOCRData}
                   className="flex-1 px-4 py-2 rounded-lg text-white"
-                  style={{ backgroundColor: '#00A9B7' }}
+                  style={{ backgroundColor: 'var(--color-teal)' }}
                 >
                   Apply to Form
                 </button>
@@ -584,13 +563,11 @@ export function NonPOInvoiceForm() {
         )}
 
         {/* Stage 2: Invoice Header */}
-        <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: '#E1E6EA' }}>
-          <div className="flex items-center gap-3 mb-6">
-            <FileText className="w-5 h-5" style={{ color: '#00A9B7' }} />
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Step 2: Invoice Header</h2>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
+        <FormSection
+          title="Step 2: Invoice Header"
+          columns={2}
+          icon={<FileText className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />}
+        >
             <VendorSelector
               value={vendorId}
               onChange={(id) => {
@@ -602,41 +579,32 @@ export function NonPOInvoiceForm() {
               error={showValidation ? errors.vendor : undefined}
             />
 
-            <div>
-              <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>
-                Invoice Number <span style={{ color: '#DC2626' }}>*</span>
-              </label>
+            <PxFormField label="Invoice Number" required error={showValidation ? errors.invoiceNumber : undefined}>
               <input
                 type="text"
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
                 placeholder="Enter invoice number"
-                className="w-full px-4 py-2 rounded-lg border-2"
-                style={{ 
-                  borderColor: showValidation && errors.invoiceNumber ? '#DC2626' : '#E1E6EA',
-                  color: '#0A0F14'
+                className="px-input w-full px-4 py-2 rounded-lg border-2"
+                style={{
+                  borderColor: showValidation && errors.invoiceNumber ? 'var(--color-error-dark)' : 'var(--color-silver)',
+                  color: 'var(--color-ink)'
                 }}
               />
-              {showValidation && errors.invoiceNumber && (
-                <p className="text-xs mt-1" style={{ color: '#DC2626' }}>{errors.invoiceNumber}</p>
-              )}
-            </div>
+            </PxFormField>
 
-            <div>
-              <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>
-                Invoice Date <span style={{ color: '#DC2626' }}>*</span>
-              </label>
+            <PxFormField label="Invoice Date" required>
               <input
                 type="date"
                 value={invoiceDate}
                 onChange={(e) => setInvoiceDate(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border-2"
-                style={{ 
-                  borderColor: showValidation && errors.invoiceDate ? '#DC2626' : '#E1E6EA',
-                  color: '#0A0F14'
+                className="px-input w-full px-4 py-2 rounded-lg border-2"
+                style={{
+                  borderColor: showValidation && errors.invoiceDate ? 'var(--color-error-dark)' : 'var(--color-silver)',
+                  color: 'var(--color-ink)'
                 }}
               />
-            </div>
+            </PxFormField>
 
             <EntitySelector
               value={entityId}
@@ -645,49 +613,40 @@ export function NonPOInvoiceForm() {
               disabled
             />
 
-            <div>
-              <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>
-                Supply Type <span style={{ color: '#DC2626' }}>*</span>
-              </label>
+            <PxFormField label="Supply Type" required>
               <select
                 value={supplyType}
                 onChange={(e) => setSupplyType(e.target.value as 'Goods' | 'Services')}
-                className="w-full px-4 py-2 rounded-lg border-2"
-                style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                className="px-input w-full px-4 py-2 rounded-lg border-2"
+                style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 <option value="Services">Services</option>
                 <option value="Goods">Goods</option>
               </select>
-            </div>
+            </PxFormField>
 
-            <div>
-              <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>
-                Place of Supply <span style={{ color: '#DC2626' }}>*</span>
-              </label>
+            <PxFormField label="Place of Supply" required>
               <select
                 value={placeOfSupply}
                 onChange={(e) => setPlaceOfSupply(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border-2"
-                style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                className="px-input w-full px-4 py-2 rounded-lg border-2"
+                style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 <option value="KA">Karnataka</option>
                 <option value="MH">Maharashtra</option>
                 <option value="TN">Tamil Nadu</option>
                 <option value="DL">Delhi</option>
               </select>
-            </div>
+            </PxFormField>
 
-            <div>
-              <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>
-                Expense Category <span style={{ color: '#DC2626' }}>*</span>
-              </label>
+            <PxFormField label="Expense Category" required error={showValidation ? errors.expenseCategory : undefined}>
               <select
                 value={expenseCategory}
                 onChange={(e) => setExpenseCategory(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border-2"
-                style={{ 
-                  borderColor: showValidation && errors.expenseCategory ? '#DC2626' : '#E1E6EA',
-                  color: '#0A0F14'
+                className="px-input w-full px-4 py-2 rounded-lg border-2"
+                style={{
+                  borderColor: showValidation && errors.expenseCategory ? 'var(--color-error-dark)' : 'var(--color-silver)',
+                  color: 'var(--color-ink)'
                 }}
               >
                 <option value="">Select category</option>
@@ -698,21 +657,18 @@ export function NonPOInvoiceForm() {
                 <option value="Maintenance">Maintenance</option>
                 <option value="Utilities">Utilities</option>
               </select>
-            </div>
+            </PxFormField>
 
-            <div>
-              <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>
-                Nature of Expense <span style={{ color: '#DC2626' }}>*</span>
-              </label>
+            <PxFormField label="Nature of Expense" required>
               <input
                 type="text"
                 value={natureOfExpense}
                 onChange={(e) => setNatureOfExpense(e.target.value)}
                 placeholder="e.g., IT Consulting, Legal Services"
-                className="w-full px-4 py-2 rounded-lg border-2"
-                style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                className="px-input w-full px-4 py-2 rounded-lg border-2"
+                style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
               />
-            </div>
+            </PxFormField>
 
             <CostCentreSelector
               value={costCentreId}
@@ -729,47 +685,42 @@ export function NonPOInvoiceForm() {
               error={showValidation ? errors.accountCode : undefined}
             />
 
-            <div>
-              <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>
-                Payment Terms
-              </label>
+            <PxFormField label="Payment Terms">
               <select
                 value={paymentTerms}
                 onChange={(e) => setPaymentTerms(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border-2"
-                style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                className="px-input w-full px-4 py-2 rounded-lg border-2"
+                style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 <option value="Net 30 Days">Net 30 Days</option>
                 <option value="Net 45 Days">Net 45 Days</option>
                 <option value="Net 60 Days">Net 60 Days</option>
                 <option value="Immediate">Immediate</option>
               </select>
-            </div>
+            </PxFormField>
 
-            <div>
-              <label className="text-sm mb-2 block" style={{ color: '#6E7A82' }}>Currency</label>
+            <PxFormField label="Currency">
               <input
                 type="text"
                 value={currency}
                 disabled
-                className="w-full px-4 py-2 rounded-lg border-2"
-                style={{ borderColor: '#E1E6EA', color: '#0A0F14', backgroundColor: '#F6F9FC' }}
+                className="px-input w-full px-4 py-2 rounded-lg border-2"
+                style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)', backgroundColor: 'var(--color-cloud)' }}
               />
-            </div>
-          </div>
-        </div>
+            </PxFormField>
+        </FormSection>
 
         {/* Stage 3: Line Items */}
-        <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: '#E1E6EA' }}>
+        <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: 'var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <Package className="w-5 h-5" style={{ color: '#00A9B7' }} />
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>Step 3: Line Items</h2>
+              <Package className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Step 3: Line Items</h2>
             </div>
             <button
               onClick={addLineItem}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-white"
-              style={{ backgroundColor: '#00A9B7' }}
+              style={{ backgroundColor: 'var(--color-teal)' }}
             >
               <Plus className="w-4 h-4" />
               Add Line
@@ -779,22 +730,22 @@ export function NonPOInvoiceForm() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: '#F6F9FC' }}>
-                  <th className="px-3 py-3 text-left text-sm" style={{ color: '#6E7A82' }}>Description</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>Qty</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>Rate</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>Base Amt</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>GST%</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>GST Amt</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>TDS%</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>TDS Amt</th>
-                  <th className="px-3 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>Net</th>
-                  <th className="px-3 py-3 text-center text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <tr style={{ backgroundColor: 'var(--color-cloud)' }}>
+                  <th className="px-3 py-3 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Description</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Qty</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Rate</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Base Amt</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>GST%</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>GST Amt</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>TDS%</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>TDS Amt</th>
+                  <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Net</th>
+                  <th className="px-3 py-3 text-center text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {lineItems.map((item, index) => (
-                  <tr key={item.id} className="border-t" style={{ borderColor: '#E1E6EA' }}>
+                  <tr key={item.id} className="border-t" style={{ borderColor: 'var(--color-silver)' }}>
                     <td className="px-3 py-3">
                       <input
                         type="text"
@@ -806,7 +757,7 @@ export function NonPOInvoiceForm() {
                         }}
                         placeholder="Description"
                         className="w-full px-2 py-1 rounded border"
-                        style={{ borderColor: '#E1E6EA', fontSize: '14px' }}
+                        style={{ borderColor: 'var(--color-silver)', fontSize: '14px' }}
                       />
                     </td>
                     <td className="px-3 py-3">
@@ -819,7 +770,7 @@ export function NonPOInvoiceForm() {
                           calculateLineItem(index, updated);
                         }}
                         className="w-20 px-2 py-1 rounded border text-right"
-                        style={{ borderColor: '#E1E6EA', fontSize: '14px' }}
+                        style={{ borderColor: 'var(--color-silver)', fontSize: '14px' }}
                       />
                     </td>
                     <td className="px-3 py-3">
@@ -832,10 +783,10 @@ export function NonPOInvoiceForm() {
                           calculateLineItem(index, updated);
                         }}
                         className="w-24 px-2 py-1 rounded border text-right"
-                        style={{ borderColor: '#E1E6EA', fontSize: '14px' }}
+                        style={{ borderColor: 'var(--color-silver)', fontSize: '14px' }}
                       />
                     </td>
-                    <td className="px-3 py-3 text-right text-sm" style={{ color: '#0A0F14' }}>
+                    <td className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-ink)' }}>
                       ₹{item.baseAmount.toLocaleString('en-IN')}
                     </td>
                     <td className="px-3 py-3">
@@ -848,10 +799,10 @@ export function NonPOInvoiceForm() {
                           calculateLineItem(index, updated);
                         }}
                         className="w-16 px-2 py-1 rounded border text-right"
-                        style={{ borderColor: '#E1E6EA', fontSize: '14px' }}
+                        style={{ borderColor: 'var(--color-silver)', fontSize: '14px' }}
                       />
                     </td>
-                    <td className="px-3 py-3 text-right text-sm" style={{ color: '#0A0F14' }}>
+                    <td className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-ink)' }}>
                       ₹{item.gstAmount.toLocaleString('en-IN')}
                     </td>
                     <td className="px-3 py-3">
@@ -864,13 +815,13 @@ export function NonPOInvoiceForm() {
                           calculateLineItem(index, updated);
                         }}
                         className="w-16 px-2 py-1 rounded border text-right"
-                        style={{ borderColor: '#E1E6EA', fontSize: '14px' }}
+                        style={{ borderColor: 'var(--color-silver)', fontSize: '14px' }}
                       />
                     </td>
-                    <td className="px-3 py-3 text-right text-sm" style={{ color: '#DC2626' }}>
+                    <td className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-error-dark)' }}>
                       -₹{item.tdsAmount.toLocaleString('en-IN')}
                     </td>
-                    <td className="px-3 py-3 text-right" style={{ color: '#00A9B7' }}>
+                    <td className="px-3 py-3 text-right" style={{ color: 'var(--color-teal)' }}>
                       ₹{item.netPayable.toLocaleString('en-IN')}
                     </td>
                     <td className="px-3 py-3 text-center">
@@ -878,7 +829,7 @@ export function NonPOInvoiceForm() {
                         <button
                           onClick={() => removeLineItem(index)}
                           className="p-1 rounded hover:bg-red-50"
-                          style={{ color: '#DC2626' }}
+                          style={{ color: 'var(--color-error-dark)' }}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -888,22 +839,22 @@ export function NonPOInvoiceForm() {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2" style={{ borderColor: '#E1E6EA', backgroundColor: '#F6F9FC' }}>
-                  <td colSpan={3} className="px-3 py-3 text-right" style={{ color: '#0A0F14' }}>
+                <tr className="border-t-2" style={{ borderColor: 'var(--color-silver)', backgroundColor: 'var(--color-cloud)' }}>
+                  <td colSpan={3} className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)' }}>
                     <strong>Totals:</strong>
                   </td>
-                  <td className="px-3 py-3 text-right" style={{ color: '#0A0F14' }}>
+                  <td className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)' }}>
                     <strong>₹{totals.baseAmount.toLocaleString('en-IN')}</strong>
                   </td>
                   <td></td>
-                  <td className="px-3 py-3 text-right" style={{ color: '#0A0F14' }}>
+                  <td className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)' }}>
                     <strong>₹{totals.gstAmount.toLocaleString('en-IN')}</strong>
                   </td>
                   <td></td>
-                  <td className="px-3 py-3 text-right" style={{ color: '#DC2626' }}>
+                  <td className="px-3 py-3 text-right" style={{ color: 'var(--color-error-dark)' }}>
                     <strong>-₹{totals.tdsAmount.toLocaleString('en-IN')}</strong>
                   </td>
-                  <td className="px-3 py-3 text-right" style={{ color: '#00A9B7' }}>
+                  <td className="px-3 py-3 text-right" style={{ color: 'var(--color-teal)' }}>
                     <strong>₹{totals.netPayable.toLocaleString('en-IN')}</strong>
                   </td>
                   <td></td>
@@ -915,22 +866,22 @@ export function NonPOInvoiceForm() {
 
         {/* Stage 4: Advance & GST Retention */}
         {showAdvanceSection && vendorId && (
-          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: '#E1E6EA' }}>
+          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: 'var(--color-silver)' }}>
             <div className="flex items-center gap-3 mb-6">
-              <DollarSign className="w-5 h-5" style={{ color: '#00A9B7' }} />
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>Step 4: Advance & GST Retention</h2>
+              <DollarSign className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Step 4: Advance & GST Retention</h2>
             </div>
 
             {/* Open Advances */}
             <div className="mb-6">
-              <h3 className="text-lg mb-3" style={{ color: '#0A0F14' }}>Open Vendor Advances</h3>
+              <h3 className="text-lg mb-3" style={{ color: 'var(--color-ink)' }}>Open Vendor Advances</h3>
               {openAdvances.length > 0 ? (
                 <div className="space-y-2">
                   {openAdvances.map((advance) => (
                     <div 
                       key={advance.id}
                       className="flex items-center justify-between p-3 rounded-lg border-2"
-                      style={{ borderColor: '#E1E6EA' }}
+                      style={{ borderColor: 'var(--color-silver)' }}
                     >
                       <div className="flex items-center gap-3">
                         <input
@@ -948,11 +899,11 @@ export function NonPOInvoiceForm() {
                           className="w-4 h-4"
                         />
                         <div>
-                          <p style={{ color: '#0A0F14' }}>{advance.reference}</p>
-                          <p className="text-sm" style={{ color: '#6E7A82' }}>{advance.date}</p>
+                          <p style={{ color: 'var(--color-ink)' }}>{advance.reference}</p>
+                          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{advance.date}</p>
                         </div>
                       </div>
-                      <p style={{ color: '#00A9B7' }}>₹{advance.amount.toLocaleString('en-IN')}</p>
+                      <p style={{ color: 'var(--color-teal)' }}>₹{advance.amount.toLocaleString('en-IN')}</p>
                     </div>
                   ))}
                   <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: '#DBEAFE' }}>
@@ -963,7 +914,7 @@ export function NonPOInvoiceForm() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC', color: '#6E7A82' }}>
+                <p className="text-sm p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}>
                   No open advances for this vendor
                 </p>
               )}
@@ -972,7 +923,7 @@ export function NonPOInvoiceForm() {
             {/* GST Retention */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg" style={{ color: '#0A0F14' }}>GST Retention</h3>
+                <h3 className="text-lg" style={{ color: 'var(--color-ink)' }}>GST Retention</h3>
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -987,7 +938,7 @@ export function NonPOInvoiceForm() {
                     }}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm" style={{ color: '#6E7A82' }}>Enable GST Retention</span>
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Enable GST Retention</span>
                 </label>
               </div>
 
@@ -1015,24 +966,24 @@ export function NonPOInvoiceForm() {
         )}
 
         {/* Final Payment Summary */}
-        <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: '#E1E6EA' }}>
-          <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Payment Summary</h2>
+        <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
+          <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Payment Summary</h2>
           <div className="space-y-3">
-            <div className="flex justify-between p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-              <span style={{ color: '#6E7A82' }}>Base Amount</span>
-              <span style={{ color: '#0A0F14' }}>₹{totals.baseAmount.toLocaleString('en-IN')}</span>
+            <div className="flex justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <span style={{ color: 'var(--color-mercury-grey)' }}>Base Amount</span>
+              <span style={{ color: 'var(--color-ink)' }}>₹{totals.baseAmount.toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-              <span style={{ color: '#6E7A82' }}>GST Amount</span>
-              <span style={{ color: '#0A0F14' }}>₹{totals.gstAmount.toLocaleString('en-IN')}</span>
+            <div className="flex justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <span style={{ color: 'var(--color-mercury-grey)' }}>GST Amount</span>
+              <span style={{ color: 'var(--color-ink)' }}>₹{totals.gstAmount.toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-              <span style={{ color: '#6E7A82' }}>Gross Amount</span>
-              <span style={{ color: '#0A0F14' }}>₹{totals.grossAmount.toLocaleString('en-IN')}</span>
+            <div className="flex justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <span style={{ color: 'var(--color-mercury-grey)' }}>Gross Amount</span>
+              <span style={{ color: 'var(--color-ink)' }}>₹{totals.grossAmount.toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between p-3 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
-              <span style={{ color: '#DC2626' }}>TDS Deducted</span>
-              <span style={{ color: '#DC2626' }}>-₹{totals.tdsAmount.toLocaleString('en-IN')}</span>
+            <div className="flex justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
+              <span style={{ color: 'var(--color-error-dark)' }}>TDS Deducted</span>
+              <span style={{ color: 'var(--color-error-dark)' }}>-₹{totals.tdsAmount.toLocaleString('en-IN')}</span>
             </div>
             {advanceAdjustment > 0 && (
               <div className="flex justify-between p-3 rounded-lg" style={{ backgroundColor: '#DBEAFE' }}>
@@ -1046,20 +997,19 @@ export function NonPOInvoiceForm() {
                 <span style={{ color: '#D97706' }}>-₹{gstRetentionAmount.toLocaleString('en-IN')}</span>
               </div>
             )}
-            <div className="border-t-2 pt-3" style={{ borderColor: '#E1E6EA' }}>
-              <div className="flex justify-between items-center p-4 rounded-lg" style={{ backgroundColor: '#00A9B710' }}>
+            <div className="border-t-2 pt-3" style={{ borderColor: 'var(--color-silver)' }}>
+              <div className="flex justify-between items-center p-4 rounded-lg" style={{ backgroundColor: 'var(--color-teal)10' }}>
                 <div className="flex items-center gap-2">
-                  <DollarSign className="w-6 h-6" style={{ color: '#00A9B7' }} />
-                  <span className="text-lg" style={{ color: '#0A0F14' }}>Final Net Payable</span>
+                  <DollarSign className="w-6 h-6" style={{ color: 'var(--color-teal)' }} />
+                  <span className="text-lg" style={{ color: 'var(--color-ink)' }}>Final Net Payable</span>
                 </div>
-                <span className="text-2xl" style={{ color: '#00A9B7' }}>
+                <span className="text-2xl" style={{ color: 'var(--color-teal)' }}>
                   ₹{finalNetPayable.toLocaleString('en-IN')}
                 </span>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </FormShell>
   );
 }

@@ -52,7 +52,7 @@ export function TopVendorSpend() {
   const maxSpend = topVendors[0]?.amount || 1;
   
   // Map to chart format with colors
-  const colors = ['#2A3A42', '#00A9B7', '#007D87', '#6E7A82', '#9AA6AF'];
+  const colors = ['#2A3A42', 'var(--color-teal)', 'var(--color-teal-dark)', 'var(--color-mercury-grey)', 'var(--color-slate)'];
   const vendorData: VendorData[] = topVendors.map((vendor, index) => ({
     name: vendor.name,
     amount: vendor.amount,
@@ -71,9 +71,9 @@ export function TopVendorSpend() {
   };
 
   return (
-    <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
-      <h2 className="text-lg mb-6" style={{ color: '#0A0F14' }}>
-        Top Vendor Spend {metrics.isConsolidated && <span style={{ color: '#6E7A82', fontSize: '0.875rem' }}>(All Entities)</span>}
+    <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+      <h2 className="text-lg mb-6" style={{ color: 'var(--color-ink)' }}>
+        Top Vendor Spend {metrics.isConsolidated && <span style={{ color: 'var(--color-mercury-grey)', fontSize: '0.875rem' }}>(All Entities)</span>}
       </h2>
       
       <div className="space-y-6">
@@ -82,9 +82,9 @@ export function TopVendorSpend() {
             <div key={index}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm" style={{ color: '#2A3A42' }}>{index + 1}. {vendor.name}</span>
-                <span className="text-sm" style={{ color: '#0A0F14' }}>{formatCurrency(vendor.amount)}</span>
+                <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{formatCurrency(vendor.amount)}</span>
               </div>
-              <div className="w-full rounded-full h-2" style={{ backgroundColor: '#F6F9FC' }}>
+              <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <div 
                   className="h-2 rounded-full"
                   style={{ 
@@ -96,7 +96,7 @@ export function TopVendorSpend() {
             </div>
           ))
         ) : (
-          <div className="text-center py-8 text-sm" style={{ color: '#6E7A82' }}>
+          <div className="text-center py-8 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
             No vendor spend data available
           </div>
         )}

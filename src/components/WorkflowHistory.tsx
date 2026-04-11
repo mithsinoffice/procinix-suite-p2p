@@ -42,11 +42,11 @@ export function WorkflowHistory({ history, title = 'Workflow History', compact =
       case 'Requested Info':
         return <MessageSquare className="w-5 h-5" style={{ color: '#F59E0B' }} />;
       case 'Modified':
-        return <Edit3 className="w-5 h-5" style={{ color: '#8B5CF6' }} />;
+        return <Edit3 className="w-5 h-5" style={{ color: '#007D87' }} />;
       case 'Reviewed':
         return <AlertCircle className="w-5 h-5" style={{ color: '#3B82F6' }} />;
       default:
-        return <Clock className="w-5 h-5" style={{ color: '#6E7A82' }} />;
+        return <Clock className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />;
     }
   };
 
@@ -56,7 +56,7 @@ export function WorkflowHistory({ history, title = 'Workflow History', compact =
       case 'Posted to ERP':
         return '#D1FAE5';
       case 'Rejected':
-        return '#FEE2E2';
+        return 'var(--color-error-light)';
       case 'Requested Info':
         return '#FEF3C7';
       case 'Modified':
@@ -65,7 +65,7 @@ export function WorkflowHistory({ history, title = 'Workflow History', compact =
       case 'Reviewed':
         return '#DBEAFE';
       default:
-        return '#F6F9FC';
+        return 'var(--color-cloud)';
     }
   };
 
@@ -93,33 +93,33 @@ export function WorkflowHistory({ history, title = 'Workflow History', compact =
 
   if (sortedHistory.length === 0) {
     return (
-      <div className="bg-white rounded-xl p-6" style={{ border: '2px solid #E1E6EA' }}>
+      <div className="bg-white rounded-xl p-6" style={{ border: '2px solid var(--color-silver)' }}>
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F6F9FC' }}>
-            <History className="w-5 h-5" style={{ color: '#6E7A82' }} />
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-cloud)' }}>
+            <History className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
           </div>
-          <h2 className={compact ? 'text-base' : 'text-xl'} style={{ color: '#0A0F14', fontWeight: '600' }}>
+          <h2 className={compact ? 'text-base' : 'text-xl'} style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
             {title}
           </h2>
         </div>
         <div className="text-center py-8">
-          <p className="text-sm" style={{ color: '#6E7A82' }}>No workflow history available</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>No workflow history available</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl p-6" style={{ border: '2px solid #E1E6EA' }}>
+    <div className="bg-white rounded-xl p-6" style={{ border: '2px solid var(--color-silver)' }}>
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-          <History className="w-5 h-5" style={{ color: '#00A9B7' }} />
+        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+          <History className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
         </div>
         <div className="flex-1">
-          <h2 className={compact ? 'text-base' : 'text-xl'} style={{ color: '#0A0F14', fontWeight: '600' }}>
+          <h2 className={compact ? 'text-base' : 'text-xl'} style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
             {title}
           </h2>
-          <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+          <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
             {sortedHistory.length} {sortedHistory.length === 1 ? 'entry' : 'entries'}
           </p>
         </div>
@@ -137,7 +137,7 @@ export function WorkflowHistory({ history, title = 'Workflow History', compact =
                 {getActionIcon(item.action)}
               </div>
               {index < sortedHistory.length - 1 && (
-                <div className="w-0.5 h-full mt-2" style={{ backgroundColor: '#E1E6EA', minHeight: compact ? '40px' : '60px' }} />
+                <div className="w-0.5 h-full mt-2" style={{ backgroundColor: 'var(--color-silver)', minHeight: compact ? '40px' : '60px' }} />
               )}
             </div>
 
@@ -146,7 +146,7 @@ export function WorkflowHistory({ history, title = 'Workflow History', compact =
               <div className="flex items-start justify-between mb-1 gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className={compact ? 'text-sm' : 'text-base'} style={{ color: '#0A0F14', fontWeight: '600' }}>
+                    <p className={compact ? 'text-sm' : 'text-base'} style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                       {item.action}
                     </p>
                     {item.action === 'Modified' && (
@@ -158,12 +158,12 @@ export function WorkflowHistory({ history, title = 'Workflow History', compact =
                       </span>
                     )}
                   </div>
-                  <p className="text-xs" style={{ color: '#6E7A82' }}>
+                  <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                     {item.by} • {item.role}
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-xs" style={{ color: '#6E7A82', fontWeight: '500' }}>
+                  <p className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '500' }}>
                     {formatDateTime(item.date, item.time)}
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>
@@ -174,10 +174,10 @@ export function WorkflowHistory({ history, title = 'Workflow History', compact =
 
               {/* Comments */}
               {item.comments && (
-                <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
+                <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
                   <div className="flex items-start gap-2">
-                    <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#6E7A82' }} />
-                    <p className="text-sm" style={{ color: '#0A0F14' }}>{item.comments}</p>
+                    <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.comments}</p>
                   </div>
                 </div>
               )}
@@ -216,8 +216,8 @@ export function CompactWorkflowHistory({ history }: { history: WorkflowHistoryIt
 
   if (recentHistory.length === 0) {
     return (
-      <div className="p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
-        <p className="text-xs text-center" style={{ color: '#6E7A82' }}>No history available</p>
+      <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+        <p className="text-xs text-center" style={{ color: 'var(--color-mercury-grey)' }}>No history available</p>
       </div>
     );
   }
@@ -235,9 +235,9 @@ export function CompactWorkflowHistory({ history }: { history: WorkflowHistoryIt
       case 'Requested Info':
         return <MessageSquare className="w-3.5 h-3.5" style={{ color: '#F59E0B' }} />;
       case 'Modified':
-        return <Edit3 className="w-3.5 h-3.5" style={{ color: '#8B5CF6' }} />;
+        return <Edit3 className="w-3.5 h-3.5" style={{ color: '#007D87' }} />;
       default:
-        return <Clock className="w-3.5 h-3.5" style={{ color: '#6E7A82' }} />;
+        return <Clock className="w-3.5 h-3.5" style={{ color: 'var(--color-mercury-grey)' }} />;
     }
   };
 
@@ -247,21 +247,21 @@ export function CompactWorkflowHistory({ history }: { history: WorkflowHistoryIt
         <div 
           key={item.id} 
           className="flex items-center gap-3 p-2 rounded-lg"
-          style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+          style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
         >
           {getActionIcon(item.action)}
           <div className="flex-1 min-w-0">
-            <p className="text-xs truncate" style={{ color: '#0A0F14', fontWeight: '600' }}>
+            <p className="text-xs truncate" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
               {item.action} by {item.by}
             </p>
-            <p className="text-xs" style={{ color: '#6E7A82' }}>
+            <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               {item.date} at {item.time}
             </p>
           </div>
         </div>
       ))}
       {history.length > 3 && (
-        <p className="text-xs text-center" style={{ color: '#6E7A82' }}>
+        <p className="text-xs text-center" style={{ color: 'var(--color-mercury-grey)' }}>
           +{history.length - 3} more {history.length - 3 === 1 ? 'entry' : 'entries'}
         </p>
       )}

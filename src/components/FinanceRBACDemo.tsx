@@ -57,11 +57,11 @@ export function FinanceRBACDemo() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="p-8 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl mb-2" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             Enterprise Finance RBAC System
           </h1>
           <p style={{ color: '#64748B', fontSize: '16px' }}>
@@ -87,7 +87,7 @@ export function FinanceRBACDemo() {
                 <div className="text-xs" style={{ color: '#64748B', fontWeight: '500' }}>
                   Current Company
                 </div>
-                <div className="text-lg" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                <div className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                   {currentCompany.code}
                 </div>
               </div>
@@ -113,7 +113,7 @@ export function FinanceRBACDemo() {
                 <div className="text-xs" style={{ color: '#64748B', fontWeight: '500' }}>
                   Current Role
                 </div>
-                <div className="text-lg" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                <div className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                   {currentRole.roleName}
                 </div>
               </div>
@@ -139,7 +139,7 @@ export function FinanceRBACDemo() {
                 <div className="text-xs" style={{ color: '#64748B', fontWeight: '500' }}>
                   Module Access
                 </div>
-                <div className="text-lg" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                <div className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                   {Object.values(permissionsByPillar).reduce((acc, perms) => acc + perms.length, 0)}
                 </div>
               </div>
@@ -180,7 +180,7 @@ export function FinanceRBACDemo() {
         >
           <div className="flex items-center gap-3 mb-4">
             <Users className="w-5 h-5" style={{ color: '#0066CC' }} />
-            <h2 className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>
+            <h2 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
               Switch Role to Test RBAC
             </h2>
           </div>
@@ -222,7 +222,7 @@ export function FinanceRBACDemo() {
                       style={{ 
                         fontWeight: '600',
                         fontSize: '14px',
-                        color: isActive ? '#0066CC' : '#0A0F14'
+                        color: isActive ? '#0066CC' : 'var(--color-ink)'
                       }}
                     >
                       {role.roleName}
@@ -248,7 +248,7 @@ export function FinanceRBACDemo() {
                 className="bg-white rounded-xl p-6" 
                 style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
               >
-                <h2 className="text-lg mb-4 flex items-center gap-3" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                <h2 className="text-lg mb-4 flex items-center gap-3" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                   <span>{pillar}</span>
                   <span 
                     className="px-2.5 py-1 rounded-full text-xs"
@@ -286,7 +286,7 @@ export function FinanceRBACDemo() {
                         <div className="flex-1 min-w-0">
                           <div 
                             className="text-sm truncate" 
-                            style={{ color: '#0A0F14', fontWeight: '600' }}
+                            style={{ color: 'var(--color-ink)', fontWeight: '600' }}
                           >
                             {resource}
                           </div>
@@ -343,7 +343,7 @@ export function FinanceRBACDemo() {
             </div>
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#DC2626' }} />
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--color-error-dark)' }} />
                 <span className="text-sm" style={{ color: '#1E3A8A', fontWeight: '600' }}>
                   No Access
                 </span>

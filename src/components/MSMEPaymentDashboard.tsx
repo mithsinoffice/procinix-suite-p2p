@@ -66,8 +66,8 @@ export function MSMEPaymentDashboard() {
 
   // MSME classification breakdown
   const classificationData = [
-    { name: 'Micro', value: 28, color: '#00A9B7' },
-    { name: 'Small', value: 15, color: '#007D87' },
+    { name: 'Micro', value: 28, color: 'var(--color-teal)' },
+    { name: 'Small', value: 15, color: 'var(--color-teal-dark)' },
     { name: 'Medium', value: 4, color: '#005F67' },
   ];
 
@@ -137,10 +137,10 @@ export function MSMEPaymentDashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'due-today': return '#D97706';
-      case 'upcoming': return '#00A9B7';
-      case 'overdue': return '#DC2626';
+      case 'upcoming': return 'var(--color-teal)';
+      case 'overdue': return 'var(--color-error-dark)';
       case 'critical': return '#991B1B';
-      default: return '#6E7A82';
+      default: return 'var(--color-mercury-grey)';
     }
   };
 
@@ -159,14 +159,14 @@ export function MSMEPaymentDashboard() {
   };
 
   return (
-    <div style={{ padding: '24px', backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ padding: '24px', backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
             MSME Payment Dashboard
           </h1>
-          <p style={{ fontSize: '14px', color: '#6E7A82', marginTop: '4px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', marginTop: '4px' }}>
             Monitor MSME vendor payments and ensure regulatory compliance
           </p>
         </div>
@@ -177,12 +177,12 @@ export function MSMEPaymentDashboard() {
               alignItems: 'center',
               gap: '8px',
               padding: '10px 16px',
-              backgroundColor: '#F6F9FC',
-              border: '1px solid #E1E6EA',
+              backgroundColor: 'var(--color-cloud)',
+              border: '1px solid var(--color-silver)',
               borderRadius: '8px',
               fontSize: '13px',
               fontWeight: '500',
-              color: '#0A0F14',
+              color: 'var(--color-ink)',
               cursor: 'pointer',
             }}
           >
@@ -195,12 +195,12 @@ export function MSMEPaymentDashboard() {
               alignItems: 'center',
               gap: '8px',
               padding: '10px 16px',
-              backgroundColor: '#F6F9FC',
-              border: '1px solid #E1E6EA',
+              backgroundColor: 'var(--color-cloud)',
+              border: '1px solid var(--color-silver)',
               borderRadius: '8px',
               fontSize: '13px',
               fontWeight: '500',
-              color: '#0A0F14',
+              color: 'var(--color-ink)',
               cursor: 'pointer',
             }}
           >
@@ -213,7 +213,7 @@ export function MSMEPaymentDashboard() {
               alignItems: 'center',
               gap: '8px',
               padding: '10px 16px',
-              backgroundColor: '#00A9B7',
+              backgroundColor: 'var(--color-teal)',
               border: 'none',
               borderRadius: '8px',
               fontSize: '13px',
@@ -243,7 +243,7 @@ export function MSMEPaymentDashboard() {
       >
         <AlertTriangle style={{ width: '20px', height: '20px', color: '#D97706', flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <p style={{ fontSize: '14px', fontWeight: '500', color: '#0A0F14', margin: 0 }}>
+          <p style={{ fontSize: '14px', fontWeight: '500', color: 'var(--color-ink)', margin: 0 }}>
             MSME Compliance Alert
           </p>
           <p style={{ fontSize: '13px', color: '#78716C', margin: '4px 0 0 0' }}>
@@ -269,78 +269,78 @@ export function MSMEPaymentDashboard() {
       {/* Key Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {/* Total MSME Vendors */}
-        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E1E6EA' }}>
+        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--color-silver)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#E8F7F8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Building2 style={{ width: '20px', height: '20px', color: '#00A9B7' }} />
+            <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'var(--color-teal-tint)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Building2 style={{ width: '20px', height: '20px', color: 'var(--color-teal)' }} />
             </div>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Total Vendors</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Total Vendors</span>
           </div>
-          <p style={{ fontSize: '28px', fontWeight: '600', color: '#0A0F14', margin: '0 0 4px 0' }}>
+          <p style={{ fontSize: '28px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 4px 0' }}>
             {msmePaymentData.totalMSMEVendors}
           </p>
-          <p style={{ fontSize: '12px', color: '#6E7A82', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: 0 }}>
             {msmePaymentData.activeInvoices} active invoices
           </p>
         </div>
 
         {/* Outstanding Amount */}
-        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E1E6EA' }}>
+        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--color-silver)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <DollarSign style={{ width: '20px', height: '20px', color: '#D97706' }} />
             </div>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Outstanding</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Outstanding</span>
           </div>
-          <p style={{ fontSize: '28px', fontWeight: '600', color: '#0A0F14', margin: '0 0 4px 0' }}>
+          <p style={{ fontSize: '28px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 4px 0' }}>
             {formatCurrency(msmePaymentData.totalOutstanding)}
           </p>
-          <p style={{ fontSize: '12px', color: '#6E7A82', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: 0 }}>
             Across all MSME vendors
           </p>
         </div>
 
         {/* Due Today */}
-        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E1E6EA' }}>
+        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--color-silver)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#FFF9E6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Clock style={{ width: '20px', height: '20px', color: '#D97706' }} />
             </div>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Due Today</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Due Today</span>
           </div>
-          <p style={{ fontSize: '28px', fontWeight: '600', color: '#0A0F14', margin: '0 0 4px 0' }}>
+          <p style={{ fontSize: '28px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 4px 0' }}>
             {formatCurrency(msmePaymentData.dueTodayAmount)}
           </p>
-          <p style={{ fontSize: '12px', color: '#6E7A82', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: 0 }}>
             {msmePaymentData.dueTodayCount} invoices
           </p>
         </div>
 
         {/* Overdue */}
-        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E1E6EA' }}>
+        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--color-silver)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <AlertCircle style={{ width: '20px', height: '20px', color: '#DC2626' }} />
+            <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'var(--color-error-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertCircle style={{ width: '20px', height: '20px', color: 'var(--color-error-dark)' }} />
             </div>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Overdue</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Overdue</span>
           </div>
-          <p style={{ fontSize: '28px', fontWeight: '600', color: '#DC2626', margin: '0 0 4px 0' }}>
+          <p style={{ fontSize: '28px', fontWeight: '600', color: 'var(--color-error-dark)', margin: '0 0 4px 0' }}>
             {formatCurrency(msmePaymentData.overdueAmount)}
           </p>
-          <p style={{ fontSize: '12px', color: '#6E7A82', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: 0 }}>
             {msmePaymentData.overdueCount} invoices
           </p>
         </div>
 
         {/* Compliance Score */}
-        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E1E6EA' }}>
+        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--color-silver)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#E6F7ED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Shield style={{ width: '20px', height: '20px', color: '#059669' }} />
             </div>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Compliance</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Compliance</span>
           </div>
-          <p style={{ fontSize: '28px', fontWeight: '600', color: '#0A0F14', margin: '0 0 4px 0' }}>
+          <p style={{ fontSize: '28px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 4px 0' }}>
             {msmePaymentData.complianceScore}%
           </p>
           <p style={{ fontSize: '12px', color: '#059669', margin: 0 }}>
@@ -349,17 +349,17 @@ export function MSMEPaymentDashboard() {
         </div>
 
         {/* Avg Payment Days */}
-        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E1E6EA' }}>
+        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--color-silver)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#EDE9FE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar style={{ width: '20px', height: '20px', color: '#7C3AED' }} />
+              <Calendar style={{ width: '20px', height: '20px', color: '#007D87' }} />
             </div>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Avg Days</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Avg Days</span>
           </div>
-          <p style={{ fontSize: '28px', fontWeight: '600', color: '#0A0F14', margin: '0 0 4px 0' }}>
+          <p style={{ fontSize: '28px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 4px 0' }}>
             {msmePaymentData.avgPaymentDays}
           </p>
-          <p style={{ fontSize: '12px', color: '#6E7A82', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: 0 }}>
             Average payment days
           </p>
         </div>
@@ -368,42 +368,42 @@ export function MSMEPaymentDashboard() {
       {/* Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '24px' }}>
         {/* Payment Trend */}
-        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E1E6EA' }}>
+        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--color-silver)' }}>
           <div style={{ marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0A0F14', margin: '0 0 4px 0' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 4px 0' }}>
               MSME Payment Trend
             </h3>
-            <p style={{ fontSize: '13px', color: '#6E7A82', margin: 0 }}>
+            <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: 0 }}>
               On-time vs delayed payments over the last 6 months
             </p>
           </div>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={paymentTrendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-              <XAxis dataKey="month" stroke="#6E7A82" style={{ fontSize: '12px' }} />
-              <YAxis stroke="#6E7A82" style={{ fontSize: '12px' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+              <XAxis dataKey="month" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
+              <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#FFFFFF',
-                  border: '1px solid #E1E6EA',
+                  border: '1px solid var(--color-silver)',
                   borderRadius: '8px',
                   fontSize: '12px',
                 }}
               />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
-              <Bar dataKey="onTime" name="On-Time" fill="#00A9B7" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="delayed" name="Delayed" fill="#DC2626" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="onTime" name="On-Time" fill="var(--color-teal)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="delayed" name="Delayed" fill="var(--color-error-dark)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         {/* MSME Classification */}
-        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E1E6EA' }}>
+        <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--color-silver)' }}>
           <div style={{ marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0A0F14', margin: '0 0 4px 0' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 4px 0' }}>
               MSME Classification
             </h3>
-            <p style={{ fontSize: '13px', color: '#6E7A82', margin: 0 }}>
+            <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: 0 }}>
               Vendor distribution by size
             </p>
           </div>
@@ -431,9 +431,9 @@ export function MSMEPaymentDashboard() {
               <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: item.color }} />
-                  <span style={{ fontSize: '13px', color: '#6E7A82' }}>{item.name}</span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-mercury-grey)' }}>{item.name}</span>
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14' }}>{item.value}</span>
+                <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)' }}>{item.value}</span>
               </div>
             ))}
           </div>
@@ -441,43 +441,43 @@ export function MSMEPaymentDashboard() {
       </div>
 
       {/* Compliance Aging Analysis */}
-      <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E1E6EA', marginBottom: '24px' }}>
+      <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid var(--color-silver)', marginBottom: '24px' }}>
         <div style={{ marginBottom: '20px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0A0F14', margin: '0 0 4px 0' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 4px 0' }}>
             Compliance Aging Analysis
           </h3>
-          <p style={{ fontSize: '13px', color: '#6E7A82', margin: 0 }}>
+          <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: 0 }}>
             Payment aging against 45-day MSMED Act requirement
           </p>
         </div>
         <div style={{ overflow: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#F6F9FC' }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+              <tr style={{ backgroundColor: 'var(--color-cloud)' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Aging Range
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Count
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Amount
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Status
                 </th>
               </tr>
             </thead>
             <tbody>
               {complianceAgingData.map((item, index) => (
-                <tr key={index} style={{ borderBottom: '1px solid #E1E6EA' }}>
-                  <td style={{ padding: '16px', fontSize: '13px', color: '#0A0F14' }}>
+                <tr key={index} style={{ borderBottom: '1px solid var(--color-silver)' }}>
+                  <td style={{ padding: '16px', fontSize: '13px', color: 'var(--color-ink)' }}>
                     {item.range}
                   </td>
-                  <td style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: '#0A0F14' }}>
+                  <td style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--color-ink)' }}>
                     {item.count}
                   </td>
-                  <td style={{ padding: '16px', textAlign: 'right', fontSize: '13px', fontWeight: '500', color: '#0A0F14' }}>
+                  <td style={{ padding: '16px', textAlign: 'right', fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)' }}>
                     {formatCurrency(item.amount)}
                   </td>
                   <td style={{ padding: '16px', textAlign: 'center' }}>
@@ -492,13 +492,13 @@ export function MSMEPaymentDashboard() {
                           item.status === 'watch' ? '#FFF9E6' :
                           item.status === 'critical' ? '#FEF3C7' :
                           item.status === 'breach' ? '#FFEDD5' :
-                          '#FEE2E2',
+                          'var(--color-error-light)',
                         color:
                           item.status === 'safe' ? '#059669' :
                           item.status === 'watch' ? '#D97706' :
                           item.status === 'critical' ? '#D97706' :
                           item.status === 'breach' ? '#EA580C' :
-                          '#DC2626',
+                          'var(--color-error-dark)',
                       }}
                     >
                       {item.status === 'safe' && '✓ Safe'}
@@ -516,13 +516,13 @@ export function MSMEPaymentDashboard() {
       </div>
 
       {/* Recent MSME Invoices */}
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E1E6EA' }}>
-        <div style={{ padding: '20px', borderBottom: '1px solid #E1E6EA', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--color-silver)' }}>
+        <div style={{ padding: '20px', borderBottom: '1px solid var(--color-silver)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0A0F14', margin: '0 0 4px 0' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 4px 0' }}>
               MSME Invoices Requiring Attention
             </h3>
-            <p style={{ fontSize: '13px', color: '#6E7A82', margin: 0 }}>
+            <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: 0 }}>
               Invoices sorted by priority and due date
             </p>
           </div>
@@ -533,7 +533,7 @@ export function MSMEPaymentDashboard() {
               alignItems: 'center',
               gap: '6px',
               padding: '8px 14px',
-              backgroundColor: '#00A9B7',
+              backgroundColor: 'var(--color-teal)',
               border: 'none',
               borderRadius: '8px',
               fontSize: '13px',
@@ -550,47 +550,47 @@ export function MSMEPaymentDashboard() {
         <div style={{ overflow: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#F6F9FC' }}>
-                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+              <tr style={{ backgroundColor: 'var(--color-cloud)' }}>
+                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Invoice ID
                 </th>
-                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Vendor
                 </th>
-                <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+                <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Type
                 </th>
-                <th style={{ padding: '12px 20px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+                <th style={{ padding: '12px 20px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Amount
                 </th>
-                <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+                <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Due Date
                 </th>
-                <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+                <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Aging
                 </th>
-                <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+                <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Status
                 </th>
-                <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', borderBottom: '1px solid #E1E6EA' }}>
+                <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
                   Action
                 </th>
               </tr>
             </thead>
             <tbody>
               {recentMSMEInvoices.map((invoice) => (
-                <tr key={invoice.id} style={{ borderBottom: '1px solid #E1E6EA' }}>
+                <tr key={invoice.id} style={{ borderBottom: '1px solid var(--color-silver)' }}>
                   <td style={{ padding: '16px 20px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '500', color: '#00A9B7' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-teal)' }}>
                       {invoice.id}
                     </span>
                   </td>
                   <td style={{ padding: '16px 20px' }}>
                     <div>
-                      <p style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14', margin: 0 }}>
+                      <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', margin: 0 }}>
                         {invoice.vendor}
                       </p>
-                      <p style={{ fontSize: '11px', color: '#6E7A82', margin: '2px 0 0 0' }}>
+                      <p style={{ fontSize: '11px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
                         {invoice.udyamNo}
                       </p>
                     </div>
@@ -602,17 +602,17 @@ export function MSMEPaymentDashboard() {
                         borderRadius: '6px',
                         fontSize: '11px',
                         fontWeight: '500',
-                        backgroundColor: '#E8F7F8',
-                        color: '#00A9B7',
+                        backgroundColor: 'var(--color-teal-tint)',
+                        color: 'var(--color-teal)',
                       }}
                     >
                       {invoice.type}
                     </span>
                   </td>
-                  <td style={{ padding: '16px 20px', textAlign: 'right', fontSize: '13px', fontWeight: '500', color: '#0A0F14' }}>
+                  <td style={{ padding: '16px 20px', textAlign: 'right', fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)' }}>
                     {formatCurrency(invoice.amount)}
                   </td>
-                  <td style={{ padding: '16px 20px', textAlign: 'center', fontSize: '13px', color: '#6E7A82' }}>
+                  <td style={{ padding: '16px 20px', textAlign: 'center', fontSize: '13px', color: 'var(--color-mercury-grey)' }}>
                     {invoice.dueDate}
                   </td>
                   <td style={{ padding: '16px 20px', textAlign: 'center' }}>
@@ -620,7 +620,7 @@ export function MSMEPaymentDashboard() {
                       style={{
                         fontSize: '13px',
                         fontWeight: '500',
-                        color: invoice.agingDays > 5 ? '#DC2626' : invoice.agingDays > 0 ? '#D97706' : '#6E7A82',
+                        color: invoice.agingDays > 5 ? 'var(--color-error-dark)' : invoice.agingDays > 0 ? '#D97706' : 'var(--color-mercury-grey)',
                       }}
                     >
                       {invoice.agingDays === 0 ? 'Today' : `${invoice.agingDays}d`}
@@ -635,8 +635,8 @@ export function MSMEPaymentDashboard() {
                         fontWeight: '500',
                         backgroundColor:
                           invoice.status === 'due-today' ? '#FFF9E6' :
-                          invoice.status === 'upcoming' ? '#E8F7F8' :
-                          invoice.status === 'overdue' ? '#FEE2E2' :
+                          invoice.status === 'upcoming' ? 'var(--color-teal-tint)' :
+                          invoice.status === 'overdue' ? 'var(--color-error-light)' :
                           '#FFEDD5',
                         color: getStatusColor(invoice.status),
                       }}
@@ -649,7 +649,7 @@ export function MSMEPaymentDashboard() {
                       onClick={() => navigate(`/invoices/detail/${invoice.id}`)}
                       style={{
                         padding: '6px 12px',
-                        backgroundColor: '#00A9B7',
+                        backgroundColor: 'var(--color-teal)',
                         border: 'none',
                         borderRadius: '6px',
                         fontSize: '12px',

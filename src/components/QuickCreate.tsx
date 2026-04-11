@@ -29,42 +29,42 @@ const quickActions: QuickAction[] = [
     description: 'Start a new purchase requisition',
     route: '/procurement/pr/create',
     icon: FileText,
-    color: '#00A9B7',
+    color: 'var(--color-teal)',
   },
   {
     label: 'Create PO',
     description: 'Create a purchase order',
     route: '/purchase-orders/create',
     icon: ShoppingCart,
-    color: '#00A9B7',
+    color: 'var(--color-teal)',
   },
   {
     label: 'Upload Invoice',
     description: 'Upload and process an invoice',
     route: '/invoices/ai-capture',
     icon: Upload,
-    color: '#00A9B7',
+    color: 'var(--color-teal)',
   },
   {
     label: 'Create Vendor Advance',
     description: 'Request a vendor advance payment',
     route: '/ap/advance-request-form',
     icon: DollarSign,
-    color: '#00A9B7',
+    color: 'var(--color-teal)',
   },
   {
     label: 'Create Debit Note',
     description: 'Create a new debit note',
     route: '/ap/debit-notes',
     icon: FileMinus,
-    color: '#00A9B7',
+    color: 'var(--color-teal)',
   },
   {
     label: 'Create Payment',
     description: 'Initiate a payment run',
     route: '/ap/payment-proposal',
     icon: Wallet,
-    color: '#00A9B7',
+    color: 'var(--color-teal)',
   },
 ];
 
@@ -72,13 +72,13 @@ export function QuickCreate() {
   const navigate = useNavigate();
 
   return (
-    <div style={{ padding: '24px', backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ padding: '24px', backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-2xl" style={{ color: '#0A0F14', fontWeight: '700', marginBottom: '8px' }}>
+        <h1 className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '700', marginBottom: '8px' }}>
           Quick Create
         </h1>
-        <p className="text-sm" style={{ color: '#6E7A82' }}>
+        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
           Create new transactions and records
         </p>
       </div>
@@ -101,16 +101,16 @@ export function QuickCreate() {
               className="text-left p-5 rounded-lg transition-all duration-200"
               style={{
                 backgroundColor: '#FFFFFF',
-                border: '1px solid #E1E6EA',
+                border: '1px solid var(--color-silver)',
                 cursor: 'pointer',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#00A9B7';
+                e.currentTarget.style.borderColor = 'var(--color-teal)';
                 e.currentTarget.style.transform = 'translateY(-2px)';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 169, 183, 0.15)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#E1E6EA';
+                e.currentTarget.style.borderColor = 'var(--color-silver)';
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = 'none';
               }}
@@ -125,10 +125,10 @@ export function QuickCreate() {
                   <Icon className="w-6 h-6" style={{ color: action.color, strokeWidth: 2 }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                  <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                     {action.label}
                   </h3>
-                  <p className="text-sm" style={{ color: '#6E7A82' }}>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                     {action.description}
                   </p>
                 </div>

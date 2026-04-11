@@ -205,22 +205,22 @@ export function CombinedDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Draft': return { bg: '#F6F9FC', text: '#6E7A82', border: '#E1E6EA' };
+      case 'Draft': return { bg: 'var(--color-cloud)', text: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
       case 'Submitted': return { bg: '#FEF3C7', text: '#D97706', border: '#FCD34D' };
       case 'Pending Approval': return { bg: '#FED7AA', text: '#EA580C', border: '#FB923C' };
       case 'Approved': return { bg: '#D1FAE5', text: '#059669', border: '#6EE7B7' };
-      case 'Rejected': return { bg: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' };
+      case 'Rejected': return { bg: 'var(--color-error-light)', text: 'var(--color-error-dark)', border: '#FCA5A5' };
       case 'Info Requested': return { bg: '#E0F2FE', text: '#0284C7', border: '#7DD3FC' };
-      default: return { bg: '#F6F9FC', text: '#6E7A82', border: '#E1E6EA' };
+      default: return { bg: 'var(--color-cloud)', text: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'High': return { bg: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' };
+      case 'High': return { bg: 'var(--color-error-light)', text: 'var(--color-error-dark)', border: '#FCA5A5' };
       case 'Medium': return { bg: '#FEF3C7', text: '#D97706', border: '#FCD34D' };
       case 'Low': return { bg: '#E0F2FE', text: '#0284C7', border: '#7DD3FC' };
-      default: return { bg: '#F6F9FC', text: '#6E7A82', border: '#E1E6EA' };
+      default: return { bg: 'var(--color-cloud)', text: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
     }
   };
 
@@ -248,21 +248,21 @@ export function CombinedDashboard() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>
+        <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
           My Unified Dashboard
         </h1>
-        <p className="text-sm mb-4" style={{ color: '#6E7A82' }}>
+        <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
           Consolidated view of all your activities and approvals
         </p>
         
         {/* Role Badges */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs" style={{ color: '#6E7A82' }}>Active Roles:</span>
+          <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Active Roles:</span>
           {user?.roles?.map((role, idx) => (
             <span 
               key={idx}
               className="px-3 py-1 rounded-full text-xs"
-              style={{ backgroundColor: '#E8F7F8', color: '#00A9B7', border: '1px solid #00A9B7' }}
+              style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)', border: '1px solid var(--color-teal)' }}
             >
               {role}
             </span>
@@ -273,10 +273,10 @@ export function CombinedDashboard() {
       {/* YTD Performance Metrics */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg" style={{ color: '#0A0F14' }}>
+          <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>
             My Performance Metrics (YTD 2024)
           </h2>
-          <span className="text-xs px-3 py-1 rounded-full" style={{ backgroundColor: '#E8F7F8', color: '#00A9B7' }}>
+          <span className="text-xs px-3 py-1 rounded-full" style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}>
             As of Dec 13, 2024
           </span>
         </div>
@@ -285,15 +285,15 @@ export function CombinedDashboard() {
           {/* POs Created */}
           <div 
             className="bg-white p-4 rounded-lg"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E8F7F8' }}>
-                <Edit className="w-5 h-5" style={{ color: '#00A9B7' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal-tint)' }}>
+                <Edit className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>142</p>
-            <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>POs Created YTD</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>142</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>POs Created YTD</p>
             <div className="flex items-center gap-1">
               <TrendingUp className="w-3 h-3" style={{ color: '#059669' }} />
               <span className="text-xs" style={{ color: '#059669' }}>+18%</span>
@@ -303,15 +303,15 @@ export function CombinedDashboard() {
           {/* POs Approved */}
           <div 
             className="bg-white p-4 rounded-lg"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#D1FAE5' }}>
                 <CheckCircle className="w-5 h-5" style={{ color: '#059669' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>287</p>
-            <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>POs Approved YTD</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>287</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>POs Approved YTD</p>
             <div className="flex items-center gap-1">
               <Award className="w-3 h-3" style={{ color: '#059669' }} />
               <span className="text-xs" style={{ color: '#059669' }}>94% on-time</span>
@@ -321,15 +321,15 @@ export function CombinedDashboard() {
           {/* GRNs Processed */}
           <div 
             className="bg-white p-4 rounded-lg"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
                 <Package className="w-5 h-5" style={{ color: '#D97706' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>198</p>
-            <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>GRNs Processed YTD</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>198</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>GRNs Processed YTD</p>
             <div className="flex items-center gap-1">
               <TrendingUp className="w-3 h-3" style={{ color: '#059669' }} />
               <span className="text-xs" style={{ color: '#059669' }}>+12%</span>
@@ -339,15 +339,15 @@ export function CombinedDashboard() {
           {/* Avg Approval Time */}
           <div 
             className="bg-white p-4 rounded-lg"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E0F2FE' }}>
                 <Timer className="w-5 h-5" style={{ color: '#0284C7' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>4.2h</p>
-            <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>Avg Approval Time</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>4.2h</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Avg Approval Time</p>
             <div className="flex items-center gap-1">
               <TrendingUp className="w-3 h-3" style={{ color: '#059669' }} />
               <span className="text-xs" style={{ color: '#059669' }}>18% faster</span>
@@ -357,17 +357,17 @@ export function CombinedDashboard() {
           {/* Total Value Handled */}
           <div 
             className="bg-white p-4 rounded-lg"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E8F5E9' }}>
-                <IndianRupee className="w-5 h-5" style={{ color: '#2E7D32' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-success-light)' }}>
+                <IndianRupee className="w-5 h-5" style={{ color: 'var(--color-success-dark)' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>₹18.4Cr</p>
-            <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>Total Value YTD</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>₹18.4Cr</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Value YTD</p>
             <div>
-              <span className="text-xs" style={{ color: '#6E7A82' }}>Combined</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Combined</span>
             </div>
           </div>
         </div>
@@ -377,61 +377,61 @@ export function CombinedDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div 
           className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid #E1E6EA' }}
+          style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E8F7F8' }}>
-              <Edit className="w-6 h-6" style={{ color: '#00A9B7' }} />
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal-tint)' }}>
+              <Edit className="w-6 h-6" style={{ color: 'var(--color-teal)' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: '#0A0F14' }}>{getCountByType('Created')}</p>
-          <p className="text-sm" style={{ color: '#6E7A82' }}>POs I Created</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByType('Created')}</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>POs I Created</p>
         </div>
 
         <div 
           className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid #E1E6EA' }}
+          style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FED7AA' }}>
               <AlertCircle className="w-6 h-6" style={{ color: '#EA580C' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: '#0A0F14' }}>{getCountByType('Approvals')}</p>
-          <p className="text-sm" style={{ color: '#6E7A82' }}>Awaiting My Approval</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByType('Approvals')}</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Awaiting My Approval</p>
         </div>
 
         <div 
           className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid #E1E6EA' }}
+          style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
               <Package className="w-6 h-6" style={{ color: '#D97706' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: '#0A0F14' }}>{getCountByType('GRN')}</p>
-          <p className="text-sm" style={{ color: '#6E7A82' }}>GRN Activities</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByType('GRN')}</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>GRN Activities</p>
         </div>
 
         <div 
           className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid #E1E6EA' }}
+          style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E0F2FE' }}>
               <Database className="w-6 h-6" style={{ color: '#0284C7' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: '#0A0F14' }}>{getCountByType('Masters')}</p>
-          <p className="text-sm" style={{ color: '#6E7A82' }}>Master Updates</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByType('Masters')}</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Master Updates</p>
         </div>
       </div>
 
       {/* Filter Tabs */}
       <div 
         className="bg-white rounded-lg mb-6"
-        style={{ border: '1px solid #E1E6EA' }}
+        style={{ border: '1px solid var(--color-silver)' }}
       >
         <div className="flex items-center gap-2 p-2">
           {['All', 'Created', 'Approvals', 'GRN', 'Masters'].map((tab) => {
@@ -443,9 +443,9 @@ export function CombinedDashboard() {
                 onClick={() => setSelectedTab(tab as any)}
                 className="px-4 py-2 rounded-lg transition-all"
                 style={{
-                  backgroundColor: isActive ? '#E8F7F8' : 'transparent',
-                  color: isActive ? '#00A9B7' : '#6E7A82',
-                  border: isActive ? '1px solid #00A9B7' : '1px solid transparent'
+                  backgroundColor: isActive ? 'var(--color-teal-tint)' : 'transparent',
+                  color: isActive ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
+                  border: isActive ? '1px solid var(--color-teal)' : '1px solid transparent'
                 }}
               >
                 <span className="text-sm">{tab}</span>
@@ -453,8 +453,8 @@ export function CombinedDashboard() {
                   <span 
                     className="ml-2 px-2 py-0.5 rounded-full text-xs"
                     style={{
-                      backgroundColor: isActive ? '#00A9B7' : '#E1E6EA',
-                      color: isActive ? '#FFFFFF' : '#6E7A82'
+                      backgroundColor: isActive ? 'var(--color-teal)' : 'var(--color-silver)',
+                      color: isActive ? '#FFFFFF' : 'var(--color-mercury-grey)'
                     }}
                   >
                     {count}
@@ -471,11 +471,11 @@ export function CombinedDashboard() {
         {items.length === 0 ? (
           <div 
             className="bg-white p-12 rounded-lg text-center"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
-            <CheckCircle className="w-16 h-16 mx-auto mb-4" style={{ color: '#E1E6EA' }} />
-            <p className="text-lg mb-2" style={{ color: '#0A0F14' }}>All Clear!</p>
-            <p className="text-sm" style={{ color: '#6E7A82' }}>
+            <CheckCircle className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--color-silver)' }} />
+            <p className="text-lg mb-2" style={{ color: 'var(--color-ink)' }}>All Clear!</p>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               No items in this category
             </p>
           </div>
@@ -489,7 +489,7 @@ export function CombinedDashboard() {
               <div
                 key={item.id}
                 className="bg-white rounded-lg"
-                style={{ border: '1px solid #E1E6EA' }}
+                style={{ border: '1px solid var(--color-silver)' }}
               >
                 {/* Main Row */}
                 <div className="p-4">
@@ -498,14 +498,14 @@ export function CombinedDashboard() {
                     <div className="flex items-start gap-3 flex-1">
                       <div 
                         className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: '#F6F9FC' }}
+                        style={{ backgroundColor: 'var(--color-cloud)' }}
                       >
-                        <TypeIcon className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                        <TypeIcon className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                       </div>
 
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <h3 className="text-sm" style={{ color: '#0A0F14' }}>
+                          <h3 className="text-sm" style={{ color: 'var(--color-ink)' }}>
                             {item.title}
                           </h3>
                           
@@ -523,9 +523,9 @@ export function CombinedDashboard() {
                           <span
                             className="px-2 py-1 rounded text-xs"
                             style={{
-                              backgroundColor: '#F6F9FC',
-                              color: '#6E7A82',
-                              border: '1px solid #E1E6EA'
+                              backgroundColor: 'var(--color-cloud)',
+                              color: 'var(--color-mercury-grey)',
+                              border: '1px solid var(--color-silver)'
                             }}
                           >
                             {getTypeLabel(item.type)}
@@ -546,27 +546,27 @@ export function CombinedDashboard() {
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                           <div>
-                            <p style={{ color: '#6E7A82' }} className="text-xs mb-0.5">Date</p>
-                            <p style={{ color: '#0A0F14' }} className="text-xs">
+                            <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Date</p>
+                            <p style={{ color: 'var(--color-ink)' }} className="text-xs">
                               {new Date(item.date).toLocaleDateString('en-IN')}
                             </p>
                           </div>
                           {item.value && (
                             <div>
-                              <p style={{ color: '#6E7A82' }} className="text-xs mb-0.5">Value</p>
-                              <p style={{ color: '#0A0F14' }} className="text-xs">{item.value}</p>
+                              <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Value</p>
+                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">{item.value}</p>
                             </div>
                           )}
                           {item.details.vendor && (
                             <div>
-                              <p style={{ color: '#6E7A82' }} className="text-xs mb-0.5">Vendor</p>
-                              <p style={{ color: '#0A0F14' }} className="text-xs">{item.details.vendor}</p>
+                              <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Vendor</p>
+                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">{item.details.vendor}</p>
                             </div>
                           )}
                           {item.details.items && (
                             <div>
-                              <p style={{ color: '#6E7A82' }} className="text-xs mb-0.5">Items</p>
-                              <p style={{ color: '#0A0F14' }} className="text-xs">{item.details.items}</p>
+                              <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Items</p>
+                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">{item.details.items}</p>
                             </div>
                           )}
                         </div>
@@ -580,9 +580,9 @@ export function CombinedDashboard() {
                           <button
                             className="px-3 py-1.5 rounded-lg text-xs transition-all"
                             style={{
-                              backgroundColor: '#00A9B7',
+                              backgroundColor: 'var(--color-teal)',
                               color: '#FFFFFF',
-                              border: '1px solid #00A9B7'
+                              border: '1px solid var(--color-teal)'
                             }}
                           >
                             <CheckCircle className="w-4 h-4" />
@@ -591,8 +591,8 @@ export function CombinedDashboard() {
                             className="px-3 py-1.5 rounded-lg text-xs transition-all"
                             style={{
                               backgroundColor: '#FFFFFF',
-                              color: '#DC2626',
-                              border: '1px solid #DC2626'
+                              color: 'var(--color-error-dark)',
+                              border: '1px solid var(--color-error-dark)'
                             }}
                           >
                             <XCircle className="w-4 h-4" />
@@ -603,9 +603,9 @@ export function CombinedDashboard() {
                         <button
                           className="px-3 py-1.5 rounded-lg text-xs transition-all"
                           style={{
-                            backgroundColor: '#00A9B7',
+                            backgroundColor: 'var(--color-teal)',
                             color: '#FFFFFF',
-                            border: '1px solid #00A9B7'
+                            border: '1px solid var(--color-teal)'
                           }}
                         >
                           <Edit className="w-4 h-4" />
@@ -615,9 +615,9 @@ export function CombinedDashboard() {
                         onClick={() => setExpandedItem(isExpanded ? null : item.id)}
                         className="px-3 py-1.5 rounded-lg text-xs transition-all"
                         style={{
-                          backgroundColor: '#F6F9FC',
-                          color: '#6E7A82',
-                          border: '1px solid #E1E6EA'
+                          backgroundColor: 'var(--color-cloud)',
+                          color: 'var(--color-mercury-grey)',
+                          border: '1px solid var(--color-silver)'
                         }}
                       >
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -629,15 +629,15 @@ export function CombinedDashboard() {
                   {isExpanded && (
                     <div 
                       className="mt-4 pt-4"
-                      style={{ borderTop: '1px solid #E1E6EA' }}
+                      style={{ borderTop: '1px solid var(--color-silver)' }}
                     >
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                         {Object.entries(item.details).map(([key, value]) => (
                           <div key={key}>
-                            <p style={{ color: '#6E7A82' }} className="text-xs mb-1 capitalize">
+                            <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-1 capitalize">
                               {key.replace(/([A-Z])/g, ' $1').trim()}
                             </p>
-                            <p style={{ color: '#0A0F14' }} className="text-xs">{String(value)}</p>
+                            <p style={{ color: 'var(--color-ink)' }} className="text-xs">{String(value)}</p>
                           </div>
                         ))}
                       </div>

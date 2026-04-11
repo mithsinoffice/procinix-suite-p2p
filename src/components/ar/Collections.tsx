@@ -19,11 +19,11 @@ export function Collections() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'Critical': return { bg: '#FEE2E2', color: '#DC2626', border: '#FCA5A5' };
-      case 'High': return { bg: '#FFF3E0', color: '#F57C00', border: '#FFB74D' };
-      case 'Medium': return { bg: '#E8F7F8', color: '#00A9B7', border: '#00A9B7' };
-      case 'Low': return { bg: '#E8F5E9', color: '#2E7D32', border: '#81C784' };
-      default: return { bg: '#F6F9FC', color: '#6E7A82', border: '#E1E6EA' };
+      case 'Critical': return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)', border: '#FCA5A5' };
+      case 'High': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)', border: '#FFB74D' };
+      case 'Medium': return { bg: 'var(--color-teal-tint)', color: 'var(--color-teal)', border: 'var(--color-teal)' };
+      case 'Low': return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)', border: '#81C784' };
+      default: return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
     }
   };
 
@@ -35,18 +35,18 @@ export function Collections() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
-      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
+      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl" style={{ color: '#0A0F14', margin: 0 }}>Collections Command Center</h1>
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded" style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}>
-                <Sparkles className="w-3.5 h-3.5" style={{ color: '#00A9B7' }} />
-                <span className="text-xs" style={{ color: '#00A9B7', fontWeight: '600' }}>AI PRIORITIZATION</span>
+              <h1 className="text-2xl" style={{ color: 'var(--color-ink)', margin: 0 }}>Collections Command Center</h1>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}>
+                <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--color-teal)' }} />
+                <span className="text-xs" style={{ color: 'var(--color-teal)', fontWeight: '600' }}>AI PRIORITIZATION</span>
               </div>
             </div>
-            <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
               AI-driven collections prioritization and workflow management
             </p>
           </div>
@@ -56,21 +56,21 @@ export function Collections() {
       <div className="p-8">
         {/* Stats */}
         <div className="grid grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Total Outstanding</p>
-            <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: '600' }}>{formatCurrency(stats.totalOutstanding)}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Outstanding</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{formatCurrency(stats.totalOutstanding)}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Total Overdue</p>
-            <p className="text-2xl" style={{ color: '#DC2626', fontWeight: '600' }}>{formatCurrency(stats.totalOverdue)}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Overdue</p>
+            <p className="text-2xl" style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>{formatCurrency(stats.totalOverdue)}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Critical Accounts</p>
-            <p className="text-2xl" style={{ color: '#DC2626', fontWeight: '600' }}>{stats.criticalAccounts}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Critical Accounts</p>
+            <p className="text-2xl" style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>{stats.criticalAccounts}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Avg DSO</p>
-            <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: '600' }}>{stats.avgDSO} days</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Avg DSO</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{stats.avgDSO} days</p>
           </div>
         </div>
 
@@ -79,18 +79,18 @@ export function Collections() {
           {collections.map((item, idx) => {
             const priorityStyle = getPriorityColor(item.priority);
             return (
-              <div key={idx} className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+              <div key={idx} className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: priorityStyle.bg }}>
                       <DollarSign className="w-5 h-5" style={{ color: priorityStyle.color }} />
                     </div>
                     <div>
-                      <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600', margin: 0 }}>{item.customer}</h3>
-                      <div className="flex items-center gap-3 text-sm" style={{ color: '#6E7A82' }}>
+                      <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600', margin: 0 }}>{item.customer}</h3>
+                      <div className="flex items-center gap-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                         <span>Outstanding: {formatCurrency(item.outstanding)}</span>
                         {item.overdue > 0 && (
-                          <span style={{ color: '#DC2626', fontWeight: '600' }}>Overdue: {formatCurrency(item.overdue)}</span>
+                          <span style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>Overdue: {formatCurrency(item.overdue)}</span>
                         )}
                         <span>DSO: {item.dso} days</span>
                       </div>
@@ -101,39 +101,39 @@ export function Collections() {
                       {item.priority} Priority
                     </span>
                     <div className="text-right">
-                      <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Collection Probability</p>
-                      <p className="text-sm" style={{ color: '#00A9B7', fontWeight: '600' }}>{item.probability}%</p>
+                      <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Collection Probability</p>
+                      <p className="text-sm" style={{ color: 'var(--color-teal)', fontWeight: '600' }}>{item.probability}%</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 p-4 rounded-lg mb-4" style={{ backgroundColor: '#F6F9FC' }}>
+                <div className="grid grid-cols-3 gap-4 p-4 rounded-lg mb-4" style={{ backgroundColor: 'var(--color-cloud)' }}>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Last Contact</p>
-                    <p className="text-sm" style={{ color: '#0A0F14' }}>{item.lastContact}</p>
+                    <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Last Contact</p>
+                    <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.lastContact}</p>
                   </div>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Next Action</p>
-                    <p className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>{item.nextAction}</p>
+                    <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Next Action</p>
+                    <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{item.nextAction}</p>
                   </div>
                   <div>
-                    <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>AI Recommendation</p>
-                    <p className="text-sm" style={{ color: '#00A9B7', fontWeight: '600' }}>
+                    <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>AI Recommendation</p>
+                    <p className="text-sm" style={{ color: 'var(--color-teal)', fontWeight: '600' }}>
                       {item.priority === 'Critical' ? 'Escalate Now' : 'Follow Standard Process'}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-3">
-                  <button className="px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+                  <button className="px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
                     <Phone className="w-4 h-4 inline mr-2" />
                     Call
                   </button>
-                  <button className="px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+                  <button className="px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
                     <Mail className="w-4 h-4 inline mr-2" />
                     Email
                   </button>
-                  <button className="px-4 py-2 rounded-lg text-white text-sm" style={{ backgroundColor: '#00A9B7' }}>
+                  <button className="px-4 py-2 rounded-lg text-white text-sm" style={{ backgroundColor: 'var(--color-teal)' }}>
                     <CheckCircle className="w-4 h-4 inline mr-2" />
                     Log Activity
                   </button>
@@ -144,14 +144,14 @@ export function Collections() {
         </div>
 
         {/* AI Insight */}
-        <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}>
+        <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}>
           <div className="flex items-start gap-3">
-            <Sparkles className="w-5 h-5 mt-0.5" style={{ color: '#00A9B7' }} />
+            <Sparkles className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-teal)' }} />
             <div>
-              <h4 className="text-sm mb-2" style={{ color: '#0A0F14', margin: 0, fontWeight: '600' }}>
+              <h4 className="text-sm mb-2" style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}>
                 AI Collection Strategy
               </h4>
-              <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
                 Focus on Infosys (₹8.9 Cr overdue) - 65% recovery probability. Historical data shows they respond best to senior management contact.
                 Expected cash inflow: ₹5.8 Cr within 2 weeks if escalated today.
               </p>

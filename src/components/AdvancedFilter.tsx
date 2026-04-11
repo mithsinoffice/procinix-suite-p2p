@@ -252,16 +252,16 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
             onChange={(e) => updateCondition(group.id, condition.id, { value: e.target.value })}
             placeholder="From"
             className="flex-1 px-3 py-2 rounded-lg text-sm"
-            style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+            style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
           />
-          <span style={{ color: '#6E7A82' }}>to</span>
+          <span style={{ color: 'var(--color-mercury-grey)' }}>to</span>
           <input
             type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
             value={condition.value2 || ''}
             onChange={(e) => updateCondition(group.id, condition.id, { value2: e.target.value })}
             placeholder="To"
             className="flex-1 px-3 py-2 rounded-lg text-sm"
-            style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+            style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
           />
         </div>
       );
@@ -274,7 +274,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
           value={condition.value}
           onChange={(e) => updateCondition(group.id, condition.id, { value: e.target.value })}
           className="px-3 py-2 rounded-lg text-sm"
-          style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
         >
           <option value="">Select value</option>
           {field.options.map(opt => (
@@ -292,7 +292,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
         onChange={(e) => updateCondition(group.id, condition.id, { value: e.target.value })}
         placeholder="Enter value"
         className="px-3 py-2 rounded-lg text-sm"
-        style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+        style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
       />
     );
   };
@@ -304,9 +304,9 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
         style={{
-          backgroundColor: activeCount > 0 ? '#E8F7F8' : 'white',
-          border: activeCount > 0 ? '1px solid #00A9B7' : '1px solid #E1E6EA',
-          color: activeCount > 0 ? '#00A9B7' : '#6E7A82'
+          backgroundColor: activeCount > 0 ? 'var(--color-teal-tint)' : 'white',
+          border: activeCount > 0 ? '1px solid var(--color-teal)' : '1px solid var(--color-silver)',
+          color: activeCount > 0 ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
         }}
       >
         <Filter className="w-4 h-4" />
@@ -314,7 +314,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
         {activeCount > 0 && (
           <span 
             className="px-2 py-0.5 rounded-full text-xs"
-            style={{ backgroundColor: '#00A9B7', color: 'white' }}
+            style={{ backgroundColor: 'var(--color-teal)', color: 'white' }}
           >
             {activeCount}
           </span>
@@ -326,23 +326,23 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div 
             className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             {/* Header */}
             <div 
               className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0"
-              style={{ borderColor: '#E1E6EA' }}
+              style={{ borderColor: 'var(--color-silver)' }}
             >
               <div className="flex items-center gap-3">
                 <div 
                   className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: '#E8F7F8' }}
+                  style={{ backgroundColor: 'var(--color-teal-tint)' }}
                 >
-                  <Filter className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                  <Filter className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                 </div>
                 <div>
-                  <h2 className="text-xl" style={{ color: '#0A0F14' }}>Advanced Filter</h2>
-                  <p className="text-xs" style={{ color: '#6E7A82' }}>
+                  <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Advanced Filter</h2>
+                  <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                     Create complex filter conditions with AND/OR logic
                   </p>
                 </div>
@@ -350,7 +350,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
               <button 
                 onClick={() => setIsOpen(false)} 
                 className="p-2 rounded-lg transition-colors" 
-                style={{ color: '#6E7A82' }}
+                style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -361,7 +361,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
               {/* Groups Logic Selector */}
               {filterGroups.length > 1 && (
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="text-sm" style={{ color: '#6E7A82' }}>
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                     Join filter groups with:
                   </span>
                   <div className="flex gap-2">
@@ -369,9 +369,9 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                       onClick={() => setGroupLogic('AND')}
                       className="px-3 py-1 rounded text-sm transition-colors"
                       style={{
-                        backgroundColor: groupLogic === 'AND' ? '#E8F7F8' : 'white',
-                        border: groupLogic === 'AND' ? '1px solid #00A9B7' : '1px solid #E1E6EA',
-                        color: groupLogic === 'AND' ? '#00A9B7' : '#6E7A82'
+                        backgroundColor: groupLogic === 'AND' ? 'var(--color-teal-tint)' : 'white',
+                        border: groupLogic === 'AND' ? '1px solid var(--color-teal)' : '1px solid var(--color-silver)',
+                        color: groupLogic === 'AND' ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
                       }}
                     >
                       AND
@@ -380,9 +380,9 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                       onClick={() => setGroupLogic('OR')}
                       className="px-3 py-1 rounded text-sm transition-colors"
                       style={{
-                        backgroundColor: groupLogic === 'OR' ? '#E8F7F8' : 'white',
-                        border: groupLogic === 'OR' ? '1px solid #00A9B7' : '1px solid #E1E6EA',
-                        color: groupLogic === 'OR' ? '#00A9B7' : '#6E7A82'
+                        backgroundColor: groupLogic === 'OR' ? 'var(--color-teal-tint)' : 'white',
+                        border: groupLogic === 'OR' ? '1px solid var(--color-teal)' : '1px solid var(--color-silver)',
+                        color: groupLogic === 'OR' ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
                       }}
                     >
                       OR
@@ -397,38 +397,38 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                   {/* Group Separator */}
                   {groupIndex > 0 && (
                     <div className="flex items-center justify-center my-4">
-                      <div className="flex-1" style={{ height: '1px', backgroundColor: '#E1E6EA' }}></div>
+                      <div className="flex-1" style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}></div>
                       <span 
                         className="px-3 py-1 rounded text-xs mx-3"
-                        style={{ backgroundColor: '#E8F7F8', color: '#00A9B7' }}
+                        style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}
                       >
                         {groupLogic}
                       </span>
-                      <div className="flex-1" style={{ height: '1px', backgroundColor: '#E1E6EA' }}></div>
+                      <div className="flex-1" style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}></div>
                     </div>
                   )}
 
                   <div 
                     className="p-4 rounded-lg"
-                    style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                    style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                   >
                     {/* Group Header */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm" style={{ color: '#6E7A82' }}>
+                        <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                           Filter Group {groupIndex + 1}
                         </span>
                         {group.conditions.length > 1 && (
                           <>
-                            <span className="text-xs" style={{ color: '#6E7A82' }}>-</span>
+                            <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>-</span>
                             <div className="flex gap-2">
                               <button
                                 onClick={() => updateGroupLogicInternal(group.id, 'AND')}
                                 className="px-2 py-0.5 rounded text-xs transition-colors"
                                 style={{
-                                  backgroundColor: group.logic === 'AND' ? '#00A9B7' : 'white',
-                                  color: group.logic === 'AND' ? 'white' : '#6E7A82',
-                                  border: '1px solid #E1E6EA'
+                                  backgroundColor: group.logic === 'AND' ? 'var(--color-teal)' : 'white',
+                                  color: group.logic === 'AND' ? 'white' : 'var(--color-mercury-grey)',
+                                  border: '1px solid var(--color-silver)'
                                 }}
                               >
                                 AND
@@ -437,9 +437,9 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                                 onClick={() => updateGroupLogicInternal(group.id, 'OR')}
                                 className="px-2 py-0.5 rounded text-xs transition-colors"
                                 style={{
-                                  backgroundColor: group.logic === 'OR' ? '#00A9B7' : 'white',
-                                  color: group.logic === 'OR' ? 'white' : '#6E7A82',
-                                  border: '1px solid #E1E6EA'
+                                  backgroundColor: group.logic === 'OR' ? 'var(--color-teal)' : 'white',
+                                  color: group.logic === 'OR' ? 'white' : 'var(--color-mercury-grey)',
+                                  border: '1px solid var(--color-silver)'
                                 }}
                               >
                                 OR
@@ -452,7 +452,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                         <button
                           onClick={() => removeGroup(group.id)}
                           className="p-1 rounded transition-colors"
-                          style={{ color: '#FF4E5B' }}
+                          style={{ color: 'var(--color-error)' }}
                           title="Remove Group"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -467,14 +467,14 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                           {/* Condition Logic Indicator */}
                           {conditionIndex > 0 && (
                             <div className="flex items-center gap-2 my-2 ml-4">
-                              <div className="w-8" style={{ height: '1px', backgroundColor: '#E1E6EA' }}></div>
+                              <div className="w-8" style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}></div>
                               <span 
                                 className="px-2 py-0.5 rounded text-xs"
-                                style={{ backgroundColor: 'white', color: '#00A9B7', border: '1px solid #00A9B7' }}
+                                style={{ backgroundColor: 'white', color: 'var(--color-teal)', border: '1px solid var(--color-teal)' }}
                               >
                                 {group.logic}
                               </span>
-                              <div className="flex-1" style={{ height: '1px', backgroundColor: '#E1E6EA' }}></div>
+                              <div className="flex-1" style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}></div>
                             </div>
                           )}
 
@@ -490,7 +490,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                                   value: ''
                                 })}
                                 className="w-full px-3 py-2 rounded-lg text-sm"
-                                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                               >
                                 {fields.map(field => (
                                   <option key={field.key} value={field.key}>
@@ -510,7 +510,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                                   value2: undefined
                                 })}
                                 className="w-full px-3 py-2 rounded-lg text-sm"
-                                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                               >
                                 {getOperatorsForField(condition.field).map(op => (
                                   <option key={op.value} value={op.value}>
@@ -530,7 +530,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                               <button
                                 onClick={() => removeCondition(group.id, condition.id)}
                                 className="p-2 rounded transition-colors"
-                                style={{ color: '#FF4E5B' }}
+                                style={{ color: 'var(--color-error)' }}
                                 title="Remove Condition"
                               >
                                 <X className="w-4 h-4" />
@@ -547,8 +547,8 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                       className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm mt-3 transition-colors"
                       style={{ 
                         backgroundColor: 'white', 
-                        border: '1px solid #00A9B7',
-                        color: '#00A9B7'
+                        border: '1px solid var(--color-teal)',
+                        color: 'var(--color-teal)'
                       }}
                     >
                       <Plus className="w-4 h-4" />
@@ -564,8 +564,8 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors"
                 style={{ 
                   backgroundColor: 'white', 
-                  border: '1px solid #00A9B7',
-                  color: '#00A9B7'
+                  border: '1px solid var(--color-teal)',
+                  color: 'var(--color-teal)'
                 }}
               >
                 <Plus className="w-4 h-4" />
@@ -576,14 +576,14 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
             {/* Footer */}
             <div 
               className="border-t px-6 py-4 flex justify-between items-center gap-3 flex-shrink-0"
-              style={{ borderColor: '#E1E6EA' }}
+              style={{ borderColor: 'var(--color-silver)' }}
             >
               <button
                 onClick={handleClear}
                 className="px-4 py-2 rounded-lg text-sm transition-colors"
                 style={{ 
-                  border: '1px solid #E1E6EA', 
-                  color: '#6E7A82', 
+                  border: '1px solid var(--color-silver)', 
+                  color: 'var(--color-mercury-grey)', 
                   backgroundColor: 'white' 
                 }}
               >
@@ -594,8 +594,8 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                   onClick={() => setIsOpen(false)} 
                   className="px-4 py-2 rounded-lg text-sm transition-colors" 
                   style={{ 
-                    border: '1px solid #E1E6EA', 
-                    color: '#6E7A82', 
+                    border: '1px solid var(--color-silver)', 
+                    color: 'var(--color-mercury-grey)', 
                     backgroundColor: 'white' 
                   }}
                 >
@@ -604,9 +604,9 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                 <button 
                   onClick={handleApply} 
                   className="px-4 py-2 rounded-lg text-white text-sm transition-colors" 
-                  style={{ backgroundColor: '#00A9B7' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                  style={{ backgroundColor: 'var(--color-teal)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
                 >
                   Apply Filter
                 </button>

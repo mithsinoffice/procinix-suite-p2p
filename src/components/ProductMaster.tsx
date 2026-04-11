@@ -1,8 +1,9 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, FileText, Tag, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface Product {
   id: string;
@@ -111,362 +112,141 @@ export function ProductMaster() {
     setProducts(products.filter(product => product.id !== id));
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [productName, productCode, catalogue, status];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [productName, productCode, catalogue, status]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showForm) {
     return (
-      <MasterFormPage
+      <FormShell
         title="Create Product"
         subtitle="Define products with codes, descriptions, and HSN classification"
         modeLabel="Create Master Record"
+        draftStatus="New"
+        completeness={completeness}
         onBack={() => setShowForm(false)}
         onCancel={() => {
           setShowForm(false);
           resetForm();
         }}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Product ID</label>
-              <div className="relative">
-                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                <input type="text" value={productId} onChange={(e) => setProductId(e.target.value)} placeholder="PROD-NEW" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Catalogue <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <div className="relative">
-                <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                <select value={catalogue} onChange={(e) => setCatalogue(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                  <option value="">Select catalogue</option>
-                  <option value="Top Wear">Top Wear</option>
-                  <option value="Bottom Wear">Bottom Wear</option>
-                  <option value="Footwear">Footwear</option>
-                  <option value="Accessories">Accessories</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Product Name <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <div className="relative">
-                <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="e.g., Legging" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Product Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <div className="relative">
-                <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                <input type="text" value={productCode} onChange={(e) => setProductCode(e.target.value)} placeholder="Internal short code" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-              </div>
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Product Description</label>
-              <div className="relative">
-                <Info className="absolute left-3 top-3 w-4 h-4" style={{ color: '#6E7A82' }} />
-                <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detailed info (optional)" rows={4} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF', resize: 'vertical' }} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>HSN Code</label>
-              <div className="relative">
-                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                <select value={hsnCode} onChange={(e) => setHsnCode(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                  <option value="">Tax classification (optional)</option>
-                  <option value="6109">6109 (T-Shirts)</option>
-                  <option value="6115">6115 (Leggings)</option>
-                  <option value="6201">6201 (Jackets)</option>
-                  <option value="6203">6203 (Trousers)</option>
-                  <option value="6212">6212 (Bras)</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <div className="relative">
-                <Info className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-      </MasterFormPage>
+        <FormSection title="Product Details" columns={2}>
+          <PxFormField label="Product ID" filled={!!productId.trim()}>
+            <input type="text" value={productId} onChange={(e) => setProductId(e.target.value)} placeholder="PROD-NEW" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Catalogue" required filled={!!catalogue}>
+            <select value={catalogue} onChange={(e) => setCatalogue(e.target.value)} className="px-select">
+              <option value="">Select catalogue</option>
+              <option value="Top Wear">Top Wear</option>
+              <option value="Bottom Wear">Bottom Wear</option>
+              <option value="Footwear">Footwear</option>
+              <option value="Accessories">Accessories</option>
+            </select>
+          </PxFormField>
+          <PxFormField label="Product Name" required filled={!!productName.trim()}>
+            <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="e.g., Legging" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Product Code" required filled={!!productCode.trim()}>
+            <input type="text" value={productCode} onChange={(e) => setProductCode(e.target.value)} placeholder="Internal short code" className="px-input" />
+          </PxFormField>
+        </FormSection>
+        <FormSection title="Additional Information" columns={2}>
+          <PxFormField label="Product Description" filled={!!description.trim()}>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detailed info (optional)" rows={4} className="px-input" />
+          </PxFormField>
+          <PxFormField label="HSN Code" filled={!!hsnCode}>
+            <select value={hsnCode} onChange={(e) => setHsnCode(e.target.value)} className="px-select">
+              <option value="">Tax classification (optional)</option>
+              <option value="6109">6109 (T-Shirts)</option>
+              <option value="6115">6115 (Leggings)</option>
+              <option value="6201">6201 (Jackets)</option>
+              <option value="6203">6203 (Trousers)</option>
+              <option value="6212">6212 (Bras)</option>
+            </select>
+          </PxFormField>
+          <PxFormField label="Status" required filled={!!status}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </PxFormField>
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/masters')}
             className="p-2 rounded-lg transition-colors"
-            style={{ color: '#6E7A82' }}
+            style={{ color: 'var(--color-mercury-grey)' }}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Product Master</h1>
-            <p style={{ color: '#6E7A82' }}>Dummy product data for now.</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Product Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Dummy product data for now.</p>
           </div>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Add New
         </button>
       </div>
 
-      {/* Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-2xl">
-            {/* Modal Header */}
-            <div className="border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: '#E1E6EA' }}>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>Add New Product Master</h2>
-              <button
-                onClick={() => setShowForm(false)}
-                className="p-2 rounded-lg transition-colors"
-                style={{ color: '#6E7A82' }}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-6">
-                {/* Product ID */}
-                <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Product ID
-                  </label>
-                  <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input
-                      type="text"
-                      value={productId}
-                      onChange={(e) => setProductId(e.target.value)}
-                      placeholder="PROD-NEW"
-                      className="w-full pl-10 pr-3 py-2 rounded-lg"
-                      style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Catalogue */}
-                <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Catalogue *
-                  </label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <select
-                      value={catalogue}
-                      onChange={(e) => setCatalogue(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 rounded-lg"
-                      style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
-                      }}
-                    >
-                      <option value="">Select catalogue</option>
-                      <option value="Top Wear">Top Wear</option>
-                      <option value="Bottom Wear">Bottom Wear</option>
-                      <option value="Footwear">Footwear</option>
-                      <option value="Accessories">Accessories</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Product Name */}
-                <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Product Name *
-                  </label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input
-                      type="text"
-                      value={productName}
-                      onChange={(e) => setProductName(e.target.value)}
-                      placeholder="e.g., Legging"
-                      className="w-full pl-10 pr-3 py-2 rounded-lg"
-                      style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Product Code */}
-                <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Product Code *
-                  </label>
-                  <div className="relative">
-                    <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input
-                      type="text"
-                      value={productCode}
-                      onChange={(e) => setProductCode(e.target.value)}
-                      placeholder="Internal short code"
-                      className="w-full pl-10 pr-3 py-2 rounded-lg"
-                      style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Product Description */}
-                <div className="col-span-2">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Product Description
-                  </label>
-                  <div className="relative">
-                    <Info className="absolute left-3 top-3 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Detailed info (optional)"
-                      rows={3}
-                      className="w-full pl-10 pr-3 py-2 rounded-lg"
-                      style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* HSN Code */}
-                <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    HSN Code
-                  </label>
-                  <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <select
-                      value={hsnCode}
-                      onChange={(e) => setHsnCode(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 rounded-lg"
-                      style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
-                      }}
-                    >
-                      <option value="">Tax classification (optional)</option>
-                      <option value="6109">6109 (T-Shirts)</option>
-                      <option value="6115">6115 (Leggings)</option>
-                      <option value="6201">6201 (Jackets)</option>
-                      <option value="6203">6203 (Trousers)</option>
-                      <option value="6212">6212 (Bras)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Status *
-                  </label>
-                  <div className="relative">
-                    <Info className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 rounded-lg"
-                      style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
-                      }}
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Audit Info */}
-              <div className="pt-4" style={{ borderTop: '1px solid #E1E6EA' }}>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
-                  Created by: Admin (auto)
-                  <span className="float-right">Audit info will come from backend.</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="border-t px-6 py-4 flex justify-end gap-3" style={{ borderColor: '#E1E6EA' }}>
-              <button
-                onClick={() => setShowForm(false)}
-                className="px-6 py-2 rounded-lg transition-colors"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  color: '#6E7A82',
-                  backgroundColor: 'white'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="px-6 py-2 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Products List */}
-      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   PRODUCT ID
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   PRODUCT NAME
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   CODE
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   CATEGORY
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   DESCRIPTION
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   STATUS
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   ACTIONS
                 </th>
               </tr>
@@ -476,30 +256,30 @@ export function ProductMaster() {
                 <tr
                   key={product.id}
                   style={{
-                    borderTop: index === 0 ? 'none' : '1px solid #E1E6EA'
+                    borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)'
                   }}
                 >
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     {product.productId}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     {product.productName}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
                     {product.productCode}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
                     {product.category}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
                     {product.description}
                   </td>
                   <td className="px-6 py-4">
                     <span
                       className="px-3 py-1 rounded-full text-sm"
                       style={{
-                        backgroundColor: product.status === 'Active' ? '#E8F7F8' : '#FFE8EA',
-                        color: product.status === 'Active' ? '#00A9B7' : '#FF4E5B'
+                        backgroundColor: product.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA',
+                        color: product.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)'
                       }}
                     >
                       {product.status}
@@ -509,7 +289,7 @@ export function ProductMaster() {
                     <button
                       onClick={() => handleDelete(product.id)}
                       className="p-2 rounded-lg transition-colors"
-                      style={{ color: '#FF4E5B' }}
+                      style={{ color: 'var(--color-error)' }}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

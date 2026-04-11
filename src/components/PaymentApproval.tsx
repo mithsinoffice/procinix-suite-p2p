@@ -71,10 +71,10 @@ export function PaymentApproval() {
       'draft': { label: 'Draft', bg: '#F3F4F6', color: '#6B7280', icon: FileText },
       'pending-approval': { label: 'Pending Approval', bg: '#FEF3C7', color: '#F59E0B', icon: Clock },
       'approved': { label: 'Approved', bg: '#D1FAE5', color: '#10B981', icon: CheckCircle },
-      'executed': { label: 'Executed', bg: '#E0F2F1', color: '#00A9B7', icon: CheckCircle },
-      'failed': { label: 'Failed', bg: '#FEE2E2', color: '#EF4444', icon: XCircle },
+      'executed': { label: 'Executed', bg: '#E0F2F1', color: 'var(--color-teal)', icon: CheckCircle },
+      'failed': { label: 'Failed', bg: 'var(--color-error-light)', color: '#EF4444', icon: XCircle },
       'partially-executed': { label: 'Partially Executed', bg: '#FEF3C7', color: '#F59E0B', icon: AlertTriangle },
-      'rejected': { label: 'Rejected', bg: '#FEE2E2', color: '#EF4444', icon: XCircle },
+      'rejected': { label: 'Rejected', bg: 'var(--color-error-light)', color: '#EF4444', icon: XCircle },
     };
 
     const { label, bg, color, icon: Icon } = config[status as keyof typeof config] || config.draft;
@@ -115,9 +115,9 @@ export function PaymentApproval() {
   const getExecutionBadge = (status: string) => {
     const config = {
       'success': { label: 'Success', bg: '#D1FAE5', color: '#10B981' },
-      'failed': { label: 'Failed', bg: '#FEE2E2', color: '#EF4444' },
+      'failed': { label: 'Failed', bg: 'var(--color-error-light)', color: '#EF4444' },
       'pending': { label: 'Pending', bg: '#FEF3C7', color: '#F59E0B' },
-      'processing': { label: 'Processing', bg: '#E0F2F1', color: '#00A9B7' },
+      'processing': { label: 'Processing', bg: '#E0F2F1', color: 'var(--color-teal)' },
     };
 
     const { label, bg, color } = config[status as keyof typeof config] || config.pending;
@@ -178,13 +178,13 @@ export function PaymentApproval() {
   } : null;
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div
         className="px-8 py-6"
         style={{
           backgroundColor: '#FFFFFF',
-          borderBottom: '2px solid #E1E6EA',
+          borderBottom: '2px solid var(--color-silver)',
         }}
       >
         <div className="flex items-center justify-between mb-4">
@@ -193,17 +193,17 @@ export function PaymentApproval() {
               onClick={() => navigate(-1)}
               className="p-2 rounded-lg transition-colors"
               style={{
-                backgroundColor: '#F6F9FC',
-                border: '1px solid #E1E6EA',
+                backgroundColor: 'var(--color-cloud)',
+                border: '1px solid var(--color-silver)',
               }}
             >
-              <ArrowLeft className="w-5 h-5" style={{ color: '#6E7A82' }} />
+              <ArrowLeft className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
             </button>
             <div>
-              <h1 className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+              <h1 className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                 Payment Batch: {batch.batchNo}
               </h1>
-              <p style={{ color: '#6E7A82', fontSize: '14px' }}>
+              <p style={{ color: 'var(--color-mercury-grey)', fontSize: '14px' }}>
                 Maker-Checker Approval & Execution
               </p>
             </div>
@@ -264,8 +264,8 @@ export function PaymentApproval() {
                   className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
                   style={{
                     backgroundColor: '#FFFFFF',
-                    color: '#6E7A82',
-                    border: '1px solid #E1E6EA',
+                    color: 'var(--color-mercury-grey)',
+                    border: '1px solid var(--color-silver)',
                   }}
                 >
                   <Download className="w-4 h-4" />
@@ -276,7 +276,7 @@ export function PaymentApproval() {
                 onClick={handleExecute}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
                 style={{
-                  backgroundColor: '#00A9B7',
+                  backgroundColor: 'var(--color-teal)',
                   color: '#FFFFFF',
                   border: 'none',
                 }}
@@ -308,10 +308,10 @@ export function PaymentApproval() {
       <div className="p-8 max-w-7xl mx-auto">
         <div className="space-y-6">
           {/* Payment Batch Summary */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
             <div className="flex items-center gap-2 mb-6">
-              <Hash className="w-5 h-5" style={{ color: '#00A9B7' }} />
-              <h2 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+              <Hash className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+              <h2 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
                 Payment Batch Summary
               </h2>
             </div>
@@ -320,12 +320,12 @@ export function PaymentApproval() {
               {/* Batch ID */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <FileText className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                  <span className="text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <FileText className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Batch ID
                   </span>
                 </div>
-                <div style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+                <div style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
                   {batch.batchNo}
                 </div>
               </div>
@@ -333,15 +333,15 @@ export function PaymentApproval() {
               {/* Total Amount */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                  <span className="text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <DollarSign className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Total Amount
                   </span>
                 </div>
-                <div style={{ color: '#00A9B7', fontWeight: '700', fontSize: '18px' }}>
+                <div style={{ color: 'var(--color-teal)', fontWeight: '700', fontSize: '18px' }}>
                   {formatCompactCurrency(batch.totalAmount, batch.currency)}
                 </div>
-                <div className="text-xs" style={{ color: '#6E7A82' }}>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                   {batch.invoiceCount} invoices
                 </div>
               </div>
@@ -349,12 +349,12 @@ export function PaymentApproval() {
               {/* Payment Date */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                  <span className="text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Payment Date
                   </span>
                 </div>
-                <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                   {new Date(batch.paymentDate).toLocaleDateString('en-GB', {
                     day: '2-digit',
                     month: 'short',
@@ -366,14 +366,14 @@ export function PaymentApproval() {
               {/* Payment Mode */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <CreditCard className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                  <span className="text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <CreditCard className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Payment Mode
                   </span>
                 </div>
                 <div
                   className="inline-block px-2 py-1 rounded text-xs"
-                  style={{ backgroundColor: '#E0F2F1', color: '#00A9B7', fontWeight: '600' }}
+                  style={{ backgroundColor: '#E0F2F1', color: 'var(--color-teal)', fontWeight: '600' }}
                 >
                   {batch.paymentMode}
                 </div>
@@ -381,29 +381,29 @@ export function PaymentApproval() {
             </div>
 
             {/* Bank Account */}
-            <div className="mt-6 pt-6" style={{ borderTop: '1px solid #E1E6EA' }}>
+            <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--color-silver)' }}>
               <div className="flex items-center gap-2 mb-3">
-                <Building2 className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                <span className="text-xs" style={{ color: '#6E7A82', fontWeight: '700', textTransform: 'uppercase' }}>
+                <Building2 className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', textTransform: 'uppercase' }}>
                   Payment Account
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>Account Name</div>
-                  <div className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                  <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Account Name</div>
+                  <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                     {batch.bankAccount.accountName}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>Account Number</div>
-                  <div className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                  <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Account Number</div>
+                  <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                     {batch.bankAccount.accountNo}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>Bank Name</div>
-                  <div className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                  <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Bank Name</div>
+                  <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                     {batch.bankAccount.bankName}
                   </div>
                 </div>
@@ -411,19 +411,19 @@ export function PaymentApproval() {
             </div>
 
             {/* Created By / Approved By */}
-            <div className="mt-6 pt-6" style={{ borderTop: '1px solid #E1E6EA' }}>
+            <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--color-silver)' }}>
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <User className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <span className="text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                    <User className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                       Created By
                     </span>
                   </div>
-                  <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                  <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                     {batch.createdBy}
                   </div>
-                  <div className="text-xs" style={{ color: '#6E7A82' }}>
+                  <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                     {new Date(batch.createdAt).toLocaleString('en-GB', {
                       day: '2-digit',
                       month: 'short',
@@ -438,15 +438,15 @@ export function PaymentApproval() {
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle className="w-4 h-4" style={{ color: '#10B981' }} />
-                      <span className="text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                      <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                         Approved By
                       </span>
                     </div>
-                    <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                    <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                       {batch.approvedBy}
                     </div>
                     {batch.approvedAt && (
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                         {new Date(batch.approvedAt).toLocaleString('en-GB', {
                           day: '2-digit',
                           month: 'short',
@@ -470,7 +470,7 @@ export function PaymentApproval() {
                     <div className="text-xs mb-1" style={{ color: '#F59E0B', fontWeight: '700' }}>
                       Batch Notes
                     </div>
-                    <div className="text-sm" style={{ color: '#0A0F14' }}>
+                    <div className="text-sm" style={{ color: 'var(--color-ink)' }}>
                       {batch.comments}
                     </div>
                   </div>
@@ -480,11 +480,11 @@ export function PaymentApproval() {
           </div>
 
           {/* Invoice Breakdown */}
-          <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid #E1E6EA' }}>
-            <div className="px-6 py-4" style={{ borderBottom: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-silver)' }}>
+            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-silver)' }}>
               <div className="flex items-center gap-2">
-                <Banknote className="w-5 h-5" style={{ color: '#00A9B7' }} />
-                <h2 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+                <Banknote className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+                <h2 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
                   Invoice Breakdown ({batch.invoices.length})
                 </h2>
               </div>
@@ -493,23 +493,23 @@ export function PaymentApproval() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
-                    <th className="text-left px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
+                    <th className="text-left px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       INVOICE NO
                     </th>
-                    <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       VENDOR
                     </th>
-                    <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       ACCOUNT DETAILS
                     </th>
-                    <th className="text-right px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       AMOUNT
                     </th>
-                    <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       DUE DATE
                     </th>
-                    <th className="text-left px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-left px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       CATEGORY
                     </th>
                   </tr>
@@ -520,34 +520,34 @@ export function PaymentApproval() {
                       key={invoice.id}
                       style={{
                         backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFBFC',
-                        borderBottom: '1px solid #E1E6EA',
+                        borderBottom: '1px solid var(--color-silver)',
                       }}
                     >
                       <td className="px-6 py-4">
-                        <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                        <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                           {invoice.invoiceNo}
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '13px' }}>
+                        <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '13px' }}>
                           {invoice.vendor}
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-xs" style={{ color: '#0A0F14', fontWeight: '500' }}>
+                        <div className="text-xs" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
                           {invoice.vendorAccount}
                         </div>
-                        <div className="text-xs" style={{ color: '#6E7A82' }}>
+                        <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                           {invoice.ifscCode}
                         </div>
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <div style={{ color: '#0A0F14', fontWeight: '700', fontSize: '14px' }}>
+                        <div style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '14px' }}>
                           {formatCompactCurrency(invoice.amount, invoice.currency)}
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-sm" style={{ color: '#0A0F14' }}>
+                        <div className="text-sm" style={{ color: 'var(--color-ink)' }}>
                           {new Date(invoice.dueDate).toLocaleDateString('en-GB', {
                             day: '2-digit',
                             month: 'short',
@@ -559,8 +559,8 @@ export function PaymentApproval() {
                         <span
                           className="px-2 py-1 rounded text-xs"
                           style={{
-                            backgroundColor: invoice.category === 'Statutory' ? '#FEE2E2' : '#F6F9FC',
-                            color: invoice.category === 'Statutory' ? '#DC2626' : '#6E7A82',
+                            backgroundColor: invoice.category === 'Statutory' ? 'var(--color-error-light)' : 'var(--color-cloud)',
+                            color: invoice.category === 'Statutory' ? 'var(--color-error-dark)' : 'var(--color-mercury-grey)',
                             fontWeight: '600',
                           }}
                         >
@@ -575,10 +575,10 @@ export function PaymentApproval() {
           </div>
 
           {/* Approval Chain */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
             <div className="flex items-center gap-2 mb-6">
-              <Shield className="w-5 h-5" style={{ color: '#00A9B7' }} />
-              <h2 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+              <Shield className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+              <h2 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
                 Approval Chain
               </h2>
             </div>
@@ -591,11 +591,11 @@ export function PaymentApproval() {
                   style={{
                     backgroundColor: approval.action === 'approved' ? '#F0FDF4' : 
                                      approval.action === 'rejected' ? '#FEF2F2' :
-                                     approval.action === 'pending' ? '#FFFBEB' : '#F6F9FC',
+                                     approval.action === 'pending' ? '#FFFBEB' : 'var(--color-cloud)',
                     border: `1px solid ${
                       approval.action === 'approved' ? '#BBF7D0' :
                       approval.action === 'rejected' ? '#FECACA' :
-                      approval.action === 'pending' ? '#FDE68A' : '#E1E6EA'
+                      approval.action === 'pending' ? '#FDE68A' : 'var(--color-silver)'
                     }`,
                   }}
                 >
@@ -617,10 +617,10 @@ export function PaymentApproval() {
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <div style={{ color: '#0A0F14', fontWeight: '700', fontSize: '14px' }}>
+                        <div style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '14px' }}>
                           {approval.approverName}
                         </div>
-                        <div className="text-xs" style={{ color: '#6E7A82' }}>
+                        <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                           {approval.approverRole}
                         </div>
                       </div>
@@ -629,8 +629,8 @@ export function PaymentApproval() {
 
                     {approval.timestamp && (
                       <div className="flex items-center gap-2 mb-2">
-                        <Clock className="w-3.5 h-3.5" style={{ color: '#6E7A82' }} />
-                        <span className="text-xs" style={{ color: '#6E7A82' }}>
+                        <Clock className="w-3.5 h-3.5" style={{ color: 'var(--color-mercury-grey)' }} />
+                        <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                           {new Date(approval.timestamp).toLocaleString('en-GB', {
                             day: '2-digit',
                             month: 'short',
@@ -647,11 +647,11 @@ export function PaymentApproval() {
                         className="mt-2 p-3 rounded-lg text-sm"
                         style={{
                           backgroundColor: '#FFFFFF',
-                          border: '1px solid #E1E6EA',
-                          color: '#0A0F14',
+                          border: '1px solid var(--color-silver)',
+                          color: 'var(--color-ink)',
                         }}
                       >
-                        <MessageSquare className="w-3.5 h-3.5 inline mr-2" style={{ color: '#6E7A82' }} />
+                        <MessageSquare className="w-3.5 h-3.5 inline mr-2" style={{ color: 'var(--color-mercury-grey)' }} />
                         {approval.comments}
                       </div>
                     )}
@@ -663,10 +663,10 @@ export function PaymentApproval() {
 
           {/* Execution Status */}
           {(batch.status === 'executed' || batch.status === 'partially-executed' || batch.status === 'failed') && (
-            <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+            <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
               <div className="flex items-center gap-2 mb-6">
-                <Activity className="w-5 h-5" style={{ color: '#00A9B7' }} />
-                <h2 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+                <Activity className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+                <h2 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
                   Execution Status
                 </h2>
               </div>
@@ -674,9 +674,9 @@ export function PaymentApproval() {
               {/* Execution Summary */}
               {executionStats && (
                 <div className="grid grid-cols-4 gap-4 mb-6">
-                  <div className="p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-                    <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>Total</div>
-                    <div className="text-2xl" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                  <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                    <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total</div>
+                    <div className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                       {executionStats.total}
                     </div>
                   </div>
@@ -686,8 +686,8 @@ export function PaymentApproval() {
                       {executionStats.success}
                     </div>
                   </div>
-                  <div className="p-4 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
-                    <div className="text-xs mb-1" style={{ color: '#DC2626' }}>Failed</div>
+                  <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
+                    <div className="text-xs mb-1" style={{ color: 'var(--color-error-dark)' }}>Failed</div>
                     <div className="text-2xl" style={{ color: '#EF4444', fontWeight: '700' }}>
                       {executionStats.failed}
                     </div>
@@ -702,7 +702,7 @@ export function PaymentApproval() {
               )}
 
               {/* Bank File Status */}
-              <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
+              <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="flex items-center gap-3">
                     {batch.bankFileGenerated ? (
@@ -711,12 +711,12 @@ export function PaymentApproval() {
                       <Clock className="w-5 h-5" style={{ color: '#F59E0B' }} />
                     )}
                     <div>
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>Bank File</div>
-                      <div className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Bank File</div>
+                      <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                         {batch.bankFileGenerated ? 'Generated' : 'Pending'}
                       </div>
                       {batch.bankFileGeneratedAt && (
-                        <div className="text-xs" style={{ color: '#6E7A82' }}>
+                        <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                           {new Date(batch.bankFileGeneratedAt).toLocaleString('en-GB', {
                             day: '2-digit',
                             month: 'short',
@@ -735,12 +735,12 @@ export function PaymentApproval() {
                       <Clock className="w-5 h-5" style={{ color: '#F59E0B' }} />
                     )}
                     <div>
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>Sent to Bank</div>
-                      <div className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Sent to Bank</div>
+                      <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                         {batch.sentToBank ? 'Yes' : 'No'}
                       </div>
                       {batch.sentToBankAt && (
-                        <div className="text-xs" style={{ color: '#6E7A82' }}>
+                        <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                           {new Date(batch.sentToBankAt).toLocaleString('en-GB', {
                             day: '2-digit',
                             month: 'short',
@@ -754,17 +754,17 @@ export function PaymentApproval() {
 
                   <div className="flex items-center gap-3">
                     {batch.executedBy ? (
-                      <User className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                      <User className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                     ) : (
-                      <User className="w-5 h-5" style={{ color: '#6E7A82' }} />
+                      <User className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
                     )}
                     <div>
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>Executed By</div>
-                      <div className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Executed By</div>
+                      <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                         {batch.executedBy || 'N/A'}
                       </div>
                       {batch.executedAt && (
-                        <div className="text-xs" style={{ color: '#6E7A82' }}>
+                        <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                           {new Date(batch.executedAt).toLocaleString('en-GB', {
                             day: '2-digit',
                             month: 'short',
@@ -783,23 +783,23 @@ export function PaymentApproval() {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
-                        <th className="text-left px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                      <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
+                        <th className="text-left px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                           INVOICE NO
                         </th>
-                        <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                        <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                           VENDOR
                         </th>
-                        <th className="text-right px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                        <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                           AMOUNT
                         </th>
-                        <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                        <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                           STATUS
                         </th>
-                        <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                        <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                           UTR / DETAILS
                         </th>
-                        <th className="text-left px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                        <th className="text-left px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                           TIMESTAMP
                         </th>
                       </tr>
@@ -810,21 +810,21 @@ export function PaymentApproval() {
                           key={execution.id}
                           style={{
                             backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFBFC',
-                            borderBottom: '1px solid #E1E6EA',
+                            borderBottom: '1px solid var(--color-silver)',
                           }}
                         >
                           <td className="px-6 py-4">
-                            <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '13px' }}>
+                            <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '13px' }}>
                               {execution.invoiceNo}
                             </div>
                           </td>
                           <td className="px-4 py-4">
-                            <div style={{ color: '#0A0F14', fontSize: '13px' }}>
+                            <div style={{ color: 'var(--color-ink)', fontSize: '13px' }}>
                               {execution.vendor}
                             </div>
                           </td>
                           <td className="px-4 py-4 text-right">
-                            <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                            <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                               {formatCompactCurrency(execution.amount, batch.currency)}
                             </div>
                           </td>
@@ -846,7 +846,7 @@ export function PaymentApproval() {
                           </td>
                           <td className="px-6 py-4">
                             {execution.executedAt && (
-                              <div className="text-xs" style={{ color: '#6E7A82' }}>
+                              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                                 {new Date(execution.executedAt).toLocaleString('en-GB', {
                                   day: '2-digit',
                                   month: 'short',
@@ -877,15 +877,15 @@ export function PaymentApproval() {
           <div
             className="bg-white rounded-lg p-6 w-full max-w-lg"
             onClick={(e) => e.stopPropagation()}
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
-            <h3 className="text-lg mb-4" style={{ color: '#0A0F14', fontWeight: '700' }}>
+            <h3 className="text-lg mb-4" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
               {actionType === 'approve' ? 'Approve Payment Batch' :
                actionType === 'reject' ? 'Reject Payment Batch' : 'Request Additional Information'}
             </h3>
             
             <div className="mb-4">
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82', fontWeight: '600' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                 Comments {actionType === 'reject' ? '(Required)' : '(Optional)'}
               </label>
               <textarea
@@ -895,9 +895,9 @@ export function PaymentApproval() {
                 rows={4}
                 className="w-full px-4 py-3 rounded-lg text-sm"
                 style={{
-                  backgroundColor: '#F6F9FC',
-                  border: '1px solid #E1E6EA',
-                  color: '#0A0F14',
+                  backgroundColor: 'var(--color-cloud)',
+                  border: '1px solid var(--color-silver)',
+                  color: 'var(--color-ink)',
                 }}
               />
             </div>
@@ -908,8 +908,8 @@ export function PaymentApproval() {
                 className="px-4 py-2 rounded-lg text-sm transition-all"
                 style={{
                   backgroundColor: '#FFFFFF',
-                  color: '#6E7A82',
-                  border: '1px solid #E1E6EA',
+                  color: 'var(--color-mercury-grey)',
+                  border: '1px solid var(--color-silver)',
                 }}
               >
                 Cancel

@@ -12,18 +12,18 @@ export const APDebitNotes = () => {
     <DeskLayoutShell deskName="AP Desk" pageName="Debit Notes">
       <div style={{ 
         backgroundColor: '#FFFFFF', 
-        border: '1px solid #E1E6EA', 
+        border: '1px solid var(--color-silver)', 
         borderRadius: '8px', 
         padding: '20px'
       }}>
         <div style={{ 
           padding: '64px', 
-          backgroundColor: '#F6F9FC', 
-          border: '1px dashed #E1E6EA', 
+          backgroundColor: 'var(--color-cloud)', 
+          border: '1px dashed var(--color-silver)', 
           borderRadius: '4px',
           textAlign: 'center'
         }}>
-          <span style={{ fontSize: '12px', color: '#6E7A82' }}>Debit Notes Table Placeholder</span>
+          <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Debit Notes Table Placeholder</span>
         </div>
       </div>
     </DeskLayoutShell>

@@ -216,23 +216,23 @@ export function PRtoPOConversionEnhanced() {
 
   const getTypeColor = (type: PRType) => {
     switch (type) {
-      case 'Catalogue': return { bg: '#E8F7F8', color: '#00A9B7' };
-      case 'Regular': return { bg: '#E8F5E9', color: '#2E7D32' };
+      case 'Catalogue': return { bg: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
+      case 'Regular': return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)' };
       case 'Service': return { bg: '#E3F2FD', color: '#1976D2' };
       case 'Kit/Bundle': return { bg: '#F3E5F5', color: '#7B1FA2' };
-      case 'Asset/CAPEX': return { bg: '#FFF3E0', color: '#F57C00' };
+      case 'Asset/CAPEX': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' };
       case 'Blanket': return { bg: '#E1F5FE', color: '#0277BD' };
-      default: return { bg: '#F6F9FC', color: '#6E7A82' };
+      default: return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' };
     }
   };
 
   const getConsumptionColor = (status: PRConsumptionStatus) => {
     switch (status) {
-      case 'Open': return { bg: '#E8F5E9', color: '#2E7D32', border: '#81C784' };
+      case 'Open': return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)', border: '#81C784' };
       case 'Partially Consumed': return { bg: '#FEF3C7', color: '#D97706', border: '#FCD34D' };
       case 'Fully Consumed': return { bg: '#E0F2FE', color: '#0284C7', border: '#7DD3FC' };
-      case 'Closed': return { bg: '#FEE2E2', color: '#DC2626', border: '#FCA5A5' };
-      default: return { bg: '#F6F9FC', color: '#6E7A82', border: '#E1E6EA' };
+      case 'Closed': return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)', border: '#FCA5A5' };
+      default: return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
     }
   };
 
@@ -371,14 +371,14 @@ export function PRtoPOConversionEnhanced() {
     <div>
       {/* Entity Filter */}
       <div className="mb-6">
-        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
           Select Entity
         </label>
         <select
           value={selectedEntity}
           onChange={(e) => setSelectedEntity(e.target.value)}
           className="w-full md:w-96 px-4 py-2 rounded-lg"
-          style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
         >
           <option value="India HQ">India HQ</option>
           <option value="India Manufacturing">India Manufacturing</option>
@@ -388,17 +388,17 @@ export function PRtoPOConversionEnhanced() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-          <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Total PRs Available</p>
-          <p className="text-2xl" style={{ color: '#0A0F14' }}>{filteredPRs.length}</p>
+        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total PRs Available</p>
+          <p className="text-2xl" style={{ color: 'var(--color-ink)' }}>{filteredPRs.length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-          <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Selected PRs</p>
-          <p className="text-2xl" style={{ color: '#00A9B7' }}>{selectedPRs.length}</p>
+        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Selected PRs</p>
+          <p className="text-2xl" style={{ color: 'var(--color-teal)' }}>{selectedPRs.length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-          <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Total Value (Selected)</p>
-          <p className="text-xl" style={{ color: '#0A0F14' }}>
+        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Value (Selected)</p>
+          <p className="text-xl" style={{ color: 'var(--color-ink)' }}>
             {formatCurrency(
               mockApprovedPRs
                 .filter(pr => selectedPRs.includes(pr.id))
@@ -406,8 +406,8 @@ export function PRtoPOConversionEnhanced() {
             )}
           </p>
         </div>
-        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-          <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Partially Consumed PRs</p>
+        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Partially Consumed PRs</p>
           <p className="text-2xl" style={{ color: '#D97706' }}>
             {filteredPRs.filter(pr => pr.consumptionStatus === 'Partially Consumed').length}
           </p>
@@ -427,7 +427,7 @@ export function PRtoPOConversionEnhanced() {
               key={pr.id}
               className="bg-white rounded-lg"
               style={{ 
-                border: isSelected ? '2px solid #00A9B7' : '1px solid #E1E6EA',
+                border: isSelected ? '2px solid var(--color-teal)' : '1px solid var(--color-silver)',
                 backgroundColor: isSelected ? '#F6FFFE' : '#FFFFFF'
               }}
             >
@@ -440,14 +440,14 @@ export function PRtoPOConversionEnhanced() {
                       checked={isSelected}
                       onChange={() => togglePRSelection(pr.id)}
                       className="w-5 h-5 rounded"
-                      style={{ accentColor: '#00A9B7' }}
+                      style={{ accentColor: 'var(--color-teal)' }}
                     />
                   </div>
 
                   {/* PR Details */}
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <h3 className="text-sm" style={{ color: '#0A0F14' }}>{pr.id}</h3>
+                      <h3 className="text-sm" style={{ color: 'var(--color-ink)' }}>{pr.id}</h3>
                       
                       {/* PR Type Badge */}
                       <span
@@ -485,24 +485,24 @@ export function PRtoPOConversionEnhanced() {
                     {/* PR Info Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3 text-xs">
                       <div>
-                        <p style={{ color: '#6E7A82' }} className="mb-0.5">Requestor</p>
-                        <p style={{ color: '#0A0F14' }}>{pr.requestor}</p>
+                        <p style={{ color: 'var(--color-mercury-grey)' }} className="mb-0.5">Requestor</p>
+                        <p style={{ color: 'var(--color-ink)' }}>{pr.requestor}</p>
                       </div>
                       <div>
-                        <p style={{ color: '#6E7A82' }} className="mb-0.5">Vendor</p>
-                        <p style={{ color: '#0A0F14' }}>{pr.vendor || 'TBD'}</p>
+                        <p style={{ color: 'var(--color-mercury-grey)' }} className="mb-0.5">Vendor</p>
+                        <p style={{ color: 'var(--color-ink)' }}>{pr.vendor || 'TBD'}</p>
                       </div>
                       <div>
-                        <p style={{ color: '#6E7A82' }} className="mb-0.5">Amount Remaining</p>
-                        <p style={{ color: '#00A9B7' }}>{formatCurrency(pr.amountRemaining)}</p>
+                        <p style={{ color: 'var(--color-mercury-grey)' }} className="mb-0.5">Amount Remaining</p>
+                        <p style={{ color: 'var(--color-teal)' }}>{formatCurrency(pr.amountRemaining)}</p>
                       </div>
                       <div>
-                        <p style={{ color: '#6E7A82' }} className="mb-0.5">Items</p>
-                        <p style={{ color: '#0A0F14' }}>{pr.lineItems.filter(li => li.quantityRemaining > 0).length} items</p>
+                        <p style={{ color: 'var(--color-mercury-grey)' }} className="mb-0.5">Items</p>
+                        <p style={{ color: 'var(--color-ink)' }}>{pr.lineItems.filter(li => li.quantityRemaining > 0).length} items</p>
                       </div>
                       <div>
-                        <p style={{ color: '#6E7A82' }} className="mb-0.5">Need By</p>
-                        <p style={{ color: '#0A0F14' }}>{pr.needByDate}</p>
+                        <p style={{ color: 'var(--color-mercury-grey)' }} className="mb-0.5">Need By</p>
+                        <p style={{ color: 'var(--color-ink)' }}>{pr.needByDate}</p>
                       </div>
                     </div>
 
@@ -524,18 +524,18 @@ export function PRtoPOConversionEnhanced() {
                             >
                               <div className="flex items-center gap-2">
                                 <Package className="w-4 h-4" style={{ color: '#D97706' }} />
-                                <span style={{ color: '#0A0F14' }}>{history.poNumber}</span>
-                                <span style={{ color: '#6E7A82' }}>({history.poDate})</span>
+                                <span style={{ color: 'var(--color-ink)' }}>{history.poNumber}</span>
+                                <span style={{ color: 'var(--color-mercury-grey)' }}>({history.poDate})</span>
                               </div>
                               <div className="flex items-center gap-3">
-                                <span style={{ color: '#0A0F14' }}>
+                                <span style={{ color: 'var(--color-ink)' }}>
                                   {formatCurrency(history.amountConsumed)}
                                 </span>
                                 <span 
                                   className="px-2 py-0.5 rounded"
                                   style={{
-                                    backgroundColor: history.status === 'Created' ? '#E8F5E9' : '#FEE2E2',
-                                    color: history.status === 'Created' ? '#2E7D32' : '#DC2626'
+                                    backgroundColor: history.status === 'Created' ? 'var(--color-success-light)' : 'var(--color-error-light)',
+                                    color: history.status === 'Created' ? 'var(--color-success-dark)' : 'var(--color-error-dark)'
                                   }}
                                 >
                                   {history.status}
@@ -559,7 +559,7 @@ export function PRtoPOConversionEnhanced() {
         <button
           onClick={() => navigate('/procurement')}
           className="flex items-center gap-2 px-6 py-3 rounded-lg"
-          style={{ color: '#6E7A82', backgroundColor: '#F6F9FC' }}
+          style={{ color: 'var(--color-mercury-grey)', backgroundColor: 'var(--color-cloud)' }}
         >
           <ArrowLeft className="w-4 h-4" />
           Cancel
@@ -570,7 +570,7 @@ export function PRtoPOConversionEnhanced() {
           disabled={selectedPRs.length === 0}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white"
           style={{
-            backgroundColor: selectedPRs.length > 0 ? '#00A9B7' : '#E1E6EA',
+            backgroundColor: selectedPRs.length > 0 ? 'var(--color-teal)' : 'var(--color-silver)',
             cursor: selectedPRs.length > 0 ? 'pointer' : 'not-allowed'
           }}
         >
@@ -585,10 +585,10 @@ export function PRtoPOConversionEnhanced() {
   const renderGroupingSelection = () => (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl mb-2" style={{ color: '#0A0F14' }}>
+        <h2 className="text-xl mb-2" style={{ color: 'var(--color-ink)' }}>
           How should we group these PRs into POs?
         </h2>
-        <p className="text-sm" style={{ color: '#6E7A82' }}>
+        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
           Select the grouping logic to intelligently club multiple PRs into purchase orders
         </p>
       </div>
@@ -599,20 +599,20 @@ export function PRtoPOConversionEnhanced() {
           onClick={() => setGroupingMode('vendor')}
           className="p-6 rounded-lg text-left transition-all"
           style={{
-            border: groupingMode === 'vendor' ? '2px solid #00A9B7' : '1px solid #E1E6EA',
+            border: groupingMode === 'vendor' ? '2px solid var(--color-teal)' : '1px solid var(--color-silver)',
             backgroundColor: groupingMode === 'vendor' ? '#F6FFFE' : '#FFFFFF'
           }}
         >
           <div className="flex items-center gap-3 mb-3">
             <div 
               className="w-10 h-10 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: '#E8F7F8' }}
+              style={{ backgroundColor: 'var(--color-teal-tint)' }}
             >
-              <Building2 className="w-5 h-5" style={{ color: '#00A9B7' }} />
+              <Building2 className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
-            <h3 className="text-sm" style={{ color: '#0A0F14' }}>Group by Vendor</h3>
+            <h3 className="text-sm" style={{ color: 'var(--color-ink)' }}>Group by Vendor</h3>
           </div>
-          <p className="text-xs" style={{ color: '#6E7A82' }}>
+          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
             Create one PO per vendor. Best for vendor consolidation and simplified payments.
           </p>
         </button>
@@ -622,20 +622,20 @@ export function PRtoPOConversionEnhanced() {
           onClick={() => setGroupingMode('shipTo')}
           className="p-6 rounded-lg text-left transition-all"
           style={{
-            border: groupingMode === 'shipTo' ? '2px solid #00A9B7' : '1px solid #E1E6EA',
+            border: groupingMode === 'shipTo' ? '2px solid var(--color-teal)' : '1px solid var(--color-silver)',
             backgroundColor: groupingMode === 'shipTo' ? '#F6FFFE' : '#FFFFFF'
           }}
         >
           <div className="flex items-center gap-3 mb-3">
             <div 
               className="w-10 h-10 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: '#E8F5E9' }}
+              style={{ backgroundColor: 'var(--color-success-light)' }}
             >
-              <MapPin className="w-5 h-5" style={{ color: '#2E7D32' }} />
+              <MapPin className="w-5 h-5" style={{ color: 'var(--color-success-dark)' }} />
             </div>
-            <h3 className="text-sm" style={{ color: '#0A0F14' }}>Group by Ship-To</h3>
+            <h3 className="text-sm" style={{ color: 'var(--color-ink)' }}>Group by Ship-To</h3>
           </div>
-          <p className="text-xs" style={{ color: '#6E7A82' }}>
+          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
             Create one PO per delivery location. Best for logistics planning and receiving.
           </p>
         </button>
@@ -645,7 +645,7 @@ export function PRtoPOConversionEnhanced() {
           onClick={() => setGroupingMode('costCentre')}
           className="p-6 rounded-lg text-left transition-all"
           style={{
-            border: groupingMode === 'costCentre' ? '2px solid #00A9B7' : '1px solid #E1E6EA',
+            border: groupingMode === 'costCentre' ? '2px solid var(--color-teal)' : '1px solid var(--color-silver)',
             backgroundColor: groupingMode === 'costCentre' ? '#F6FFFE' : '#FFFFFF'
           }}
         >
@@ -656,9 +656,9 @@ export function PRtoPOConversionEnhanced() {
             >
               <DollarSign className="w-5 h-5" style={{ color: '#D97706' }} />
             </div>
-            <h3 className="text-sm" style={{ color: '#0A0F14' }}>Group by Cost Centre</h3>
+            <h3 className="text-sm" style={{ color: 'var(--color-ink)' }}>Group by Cost Centre</h3>
           </div>
-          <p className="text-xs" style={{ color: '#6E7A82' }}>
+          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
             Create one PO per cost centre. Best for budget tracking and departmental accounting.
           </p>
         </button>
@@ -668,7 +668,7 @@ export function PRtoPOConversionEnhanced() {
           onClick={() => setGroupingMode('needByDate')}
           className="p-6 rounded-lg text-left transition-all"
           style={{
-            border: groupingMode === 'needByDate' ? '2px solid #00A9B7' : '1px solid #E1E6EA',
+            border: groupingMode === 'needByDate' ? '2px solid var(--color-teal)' : '1px solid var(--color-silver)',
             backgroundColor: groupingMode === 'needByDate' ? '#F6FFFE' : '#FFFFFF'
           }}
         >
@@ -679,9 +679,9 @@ export function PRtoPOConversionEnhanced() {
             >
               <Calendar className="w-5 h-5" style={{ color: '#1976D2' }} />
             </div>
-            <h3 className="text-sm" style={{ color: '#0A0F14' }}>Group by Need-By Date</h3>
+            <h3 className="text-sm" style={{ color: 'var(--color-ink)' }}>Group by Need-By Date</h3>
           </div>
-          <p className="text-xs" style={{ color: '#6E7A82' }}>
+          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
             Create one PO per delivery date. Best for production planning and JIT inventory.
           </p>
         </button>
@@ -692,7 +692,7 @@ export function PRtoPOConversionEnhanced() {
         <button
           onClick={() => setStep(1)}
           className="flex items-center gap-2 px-6 py-3 rounded-lg"
-          style={{ color: '#6E7A82', backgroundColor: '#F6F9FC' }}
+          style={{ color: 'var(--color-mercury-grey)', backgroundColor: 'var(--color-cloud)' }}
         >
           <ArrowLeft className="w-4 h-4" />
           Back to PR Selection
@@ -701,7 +701,7 @@ export function PRtoPOConversionEnhanced() {
         <button
           onClick={generatePODrafts}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white"
-          style={{ backgroundColor: '#00A9B7' }}
+          style={{ backgroundColor: 'var(--color-teal)' }}
         >
           Generate PO Drafts
           <ChevronRight className="w-4 h-4" />
@@ -714,29 +714,29 @@ export function PRtoPOConversionEnhanced() {
   const renderPOPreview = () => (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl mb-2" style={{ color: '#0A0F14' }}>
+        <h2 className="text-xl mb-2" style={{ color: 'var(--color-ink)' }}>
           Review & Confirm PO Drafts
         </h2>
-        <p className="text-sm" style={{ color: '#6E7A82' }}>
+        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
           {poDrafts.length} PO(s) will be created from {selectedPRs.length} PR(s)
         </p>
       </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-          <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Total POs to Create</p>
-          <p className="text-2xl" style={{ color: '#00A9B7' }}>{poDrafts.length}</p>
+        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total POs to Create</p>
+          <p className="text-2xl" style={{ color: 'var(--color-teal)' }}>{poDrafts.length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-          <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Total Value</p>
-          <p className="text-xl" style={{ color: '#0A0F14' }}>
+        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Value</p>
+          <p className="text-xl" style={{ color: 'var(--color-ink)' }}>
             {formatCurrency(poDrafts.reduce((sum, po) => sum + po.totalAmount, 0))}
           </p>
         </div>
-        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-          <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Total Line Items</p>
-          <p className="text-2xl" style={{ color: '#0A0F14' }}>
+        <div className="bg-white p-4 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Line Items</p>
+          <p className="text-2xl" style={{ color: 'var(--color-ink)' }}>
             {poDrafts.reduce((sum, po) => sum + po.itemCount, 0)}
           </p>
         </div>
@@ -748,40 +748,40 @@ export function PRtoPOConversionEnhanced() {
           <div
             key={po.id}
             className="bg-white rounded-lg p-6"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg mb-2" style={{ color: '#0A0F14' }}>
+                <h3 className="text-lg mb-2" style={{ color: 'var(--color-ink)' }}>
                   PO #{idx + 1} - {po.vendor}
                 </h3>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#E8F7F8', color: '#00A9B7' }}>
+                  <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}>
                     {po.prIds.length} PRs
                   </span>
-                  <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#E8F5E9', color: '#2E7D32' }}>
+                  <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-success-light)', color: 'var(--color-success-dark)' }}>
                     {po.itemCount} items
                   </span>
-                  <span className="text-xs" style={{ color: '#6E7A82' }}>
+                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                     Ship to: {po.shipTo}
                   </span>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Total Amount</p>
-                <p className="text-xl" style={{ color: '#00A9B7' }}>{formatCurrency(po.totalAmount)}</p>
+                <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Amount</p>
+                <p className="text-xl" style={{ color: 'var(--color-teal)' }}>{formatCurrency(po.totalAmount)}</p>
               </div>
             </div>
 
             {/* PR References */}
             <div className="mb-4">
-              <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>Source PRs:</p>
+              <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Source PRs:</p>
               <div className="flex items-center gap-2 flex-wrap">
                 {po.prIds.map(prId => (
                   <span 
                     key={prId}
                     className="text-xs px-2 py-1 rounded"
-                    style={{ backgroundColor: '#F6F9FC', color: '#0A0F14' }}
+                    style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)' }}
                   >
                     {prId}
                   </span>
@@ -792,39 +792,39 @@ export function PRtoPOConversionEnhanced() {
             {/* Line Items Table */}
             <div 
               className="rounded-lg overflow-hidden"
-              style={{ border: '1px solid #E1E6EA' }}
+              style={{ border: '1px solid var(--color-silver)' }}
             >
               <table className="w-full">
                 <thead>
-                  <tr style={{ backgroundColor: '#F6F9FC' }}>
-                    <th className="text-left p-3 text-xs" style={{ color: '#6E7A82' }}>Item</th>
-                    <th className="text-left p-3 text-xs" style={{ color: '#6E7A82' }}>From PR</th>
-                    <th className="text-right p-3 text-xs" style={{ color: '#6E7A82' }}>Qty</th>
-                    <th className="text-right p-3 text-xs" style={{ color: '#6E7A82' }}>Unit Price</th>
-                    <th className="text-right p-3 text-xs" style={{ color: '#6E7A82' }}>Amount</th>
+                  <tr style={{ backgroundColor: 'var(--color-cloud)' }}>
+                    <th className="text-left p-3 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Item</th>
+                    <th className="text-left p-3 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>From PR</th>
+                    <th className="text-right p-3 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Qty</th>
+                    <th className="text-right p-3 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Unit Price</th>
+                    <th className="text-right p-3 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {po.lineItems.map((li, liIdx) => (
                     <tr 
                       key={`${po.id}-${liIdx}`}
-                      style={{ borderTop: '1px solid #E1E6EA' }}
+                      style={{ borderTop: '1px solid var(--color-silver)' }}
                     >
                       <td className="p-3">
-                        <p className="text-xs" style={{ color: '#0A0F14' }}>{li.itemName}</p>
-                        <p className="text-xs" style={{ color: '#6E7A82' }}>{li.itemCode}</p>
+                        <p className="text-xs" style={{ color: 'var(--color-ink)' }}>{li.itemName}</p>
+                        <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{li.itemCode}</p>
                       </td>
                       <td className="p-3">
                         <span 
                           className="text-xs px-2 py-0.5 rounded"
-                          style={{ backgroundColor: '#E8F7F8', color: '#00A9B7' }}
+                          style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}
                         >
                           {li.prId}
                         </span>
                       </td>
-                      <td className="p-3 text-right text-xs" style={{ color: '#0A0F14' }}>{li.quantity}</td>
-                      <td className="p-3 text-right text-xs" style={{ color: '#0A0F14' }}>₹{li.unitPrice.toLocaleString()}</td>
-                      <td className="p-3 text-right text-xs" style={{ color: '#0A0F14' }}>
+                      <td className="p-3 text-right text-xs" style={{ color: 'var(--color-ink)' }}>{li.quantity}</td>
+                      <td className="p-3 text-right text-xs" style={{ color: 'var(--color-ink)' }}>₹{li.unitPrice.toLocaleString()}</td>
+                      <td className="p-3 text-right text-xs" style={{ color: 'var(--color-ink)' }}>
                         ₹{li.totalAmount.toLocaleString()}
                       </td>
                     </tr>
@@ -841,7 +841,7 @@ export function PRtoPOConversionEnhanced() {
         <button
           onClick={() => setStep(2)}
           className="flex items-center gap-2 px-6 py-3 rounded-lg"
-          style={{ color: '#6E7A82', backgroundColor: '#F6F9FC' }}
+          style={{ color: 'var(--color-mercury-grey)', backgroundColor: 'var(--color-cloud)' }}
         >
           <ArrowLeft className="w-4 h-4" />
           Change Grouping
@@ -850,7 +850,7 @@ export function PRtoPOConversionEnhanced() {
         <button
           onClick={createPOs}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white"
-          style={{ backgroundColor: '#00A9B7' }}
+          style={{ backgroundColor: 'var(--color-teal)' }}
         >
           <CheckCircle className="w-4 h-4" />
           Create {poDrafts.length} PO(s)
@@ -860,22 +860,22 @@ export function PRtoPOConversionEnhanced() {
   );
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }} className="p-8">
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="p-8">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => navigate('/procurement')}
             className="p-2 rounded-lg"
-            style={{ color: '#6E7A82', backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+            style={{ color: 'var(--color-mercury-grey)', backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>
               PR to PO Conversion
             </h1>
-            <p className="text-sm" style={{ color: '#6E7A82' }}>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               Convert approved Purchase Requisitions into Purchase Orders with full consumption tracking
             </p>
           </div>
@@ -893,15 +893,15 @@ export function PRtoPOConversionEnhanced() {
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
                   style={{
-                    backgroundColor: step >= s.num ? '#00A9B7' : '#E1E6EA',
-                    color: step >= s.num ? '#FFFFFF' : '#6E7A82'
+                    backgroundColor: step >= s.num ? 'var(--color-teal)' : 'var(--color-silver)',
+                    color: step >= s.num ? '#FFFFFF' : 'var(--color-mercury-grey)'
                   }}
                 >
                   {step > s.num ? <Check className="w-4 h-4" /> : s.num}
                 </div>
                 <span 
                   className="text-sm"
-                  style={{ color: step >= s.num ? '#0A0F14' : '#6E7A82' }}
+                  style={{ color: step >= s.num ? 'var(--color-ink)' : 'var(--color-mercury-grey)' }}
                 >
                   {s.label}
                 </span>
@@ -909,7 +909,7 @@ export function PRtoPOConversionEnhanced() {
               {idx < 2 && (
                 <div 
                   className="w-12 h-0.5"
-                  style={{ backgroundColor: step > s.num ? '#00A9B7' : '#E1E6EA' }}
+                  style={{ backgroundColor: step > s.num ? 'var(--color-teal)' : 'var(--color-silver)' }}
                 />
               )}
             </div>

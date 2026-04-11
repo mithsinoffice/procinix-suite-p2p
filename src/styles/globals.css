@@ -2,43 +2,66 @@
 
 :root {
   --font-size: 16px;
+
+  /* ── Procinix Brand Palette ────────────────────────────── */
+  --color-teal: #00A9B7;
+  --color-teal-dark: #007D87;
+  --color-teal-light: #D6F7F9;
+  --color-teal-tint: #E8F7F8;
+  --color-silver: #E1E6EA;
+  --color-mercury-grey: #6E7A82;
+  --color-success: #00C796;
+  --color-success-dark: #2E7D32;
+  --color-success-light: #E8F5E9;
+  --color-warning: #FFC75E;
+  --color-warning-dark: #F57C00;
+  --color-warning-light: #FFF3E0;
+  --color-error: #FF4E5B;
+  --color-error-dark: #DC2626;
+  --color-error-light: #FEE2E2;
+  --color-ink: #0A0F14;
+  --color-cloud: #F6F9FC;
+  --color-fog: #D7E3EA;
+  --color-slate: #9AA6AF;
+
+  /* ── shadcn/ui design tokens ───────────────────────────── */
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #030213;
-  --primary-foreground: oklch(1 0 0);
+  --primary: var(--color-teal);
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.95 0.0058 264.53);
-  --secondary-foreground: #030213;
+  --secondary-foreground: var(--color-ink);
   --muted: #ececf0;
-  --muted-foreground: #717182;
+  --muted-foreground: var(--color-mercury-grey);
   --accent: #e9ebef;
-  --accent-foreground: #030213;
-  --destructive: #d4183d;
+  --accent-foreground: var(--color-ink);
+  --destructive: var(--color-error);
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
+  --border: var(--color-silver);
   --input: transparent;
-  --input-background: #f3f3f5;
+  --input-background: var(--color-cloud);
   --switch-background: #cbced4;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --ring: var(--color-teal);
+  --chart-1: var(--color-teal);
+  --chart-2: var(--color-success);
+  --chart-3: var(--color-teal-dark);
+  --chart-4: var(--color-warning);
+  --chart-5: var(--color-error);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: var(--color-teal);
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-border: var(--color-silver);
+  --sidebar-ring: var(--color-teal);
 }
 
 .dark {
@@ -79,6 +102,28 @@
 }
 
 @theme inline {
+  /* ── Procinix brand utilities (e.g. bg-px-teal, text-px-ink) ── */
+  --color-px-teal: var(--color-teal);
+  --color-px-teal-dark: var(--color-teal-dark);
+  --color-px-teal-light: var(--color-teal-light);
+  --color-px-teal-tint: var(--color-teal-tint);
+  --color-px-silver: var(--color-silver);
+  --color-px-mercury: var(--color-mercury-grey);
+  --color-px-success: var(--color-success);
+  --color-px-success-dark: var(--color-success-dark);
+  --color-px-success-light: var(--color-success-light);
+  --color-px-warning: var(--color-warning);
+  --color-px-warning-dark: var(--color-warning-dark);
+  --color-px-warning-light: var(--color-warning-light);
+  --color-px-error: var(--color-error);
+  --color-px-error-dark: var(--color-error-dark);
+  --color-px-error-light: var(--color-error-light);
+  --color-px-ink: var(--color-ink);
+  --color-px-cloud: var(--color-cloud);
+  --color-px-fog: var(--color-fog);
+  --color-px-slate: var(--color-slate);
+
+  /* ── shadcn/ui design tokens ── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -188,4 +233,398 @@
 
 html {
   font-size: var(--font-size);
+}
+
+/* ─────────────────────────────────────────────────────────
+   Procinix Global Component Styles
+   ───────────────────────────────────────────────────────── */
+
+/* ── Focus ring (teal) ────────────────────────────────── */
+@layer base {
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--color-teal) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-teal) 18%, transparent);
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--color-teal);
+    outline-offset: 2px;
+  }
+}
+
+/* ── Buttons ──────────────────────────────────────────── */
+@layer components {
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background-color: var(--color-teal);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+  .btn-primary:hover {
+    background-color: var(--color-teal-dark);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background-color: var(--color-cloud);
+    color: var(--color-mercury-grey);
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid var(--color-silver);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+  .btn-secondary:hover {
+    background-color: var(--color-silver);
+    color: var(--color-ink);
+  }
+
+  .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background-color: var(--color-error);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+  .btn-danger:hover {
+    background-color: var(--color-error-dark);
+  }
+
+  .btn-success {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background-color: var(--color-success);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+  }
+  .btn-success:hover {
+    background-color: var(--color-success-dark);
+  }
+}
+
+/* ── Badges ───────────────────────────────────────────── */
+@layer components {
+  .badge-teal {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    background-color: var(--color-teal-tint);
+    color: var(--color-teal-dark);
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 9999px;
+  }
+
+  .badge-success {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    background-color: var(--color-success-light);
+    color: var(--color-success-dark);
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 9999px;
+  }
+
+  .badge-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    background-color: var(--color-warning-light);
+    color: var(--color-warning-dark);
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 9999px;
+  }
+
+  .badge-error {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    background-color: var(--color-error-light);
+    color: var(--color-error-dark);
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 9999px;
+  }
+
+  .badge-neutral {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    background-color: var(--color-cloud);
+    color: var(--color-mercury-grey);
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 9999px;
+  }
+}
+
+/* ── Section headers ──────────────────────────────────── */
+@layer components {
+  .section-header {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-silver);
+  }
+
+  .section-card {
+    background-color: #fff;
+    border: 1px solid var(--color-silver);
+    border-radius: 8px;
+    padding: 24px;
+  }
+
+  .section-card-accent {
+    background-color: #fff;
+    border: 2px solid var(--color-teal);
+    border-radius: 8px;
+    padding: 24px;
+  }
+}
+
+/* ── Form controls ────────────────────────────────────── */
+@layer components {
+  .px-input {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--color-silver);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--color-ink);
+    background-color: #fff;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .px-select {
+    width: 100%;
+    height: 42px;
+    padding: 0 36px 0 12px;
+    border: 1px solid var(--color-silver);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--color-ink);
+    background-color: #fff;
+    outline: none;
+    box-sizing: border-box;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236E7A82' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px 16px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .px-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-ink);
+    margin-bottom: 8px;
+  }
+
+  .px-required::after {
+    content: ' *';
+    color: var(--color-error);
+  }
+
+  .px-input-readonly {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--color-silver);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--color-mercury-grey);
+    background-color: var(--color-cloud);
+    outline: none;
+    box-sizing: border-box;
+    cursor: default;
+  }
+}
+
+/* ── Table headers ────────────────────────────────────── */
+@layer components {
+  .px-table-header {
+    background-color: var(--color-cloud);
+    color: var(--color-mercury-grey);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+}
+
+/* ── Form section primitives ──────────────────────────── */
+@layer components {
+  .px-section-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background-color: var(--color-teal);
+    flex-shrink: 0;
+  }
+
+  .px-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-mercury-grey);
+    white-space: nowrap;
+  }
+
+  .px-check-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid var(--color-silver);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+    background-color: #ffffff;
+  }
+
+  .px-check-card[data-checked="true"] {
+    border-color: var(--color-teal);
+    background-color: var(--color-teal-tint);
+  }
+
+  .px-input-compact {
+    width: 100%;
+    height: 38px;
+    padding: 0 8px;
+    border: 1px solid var(--color-silver);
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--color-ink);
+    background-color: #ffffff;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .px-select-compact {
+    width: 100%;
+    height: 38px;
+    padding: 0 32px 0 8px;
+    border: 1px solid var(--color-silver);
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--color-ink);
+    background-color: #ffffff;
+    outline: none;
+    box-sizing: border-box;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236E7A82' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 14px 14px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+}
+
+/* ── Procinix hardcoded overrides (purge-safe) ────────── */
+
+.btn-primary {
+  background-color: #007D87 !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+.btn-primary:hover {
+  background-color: #00A9B7 !important;
+}
+
+.badge-active {
+  background: #E6FBF5 !important;
+  color: #007D60 !important;
+  border: 0.5px solid #9FE8D0 !important;
+}
+.badge-inactive {
+  background: #FFF8EC !important;
+  color: #9A6800 !important;
+  border: 0.5px solid #FFE4A0 !important;
+}
+.badge-draft {
+  background: #D6F7F9 !important;
+  color: #007D87 !important;
+  border: 0.5px solid #9FE8EE !important;
+}
+.badge-error {
+  background: #FEE2E2 !important;
+  color: #DC2626 !important;
+}
+
+.px-input:focus {
+  border-color: #00A9B7 !important;
+  box-shadow: 0 0 0 3px rgba(0,169,183,0.12) !important;
+}
+
+.px-progress-fill {
+  background-color: #00A9B7 !important;
+}
+
+.px-section-label {
+  color: #007D87 !important;
+}
+
+.px-section-dot {
+  background-color: #00A9B7 !important;
+}
+
+.sidebar-active {
+  background: #D6F7F9 !important;
+  color: #007D87 !important;
+  border-left: 3px solid #00A9B7 !important;
 }

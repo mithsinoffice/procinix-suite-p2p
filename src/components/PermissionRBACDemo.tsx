@@ -39,12 +39,12 @@ export function PermissionRBACDemo() {
   };
 
   const getPermissionColor = (permission: string) => {
-    if (permission.includes('.APPROVE') || permission.includes('.REJECT')) return '#00A9B7';
+    if (permission.includes('.APPROVE') || permission.includes('.REJECT')) return 'var(--color-teal)';
     if (permission.includes('.CREATE') || permission.includes('.EDIT') || 
         permission.includes('.DELETE') || permission.includes('.MANAGE') ||
         permission.includes('.EXECUTE') || permission.includes('.POST')) return '#10B981';
     if (permission.includes('.VIEW')) return '#F59E0B';
-    return '#6E7A82';
+    return 'var(--color-mercury-grey)';
   };
 
   const getPermissionLabel = (permission: string) => {
@@ -56,14 +56,14 @@ export function PermissionRBACDemo() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="p-8 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>
+          <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
             Permission-Based RBAC Demo
           </h1>
-          <p style={{ color: '#6E7A82' }}>
+          <p style={{ color: 'var(--color-mercury-grey)' }}>
             Switch between roles to see granular permission-based access control in action
           </p>
         </div>
@@ -71,45 +71,45 @@ export function PermissionRBACDemo() {
         {/* Current Context */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Company Info */}
-          <div className="bg-white rounded-xl p-6" style={{ border: '2px solid #E1E6EA' }}>
+          <div className="bg-white rounded-xl p-6" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-                <Building2 className="w-5 h-5" style={{ color: '#00A9B7' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+                <Building2 className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
-              <h2 className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>Current Company</h2>
+              <h2 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Current Company</h2>
             </div>
             <div className="space-y-2">
               <div>
-                <span className="text-sm" style={{ color: '#6E7A82' }}>Code: </span>
-                <span style={{ color: '#0A0F14', fontWeight: '600' }}>{currentCompany.code}</span>
+                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Code: </span>
+                <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{currentCompany.code}</span>
               </div>
               <div>
-                <span className="text-sm" style={{ color: '#6E7A82' }}>Name: </span>
-                <span style={{ color: '#0A0F14' }}>{currentCompany.name}</span>
+                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Name: </span>
+                <span style={{ color: 'var(--color-ink)' }}>{currentCompany.name}</span>
               </div>
             </div>
           </div>
 
           {/* Current Role */}
-          <div className="bg-white rounded-xl p-6" style={{ border: '2px solid #E1E6EA' }}>
+          <div className="bg-white rounded-xl p-6" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-                <Shield className="w-5 h-5" style={{ color: '#00A9B7' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+                <Shield className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
-              <h2 className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>Current Role</h2>
+              <h2 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Current Role</h2>
             </div>
             <div className="space-y-3">
               <div 
                 className="px-4 py-3 rounded-lg"
-                style={{ backgroundColor: '#00A9B720', border: '2px solid #00A9B7' }}
+                style={{ backgroundColor: 'var(--color-teal)20', border: '2px solid var(--color-teal)' }}
               >
-                <span className="text-lg" style={{ color: '#00A9B7', fontWeight: '600' }}>
+                <span className="text-lg" style={{ color: 'var(--color-teal)', fontWeight: '600' }}>
                   {currentRole.roleName}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Unlock className="w-4 h-4" style={{ color: '#10B981' }} />
-                <span className="text-sm" style={{ color: '#6E7A82' }}>
+                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   {currentRole.permissions.length} permissions granted
                 </span>
               </div>
@@ -118,12 +118,12 @@ export function PermissionRBACDemo() {
         </div>
 
         {/* Role Switcher */}
-        <div className="bg-white rounded-xl p-6 mb-8" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-8" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-4">
-            <Users className="w-5 h-5" style={{ color: '#00A9B7' }} />
-            <h2 className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>Switch Role to Test RBAC</h2>
+            <Users className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+            <h2 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Switch Role to Test RBAC</h2>
           </div>
-          <p className="text-sm mb-4" style={{ color: '#6E7A82' }}>
+          <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
             Click on any role to switch and see how permissions and navigation change dynamically
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -133,16 +133,16 @@ export function PermissionRBACDemo() {
                 onClick={() => switchRole(role.roleId)}
                 className="p-4 rounded-lg text-left transition-all"
                 style={{
-                  backgroundColor: role.roleId === currentRole.roleId ? '#00A9B720' : '#F6F9FC',
-                  border: `2px solid ${role.roleId === currentRole.roleId ? '#00A9B7' : '#E1E6EA'}`,
-                  color: role.roleId === currentRole.roleId ? '#00A9B7' : '#0A0F14'
+                  backgroundColor: role.roleId === currentRole.roleId ? 'var(--color-teal)20' : 'var(--color-cloud)',
+                  border: `2px solid ${role.roleId === currentRole.roleId ? 'var(--color-teal)' : 'var(--color-silver)'}`,
+                  color: role.roleId === currentRole.roleId ? 'var(--color-teal)' : 'var(--color-ink)'
                 }}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="w-4 h-4" />
                   <span style={{ fontWeight: '600', fontSize: '14px' }}>{role.roleName}</span>
                 </div>
-                <div className="text-xs" style={{ color: '#6E7A82' }}>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                   {role.permissions.length} permissions
                 </div>
               </button>
@@ -156,14 +156,14 @@ export function PermissionRBACDemo() {
             if (permissions.length === 0) return null;
 
             return (
-              <div key={category} className="bg-white rounded-xl p-6" style={{ border: '2px solid #E1E6EA' }}>
-                <h2 className="text-lg mb-4 flex items-center gap-2" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <div key={category} className="bg-white rounded-xl p-6" style={{ border: '2px solid var(--color-silver)' }}>
+                <h2 className="text-lg mb-4 flex items-center gap-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                   {category}
                   <span 
                     className="px-2 py-0.5 rounded text-xs"
                     style={{ 
-                      backgroundColor: '#F6F9FC',
-                      color: '#6E7A82',
+                      backgroundColor: 'var(--color-cloud)',
+                      color: 'var(--color-mercury-grey)',
                       fontWeight: '600'
                     }}
                   >
@@ -181,7 +181,7 @@ export function PermissionRBACDemo() {
                       <div 
                         key={permission}
                         className="flex items-center gap-3 p-3 rounded-lg"
-                        style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                        style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                       >
                         <div 
                           className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -190,7 +190,7 @@ export function PermissionRBACDemo() {
                           <PermIcon className="w-4 h-4" style={{ color }} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm truncate" style={{ color: '#0A0F14', fontWeight: '500' }}>
+                          <div className="text-sm truncate" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
                             {resource}
                           </div>
                           <div 
@@ -225,8 +225,8 @@ export function PermissionRBACDemo() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: '#00A9B720' }}>
-                <CheckCircle className="w-3.5 h-3.5" style={{ color: '#00A9B7' }} />
+              <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)20' }}>
+                <CheckCircle className="w-3.5 h-3.5" style={{ color: 'var(--color-teal)' }} />
               </div>
               <div>
                 <div className="text-xs" style={{ color: '#1E3A8A', fontWeight: '600' }}>Approve Permissions</div>

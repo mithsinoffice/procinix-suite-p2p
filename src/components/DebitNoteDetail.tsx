@@ -70,15 +70,15 @@ export function DebitNoteDetail() {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'Draft':
-        return { color: '#6E7A82', bgColor: '#F6F9FC' };
+        return { color: 'var(--color-mercury-grey)', bgColor: 'var(--color-cloud)' };
       case 'Issued':
-        return { color: '#00A9B7', bgColor: '#E8F7F8' };
+        return { color: 'var(--color-teal)', bgColor: 'var(--color-teal-tint)' };
       case 'Adjusted':
         return { color: '#F59E0B', bgColor: '#FEF3C7' };
       case 'Closed':
         return { color: '#10B981', bgColor: '#D1FAE5' };
       default:
-        return { color: '#6E7A82', bgColor: '#F6F9FC' };
+        return { color: 'var(--color-mercury-grey)', bgColor: 'var(--color-cloud)' };
     }
   };
 
@@ -134,22 +134,22 @@ export function DebitNoteDetail() {
   };
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button
             onClick={handleBack}
             className="p-2 rounded-lg transition-colors"
-            style={{ color: '#6E7A82' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E1E6EA'}
+            style={{ color: 'var(--color-mercury-grey)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-silver)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl" style={{ color: '#0A0F14' }}>
+              <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>
                 {debitNote.debitNoteNumber}
               </h1>
               <span
@@ -162,7 +162,7 @@ export function DebitNoteDetail() {
                 {debitNote.status}
               </span>
             </div>
-            <p style={{ color: '#6E7A82' }}>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>
               Debit note against {debitNote.referenceType} {debitNote.referenceNumber}
             </p>
           </div>
@@ -173,8 +173,8 @@ export function DebitNoteDetail() {
             <button
               onClick={handleEdit}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
-              style={{ border: '1px solid #00A9B7', color: '#00A9B7', backgroundColor: 'white' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E8F7F8'}
+              style={{ border: '1px solid var(--color-teal)', color: 'var(--color-teal)', backgroundColor: 'white' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-tint)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
             >
               <Edit className="w-4 h-4" />
@@ -185,9 +185,9 @@ export function DebitNoteDetail() {
             onClick={() => setShowAccountingPreview(!showAccountingPreview)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
             style={{ 
-              border: '1px solid #E1E6EA', 
-              color: showAccountingPreview ? '#00A9B7' : '#0A0F14',
-              backgroundColor: showAccountingPreview ? '#E8F7F8' : 'white'
+              border: '1px solid var(--color-silver)', 
+              color: showAccountingPreview ? 'var(--color-teal)' : 'var(--color-ink)',
+              backgroundColor: showAccountingPreview ? 'var(--color-teal-tint)' : 'white'
             }}
           >
             <Eye className="w-4 h-4" />
@@ -198,10 +198,10 @@ export function DebitNoteDetail() {
 
       {/* Accounting Preview (Collapsible) */}
       {showAccountingPreview && (
-        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-4">
-            <Receipt className="w-5 h-5" style={{ color: '#00A9B7' }} />
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Accounting Entry Preview</h2>
+            <Receipt className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Accounting Entry Preview</h2>
             <span 
               className="px-3 py-1 rounded-full text-sm"
               style={{ backgroundColor: '#FEF3C7', color: '#F59E0B' }}
@@ -210,57 +210,57 @@ export function DebitNoteDetail() {
             </span>
           </div>
           
-          <p className="text-sm mb-4" style={{ color: '#6E7A82' }}>
+          <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
             This is a preview of the accounting entry that will be generated when this debit note is posted.
             GL mappings are derived from Vendor and Item masters.
           </p>
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ backgroundColor: '#F6F9FC' }}>
+              <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm" style={{ color: '#6E7A82' }}>
+                  <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                     Account Code
                   </th>
-                  <th className="px-4 py-3 text-left text-sm" style={{ color: '#6E7A82' }}>
+                  <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                     Account Name
                   </th>
-                  <th className="px-4 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>
+                  <th className="px-4 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                     Debit
                   </th>
-                  <th className="px-4 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>
+                  <th className="px-4 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                     Credit
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {accountingEntries.map((entry, index) => (
-                  <tr key={index} style={{ borderTop: '1px solid #E1E6EA' }}>
-                    <td className="px-4 py-3" style={{ color: '#0A0F14' }}>
+                  <tr key={index} style={{ borderTop: '1px solid var(--color-silver)' }}>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-ink)' }}>
                       {entry.accountCode}
                     </td>
-                    <td className="px-4 py-3" style={{ color: '#6E7A82' }}>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-mercury-grey)' }}>
                       {entry.accountName}
                     </td>
-                    <td className="px-4 py-3 text-right" style={{ color: entry.debit > 0 ? '#0A0F14' : '#6E7A82' }}>
+                    <td className="px-4 py-3 text-right" style={{ color: entry.debit > 0 ? 'var(--color-ink)' : 'var(--color-mercury-grey)' }}>
                       {entry.debit > 0 ? `${debitNote.currency} ${entry.debit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
                     </td>
-                    <td className="px-4 py-3 text-right" style={{ color: entry.credit > 0 ? '#0A0F14' : '#6E7A82' }}>
+                    <td className="px-4 py-3 text-right" style={{ color: entry.credit > 0 ? 'var(--color-ink)' : 'var(--color-mercury-grey)' }}>
                       {entry.credit > 0 ? `${debitNote.currency} ${entry.credit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
                     </td>
                   </tr>
                 ))}
                 {/* Totals */}
-                <tr style={{ borderTop: '2px solid #E1E6EA' }}>
-                  <td className="px-4 py-3" colSpan={2} style={{ color: '#0A0F14' }}>
+                <tr style={{ borderTop: '2px solid var(--color-silver)' }}>
+                  <td className="px-4 py-3" colSpan={2} style={{ color: 'var(--color-ink)' }}>
                     <strong>Total</strong>
                   </td>
-                  <td className="px-4 py-3 text-right" style={{ color: '#0A0F14' }}>
+                  <td className="px-4 py-3 text-right" style={{ color: 'var(--color-ink)' }}>
                     <strong>
                       {debitNote.currency} {debitNote.debitAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </strong>
                   </td>
-                  <td className="px-4 py-3 text-right" style={{ color: '#0A0F14' }}>
+                  <td className="px-4 py-3 text-right" style={{ color: 'var(--color-ink)' }}>
                     <strong>
                       {debitNote.currency} {debitNote.debitAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </strong>
@@ -270,8 +270,8 @@ export function DebitNoteDetail() {
             </table>
           </div>
 
-          <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-            <p className="text-sm" style={{ color: '#6E7A82' }}>
+          <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               <strong>Note:</strong> This entry will only be posted to the ERP system after approval and payment adjustment.
               GL accounts cannot be modified at the debit note level.
             </p>
@@ -280,24 +280,24 @@ export function DebitNoteDetail() {
       )}
 
       {/* Debit Note Details Card */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
-        <h2 className="text-xl mb-6" style={{ color: '#0A0F14' }}>Debit Note Details</h2>
+      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <h2 className="text-xl mb-6" style={{ color: 'var(--color-ink)' }}>Debit Note Details</h2>
         
         <div className="grid grid-cols-3 gap-6 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Hash className="w-4 h-4" style={{ color: '#6E7A82' }} />
-              <span className="text-sm" style={{ color: '#6E7A82' }}>Debit Note Number</span>
+              <Hash className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Debit Note Number</span>
             </div>
-            <p style={{ color: '#0A0F14' }}>{debitNote.debitNoteNumber}</p>
+            <p style={{ color: 'var(--color-ink)' }}>{debitNote.debitNoteNumber}</p>
           </div>
 
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4" style={{ color: '#6E7A82' }} />
-              <span className="text-sm" style={{ color: '#6E7A82' }}>Debit Note Date</span>
+              <Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Debit Note Date</span>
             </div>
-            <p style={{ color: '#0A0F14' }}>
+            <p style={{ color: 'var(--color-ink)' }}>
               {new Date(debitNote.debitNoteDate).toLocaleDateString('en-IN', {
                 day: '2-digit',
                 month: 'short',
@@ -308,29 +308,29 @@ export function DebitNoteDetail() {
 
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <FileText className="w-4 h-4" style={{ color: '#6E7A82' }} />
-              <span className="text-sm" style={{ color: '#6E7A82' }}>Reference</span>
+              <FileText className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Reference</span>
             </div>
-            <p style={{ color: '#0A0F14' }}>
+            <p style={{ color: 'var(--color-ink)' }}>
               {debitNote.referenceType}: {debitNote.referenceNumber}
             </p>
           </div>
         </div>
 
         {/* Vendor Information */}
-        <div className="p-4 rounded-lg mb-6" style={{ backgroundColor: '#F6F9FC' }}>
+        <div className="p-4 rounded-lg mb-6" style={{ backgroundColor: 'var(--color-cloud)' }}>
           <div className="flex items-center gap-3 mb-3">
-            <Building2 className="w-5 h-5" style={{ color: '#00A9B7' }} />
-            <h3 style={{ color: '#0A0F14' }}>Vendor Information</h3>
+            <Building2 className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+            <h3 style={{ color: 'var(--color-ink)' }}>Vendor Information</h3>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <span className="text-sm" style={{ color: '#6E7A82' }}>Vendor Code</span>
-              <p style={{ color: '#0A0F14' }}>{debitNote.vendorCode}</p>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Vendor Code</span>
+              <p style={{ color: 'var(--color-ink)' }}>{debitNote.vendorCode}</p>
             </div>
             <div className="col-span-2">
-              <span className="text-sm" style={{ color: '#6E7A82' }}>Vendor Name</span>
-              <p style={{ color: '#0A0F14' }}>{debitNote.vendorName}</p>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Vendor Name</span>
+              <p style={{ color: 'var(--color-ink)' }}>{debitNote.vendorName}</p>
             </div>
           </div>
         </div>
@@ -338,63 +338,63 @@ export function DebitNoteDetail() {
         {/* Debit Note Reason */}
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <FileText className="w-4 h-4" style={{ color: '#6E7A82' }} />
-            <span className="text-sm" style={{ color: '#6E7A82' }}>Debit Note Reason</span>
+            <FileText className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Debit Note Reason</span>
           </div>
-          <p style={{ color: '#0A0F14' }}>{debitNote.reasonName}</p>
+          <p style={{ color: 'var(--color-ink)' }}>{debitNote.reasonName}</p>
         </div>
       </div>
 
       {/* Line Items */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
-        <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Line Items</h2>
+      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Line Items</h2>
         
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-4 py-3 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-4 py-3 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Item / Service
                 </th>
-                <th className="px-4 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-4 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Reference Qty
                 </th>
-                <th className="px-4 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-4 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Invoiced Qty
                 </th>
-                <th className="px-4 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-4 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Debit Qty
                 </th>
-                <th className="px-4 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-4 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Rate
                 </th>
-                <th className="px-4 py-3 text-right text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-4 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Debit Amount
                 </th>
               </tr>
             </thead>
             <tbody>
               {debitNote.lineItems.map((item, index) => (
-                <tr key={item.id} style={{ borderTop: '1px solid #E1E6EA' }}>
+                <tr key={item.id} style={{ borderTop: '1px solid var(--color-silver)' }}>
                   <td className="px-4 py-3">
                     <div>
-                      <div style={{ color: '#0A0F14' }}>{item.itemName}</div>
-                      <div className="text-sm" style={{ color: '#6E7A82' }}>{item.itemCode}</div>
+                      <div style={{ color: 'var(--color-ink)' }}>{item.itemName}</div>
+                      <div className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{item.itemCode}</div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right" style={{ color: '#6E7A82' }}>
+                  <td className="px-4 py-3 text-right" style={{ color: 'var(--color-mercury-grey)' }}>
                     {item.referenceQty} {item.uom}
                   </td>
-                  <td className="px-4 py-3 text-right" style={{ color: '#0A0F14' }}>
+                  <td className="px-4 py-3 text-right" style={{ color: 'var(--color-ink)' }}>
                     {item.invoicedQty} {item.uom}
                   </td>
-                  <td className="px-4 py-3 text-right" style={{ color: '#00A9B7' }}>
+                  <td className="px-4 py-3 text-right" style={{ color: 'var(--color-teal)' }}>
                     <strong>{item.debitQty} {item.uom}</strong>
                   </td>
-                  <td className="px-4 py-3 text-right" style={{ color: '#0A0F14' }}>
+                  <td className="px-4 py-3 text-right" style={{ color: 'var(--color-ink)' }}>
                     {debitNote.currency} {item.rate.toLocaleString('en-IN')}
                   </td>
-                  <td className="px-4 py-3 text-right" style={{ color: '#0A0F14' }}>
+                  <td className="px-4 py-3 text-right" style={{ color: 'var(--color-ink)' }}>
                     {debitNote.currency} {item.debitAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
@@ -404,18 +404,18 @@ export function DebitNoteDetail() {
         </div>
 
         {/* Summary */}
-        <div className="mt-6 pt-6" style={{ borderTop: '1px solid #E1E6EA' }}>
+        <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--color-silver)' }}>
           <div className="flex justify-end">
             <div className="w-96 space-y-3">
               <div className="flex justify-between items-center">
-                <span style={{ color: '#6E7A82' }}>Subtotal</span>
-                <span style={{ color: '#0A0F14' }}>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>Subtotal</span>
+                <span style={{ color: 'var(--color-ink)' }}>
                   {debitNote.currency} {debitNote.debitAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
-              <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid #E1E6EA' }}>
-                <span style={{ color: '#0A0F14' }}><strong>Debit Note Total</strong></span>
-                <span className="text-xl" style={{ color: '#0A0F14' }}>
+              <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
+                <span style={{ color: 'var(--color-ink)' }}><strong>Debit Note Total</strong></span>
+                <span className="text-xl" style={{ color: 'var(--color-ink)' }}>
                   <strong>{debitNote.currency} {debitNote.debitAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
                 </span>
               </div>
@@ -425,20 +425,20 @@ export function DebitNoteDetail() {
       </div>
 
       {/* Audit Trail */}
-      <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
-        <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Audit Trail</h2>
+      <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Audit Trail</h2>
         
         <div className="space-y-4">
           <div className="flex items-start gap-4">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-              <FileText className="w-4 h-4" style={{ color: '#6E7A82' }} />
+            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <FileText className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">
-                <span style={{ color: '#0A0F14' }}>Created by {debitNote.createdBy}</span>
-                <span className="text-sm" style={{ color: '#6E7A82' }}>{debitNote.createdDate}</span>
+                <span style={{ color: 'var(--color-ink)' }}>Created by {debitNote.createdBy}</span>
+                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{debitNote.createdDate}</span>
               </div>
-              <p className="text-sm" style={{ color: '#6E7A82' }}>
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                 Debit note created against {debitNote.referenceType} {debitNote.referenceNumber}
               </p>
             </div>
@@ -446,15 +446,15 @@ export function DebitNoteDetail() {
 
           {debitNote.status !== 'Draft' && debitNote.issuedBy && (
             <div className="flex items-start gap-4">
-              <div className="p-2 rounded-lg" style={{ backgroundColor: '#E8F7F8' }}>
-                <CheckCircle className="w-4 h-4" style={{ color: '#00A9B7' }} />
+              <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-teal-tint)' }}>
+                <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
-                  <span style={{ color: '#0A0F14' }}>Issued by {debitNote.issuedBy}</span>
-                  <span className="text-sm" style={{ color: '#6E7A82' }}>{debitNote.issuedDate}</span>
+                  <span style={{ color: 'var(--color-ink)' }}>Issued by {debitNote.issuedBy}</span>
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{debitNote.issuedDate}</span>
                 </div>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Debit note issued and sent to vendor
                 </p>
               </div>

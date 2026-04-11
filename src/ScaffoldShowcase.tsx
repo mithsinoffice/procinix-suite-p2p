@@ -126,21 +126,21 @@ export default function ScaffoldShowcase() {
   const SelectedComponent = findComponent();
 
   return (
-    <div style={{ display: 'flex', height: '100vh', backgroundColor: '#F6F9FC' }}>
+    <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--color-cloud)' }}>
       {/* Navigation Sidebar */}
       <div 
         style={{ 
           width: '280px', 
-          backgroundColor: '#0A0F14', 
+          backgroundColor: 'var(--color-ink)', 
           overflowY: 'auto',
-          borderRight: '1px solid #E1E6EA'
+          borderRight: '1px solid var(--color-silver)'
         }}
       >
         <div style={{ padding: '24px 20px' }}>
           <h2 style={{ fontSize: '18px', color: '#FFFFFF', margin: '0 0 8px 0' }}>
             ERP Scaffold
           </h2>
-          <p style={{ fontSize: '12px', color: '#6E7A82', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: 0 }}>
             Browse all scaffold components
           </p>
         </div>
@@ -150,9 +150,9 @@ export default function ScaffoldShowcase() {
             <div style={{ 
               padding: '8px 20px', 
               backgroundColor: 'rgba(0,169,183,0.1)',
-              borderLeft: '3px solid #00A9B7'
+              borderLeft: '3px solid var(--color-teal)'
             }}>
-              <h3 style={{ fontSize: '12px', color: '#00A9B7', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <h3 style={{ fontSize: '12px', color: 'var(--color-teal)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {category}
               </h3>
             </div>
@@ -165,8 +165,8 @@ export default function ScaffoldShowcase() {
                   padding: '10px 20px 10px 32px',
                   backgroundColor: selectedSection === section.id ? 'rgba(0,169,183,0.15)' : 'transparent',
                   border: 'none',
-                  borderLeft: selectedSection === section.id ? '3px solid #00A9B7' : '3px solid transparent',
-                  color: selectedSection === section.id ? '#00A9B7' : '#6E7A82',
+                  borderLeft: selectedSection === section.id ? '3px solid var(--color-teal)' : '3px solid transparent',
+                  color: selectedSection === section.id ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
                   fontSize: '13px',
                   textAlign: 'left',
                   cursor: 'pointer',
@@ -182,7 +182,7 @@ export default function ScaffoldShowcase() {
                 onMouseLeave={(e) => {
                   if (selectedSection !== section.id) {
                     e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = '#6E7A82';
+                    e.currentTarget.style.color = 'var(--color-mercury-grey)';
                   }
                 }}
               >
@@ -197,7 +197,7 @@ export default function ScaffoldShowcase() {
       <div style={{ flex: 1, overflow: 'auto' }}>
         {SelectedComponent ? <SelectedComponent /> : (
           <div style={{ padding: '48px', textAlign: 'center' }}>
-            <p style={{ fontSize: '14px', color: '#6E7A82' }}>Select a component to preview</p>
+            <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)' }}>Select a component to preview</p>
           </div>
         )}
       </div>

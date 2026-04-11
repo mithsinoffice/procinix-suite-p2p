@@ -15,20 +15,20 @@ export const CFOCashAndPayments = () => {
         <div 
           style={{ 
             backgroundColor: '#FFFFFF', 
-            border: '1px solid #E1E6EA', 
+            border: '1px solid var(--color-silver)', 
             borderRadius: '8px', 
             padding: '20px'
           }}
         >
-          <h3 style={{ fontSize: '16px', color: '#0A0F14', margin: '0 0 16px 0' }}>Cash Position</h3>
+          <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: '0 0 16px 0' }}>Cash Position</h3>
           <div style={{ 
             padding: '48px', 
-            backgroundColor: '#F6F9FC', 
-            border: '1px dashed #E1E6EA', 
+            backgroundColor: 'var(--color-cloud)', 
+            border: '1px dashed var(--color-silver)', 
             borderRadius: '4px',
             textAlign: 'center'
           }}>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Metric + Trend Card</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Metric + Trend Card</span>
           </div>
         </div>
 
@@ -36,20 +36,20 @@ export const CFOCashAndPayments = () => {
         <div 
           style={{ 
             backgroundColor: '#FFFFFF', 
-            border: '1px solid #E1E6EA', 
+            border: '1px solid var(--color-silver)', 
             borderRadius: '8px', 
             padding: '20px'
           }}
         >
-          <h3 style={{ fontSize: '16px', color: '#0A0F14', margin: '0 0 16px 0' }}>Payment Schedule</h3>
+          <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: '0 0 16px 0' }}>Payment Schedule</h3>
           <div style={{ 
             padding: '48px', 
-            backgroundColor: '#F6F9FC', 
-            border: '1px dashed #E1E6EA', 
+            backgroundColor: 'var(--color-cloud)', 
+            border: '1px dashed var(--color-silver)', 
             borderRadius: '4px',
             textAlign: 'center'
           }}>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Drilldown Table</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Drilldown Table</span>
           </div>
         </div>
 
@@ -58,16 +58,16 @@ export const CFOCashAndPayments = () => {
           style={{ 
             gridColumn: 'span 2',
             backgroundColor: '#FFFFFF', 
-            border: '1px solid #E1E6EA', 
+            border: '1px solid var(--color-silver)', 
             borderRadius: '8px', 
             padding: '20px'
           }}
         >
-          <h3 style={{ fontSize: '16px', color: '#0A0F14', margin: '0 0 16px 0' }}>Cash Flow Forecast</h3>
+          <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: '0 0 16px 0' }}>Cash Flow Forecast</h3>
           <div style={{ 
             padding: '48px', 
-            backgroundColor: '#F6F9FC', 
-            border: '1px dashed #E1E6EA', 
+            backgroundColor: 'var(--color-cloud)', 
+            border: '1px dashed var(--color-silver)', 
             borderRadius: '4px',
             textAlign: 'center',
             height: '240px',
@@ -75,7 +75,7 @@ export const CFOCashAndPayments = () => {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Line Chart Placeholder</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Line Chart Placeholder</span>
           </div>
         </div>
       </div>

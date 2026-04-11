@@ -126,7 +126,7 @@ export function Header() {
     <header 
       className="bg-white flex items-center justify-end"
       style={{ 
-        borderBottom: '1px solid #E1E6EA',
+        borderBottom: '1px solid var(--color-silver)',
         height: '64px',
         paddingLeft: '32px',
         paddingRight: '32px',
@@ -149,24 +149,24 @@ export function Header() {
               paddingBottom: '8px',
               paddingLeft: '12px',
               paddingRight: '12px',
-              backgroundColor: '#F6F9FC',
-              border: '1px solid #E1E6EA',
+              backgroundColor: 'var(--color-cloud)',
+              border: '1px solid var(--color-silver)',
               minWidth: '200px'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E8F7F8'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-tint)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
           >
-            <Building style={{ width: '16px', height: '16px', color: '#00A9B7' }} />
+            <Building style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
             <div style={{ flex: 1, textAlign: 'left' }}>
-              <div style={{ fontSize: '13px', fontWeight: '600', color: '#0A0F14', lineHeight: '1.2' }}>
+              <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)', lineHeight: '1.2' }}>
                 {currentCompany ? (getEntityById(currentCompany.id)?.legalName || currentCompany.name) : 'Select Entity'}
               </div>
-              <div style={{ fontSize: '11px', color: '#6E7A82', marginTop: '2px', lineHeight: '1.2' }}>
+              <div style={{ fontSize: '11px', color: 'var(--color-mercury-grey)', marginTop: '2px', lineHeight: '1.2' }}>
                 {currentCompany ? (getEntityById(currentCompany.id)?.country || currentCompany.code) : 'No entity selected'}
               </div>
             </div>
             <ChevronDown 
-              style={{ width: '14px', height: '14px', color: '#6E7A82' }} 
+              style={{ width: '14px', height: '14px', color: 'var(--color-mercury-grey)' }} 
             />
           </button>
 
@@ -182,7 +182,7 @@ export function Header() {
                 minWidth: Math.max(dropdownPosition.width, 280),
                 maxWidth: '420px',
                 maxHeight: '360px',
-                border: '1px solid #E1E6EA',
+                border: '1px solid var(--color-silver)',
                 boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.12)',
                 zIndex: 9999,
                 overflowY: 'auto',
@@ -201,15 +201,15 @@ export function Header() {
                 }}
                 className="w-full p-3 rounded-lg transition-all text-left"
                 style={{
-                  backgroundColor: currentCompany?.id === 'CONSOLIDATED' ? '#E8F7F8' : 'transparent',
-                  border: currentCompany?.id === 'CONSOLIDATED' ? '1px solid #00A9B7' : '1px solid transparent',
+                  backgroundColor: currentCompany?.id === 'CONSOLIDATED' ? 'var(--color-teal-tint)' : 'transparent',
+                  border: currentCompany?.id === 'CONSOLIDATED' ? '1px solid var(--color-teal)' : '1px solid transparent',
                   marginBottom: '8px',
                   display: 'block',
-                  borderBottom: '1px solid #E1E6EA',
+                  borderBottom: '1px solid var(--color-silver)',
                   paddingBottom: '12px'
                 }}
                 onMouseEnter={(e) => {
-                  if (currentCompany?.id !== 'CONSOLIDATED') e.currentTarget.style.backgroundColor = '#F6F9FC';
+                  if (currentCompany?.id !== 'CONSOLIDATED') e.currentTarget.style.backgroundColor = 'var(--color-cloud)';
                 }}
                 onMouseLeave={(e) => {
                   if (currentCompany?.id !== 'CONSOLIDATED') e.currentTarget.style.backgroundColor = 'transparent';
@@ -220,7 +220,7 @@ export function Header() {
                     <p 
                       style={{ 
                         fontSize: '13px',
-                        color: '#0A0F14',
+                        color: 'var(--color-ink)',
                         fontWeight: currentCompany?.id === 'CONSOLIDATED' ? '600' : '500',
                         margin: 0,
                         lineHeight: '1.3'
@@ -231,7 +231,7 @@ export function Header() {
                     <div 
                       style={{ 
                         fontSize: '11px',
-                        color: '#6E7A82',
+                        color: 'var(--color-mercury-grey)',
                         margin: '4px 0 0 0',
                         display: 'flex',
                         alignItems: 'center',
@@ -244,7 +244,7 @@ export function Header() {
                     </div>
                   </div>
                   {currentCompany?.id === 'CONSOLIDATED' && (
-                    <CheckCircle style={{ width: '16px', height: '16px', color: '#00A9B7', marginLeft: '8px' }} />
+                    <CheckCircle style={{ width: '16px', height: '16px', color: 'var(--color-teal)', marginLeft: '8px' }} />
                   )}
                 </div>
               </button>
@@ -265,13 +265,13 @@ export function Header() {
                     }}
                     className="w-full p-3 rounded-lg transition-all text-left"
                     style={{
-                      backgroundColor: isActive ? '#E8F7F8' : 'transparent',
-                      border: isActive ? '1px solid #00A9B7' : '1px solid transparent',
+                      backgroundColor: isActive ? 'var(--color-teal-tint)' : 'transparent',
+                      border: isActive ? '1px solid var(--color-teal)' : '1px solid transparent',
                       marginBottom: '4px',
                       display: 'block'
                     }}
                     onMouseEnter={(e) => {
-                      if (!isActive) e.currentTarget.style.backgroundColor = '#F6F9FC';
+                      if (!isActive) e.currentTarget.style.backgroundColor = 'var(--color-cloud)';
                     }}
                     onMouseLeave={(e) => {
                       if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
@@ -282,7 +282,7 @@ export function Header() {
                         <p 
                           style={{ 
                             fontSize: '13px',
-                            color: '#0A0F14',
+                            color: 'var(--color-ink)',
                             fontWeight: isActive ? '600' : '500',
                             margin: 0,
                             lineHeight: '1.3'
@@ -293,7 +293,7 @@ export function Header() {
                         <div 
                           style={{ 
                             fontSize: '11px',
-                            color: '#6E7A82',
+                            color: 'var(--color-mercury-grey)',
                             margin: '4px 0 0 0',
                             display: 'flex',
                             alignItems: 'center',
@@ -310,7 +310,7 @@ export function Header() {
                         </div>
                       </div>
                       {isActive && (
-                        <CheckCircle style={{ width: '16px', height: '16px', color: '#00A9B7', marginLeft: '8px' }} />
+                        <CheckCircle style={{ width: '16px', height: '16px', color: 'var(--color-teal)', marginLeft: '8px' }} />
                       )}
                     </div>
                   </button>
@@ -325,18 +325,18 @@ export function Header() {
         {currentRole && (
           <div 
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
-            style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}
+            style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}
             title={`Viewing as: ${currentRole.roleName}`}
           >
-            <Layers style={{ width: '14px', height: '14px', color: '#00A9B7' }} />
-            <span style={{ fontSize: '12px', fontWeight: '600', color: '#00A9B7' }}>
+            <Layers style={{ width: '14px', height: '14px', color: 'var(--color-teal)' }} />
+            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--color-teal)' }}>
               {currentRole.roleName}
             </span>
           </div>
         )}
 
         {/* Divider */}
-        <div style={{ width: '1px', height: '24px', backgroundColor: '#E1E6EA' }} />
+        <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--color-silver)' }} />
         
         {/* Notifications Icon Button - 32x32 */}
         <div className="relative" ref={notificationRef}>
@@ -349,11 +349,11 @@ export function Header() {
               backgroundColor: 'transparent',
               border: 'none'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             title="View Pending Approvals"
           >
-            <Bell style={{ width: '18px', height: '18px', color: '#6E7A82' }} />
+            <Bell style={{ width: '18px', height: '18px', color: 'var(--color-mercury-grey)' }} />
             {/* Notification Badge */}
             <span
               className="absolute rounded-full flex items-center justify-center"
@@ -362,7 +362,7 @@ export function Header() {
                 right: '2px',
                 width: '16px',
                 height: '16px',
-                backgroundColor: '#FF4E5B',
+                backgroundColor: 'var(--color-error)',
                 color: '#FFFFFF',
                 fontSize: '10px',
                 fontWeight: '600'
@@ -380,16 +380,16 @@ export function Header() {
                 marginTop: '8px',
                 width: '320px',
                 maxHeight: '420px',
-                border: '1px solid #E1E6EA',
+                border: '1px solid var(--color-silver)',
                 boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.12)',
                 zIndex: 1000,
                 overflowY: 'auto'
               }}
             >
               {/* Notification Header */}
-              <div style={{ padding: '12px', borderBottom: '1px solid #E1E6EA' }}>
+              <div style={{ padding: '12px', borderBottom: '1px solid var(--color-silver)' }}>
                 <div className="flex items-center justify-between">
-                  <p style={{ fontSize: '14px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+                  <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
                     Pending Approvals
                   </p>
                   <span 
@@ -397,7 +397,7 @@ export function Header() {
                     style={{
                       width: '20px',
                       height: '20px',
-                      backgroundColor: '#FF4E5B',
+                      backgroundColor: 'var(--color-error)',
                       color: '#FFFFFF',
                       fontSize: '11px',
                       fontWeight: '600'
@@ -415,10 +415,10 @@ export function Header() {
                   className="transition-all cursor-pointer"
                   style={{
                     padding: '12px',
-                    borderBottom: '1px solid #E1E6EA',
+                    borderBottom: '1px solid var(--color-silver)',
                     backgroundColor: 'transparent'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   onClick={() => {
                     navigate('/approval-dashboard');
@@ -431,22 +431,22 @@ export function Header() {
                       style={{
                         width: '32px',
                         height: '32px',
-                        backgroundColor: '#E8F7F8',
+                        backgroundColor: 'var(--color-teal-tint)',
                         flexShrink: 0
                       }}
                     >
-                      <FileText style={{ width: '16px', height: '16px', color: '#00A9B7' }} />
+                      <FileText style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14', margin: 0 }}>
+                      <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', margin: 0 }}>
                         Purchase Order Approval
                       </p>
-                      <p style={{ fontSize: '12px', color: '#6E7A82', margin: '2px 0 0 0' }}>
+                      <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
                         PO-2024-001 • ₹2,45,000
                       </p>
                       <div className="flex items-center gap-1" style={{ marginTop: '4px' }}>
-                        <Clock style={{ width: '12px', height: '12px', color: '#6E7A82' }} />
-                        <span style={{ fontSize: '11px', color: '#6E7A82' }}>2 hours ago</span>
+                        <Clock style={{ width: '12px', height: '12px', color: 'var(--color-mercury-grey)' }} />
+                        <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>2 hours ago</span>
                       </div>
                     </div>
                   </div>
@@ -457,10 +457,10 @@ export function Header() {
                   className="transition-all cursor-pointer"
                   style={{
                     padding: '12px',
-                    borderBottom: '1px solid #E1E6EA',
+                    borderBottom: '1px solid var(--color-silver)',
                     backgroundColor: 'transparent'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   onClick={() => {
                     navigate('/approval-dashboard');
@@ -480,15 +480,15 @@ export function Header() {
                       <Package style={{ width: '16px', height: '16px', color: '#D97706' }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14', margin: 0 }}>
+                      <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', margin: 0 }}>
                         GRN Location Acceptance
                       </p>
-                      <p style={{ fontSize: '12px', color: '#6E7A82', margin: '2px 0 0 0' }}>
+                      <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
                         GRN-2024-045 • Mumbai Warehouse
                       </p>
                       <div className="flex items-center gap-1" style={{ marginTop: '4px' }}>
-                        <Clock style={{ width: '12px', height: '12px', color: '#6E7A82' }} />
-                        <span style={{ fontSize: '11px', color: '#6E7A82' }}>5 hours ago</span>
+                        <Clock style={{ width: '12px', height: '12px', color: 'var(--color-mercury-grey)' }} />
+                        <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>5 hours ago</span>
                       </div>
                     </div>
                   </div>
@@ -499,10 +499,10 @@ export function Header() {
                   className="transition-all cursor-pointer"
                   style={{
                     padding: '12px',
-                    borderBottom: '1px solid #E1E6EA',
+                    borderBottom: '1px solid var(--color-silver)',
                     backgroundColor: 'transparent'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   onClick={() => {
                     navigate('/approval-dashboard');
@@ -522,15 +522,15 @@ export function Header() {
                       <Users style={{ width: '16px', height: '16px', color: '#7B1FA2' }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14', margin: 0 }}>
+                      <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', margin: 0 }}>
                         Vendor Master Update
                       </p>
-                      <p style={{ fontSize: '12px', color: '#6E7A82', margin: '2px 0 0 0' }}>
+                      <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
                         Tech Solutions Pvt Ltd
                       </p>
                       <div className="flex items-center gap-1" style={{ marginTop: '4px' }}>
-                        <Clock style={{ width: '12px', height: '12px', color: '#6E7A82' }} />
-                        <span style={{ fontSize: '11px', color: '#6E7A82' }}>1 day ago</span>
+                        <Clock style={{ width: '12px', height: '12px', color: 'var(--color-mercury-grey)' }} />
+                        <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>1 day ago</span>
                       </div>
                     </div>
                   </div>
@@ -547,15 +547,15 @@ export function Header() {
                   className="w-full rounded-lg transition-all"
                   style={{
                     height: '36px',
-                    backgroundColor: '#00A9B7',
+                    backgroundColor: 'var(--color-teal)',
                     color: '#FFFFFF',
                     fontSize: '13px',
                     fontWeight: '500',
                     border: 'none',
                     cursor: 'pointer'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
                 >
                   View All Approvals
                 </button>
@@ -575,11 +575,11 @@ export function Header() {
               paddingBottom: '6px',
               paddingLeft: '6px',
               paddingRight: '6px',
-              backgroundColor: showProfileMenu ? '#F6F9FC' : 'transparent',
+              backgroundColor: showProfileMenu ? 'var(--color-cloud)' : 'transparent',
               border: 'none'
             }}
             onMouseEnter={(e) => {
-              if (!showProfileMenu) e.currentTarget.style.backgroundColor = '#F6F9FC';
+              if (!showProfileMenu) e.currentTarget.style.backgroundColor = 'var(--color-cloud)';
             }}
             onMouseLeave={(e) => {
               if (!showProfileMenu) e.currentTarget.style.backgroundColor = 'transparent';
@@ -589,7 +589,7 @@ export function Header() {
             <div 
               className="rounded-full flex items-center justify-center"
               style={{ 
-                backgroundColor: '#00A9B7', 
+                backgroundColor: 'var(--color-teal)', 
                 width: '32px',
                 height: '32px',
                 color: '#FFFFFF'
@@ -608,20 +608,20 @@ export function Header() {
               style={{ 
                 marginTop: '8px',
                 width: '260px',
-                border: '1px solid #E1E6EA',
+                border: '1px solid var(--color-silver)',
                 boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.12)',
                 zIndex: 1000
               }}
             >
               {/* User Info (Top - Read Only) - Padding 12px */}
-              <div style={{ padding: '12px', borderBottom: '1px solid #E1E6EA' }}>
-                <p style={{ fontSize: '14px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+              <div style={{ padding: '12px', borderBottom: '1px solid var(--color-silver)' }}>
+                <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
                   {user?.name || 'Guest User'}
                 </p>
-                <p style={{ fontSize: '12px', color: '#6E7A82', margin: '2px 0 0 0' }}>
+                <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
                   {user?.role || 'Guest'}
                 </p>
-                <p style={{ fontSize: '12px', color: '#6E7A82', margin: '2px 0 0 0' }}>
+                <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
                   {user?.department || 'Procurement'} · {user?.currentEntity?.name || 'Procinix Solutions Pvt Ltd'}
                 </p>
               </div>
@@ -643,10 +643,10 @@ export function Header() {
                     backgroundColor: 'transparent',
                     border: 'none'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  <UserCircle style={{ width: '16px', height: '16px', color: '#6E7A82' }} />
+                  <UserCircle style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
                   <span style={{ fontSize: '13px', color: '#2A3A42' }}>My Profile</span>
                 </button>
 
@@ -666,10 +666,10 @@ export function Header() {
                     border: 'none',
                     marginTop: '8px'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  <Settings style={{ width: '16px', height: '16px', color: '#6E7A82' }} />
+                  <Settings style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
                   <span style={{ fontSize: '13px', color: '#2A3A42' }}>My Preferences</span>
                 </button>
 
@@ -689,16 +689,16 @@ export function Header() {
                     border: 'none',
                     marginTop: '8px'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  <HelpCircle style={{ width: '16px', height: '16px', color: '#6E7A82' }} />
+                  <HelpCircle style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
                   <span style={{ fontSize: '13px', color: '#2A3A42' }}>Help & Support</span>
                 </button>
               </div>
 
               {/* Divider */}
-              <div style={{ height: '1px', backgroundColor: '#E1E6EA' }} />
+              <div style={{ height: '1px', backgroundColor: 'var(--color-silver)' }} />
 
               {/* Logout */}
               <div style={{ padding: '12px' }}>
@@ -713,11 +713,11 @@ export function Header() {
                     backgroundColor: 'transparent',
                     border: 'none'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEE2E2'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-error-light)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                  <LogOut style={{ width: '16px', height: '16px', color: '#FF4E5B' }} />
-                  <span style={{ fontSize: '13px', color: '#FF4E5B' }}>Logout</span>
+                  <LogOut style={{ width: '16px', height: '16px', color: 'var(--color-error)' }} />
+                  <span style={{ fontSize: '13px', color: 'var(--color-error)' }}>Logout</span>
                 </button>
               </div>
             </div>
@@ -728,12 +728,12 @@ export function Header() {
       {/* My Profile Modal */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-2xl mx-4" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg w-full max-w-2xl mx-4" style={{ border: '1px solid var(--color-silver)' }}>
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
-              <h2 className="text-lg" style={{ color: '#0A0F14' }}>My Profile</h2>
+            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+              <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>My Profile</h2>
               <button onClick={() => setShowProfileModal(false)} className="p-1 hover:bg-opacity-50 rounded">
-                <X className="w-5 h-5" style={{ color: '#6E7A82' }} />
+                <X className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
               </button>
             </div>
 
@@ -743,62 +743,62 @@ export function Header() {
               <div className="flex items-center gap-4 mb-6">
                 <div 
                   className="w-20 h-20 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: '#00A9B7', color: '#FFFFFF' }}
+                  style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF' }}
                 >
                   <span className="text-2xl font-medium">
                     {getUserInitials(user?.name || 'Guest User')}
                   </span>
                 </div>
                 <div>
-                  <h3 className="text-xl" style={{ color: '#0A0F14' }}>{user?.name}</h3>
-                  <p className="text-sm mt-1" style={{ color: '#6E7A82' }}>{user?.role}</p>
+                  <h3 className="text-xl" style={{ color: 'var(--color-ink)' }}>{user?.name}</h3>
+                  <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>{user?.role}</p>
                 </div>
               </div>
 
               {/* Profile Details */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5" style={{ color: '#6E7A82' }} />
+                  <Mail className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
                   <div>
-                    <p className="text-xs" style={{ color: '#6E7A82' }}>Email Address</p>
-                    <p className="text-sm" style={{ color: '#0A0F14' }}>{user?.email}</p>
+                    <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Email Address</p>
+                    <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{user?.email}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Building2 className="w-5 h-5" style={{ color: '#6E7A82' }} />
+                  <Building2 className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
                   <div>
-                    <p className="text-xs" style={{ color: '#6E7A82' }}>Department</p>
-                    <p className="text-sm" style={{ color: '#0A0F14' }}>{user?.department || 'Not specified'}</p>
+                    <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Department</p>
+                    <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{user?.department || 'Not specified'}</p>
                   </div>
                 </div>
 
                 {user?.location && (
                   <div className="flex items-center gap-3">
-                    <MapPin className="w-5 h-5" style={{ color: '#6E7A82' }} />
+                    <MapPin className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
                     <div>
-                      <p className="text-xs" style={{ color: '#6E7A82' }}>Location</p>
-                      <p className="text-sm" style={{ color: '#0A0F14' }}>{user.location}</p>
+                      <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Location</p>
+                      <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{user.location}</p>
                     </div>
                   </div>
                 )}
 
                 <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5" style={{ color: '#6E7A82' }} />
+                  <Phone className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
                   <div>
-                    <p className="text-xs" style={{ color: '#6E7A82' }}>Phone Number</p>
-                    <p className="text-sm" style={{ color: '#0A0F14' }}>+91 98765 43210</p>
+                    <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Phone Number</p>
+                    <p className="text-sm" style={{ color: 'var(--color-ink)' }}>+91 98765 43210</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-3 p-6" style={{ borderTop: '1px solid #E1E6EA' }}>
+            <div className="flex justify-end gap-3 p-6" style={{ borderTop: '1px solid var(--color-silver)' }}>
               <button
                 onClick={() => setShowProfileModal(false)}
                 className="px-4 py-2 rounded-lg transition-all"
-                style={{ backgroundColor: '#F6F9FC', color: '#0A0F14', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)', border: '1px solid var(--color-silver)' }}
               >
                 Close
               </button>
@@ -810,12 +810,12 @@ export function Header() {
       {/* My Preferences Modal */}
       {showPreferencesModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-2xl mx-4" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg w-full max-w-2xl mx-4" style={{ border: '1px solid var(--color-silver)' }}>
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
-              <h2 className="text-lg" style={{ color: '#0A0F14' }}>My Preferences</h2>
+            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+              <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>My Preferences</h2>
               <button onClick={() => setShowPreferencesModal(false)} className="p-1 hover:bg-opacity-50 rounded">
-                <X className="w-5 h-5" style={{ color: '#6E7A82' }} />
+                <X className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
               </button>
             </div>
 
@@ -823,10 +823,10 @@ export function Header() {
             <div className="p-6 space-y-6">
               {/* Language */}
               <div>
-                <label className="block text-sm mb-2" style={{ color: '#0A0F14' }}>Language</label>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-ink)' }}>Language</label>
                 <select 
                   className="w-full px-4 py-2 rounded-lg"
-                  style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>English (US)</option>
                   <option>English (UK)</option>
@@ -836,10 +836,10 @@ export function Header() {
 
               {/* Date Format */}
               <div>
-                <label className="block text-sm mb-2" style={{ color: '#0A0F14' }}>Date Format</label>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-ink)' }}>Date Format</label>
                 <select 
                   className="w-full px-4 py-2 rounded-lg"
-                  style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>DD/MM/YYYY</option>
                   <option>MM/DD/YYYY</option>
@@ -849,10 +849,10 @@ export function Header() {
 
               {/* Time Zone */}
               <div>
-                <label className="block text-sm mb-2" style={{ color: '#0A0F14' }}>Time Zone</label>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-ink)' }}>Time Zone</label>
                 <select 
                   className="w-full px-4 py-2 rounded-lg"
-                  style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>Asia/Kolkata (IST +5:30)</option>
                   <option>Asia/Dubai (GST +4:00)</option>
@@ -863,10 +863,10 @@ export function Header() {
 
               {/* Number Format */}
               <div>
-                <label className="block text-sm mb-2" style={{ color: '#0A0F14' }}>Number Format</label>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-ink)' }}>Number Format</label>
                 <select 
                   className="w-full px-4 py-2 rounded-lg"
-                  style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>1,234,567.89</option>
                   <option>1.234.567,89</option>
@@ -876,10 +876,10 @@ export function Header() {
 
               {/* Currency */}
               <div>
-                <label className="block text-sm mb-2" style={{ color: '#0A0F14' }}>Currency Display</label>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-ink)' }}>Currency Display</label>
                 <select 
                   className="w-full px-4 py-2 rounded-lg"
-                  style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>INR (₹)</option>
                   <option>USD ($)</option>
@@ -890,18 +890,18 @@ export function Header() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-3 p-6" style={{ borderTop: '1px solid #E1E6EA' }}>
+            <div className="flex justify-end gap-3 p-6" style={{ borderTop: '1px solid var(--color-silver)' }}>
               <button
                 onClick={() => setShowPreferencesModal(false)}
                 className="px-4 py-2 rounded-lg transition-all"
-                style={{ backgroundColor: '#F6F9FC', color: '#0A0F14', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)', border: '1px solid var(--color-silver)' }}
               >
                 Cancel
               </button>
               <button
                 onClick={() => setShowPreferencesModal(false)}
                 className="px-4 py-2 rounded-lg transition-all"
-                style={{ backgroundColor: '#00A9B7', color: '#FFFFFF' }}
+                style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF' }}
               >
                 Save Preferences
               </button>
@@ -913,12 +913,12 @@ export function Header() {
       {/* Help & Support Modal */}
       {showHelpModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-2xl mx-4" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg w-full max-w-2xl mx-4" style={{ border: '1px solid var(--color-silver)' }}>
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
-              <h2 className="text-lg" style={{ color: '#0A0F14' }}>Help & Support</h2>
+            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+              <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>Help & Support</h2>
               <button onClick={() => setShowHelpModal(false)} className="p-1 hover:bg-opacity-50 rounded">
-                <X className="w-5 h-5" style={{ color: '#6E7A82' }} />
+                <X className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
               </button>
             </div>
 
@@ -926,45 +926,45 @@ export function Header() {
             <div className="p-6 space-y-4">
               <div 
                 className="p-4 rounded-lg cursor-pointer hover:bg-opacity-70 transition-all"
-                style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
               >
-                <h3 className="text-sm mb-1" style={{ color: '#0A0F14' }}>📚 Documentation</h3>
-                <p className="text-xs" style={{ color: '#6E7A82' }}>Access user guides and manuals</p>
+                <h3 className="text-sm mb-1" style={{ color: 'var(--color-ink)' }}>📚 Documentation</h3>
+                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Access user guides and manuals</p>
               </div>
 
               <div 
                 className="p-4 rounded-lg cursor-pointer hover:bg-opacity-70 transition-all"
-                style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
               >
-                <h3 className="text-sm mb-1" style={{ color: '#0A0F14' }}>💬 Contact Support</h3>
-                <p className="text-xs" style={{ color: '#6E7A82' }}>Email: support@procinix.ai</p>
-                <p className="text-xs" style={{ color: '#6E7A82' }}>Phone: +91 1800 123 4567</p>
+                <h3 className="text-sm mb-1" style={{ color: 'var(--color-ink)' }}>💬 Contact Support</h3>
+                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Email: support@procinix.ai</p>
+                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Phone: +91 1800 123 4567</p>
               </div>
 
               <div 
                 className="p-4 rounded-lg cursor-pointer hover:bg-opacity-70 transition-all"
-                style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
               >
-                <h3 className="text-sm mb-1" style={{ color: '#0A0F14' }}>🎫 Raise Support Ticket</h3>
-                <p className="text-xs" style={{ color: '#6E7A82' }}>Submit a ticket for technical issues</p>
+                <h3 className="text-sm mb-1" style={{ color: 'var(--color-ink)' }}>🎫 Raise Support Ticket</h3>
+                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Submit a ticket for technical issues</p>
               </div>
 
               <div 
                 className="p-4 rounded-lg"
-                style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
               >
-                <h3 className="text-sm mb-1" style={{ color: '#0A0F14' }}>ℹ️ System Information</h3>
-                <p className="text-xs" style={{ color: '#6E7A82' }}>Version: 2.1.0</p>
-                <p className="text-xs" style={{ color: '#6E7A82' }}>Last Updated: Dec 12, 2025</p>
+                <h3 className="text-sm mb-1" style={{ color: 'var(--color-ink)' }}>ℹ️ System Information</h3>
+                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Version: 2.1.0</p>
+                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Last Updated: Dec 12, 2025</p>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-3 p-6" style={{ borderTop: '1px solid #E1E6EA' }}>
+            <div className="flex justify-end gap-3 p-6" style={{ borderTop: '1px solid var(--color-silver)' }}>
               <button
                 onClick={() => setShowHelpModal(false)}
                 className="px-4 py-2 rounded-lg transition-all"
-                style={{ backgroundColor: '#F6F9FC', color: '#0A0F14', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)', border: '1px solid var(--color-silver)' }}
               >
                 Close
               </button>
@@ -976,17 +976,17 @@ export function Header() {
       {/* Entity Switcher Modal */}
       {showEntitySwitcher && user && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-2xl mx-4" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg w-full max-w-2xl mx-4" style={{ border: '1px solid var(--color-silver)' }}>
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
               <div>
-                <h2 className="text-lg" style={{ color: '#0A0F14' }}>Switch Entity</h2>
-                <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+                <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>Switch Entity</h2>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                   Select an entity to switch your working context
                 </p>
               </div>
               <button onClick={() => setShowEntitySwitcher(false)} className="p-1 hover:bg-opacity-50 rounded">
-                <X className="w-5 h-5" style={{ color: '#6E7A82' }} />
+                <X className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
               </button>
             </div>
 
@@ -1010,8 +1010,8 @@ export function Header() {
                       }}
                       className="w-full p-4 rounded-lg transition-all text-left"
                       style={{
-                        backgroundColor: isActive ? '#E8F7F8' : '#F6F9FC',
-                        border: isActive ? '2px solid #00A9B7' : '1px solid #E1E6EA'
+                        backgroundColor: isActive ? 'var(--color-teal-tint)' : 'var(--color-cloud)',
+                        border: isActive ? '2px solid var(--color-teal)' : '1px solid var(--color-silver)'
                       }}
                     >
                       <div className="flex items-center justify-between">
@@ -1019,26 +1019,26 @@ export function Header() {
                           <div 
                             className="w-12 h-12 rounded-lg flex items-center justify-center"
                             style={{ 
-                              backgroundColor: isActive ? '#00A9B7' : '#FFFFFF',
-                              border: '1px solid #E1E6EA'
+                              backgroundColor: isActive ? 'var(--color-teal)' : '#FFFFFF',
+                              border: '1px solid var(--color-silver)'
                             }}
                           >
                             <Building 
                               className="w-6 h-6" 
-                              style={{ color: isActive ? '#FFFFFF' : '#00A9B7' }} 
+                              style={{ color: isActive ? '#FFFFFF' : 'var(--color-teal)' }} 
                             />
                           </div>
                           <div>
                             <p 
                               className="text-sm mb-1" 
                               style={{ 
-                                color: '#0A0F14',
+                                color: 'var(--color-ink)',
                                 fontWeight: isActive ? '600' : '400'
                               }}
                             >
                               {displayName}
                             </p>
-                            <p className="text-xs" style={{ color: '#6E7A82' }}>
+                            <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                               {entity.code}{currency ? ` | ${currency}` : ''}
                             </p>
                           </div>
@@ -1046,7 +1046,7 @@ export function Header() {
                         {isActive && (
                           <div 
                             className="flex items-center gap-2 px-3 py-1 rounded-full"
-                            style={{ backgroundColor: '#00A9B7' }}
+                            style={{ backgroundColor: 'var(--color-teal)' }}
                           >
                             <CheckCircle className="w-4 h-4" style={{ color: '#FFFFFF' }} />
                             <span className="text-xs" style={{ color: '#FFFFFF' }}>Active</span>
@@ -1070,11 +1070,11 @@ export function Header() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-3 p-6" style={{ borderTop: '1px solid #E1E6EA' }}>
+            <div className="flex justify-end gap-3 p-6" style={{ borderTop: '1px solid var(--color-silver)' }}>
               <button
                 onClick={() => setShowEntitySwitcher(false)}
                 className="px-4 py-2 rounded-lg transition-all"
-                style={{ backgroundColor: '#F6F9FC', color: '#0A0F14', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)', border: '1px solid var(--color-silver)' }}
               >
                 Cancel
               </button>

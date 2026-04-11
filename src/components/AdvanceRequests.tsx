@@ -92,18 +92,18 @@ export function AdvanceRequests() {
     Boolean(filterDateRange.from || filterDateRange.to);
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC]">
+    <div className="min-h-screen bg-[var(--color-cloud)]">
       {/* Header */}
-      <div className="bg-white border-b border-[#E1E6EA]">
+      <div className="bg-white border-b border-[var(--color-silver)]">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-[#0A0F14]">Advance Requests</h1>
-              <p className="text-[#6E7A82] text-sm">Manage vendor advance requests and approvals</p>
+              <h1 className="text-[var(--color-ink)]">Advance Requests</h1>
+              <p className="text-[var(--color-mercury-grey)] text-sm">Manage vendor advance requests and approvals</p>
             </div>
             <button
               onClick={() => navigate('/ap/advance-request-form')}
-              className="px-4 py-2 bg-[#00A9B7] text-white rounded-lg hover:bg-[#007D87] transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-[var(--color-teal)] text-white rounded-lg hover:bg-[var(--color-teal-dark)] transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Create Advance Request
@@ -115,40 +115,40 @@ export function AdvanceRequests() {
       {/* Statistics Cards */}
       <div className="p-6">
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Total Requests</span>
-              <FileText className="w-4 h-4 text-[#6E7A82]" />
+              <span className="text-sm text-[var(--color-mercury-grey)]">Total Requests</span>
+              <FileText className="w-4 h-4 text-[var(--color-mercury-grey)]" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.total}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.total}</div>
           </div>
           
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Pending Approval</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Pending Approval</span>
               <Clock className="w-4 h-4 text-blue-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.submitted}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.submitted}</div>
           </div>
           
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Approved</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Approved</span>
               <CheckCircle className="w-4 h-4 text-green-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.approved}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.approved}</div>
           </div>
           
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Total Value</span>
-              <DollarSign className="w-4 h-4 text-[#00A9B7]" />
+              <span className="text-sm text-[var(--color-mercury-grey)]">Total Value</span>
+              <DollarSign className="w-4 h-4 text-[var(--color-teal)]" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">₹{stats.totalValue.toLocaleString()}</div>
+            <div className="text-2xl text-[var(--color-ink)]">₹{stats.totalValue.toLocaleString()}</div>
           </div>
         </div>
 
-        <div className="rounded-[28px] overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D7E3EA', boxShadow: '0 24px 52px rgba(15, 23, 42, 0.07)' }}>
+        <div className="rounded-[28px] overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)', boxShadow: '0 24px 52px rgba(15, 23, 42, 0.07)' }}>
           <div className="flex items-center justify-between gap-4 px-6 py-4" style={{ borderBottom: '1px solid #E8F0F4' }}>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #E5FBFF 0%, #D5F5FF 100%)', boxShadow: '0 14px 30px rgba(0, 169, 183, 0.12)' }}>
@@ -163,7 +163,7 @@ export function AdvanceRequests() {
                 </span>
               </div>
             </div>
-            <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
+            <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm" style={{ border: '1px solid var(--color-fog)', color: 'var(--color-ink)', backgroundColor: '#FFFFFF' }}>
               <Download className="w-4 h-4" />
               Export
             </button>
@@ -174,14 +174,14 @@ export function AdvanceRequests() {
               <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.7fr 1.7fr 1fr 1.4fr 1fr 1fr 1fr 1fr 1fr 0.9fr', borderBottom: '1px solid #E8F0F4' }}>
                 <div className="space-y-2">
                   <div className="relative w-full">
-                    <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#6E7A82]" />
+                    <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-mercury-grey)]" />
                     <input
                       type="text"
                       placeholder="Search advance..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm"
-                      style={{ backgroundColor: '#F8FBFD', border: '1px solid #D7E3EA', color: '#0A0F14' }}
+                      style={{ backgroundColor: '#F8FBFD', border: '1px solid var(--color-fog)', color: 'var(--color-ink)' }}
                     />
                   </div>
                   {hasActiveFilters && (
@@ -211,7 +211,7 @@ export function AdvanceRequests() {
 
               <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.7fr 1.7fr 1fr 1.4fr 1fr 1fr 1fr 1fr 1fr 0.9fr', background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)', borderBottom: '1px solid #E4EDF2' }}>
                 {['Request', 'Vendor', 'Type', 'PO / Milestone', 'Requested', 'Approved', 'Status', 'Payment', 'Priority', 'Action'].map((column) => (
-                  <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: '#6E7A82', fontWeight: 700 }}>
+                  <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
                     {column}
                   </div>
                 ))}
@@ -221,16 +221,16 @@ export function AdvanceRequests() {
                   filteredRequests.map(request => (
                     <div key={request.id} className="grid gap-4 px-6 py-4 hover:bg-[#F8FCFE]" style={{ gridTemplateColumns: '1.7fr 1.7fr 1fr 1.4fr 1fr 1fr 1fr 1fr 1fr 0.9fr', borderBottom: '1px solid #EDF3F7' }}>
                       <div>
-                        <span className="text-[#00A9B7]">{request.requestNumber}</span>
-                        <div className="text-xs text-[#6E7A82] mt-0.5">{request.createdDate}</div>
+                        <span className="text-[var(--color-teal)]">{request.requestNumber}</span>
+                        <div className="text-xs text-[var(--color-mercury-grey)] mt-0.5">{request.createdDate}</div>
                       </div>
                       <div>
-                        <div className="text-[#0A0F14]">{request.vendor}</div>
-                        <div className="text-xs text-[#6E7A82] mt-0.5">{request.vendorCode}</div>
+                        <div className="text-[var(--color-ink)]">{request.vendor}</div>
+                        <div className="text-xs text-[var(--color-mercury-grey)] mt-0.5">{request.vendorCode}</div>
                       </div>
                       <div>
                         <span className={`px-2 py-1 rounded text-xs ${
-                          request.advanceType === 'PO-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                          request.advanceType === 'PO-based' ? 'bg-blue-100 text-blue-700' : 'bg-px-teal-light text-px-teal-dark'
                         }`}>
                           {request.advanceType}
                         </span>
@@ -238,25 +238,25 @@ export function AdvanceRequests() {
                       <div>
                         {request.poNumber ? (
                           <div>
-                            <div className="text-[#0A0F14]">{request.poNumber}</div>
+                            <div className="text-[var(--color-ink)]">{request.poNumber}</div>
                             {request.milestoneName && (
-                              <div className="text-xs text-[#6E7A82] mt-0.5">{request.milestoneName}</div>
+                              <div className="text-xs text-[var(--color-mercury-grey)] mt-0.5">{request.milestoneName}</div>
                             )}
                           </div>
                         ) : (
-                          <span className="text-[#6E7A82]">-</span>
+                          <span className="text-[var(--color-mercury-grey)]">-</span>
                         )}
                       </div>
-                      <div className="text-[#0A0F14] text-right">
+                      <div className="text-[var(--color-ink)] text-right">
                         {request.currency} {request.requestedAmount.toLocaleString()}
                       </div>
                       <div className="text-right">
                         {request.approvedAmount ? (
-                          <span className="text-[#00A9B7]">
+                          <span className="text-[var(--color-teal)]">
                             {request.currency} {request.approvedAmount.toLocaleString()}
                           </span>
                         ) : (
-                          <span className="text-[#6E7A82]">-</span>
+                          <span className="text-[var(--color-mercury-grey)]">-</span>
                         )}
                       </div>
                       <div>
@@ -285,9 +285,9 @@ export function AdvanceRequests() {
                   ))
                 ) : (
                   <div className="px-4 py-12 text-center">
-                      <FileText className="w-12 h-12 mx-auto mb-3 text-[#6E7A82] opacity-50" />
-                      <p className="text-[#6E7A82]">No advance requests found</p>
-                      <p className="text-sm text-[#6E7A82] mt-1">
+                      <FileText className="w-12 h-12 mx-auto mb-3 text-[var(--color-mercury-grey)] opacity-50" />
+                      <p className="text-[var(--color-mercury-grey)]">No advance requests found</p>
+                      <p className="text-sm text-[var(--color-mercury-grey)] mt-1">
                         {hasActiveFilters
                           ? 'Try adjusting your filters'
                           : 'Create your first advance request to get started'}

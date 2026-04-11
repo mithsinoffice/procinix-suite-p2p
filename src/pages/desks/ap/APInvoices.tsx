@@ -13,7 +13,7 @@ export const APInvoices = () => {
       {/* Actions Bar */}
       <div style={{ 
         backgroundColor: '#FFFFFF', 
-        border: '1px solid #E1E6EA', 
+        border: '1px solid var(--color-silver)', 
         borderRadius: '8px', 
         padding: '16px',
         marginBottom: '24px',
@@ -27,18 +27,18 @@ export const APInvoices = () => {
               key={filter}
               style={{ 
                 padding: '8px 12px', 
-                backgroundColor: '#F6F9FC', 
-                border: '1px dashed #E1E6EA', 
+                backgroundColor: 'var(--color-cloud)', 
+                border: '1px dashed var(--color-silver)', 
                 borderRadius: '4px'
               }}
             >
-              <span style={{ fontSize: '12px', color: '#6E7A82' }}>{filter}</span>
+              <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>{filter}</span>
             </div>
           ))}
         </div>
         <div style={{ 
           padding: '8px 16px', 
-          backgroundColor: '#00A9B7', 
+          backgroundColor: 'var(--color-teal)', 
           borderRadius: '6px'
         }}>
           <span style={{ fontSize: '13px', color: '#FFFFFF' }}>+ Create Invoice</span>
@@ -49,19 +49,19 @@ export const APInvoices = () => {
       <div 
         style={{ 
           backgroundColor: '#FFFFFF', 
-          border: '1px solid #E1E6EA', 
+          border: '1px solid var(--color-silver)', 
           borderRadius: '8px', 
           padding: '20px'
         }}
       >
         <div style={{ 
           padding: '64px', 
-          backgroundColor: '#F6F9FC', 
-          border: '1px dashed #E1E6EA', 
+          backgroundColor: 'var(--color-cloud)', 
+          border: '1px dashed var(--color-silver)', 
           borderRadius: '4px',
           textAlign: 'center'
         }}>
-          <span style={{ fontSize: '12px', color: '#6E7A82' }}>Invoice Listing Table Placeholder</span>
+          <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Invoice Listing Table Placeholder</span>
         </div>
       </div>
     </DeskLayoutShell>

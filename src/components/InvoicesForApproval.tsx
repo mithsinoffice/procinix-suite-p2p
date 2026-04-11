@@ -107,7 +107,7 @@ export function InvoicesForApproval() {
 
   const getPriorityStyle = (priority: PendingInvoice['priority']) => {
     const styles = {
-      'High': { bg: '#FEE2E2', color: '#DC2626', icon: AlertCircle },
+      'High': { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)', icon: AlertCircle },
       'Medium': { bg: '#FEF3C7', color: '#D97706', icon: AlertTriangle },
       'Low': { bg: '#D1FAE5', color: '#047857', icon: CheckCircle }
     };
@@ -190,69 +190,69 @@ export function InvoicesForApproval() {
       label: 'Overdue (>3 days)', 
       value: invoices.filter(i => i.agingDays > 3).length, 
       icon: AlertTriangle, 
-      color: '#DC2626',
-      bg: '#FEE2E2'
+      color: 'var(--color-error-dark)',
+      bg: 'var(--color-error-light)'
     },
     { 
       label: 'Total Value', 
       value: `₹${(invoices.reduce((sum, inv) => sum + inv.netPayable, 0) / 100000).toFixed(1)}L`, 
       icon: DollarSign, 
-      color: '#00A9B7',
-      bg: '#00A9B710'
+      color: 'var(--color-teal)',
+      bg: 'var(--color-teal)10'
     },
     { 
       label: 'With AI Flags', 
       value: invoices.filter(i => i.aiRiskFlags.length > 0).length, 
       icon: Zap, 
-      color: '#8B5CF6',
+      color: '#007D87',
       bg: '#EDE9FE'
     }
   ];
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }} className="p-8">
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="p-8">
       <div className="mb-6">
-        <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>Invoices for Approval</h1>
-        <p style={{ color: '#6E7A82' }}>Review and approve pending invoices</p>
+        <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>Invoices for Approval</h1>
+        <p style={{ color: 'var(--color-mercury-grey)' }}>Review and approve pending invoices</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white rounded-xl p-4 border-2" style={{ borderColor: '#E1E6EA' }}>
+          <div key={idx} className="bg-white rounded-xl p-4 border-2" style={{ borderColor: 'var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm" style={{ color: '#6E7A82' }}>{stat.label}</span>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{stat.label}</span>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: stat.bg }}>
                 <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
               </div>
             </div>
-            <p className="text-2xl" style={{ color: '#0A0F14' }}>{stat.value}</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)' }}>{stat.value}</p>
           </div>
         ))}
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white rounded-xl border-2 mb-4" style={{ borderColor: '#E1E6EA' }}>
+      <div className="bg-white rounded-xl border-2 mb-4" style={{ borderColor: 'var(--color-silver)' }}>
         <div className="p-4">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: '#6E7A82' }} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
               <input
                 type="text"
                 placeholder="Search by invoice number, vendor, or PO..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 rounded-lg border-2"
-                style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
               />
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors"
               style={{ 
-                borderColor: showFilters ? '#00A9B7' : '#E1E6EA',
-                backgroundColor: showFilters ? '#00A9B710' : 'white',
-                color: showFilters ? '#00A9B7' : '#6E7A82'
+                borderColor: showFilters ? 'var(--color-teal)' : 'var(--color-silver)',
+                backgroundColor: showFilters ? 'var(--color-teal)10' : 'white',
+                color: showFilters ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
               }}
             >
               <Filter className="w-5 h-5" />
@@ -262,9 +262,9 @@ export function InvoicesForApproval() {
               <button
                 onClick={handleBulkApprove}
                 className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                style={{ backgroundColor: 'var(--color-teal)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
               >
                 <CheckCircle className="w-5 h-5" />
                 Approve Selected ({selectedInvoices.size})
@@ -273,14 +273,14 @@ export function InvoicesForApproval() {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t-2" style={{ borderColor: '#E1E6EA' }}>
+            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t-2" style={{ borderColor: 'var(--color-silver)' }}>
               <div>
-                <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>Priority</label>
+                <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Priority</label>
                 <select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border-2"
-                  style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                  style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>All</option>
                   <option>High</option>
@@ -289,12 +289,12 @@ export function InvoicesForApproval() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>Risk Flags</label>
+                <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Risk Flags</label>
                 <select
                   value={riskFilter}
                   onChange={(e) => setRiskFilter(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border-2"
-                  style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                  style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>All</option>
                   <option>Has Flags</option>
@@ -302,12 +302,12 @@ export function InvoicesForApproval() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>Status</label>
+                <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Status</label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border-2"
-                  style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                  style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option>All</option>
                   <option>Overdue</option>
@@ -320,27 +320,27 @@ export function InvoicesForApproval() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border-2 overflow-hidden" style={{ borderColor: '#E1E6EA' }}>
+      <div className="bg-white rounded-xl border-2 overflow-hidden" style={{ borderColor: 'var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
                 <th className="px-6 py-4">
                   <input
                     type="checkbox"
                     checked={selectedInvoices.size === filteredInvoices.length && filteredInvoices.length > 0}
                     onChange={handleSelectAll}
-                    className="w-4 h-4 rounded accent-[#00A9B7]"
+                    className="w-4 h-4 rounded accent-[var(--color-teal)]"
                   />
                 </th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Invoice Number</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Vendor</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>PO Reference</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Amount</th>
-                <th className="text-center px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Aging</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>AI Risk Flags</th>
-                <th className="text-center px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Priority</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Number</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>PO Reference</th>
+                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Amount</th>
+                <th className="text-center px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Aging</th>
+                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>AI Risk Flags</th>
+                <th className="text-center px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Priority</th>
+                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -352,43 +352,43 @@ export function InvoicesForApproval() {
                 return (
                   <tr 
                     key={invoice.id} 
-                    className="border-t-2 hover:bg-[#F6F9FC] transition-colors"
-                    style={{ borderColor: '#E1E6EA' }}
+                    className="border-t-2 hover:bg-[var(--color-cloud)] transition-colors"
+                    style={{ borderColor: 'var(--color-silver)' }}
                   >
                     <td className="px-6 py-4">
                       <input
                         type="checkbox"
                         checked={selectedInvoices.has(invoice.id)}
                         onChange={() => handleToggleSelect(invoice.id)}
-                        className="w-4 h-4 rounded accent-[#00A9B7]"
+                        className="w-4 h-4 rounded accent-[var(--color-teal)]"
                         onClick={(e) => e.stopPropagation()}
                       />
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-[#00A9B7]" />
-                        <span style={{ color: '#0A0F14' }}>{invoice.invoiceNumber}</span>
+                        <FileText className="w-4 h-4 text-[var(--color-teal)]" />
+                        <span style={{ color: 'var(--color-ink)' }}>{invoice.invoiceNumber}</span>
                       </div>
-                      <p className="text-xs mt-0.5" style={{ color: '#6E7A82' }}>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--color-mercury-grey)' }}>
                         by {invoice.submittedBy}
                       </p>
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <p style={{ color: '#0A0F14' }}>{invoice.vendorName}</p>
-                        <p className="text-sm" style={{ color: '#6E7A82' }}>{invoice.vendorCode}</p>
+                        <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorName}</p>
+                        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.vendorCode}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{invoice.poNumber}</td>
-                    <td className="px-6 py-4 text-right" style={{ color: '#0A0F14' }}>
+                    <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{invoice.poNumber}</td>
+                    <td className="px-6 py-4 text-right" style={{ color: 'var(--color-ink)' }}>
                       ₹{invoice.netPayable.toLocaleString('en-IN')}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <Clock className="w-4 h-4" style={{ color: isOverdue ? '#DC2626' : '#6E7A82' }} />
+                        <Clock className="w-4 h-4" style={{ color: isOverdue ? 'var(--color-error-dark)' : 'var(--color-mercury-grey)' }} />
                         <span 
                           className="text-sm"
-                          style={{ color: isOverdue ? '#DC2626' : '#0A0F14' }}
+                          style={{ color: isOverdue ? 'var(--color-error-dark)' : 'var(--color-ink)' }}
                         >
                           {invoice.agingDays}d
                         </span>
@@ -407,7 +407,7 @@ export function InvoicesForApproval() {
                       ) : (
                         <div className="flex items-center gap-1 justify-center">
                           <CheckCircle className="w-3 h-3 text-[#047857]" />
-                          <span className="text-xs" style={{ color: '#6E7A82' }}>No flags</span>
+                          <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>No flags</span>
                         </div>
                       )}
                     </td>
@@ -431,24 +431,24 @@ export function InvoicesForApproval() {
                         </button>
                         <button
                           onClick={() => handleReject(invoice.id)}
-                          className="p-2 rounded-lg hover:bg-[#FEE2E2] transition-colors"
+                          className="p-2 rounded-lg hover:bg-[var(--color-error-light)] transition-colors"
                           title="Reject"
                         >
-                          <XCircle className="w-4 h-4 text-[#DC2626]" />
+                          <XCircle className="w-4 h-4 text-[var(--color-error-dark)]" />
                         </button>
                         <button
                           onClick={() => handleSendBack(invoice.id)}
-                          className="p-2 rounded-lg hover:bg-[#E1E6EA] transition-colors"
+                          className="p-2 rounded-lg hover:bg-[var(--color-silver)] transition-colors"
                           title="Send Back"
                         >
-                          <MessageSquare className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                          <MessageSquare className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                         </button>
                         <button
                           onClick={() => navigate(`/ap/invoice-workflow/${invoice.id}`)}
-                          className="p-2 rounded-lg hover:bg-[#E1E6EA] transition-colors"
+                          className="p-2 rounded-lg hover:bg-[var(--color-silver)] transition-colors"
                           title="View Details"
                         >
-                          <Eye className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                          <Eye className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                         </button>
                       </div>
                     </td>
@@ -461,8 +461,8 @@ export function InvoicesForApproval() {
 
         {filteredInvoices.length === 0 && (
           <div className="text-center py-12">
-            <Clock className="w-12 h-12 mx-auto mb-3" style={{ color: '#E1E6EA' }} />
-            <p style={{ color: '#6E7A82' }}>No invoices pending approval</p>
+            <Clock className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--color-silver)' }} />
+            <p style={{ color: 'var(--color-mercury-grey)' }}>No invoices pending approval</p>
           </div>
         )}
       </div>

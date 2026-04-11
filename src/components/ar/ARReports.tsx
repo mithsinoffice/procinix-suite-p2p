@@ -14,25 +14,25 @@ export function ARReports() {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'Operational': return { bg: '#E8F7F8', color: '#00A9B7', border: '#00A9B7' };
+      case 'Operational': return { bg: 'var(--color-teal-tint)', color: 'var(--color-teal)', border: 'var(--color-teal)' };
       case 'Analysis': return { bg: '#F3E5F5', color: '#7B1FA2', border: '#BA68C8' };
-      case 'Compliance': return { bg: '#FFF3E0', color: '#F57C00', border: '#FFB74D' };
+      case 'Compliance': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)', border: '#FFB74D' };
       case 'Strategic': return { bg: '#E3F2FD', color: '#1976D2', border: '#64B5F6' };
-      default: return { bg: '#F6F9FC', color: '#6E7A82', border: '#E1E6EA' };
+      default: return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
     }
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
-      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
+      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl mb-2" style={{ color: '#0A0F14', margin: 0 }}>AR Reports</h1>
-            <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>
+            <h1 className="text-2xl mb-2" style={{ color: 'var(--color-ink)', margin: 0 }}>AR Reports</h1>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
               Comprehensive reporting suite for accounts receivable
             </p>
           </div>
-          <button className="px-4 py-2 rounded-lg" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+          <button className="px-4 py-2 rounded-lg" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
             <Filter className="w-4 h-4 inline mr-2" />
             Filter Reports
           </button>
@@ -44,15 +44,15 @@ export function ARReports() {
           {reports.map((report, idx) => {
             const typeStyle = getTypeColor(report.type);
             return (
-              <div key={idx} className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+              <div key={idx} className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F6F9FC' }}>
-                      <FileText className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                      <FileText className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                     </div>
                     <div>
-                      <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600', margin: 0 }}>{report.name}</h3>
-                      <div className="flex items-center gap-3 text-sm" style={{ color: '#6E7A82' }}>
+                      <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600', margin: 0 }}>{report.name}</h3>
+                      <div className="flex items-center gap-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                         <span>{report.description}</span>
                         <span>•</span>
                         <span className="px-2 py-0.5 rounded text-xs" style={typeStyle}>{report.type}</span>
@@ -61,7 +61,7 @@ export function ARReports() {
                       </div>
                     </div>
                   </div>
-                  <button className="px-4 py-2 rounded-lg text-white" style={{ backgroundColor: '#00A9B7' }}>
+                  <button className="px-4 py-2 rounded-lg text-white" style={{ backgroundColor: 'var(--color-teal)' }}>
                     <Download className="w-4 h-4 inline mr-2" />
                     Generate
                   </button>
@@ -71,11 +71,11 @@ export function ARReports() {
           })}
         </div>
 
-        <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}>
-          <h4 className="text-sm mb-2" style={{ color: '#0A0F14', margin: 0, fontWeight: '600' }}>
+        <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}>
+          <h4 className="text-sm mb-2" style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}>
             Cash Flow Integration
           </h4>
-          <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
             All AR reports integrate with Cash Flow AI module. Expected collection data feeds directly into 13-week and monthly forecasts
             with probability-weighted projections. Drill-down from Cash Flow → Collections → Invoice → Customer is fully supported.
           </p>

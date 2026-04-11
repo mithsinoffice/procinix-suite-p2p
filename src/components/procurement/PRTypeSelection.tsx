@@ -15,8 +15,8 @@ export function PRTypeSelection() {
       title: 'Catalogue PR',
       subtitle: 'Pre-approved catalog items',
       icon: ShoppingCart,
-      color: '#00A9B7',
-      bgColor: '#E8F7F8',
+      color: 'var(--color-teal)',
+      bgColor: 'var(--color-teal-tint)',
       route: '/procurement/pr/create/catalogue',
       description: 'Create PR from pre-approved vendor catalogs with fixed pricing',
       useCases: [
@@ -37,8 +37,8 @@ export function PRTypeSelection() {
       title: 'Regular PR',
       subtitle: 'Multi-item, multi-vendor procurement',
       icon: FileText,
-      color: '#2E7D32',
-      bgColor: '#E8F5E9',
+      color: 'var(--color-success-dark)',
+      bgColor: 'var(--color-success-light)',
       route: '/procurement/pr/create/regular',
       description: 'Standard PR for multiple independent items from different vendors',
       useCases: [
@@ -81,8 +81,8 @@ export function PRTypeSelection() {
       title: 'Service PR',
       subtitle: 'Professional services & consulting',
       icon: Briefcase,
-      color: '#F57C00',
-      bgColor: '#FFF3E0',
+      color: 'var(--color-warning-dark)',
+      bgColor: 'var(--color-warning-light)',
       route: '/procurement/pr/create/service',
       description: 'For professional services, consulting, AMC, and service contracts',
       useCases: [
@@ -189,54 +189,54 @@ export function PRTypeSelection() {
   ];
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
-      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
+      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center gap-3 mb-4">
           <button 
             onClick={() => navigate('/procurement/pr/my-prs')}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            style={{ color: '#6E7A82' }}
+            style={{ color: 'var(--color-mercury-grey)' }}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl mb-1" style={{ color: '#0A0F14', margin: 0 }}>Create Purchase Requisition</h1>
-            <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>Select the type of PR based on your procurement scenario</p>
+            <h1 className="text-2xl mb-1" style={{ color: 'var(--color-ink)', margin: 0 }}>Create Purchase Requisition</h1>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>Select the type of PR based on your procurement scenario</p>
           </div>
         </div>
       </div>
 
       <div className="p-8">
         {/* Help Section */}
-        <div className="bg-white p-6 rounded-lg mb-8" style={{ border: '1px solid #E1E6EA' }}>
-          <h3 className="text-base mb-3" style={{ color: '#0A0F14', fontWeight: '600' }}>📋 How to Choose the Right PR Type?</h3>
+        <div className="bg-white p-6 rounded-lg mb-8" style={{ border: '1px solid var(--color-silver)' }}>
+          <h3 className="text-base mb-3" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>📋 How to Choose the Right PR Type?</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>
-                <strong style={{ color: '#0A0F14' }}>Catalogue PR:</strong> Use when ordering from pre-approved vendor catalogs
+              <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                <strong style={{ color: 'var(--color-ink)' }}>Catalogue PR:</strong> Use when ordering from pre-approved vendor catalogs
               </p>
-              <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>
-                <strong style={{ color: '#0A0F14' }}>Regular PR:</strong> Use for general procurement with multiple items/vendors
+              <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                <strong style={{ color: 'var(--color-ink)' }}>Regular PR:</strong> Use for general procurement with multiple items/vendors
               </p>
-              <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>
-                <strong style={{ color: '#0A0F14' }}>Kit/Bundle PR:</strong> Use when a product has multiple SKUs (e.g., laptop kit)
+              <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                <strong style={{ color: 'var(--color-ink)' }}>Kit/Bundle PR:</strong> Use when a product has multiple SKUs (e.g., laptop kit)
               </p>
-              <p className="text-sm" style={{ color: '#6E7A82' }}>
-                <strong style={{ color: '#0A0F14' }}>Service PR:</strong> Use for consulting, AMC, training, or service contracts
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                <strong style={{ color: 'var(--color-ink)' }}>Service PR:</strong> Use for consulting, AMC, training, or service contracts
               </p>
             </div>
             <div>
-              <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>
-                <strong style={{ color: '#0A0F14' }}>Asset/CAPEX PR:</strong> Use for high-value capital assets (&gt;₹50L)
+              <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                <strong style={{ color: 'var(--color-ink)' }}>Asset/CAPEX PR:</strong> Use for high-value capital assets (&gt;₹50L)
               </p>
-              <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>
-                <strong style={{ color: '#0A0F14' }}>Blanket PR:</strong> Use for recurring orders with planned delivery schedule
+              <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                <strong style={{ color: 'var(--color-ink)' }}>Blanket PR:</strong> Use for recurring orders with planned delivery schedule
               </p>
-              <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>
-                <strong style={{ color: '#0A0F14' }}>Contract-based PR:</strong> Use for orders against existing contracts/AMCs
+              <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                <strong style={{ color: 'var(--color-ink)' }}>Contract-based PR:</strong> Use for orders against existing contracts/AMCs
               </p>
-              <p className="text-sm" style={{ color: '#6E7A82' }}>
-                <strong style={{ color: '#0A0F14' }}>Emergency PR:</strong> Use only for urgent/emergency procurement needs
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                <strong style={{ color: 'var(--color-ink)' }}>Emergency PR:</strong> Use only for urgent/emergency procurement needs
               </p>
             </div>
           </div>
@@ -251,14 +251,14 @@ export function PRTypeSelection() {
                 key={type.id}
                 className="bg-white rounded-lg p-6 cursor-pointer transition-all hover:shadow-lg"
                 style={{ 
-                  border: `2px solid ${type.implemented ? type.color : '#E1E6EA'}`,
+                  border: `2px solid ${type.implemented ? type.color : 'var(--color-silver)'}`,
                   opacity: type.implemented ? 1 : 0.6,
                   position: 'relative'
                 }}
                 onClick={() => type.implemented && navigate(type.route)}
               >
                 {!type.implemented && (
-                  <div className="absolute top-3 right-3 px-2 py-1 rounded text-xs" style={{ backgroundColor: '#FFF3E0', color: '#F57C00' }}>
+                  <div className="absolute top-3 right-3 px-2 py-1 rounded text-xs" style={{ backgroundColor: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' }}>
                     Coming Soon
                   </div>
                 )}
@@ -268,21 +268,21 @@ export function PRTypeSelection() {
                     <Icon className="w-6 h-6" style={{ color: type.color }} />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>{type.title}</h3>
-                    <p className="text-sm" style={{ color: '#6E7A82' }}>{type.subtitle}</p>
+                    <h3 className="text-lg mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{type.title}</h3>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{type.subtitle}</p>
                   </div>
                   {type.implemented && (
                     <ArrowRight className="w-5 h-5" style={{ color: type.color }} />
                   )}
                 </div>
 
-                <p className="text-sm mb-4" style={{ color: '#6E7A82' }}>{type.description}</p>
+                <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>{type.description}</p>
 
                 <div className="mb-4">
-                  <p className="text-xs mb-2" style={{ color: '#0A0F14', fontWeight: '600' }}>USE CASES:</p>
+                  <p className="text-xs mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>USE CASES:</p>
                   <ul className="space-y-1">
                     {type.useCases.map((useCase, idx) => (
-                      <li key={idx} className="text-xs flex items-start gap-2" style={{ color: '#6E7A82' }}>
+                      <li key={idx} className="text-xs flex items-start gap-2" style={{ color: 'var(--color-mercury-grey)' }}>
                         <Check className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: type.color }} />
                         <span>{useCase}</span>
                       </li>
@@ -291,18 +291,18 @@ export function PRTypeSelection() {
                 </div>
 
                 <div className="mb-4">
-                  <p className="text-xs mb-2" style={{ color: '#0A0F14', fontWeight: '600' }}>CONSTRAINTS:</p>
+                  <p className="text-xs mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>CONSTRAINTS:</p>
                   <ul className="space-y-1">
                     {type.constraints.map((constraint, idx) => (
-                      <li key={idx} className="text-xs" style={{ color: '#6E7A82' }}>
+                      <li key={idx} className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                         • {constraint}
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <div className="pt-4" style={{ borderTop: '1px solid #E1E6EA' }}>
-                  <p className="text-xs" style={{ color: '#6E7A82' }}>
+                <div className="pt-4" style={{ borderTop: '1px solid var(--color-silver)' }}>
+                  <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                     <strong style={{ color: type.color }}>Best for:</strong> {type.bestFor}
                   </p>
                 </div>

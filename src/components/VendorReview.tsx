@@ -10,11 +10,11 @@ import {
 } from '../lib/vendorSubmissionReview';
 import { formatInvitationDisplayId } from '../lib/invitationDisplay';
 
-const surface = '#F6F9FC';
-const border = '#E1E6EA';
-const textMuted = '#6E7A82';
-const textMain = '#0A0F14';
-const accent = '#00A9B7';
+const surface = 'var(--color-cloud)';
+const border = 'var(--color-silver)';
+const textMuted = 'var(--color-mercury-grey)';
+const textMain = 'var(--color-ink)';
+const accent = 'var(--color-teal)';
 
 function statusStyle(st: VendorInvitationStatus): { bg: string; color: string } {
   switch (st) {
@@ -30,7 +30,7 @@ function statusStyle(st: VendorInvitationStatus): { bg: string; color: string } 
     case 'changes_requested':
       return { bg: '#FFF7ED', color: '#C2410C' };
     default:
-      return { bg: '#F1F4F6', color: '#6E7A82' };
+      return { bg: '#F1F4F6', color: 'var(--color-mercury-grey)' };
   }
 }
 

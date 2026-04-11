@@ -5,11 +5,11 @@ import { useVendorInvitations } from '../contexts/VendorInvitationContext';
 import type { VendorInvitationDocument, VendorSubmissionPayload } from '../types/vendorInvitation';
 import { isGstinFormat, isIfscFormat, isPanFormat } from '../lib/vendorKyc';
 
-const surface = '#F6F9FC';
-const border = '#E1E6EA';
-const textMuted = '#6E7A82';
-const textMain = '#0A0F14';
-const accent = '#00A9B7';
+const surface = 'var(--color-cloud)';
+const border = 'var(--color-silver)';
+const textMuted = 'var(--color-mercury-grey)';
+const textMain = 'var(--color-ink)';
+const accent = 'var(--color-teal)';
 
 export function VendorInvitationPortal() {
   const { token } = useParams<{ token: string }>();

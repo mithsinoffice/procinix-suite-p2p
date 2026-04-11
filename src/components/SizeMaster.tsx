@@ -1,10 +1,11 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, Ruler, FileText, Tag, Edit, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface Size {
   id: string;
@@ -174,90 +175,90 @@ export function SizeMaster() {
   const getStatusBadgeStyle = (approvalStatus: string) => {
     switch (approvalStatus) {
       case 'Approved':
-        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+        return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
       case 'Pending Approval':
         return { backgroundColor: '#FFF9E6', color: '#D97706' };
       case 'Draft':
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
       case 'Rejected':
-        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+        return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
       default:
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
     }
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [sizeCode, sizeName, sortOrder];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [sizeCode, sizeName, sortOrder]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showForm) {
     return (
-      <MasterFormPage
-        title={isEditMode ? 'Edit Size' : 'Create Size'}
+      <FormShell
+        title={editingId ? 'Edit Size' : 'Create Size'}
         subtitle="Manage size variants with approval workflow"
-        modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
+        modeLabel={editingId ? 'Edit Master Record' : 'Create Master Record'}
+        draftStatus={editingId ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={() => setShowForm(false)}
-        onCancel={() => {
-          setShowForm(false);
-          resetForm();
-        }}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onCancel={() => { setShowForm(false); resetForm(); }}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={sizeCode} onChange={(e) => setSizeCode(e.target.value)} placeholder="e.g., 006" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Name <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={sizeName} onChange={(e) => setSizeName(e.target.value)} placeholder="e.g., XXL" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Category</label>
-            <div className="relative">
-              <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select value={sizeCategory} onChange={(e) => setSizeCategory(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="">Select Category</option>
-                <option value="Apparel">Apparel</option>
-                <option value="Footwear">Footwear</option>
-                <option value="Accessories">Accessories</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Sort Order</label>
-            <input type="text" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} placeholder="e.g., 6" className="w-full px-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </MasterFormPage>
+        <FormSection title="Size Details" columns={2}>
+          <PxFormField label="Size Code" required filled={!!sizeCode.trim()}>
+            <input type="text" value={sizeCode} onChange={(e) => setSizeCode(e.target.value)} placeholder="e.g., 006" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Size Name" required filled={!!sizeName.trim()}>
+            <input type="text" value={sizeName} onChange={(e) => setSizeName(e.target.value)} placeholder="e.g., XXL" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Size Category" filled={!!sizeCategory}>
+            <select value={sizeCategory} onChange={(e) => setSizeCategory(e.target.value)} className="px-select">
+              <option value="">Select Category</option>
+              <option value="Apparel">Apparel</option>
+              <option value="Footwear">Footwear</option>
+              <option value="Accessories">Accessories</option>
+            </select>
+          </PxFormField>
+          <PxFormField label="Sort Order" filled={!!sortOrder.trim()} hint="Numeric display order">
+            <input type="text" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} placeholder="e.g., 6" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Status" required filled={!!status}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </PxFormField>
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Size Master</h1>
-            <p style={{ color: '#6E7A82' }}>Manage size variants with approval workflow</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Size Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage size variants with approval workflow</p>
           </div>
         </div>
         <button
@@ -266,9 +267,9 @@ export function SizeMaster() {
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Add Size
@@ -278,35 +279,35 @@ export function SizeMaster() {
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>
+            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
                 {isEditMode ? 'Edit Size' : 'Add New Size'}
               </h2>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Code <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Size Code <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input type="text" value={sizeCode} onChange={(e) => setSizeCode(e.target.value)} placeholder="e.g., 006" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <input type="text" value={sizeCode} onChange={(e) => setSizeCode(e.target.value)} placeholder="e.g., 006" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Name <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Size Name <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <div className="relative">
-                    <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input type="text" value={sizeName} onChange={(e) => setSizeName(e.target.value)} placeholder="e.g., XXL" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                    <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <input type="text" value={sizeName} onChange={(e) => setSizeName(e.target.value)} placeholder="e.g., XXL" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Category</label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Size Category</label>
                   <div className="relative">
-                    <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <select value={sizeCategory} onChange={(e) => setSizeCategory(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+                    <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <select value={sizeCategory} onChange={(e) => setSizeCategory(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
                       <option value="">Select Category</option>
                       <option value="Apparel">Apparel</option>
                       <option value="Footwear">Footwear</option>
@@ -315,14 +316,14 @@ export function SizeMaster() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Sort Order</label>
-                  <input type="text" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} placeholder="e.g., 6" className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Sort Order</label>
+                  <input type="text" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} placeholder="e.g., 6" className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Status <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                     </select>
@@ -330,11 +331,11 @@ export function SizeMaster() {
                 </div>
               </div>
             </div>
-            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
-              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid #E1E6EA', color: '#6E7A82', backgroundColor: 'white' }}>
+            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
+              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}>
                 Cancel
               </button>
-              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: '#00A9B7' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}>
+              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
                 {isEditMode ? 'Update' : 'Save'}
               </button>
             </div>
@@ -353,29 +354,29 @@ export function SizeMaster() {
         onRequestInfo={handleRequestInfo}
       />
 
-      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Size Code</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Size Name</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Category</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Sort Order</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Approval Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Size Code</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Size Name</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Category</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Sort Order</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {sizes.map((size, index) => (
-                <tr key={size.id} style={{ borderTop: index === 0 ? 'none' : '1px solid #E1E6EA' }}>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{size.sizeCode}</td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{size.sizeName}</td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{size.sizeCategory}</td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{size.sortOrder}</td>
+                <tr key={size.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{size.sizeCode}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{size.sizeName}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{size.sizeCategory}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{size.sortOrder}</td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: size.status === 'Active' ? '#E8F7F8' : '#FFE8EA', color: size.status === 'Active' ? '#00A9B7' : '#FF4E5B' }}>
+                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: size.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA', color: size.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)' }}>
                       {size.status}
                     </span>
                   </td>
@@ -387,14 +388,14 @@ export function SizeMaster() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       {size.approvalStatus === 'Pending Approval' && (
-                        <button onClick={() => handleReview(size)} className="p-2 rounded-lg transition-colors" style={{ color: '#00A9B7' }} title="Review Changes">
+                        <button onClick={() => handleReview(size)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-teal)' }} title="Review Changes">
                           <Eye className="w-4 h-4" />
                         </button>
                       )}
-                      <button onClick={() => handleEdit(size)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }} title="Edit">
+                      <button onClick={() => handleEdit(size)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }} title="Edit">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(size.id)} className="p-2 rounded-lg transition-colors" style={{ color: size.approvalStatus === 'Approved' ? '#C4C4C4' : '#FF4E5B', cursor: size.approvalStatus === 'Approved' ? 'not-allowed' : 'pointer' }} title={size.approvalStatus === 'Approved' ? 'Cannot delete approved records' : 'Delete'} disabled={size.approvalStatus === 'Approved'}>
+                      <button onClick={() => handleDelete(size.id)} className="p-2 rounded-lg transition-colors" style={{ color: size.approvalStatus === 'Approved' ? '#C4C4C4' : 'var(--color-error)', cursor: size.approvalStatus === 'Approved' ? 'not-allowed' : 'pointer' }} title={size.approvalStatus === 'Approved' ? 'Cannot delete approved records' : 'Delete'} disabled={size.approvalStatus === 'Approved'}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

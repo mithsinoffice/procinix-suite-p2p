@@ -104,7 +104,7 @@ const masterRegister: MasterRegisterRow[] = [
     status: 'Workflow Enabled',
     badge: 'Identity',
     icon: UserRound,
-    iconTint: '#7C3AED',
+    iconTint: '#007D87',
     iconBg: 'linear-gradient(135deg, #EEE2FF 0%, #E2D5FF 100%)',
   },
   {
@@ -194,7 +194,7 @@ const masterRegister: MasterRegisterRow[] = [
     status: 'Workflow Enabled',
     badge: 'Catalog',
     icon: Tags,
-    iconTint: '#7C3AED',
+    iconTint: '#007D87',
     iconBg: 'linear-gradient(135deg, #EFE4FF 0%, #E6D8FF 100%)',
   },
   {
@@ -445,12 +445,12 @@ function FilterMenu({
         className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
         style={{
           backgroundColor: '#FFFFFF',
-          border: '1px solid #D7E3EA',
-          color: '#0A0F14',
+          border: '1px solid var(--color-fog)',
+          color: 'var(--color-ink)',
           boxShadow: '0 6px 18px rgba(15, 23, 42, 0.04)',
         }}
       >
-        <Filter className="w-4 h-4" style={{ color: '#00A9B7' }} />
+        <Filter className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
         <span>{label}</span>
         {selected.length > 0 && (
           <span
@@ -460,7 +460,7 @@ function FilterMenu({
             {selected.length}
           </span>
         )}
-        <ChevronDown className="w-4 h-4" style={{ color: '#6E7A82' }} />
+        <ChevronDown className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
       </button>
 
       {open && (
@@ -468,13 +468,13 @@ function FilterMenu({
           className="absolute left-0 top-full mt-2 w-64 rounded-2xl p-3 z-20"
           style={{
             backgroundColor: '#FFFFFF',
-            border: '1px solid #D7E3EA',
+            border: '1px solid var(--color-fog)',
             boxShadow: '0 24px 48px rgba(15, 23, 42, 0.12)',
           }}
         >
           <div className="flex flex-wrap gap-2 mb-3">
             {selected.length === 0 ? (
-              <span className="text-xs" style={{ color: '#6E7A82' }}>No filters selected</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>No filters selected</span>
             ) : (
               selected.map((value) => (
                 <span
@@ -498,7 +498,7 @@ function FilterMenu({
                   className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm"
                   style={{
                     backgroundColor: isSelected ? '#E7FBFD' : '#FFFFFF',
-                    color: '#0A0F14',
+                    color: 'var(--color-ink)',
                     border: `1px solid ${isSelected ? '#7ADBE3' : 'transparent'}`,
                   }}
                 >
@@ -506,7 +506,7 @@ function FilterMenu({
                   {isSelected && (
                     <span
                       className="px-2 py-0.5 rounded-full text-[11px]"
-                      style={{ backgroundColor: '#00A9B7', color: '#FFFFFF', fontWeight: 700 }}
+                      style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF', fontWeight: 700 }}
                     >
                       On
                     </span>
@@ -520,7 +520,7 @@ function FilterMenu({
               type="button"
               onClick={() => setOpen(false)}
               className="w-full px-3 py-2 rounded-xl text-sm"
-              style={{ backgroundColor: '#0A0F14', color: '#FFFFFF', fontWeight: 600 }}
+              style={{ backgroundColor: 'var(--color-ink)', color: '#FFFFFF', fontWeight: 600 }}
             >
               Done
             </button>
@@ -583,7 +583,7 @@ export function Masters() {
   };
 
   return (
-    <div className="p-8" style={{ background: 'linear-gradient(180deg, #EEF6FB 0%, #F6F9FC 42%, #F6F9FC 100%)', minHeight: '100vh' }}>
+    <div className="p-8" style={{ background: 'linear-gradient(180deg, #EEF6FB 0%, var(--color-cloud) 42%, var(--color-cloud) 100%)', minHeight: '100vh' }}>
       <div className="mb-6 flex items-start justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-3">
@@ -608,8 +608,8 @@ export function Masters() {
               </span>
             </div>
           </div>
-          <h1 className="text-3xl mb-2" style={{ color: '#0A0F14', fontWeight: 700 }}>Masters</h1>
-          <p style={{ color: '#6E7A82', maxWidth: '840px' }}>
+          <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>Masters</h1>
+          <p style={{ color: 'var(--color-mercury-grey)', maxWidth: '840px' }}>
             Review master domains, entity applicability, governance status, and open the right maintenance screen from one premium operational register.
           </p>
         </div>
@@ -618,18 +618,18 @@ export function Masters() {
           className="rounded-3xl p-5 min-w-[300px]"
           style={{
             backgroundColor: '#FFFFFF',
-            border: '1px solid #D7E3EA',
+            border: '1px solid var(--color-fog)',
             boxShadow: '0 20px 40px rgba(15, 23, 42, 0.06)',
           }}
         >
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Workflow Enabled</p>
-              <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: 700 }}>{totalWorkflow}</p>
+              <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Workflow Enabled</p>
+              <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{totalWorkflow}</p>
             </div>
             <div>
-              <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Live Only</p>
-              <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: 700 }}>{totalLive}</p>
+              <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Live Only</p>
+              <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{totalLive}</p>
             </div>
           </div>
         </div>
@@ -639,7 +639,7 @@ export function Masters() {
         className="rounded-[28px] overflow-hidden"
         style={{
           backgroundColor: '#FFFFFF',
-          border: '1px solid #D7E3EA',
+          border: '1px solid var(--color-fog)',
           boxShadow: '0 24px 52px rgba(15, 23, 42, 0.07)',
         }}
       >
@@ -655,7 +655,7 @@ export function Masters() {
             >
               <div className="space-y-2">
                 <div className="relative w-full">
-                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#6E7A82' }} />
+                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -663,8 +663,8 @@ export function Masters() {
                     className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm"
                     style={{
                       backgroundColor: '#F8FBFD',
-                      border: '1px solid #D7E3EA',
-                      color: '#0A0F14',
+                      border: '1px solid var(--color-fog)',
+                      color: 'var(--color-ink)',
                     }}
                   />
                 </div>
@@ -730,7 +730,7 @@ export function Masters() {
               }}
             >
               {['Master', 'Domain', 'Scope', 'Entity', 'Access', 'Status', 'Action'].map((column) => (
-                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: '#6E7A82', fontWeight: 700 }}>
+                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
                   {column}
                 </div>
               ))}
@@ -770,12 +770,12 @@ export function Masters() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span style={{ color: '#0A0F14', fontWeight: 700 }}>{master.title}</span>
+                        <span style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{master.title}</span>
                         <span className="px-2.5 py-1 rounded-full text-[11px]" style={{ backgroundColor: '#EEF7FF', color: '#2563EB', fontWeight: 700 }}>
                           {master.badge}
                         </span>
                       </div>
-                      <p className="text-sm" style={{ color: '#6E7A82', lineHeight: '1.5' }}>
+                      <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', lineHeight: '1.5' }}>
                         {master.description}
                       </p>
                     </div>
@@ -906,10 +906,10 @@ export function Masters() {
                     className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center"
                     style={{ background: 'linear-gradient(135deg, #EAF8FB 0%, #DDF2F8 100%)' }}
                   >
-                    <Search className="w-6 h-6" style={{ color: '#00A9B7' }} />
+                    <Search className="w-6 h-6" style={{ color: 'var(--color-teal)' }} />
                   </div>
-                  <p className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: 700 }}>No masters match the current filters</p>
-                  <p className="text-sm" style={{ color: '#6E7A82' }}>Clear one or more filters to bring the full register back.</p>
+                  <p className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>No masters match the current filters</p>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Clear one or more filters to bring the full register back.</p>
                 </div>
               )}
             </div>

@@ -205,12 +205,12 @@ export function CreatorDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Draft': return { bg: '#E1E6EA', text: '#6E7A82', border: '#E1E6EA' };
+      case 'Draft': return { bg: 'var(--color-silver)', text: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
       case 'Submitted': return { bg: '#FEF3C7', text: '#D97706', border: '#FCD34D' };
-      case 'Approved': return { bg: '#E8F5E9', text: '#2E7D32', border: '#81C784' };
-      case 'Rejected': return { bg: '#FEE2E2', text: '#DC2626', border: '#FCA5A5' };
+      case 'Approved': return { bg: 'var(--color-success-light)', text: 'var(--color-success-dark)', border: '#81C784' };
+      case 'Rejected': return { bg: 'var(--color-error-light)', text: 'var(--color-error-dark)', border: '#FCA5A5' };
       case 'Info Requested': return { bg: '#E0F2FE', text: '#0284C7', border: '#7DD3FC' };
-      default: return { bg: '#F6F9FC', text: '#6E7A82', border: '#E1E6EA' };
+      default: return { bg: 'var(--color-cloud)', text: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
     }
   };
 
@@ -240,10 +240,10 @@ export function CreatorDashboard() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>
+        <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
           My Submissions
         </h1>
-        <p className="text-sm" style={{ color: '#6E7A82' }}>
+        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
           Track your created purchase orders and master records
         </p>
       </div>
@@ -251,10 +251,10 @@ export function CreatorDashboard() {
       {/* Creator Performance Metrics - YTD */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg" style={{ color: '#0A0F14' }}>
+          <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>
             My Creation Performance (YTD 2024)
           </h2>
-          <span className="text-xs px-3 py-1 rounded-full" style={{ backgroundColor: '#E8F7F8', color: '#00A9B7' }}>
+          <span className="text-xs px-3 py-1 rounded-full" style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}>
             As of Dec 12, 2024
           </span>
         </div>
@@ -263,15 +263,15 @@ export function CreatorDashboard() {
           {/* Total Submissions YTD */}
           <div 
             className="bg-white p-4 rounded-lg"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E8F7F8' }}>
-                <Send className="w-5 h-5" style={{ color: '#00A9B7' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal-tint)' }}>
+                <Send className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>{totalSubmissions + 35}</p>
-            <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>Total Submissions YTD</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>{totalSubmissions + 35}</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Submissions YTD</p>
             <div className="flex items-center gap-1">
               <TrendingUp className="w-3 h-3" style={{ color: '#059669' }} />
               <span className="text-xs" style={{ color: '#059669' }}>+18%</span>
@@ -281,49 +281,49 @@ export function CreatorDashboard() {
           {/* Approval Rate */}
           <div 
             className="bg-white p-4 rounded-lg"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E8F5E9' }}>
-                <Award className="w-5 h-5" style={{ color: '#2E7D32' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-success-light)' }}>
+                <Award className="w-5 h-5" style={{ color: 'var(--color-success-dark)' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>{approvalRate}%</p>
-            <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>Approval Rate</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>{approvalRate}%</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Approval Rate</p>
             <div>
-              <span className="text-xs" style={{ color: '#6E7A82' }}>{totalApprovals} of {totalSubmissions} approved</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{totalApprovals} of {totalSubmissions} approved</span>
             </div>
           </div>
 
           {/* Avg Submissions Per Month */}
           <div 
             className="bg-white p-4 rounded-lg"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
                 <Activity className="w-5 h-5" style={{ color: '#D97706' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>{avgApprovalsPerMonth + 3}</p>
-            <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>Avg Submissions/Month</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>{avgApprovalsPerMonth + 3}</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Avg Submissions/Month</p>
             <div>
-              <span className="text-xs" style={{ color: '#6E7A82' }}>11 months</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>11 months</span>
             </div>
           </div>
 
           {/* Avg Time to Approval */}
           <div 
             className="bg-white p-4 rounded-lg"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E0F2FE' }}>
                 <Timer className="w-5 h-5" style={{ color: '#0284C7' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>{avgTimeToApproval}h</p>
-            <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>Avg Time to Approval</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>{avgTimeToApproval}h</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Avg Time to Approval</p>
             <div className="flex items-center gap-1">
               <TrendingUp className="w-3 h-3" style={{ color: '#059669' }} />
               <span className="text-xs" style={{ color: '#059669' }}>22% faster</span>
@@ -333,17 +333,17 @@ export function CreatorDashboard() {
           {/* Total Rejections YTD */}
           <div 
             className="bg-white p-4 rounded-lg"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEE2E2' }}>
-                <ThumbsDown className="w-5 h-5" style={{ color: '#DC2626' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-error-light)' }}>
+                <ThumbsDown className="w-5 h-5" style={{ color: 'var(--color-error-dark)' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>{totalRejections + 3}</p>
-            <p className="text-xs mb-2" style={{ color: '#6E7A82' }}>Total Rejections YTD</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>{totalRejections + 3}</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Rejections YTD</p>
             <div>
-              <span className="text-xs" style={{ color: '#6E7A82' }}>{100 - approvalRate}% rejection rate</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{100 - approvalRate}% rejection rate</span>
             </div>
           </div>
         </div>
@@ -353,61 +353,61 @@ export function CreatorDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div 
           className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid #E1E6EA' }}
+          style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E1E6EA' }}>
-              <Edit className="w-6 h-6" style={{ color: '#6E7A82' }} />
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-silver)' }}>
+              <Edit className="w-6 h-6" style={{ color: 'var(--color-mercury-grey)' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: '#0A0F14' }}>{getCountByStatus('Draft')}</p>
-          <p className="text-sm" style={{ color: '#6E7A82' }}>Drafts</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByStatus('Draft')}</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Drafts</p>
         </div>
 
         <div 
           className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid #E1E6EA' }}
+          style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
               <Clock className="w-6 h-6" style={{ color: '#D97706' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: '#0A0F14' }}>{getCountByStatus('Submitted')}</p>
-          <p className="text-sm" style={{ color: '#6E7A82' }}>Pending Approval</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByStatus('Submitted')}</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Pending Approval</p>
         </div>
 
         <div 
           className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid #E1E6EA' }}
+          style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E8F5E9' }}>
-              <CheckCircle className="w-6 h-6" style={{ color: '#2E7D32' }} />
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-success-light)' }}>
+              <CheckCircle className="w-6 h-6" style={{ color: 'var(--color-success-dark)' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: '#0A0F14' }}>{getCountByStatus('Approved')}</p>
-          <p className="text-sm" style={{ color: '#6E7A82' }}>Approved (Recent)</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByStatus('Approved')}</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approved (Recent)</p>
         </div>
 
         <div 
           className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid #E1E6EA' }}
+          style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEE2E2' }}>
-              <XCircle className="w-6 h-6" style={{ color: '#DC2626' }} />
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-error-light)' }}>
+              <XCircle className="w-6 h-6" style={{ color: 'var(--color-error-dark)' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: '#0A0F14' }}>{getCountByStatus('Rejected')}</p>
-          <p className="text-sm" style={{ color: '#6E7A82' }}>Rejected (Recent)</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByStatus('Rejected')}</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Rejected (Recent)</p>
         </div>
       </div>
 
       {/* Filter Tabs */}
       <div 
         className="bg-white rounded-lg mb-6"
-        style={{ border: '1px solid #E1E6EA' }}
+        style={{ border: '1px solid var(--color-silver)' }}
       >
         <div className="flex items-center gap-2 p-2">
           {['All', 'Draft', 'Submitted', 'Approved', 'Rejected'].map((tab) => {
@@ -421,9 +421,9 @@ export function CreatorDashboard() {
                 onClick={() => setSelectedTab(tab as any)}
                 className="px-4 py-2 rounded-lg transition-all"
                 style={{
-                  backgroundColor: isActive ? '#E8F7F8' : 'transparent',
-                  color: isActive ? '#00A9B7' : '#6E7A82',
-                  border: isActive ? '1px solid #00A9B7' : '1px solid transparent'
+                  backgroundColor: isActive ? 'var(--color-teal-tint)' : 'transparent',
+                  color: isActive ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
+                  border: isActive ? '1px solid var(--color-teal)' : '1px solid transparent'
                 }}
               >
                 <span className="text-sm">{tab}</span>
@@ -431,8 +431,8 @@ export function CreatorDashboard() {
                   <span 
                     className="ml-2 px-2 py-0.5 rounded-full text-xs"
                     style={{
-                      backgroundColor: isActive ? '#00A9B7' : '#E1E6EA',
-                      color: isActive ? '#FFFFFF' : '#6E7A82'
+                      backgroundColor: isActive ? 'var(--color-teal)' : 'var(--color-silver)',
+                      color: isActive ? '#FFFFFF' : 'var(--color-mercury-grey)'
                     }}
                   >
                     {count}
@@ -449,11 +449,11 @@ export function CreatorDashboard() {
         {items.length === 0 ? (
           <div 
             className="bg-white p-12 rounded-lg text-center"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
-            <FileText className="w-16 h-16 mx-auto mb-4" style={{ color: '#E1E6EA' }} />
-            <p className="text-lg mb-2" style={{ color: '#0A0F14' }}>No Items Found</p>
-            <p className="text-sm" style={{ color: '#6E7A82' }}>
+            <FileText className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--color-silver)' }} />
+            <p className="text-lg mb-2" style={{ color: 'var(--color-ink)' }}>No Items Found</p>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               No items in this category
             </p>
           </div>
@@ -467,7 +467,7 @@ export function CreatorDashboard() {
               <div
                 key={item.id}
                 className="bg-white rounded-lg"
-                style={{ border: '1px solid #E1E6EA' }}
+                style={{ border: '1px solid var(--color-silver)' }}
               >
                 {/* Main Row */}
                 <div className="p-4">
@@ -476,14 +476,14 @@ export function CreatorDashboard() {
                     <div className="flex items-start gap-3 flex-1">
                       <div 
                         className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: '#F6F9FC' }}
+                        style={{ backgroundColor: 'var(--color-cloud)' }}
                       >
-                        <TypeIcon className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                        <TypeIcon className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                       </div>
 
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <h3 className="text-sm" style={{ color: '#0A0F14' }}>
+                          <h3 className="text-sm" style={{ color: 'var(--color-ink)' }}>
                             {item.title}
                           </h3>
                           
@@ -504,8 +504,8 @@ export function CreatorDashboard() {
                             <span
                               className="px-2 py-1 rounded text-xs flex items-center gap-1"
                               style={{
-                                backgroundColor: '#E8F5E9',
-                                color: '#2E7D32',
+                                backgroundColor: 'var(--color-success-light)',
+                                color: 'var(--color-success-dark)',
                                 border: '1px solid #81C784'
                               }}
                             >
@@ -517,25 +517,25 @@ export function CreatorDashboard() {
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                           <div>
-                            <p style={{ color: '#6E7A82' }} className="text-xs mb-0.5">Created Date</p>
-                            <p style={{ color: '#0A0F14' }} className="text-xs">{new Date(item.createdDate).toLocaleDateString('en-IN')}</p>
+                            <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Created Date</p>
+                            <p style={{ color: 'var(--color-ink)' }} className="text-xs">{new Date(item.createdDate).toLocaleDateString('en-IN')}</p>
                           </div>
                           {item.submittedDate && (
                             <div>
-                              <p style={{ color: '#6E7A82' }} className="text-xs mb-0.5">Submitted Date</p>
-                              <p style={{ color: '#0A0F14' }} className="text-xs">{new Date(item.submittedDate).toLocaleDateString('en-IN')}</p>
+                              <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Submitted Date</p>
+                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">{new Date(item.submittedDate).toLocaleDateString('en-IN')}</p>
                             </div>
                           )}
                           {item.value && (
                             <div>
-                              <p style={{ color: '#6E7A82' }} className="text-xs mb-0.5">Value</p>
-                              <p style={{ color: '#0A0F14' }} className="text-xs">{item.value}</p>
+                              <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Value</p>
+                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">{item.value}</p>
                             </div>
                           )}
                           {item.approver && (
                             <div>
-                              <p style={{ color: '#6E7A82' }} className="text-xs mb-0.5">Approver</p>
-                              <p style={{ color: '#0A0F14' }} className="text-xs">{item.approver}</p>
+                              <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Approver</p>
+                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">{item.approver}</p>
                             </div>
                           )}
                         </div>
@@ -547,16 +547,16 @@ export function CreatorDashboard() {
                       <button
                         onClick={() => setExpandedItem(isExpanded ? null : item.id)}
                         className="p-2 rounded-lg hover:bg-opacity-50 transition-all"
-                        style={{ backgroundColor: '#F6F9FC' }}
+                        style={{ backgroundColor: 'var(--color-cloud)' }}
                         title="View Details"
                       >
-                        <Eye className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                        <Eye className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                       </button>
                       
                       {item.status === 'Draft' && (
                         <button
                           className="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
-                          style={{ backgroundColor: '#E8F7F8', color: '#00A9B7', border: '1px solid #00A9B7' }}
+                          style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)', border: '1px solid var(--color-teal)' }}
                         >
                           <Edit className="w-4 h-4" />
                           <span className="text-xs">Edit</span>
@@ -566,7 +566,7 @@ export function CreatorDashboard() {
                       {item.status === 'Draft' && (
                         <button
                           className="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
-                          style={{ backgroundColor: '#E8F5E9', color: '#2E7D32', border: '1px solid #81C784' }}
+                          style={{ backgroundColor: 'var(--color-success-light)', color: 'var(--color-success-dark)', border: '1px solid #81C784' }}
                         >
                           <Send className="w-4 h-4" />
                           <span className="text-xs">Submit</span>
@@ -580,22 +580,22 @@ export function CreatorDashboard() {
                 {isExpanded && (
                   <div 
                     className="px-4 pb-4"
-                    style={{ borderTop: '1px solid #E1E6EA' }}
+                    style={{ borderTop: '1px solid var(--color-silver)' }}
                   >
                     <div className="pt-4">
                       {item.type === 'PO' && (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           <div>
-                            <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Vendor</p>
-                            <p className="text-sm" style={{ color: '#0A0F14' }}>{item.details.vendor}</p>
+                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</p>
+                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.details.vendor}</p>
                           </div>
                           <div>
-                            <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Items</p>
-                            <p className="text-sm" style={{ color: '#0A0F14' }}>{item.details.items}</p>
+                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Items</p>
+                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.details.items}</p>
                           </div>
                           <div>
-                            <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Delivery Date</p>
-                            <p className="text-sm" style={{ color: '#0A0F14' }}>{item.details.deliveryDate}</p>
+                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Delivery Date</p>
+                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.details.deliveryDate}</p>
                           </div>
                         </div>
                       )}
@@ -603,12 +603,12 @@ export function CreatorDashboard() {
                       {item.type === 'Master' && (
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Record Type</p>
-                            <p className="text-sm" style={{ color: '#0A0F14' }}>{item.details.recordType}</p>
+                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Record Type</p>
+                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.details.recordType}</p>
                           </div>
                           <div>
-                            <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Record Name</p>
-                            <p className="text-sm" style={{ color: '#0A0F14' }}>{item.details.recordName}</p>
+                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Record Name</p>
+                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.details.recordName}</p>
                           </div>
                         </div>
                       )}
@@ -617,13 +617,13 @@ export function CreatorDashboard() {
                       {item.status === 'Rejected' && item.rejectionReason && (
                         <div 
                           className="mt-4 p-4 rounded-lg"
-                          style={{ backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5' }}
+                          style={{ backgroundColor: 'var(--color-error-light)', border: '1px solid #FCA5A5' }}
                         >
                           <div className="flex items-start gap-2">
-                            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#DC2626' }} />
+                            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-error-dark)' }} />
                             <div>
-                              <p className="text-xs mb-1" style={{ color: '#DC2626' }}>Rejection Reason:</p>
-                              <p className="text-sm" style={{ color: '#0A0F14' }}>{item.rejectionReason}</p>
+                              <p className="text-xs mb-1" style={{ color: 'var(--color-error-dark)' }}>Rejection Reason:</p>
+                              <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.rejectionReason}</p>
                             </div>
                           </div>
                         </div>

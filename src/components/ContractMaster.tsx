@@ -1,13 +1,14 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, FileText, Calendar, Building, Edit, Eye, Upload, IndianRupee, Package, Barcode, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { ApprovalModal } from './ApprovalModal';
 import { AdvancedFilter, FilterConfig } from './AdvancedFilter';
 import { applyFilters } from '../utils/filterUtils';
 import { logCreate, logUpdate, logDelete, logApproval, logSubmit, logRequestInfo } from '../utils/auditLog';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface Contract {
   id: string;
@@ -425,15 +426,15 @@ export function ContractMaster() {
   const getStatusBadgeStyle = (approvalStatus: string) => {
     switch (approvalStatus) {
       case 'Approved':
-        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+        return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
       case 'Pending Approval':
         return { backgroundColor: '#FFF9E6', color: '#D97706' };
       case 'Draft':
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
       case 'Rejected':
-        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+        return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
       default:
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
     }
   };
 
@@ -482,12 +483,31 @@ export function ContractMaster() {
     setFilterConfig(null);
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [vendor, contractStartDate, contractEndDate, productId, ratePerUnit, currency, status, paymentTerms];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [vendor, contractStartDate, contractEndDate, productId, ratePerUnit, currency, status, paymentTerms]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showForm) {
     return (
-      <MasterFormPage
+      <FormShell
         title={isEditMode ? 'Edit Contract' : 'Create Contract'}
         subtitle="Manage vendor contracts with approval workflow"
         modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
+        draftStatus={isEditMode ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={() => {
           setShowForm(false);
           resetForm();
@@ -496,137 +516,94 @@ export function ContractMaster() {
           setShowForm(false);
           resetForm();
         }}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Contract ID</label>
-              <div className="relative">
-                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-                <input type="text" value={contractId} disabled className="w-full pl-10 pr-3 py-3 rounded-xl bg-gray-50" style={{ border: '1px solid #D7E3EA', color: '#6E7A82' }} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Vendor <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <div className="relative">
-                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-                <select value={vendor} onChange={(e) => setVendor(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: errors.vendor ? '1px solid #FF4E5B' : '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                  <option value="">Select vendor</option>
-                  {mockVendors.map((v) => <option key={v.id} value={v.name}>{v.name}</option>)}
-                </select>
-              </div>
-              {errors.vendor && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.vendor}</p>}
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>SKU ID</label>
-              <div className="relative">
-                <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-                <input type="text" value={skuId} onChange={(e) => setSkuId(e.target.value)} placeholder="Optional" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Contract Start Date <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-                <input type="date" value={contractStartDate} onChange={(e) => setContractStartDate(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: errors.contractStartDate ? '1px solid #FF4E5B' : '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-              </div>
-              {errors.contractStartDate && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.contractStartDate}</p>}
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Contract End Date <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-                <input type="date" value={contractEndDate} onChange={(e) => setContractEndDate(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: errors.contractEndDate ? '1px solid #FF4E5B' : '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-              </div>
-              {errors.contractEndDate && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.contractEndDate}</p>}
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Product ID <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <div className="relative">
-                <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#7C3AED' }} />
-                <select value={productId} onChange={(e) => setProductId(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: errors.productId ? '1px solid #FF4E5B' : '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                  <option value="">Select product</option>
-                  {mockProducts.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
-                </select>
-              </div>
-              {errors.productId && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.productId}</p>}
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Rate Per Unit <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <div className="relative">
-                <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-                <input type="text" value={ratePerUnit} onChange={(e) => setRatePerUnit(e.target.value)} placeholder="Vendor price" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: errors.ratePerUnit ? '1px solid #FF4E5B' : '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-              </div>
-              {errors.ratePerUnit && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.ratePerUnit}</p>}
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Currency <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <div className="relative">
-                <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-                <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                  <option value="INR">INR</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                  <option value="GBP">GBP</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Lead Time (Days)</label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-                <input type="text" value={leadTime} onChange={(e) => setLeadTime(e.target.value)} placeholder="Optional" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: errors.leadTime ? '1px solid #FF4E5B' : '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-              </div>
-              {errors.leadTime && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.leadTime}</p>}
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Expired">Expired</option>
-                <option value="Terminated">Terminated</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Payment Terms <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <div className="relative">
-                <FileText className="absolute left-3 top-3 w-4 h-4" style={{ color: '#00A9B7' }} />
-                <textarea value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} placeholder="e.g. 30 days credit, advance 20% etc." rows={3} className="w-full pl-10 pr-3 py-3 rounded-xl resize-none" style={{ border: errors.paymentTerms ? '1px solid #FF4E5B' : '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-              </div>
-              {errors.paymentTerms && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.paymentTerms}</p>}
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Contract Attachment (PDF)</label>
-              <div className="relative">
-                <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-                <input type="file" accept=".pdf" onChange={handleFileChange} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: errors.contractAttachment ? '1px solid #FF4E5B' : '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-              </div>
-              <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>Optional - upload signed agreement</p>
-              {errors.contractAttachment && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.contractAttachment}</p>}
-            </div>
-          </div>
-        </div>
-      </MasterFormPage>
+        <FormSection title="Contract Details" columns={3}>
+          <PxFormField label="Contract ID" filled={!!contractId.trim()}>
+            <input type="text" value={contractId} disabled className="px-input bg-gray-50" />
+          </PxFormField>
+          <PxFormField label="Vendor" required filled={!!vendor}>
+            <select value={vendor} onChange={(e) => setVendor(e.target.value)} className="px-select">
+              <option value="">Select vendor</option>
+              {mockVendors.map((v) => <option key={v.id} value={v.name}>{v.name}</option>)}
+            </select>
+            {errors.vendor && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.vendor}</p>}
+          </PxFormField>
+          <PxFormField label="SKU ID" filled={!!skuId.trim()}>
+            <input type="text" value={skuId} onChange={(e) => setSkuId(e.target.value)} placeholder="Optional" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Contract Start Date" required filled={!!contractStartDate}>
+            <input type="date" value={contractStartDate} onChange={(e) => setContractStartDate(e.target.value)} className="px-input" />
+            {errors.contractStartDate && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.contractStartDate}</p>}
+          </PxFormField>
+          <PxFormField label="Contract End Date" required filled={!!contractEndDate}>
+            <input type="date" value={contractEndDate} onChange={(e) => setContractEndDate(e.target.value)} className="px-input" />
+            {errors.contractEndDate && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.contractEndDate}</p>}
+          </PxFormField>
+          <PxFormField label="Product ID" required filled={!!productId}>
+            <select value={productId} onChange={(e) => setProductId(e.target.value)} className="px-select">
+              <option value="">Select product</option>
+              {mockProducts.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
+            {errors.productId && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.productId}</p>}
+          </PxFormField>
+        </FormSection>
+
+        <FormSection title="Financial Terms" columns={3}>
+          <PxFormField label="Rate Per Unit" required filled={!!ratePerUnit.trim()}>
+            <input type="text" value={ratePerUnit} onChange={(e) => setRatePerUnit(e.target.value)} placeholder="Vendor price" className="px-input" />
+            {errors.ratePerUnit && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.ratePerUnit}</p>}
+          </PxFormField>
+          <PxFormField label="Currency" required filled={!!currency}>
+            <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="px-select">
+              <option value="INR">INR</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+            </select>
+          </PxFormField>
+          <PxFormField label="Lead Time (Days)" filled={!!leadTime.trim()}>
+            <input type="text" value={leadTime} onChange={(e) => setLeadTime(e.target.value)} placeholder="Optional" className="px-input" />
+            {errors.leadTime && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.leadTime}</p>}
+          </PxFormField>
+          <PxFormField label="Payment Terms" required filled={!!paymentTerms.trim()}>
+            <textarea value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} placeholder="e.g. 30 days credit, advance 20% etc." rows={3} className="px-input resize-none" />
+            {errors.paymentTerms && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.paymentTerms}</p>}
+          </PxFormField>
+        </FormSection>
+
+        <FormSection title="Settings" columns={3}>
+          <PxFormField label="Status" required filled={!!status}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Expired">Expired</option>
+              <option value="Terminated">Terminated</option>
+            </select>
+          </PxFormField>
+          <PxFormField label="Contract Attachment (PDF)" filled={!!contractAttachment} hint="Optional - upload signed agreement">
+            <input type="file" accept=".pdf" onChange={handleFileChange} className="px-input" />
+            {errors.contractAttachment && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.contractAttachment}</p>}
+          </PxFormField>
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Contract Master</h1>
-            <p style={{ color: '#6E7A82' }}>Manage vendor contracts with approval workflow</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Contract Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage vendor contracts with approval workflow</p>
           </div>
         </div>
         <button
@@ -635,9 +612,9 @@ export function ContractMaster() {
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Add Contract
@@ -647,11 +624,11 @@ export function ContractMaster() {
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>
+            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
                 {isEditMode ? 'Edit Contract' : 'Add New Contract'}
               </h2>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -659,31 +636,31 @@ export function ContractMaster() {
               <div className="grid grid-cols-3 gap-4">
                 {/* Row 1: Contract ID, Vendor, SKU ID */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Contract ID</label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Contract ID</label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input 
                       type="text" 
                       value={contractId} 
                       disabled
                       className="w-full pl-10 pr-3 py-2 rounded-lg bg-gray-50" 
-                      style={{ border: '1px solid #E1E6EA', color: '#6E7A82' }} 
+                      style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)' }} 
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Vendor <span style={{ color: '#FF4E5B' }}>*</span>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Vendor <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <div className="relative">
-                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <select 
                       value={vendor} 
                       onChange={(e) => setVendor(e.target.value)} 
                       className="w-full pl-10 pr-3 py-2 rounded-lg" 
                       style={{ 
-                        border: errors.vendor ? '1px solid #FF4E5B' : '1px solid #E1E6EA', 
-                        color: vendor ? '#0A0F14' : '#6E7A82' 
+                        border: errors.vendor ? '1px solid var(--color-error)' : '1px solid var(--color-silver)', 
+                        color: vendor ? 'var(--color-ink)' : 'var(--color-mercury-grey)' 
                       }}
                     >
                       <option value="">Select vendor</option>
@@ -692,75 +669,75 @@ export function ContractMaster() {
                       ))}
                     </select>
                   </div>
-                  {errors.vendor && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.vendor}</p>}
+                  {errors.vendor && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.vendor}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>SKU ID</label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>SKU ID</label>
                   <div className="relative">
-                    <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input 
                       type="text" 
                       value={skuId} 
                       onChange={(e) => setSkuId(e.target.value)} 
                       placeholder="Optional" 
                       className="w-full pl-10 pr-3 py-2 rounded-lg" 
-                      style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} 
+                      style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} 
                     />
                   </div>
                 </div>
 
                 {/* Row 2: Start Date, End Date, Product ID */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Contract Start Date <span style={{ color: '#FF4E5B' }}>*</span>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Contract Start Date <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input 
                       type="date" 
                       value={contractStartDate} 
                       onChange={(e) => setContractStartDate(e.target.value)} 
                       className="w-full pl-10 pr-3 py-2 rounded-lg" 
                       style={{ 
-                        border: errors.contractStartDate ? '1px solid #FF4E5B' : '1px solid #E1E6EA', 
-                        color: '#0A0F14' 
+                        border: errors.contractStartDate ? '1px solid var(--color-error)' : '1px solid var(--color-silver)', 
+                        color: 'var(--color-ink)' 
                       }} 
                     />
                   </div>
-                  {errors.contractStartDate && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.contractStartDate}</p>}
+                  {errors.contractStartDate && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.contractStartDate}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Contract End Date <span style={{ color: '#FF4E5B' }}>*</span>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Contract End Date <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input 
                       type="date" 
                       value={contractEndDate} 
                       onChange={(e) => setContractEndDate(e.target.value)} 
                       className="w-full pl-10 pr-3 py-2 rounded-lg" 
                       style={{ 
-                        border: errors.contractEndDate ? '1px solid #FF4E5B' : '1px solid #E1E6EA', 
-                        color: '#0A0F14' 
+                        border: errors.contractEndDate ? '1px solid var(--color-error)' : '1px solid var(--color-silver)', 
+                        color: 'var(--color-ink)' 
                       }} 
                     />
                   </div>
-                  {errors.contractEndDate && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.contractEndDate}</p>}
+                  {errors.contractEndDate && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.contractEndDate}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Product ID <span style={{ color: '#FF4E5B' }}>*</span>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Product ID <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <div className="relative">
-                    <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#7C3AED' }} />
+                    <Package className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#007D87' }} />
                     <select 
                       value={productId} 
                       onChange={(e) => setProductId(e.target.value)} 
                       className="w-full pl-10 pr-3 py-2 rounded-lg" 
                       style={{ 
-                        border: errors.productId ? '1px solid #FF4E5B' : '1px solid #E1E6EA', 
-                        color: productId ? '#0A0F14' : '#6E7A82' 
+                        border: errors.productId ? '1px solid var(--color-error)' : '1px solid var(--color-silver)', 
+                        color: productId ? 'var(--color-ink)' : 'var(--color-mercury-grey)' 
                       }}
                     >
                       <option value="">Select product</option>
@@ -769,16 +746,16 @@ export function ContractMaster() {
                       ))}
                     </select>
                   </div>
-                  {errors.productId && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.productId}</p>}
+                  {errors.productId && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.productId}</p>}
                 </div>
 
                 {/* Row 3: Rate Per Unit, Currency, Lead Time, Status */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Rate Per Unit <span style={{ color: '#FF4E5B' }}>*</span>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Rate Per Unit <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <div className="relative">
-                    <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input 
                       type="text" 
                       value={ratePerUnit} 
@@ -786,24 +763,24 @@ export function ContractMaster() {
                       placeholder="Vendor price" 
                       className="w-full pl-10 pr-3 py-2 rounded-lg" 
                       style={{ 
-                        border: errors.ratePerUnit ? '1px solid #FF4E5B' : '1px solid #E1E6EA', 
-                        color: '#0A0F14' 
+                        border: errors.ratePerUnit ? '1px solid var(--color-error)' : '1px solid var(--color-silver)', 
+                        color: 'var(--color-ink)' 
                       }} 
                     />
                   </div>
-                  {errors.ratePerUnit && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.ratePerUnit}</p>}
+                  {errors.ratePerUnit && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.ratePerUnit}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Currency <span style={{ color: '#FF4E5B' }}>*</span>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Currency <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <div className="relative">
-                    <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <select 
                       value={currency} 
                       onChange={(e) => setCurrency(e.target.value)} 
                       className="w-full pl-10 pr-3 py-2 rounded-lg" 
-                      style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                      style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                     >
                       <option value="INR">INR</option>
                       <option value="USD">USD</option>
@@ -813,9 +790,9 @@ export function ContractMaster() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Lead Time (Days)</label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Lead Time (Days)</label>
                   <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input 
                       type="text" 
                       value={leadTime} 
@@ -823,24 +800,24 @@ export function ContractMaster() {
                       placeholder="Optional" 
                       className="w-full pl-10 pr-3 py-2 rounded-lg" 
                       style={{ 
-                        border: errors.leadTime ? '1px solid #FF4E5B' : '1px solid #E1E6EA', 
-                        color: '#0A0F14' 
+                        border: errors.leadTime ? '1px solid var(--color-error)' : '1px solid var(--color-silver)', 
+                        color: 'var(--color-ink)' 
                       }} 
                     />
                   </div>
-                  {errors.leadTime && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.leadTime}</p>}
+                  {errors.leadTime && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.leadTime}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Status <span style={{ color: '#FF4E5B' }}>*</span>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Status <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <div className="relative">
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 w-2 h-2 rounded-full" style={{ backgroundColor: '#7C3AED' }}></div>
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 w-2 h-2 rounded-full" style={{ backgroundColor: '#007D87' }}></div>
                     <select 
                       value={status} 
                       onChange={(e) => setStatus(e.target.value)} 
                       className="w-full pl-8 pr-3 py-2 rounded-lg" 
-                      style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                      style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                     >
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
@@ -855,11 +832,11 @@ export function ContractMaster() {
               <div className="grid grid-cols-1 gap-4 mt-4">
                 {/* Payment Terms */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                    Payment Terms <span style={{ color: '#FF4E5B' }}>*</span>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Payment Terms <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-3 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <FileText className="absolute left-3 top-3 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <textarea 
                       value={paymentTerms} 
                       onChange={(e) => setPaymentTerms(e.target.value)} 
@@ -867,47 +844,47 @@ export function ContractMaster() {
                       rows={3}
                       className="w-full pl-10 pr-3 py-2 rounded-lg resize-none" 
                       style={{ 
-                        border: errors.paymentTerms ? '1px solid #FF4E5B' : '1px solid #E1E6EA', 
-                        color: '#0A0F14' 
+                        border: errors.paymentTerms ? '1px solid var(--color-error)' : '1px solid var(--color-silver)', 
+                        color: 'var(--color-ink)' 
                       }} 
                     />
                   </div>
-                  {errors.paymentTerms && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.paymentTerms}</p>}
+                  {errors.paymentTerms && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.paymentTerms}</p>}
                 </div>
 
                 {/* Contract Attachment */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Contract Attachment (PDF)</label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Contract Attachment (PDF)</label>
                   <div className="relative">
-                    <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input 
                       type="file" 
                       accept=".pdf"
                       onChange={handleFileChange} 
                       className="w-full pl-10 pr-3 py-2 rounded-lg" 
                       style={{ 
-                        border: errors.contractAttachment ? '1px solid #FF4E5B' : '1px solid #E1E6EA', 
-                        color: '#0A0F14' 
+                        border: errors.contractAttachment ? '1px solid var(--color-error)' : '1px solid var(--color-silver)', 
+                        color: 'var(--color-ink)' 
                       }} 
                     />
                   </div>
-                  <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>Optional - upload signed agreement</p>
-                  {errors.contractAttachment && <p className="text-xs mt-1" style={{ color: '#FF4E5B' }}>{errors.contractAttachment}</p>}
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>Optional - upload signed agreement</p>
+                  {errors.contractAttachment && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.contractAttachment}</p>}
                 </div>
 
                 {/* Audit Info */}
-                <div className="pt-4" style={{ borderTop: '1px solid #E1E6EA' }}>
-                  <p className="text-xs" style={{ color: '#6E7A82' }}>
+                <div className="pt-4" style={{ borderTop: '1px solid var(--color-silver)' }}>
+                  <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                     Created / Updated by: Admin (auto). Audit details will come from backend.
                   </p>
                 </div>
               </div>
             </div>
-            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
-              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid #E1E6EA', color: '#6E7A82', backgroundColor: 'white' }}>
+            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
+              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}>
                 Cancel
               </button>
-              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: '#00A9B7' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}>
+              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
                 {isEditMode ? 'Update' : 'Save'}
               </button>
             </div>
@@ -934,35 +911,35 @@ export function ContractMaster() {
             onApplyFilter={handleApplyFilter}
             onClearFilter={handleClearFilter}
           />
-          <div className="text-sm" style={{ color: '#6E7A82' }}>
+          <div className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
             Showing {filteredContracts.length} of {contracts.length} records
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Contract ID</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Vendor Name</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Start Date</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>End Date</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Approval Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Contract ID</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Vendor Name</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Start Date</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>End Date</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredContracts.map((contract, index) => (
-                <tr key={contract.id} style={{ borderTop: index === 0 ? 'none' : '1px solid #E1E6EA' }}>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{contract.contractId}</td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{contract.vendor}</td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{contract.contractStartDate}</td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{contract.contractEndDate}</td>
+                <tr key={contract.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{contract.contractId}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{contract.vendor}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{contract.contractStartDate}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{contract.contractEndDate}</td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: contract.status === 'Active' ? '#E8F7F8' : '#FFE8EA', color: contract.status === 'Active' ? '#00A9B7' : '#FF4E5B' }}>
+                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: contract.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA', color: contract.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)' }}>
                       {contract.status}
                     </span>
                   </td>
@@ -974,14 +951,14 @@ export function ContractMaster() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       {contract.approvalStatus === 'Pending Approval' && (
-                        <button onClick={() => handleReview(contract)} className="p-2 rounded-lg transition-colors" style={{ color: '#00A9B7' }} title="Review Changes">
+                        <button onClick={() => handleReview(contract)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-teal)' }} title="Review Changes">
                           <Eye className="w-4 h-4" />
                         </button>
                       )}
-                      <button onClick={() => handleEdit(contract)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }} title="Edit">
+                      <button onClick={() => handleEdit(contract)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }} title="Edit">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(contract.id)} className="p-2 rounded-lg transition-colors" style={{ color: contract.approvalStatus === 'Approved' ? '#C4C4C4' : '#FF4E5B', cursor: contract.approvalStatus === 'Approved' ? 'not-allowed' : 'pointer' }} title={contract.approvalStatus === 'Approved' ? 'Cannot delete approved records' : 'Delete'} disabled={contract.approvalStatus === 'Approved'}>
+                      <button onClick={() => handleDelete(contract.id)} className="p-2 rounded-lg transition-colors" style={{ color: contract.approvalStatus === 'Approved' ? '#C4C4C4' : 'var(--color-error)', cursor: contract.approvalStatus === 'Approved' ? 'not-allowed' : 'pointer' }} title={contract.approvalStatus === 'Approved' ? 'Cannot delete approved records' : 'Delete'} disabled={contract.approvalStatus === 'Approved'}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

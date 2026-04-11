@@ -1,10 +1,11 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, Type, FileText, Edit, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { ApprovalModal } from './ApprovalModal';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface UOM {
   id: string;
@@ -151,76 +152,80 @@ export function UOMMaster() {
       case 'Pending Approval':
         return { backgroundColor: '#FFF9E6', color: '#D97706' };
       case 'Rejected':
-        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+        return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
       case 'Changes Requested':
         return { backgroundColor: '#E0F2FE', color: '#0284C7' };
       case 'Draft':
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
       default:
-        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+        return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
     }
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [code, name, description];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [code, name, description]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showForm) {
     return (
-      <MasterFormPage
-        title={isEditMode ? 'Edit UOM' : 'Create UOM'}
+      <FormShell
+        title={editingId ? 'Edit UOM' : 'Create UOM'}
         subtitle="Manage units of measure for items and services"
-        modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
+        modeLabel={editingId ? 'Edit Master Record' : 'Create Master Record'}
+        draftStatus={editingId ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={() => setShowForm(false)}
-        onCancel={() => {
-          setShowForm(false);
-          resetForm();
-        }}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onCancel={() => { setShowForm(false); resetForm(); }}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>UOM Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g., KG" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>UOM Name <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Kilogram" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Description</label>
-            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of the unit" className="w-full px-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </MasterFormPage>
+        <FormSection title="UOM Details" columns={2}>
+          <PxFormField label="UOM Code" required filled={!!code.trim()} hint="Unique identifier (auto-uppercased)">
+            <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g., KG" className="px-input" />
+          </PxFormField>
+          <PxFormField label="UOM Name" required filled={!!name.trim()}>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Kilogram" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Description" filled={!!description.trim()}>
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of the unit" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Status" required filled={!!status}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </PxFormField>
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>UOM Master</h1>
-            <p style={{ color: '#6E7A82' }}>Manage units of measure for items and services</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>UOM Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage units of measure for items and services</p>
           </div>
         </div>
         <button
@@ -229,9 +234,9 @@ export function UOMMaster() {
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Add UOM
@@ -241,39 +246,39 @@ export function UOMMaster() {
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>
+            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
                 {isEditMode ? 'Edit UOM' : 'Add New UOM'}
               </h2>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>UOM Code <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>UOM Code <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g., KG" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g., KG" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>UOM Name <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>UOM Name <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <div className="relative">
-                    <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Kilogram" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                    <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Kilogram" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
                   </div>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Description</label>
-                  <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of the unit" className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Description</label>
+                  <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of the unit" className="w-full px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Status <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                     </select>
@@ -281,14 +286,14 @@ export function UOMMaster() {
                 </div>
               </div>
             </div>
-            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
-              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid #E1E6EA', color: '#6E7A82', backgroundColor: 'white' }}>
+            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
+              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}>
                 Cancel
               </button>
               <button onClick={() => handleSubmit('Draft')} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid #BFE8EC', color: '#0F8A95', backgroundColor: '#ECFEFF', fontWeight: 700 }}>
                 Save Draft
               </button>
-              <button onClick={() => handleSubmit('Pending Approval')} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: '#00A9B7' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}>
+              <button onClick={() => handleSubmit('Pending Approval')} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
                 Submit
               </button>
             </div>
@@ -296,27 +301,27 @@ export function UOMMaster() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>UOM Code</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>UOM Name</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Description</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Approval</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>UOM Code</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>UOM Name</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Description</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {uoms.map((uom, index) => (
-                <tr key={uom.id} style={{ borderTop: index === 0 ? 'none' : '1px solid #E1E6EA' }}>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{uom.code}</td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{uom.name}</td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{uom.description}</td>
+                <tr key={uom.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{uom.code}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{uom.name}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{uom.description}</td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: uom.status === 'Active' ? '#E8F7F8' : '#E5E7EB', color: uom.status === 'Active' ? '#00A9B7' : '#6E7A82' }}>
+                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: uom.status === 'Active' ? 'var(--color-teal-tint)' : '#E5E7EB', color: uom.status === 'Active' ? 'var(--color-teal)' : 'var(--color-mercury-grey)' }}>
                       {uom.status}
                     </span>
                   </td>
@@ -327,15 +332,15 @@ export function UOMMaster() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => handleEdit(uom)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }} title="Edit">
+                      <button onClick={() => handleEdit(uom)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }} title="Edit">
                         <Edit className="w-4 h-4" />
                       </button>
                       {(uom.approvalStatus === 'Pending Approval' || uom.approvalStatus === 'Changes Requested' || uom.approvalStatus === 'Draft') && (
-                        <button onClick={() => handleReview(uom)} className="p-2 rounded-lg transition-colors" style={{ color: '#00A9B7' }} title="Review Changes">
+                        <button onClick={() => handleReview(uom)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-teal)' }} title="Review Changes">
                           <Eye className="w-4 h-4" />
                         </button>
                       )}
-                      <button onClick={() => handleDelete(uom.id)} className="p-2 rounded-lg transition-colors" style={{ color: '#FF4E5B' }} title="Delete">
+                      <button onClick={() => handleDelete(uom.id)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-error)' }} title="Delete">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

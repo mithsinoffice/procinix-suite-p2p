@@ -18,8 +18,8 @@ export function APDashboard() {
       change: '+12.5%',
       trend: 'up',
       icon: DollarSign,
-      color: '#00A9B7',
-      bg: '#00A9B710'
+      color: 'var(--color-teal)',
+      bg: 'var(--color-teal)10'
     },
     {
       label: 'Overdue Amount',
@@ -27,8 +27,8 @@ export function APDashboard() {
       change: '+5.2%',
       trend: 'up',
       icon: AlertTriangle,
-      color: '#DC2626',
-      bg: '#FEE2E2'
+      color: 'var(--color-error-dark)',
+      bg: 'var(--color-error-light)'
     },
     {
       label: 'Due This Week',
@@ -63,7 +63,7 @@ export function APDashboard() {
       change: '+3 days',
       trend: 'up',
       icon: Calendar,
-      color: '#8B5CF6',
+      color: '#007D87',
       bg: '#EDE9FE'
     }
   ];
@@ -134,7 +134,7 @@ export function APDashboard() {
   const getAlertStyle = (severity: string) => {
     switch (severity) {
       case 'high':
-        return { bg: '#FEE2E2', border: '#DC2626', color: '#DC2626' };
+        return { bg: 'var(--color-error-light)', border: 'var(--color-error-dark)', color: 'var(--color-error-dark)' };
       case 'medium':
         return { bg: '#FEF3C7', border: '#D97706', color: '#D97706' };
       default:
@@ -143,19 +143,19 @@ export function APDashboard() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }} className="p-8">
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="p-8">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>AP Command Center</h1>
-            <p style={{ color: '#6E7A82' }}>Comprehensive accounts payable dashboard and analytics</p>
+            <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>AP Command Center</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Comprehensive accounts payable dashboard and analytics</p>
           </div>
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
             className="px-4 py-2 rounded-lg border-2"
-            style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+            style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
           >
             <option>This Week</option>
             <option>This Month</option>
@@ -168,11 +168,11 @@ export function APDashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {kpis.map((kpi, idx) => (
-          <div key={idx} className="bg-white rounded-xl p-6 border-2" style={{ borderColor: '#E1E6EA' }}>
+          <div key={idx} className="bg-white rounded-xl p-6 border-2" style={{ borderColor: 'var(--color-silver)' }}>
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
-                <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>{kpi.label}</p>
-                <p className="text-3xl mb-2" style={{ color: '#0A0F14' }}>{kpi.value}</p>
+                <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>{kpi.label}</p>
+                <p className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>{kpi.value}</p>
                 <div className="flex items-center gap-1">
                   {kpi.trend === 'up' ? (
                     <TrendingUp className="w-4 h-4" style={{ color: kpi.color }} />
@@ -180,7 +180,7 @@ export function APDashboard() {
                     <TrendingDown className="w-4 h-4" style={{ color: kpi.color }} />
                   )}
                   <span className="text-sm" style={{ color: kpi.color }}>{kpi.change}</span>
-                  <span className="text-sm" style={{ color: '#6E7A82' }}>vs last period</span>
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>vs last period</span>
                 </div>
               </div>
               <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: kpi.bg }}>
@@ -193,15 +193,15 @@ export function APDashboard() {
 
       <div className="grid grid-cols-3 gap-6 mb-6">
         {/* Aging Analysis */}
-        <div className="col-span-2 bg-white rounded-xl border-2 p-6" style={{ borderColor: '#E1E6EA' }}>
+        <div className="col-span-2 bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-[#00A9B7]" />
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>AP Aging Analysis</h2>
+              <BarChart3 className="w-5 h-5 text-[var(--color-teal)]" />
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>AP Aging Analysis</h2>
             </div>
             <button
               onClick={() => navigate('/ap/reports')}
-              className="text-sm text-[#00A9B7] hover:underline"
+              className="text-sm text-[var(--color-teal)] hover:underline"
             >
               View Detailed Report →
             </button>
@@ -212,16 +212,16 @@ export function APDashboard() {
               <div key={idx}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <span style={{ color: '#0A0F14' }}>{bucket.range}</span>
-                    <span className="text-sm px-2 py-0.5 rounded" style={{ backgroundColor: '#F6F9FC', color: '#6E7A82' }}>
+                    <span style={{ color: 'var(--color-ink)' }}>{bucket.range}</span>
+                    <span className="text-sm px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}>
                       {bucket.count} invoices
                     </span>
                   </div>
-                  <span style={{ color: '#0A0F14' }}>
+                  <span style={{ color: 'var(--color-ink)' }}>
                     ₹{(bucket.amount / 100000).toFixed(1)}L
                   </span>
                 </div>
-                <div className="relative w-full bg-[#E1E6EA] rounded-full h-3">
+                <div className="relative w-full bg-[var(--color-silver)] rounded-full h-3">
                   <div
                     className="h-3 rounded-full transition-all"
                     style={{
@@ -229,12 +229,12 @@ export function APDashboard() {
                       backgroundColor: 
                         idx === 0 ? '#047857' :
                         idx === 1 ? '#D97706' :
-                        idx === 2 ? '#EA580C' : '#DC2626'
+                        idx === 2 ? '#EA580C' : 'var(--color-error-dark)'
                     }}
                   />
                   <span 
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs"
-                    style={{ color: '#0A0F14' }}
+                    style={{ color: 'var(--color-ink)' }}
                   >
                     {bucket.percentage}%
                   </span>
@@ -243,18 +243,18 @@ export function APDashboard() {
             ))}
           </div>
 
-          <div className="mt-6 pt-6 border-t-2" style={{ borderColor: '#E1E6EA' }}>
+          <div className="mt-6 pt-6 border-t-2" style={{ borderColor: 'var(--color-silver)' }}>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Total Outstanding</p>
-                <p className="text-xl" style={{ color: '#0A0F14' }}>₹45.2L</p>
+                <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Outstanding</p>
+                <p className="text-xl" style={{ color: 'var(--color-ink)' }}>₹45.2L</p>
               </div>
               <div>
-                <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Overdue (&gt;60d)</p>
-                <p className="text-xl" style={{ color: '#DC2626' }}>₹8.2L</p>
+                <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Overdue (&gt;60d)</p>
+                <p className="text-xl" style={{ color: 'var(--color-error-dark)' }}>₹8.2L</p>
               </div>
               <div>
-                <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Current (&lt;30d)</p>
+                <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Current (&lt;30d)</p>
                 <p className="text-xl" style={{ color: '#047857' }}>₹25.0L</p>
               </div>
             </div>
@@ -262,30 +262,30 @@ export function APDashboard() {
         </div>
 
         {/* Top Vendors */}
-        <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: '#E1E6EA' }}>
+        <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
           <div className="flex items-center gap-2 mb-6">
-            <Building2 className="w-5 h-5 text-[#00A9B7]" />
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Top Vendors</h2>
+            <Building2 className="w-5 h-5 text-[var(--color-teal)]" />
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Top Vendors</h2>
           </div>
 
           <div className="space-y-4">
             {topVendors.map((vendor, idx) => (
-              <div key={idx} className="p-3 rounded-lg hover:bg-[#F6F9FC] cursor-pointer transition-colors">
+              <div key={idx} className="p-3 rounded-lg hover:bg-[var(--color-cloud)] cursor-pointer transition-colors">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
-                    <p className="text-sm mb-1" style={{ color: '#0A0F14' }}>{vendor.name}</p>
-                    <p className="text-xs" style={{ color: '#6E7A82' }}>{vendor.invoices} invoices</p>
+                    <p className="text-sm mb-1" style={{ color: 'var(--color-ink)' }}>{vendor.name}</p>
+                    <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{vendor.invoices} invoices</p>
                   </div>
-                  <span className="text-sm" style={{ color: '#0A0F14' }}>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                     ₹{(vendor.outstanding / 100000).toFixed(1)}L
                   </span>
                 </div>
-                <div className="w-full bg-[#E1E6EA] rounded-full h-1.5">
+                <div className="w-full bg-[var(--color-silver)] rounded-full h-1.5">
                   <div
                     className="h-1.5 rounded-full"
                     style={{
                       width: `${(vendor.outstanding / 8500000) * 100}%`,
-                      backgroundColor: '#00A9B7'
+                      backgroundColor: 'var(--color-teal)'
                     }}
                   />
                 </div>
@@ -296,10 +296,10 @@ export function APDashboard() {
       </div>
 
       {/* Approval Cycle Time Trend */}
-      <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: '#E1E6EA' }}>
+      <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: 'var(--color-silver)' }}>
         <div className="flex items-center gap-2 mb-6">
-          <Activity className="w-5 h-5 text-[#00A9B7]" />
-          <h2 className="text-xl" style={{ color: '#0A0F14' }}>Approval Cycle Time Trend</h2>
+          <Activity className="w-5 h-5 text-[var(--color-teal)]" />
+          <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Approval Cycle Time Trend</h2>
         </div>
 
         <div className="flex items-end gap-4 h-48">
@@ -309,36 +309,36 @@ export function APDashboard() {
             
             return (
               <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                <div className="text-sm" style={{ color: '#6E7A82' }}>{data.days}d</div>
+                <div className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{data.days}d</div>
                 <div 
                   className="w-full rounded-t-lg transition-all hover:opacity-80 cursor-pointer"
                   style={{ 
                     height: `${heightPercent}%`,
-                    backgroundColor: '#00A9B7',
+                    backgroundColor: 'var(--color-teal)',
                     minHeight: '20px'
                   }}
                 />
-                <div className="text-sm" style={{ color: '#0A0F14' }}>{data.month}</div>
+                <div className="text-sm" style={{ color: 'var(--color-ink)' }}>{data.month}</div>
               </div>
             );
           })}
         </div>
 
-        <div className="mt-6 pt-6 border-t-2 grid grid-cols-4 gap-4" style={{ borderColor: '#E1E6EA' }}>
+        <div className="mt-6 pt-6 border-t-2 grid grid-cols-4 gap-4" style={{ borderColor: 'var(--color-silver)' }}>
           <div className="text-center">
-            <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Current Avg</p>
-            <p className="text-xl" style={{ color: '#00A9B7' }}>2.3 days</p>
+            <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Current Avg</p>
+            <p className="text-xl" style={{ color: 'var(--color-teal)' }}>2.3 days</p>
           </div>
           <div className="text-center">
-            <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Target SLA</p>
+            <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Target SLA</p>
             <p className="text-xl" style={{ color: '#047857' }}>2.0 days</p>
           </div>
           <div className="text-center">
-            <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>6-Month Avg</p>
-            <p className="text-xl" style={{ color: '#6E7A82' }}>2.7 days</p>
+            <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>6-Month Avg</p>
+            <p className="text-xl" style={{ color: 'var(--color-mercury-grey)' }}>2.7 days</p>
           </div>
           <div className="text-center">
-            <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Improvement</p>
+            <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Improvement</p>
             <p className="text-xl flex items-center justify-center gap-1" style={{ color: '#047857' }}>
               <TrendingDown className="w-4 h-4" />
               15%
@@ -348,10 +348,10 @@ export function APDashboard() {
       </div>
 
       {/* Alerts */}
-      <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: '#E1E6EA' }}>
+      <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
         <div className="flex items-center gap-2 mb-6">
-          <AlertTriangle className="w-5 h-5 text-[#DC2626]" />
-          <h2 className="text-xl" style={{ color: '#0A0F14' }}>Critical Alerts & Actions</h2>
+          <AlertTriangle className="w-5 h-5 text-[var(--color-error-dark)]" />
+          <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Critical Alerts & Actions</h2>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -369,7 +369,7 @@ export function APDashboard() {
                   <AlertIcon className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: style.color }} />
                   <div className="flex-1">
                     <h4 className="mb-1" style={{ color: style.color }}>{alert.title}</h4>
-                    <p className="text-sm mb-3" style={{ color: '#6E7A82' }}>{alert.description}</p>
+                    <p className="text-sm mb-3" style={{ color: 'var(--color-mercury-grey)' }}>{alert.description}</p>
                     <button
                       onClick={() => navigate(alert.link)}
                       className="text-sm px-3 py-1 rounded border hover:bg-white transition-colors"

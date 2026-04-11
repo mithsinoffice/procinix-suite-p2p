@@ -1,14 +1,14 @@
 import type { CSSProperties } from 'react';
 
-/** Canonical palette for master forms — keep in sync with `docs/universal-ui-rules.md`. */
+/** Canonical palette for master forms — references CSS custom properties in globals.css. */
 export const formColors = {
-  border: '#E1E6EA',
-  text: '#0A0F14',
-  textMuted: '#6E7A82',
-  required: '#FF4E5B',
-  readOnlyBg: '#F6F9FC',
-  tableHeaderBg: '#F6F9FC',
-  accent: '#00A9B7',
+  border: 'var(--color-silver)',
+  text: 'var(--color-ink)',
+  textMuted: 'var(--color-mercury-grey)',
+  required: 'var(--color-error)',
+  readOnlyBg: 'var(--color-cloud)',
+  tableHeaderBg: 'var(--color-cloud)',
+  accent: 'var(--color-teal)',
 } as const;
 
 const CONTROL_H = 42;

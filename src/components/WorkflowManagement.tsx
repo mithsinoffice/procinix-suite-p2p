@@ -156,11 +156,11 @@ export function WorkflowManagement() {
   const hasActiveFilters = searchTerm.trim().length > 0 || categoryFilter.length > 0 || statusFilter.length > 0;
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="flex items-start justify-between gap-6 mb-8">
         <div>
-          <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>Workflow Listing</h1>
-          <p style={{ color: '#6E7A82' }}>
+          <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>Workflow Listing</h1>
+          <p style={{ color: 'var(--color-mercury-grey)' }}>
             Review existing workflows and open the designer to create or refine approval logic.
           </p>
         </div>
@@ -170,7 +170,7 @@ export function WorkflowManagement() {
           className="inline-flex items-center gap-2 rounded-lg transition-all"
           style={{
             padding: '12px 18px',
-            background: 'linear-gradient(135deg, #00A9B7 0%, #007D87 100%)',
+            background: 'linear-gradient(135deg, var(--color-teal) 0%, var(--color-teal-dark) 100%)',
             color: '#FFFFFF',
             border: 'none',
             fontSize: '14px',
@@ -188,7 +188,7 @@ export function WorkflowManagement() {
         className="rounded-xl p-4 mb-5"
         style={{
           background: 'linear-gradient(180deg, #FFFFFF 0%, #F9FBFD 100%)',
-          border: '1px solid #E1E6EA',
+          border: '1px solid var(--color-silver)',
           boxShadow: '0 12px 24px rgba(34, 51, 84, 0.06)',
         }}
       >
@@ -235,7 +235,7 @@ export function WorkflowManagement() {
                 {filteredWorkflows.length} Listed
               </span>
             </div>
-            <h2 className="text-lg" style={{ color: '#0A0F14', margin: 0 }}>Central Workflow Register</h2>
+            <h2 className="text-lg" style={{ color: 'var(--color-ink)', margin: 0 }}>Central Workflow Register</h2>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -269,7 +269,7 @@ export function WorkflowManagement() {
         className="rounded-xl overflow-hidden"
         style={{
           backgroundColor: '#FFFFFF',
-          border: '1px solid #E1E6EA',
+          border: '1px solid var(--color-silver)',
           boxShadow: '0 10px 20px rgba(34, 51, 84, 0.05)',
         }}
       >
@@ -279,12 +279,12 @@ export function WorkflowManagement() {
               className="grid gap-4 px-5 py-4"
               style={{
                 gridTemplateColumns: '2.4fr 1.2fr 1.2fr 1.2fr 1fr 0.9fr',
-                borderBottom: '1px solid #E1E6EA',
+                borderBottom: '1px solid var(--color-silver)',
               }}
             >
               <div className="space-y-2">
                 <div className="relative">
-                  <Search style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: '#6E7A82' }} />
+                  <Search style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: 'var(--color-mercury-grey)' }} />
                   <input
                     type="text"
                     placeholder="Search workflow..."
@@ -294,10 +294,10 @@ export function WorkflowManagement() {
                       width: '100%',
                       height: '44px',
                       padding: '0 14px 0 42px',
-                      border: '1px solid #D7E3EA',
+                      border: '1px solid var(--color-fog)',
                       borderRadius: '16px',
                       fontSize: '14px',
-                      color: '#0A0F14',
+                      color: 'var(--color-ink)',
                       backgroundColor: '#F8FBFD',
                       outline: 'none',
                     }}
@@ -345,23 +345,23 @@ export function WorkflowManagement() {
             </div>
             <table className="w-full border-collapse">
               <thead>
-                <tr style={{ background: 'linear-gradient(180deg, #FBFCFE 0%, #F5F8FB 100%)', borderBottom: '1px solid #E1E6EA' }}>
-                  <th className="px-5 py-3 text-left" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6E7A82', width: '28%' }}>
+                <tr style={{ background: 'linear-gradient(180deg, #FBFCFE 0%, #F5F8FB 100%)', borderBottom: '1px solid var(--color-silver)' }}>
+                  <th className="px-5 py-3 text-left" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-mercury-grey)', width: '28%' }}>
                     Workflow
                   </th>
-                  <th className="px-4 py-3 text-left" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6E7A82', width: '18%' }}>
+                  <th className="px-4 py-3 text-left" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-mercury-grey)', width: '18%' }}>
                     Scope
                   </th>
-                  <th className="px-4 py-3 text-left" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6E7A82', width: '16%' }}>
+                  <th className="px-4 py-3 text-left" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-mercury-grey)', width: '16%' }}>
                     Routing
                   </th>
-                  <th className="px-4 py-3 text-left" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6E7A82', width: '12%' }}>
+                  <th className="px-4 py-3 text-left" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-mercury-grey)', width: '12%' }}>
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6E7A82', width: '14%' }}>
+                  <th className="px-4 py-3 text-left" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-mercury-grey)', width: '14%' }}>
                     Created
                   </th>
-                  <th className="px-5 py-3 text-right" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6E7A82', width: '12%' }}>
+                  <th className="px-5 py-3 text-right" style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-mercury-grey)', width: '12%' }}>
                     Action
                   </th>
                 </tr>
@@ -414,13 +414,13 @@ export function WorkflowManagement() {
                           {workflow.workflowTarget ?? workflow.module}
                         </span>
                       </div>
-                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#0A0F14', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-ink)', marginBottom: '4px' }}>
                         {workflow.workflowName}
                       </div>
                       <div
                         style={{
                           fontSize: '12px',
-                          color: '#6E7A82',
+                          color: 'var(--color-mercury-grey)',
                           lineHeight: 1.5,
                           display: '-webkit-box',
                           WebkitLineClamp: 2,

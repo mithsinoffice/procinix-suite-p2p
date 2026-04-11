@@ -15,28 +15,28 @@ const reportCategories: ReportCategory[] = [
     description: 'Real-time procurement operations overview with PO tracking, GRN status, vendor spend analysis, and departmental budget monitoring',
     icon: Activity,
     route: '/reports/operational-dashboard',
-    color: '#00A9B7'
+    color: 'var(--color-teal)'
   },
   {
     title: 'Procurement Head Desk',
     description: 'Operational control dashboard with PR-to-PO tracking, cycle time analysis, vendor performance metrics, and approval bottleneck identification',
     icon: Package,
     route: '/reports/procurement-head-desk',
-    color: '#00A9B7'
+    color: 'var(--color-teal)'
   },
   {
     title: 'CFO Desk',
     description: 'Financial analytics dashboard with budget tracking, spend analysis, cost savings metrics, and cash flow projections',
     icon: DollarSign,
     route: '/reports/cfo-desk',
-    color: '#00A9B7'
+    color: 'var(--color-teal)'
   },
   {
     title: 'Management Desk',
     description: 'Executive summary dashboard with strategic KPIs, organizational performance, risk indicators, and compliance overview',
     icon: Users,
     route: '/reports/management-desk',
-    color: '#00A9B7'
+    color: 'var(--color-teal)'
   },
 ];
 
@@ -61,16 +61,16 @@ export function Reports() {
   const navigate = useNavigate();
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>Reports</h1>
-        <p style={{ color: '#6E7A82' }}>Comprehensive analytics and compliance reports</p>
+        <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>Reports</h1>
+        <p style={{ color: 'var(--color-mercury-grey)' }}>Comprehensive analytics and compliance reports</p>
       </div>
 
       {/* Executive Dashboards Section */}
       <div className="mb-8">
-        <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Executive Dashboards</h2>
+        <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Executive Dashboards</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
           {reportCategories.map((category, index) => {
             const Icon = category.icon;
@@ -79,7 +79,7 @@ export function Reports() {
                 key={index}
                 onClick={() => navigate(category.route)}
                 className="bg-white rounded-lg p-6 cursor-pointer hover:shadow-lg transition-all flex flex-col"
-                style={{ border: '1px solid #E1E6EA' }}
+                style={{ border: '1px solid var(--color-silver)' }}
               >
                 <div 
                   className="w-14 h-14 rounded-lg flex items-center justify-center mb-4"
@@ -88,17 +88,17 @@ export function Reports() {
                   <Icon className="w-7 h-7" style={{ color: category.color }} />
                 </div>
                 
-                <h3 className="text-lg mb-2" style={{ color: '#0A0F14' }}>
+                <h3 className="text-lg mb-2" style={{ color: 'var(--color-ink)' }}>
                   {category.title}
                 </h3>
-                <p className="text-sm mb-6 flex-grow" style={{ color: '#6E7A82' }}>
+                <p className="text-sm mb-6 flex-grow" style={{ color: 'var(--color-mercury-grey)' }}>
                   {category.description}
                 </p>
 
                 <button 
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
                   style={{ backgroundColor: category.color }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = category.color}
                 >
                   <BarChart3 className="w-4 h-4" />
@@ -112,7 +112,7 @@ export function Reports() {
 
       {/* Standard Reports Section */}
       <div>
-        <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Standard Reports</h2>
+        <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Standard Reports</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {standardReports.map((report, index) => {
             const Icon = report.icon;
@@ -120,28 +120,28 @@ export function Reports() {
               <div 
                 key={index}
                 className="bg-white rounded-lg p-6 hover:shadow-lg transition-shadow flex flex-col"
-                style={{ border: '1px solid #E1E6EA' }}
+                style={{ border: '1px solid var(--color-silver)' }}
               >
                 <div 
                   className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
-                  style={{ backgroundColor: '#F6F9FC' }}
+                  style={{ backgroundColor: 'var(--color-cloud)' }}
                 >
-                  <Icon className="w-6 h-6" style={{ color: '#00A9B7' }} />
+                  <Icon className="w-6 h-6" style={{ color: 'var(--color-teal)' }} />
                 </div>
 
-                <h3 className="text-lg mb-2" style={{ color: '#0A0F14' }}>
+                <h3 className="text-lg mb-2" style={{ color: 'var(--color-ink)' }}>
                   {report.title}
                 </h3>
-                <p className="text-sm mb-6 flex-grow" style={{ color: '#6E7A82' }}>
+                <p className="text-sm mb-6 flex-grow" style={{ color: 'var(--color-mercury-grey)' }}>
                   {report.description}
                 </p>
 
                 <button 
                   onClick={() => navigate(report.route)}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-                  style={{ backgroundColor: '#00A9B7' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                  style={{ backgroundColor: 'var(--color-teal)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
                 >
                   <Icon className="w-4 h-4" />
                   {report.actionLabel}

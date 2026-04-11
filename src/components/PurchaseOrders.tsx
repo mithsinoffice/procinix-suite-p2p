@@ -82,7 +82,7 @@ export function PurchaseOrders() {
     searchTerm.trim().length > 0 || statusFilter.length > 0 || departmentFilter.length > 0;
 
   return (
-    <div className="p-8" style={{ background: 'linear-gradient(180deg, #EEF6FB 0%, #F6F9FC 42%, #F6F9FC 100%)', minHeight: '100vh' }}>
+    <div className="p-8" style={{ background: 'linear-gradient(180deg, #EEF6FB 0%, var(--color-cloud) 42%, var(--color-cloud) 100%)', minHeight: '100vh' }}>
       <div className="flex items-start justify-between gap-6 mb-8">
         <div>
           <div className="flex items-center gap-3 mb-3">
@@ -104,8 +104,8 @@ export function PurchaseOrders() {
               </span>
             </div>
           </div>
-          <h1 className="text-3xl" style={{ color: '#0A0F14', fontWeight: 700 }}>Purchase Orders</h1>
-          <p style={{ color: '#6E7A82', maxWidth: '820px' }}>
+          <h1 className="text-3xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>Purchase Orders</h1>
+          <p style={{ color: 'var(--color-mercury-grey)', maxWidth: '820px' }}>
             Review purchase orders, receiving status, department ownership, and act from one premium operational register.
           </p>
         </div>
@@ -114,12 +114,12 @@ export function PurchaseOrders() {
           <button
             onClick={() => setShowCreateMenu(!showCreateMenu)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white transition-colors"
-            style={{ backgroundColor: '#00A9B7', boxShadow: '0 10px 22px rgba(0, 169, 183, 0.18)' }}
+            style={{ backgroundColor: 'var(--color-teal)', boxShadow: '0 10px 22px rgba(0, 169, 183, 0.18)' }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#007D87';
+              e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#00A9B7';
+              e.currentTarget.style.backgroundColor = 'var(--color-teal)';
             }}
           >
             <Plus className="w-5 h-5" />
@@ -140,7 +140,7 @@ export function PurchaseOrders() {
                   right: 0,
                   marginTop: '8px',
                   backgroundColor: 'white',
-                  border: '1px solid #D7E3EA',
+                  border: '1px solid var(--color-fog)',
                   borderRadius: '18px',
                   boxShadow: '0 24px 48px rgba(15, 23, 42, 0.12)',
                   minWidth: '320px',
@@ -161,8 +161,8 @@ export function PurchaseOrders() {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <div style={{ color: '#0A0F14', fontWeight: 600, marginBottom: '4px' }}>Create Direct PO</div>
-                  <div style={{ color: '#6E7A82', fontSize: '13px' }}>Create a purchase order without PR.</div>
+                  <div style={{ color: 'var(--color-ink)', fontWeight: 600, marginBottom: '4px' }}>Create Direct PO</div>
+                  <div style={{ color: 'var(--color-mercury-grey)', fontSize: '13px' }}>Create a purchase order without PR.</div>
                 </button>
 
                 <button
@@ -178,8 +178,8 @@ export function PurchaseOrders() {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <div style={{ color: '#0A0F14', fontWeight: 600, marginBottom: '4px' }}>Create PO from PR</div>
-                  <div style={{ color: '#6E7A82', fontSize: '13px' }}>Combine one or more approved PRs.</div>
+                  <div style={{ color: 'var(--color-ink)', fontWeight: 600, marginBottom: '4px' }}>Create PO from PR</div>
+                  <div style={{ color: 'var(--color-mercury-grey)', fontSize: '13px' }}>Combine one or more approved PRs.</div>
                 </button>
               </div>
             </>
@@ -188,21 +188,21 @@ export function PurchaseOrders() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D7E3EA', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
-          <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Total Orders</p>
-          <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: 700 }}>{stats.total}</p>
+        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Orders</p>
+          <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{stats.total}</p>
         </div>
-        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D7E3EA', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
-          <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Issued</p>
-          <p className="text-2xl" style={{ color: '#00A9B7', fontWeight: 700 }}>{stats.issued}</p>
+        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Issued</p>
+          <p className="text-2xl" style={{ color: 'var(--color-teal)', fontWeight: 700 }}>{stats.issued}</p>
         </div>
-        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D7E3EA', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
-          <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Fully Received</p>
+        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Fully Received</p>
           <p className="text-2xl" style={{ color: '#0F9D69', fontWeight: 700 }}>{stats.received}</p>
         </div>
-        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D7E3EA', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
-          <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Total Value</p>
-          <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: 700 }}>₹{stats.totalValue.toLocaleString('en-IN')}</p>
+        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Value</p>
+          <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>₹{stats.totalValue.toLocaleString('en-IN')}</p>
         </div>
       </div>
 
@@ -210,7 +210,7 @@ export function PurchaseOrders() {
         className="rounded-[28px] overflow-hidden"
         style={{
           backgroundColor: '#FFFFFF',
-          border: '1px solid #D7E3EA',
+          border: '1px solid var(--color-fog)',
           boxShadow: '0 24px 52px rgba(15, 23, 42, 0.07)',
         }}
       >
@@ -225,14 +225,14 @@ export function PurchaseOrders() {
             >
               <div className="space-y-2">
                 <div className="relative w-full">
-                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#6E7A82' }} />
+                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
                   <input
                     type="text"
                     placeholder="Search PO..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm"
-                    style={{ backgroundColor: '#F8FBFD', border: '1px solid #D7E3EA', color: '#0A0F14' }}
+                    style={{ backgroundColor: '#F8FBFD', border: '1px solid var(--color-fog)', color: 'var(--color-ink)' }}
                   />
                 </div>
                 {hasActiveFilters && (
@@ -270,7 +270,7 @@ export function PurchaseOrders() {
                 />
               </div>
               <div className="flex justify-end">
-                <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
+                <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm" style={{ border: '1px solid var(--color-fog)', color: 'var(--color-ink)', backgroundColor: '#FFFFFF' }}>
                   <Download className="w-4 h-4" />
                   Export
                 </button>
@@ -286,7 +286,7 @@ export function PurchaseOrders() {
               }}
             >
               {['PO Number', 'Vendor', 'Date', 'Department', 'Amount', 'Status', 'Action'].map((column) => (
-                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: '#6E7A82', fontWeight: 700 }}>
+                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
                   {column}
                 </div>
               ))}
@@ -315,14 +315,14 @@ export function PurchaseOrders() {
                       <Package className="w-4 h-4" style={{ color: '#2563EB' }} />
                     </div>
                     <div>
-                      <div style={{ color: '#0A0F14', fontWeight: 700 }}>{order.poNumber}</div>
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>Purchase order</div>
+                      <div style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{order.poNumber}</div>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Purchase order</div>
                     </div>
                   </div>
-                  <div style={{ color: '#0A0F14' }}>{order.vendor}</div>
-                  <div style={{ color: '#6E7A82' }}>{new Date(order.date).toLocaleDateString('en-IN')}</div>
-                  <div style={{ color: '#6E7A82' }}>{order.department}</div>
-                  <div style={{ color: '#0A0F14', fontWeight: 600 }}>₹{order.amount.toLocaleString('en-IN')}</div>
+                  <div style={{ color: 'var(--color-ink)' }}>{order.vendor}</div>
+                  <div style={{ color: 'var(--color-mercury-grey)' }}>{new Date(order.date).toLocaleDateString('en-IN')}</div>
+                  <div style={{ color: 'var(--color-mercury-grey)' }}>{order.department}</div>
+                  <div style={{ color: 'var(--color-ink)', fontWeight: 600 }}>₹{order.amount.toLocaleString('en-IN')}</div>
                   <div>
                     <span
                       className="inline-flex items-center rounded-full px-3 py-1 text-xs"
@@ -371,20 +371,20 @@ export function PurchaseOrders() {
         </div>
 
         <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: '1px solid #E8F0F4' }}>
-          <span style={{ color: '#6E7A82' }}>
+          <span style={{ color: 'var(--color-mercury-grey)' }}>
             Showing {filteredOrders.length} of {mockPurchaseOrders.length} orders
           </span>
           <div className="flex gap-2">
-            <button className="px-4 py-2 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#6E7A82' }}>
+            <button className="px-4 py-2 rounded-xl" style={{ border: '1px solid var(--color-fog)', color: 'var(--color-mercury-grey)' }}>
               Previous
             </button>
-            <button className="px-4 py-2 rounded-xl text-white" style={{ backgroundColor: '#00A9B7' }}>
+            <button className="px-4 py-2 rounded-xl text-white" style={{ backgroundColor: 'var(--color-teal)' }}>
               1
             </button>
-            <button className="px-4 py-2 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#6E7A82' }}>
+            <button className="px-4 py-2 rounded-xl" style={{ border: '1px solid var(--color-fog)', color: 'var(--color-mercury-grey)' }}>
               2
             </button>
-            <button className="px-4 py-2 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#6E7A82' }}>
+            <button className="px-4 py-2 rounded-xl" style={{ border: '1px solid var(--color-fog)', color: 'var(--color-mercury-grey)' }}>
               Next
             </button>
           </div>

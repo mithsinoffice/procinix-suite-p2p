@@ -1,8 +1,9 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, FileText, Palette, Ruler, Barcode, Tag, Calendar, Circle, Upload, ListFilter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface SKU {
   id: string;
@@ -220,159 +221,135 @@ export function SKUMaster() {
     setSKUs(skus.filter(sku => sku.id !== id));
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [skuName, catalogue, product, colorCode, sizeCode, status];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [skuName, catalogue, product, colorCode, sizeCode, status]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showAddForm) {
     return (
-      <MasterFormPage
+      <FormShell
         title="Create SKU"
         subtitle="Define a sellable stock keeping unit with product, color, size, and code mappings"
         modeLabel="Create Master Record"
+        draftStatus="New"
+        completeness={completeness}
         onBack={() => setShowAddForm(false)}
         onCancel={() => {
           setShowAddForm(false);
           resetAddForm();
         }}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>SKU ID</label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-              <input type="text" value={skuId} onChange={(e) => setSKUId(e.target.value)} placeholder="SKU-NEW" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>SKU Name <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-              <input type="text" value={skuName} onChange={(e) => setSKUName(e.target.value)} placeholder="e.g., Legging - Black - XL" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Catalogue <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-              <select value={catalogue} onChange={(e) => setCatalogue(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="">Select catalogue</option>
-                <option value="Top Wear">Top Wear</option>
-                <option value="Bottom Wear">Bottom Wear</option>
-                <option value="Footwear">Footwear</option>
-                <option value="Accessories">Accessories</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Product <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-              <select value={product} onChange={(e) => setProduct(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="">Select product</option>
-                <option value="Ultimate Leggings">Ultimate Leggings</option>
-                <option value="Flair Pants">Flair Pants</option>
-                <option value="Sports Bra">Sports Bra</option>
-                <option value="Sports T-Shirt">Sports T-Shirt</option>
-                <option value="Running Jacket">Running Jacket</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Color Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Palette className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-              <select value={colorCode} onChange={(e) => setColorCode(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="">Select color</option>
-                <option value="Black">Black (101)</option>
-                <option value="White">White (102)</option>
-                <option value="Navy Blue">Navy Blue (103)</option>
-                <option value="Maroon">Maroon (104)</option>
-                <option value="Olive Green">Olive Green (105)</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Size Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-              <select value={sizeCode} onChange={(e) => setSizeCode(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="">Select size</option>
-                <option value="XS">XS (001)</option>
-                <option value="S">S (002)</option>
-                <option value="M">M (003)</option>
-                <option value="L">L (004)</option>
-                <option value="XL">XL (005)</option>
-                <option value="XXL">XXL (006)</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Final SKU Code</label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-              <input type="text" value={finalSKUCode} onChange={(e) => setFinalSKUCode(e.target.value)} placeholder="auto on save" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Barcode Number</label>
-            <div className="relative">
-              <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-              <input type="text" value={barcodeNumber} onChange={(e) => setBarcodeNumber(e.target.value)} placeholder="Optional" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Style Code</label>
-            <div className="relative">
-              <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-              <input type="text" value={styleCode} onChange={(e) => setStyleCode(e.target.value)} placeholder="Optional" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Season</label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-              <input type="text" value={season} onChange={(e) => setSeason(e.target.value)} placeholder="e.g., SS24, FW25" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Circle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </MasterFormPage>
+        <FormSection title="SKU Details" columns={3}>
+          <PxFormField label="SKU ID" filled={!!skuId.trim()}>
+            <input type="text" value={skuId} onChange={(e) => setSKUId(e.target.value)} placeholder="SKU-NEW" className="px-input" />
+          </PxFormField>
+          <PxFormField label="SKU Name" required filled={!!skuName.trim()}>
+            <input type="text" value={skuName} onChange={(e) => setSKUName(e.target.value)} placeholder="e.g., Legging - Black - XL" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Catalogue" required filled={!!catalogue}>
+            <select value={catalogue} onChange={(e) => setCatalogue(e.target.value)} className="px-select">
+              <option value="">Select catalogue</option>
+              <option value="Top Wear">Top Wear</option>
+              <option value="Bottom Wear">Bottom Wear</option>
+              <option value="Footwear">Footwear</option>
+              <option value="Accessories">Accessories</option>
+            </select>
+          </PxFormField>
+          <PxFormField label="Product" required filled={!!product}>
+            <select value={product} onChange={(e) => setProduct(e.target.value)} className="px-select">
+              <option value="">Select product</option>
+              <option value="Ultimate Leggings">Ultimate Leggings</option>
+              <option value="Flair Pants">Flair Pants</option>
+              <option value="Sports Bra">Sports Bra</option>
+              <option value="Sports T-Shirt">Sports T-Shirt</option>
+              <option value="Running Jacket">Running Jacket</option>
+            </select>
+          </PxFormField>
+          <PxFormField label="Color Code" required filled={!!colorCode}>
+            <select value={colorCode} onChange={(e) => setColorCode(e.target.value)} className="px-select">
+              <option value="">Select color</option>
+              <option value="Black">Black (101)</option>
+              <option value="White">White (102)</option>
+              <option value="Navy Blue">Navy Blue (103)</option>
+              <option value="Maroon">Maroon (104)</option>
+              <option value="Olive Green">Olive Green (105)</option>
+            </select>
+          </PxFormField>
+          <PxFormField label="Size Code" required filled={!!sizeCode}>
+            <select value={sizeCode} onChange={(e) => setSizeCode(e.target.value)} className="px-select">
+              <option value="">Select size</option>
+              <option value="XS">XS (001)</option>
+              <option value="S">S (002)</option>
+              <option value="M">M (003)</option>
+              <option value="L">L (004)</option>
+              <option value="XL">XL (005)</option>
+              <option value="XXL">XXL (006)</option>
+            </select>
+          </PxFormField>
+          <PxFormField label="Final SKU Code" filled={!!finalSKUCode.trim()}>
+            <input type="text" value={finalSKUCode} onChange={(e) => setFinalSKUCode(e.target.value)} placeholder="auto on save" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Barcode Number" filled={!!barcodeNumber.trim()}>
+            <input type="text" value={barcodeNumber} onChange={(e) => setBarcodeNumber(e.target.value)} placeholder="Optional" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Style Code" filled={!!styleCode.trim()}>
+            <input type="text" value={styleCode} onChange={(e) => setStyleCode(e.target.value)} placeholder="Optional" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Season" filled={!!season.trim()}>
+            <input type="text" value={season} onChange={(e) => setSeason(e.target.value)} placeholder="e.g., SS24, FW25" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Status" required filled={!!status}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </PxFormField>
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/masters')}
             className="p-2 rounded-lg transition-colors"
-            style={{ color: '#6E7A82' }}
+            style={{ color: 'var(--color-mercury-grey)' }}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>SKU Master</h1>
-            <p style={{ color: '#6E7A82' }}>Dummy SKU data</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>SKU Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Dummy SKU data</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button
             className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
             style={{ 
-              border: '1px solid #E1E6EA',
-              color: '#6E7A82',
+              border: '1px solid var(--color-silver)',
+              color: 'var(--color-mercury-grey)',
               backgroundColor: 'white'
             }}
           >
@@ -382,9 +359,9 @@ export function SKUMaster() {
           <button
             onClick={() => setShowAddForm(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-            style={{ backgroundColor: '#00A9B7' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+            style={{ backgroundColor: 'var(--color-teal)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
           >
             <Plus className="w-4 h-4" />
             Add New
@@ -392,9 +369,9 @@ export function SKUMaster() {
           <button
             onClick={() => setShowVariationGenerator(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-            style={{ backgroundColor: '#00A9B7' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+            style={{ backgroundColor: 'var(--color-teal)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
           >
             <Plus className="w-4 h-4" />
             Add SKU
@@ -402,8 +379,8 @@ export function SKUMaster() {
           <button
             className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
             style={{ 
-              border: '1px solid #E1E6EA',
-              color: '#6E7A82',
+              border: '1px solid var(--color-silver)',
+              color: 'var(--color-mercury-grey)',
               backgroundColor: 'white'
             }}
           >
@@ -418,12 +395,12 @@ export function SKUMaster() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: '#E1E6EA' }}>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>Add New SKU Master</h2>
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: 'var(--color-silver)' }}>
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Add New SKU Master</h2>
               <button
                 onClick={() => setShowAddForm(false)}
                 className="p-2 rounded-lg transition-colors"
-                style={{ color: '#6E7A82' }}
+                style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -434,11 +411,11 @@ export function SKUMaster() {
               <div className="grid grid-cols-3 gap-6">
                 {/* SKU ID */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     SKU ID
                   </label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input
                       type="text"
                       value={skuId}
@@ -446,8 +423,8 @@ export function SKUMaster() {
                       placeholder="SKU-NEW"
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
+                        border: '1px solid var(--color-silver)',
+                        color: 'var(--color-ink)'
                       }}
                     />
                   </div>
@@ -455,11 +432,11 @@ export function SKUMaster() {
 
                 {/* SKU Name */}
                 <div className="col-span-2">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     SKU Name *
                   </label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input
                       type="text"
                       value={skuName}
@@ -467,8 +444,8 @@ export function SKUMaster() {
                       placeholder="e.g., 'Legging - Black - XL'"
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
+                        border: '1px solid var(--color-silver)',
+                        color: 'var(--color-ink)'
                       }}
                     />
                   </div>
@@ -476,18 +453,18 @@ export function SKUMaster() {
 
                 {/* Catalogue */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Catalogue *
                   </label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <select
                       value={catalogue}
                       onChange={(e) => setCatalogue(e.target.value)}
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: catalogue ? '#0A0F14' : '#6E7A82'
+                        border: '1px solid var(--color-silver)',
+                        color: catalogue ? 'var(--color-ink)' : 'var(--color-mercury-grey)'
                       }}
                     >
                       <option value="">Select catalogue</option>
@@ -501,18 +478,18 @@ export function SKUMaster() {
 
                 {/* Product */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Product *
                   </label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <select
                       value={product}
                       onChange={(e) => setProduct(e.target.value)}
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: product ? '#0A0F14' : '#6E7A82'
+                        border: '1px solid var(--color-silver)',
+                        color: product ? 'var(--color-ink)' : 'var(--color-mercury-grey)'
                       }}
                     >
                       <option value="">Select product</option>
@@ -527,18 +504,18 @@ export function SKUMaster() {
 
                 {/* Color Code */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Color Code *
                   </label>
                   <div className="relative">
-                    <Palette className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Palette className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <select
                       value={colorCode}
                       onChange={(e) => setColorCode(e.target.value)}
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: colorCode ? '#0A0F14' : '#6E7A82'
+                        border: '1px solid var(--color-silver)',
+                        color: colorCode ? 'var(--color-ink)' : 'var(--color-mercury-grey)'
                       }}
                     >
                       <option value="">Select color</option>
@@ -553,18 +530,18 @@ export function SKUMaster() {
 
                 {/* Size Code */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Size Code *
                   </label>
                   <div className="relative">
-                    <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <select
                       value={sizeCode}
                       onChange={(e) => setSizeCode(e.target.value)}
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: sizeCode ? '#0A0F14' : '#6E7A82'
+                        border: '1px solid var(--color-silver)',
+                        color: sizeCode ? 'var(--color-ink)' : 'var(--color-mercury-grey)'
                       }}
                     >
                       <option value="">Select size</option>
@@ -580,11 +557,11 @@ export function SKUMaster() {
 
                 {/* Final SKU Code */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Final SKU Code
                   </label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input
                       type="text"
                       value={finalSKUCode}
@@ -592,8 +569,8 @@ export function SKUMaster() {
                       placeholder="auto on save"
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
+                        border: '1px solid var(--color-silver)',
+                        color: 'var(--color-ink)'
                       }}
                     />
                   </div>
@@ -601,11 +578,11 @@ export function SKUMaster() {
 
                 {/* Barcode Number */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Barcode Number
                   </label>
                   <div className="relative">
-                    <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Barcode className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input
                       type="text"
                       value={barcodeNumber}
@@ -613,8 +590,8 @@ export function SKUMaster() {
                       placeholder="Optional"
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
+                        border: '1px solid var(--color-silver)',
+                        color: 'var(--color-ink)'
                       }}
                     />
                   </div>
@@ -622,11 +599,11 @@ export function SKUMaster() {
 
                 {/* Style Code */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Style Code
                   </label>
                   <div className="relative">
-                    <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input
                       type="text"
                       value={styleCode}
@@ -634,8 +611,8 @@ export function SKUMaster() {
                       placeholder="Optional"
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
+                        border: '1px solid var(--color-silver)',
+                        color: 'var(--color-ink)'
                       }}
                     />
                   </div>
@@ -643,11 +620,11 @@ export function SKUMaster() {
 
                 {/* Season */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Season
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input
                       type="text"
                       value={season}
@@ -655,8 +632,8 @@ export function SKUMaster() {
                       placeholder="e.g., SS24, FW25"
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
+                        border: '1px solid var(--color-silver)',
+                        color: 'var(--color-ink)'
                       }}
                     />
                   </div>
@@ -664,18 +641,18 @@ export function SKUMaster() {
 
                 {/* Status */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Status *
                   </label>
                   <div className="relative">
-                    <Circle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Circle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
+                        border: '1px solid var(--color-silver)',
+                        color: 'var(--color-ink)'
                       }}
                     >
                       <option value="Active">Active</option>
@@ -685,8 +662,8 @@ export function SKUMaster() {
                 </div>
 
                 {/* Footer Note */}
-                <div className="col-span-3 pt-4" style={{ borderTop: '1px solid #E1E6EA' }}>
-                  <p className="text-sm" style={{ color: '#6E7A82' }}>
+                <div className="col-span-3 pt-4" style={{ borderTop: '1px solid var(--color-silver)' }}>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                     Created / Updated by: Admin (auto)
                   </p>
                 </div>
@@ -694,13 +671,13 @@ export function SKUMaster() {
             </div>
 
             {/* Modal Footer */}
-            <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end gap-3" style={{ borderColor: '#E1E6EA' }}>
+            <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end gap-3" style={{ borderColor: 'var(--color-silver)' }}>
               <button
                 onClick={() => setShowAddForm(false)}
                 className="px-6 py-2 rounded-lg transition-colors"
                 style={{
-                  border: '1px solid #E1E6EA',
-                  color: '#6E7A82',
+                  border: '1px solid var(--color-silver)',
+                  color: 'var(--color-mercury-grey)',
                   backgroundColor: 'white'
                 }}
               >
@@ -709,9 +686,9 @@ export function SKUMaster() {
               <button
                 onClick={handleSubmit}
                 className="px-6 py-2 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#7C3AED' }}
+                style={{ backgroundColor: '#007D87' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#6D28D9'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#7C3AED'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
               >
                 Save
               </button>
@@ -725,12 +702,12 @@ export function SKUMaster() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
-            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>SKU Variation Generator</h2>
+            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>SKU Variation Generator</h2>
               <button
                 onClick={() => setShowVariationGenerator(false)}
                 className="p-2 rounded-lg transition-colors"
-                style={{ color: '#6E7A82' }}
+                style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -741,11 +718,11 @@ export function SKUMaster() {
               <div className="grid grid-cols-2 gap-6">
                 {/* Parent Item Code */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Parent Item Code
                   </label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#00A9B7' }} />
+                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                     <input
                       type="text"
                       value={parentItemCode}
@@ -753,8 +730,8 @@ export function SKUMaster() {
                       placeholder="e.g., 399"
                       className="w-full pl-10 pr-3 py-2 rounded-lg"
                       style={{
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
+                        border: '1px solid var(--color-silver)',
+                        color: 'var(--color-ink)'
                       }}
                     />
                   </div>
@@ -762,7 +739,7 @@ export function SKUMaster() {
 
                 {/* Select Product */}
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Select Product
                   </label>
                   <select
@@ -770,8 +747,8 @@ export function SKUMaster() {
                     onChange={(e) => setSelectedProduct(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg"
                     style={{
-                      border: '1px solid #E1E6EA',
-                      color: selectedProduct ? '#0A0F14' : '#6E7A82'
+                      border: '1px solid var(--color-silver)',
+                      color: selectedProduct ? 'var(--color-ink)' : 'var(--color-mercury-grey)'
                     }}
                   >
                     <option value="">-- Select Product --</option>
@@ -787,7 +764,7 @@ export function SKUMaster() {
               <div className="grid grid-cols-2 gap-6">
                 {/* Variation 1: Color Options */}
                 <div>
-                  <label className="block text-sm mb-3" style={{ color: '#0A0F14' }}>
+                  <label className="block text-sm mb-3" style={{ color: 'var(--color-ink)' }}>
                     Variation 1: Color Options
                   </label>
                   <div className="space-y-2">
@@ -798,22 +775,22 @@ export function SKUMaster() {
                           checked={selectedColors.includes(color.id)}
                           onChange={() => handleColorToggle(color.id)}
                           className="w-4 h-4 rounded"
-                          style={{ accentColor: '#7C3AED' }}
+                          style={{ accentColor: '#007D87' }}
                         />
-                        <span style={{ color: '#0A0F14' }}>
+                        <span style={{ color: 'var(--color-ink)' }}>
                           {color.name} ({color.code})
                         </span>
                       </label>
                     ))}
                   </div>
-                  <p className="text-sm mt-3" style={{ color: '#6E7A82' }}>
+                  <p className="text-sm mt-3" style={{ color: 'var(--color-mercury-grey)' }}>
                     Selected colors: {selectedColors.length}
                   </p>
                 </div>
 
                 {/* Variation 2: Size Options */}
                 <div>
-                  <label className="block text-sm mb-3" style={{ color: '#0A0F14' }}>
+                  <label className="block text-sm mb-3" style={{ color: 'var(--color-ink)' }}>
                     Variation 2: Size Options
                   </label>
                   <div className="space-y-2">
@@ -824,15 +801,15 @@ export function SKUMaster() {
                           checked={selectedSizes.includes(size.id)}
                           onChange={() => handleSizeToggle(size.id)}
                           className="w-4 h-4 rounded"
-                          style={{ accentColor: '#7C3AED' }}
+                          style={{ accentColor: '#007D87' }}
                         />
-                        <span style={{ color: '#0A0F14' }}>
+                        <span style={{ color: 'var(--color-ink)' }}>
                           {size.name} ({size.code})
                         </span>
                       </label>
                     ))}
                   </div>
-                  <p className="text-sm mt-3" style={{ color: '#6E7A82' }}>
+                  <p className="text-sm mt-3" style={{ color: 'var(--color-mercury-grey)' }}>
                     Selected sizes: {selectedSizes.length}
                   </p>
                 </div>
@@ -842,7 +819,7 @@ export function SKUMaster() {
               {previewSKUs.length > 0 && (
                 <div className="mt-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg" style={{ color: '#0A0F14' }}>Preview SKUs</h3>
+                    <h3 className="text-lg" style={{ color: 'var(--color-ink)' }}>Preview SKUs</h3>
                     <button
                       onClick={handleSelectAllPreview}
                       className="text-sm text-blue-500 cursor-pointer"
@@ -850,7 +827,7 @@ export function SKUMaster() {
                       {selectedPreviewSKUs.length === previewSKUs.length ? 'Unselect All' : 'Select All'}
                     </button>
                   </div>
-                  <div className="space-y-2 max-h-64 overflow-y-auto p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
+                  <div className="space-y-2 max-h-64 overflow-y-auto p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
                     {previewSKUs.map(sku => (
                       <div key={sku.id} className="flex items-center gap-3">
                         <input
@@ -858,15 +835,15 @@ export function SKUMaster() {
                           checked={selectedPreviewSKUs.includes(sku.id)}
                           onChange={() => handlePreviewToggle(sku.id)}
                           className="w-4 h-4 rounded"
-                          style={{ accentColor: '#7C3AED' }}
+                          style={{ accentColor: '#007D87' }}
                         />
-                        <span style={{ color: '#0A0F14' }}>
+                        <span style={{ color: 'var(--color-ink)' }}>
                           {sku.skuCode} - {sku.product} - {sku.size} - {sku.color}
                         </span>
                       </div>
                     ))}
                   </div>
-                  <p className="text-sm mt-2" style={{ color: '#6E7A82' }}>
+                  <p className="text-sm mt-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Selected: {selectedPreviewSKUs.length} of {previewSKUs.length} SKUs
                   </p>
                 </div>
@@ -874,20 +851,20 @@ export function SKUMaster() {
 
               {/* Warning Message */}
               {selectedColors.length === 0 || selectedSizes.length === 0 ? (
-                <p className="text-sm text-center py-4" style={{ color: '#FF4E5B' }}>
+                <p className="text-sm text-center py-4" style={{ color: 'var(--color-error)' }}>
                   Select colors and sizes to see combinations
                 </p>
               ) : null}
             </div>
 
             {/* Modal Footer - Fixed */}
-            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
+            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
               <button
                 onClick={() => setShowVariationGenerator(false)}
                 className="px-6 py-2 rounded-lg transition-colors"
                 style={{
-                  border: '1px solid #E1E6EA',
-                  color: '#6E7A82',
+                  border: '1px solid var(--color-silver)',
+                  color: 'var(--color-mercury-grey)',
                   backgroundColor: 'white'
                 }}
               >
@@ -898,7 +875,7 @@ export function SKUMaster() {
                 disabled={selectedColors.length === 0 || selectedSizes.length === 0}
                 className="px-6 py-2 rounded-lg text-white transition-colors"
                 style={{ 
-                  backgroundColor: (selectedColors.length === 0 || selectedSizes.length === 0) ? '#E1E6EA' : '#7C3AED',
+                  backgroundColor: (selectedColors.length === 0 || selectedSizes.length === 0) ? 'var(--color-silver)' : '#007D87',
                   cursor: (selectedColors.length === 0 || selectedSizes.length === 0) ? 'not-allowed' : 'pointer'
                 }}
                 onMouseEnter={(e) => {
@@ -908,7 +885,7 @@ export function SKUMaster() {
                 }}
                 onMouseLeave={(e) => {
                   if (selectedColors.length > 0 && selectedSizes.length > 0) {
-                    e.currentTarget.style.backgroundColor = '#7C3AED';
+                    e.currentTarget.style.backgroundColor = '#007D87';
                   }
                 }}
               >
@@ -919,7 +896,7 @@ export function SKUMaster() {
                 disabled={selectedPreviewSKUs.length === 0}
                 className="px-6 py-2 rounded-lg text-white transition-colors"
                 style={{ 
-                  backgroundColor: selectedPreviewSKUs.length === 0 ? '#E1E6EA' : '#7C3AED',
+                  backgroundColor: selectedPreviewSKUs.length === 0 ? 'var(--color-silver)' : '#007D87',
                   cursor: selectedPreviewSKUs.length === 0 ? 'not-allowed' : 'pointer'
                 }}
                 onMouseEnter={(e) => {
@@ -929,7 +906,7 @@ export function SKUMaster() {
                 }}
                 onMouseLeave={(e) => {
                   if (selectedPreviewSKUs.length > 0) {
-                    e.currentTarget.style.backgroundColor = '#7C3AED';
+                    e.currentTarget.style.backgroundColor = '#007D87';
                   }
                 }}
               >
@@ -941,27 +918,27 @@ export function SKUMaster() {
       )}
 
       {/* SKU List Table */}
-      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   SKU
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   PRODUCT
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   SIZE
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   COLOR
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   STATUS
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   ACTIONS
                 </th>
               </tr>
@@ -971,27 +948,27 @@ export function SKUMaster() {
                 <tr
                   key={sku.id}
                   style={{
-                    borderTop: index === 0 ? 'none' : '1px solid #E1E6EA'
+                    borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)'
                   }}
                 >
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     {sku.skuCode}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     {sku.product}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
                     {sku.size}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
                     {sku.color}
                   </td>
                   <td className="px-6 py-4">
                     <span
                       className="px-3 py-1 rounded-full text-sm"
                       style={{
-                        backgroundColor: sku.status === 'Active' ? '#E8F7F8' : '#FFE8EA',
-                        color: sku.status === 'Active' ? '#00A9B7' : '#FF4E5B'
+                        backgroundColor: sku.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA',
+                        color: sku.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)'
                       }}
                     >
                       {sku.status}
@@ -1001,7 +978,7 @@ export function SKUMaster() {
                     <button
                       onClick={() => handleDelete(sku.id)}
                       className="p-2 rounded-lg transition-colors"
-                      style={{ color: '#FF4E5B' }}
+                      style={{ color: 'var(--color-error)' }}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

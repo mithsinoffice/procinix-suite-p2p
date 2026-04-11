@@ -16,11 +16,11 @@ import type { PortalUser, PortalUserStatus } from '../types/portalUser';
 import { Switch } from './ui/switch';
 import { buildPortalWelcomeMailto, sendPortalWelcomeEmail } from '../lib/portalWelcomeEmail';
 
-const surface = '#F6F9FC';
-const border = '#E1E6EA';
-const textMuted = '#6E7A82';
-const textMain = '#0A0F14';
-const accent = '#00A9B7';
+const surface = 'var(--color-cloud)';
+const border = 'var(--color-silver)';
+const textMuted = 'var(--color-mercury-grey)';
+const textMain = 'var(--color-ink)';
+const accent = 'var(--color-teal)';
 
 const PORTAL_ROLES = [
   'Primary Contact',
@@ -330,8 +330,8 @@ export function PortalUsers() {
         <KpiCard
           label="Suspended"
           value={kpis.suspended}
-          icon={<Ban className="w-5 h-5" style={{ color: '#DC2626' }} />}
-          iconColor="#DC2626"
+          icon={<Ban className="w-5 h-5" style={{ color: 'var(--color-error-dark)' }} />}
+          iconColor="var(--color-error-dark)"
         />
       </div>
 
@@ -548,7 +548,7 @@ export function PortalUsers() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: textMuted }}>
-                    First name <span style={{ color: '#DC2626' }}>*</span>
+                    First name <span style={{ color: 'var(--color-error-dark)' }}>*</span>
                   </label>
                   <input
                     required
@@ -560,7 +560,7 @@ export function PortalUsers() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium mb-1" style={{ color: textMuted }}>
-                    Last name <span style={{ color: '#DC2626' }}>*</span>
+                    Last name <span style={{ color: 'var(--color-error-dark)' }}>*</span>
                   </label>
                   <input
                     required
@@ -573,7 +573,7 @@ export function PortalUsers() {
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: textMuted }}>
-                  Email address <span style={{ color: '#DC2626' }}>*</span>
+                  Email address <span style={{ color: 'var(--color-error-dark)' }}>*</span>
                 </label>
                 <input
                   type="email"
@@ -587,7 +587,7 @@ export function PortalUsers() {
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: textMuted }}>
-                  Vendor <span style={{ color: '#DC2626' }}>*</span>
+                  Vendor <span style={{ color: 'var(--color-error-dark)' }}>*</span>
                 </label>
                 <select
                   required
@@ -611,7 +611,7 @@ export function PortalUsers() {
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: textMuted }}>
-                  Role <span style={{ color: '#DC2626' }}>*</span>
+                  Role <span style={{ color: 'var(--color-error-dark)' }}>*</span>
                 </label>
                 <select
                   required
@@ -637,7 +637,7 @@ export function PortalUsers() {
                   <Switch
                     checked={sendWelcome}
                     onCheckedChange={setSendWelcome}
-                    className="data-[state=checked]:bg-[#00A9B7]"
+                    className="data-[state=checked]:bg-[var(--color-teal)]"
                   />
                 </div>
               )}

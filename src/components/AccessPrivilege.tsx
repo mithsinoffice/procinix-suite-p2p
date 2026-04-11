@@ -114,13 +114,13 @@ export function AccessPrivilege() {
   };
 
   return (
-    <div style={{ padding: '24px', backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ padding: '24px', backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
           Access Privilege Management
         </h1>
-        <p style={{ fontSize: '14px', color: '#6E7A82', margin: '4px 0 0 0' }}>
+        <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>
           Configure module-level permissions for each role
         </p>
       </div>
@@ -131,11 +131,11 @@ export function AccessPrivilege() {
           className="rounded-lg" 
           style={{ 
             backgroundColor: '#FFFFFF', 
-            border: '1px solid #E1E6EA',
+            border: '1px solid var(--color-silver)',
             padding: '16px'
           }}
         >
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0A0F14', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: 'var(--color-ink)', marginBottom: '8px' }}>
             Select Role
           </label>
           <select
@@ -144,10 +144,10 @@ export function AccessPrivilege() {
             style={{
               width: '100%',
               padding: '10px 12px',
-              border: '1px solid #E1E6EA',
+              border: '1px solid var(--color-silver)',
               borderRadius: '8px',
               fontSize: '14px',
-              color: '#0A0F14',
+              color: 'var(--color-ink)',
               outline: 'none'
             }}
           >
@@ -161,36 +161,36 @@ export function AccessPrivilege() {
           className="rounded-lg" 
           style={{ 
             backgroundColor: '#FFFFFF', 
-            border: '1px solid #E1E6EA',
+            border: '1px solid var(--color-silver)',
             padding: '16px'
           }}
         >
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#0A0F14', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: 'var(--color-ink)', marginBottom: '8px' }}>
             Entity Scope
           </label>
           <div className="flex flex-wrap gap-2" style={{ marginBottom: '8px' }}>
-            <label className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+            <label className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
               <input
                 type="checkbox"
                 checked={selectedEntityIds.includes('ALL')}
                 onChange={() => toggleEntityScope('ALL')}
-                style={{ accentColor: '#00A9B7' }}
+                style={{ accentColor: 'var(--color-teal)' }}
               />
-              <span style={{ fontSize: '13px', color: '#0A0F14' }}>All Entities</span>
+              <span style={{ fontSize: '13px', color: 'var(--color-ink)' }}>All Entities</span>
             </label>
             {availableCompanies.map((company) => (
-              <label key={company.id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+              <label key={company.id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
                 <input
                   type="checkbox"
                   checked={!selectedEntityIds.includes('ALL') && selectedEntityIds.includes(company.id)}
                   onChange={() => toggleEntityScope(company.id)}
-                  style={{ accentColor: '#00A9B7' }}
+                  style={{ accentColor: 'var(--color-teal)' }}
                 />
-                <span style={{ fontSize: '13px', color: '#0A0F14' }}>{company.code}</span>
+                <span style={{ fontSize: '13px', color: 'var(--color-ink)' }}>{company.code}</span>
               </label>
             ))}
           </div>
-          <p style={{ fontSize: '12px', color: '#6E7A82', margin: 0 }}>
+          <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: 0 }}>
             Current scope: {entityScopeLabel}
           </p>
         </div>
@@ -199,12 +199,12 @@ export function AccessPrivilege() {
           className="rounded-lg" 
           style={{ 
             backgroundColor: '#FFFFFF', 
-            border: '1px solid #E1E6EA',
+            border: '1px solid var(--color-silver)',
             padding: '16px'
           }}
         >
           <div className="flex items-center gap-2" style={{ position: 'relative' }}>
-            <Search style={{ position: 'absolute', left: '12px', width: '18px', height: '18px', color: '#6E7A82' }} />
+            <Search style={{ position: 'absolute', left: '12px', width: '18px', height: '18px', color: 'var(--color-mercury-grey)' }} />
             <input
               type="text"
               placeholder="Search modules..."
@@ -213,10 +213,10 @@ export function AccessPrivilege() {
               style={{
                 flex: 1,
                 padding: '10px 10px 10px 40px',
-                border: '1px solid #E1E6EA',
+                border: '1px solid var(--color-silver)',
                 borderRadius: '8px',
                 fontSize: '14px',
-                color: '#0A0F14',
+                color: 'var(--color-ink)',
                 outline: 'none'
               }}
             />
@@ -229,48 +229,48 @@ export function AccessPrivilege() {
         className="rounded-lg" 
         style={{ 
           backgroundColor: '#FFFFFF', 
-          border: '1px solid #E1E6EA',
+          border: '1px solid var(--color-silver)',
           overflow: 'hidden'
         }}
       >
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase', minWidth: '200px' }}>
+              <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase', minWidth: '200px' }}>
                   Module
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   <div className="flex flex-col items-center gap-1">
                     <Eye style={{ width: '16px', height: '16px' }} />
                     <span>View</span>
                   </div>
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   <div className="flex flex-col items-center gap-1">
                     <Edit style={{ width: '16px', height: '16px' }} />
                     <span>Create</span>
                   </div>
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   <div className="flex flex-col items-center gap-1">
                     <Edit style={{ width: '16px', height: '16px' }} />
                     <span>Edit</span>
                   </div>
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   <div className="flex flex-col items-center gap-1">
                     <Trash2 style={{ width: '16px', height: '16px' }} />
                     <span>Delete</span>
                   </div>
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   <div className="flex flex-col items-center gap-1">
                     <Check style={{ width: '16px', height: '16px' }} />
                     <span>Approve</span>
                   </div>
                 </th>
-                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82', textTransform: 'uppercase' }}>
+                <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', textTransform: 'uppercase' }}>
                   <div className="flex flex-col items-center gap-1">
                     <Shield style={{ width: '16px', height: '16px' }} />
                     <span>Export</span>
@@ -280,13 +280,13 @@ export function AccessPrivilege() {
             </thead>
             <tbody>
               {getRoleAccessRules().map((rule) => (
-                <tr key={rule.module} style={{ borderBottom: '1px solid #E1E6EA' }}>
-                  <td style={{ padding: '16px', fontSize: '14px', color: '#0A0F14', fontWeight: '500' }}>
+                <tr key={rule.module} style={{ borderBottom: '1px solid var(--color-silver)' }}>
+                  <td style={{ padding: '16px', fontSize: '14px', color: 'var(--color-ink)', fontWeight: '500' }}>
                     <div className="flex items-center gap-2">
-                      <Lock style={{ width: '16px', height: '16px', color: '#00A9B7' }} />
+                      <Lock style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
                       <div>
                         <div>{rule.module}</div>
-                        <div style={{ fontSize: '11px', color: '#6E7A82', fontWeight: '400' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--color-mercury-grey)', fontWeight: '400' }}>
                           {rule.entityIds.includes('ALL')
                             ? 'All Entities'
                             : availableCompanies.filter((company) => rule.entityIds.includes(company.id)).map((company) => company.code).join(', ')}
@@ -299,7 +299,7 @@ export function AccessPrivilege() {
                       type="checkbox"
                       checked={rule.canView}
                       onChange={() => togglePermission(rule.module, 'canView')}
-                      style={{ width: '18px', height: '18px', accentColor: '#00A9B7', cursor: 'pointer' }}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--color-teal)', cursor: 'pointer' }}
                     />
                   </td>
                   <td style={{ padding: '16px', textAlign: 'center' }}>
@@ -307,7 +307,7 @@ export function AccessPrivilege() {
                       type="checkbox"
                       checked={rule.canCreate}
                       onChange={() => togglePermission(rule.module, 'canCreate')}
-                      style={{ width: '18px', height: '18px', accentColor: '#00A9B7', cursor: 'pointer' }}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--color-teal)', cursor: 'pointer' }}
                     />
                   </td>
                   <td style={{ padding: '16px', textAlign: 'center' }}>
@@ -315,7 +315,7 @@ export function AccessPrivilege() {
                       type="checkbox"
                       checked={rule.canEdit}
                       onChange={() => togglePermission(rule.module, 'canEdit')}
-                      style={{ width: '18px', height: '18px', accentColor: '#00A9B7', cursor: 'pointer' }}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--color-teal)', cursor: 'pointer' }}
                     />
                   </td>
                   <td style={{ padding: '16px', textAlign: 'center' }}>
@@ -323,7 +323,7 @@ export function AccessPrivilege() {
                       type="checkbox"
                       checked={rule.canDelete}
                       onChange={() => togglePermission(rule.module, 'canDelete')}
-                      style={{ width: '18px', height: '18px', accentColor: '#00A9B7', cursor: 'pointer' }}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--color-teal)', cursor: 'pointer' }}
                     />
                   </td>
                   <td style={{ padding: '16px', textAlign: 'center' }}>
@@ -331,7 +331,7 @@ export function AccessPrivilege() {
                       type="checkbox"
                       checked={rule.canApprove}
                       onChange={() => togglePermission(rule.module, 'canApprove')}
-                      style={{ width: '18px', height: '18px', accentColor: '#00A9B7', cursor: 'pointer' }}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--color-teal)', cursor: 'pointer' }}
                     />
                   </td>
                   <td style={{ padding: '16px', textAlign: 'center' }}>
@@ -339,7 +339,7 @@ export function AccessPrivilege() {
                       type="checkbox"
                       checked={rule.canExport}
                       onChange={() => togglePermission(rule.module, 'canExport')}
-                      style={{ width: '18px', height: '18px', accentColor: '#00A9B7', cursor: 'pointer' }}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--color-teal)', cursor: 'pointer' }}
                     />
                   </td>
                 </tr>
@@ -354,15 +354,15 @@ export function AccessPrivilege() {
         <button
           className="px-6 py-3 rounded-lg transition-all"
           style={{
-            backgroundColor: '#00A9B7',
+            backgroundColor: 'var(--color-teal)',
             border: 'none',
             color: '#FFFFFF',
             fontSize: '14px',
             fontWeight: '500',
             cursor: 'pointer'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           Save Access Configuration
         </button>

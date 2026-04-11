@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, X, Edit, Eye, Trash2 } from 'lucide-react';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface Category {
   id: string;
@@ -196,121 +197,95 @@ export function CategoryMaster() {
   const getStatusBadgeStyle = (approvalStatus: string) => {
     switch (approvalStatus) {
       case 'Approved':
-        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+        return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
       case 'Pending Approval':
         return { backgroundColor: '#FFF9E6', color: '#D97706' };
       case 'Draft':
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
       case 'Rejected':
-        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+        return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
       default:
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
     }
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [categoryCode, categoryName, description];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [categoryCode, categoryName, description]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showForm) {
     return (
-      <MasterFormPage
-        title="Category Master"
+      <FormShell
+        title={editingId ? 'Edit Category' : 'Create Category'}
         subtitle="Manage categories with approval workflow"
-        modeLabel={isEditMode ? 'Edit Category' : 'Create Category'}
+        modeLabel={editingId ? 'Edit Master Record' : 'Create Master Record'}
+        draftStatus={editingId ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={() => setShowForm(false)}
-        onCancel={() => setShowForm(false)}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onCancel={() => { setShowForm(false); resetForm(); }}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-              Category Code <span style={{ color: '#FF4E5B' }}>*</span>
-            </label>
-            <input
-              type="text"
-              value={categoryCode}
-              onChange={(e) => setCategoryCode(e.target.value)}
-              placeholder="e.g., CAT004"
-              className="w-full px-3 py-2 rounded-lg"
-              style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-              Category Name <span style={{ color: '#FF4E5B' }}>*</span>
-            </label>
-            <input
-              type="text"
-              value={categoryName}
-              onChange={(e) => setCategoryName(e.target.value)}
-              placeholder="e.g., Winter Wear"
-              className="w-full px-3 py-2 rounded-lg"
-              style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-              Parent Category
-            </label>
-            <select
-              value={parentCategory}
-              onChange={(e) => setParentCategory(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg"
-              style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
-            >
+        <FormSection title="Category Details" columns={2}>
+          <PxFormField label="Category Code" required filled={!!categoryCode.trim()}>
+            <input type="text" value={categoryCode} onChange={(e) => setCategoryCode(e.target.value)} placeholder="e.g., CAT004" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Category Name" required filled={!!categoryName.trim()}>
+            <input type="text" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="e.g., Winter Wear" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Parent Category" filled={!!parentCategory}>
+            <select value={parentCategory} onChange={(e) => setParentCategory(e.target.value)} className="px-select">
               <option value="">Select Parent</option>
               <option value="Garments">Garments</option>
               <option value="Accessories">Accessories</option>
               <option value="Raw Materials">Raw Materials</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-              Status
-            </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg"
-              style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
-            >
+          </PxFormField>
+          <PxFormField label="Status" filled={!!status}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter category description"
-              rows={4}
-              className="w-full px-3 py-2 rounded-lg"
-              style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
-            />
-          </div>
-        </div>
-      </MasterFormPage>
+          </PxFormField>
+          <PxFormField label="Description" filled={!!description.trim()}>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Enter category description" rows={4} className="px-input" />
+          </PxFormField>
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/masters')}
             className="p-2 rounded-lg transition-colors"
-            style={{ color: '#6E7A82' }}
+            style={{ color: 'var(--color-mercury-grey)' }}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Category Master</h1>
-            <p style={{ color: '#6E7A82' }}>Manage categories with approval workflow</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Category Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage categories with approval workflow</p>
           </div>
         </div>
         <button
@@ -319,9 +294,9 @@ export function CategoryMaster() {
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Add Category
@@ -341,30 +316,30 @@ export function CategoryMaster() {
       />
 
       {/* Categories List */}
-      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Category Code
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Category Name
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Parent Category
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Description
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Status
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Approval Status
                 </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Actions
                 </th>
               </tr>
@@ -374,27 +349,27 @@ export function CategoryMaster() {
                 <tr
                   key={category.id}
                   style={{
-                    borderTop: index === 0 ? 'none' : '1px solid #E1E6EA'
+                    borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)'
                   }}
                 >
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     {category.categoryCode}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     {category.categoryName}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
                     {category.parentCategory}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
                     {category.description}
                   </td>
                   <td className="px-6 py-4">
                     <span
                       className="px-3 py-1 rounded-full text-sm"
                       style={{
-                        backgroundColor: category.status === 'Active' ? '#E8F7F8' : '#F6F9FC',
-                        color: category.status === 'Active' ? '#00A9B7' : '#6E7A82'
+                        backgroundColor: category.status === 'Active' ? 'var(--color-teal-tint)' : 'var(--color-cloud)',
+                        color: category.status === 'Active' ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
                       }}
                     >
                       {category.status}
@@ -414,7 +389,7 @@ export function CategoryMaster() {
                         <button
                           onClick={() => handleReview(category)}
                           className="p-2 rounded-lg transition-colors"
-                          style={{ color: '#00A9B7' }}
+                          style={{ color: 'var(--color-teal)' }}
                           title="Review Changes"
                         >
                           <Eye className="w-4 h-4" />
@@ -423,7 +398,7 @@ export function CategoryMaster() {
                       <button
                         onClick={() => handleEdit(category)}
                         className="p-2 rounded-lg transition-colors"
-                        style={{ color: '#6E7A82' }}
+                        style={{ color: 'var(--color-mercury-grey)' }}
                         title="Edit"
                       >
                         <Edit className="w-4 h-4" />
@@ -432,7 +407,7 @@ export function CategoryMaster() {
                         onClick={() => handleDelete(category.id)}
                         className="p-2 rounded-lg transition-colors"
                         style={{
-                          color: category.approvalStatus === 'Approved' ? '#C4C4C4' : '#FF4E5B',
+                          color: category.approvalStatus === 'Approved' ? '#C4C4C4' : 'var(--color-error)',
                           cursor: category.approvalStatus === 'Approved' ? 'not-allowed' : 'pointer'
                         }}
                         title={category.approvalStatus === 'Approved' ? 'Cannot delete approved records' : 'Delete'}

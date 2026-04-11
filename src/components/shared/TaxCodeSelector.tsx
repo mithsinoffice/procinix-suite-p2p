@@ -43,9 +43,9 @@ export function TaxCodeSelector({
   return (
     <div className="flex flex-col gap-2">
       {label && (
-        <label className="text-sm" style={{ color: '#6E7A82' }}>
+        <label className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
           {label}
-          {required && <span style={{ color: '#DC2626' }}> *</span>}
+          {required && <span style={{ color: 'var(--color-error-dark)' }}> *</span>}
           <span 
             className="ml-2 text-xs px-2 py-0.5 rounded" 
             style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}
@@ -63,9 +63,9 @@ export function TaxCodeSelector({
           disabled={disabled}
           className="w-full pl-10 pr-4 py-2 rounded-lg appearance-none"
           style={{
-            border: error ? '2px solid #DC2626' : '2px solid #E1E6EA',
-            backgroundColor: disabled ? '#F6F9FC' : '#FFFFFF',
-            color: '#0A0F14'
+            border: error ? '2px solid var(--color-error-dark)' : '2px solid var(--color-silver)',
+            backgroundColor: disabled ? 'var(--color-cloud)' : '#FFFFFF',
+            color: 'var(--color-ink)'
           }}
         >
           <option value="">{placeholder}</option>
@@ -78,19 +78,19 @@ export function TaxCodeSelector({
         
         <Receipt 
           className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" 
-          style={{ color: '#6E7A82' }} 
+          style={{ color: 'var(--color-mercury-grey)' }} 
         />
         
         {error && (
           <AlertCircle 
             className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4" 
-            style={{ color: '#DC2626' }} 
+            style={{ color: 'var(--color-error-dark)' }} 
           />
         )}
       </div>
 
       {selectedTaxCode && (
-        <div className="text-xs p-2 rounded" style={{ backgroundColor: '#F6F9FC', color: '#6E7A82' }}>
+        <div className="text-xs p-2 rounded" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}>
           {selectedTaxCode.taxType === 'GST' && (
             <>CGST: {selectedTaxCode.cgstRate}% | SGST: {selectedTaxCode.sgstRate}% | IGST: {selectedTaxCode.igstRate}%</>
           )}
@@ -101,7 +101,7 @@ export function TaxCodeSelector({
       )}
 
       {error && (
-        <p className="text-xs" style={{ color: '#DC2626' }}>{error}</p>
+        <p className="text-xs" style={{ color: 'var(--color-error-dark)' }}>{error}</p>
       )}
     </div>
   );

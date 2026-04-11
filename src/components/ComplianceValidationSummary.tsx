@@ -35,34 +35,34 @@ export function ComplianceValidationSummary({
   const getStatusColor = (status: 'PENDING' | 'VALIDATED' | 'FAILED' | 'MISSING') => {
     switch (status) {
       case 'VALIDATED':
-        return { bg: '#E8F5E9', text: '#2E7D32', icon: <CheckCircle className="w-4 h-4" /> };
+        return { bg: 'var(--color-success-light)', text: 'var(--color-success-dark)', icon: <CheckCircle className="w-4 h-4" /> };
       case 'FAILED':
         return { bg: '#FFEBEE', text: '#C62828', icon: <XCircle className="w-4 h-4" /> };
       case 'MISSING':
-        return { bg: '#FFF3E0', text: '#E65100', icon: <AlertCircle className="w-4 h-4" /> };
+        return { bg: 'var(--color-warning-light)', text: '#E65100', icon: <AlertCircle className="w-4 h-4" /> };
       default:
-        return { bg: '#FFF3E0', text: '#E65100', icon: <AlertCircle className="w-4 h-4" /> };
+        return { bg: 'var(--color-warning-light)', text: '#E65100', icon: <AlertCircle className="w-4 h-4" /> };
     }
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 space-y-4" style={{ border: '1px solid #E1E6EA' }}>
-      <h3 className="text-lg mb-4" style={{ color: '#0A0F14' }}>Compliance Validation Summary</h3>
+    <div className="bg-white rounded-lg p-6 space-y-4" style={{ border: '1px solid var(--color-silver)' }}>
+      <h3 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>Compliance Validation Summary</h3>
       
       {/* Run Compliance Checks Button */}
       <button
         onClick={onRunAllChecks}
         disabled={validating}
         className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-white transition-colors"
-        style={{ backgroundColor: validating ? '#6E7A82' : '#00A9B7' }}
-        onMouseEnter={(e) => !validating && (e.currentTarget.style.backgroundColor = '#007D87')}
-        onMouseLeave={(e) => !validating && (e.currentTarget.style.backgroundColor = '#00A9B7')}
+        style={{ backgroundColor: validating ? 'var(--color-mercury-grey)' : 'var(--color-teal)' }}
+        onMouseEnter={(e) => !validating && (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+        onMouseLeave={(e) => !validating && (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
       >
         <CheckCircle className="w-5 h-5" />
         {validating ? 'Running Checks...' : 'Run Compliance Checks'}
       </button>
 
-      <p className="text-sm" style={{ color: '#6E7A82' }}>
+      <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
         Last Checked: {lastValidatedOn || 'N/A'}
       </p>
 
@@ -76,7 +76,7 @@ export function ComplianceValidationSummary({
           }}
         >
           <div>
-            <p className="text-sm" style={{ color: '#0A0F14' }}>PAN/TDS Validation Status</p>
+            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>PAN/TDS Validation Status</p>
           </div>
           <div className="flex items-center gap-2">
             {!panNumber ? (
@@ -106,7 +106,7 @@ export function ComplianceValidationSummary({
           }}
         >
           <div>
-            <p className="text-sm" style={{ color: '#0A0F14' }}>CIN/Company Registrar Check</p>
+            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>CIN/Company Registrar Check</p>
           </div>
           <div className="flex items-center gap-2">
             {!cinNumber ? (
@@ -131,10 +131,10 @@ export function ComplianceValidationSummary({
         {/* Section 206AB Status */}
         <div 
           className="p-3 rounded-lg flex items-center justify-between"
-          style={{ backgroundColor: section206AB ? '#FFF3E0' : '#F6F9FC' }}
+          style={{ backgroundColor: section206AB ? 'var(--color-warning-light)' : 'var(--color-cloud)' }}
         >
           <div>
-            <p className="text-sm" style={{ color: '#0A0F14' }}>Section 206AB Status (ITR Check)</p>
+            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>Section 206AB Status (ITR Check)</p>
           </div>
           <div className="flex items-center gap-2">
             {section206AB ? (
@@ -145,7 +145,7 @@ export function ComplianceValidationSummary({
                 </span>
               </>
             ) : (
-              <span className="text-sm" style={{ color: '#6E7A82' }}>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                 Not Applicable
               </span>
             )}
@@ -156,15 +156,15 @@ export function ComplianceValidationSummary({
         <div 
           className="p-3 rounded-lg flex items-center justify-between"
           style={{ 
-            backgroundColor: udyamRegistrationNo ? getStatusColor(udyamValidationStatus).bg : '#F6F9FC'
+            backgroundColor: udyamRegistrationNo ? getStatusColor(udyamValidationStatus).bg : 'var(--color-cloud)'
           }}
         >
           <div>
-            <p className="text-sm" style={{ color: '#0A0F14' }}>MSME Udyam Registration</p>
+            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>MSME Udyam Registration</p>
           </div>
           <div className="flex items-center gap-2">
             {!udyamRegistrationNo ? (
-              <span className="text-sm" style={{ color: '#6E7A82' }}>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                 N/A
               </span>
             ) : (
@@ -181,13 +181,13 @@ export function ComplianceValidationSummary({
 
         {/* GSTINs Status Summary */}
         <div className="space-y-2">
-          <p className="text-sm" style={{ color: '#0A0F14' }}>GSTINs Status Summary</p>
+          <p className="text-sm" style={{ color: 'var(--color-ink)' }}>GSTINs Status Summary</p>
           {gstDetails.length === 0 ? (
             <div 
               className="p-3 rounded-lg"
-              style={{ backgroundColor: '#F6F9FC' }}
+              style={{ backgroundColor: 'var(--color-cloud)' }}
             >
-              <span className="text-sm" style={{ color: '#6E7A82' }}>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                 No GST registrations added
               </span>
             </div>
@@ -201,7 +201,7 @@ export function ComplianceValidationSummary({
                   className="p-3 rounded-lg flex items-center justify-between"
                   style={{ backgroundColor: colors.bg }}
                 >
-                  <span className="text-sm" style={{ color: '#0A0F14' }}>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                     {gst.gstin || 'Not entered'} ({gst.registeredState || 'State'})
                   </span>
                   <div className="flex items-center gap-2">
@@ -219,13 +219,13 @@ export function ComplianceValidationSummary({
 
         {/* Bank Account Verification */}
         <div className="space-y-2">
-          <p className="text-sm" style={{ color: '#0A0F14' }}>Bank Account Verification</p>
+          <p className="text-sm" style={{ color: 'var(--color-ink)' }}>Bank Account Verification</p>
           {bankAccounts.length === 0 ? (
             <div 
               className="p-3 rounded-lg"
-              style={{ backgroundColor: '#F6F9FC' }}
+              style={{ backgroundColor: 'var(--color-cloud)' }}
             >
-              <span className="text-sm" style={{ color: '#6E7A82' }}>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                 No bank accounts added
               </span>
             </div>
@@ -236,14 +236,14 @@ export function ComplianceValidationSummary({
                 <div 
                   key={bank.id}
                   className="p-3 rounded-lg flex items-center justify-between"
-                  style={{ backgroundColor: '#E8F5E9' }}
+                  style={{ backgroundColor: 'var(--color-success-light)' }}
                 >
-                  <span className="text-sm" style={{ color: '#0A0F14' }}>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                     Primary A/C (Penny Drop Check)
                   </span>
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" />
-                    <span className="text-sm" style={{ color: '#2E7D32' }}>
+                    <span className="text-sm" style={{ color: 'var(--color-success-dark)' }}>
                       Verified & Matched
                     </span>
                   </div>
@@ -253,7 +253,7 @@ export function ComplianceValidationSummary({
           {bankAccounts.length > 0 && !bankAccounts.some(b => b.primary) && (
             <div 
               className="p-3 rounded-lg"
-              style={{ backgroundColor: '#FFF3E0' }}
+              style={{ backgroundColor: 'var(--color-warning-light)' }}
             >
               <span className="text-sm" style={{ color: '#E65100' }}>
                 No primary account selected

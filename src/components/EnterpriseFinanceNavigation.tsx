@@ -126,11 +126,11 @@ export function EnterpriseFinanceNavigation() {
                     to={submodule.route}
                     className="flex items-center gap-3 px-4 py-2 transition-all duration-200 group"
                     style={{
-                      backgroundColor: isSubActive ? '#00A9B720' : 'transparent',
-                      borderLeft: isSubActive ? '2px solid #00A9B7' : '2px solid transparent',
+                      backgroundColor: isSubActive ? 'var(--color-teal)20' : 'transparent',
+                      borderLeft: isSubActive ? '2px solid var(--color-teal)' : '2px solid transparent',
                       marginLeft: '0',
                       paddingLeft: isSubActive ? '14px' : '16px',
-                      color: isSubActive ? '#00A9B7' : '#B8C5CE'
+                      color: isSubActive ? 'var(--color-teal)' : '#B8C5CE'
                     }}
                     onMouseEnter={(e) => {
                       if (!isSubActive) {
@@ -169,12 +169,12 @@ export function EnterpriseFinanceNavigation() {
         to={module.route}
         className="flex items-center gap-3 px-4 py-2.5 transition-all duration-200 group"
         style={{
-          backgroundColor: isActive ? '#00A9B720' : 'transparent',
-          borderLeft: isActive ? '3px solid #00A9B7' : '3px solid transparent',
+          backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
+          borderLeft: isActive ? '3px solid var(--color-teal)' : '3px solid transparent',
           marginLeft: '0',
           paddingLeft: isActive ? '13px' : '16px',
           justifyContent: isCollapsed ? 'center' : 'flex-start',
-          color: isActive ? '#00A9B7' : '#B8C5CE'
+          color: isActive ? 'var(--color-teal)' : '#B8C5CE'
         }}
         onMouseEnter={(e) => {
           if (!isActive) {
@@ -207,7 +207,7 @@ export function EnterpriseFinanceNavigation() {
             {isViewOnly && (
               <Eye 
                 className="w-3.5 h-3.5" 
-                style={{ color: '#9AA6AF' }} 
+                style={{ color: 'var(--color-slate)' }} 
                 title="View Only Access"
               />
             )}
@@ -229,14 +229,14 @@ export function EnterpriseFinanceNavigation() {
       {/* Collapse Toggle */}
       <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #3a4a52' }}>
         {!isCollapsed && (
-          <span className="text-xs uppercase tracking-wider" style={{ color: '#9AA6AF', fontWeight: '600' }}>
+          <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
             Navigation
           </span>
         )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-1.5 rounded-lg transition-colors"
-          style={{ color: '#9AA6AF' }}
+          style={{ color: 'var(--color-slate)' }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a4a52'}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           title={isCollapsed ? 'Expand' : 'Collapse'}
@@ -273,7 +273,7 @@ export function EnterpriseFinanceNavigation() {
                 className="w-full flex items-center justify-between px-4 py-3 transition-colors"
                 style={{
                   backgroundColor: isExpanded ? '#3a4a52' : 'transparent',
-                  color: isExpanded ? '#FFFFFF' : '#9AA6AF',
+                  color: isExpanded ? '#FFFFFF' : 'var(--color-slate)',
                   justifyContent: isCollapsed ? 'center' : 'space-between'
                 }}
                 onMouseEnter={(e) => {
@@ -285,7 +285,7 @@ export function EnterpriseFinanceNavigation() {
                 title={isCollapsed ? pillar.label : ''}
               >
                 <div className="flex items-center gap-3">
-                  <PillarIcon className="w-5 h-5 flex-shrink-0" style={{ color: '#00A9B7' }} />
+                  <PillarIcon className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--color-teal)' }} />
                   {!isCollapsed && (
                     <span style={{ fontWeight: '600', fontSize: '14px' }}>
                       {pillar.label}
@@ -294,9 +294,9 @@ export function EnterpriseFinanceNavigation() {
                 </div>
                 {!isCollapsed && (
                   isExpanded ? (
-                    <ChevronDown className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : '#9AA6AF' }} />
+                    <ChevronDown className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }} />
                   ) : (
-                    <ChevronRight className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : '#9AA6AF' }} />
+                    <ChevronRight className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }} />
                   )
                 )}
               </button>
@@ -316,7 +316,7 @@ export function EnterpriseFinanceNavigation() {
       <div className="p-4" style={{ borderTop: '1px solid #3a4a52' }}>
         {!isCollapsed && (
           <div className="mb-2 px-2">
-            <span className="text-xs uppercase tracking-wider" style={{ color: '#9AA6AF', fontWeight: '600' }}>
+            <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
               Global
             </span>
           </div>
@@ -335,8 +335,8 @@ export function EnterpriseFinanceNavigation() {
               to={section.route}
               className="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors mb-1"
               style={{
-                backgroundColor: isActive ? '#00A9B720' : 'transparent',
-                color: isActive ? '#00A9B7' : '#B8C5CE',
+                backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
+                color: isActive ? 'var(--color-teal)' : '#B8C5CE',
                 justifyContent: isCollapsed ? 'center' : 'flex-start'
               }}
               onMouseEnter={(e) => {

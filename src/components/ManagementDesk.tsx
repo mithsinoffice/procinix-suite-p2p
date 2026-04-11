@@ -112,11 +112,11 @@ export function ManagementDesk() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'exceeding': return '#10B981';
-      case 'on-track': return '#00A9B7';
+      case 'on-track': return 'var(--color-teal)';
       case 'warning': return '#F59E0B';
       case 'critical': return '#EF4444';
       case 'success': return '#10B981';
-      default: return '#6E7A82';
+      default: return 'var(--color-mercury-grey)';
     }
   };
 
@@ -125,15 +125,15 @@ export function ManagementDesk() {
     const isPositive = trend > 0;
 
     return (
-      <div className="bg-white rounded-xl p-8" style={{ border: '2px solid #E1E6EA', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+      <div className="bg-white rounded-xl p-8" style={{ border: '2px solid var(--color-silver)', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
         <div className="flex items-start justify-between mb-6">
           <div className="flex-1">
-            <p className="text-sm mb-3" style={{ color: '#6E7A82', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{title}</p>
+            <p className="text-sm mb-3" style={{ color: 'var(--color-mercury-grey)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{title}</p>
             <div className="flex items-baseline gap-3 mb-3">
-              <span className="text-4xl" style={{ color: '#0A0F14', fontWeight: '700' }}>
+              <span className="text-4xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                 {unit === 'Cr' ? formatCurrency(value) : value}
               </span>
-              {unit !== 'Cr' && <span className="text-xl" style={{ color: '#6E7A82' }}>{unit}</span>}
+              {unit !== 'Cr' && <span className="text-xl" style={{ color: 'var(--color-mercury-grey)' }}>{unit}</span>}
             </div>
           </div>
           <div 
@@ -158,7 +158,7 @@ export function ManagementDesk() {
               {isPositive ? '+' : ''}{trend}%
             </span>
           </div>
-          <span className="text-sm" style={{ color: '#6E7A82' }}>{trendLabel}</span>
+          <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{trendLabel}</span>
         </div>
       </div>
     );
@@ -185,11 +185,11 @@ export function ManagementDesk() {
                 {level} Risk
               </span>
             </div>
-            <h4 className="text-sm mb-2" style={{ color: '#0A0F14', fontWeight: '600' }}>{title}</h4>
+            <h4 className="text-sm mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{title}</h4>
           </div>
           <span className="text-2xl" style={{ color: statusColor, fontWeight: '700' }}>{value}{typeof value === 'number' && value < 100 ? '%' : ''}</span>
         </div>
-        <p className="text-xs" style={{ color: '#6E7A82', lineHeight: '1.5' }}>{description}</p>
+        <p className="text-xs" style={{ color: 'var(--color-mercury-grey)', lineHeight: '1.5' }}>{description}</p>
       </div>
     );
   };
@@ -199,28 +199,28 @@ export function ManagementDesk() {
   };
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/reports')} 
             className="p-2 rounded-lg transition-colors hover:bg-white" 
-            style={{ color: '#6E7A82' }}
+            style={{ color: 'var(--color-mercury-grey)' }}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-4xl mb-2" style={{ color: '#0A0F14', fontWeight: '700' }}>Management Desk</h1>
-            <p className="text-sm" style={{ color: '#6E7A82' }}>Executive Procurement Summary • FY 2024-25 • Board-Ready Insights</p>
+            <h1 className="text-4xl mb-2" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>Management Desk</h1>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Executive Procurement Summary • FY 2024-25 • Board-Ready Insights</p>
           </div>
         </div>
         <button
           onClick={handleExport}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7', fontWeight: '600' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)', fontWeight: '600' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Download className="w-5 h-5" />
           Export Executive Summary
@@ -279,8 +279,8 @@ export function ManagementDesk() {
       {/* Strategic Insights Row */}
       <div className="grid grid-cols-3 gap-6 mb-8">
         {/* Strategic vs Non-Strategic Vendor Spend */}
-        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid #E1E6EA', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <h3 className="text-sm mb-6" style={{ color: '#6E7A82', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Vendor Spend Distribution</h3>
+        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid var(--color-silver)', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+          <h3 className="text-sm mb-6" style={{ color: 'var(--color-mercury-grey)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Vendor Spend Distribution</h3>
           <ResponsiveContainer width="100%" height={280}>
             <PieChart>
               <Pie
@@ -297,7 +297,7 @@ export function ManagementDesk() {
                 ))}
               </Pie>
               <Tooltip 
-                contentStyle={{ backgroundColor: 'white', border: '2px solid #E1E6EA', borderRadius: '12px', fontSize: '13px', padding: '12px' }}
+                contentStyle={{ backgroundColor: 'white', border: '2px solid var(--color-silver)', borderRadius: '12px', fontSize: '13px', padding: '12px' }}
                 formatter={(value: number) => formatCurrency(value)}
               />
             </PieChart>
@@ -307,11 +307,11 @@ export function ManagementDesk() {
               <div key={index} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 rounded" style={{ backgroundColor: entry.color }}></div>
-                  <span className="text-sm" style={{ color: '#0A0F14' }}>{entry.name}</span>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{entry.name}</span>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>{formatCurrency(entry.value)}</div>
-                  <div className="text-xs" style={{ color: '#6E7A82' }}>{entry.percentage}%</div>
+                  <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{formatCurrency(entry.value)}</div>
+                  <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{entry.percentage}%</div>
                 </div>
               </div>
             ))}
@@ -319,22 +319,22 @@ export function ManagementDesk() {
         </div>
 
         {/* Savings Trend */}
-        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid #E1E6EA', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <h3 className="text-sm mb-6" style={{ color: '#6E7A82', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Savings Trend (FY 2024-25)</h3>
+        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid var(--color-silver)', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+          <h3 className="text-sm mb-6" style={{ color: 'var(--color-mercury-grey)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Savings Trend (FY 2024-25)</h3>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={savingsTrendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-              <XAxis dataKey="month" stroke="#6E7A82" style={{ fontSize: '12px' }} />
-              <YAxis stroke="#6E7A82" style={{ fontSize: '12px' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+              <XAxis dataKey="month" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
+              <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
               <Tooltip 
-                contentStyle={{ backgroundColor: 'white', border: '2px solid #E1E6EA', borderRadius: '12px', fontSize: '13px', padding: '12px' }}
+                contentStyle={{ backgroundColor: 'white', border: '2px solid var(--color-silver)', borderRadius: '12px', fontSize: '13px', padding: '12px' }}
                 formatter={(value) => `₹${value} Cr`}
               />
               <Legend 
                 wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }}
                 formatter={(value) => {
                   const labels: any = { savings: 'Actual Savings', target: 'Target' };
-                  return <span style={{ color: '#0A0F14', fontWeight: '500' }}>{labels[value]}</span>;
+                  return <span style={{ color: 'var(--color-ink)', fontWeight: '500' }}>{labels[value]}</span>;
                 }}
               />
               <Line 
@@ -358,32 +358,32 @@ export function ManagementDesk() {
         </div>
 
         {/* Procurement Maturity Radar */}
-        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid #E1E6EA', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          <h3 className="text-sm mb-6" style={{ color: '#6E7A82', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Procurement Maturity Index</h3>
+        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid var(--color-silver)', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+          <h3 className="text-sm mb-6" style={{ color: 'var(--color-mercury-grey)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Procurement Maturity Index</h3>
           <ResponsiveContainer width="100%" height={280}>
             <RadarChart data={procurementMaturityData}>
-              <PolarGrid stroke="#E1E6EA" />
+              <PolarGrid stroke="var(--color-silver)" />
               <PolarAngleAxis 
                 dataKey="subject" 
-                stroke="#6E7A82" 
+                stroke="var(--color-mercury-grey)" 
                 style={{ fontSize: '12px', fontWeight: '500' }}
               />
               <PolarRadiusAxis 
                 angle={90} 
                 domain={[0, 100]} 
-                stroke="#6E7A82"
+                stroke="var(--color-mercury-grey)"
                 style={{ fontSize: '11px' }}
               />
               <Radar 
                 name="Maturity Score" 
                 dataKey="score" 
-                stroke="#00A9B7" 
-                fill="#00A9B7" 
+                stroke="var(--color-teal)" 
+                fill="var(--color-teal)" 
                 fillOpacity={0.3}
                 strokeWidth={3}
               />
               <Tooltip 
-                contentStyle={{ backgroundColor: 'white', border: '2px solid #E1E6EA', borderRadius: '12px', fontSize: '13px', padding: '12px' }}
+                contentStyle={{ backgroundColor: 'white', border: '2px solid var(--color-silver)', borderRadius: '12px', fontSize: '13px', padding: '12px' }}
                 formatter={(value) => `${value}%`}
               />
             </RadarChart>
@@ -393,7 +393,7 @@ export function ManagementDesk() {
 
       {/* Risk & Governance Section */}
       <div className="mb-6">
-        <h2 className="text-lg mb-4" style={{ color: '#0A0F14', fontWeight: '600', letterSpacing: '0.3px', textTransform: 'uppercase' }}>Risk & Governance Overview</h2>
+        <h2 className="text-lg mb-4" style={{ color: 'var(--color-ink)', fontWeight: '600', letterSpacing: '0.3px', textTransform: 'uppercase' }}>Risk & Governance Overview</h2>
         
         <div className="grid grid-cols-4 gap-6">
           <RiskIndicatorCard 
@@ -429,99 +429,99 @@ export function ManagementDesk() {
 
       {/* Strategic Highlights Section */}
       <div className="grid grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid #E1E6EA', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid var(--color-silver)', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10B981' }}></div>
-            <h3 className="text-sm" style={{ color: '#6E7A82', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Key Achievements</h3>
+            <h3 className="text-sm" style={{ color: 'var(--color-mercury-grey)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Key Achievements</h3>
           </div>
           <ul className="space-y-3">
             <li className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#10B981' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Exceeded annual savings target by 24.5%
               </span>
             </li>
             <li className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#10B981' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Reduced procurement cycle time by 32%
               </span>
             </li>
             <li className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#10B981' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Achieved 68% automation across processes
               </span>
             </li>
             <li className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#10B981' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Maintained 94% compliance score
               </span>
             </li>
           </ul>
         </div>
 
-        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid #E1E6EA', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid var(--color-silver)', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#F59E0B' }}></div>
-            <h3 className="text-sm" style={{ color: '#6E7A82', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Areas of Focus</h3>
+            <h3 className="text-sm" style={{ color: 'var(--color-mercury-grey)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Areas of Focus</h3>
           </div>
           <ul className="space-y-3">
             <li className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#F59E0B' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Monitor vendor concentration in top 3 suppliers
               </span>
             </li>
             <li className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#F59E0B' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Address 18% price volatility in commodities
               </span>
             </li>
             <li className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#F59E0B' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Improve scalability score from 72% to 85%
               </span>
             </li>
             <li className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#F59E0B' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Expand strategic vendor partnerships
               </span>
             </li>
           </ul>
         </div>
 
-        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid #E1E6EA', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+        <div className="bg-white rounded-xl p-8" style={{ border: '2px solid var(--color-silver)', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#00A9B7' }}></div>
-            <h3 className="text-sm" style={{ color: '#6E7A82', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Strategic Initiatives</h3>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--color-teal)' }}></div>
+            <h3 className="text-sm" style={{ color: 'var(--color-mercury-grey)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Strategic Initiatives</h3>
           </div>
           <ul className="space-y-3">
             <li className="flex items-start gap-3">
-              <Target className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#00A9B7' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <Target className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-teal)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Implement AI-powered demand forecasting
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <Target className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#00A9B7' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <Target className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-teal)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Launch vendor sustainability program
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <Target className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#00A9B7' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <Target className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-teal)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Expand touchless PO automation to 75%
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <Target className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#00A9B7' }} />
-              <span className="text-sm" style={{ color: '#0A0F14', lineHeight: '1.6' }}>
+              <Target className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-teal)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-ink)', lineHeight: '1.6' }}>
                 Establish regional procurement centers
               </span>
             </li>

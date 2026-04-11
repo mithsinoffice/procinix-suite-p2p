@@ -93,10 +93,10 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'blocker': return '#DC2626';
+      case 'blocker': return 'var(--color-error-dark)';
       case 'warning': return '#F59E0B';
-      case 'info': return '#00A9B7';
-      default: return '#6E7A82';
+      case 'info': return 'var(--color-teal)';
+      default: return 'var(--color-mercury-grey)';
     }
   };
 
@@ -112,13 +112,13 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
   const getRiskBadgeStyle = (risk: string) => {
     switch (risk) {
       case 'High':
-        return { backgroundColor: '#FEE2E2', color: '#DC2626', borderColor: '#FCA5A5' };
+        return { backgroundColor: 'var(--color-error-light)', color: 'var(--color-error-dark)', borderColor: '#FCA5A5' };
       case 'Medium':
         return { backgroundColor: '#FEF3C7', color: '#D97706', borderColor: '#FCD34D' };
       case 'Low':
         return { backgroundColor: '#D1FAE5', color: '#059669', borderColor: '#6EE7B7' };
       default:
-        return { backgroundColor: '#F6F9FC', color: '#6E7A82', borderColor: '#E1E6EA' };
+        return { backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', borderColor: 'var(--color-silver)' };
     }
   };
 
@@ -137,11 +137,11 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
       style={{ 
         width: '420px',
         backgroundColor: '#FFFFFF',
-        borderLeft: '1px solid #E1E6EA'
+        borderLeft: '1px solid var(--color-silver)'
       }}
     >
       {/* Header */}
-      <div className="p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+      <div className="p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div 
@@ -152,13 +152,13 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
                 backgroundColor: '#E6F7F8' 
               }}
             >
-              <Shield className="w-5 h-5" style={{ color: '#00A9B7' }} />
+              <Shield className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
             <div>
-              <h3 className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 AI Assurance
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Compliance & Risk Validation
               </p>
             </div>
@@ -168,7 +168,7 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
             disabled={checksStatus === 'running'}
             className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
             style={{
-              backgroundColor: checksStatus === 'running' ? '#E1E6EA' : '#00A9B7',
+              backgroundColor: checksStatus === 'running' ? 'var(--color-silver)' : 'var(--color-teal)',
               color: '#FFFFFF',
               border: 'none',
               cursor: checksStatus === 'running' ? 'not-allowed' : 'pointer'
@@ -192,9 +192,9 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
         <div className="grid grid-cols-2 gap-3">
           <div 
             className="p-3 rounded-lg"
-            style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+            style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
           >
-            <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>Overall Risk</div>
+            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Overall Risk</div>
             <div 
               className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs"
               style={{
@@ -208,11 +208,11 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
           </div>
           <div 
             className="p-3 rounded-lg"
-            style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+            style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
           >
-            <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>Findings</div>
+            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Findings</div>
             <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: '#DC2626', fontWeight: '600' }}>
+              <span className="text-xs" style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>
                 {blockerCount} Blockers
               </span>
               <span className="text-xs" style={{ color: '#F59E0B', fontWeight: '600' }}>
@@ -226,7 +226,7 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
       {/* Tabs */}
       <div 
         className="flex gap-1 px-4 py-3"
-        style={{ borderBottom: '1px solid #E1E6EA', backgroundColor: '#FAFBFC' }}
+        style={{ borderBottom: '1px solid var(--color-silver)', backgroundColor: '#FAFBFC' }}
       >
         {tabs.map(tab => (
           <button
@@ -235,8 +235,8 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
             className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-xs"
             style={{
               backgroundColor: activeTab === tab.key ? '#FFFFFF' : 'transparent',
-              color: activeTab === tab.key ? '#00A9B7' : '#6E7A82',
-              border: activeTab === tab.key ? '1px solid #E1E6EA' : '1px solid transparent',
+              color: activeTab === tab.key ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
+              border: activeTab === tab.key ? '1px solid var(--color-silver)' : '1px solid transparent',
               fontWeight: activeTab === tab.key ? '600' : '400'
             }}
           >
@@ -251,8 +251,8 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
         {filteredInsights.length === 0 ? (
           <div className="text-center py-12">
             <CheckCircle className="w-12 h-12 mx-auto mb-3" style={{ color: '#10B981' }} />
-            <p style={{ color: '#0A0F14', fontWeight: '600' }}>All checks passed</p>
-            <p className="text-sm mt-1" style={{ color: '#6E7A82' }}>
+            <p style={{ color: 'var(--color-ink)', fontWeight: '600' }}>All checks passed</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
               No issues found in this category
             </p>
           </div>
@@ -332,7 +332,7 @@ function InsightCard({
       <div 
         className="p-4 cursor-pointer"
         onClick={onToggleExpand}
-        style={{ borderBottom: isExpanded ? '1px solid #E1E6EA' : 'none' }}
+        style={{ borderBottom: isExpanded ? '1px solid var(--color-silver)' : 'none' }}
       >
         <div className="flex items-start gap-3">
           <div 
@@ -362,23 +362,23 @@ function InsightCard({
               </span>
               <span 
                 className="text-xs px-2 py-0.5 rounded"
-                style={{ backgroundColor: '#F6F9FC', color: '#6E7A82' }}
+                style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
               >
                 {insight.confidence}% confidence
               </span>
             </div>
-            <h4 className="text-sm mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+            <h4 className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
               {insight.title}
             </h4>
-            <p className="text-xs" style={{ color: '#6E7A82' }}>
+            <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               {insight.explanation}
             </p>
           </div>
           <button className="flex-shrink-0 p-1">
             {isExpanded ? (
-              <ChevronUp className="w-4 h-4" style={{ color: '#6E7A82' }} />
+              <ChevronUp className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
             ) : (
-              <ChevronDown className="w-4 h-4" style={{ color: '#6E7A82' }} />
+              <ChevronDown className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
             )}
           </button>
         </div>
@@ -391,7 +391,7 @@ function InsightCard({
           <button
             onClick={onShowEvidence}
             className="flex items-center gap-2 text-xs transition-colors"
-            style={{ color: '#00A9B7' }}
+            style={{ color: 'var(--color-teal)' }}
           >
             <Eye className="w-3.5 h-3.5" />
             Show Evidence
@@ -400,7 +400,7 @@ function InsightCard({
           {/* Recommended Actions */}
           {insight.recommendedActions.length > 0 && (
             <div className="space-y-2">
-              <div className="text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>
+              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                 Recommended Actions
               </div>
               <div className="space-y-2">
@@ -410,10 +410,10 @@ function InsightCard({
                     onClick={() => handleActionClick(action)}
                     className="w-full text-left px-3 py-2 rounded-lg text-xs transition-colors"
                     style={{
-                      backgroundColor: action.type === 'primary' ? '#00A9B7' : 
-                                     action.type === 'danger' ? '#DC2626' : '#FFFFFF',
-                      color: action.type === 'primary' || action.type === 'danger' ? '#FFFFFF' : '#0A0F14',
-                      border: action.type === 'secondary' ? '1px solid #E1E6EA' : 'none'
+                      backgroundColor: action.type === 'primary' ? 'var(--color-teal)' : 
+                                     action.type === 'danger' ? 'var(--color-error-dark)' : '#FFFFFF',
+                      color: action.type === 'primary' || action.type === 'danger' ? '#FFFFFF' : 'var(--color-ink)',
+                      border: action.type === 'secondary' ? '1px solid var(--color-silver)' : 'none'
                     }}
                   >
                     {action.label}
@@ -425,12 +425,12 @@ function InsightCard({
 
           {/* Override Section */}
           {insight.canOverride && !overrideReason && (
-            <div className="pt-3" style={{ borderTop: '1px solid #E1E6EA' }}>
+            <div className="pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
               {!showOverrideInput ? (
                 <button
                   onClick={() => setShowOverrideInput(true)}
                   className="text-xs"
-                  style={{ color: '#6E7A82' }}
+                  style={{ color: 'var(--color-mercury-grey)' }}
                 >
                   Override with reason
                 </button>
@@ -443,8 +443,8 @@ function InsightCard({
                     className="w-full px-3 py-2 rounded-lg text-xs"
                     style={{
                       backgroundColor: '#FFFFFF',
-                      border: '1px solid #E1E6EA',
-                      color: '#0A0F14',
+                      border: '1px solid var(--color-silver)',
+                      color: 'var(--color-ink)',
                       resize: 'none'
                     }}
                     rows={2}
@@ -458,7 +458,7 @@ function InsightCard({
                       disabled={!overrideText.trim()}
                       className="px-3 py-1.5 rounded text-xs"
                       style={{
-                        backgroundColor: overrideText.trim() ? '#00A9B7' : '#E1E6EA',
+                        backgroundColor: overrideText.trim() ? 'var(--color-teal)' : 'var(--color-silver)',
                         color: '#FFFFFF'
                       }}
                     >
@@ -469,8 +469,8 @@ function InsightCard({
                       className="px-3 py-1.5 rounded text-xs"
                       style={{
                         backgroundColor: '#FFFFFF',
-                        border: '1px solid #E1E6EA',
-                        color: '#6E7A82'
+                        border: '1px solid var(--color-silver)',
+                        color: 'var(--color-mercury-grey)'
                       }}
                     >
                       Cancel
@@ -524,13 +524,13 @@ function EvidenceModal({ insight, onClose }: EvidenceModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+        <div className="p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-lg mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-lg mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Evidence: {insight.title}
               </h3>
-              <p className="text-sm" style={{ color: '#6E7A82' }}>
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                 Detailed validation data and sources
               </p>
             </div>
@@ -538,7 +538,7 @@ function EvidenceModal({ insight, onClose }: EvidenceModalProps) {
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              <XCircle className="w-5 h-5" style={{ color: '#6E7A82' }} />
+              <XCircle className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
             </button>
           </div>
         </div>
@@ -548,12 +548,12 @@ function EvidenceModal({ insight, onClose }: EvidenceModalProps) {
           <div className="space-y-4">
             {/* Evidence Type */}
             <div>
-              <div className="text-xs mb-2" style={{ color: '#6E7A82', fontWeight: '600' }}>
+              <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                 Evidence Type
               </div>
               <div 
                 className="px-3 py-2 rounded-lg text-sm"
-                style={{ backgroundColor: '#F6F9FC', color: '#0A0F14' }}
+                style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)' }}
               >
                 {insight.evidence.type}
               </div>
@@ -561,21 +561,21 @@ function EvidenceModal({ insight, onClose }: EvidenceModalProps) {
 
             {/* Evidence Details */}
             <div>
-              <div className="text-xs mb-2" style={{ color: '#6E7A82', fontWeight: '600' }}>
+              <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                 Details
               </div>
               <div 
                 className="p-4 rounded-lg"
-                style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
               >
-                <pre className="text-xs whitespace-pre-wrap" style={{ color: '#0A0F14' }}>
+                <pre className="text-xs whitespace-pre-wrap" style={{ color: 'var(--color-ink)' }}>
                   {JSON.stringify(insight.evidence.details, null, 2)}
                 </pre>
               </div>
             </div>
 
             {/* Timestamp */}
-            <div className="flex items-center gap-2 text-xs" style={{ color: '#6E7A82' }}>
+            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               <Clock className="w-4 h-4" />
               <span>Check performed: {new Date().toLocaleString()}</span>
             </div>
@@ -585,13 +585,13 @@ function EvidenceModal({ insight, onClose }: EvidenceModalProps) {
         {/* Modal Footer */}
         <div 
           className="p-6 flex justify-end"
-          style={{ borderTop: '1px solid #E1E6EA' }}
+          style={{ borderTop: '1px solid var(--color-silver)' }}
         >
           <button
             onClick={onClose}
             className="px-6 py-2.5 rounded-lg text-sm"
             style={{
-              backgroundColor: '#00A9B7',
+              backgroundColor: 'var(--color-teal)',
               color: '#FFFFFF'
             }}
           >

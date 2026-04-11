@@ -35,13 +35,13 @@ export function POCreationHub() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }} className="p-8">
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>
+        <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
           Create Purchase Order
         </h1>
-        <p className="text-sm" style={{ color: '#6E7A82' }}>
+        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
           Choose your preferred PO creation method
         </p>
       </div>
@@ -53,24 +53,24 @@ export function POCreationHub() {
           onClick={() => handleModeSelection('with-pr')}
           className="bg-white p-8 rounded-lg text-left transition-all hover:shadow-lg"
           style={{ 
-            border: selectedMode === 'with-pr' ? '2px solid #00A9B7' : '1px solid #E1E6EA',
+            border: selectedMode === 'with-pr' ? '2px solid var(--color-teal)' : '1px solid var(--color-silver)',
             cursor: 'pointer'
           }}
         >
           <div className="flex items-start justify-between mb-4">
             <div 
               className="w-14 h-14 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: '#E8F7F8' }}
+              style={{ backgroundColor: 'var(--color-teal-tint)' }}
             >
-              <ShoppingCart className="w-7 h-7" style={{ color: '#00A9B7' }} />
+              <ShoppingCart className="w-7 h-7" style={{ color: 'var(--color-teal)' }} />
             </div>
-            <ArrowRight className="w-6 h-6" style={{ color: '#00A9B7' }} />
+            <ArrowRight className="w-6 h-6" style={{ color: 'var(--color-teal)' }} />
           </div>
 
-          <h2 className="text-xl mb-3" style={{ color: '#0A0F14' }}>
+          <h2 className="text-xl mb-3" style={{ color: 'var(--color-ink)' }}>
             PO with PR
           </h2>
-          <p className="text-sm mb-4" style={{ color: '#6E7A82', lineHeight: '1.6' }}>
+          <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)', lineHeight: '1.6' }}>
             Convert approved Purchase Requisitions into Purchase Orders. Best for planned procurement with proper authorization trail.
           </p>
 
@@ -78,26 +78,26 @@ export function POCreationHub() {
           <div className="space-y-2 mb-4">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4" style={{ color: '#059669' }} />
-              <span className="text-xs" style={{ color: '#6E7A82' }}>Full PR-to-PO traceability</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Full PR-to-PO traceability</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4" style={{ color: '#059669' }} />
-              <span className="text-xs" style={{ color: '#6E7A82' }}>Multi-PR clubbing support</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Multi-PR clubbing support</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4" style={{ color: '#059669' }} />
-              <span className="text-xs" style={{ color: '#6E7A82' }}>Automatic PR consumption tracking</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Automatic PR consumption tracking</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4" style={{ color: '#059669' }} />
-              <span className="text-xs" style={{ color: '#6E7A82' }}>Budget & approval workflow aligned</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Budget & approval workflow aligned</span>
             </div>
           </div>
 
           {/* Recommended Badge */}
           <div 
             className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs"
-            style={{ backgroundColor: '#E8F7F8', color: '#00A9B7' }}
+            style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}
           >
             <Package className="w-3 h-3" />
             Recommended
@@ -109,7 +109,7 @@ export function POCreationHub() {
           onClick={() => handleModeSelection('without-pr')}
           className="bg-white p-8 rounded-lg text-left transition-all hover:shadow-lg"
           style={{ 
-            border: selectedMode === 'without-pr' ? '2px solid #00A9B7' : '1px solid #E1E6EA',
+            border: selectedMode === 'without-pr' ? '2px solid var(--color-teal)' : '1px solid var(--color-silver)',
             cursor: 'pointer'
           }}
         >
@@ -123,10 +123,10 @@ export function POCreationHub() {
             <ArrowRight className="w-6 h-6" style={{ color: '#D97706' }} />
           </div>
 
-          <h2 className="text-xl mb-3" style={{ color: '#0A0F14' }}>
+          <h2 className="text-xl mb-3" style={{ color: 'var(--color-ink)' }}>
             PO without PR
           </h2>
-          <p className="text-sm mb-4" style={{ color: '#6E7A82', lineHeight: '1.6' }}>
+          <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)', lineHeight: '1.6' }}>
             Create Purchase Orders directly without a requisition. Suitable for urgent, ad-hoc, or emergency procurement needs.
           </p>
 
@@ -134,19 +134,19 @@ export function POCreationHub() {
           <div className="space-y-2 mb-4">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4" style={{ color: '#059669' }} />
-              <span className="text-xs" style={{ color: '#6E7A82' }}>Quick PO creation</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Quick PO creation</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4" style={{ color: '#059669' }} />
-              <span className="text-xs" style={{ color: '#6E7A82' }}>Direct vendor selection</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Direct vendor selection</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4" style={{ color: '#059669' }} />
-              <span className="text-xs" style={{ color: '#6E7A82' }}>Manual line item entry</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Manual line item entry</span>
             </div>
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4" style={{ color: '#D97706' }} />
-              <span className="text-xs" style={{ color: '#6E7A82' }}>Requires higher approval authority</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Requires higher approval authority</span>
             </div>
           </div>
 
@@ -163,22 +163,22 @@ export function POCreationHub() {
       {/* Info Section */}
       <div 
         className="bg-white p-6 rounded-lg mt-8 max-w-5xl"
-        style={{ border: '1px solid #E1E6EA' }}
+        style={{ border: '1px solid var(--color-silver)' }}
       >
         <div className="flex items-start gap-3">
           <div 
             className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: '#E8F7F8' }}
+            style={{ backgroundColor: 'var(--color-teal-tint)' }}
           >
-            <AlertCircle className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <AlertCircle className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
           </div>
           <div>
-            <h3 className="text-sm mb-2" style={{ color: '#0A0F14' }}>
+            <h3 className="text-sm mb-2" style={{ color: 'var(--color-ink)' }}>
               Which option should I choose?
             </h3>
-            <ul className="space-y-2 text-sm" style={{ color: '#6E7A82' }}>
+            <ul className="space-y-2 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               <li className="flex items-start gap-2">
-                <span style={{ color: '#00A9B7' }}>•</span>
+                <span style={{ color: 'var(--color-teal)' }}>•</span>
                 <span><strong>Choose "PO with PR"</strong> if you have approved requisitions waiting to be converted into purchase orders. This ensures proper budget alignment and approval workflow compliance.</span>
               </li>
               <li className="flex items-start gap-2">
@@ -194,39 +194,39 @@ export function POCreationHub() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 max-w-5xl">
         <div 
           className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid #E1E6EA' }}
+          style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
             <div 
               className="w-10 h-10 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: '#E8F7F8' }}
+              style={{ backgroundColor: 'var(--color-teal-tint)' }}
             >
-              <ShoppingCart className="w-5 h-5" style={{ color: '#00A9B7' }} />
+              <ShoppingCart className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
           </div>
-          <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>12</p>
-          <p className="text-xs" style={{ color: '#6E7A82' }}>Approved PRs Awaiting Conversion</p>
+          <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>12</p>
+          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Approved PRs Awaiting Conversion</p>
         </div>
 
         <div 
           className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid #E1E6EA' }}
+          style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
             <div 
               className="w-10 h-10 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: '#E8F5E9' }}
+              style={{ backgroundColor: 'var(--color-success-light)' }}
             >
-              <Package className="w-5 h-5" style={{ color: '#2E7D32' }} />
+              <Package className="w-5 h-5" style={{ color: 'var(--color-success-dark)' }} />
             </div>
           </div>
-          <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>₹89.5L</p>
-          <p className="text-xs" style={{ color: '#6E7A82' }}>Total PR Value Pending PO</p>
+          <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>₹89.5L</p>
+          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Total PR Value Pending PO</p>
         </div>
 
         <div 
           className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid #E1E6EA' }}
+          style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
             <div 
@@ -236,8 +236,8 @@ export function POCreationHub() {
               <FileText className="w-5 h-5" style={{ color: '#D97706' }} />
             </div>
           </div>
-          <p className="text-2xl mb-1" style={{ color: '#0A0F14' }}>34</p>
-          <p className="text-xs" style={{ color: '#6E7A82' }}>POs Created This Month</p>
+          <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>34</p>
+          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>POs Created This Month</p>
         </div>
       </div>
     </div>

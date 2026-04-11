@@ -1,11 +1,12 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, DollarSign, FileText, Edit, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface Change {
   field: string;
@@ -130,8 +131,8 @@ export function CurrencyMaster() {
 
   const getStatusBadgeStyle = (isActive: boolean) => {
     return isActive
-      ? { backgroundColor: '#E8F7F8', color: '#00A9B7' }
-      : { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+      ? { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }
+      : { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
   };
 
   const getApprovalBadgeStyle = (approvalStatus?: string) => {
@@ -139,78 +140,89 @@ export function CurrencyMaster() {
       case 'Pending Approval':
         return { backgroundColor: '#FFF9E6', color: '#D97706' };
       case 'Rejected':
-        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+        return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
       case 'Changes Requested':
         return { backgroundColor: '#E0F2FE', color: '#0284C7' };
       case 'Draft':
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
       default:
-        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+        return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
     }
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [code, name, symbol, decimalPrecision];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [code, name, symbol, decimalPrecision]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showForm) {
     return (
-      <MasterFormPage
+      <FormShell
         title={editingId ? 'Edit Currency' : 'Create Currency'}
         subtitle="Manage currencies and currency codes"
         modeLabel={editingId ? 'Edit Master Record' : 'Create Master Record'}
+        draftStatus={editingId ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={() => setShowForm(false)}
-        onCancel={() => {
-          setShowForm(false);
-          resetForm();
-        }}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onCancel={() => { setShowForm(false); resetForm(); }}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Currency Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g., INR" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Currency Name <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Indian Rupee" className="w-full px-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Symbol <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="e.g., ₹" className="w-full pl-10 pr-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Decimal Precision <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <input type="number" value={decimalPrecision} onChange={(e) => setDecimalPrecision(e.target.value)} className="w-full px-3 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} />
-          </div>
-          <div className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ border: '1px solid #D7E3EA', backgroundColor: '#FFFFFF' }}>
-            <input id="base-currency" type="checkbox" checked={isBaseCurrency} onChange={(e) => setIsBaseCurrency(e.target.checked)} />
-            <label htmlFor="base-currency" style={{ color: '#0A0F14' }}>Set as base currency</label>
-          </div>
-          <div className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ border: '1px solid #D7E3EA', backgroundColor: '#FFFFFF' }}>
-            <input id="currency-status" type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-            <label htmlFor="currency-status" style={{ color: '#0A0F14' }}>Active currency</label>
-          </div>
-        </div>
-      </MasterFormPage>
+        <FormSection title="Currency Details" columns={2}>
+          <PxFormField label="Currency Code" required filled={!!code.trim()} hint="ISO 4217 currency code">
+            <input type="text" value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g., INR" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Currency Name" required filled={!!name.trim()}>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Indian Rupee" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Symbol" required filled={!!symbol.trim()} hint="Currency symbol for display">
+            <input type="text" value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="e.g., ₹" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Decimal Precision" required filled={!!decimalPrecision.trim()}>
+            <input type="number" value={decimalPrecision} onChange={(e) => setDecimalPrecision(e.target.value)} className="px-input" />
+          </PxFormField>
+          <CheckCard
+            title="Base Currency"
+            subtitle="Set as the base currency for the system"
+            checked={isBaseCurrency}
+            onChange={setIsBaseCurrency}
+          />
+          <CheckCard
+            title="Active Currency"
+            subtitle="Inactive currencies are hidden from transaction forms"
+            checked={isActive}
+            onChange={setIsActive}
+          />
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)' }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Currency Master</h1>
-            <p style={{ color: '#6E7A82' }}>Manage currencies and currency codes (INR, AED, USD, EUR, GBP)</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Currency Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage currencies and currency codes (INR, AED, USD, EUR, GBP)</p>
           </div>
         </div>
         <button
@@ -219,40 +231,40 @@ export function CurrencyMaster() {
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Add Currency
         </button>
       </div>
 
-      <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: '#F6F9FC' }}>
+            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Currency Code</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Currency Name</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Symbol</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Decimal Precision</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Base Currency</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Approval</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: '#6E7A82' }}>Actions</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Currency Code</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Currency Name</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Symbol</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Decimal Precision</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Base Currency</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {currencies.map((currency, index) => (
-                <tr key={currency.id} style={{ borderTop: index === 0 ? 'none' : '1px solid #E1E6EA' }}>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14', fontWeight: '600' }}>{currency.code}</td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{currency.name}</td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82', fontSize: '18px' }}>{currency.symbol}</td>
-                  <td className="px-6 py-4" style={{ color: '#6E7A82' }}>{currency.decimalPrecision}</td>
+                <tr key={currency.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{currency.code}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{currency.name}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)', fontSize: '18px' }}>{currency.symbol}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{currency.decimalPrecision}</td>
                   <td className="px-6 py-4">
                     {currency.isBaseCurrency && (
-                      <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: '#E8F7F8', color: '#00A9B7' }}>
+                      <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}>
                         Base
                       </span>
                     )}
@@ -271,14 +283,14 @@ export function CurrencyMaster() {
                     <div className="flex items-center gap-2">
                       <button 
                         className="p-2 rounded-lg transition-colors" 
-                        style={{ color: '#6E7A82' }} 
+                        style={{ color: 'var(--color-mercury-grey)' }} 
                         title="View Details"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button 
                         className="p-2 rounded-lg transition-colors" 
-                        style={{ color: '#6E7A82' }} 
+                        style={{ color: 'var(--color-mercury-grey)' }} 
                         title="Edit"
                         onClick={() => handleEdit(currency)}
                       >
@@ -287,7 +299,7 @@ export function CurrencyMaster() {
                       {(currency.approvalStatus === 'Pending Approval' || currency.approvalStatus === 'Changes Requested' || currency.approvalStatus === 'Draft') && (
                         <button
                           className="p-2 rounded-lg transition-colors"
-                          style={{ color: '#00A9B7' }}
+                          style={{ color: 'var(--color-teal)' }}
                           title="Review Changes"
                           onClick={() => handleReview(currency)}
                         >
@@ -316,22 +328,22 @@ export function CurrencyMaster() {
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-xl">
-            <div className="border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: '#E1E6EA' }}>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>{editingId ? 'Edit Currency' : 'Add Currency'}</h2>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg" style={{ color: '#6E7A82' }}><X className="w-5 h-5" /></button>
+            <div className="border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: 'var(--color-silver)' }}>
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>{editingId ? 'Edit Currency' : 'Add Currency'}</h2>
+              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg" style={{ color: 'var(--color-mercury-grey)' }}><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 grid grid-cols-2 gap-4">
-              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Code" className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <input value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="Symbol" className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <input value={decimalPrecision} onChange={(e) => setDecimalPrecision(e.target.value)} placeholder="Decimal Precision" className="px-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA' }} />
-              <label className="flex items-center gap-2 text-sm" style={{ color: '#0A0F14' }}><input type="checkbox" checked={isBaseCurrency} onChange={(e) => setIsBaseCurrency(e.target.checked)} />Base Currency</label>
-              <label className="flex items-center gap-2 text-sm" style={{ color: '#0A0F14' }}><input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />Active</label>
+              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Code" className="px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)' }} />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)' }} />
+              <input value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="Symbol" className="px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)' }} />
+              <input value={decimalPrecision} onChange={(e) => setDecimalPrecision(e.target.value)} placeholder="Decimal Precision" className="px-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)' }} />
+              <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-ink)' }}><input type="checkbox" checked={isBaseCurrency} onChange={(e) => setIsBaseCurrency(e.target.checked)} />Base Currency</label>
+              <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-ink)' }}><input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />Active</label>
             </div>
-            <div className="border-t px-6 py-4 flex justify-end gap-3" style={{ borderColor: '#E1E6EA' }}>
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#6E7A82' }}>Cancel</button>
+            <div className="border-t px-6 py-4 flex justify-end gap-3" style={{ borderColor: 'var(--color-silver)' }}>
+              <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', backgroundColor: '#FFFFFF', color: 'var(--color-mercury-grey)' }}>Cancel</button>
               <button onClick={() => handleSubmit('Draft')} className="px-4 py-2 rounded-lg" style={{ border: '1px solid #BFE8EC', color: '#0F8A95', backgroundColor: '#ECFEFF', fontWeight: 700 }}>Save Draft</button>
-              <button onClick={() => handleSubmit('Pending Approval')} className="px-4 py-2 rounded-lg text-white" style={{ backgroundColor: '#00A9B7' }}>Submit</button>
+              <button onClick={() => handleSubmit('Pending Approval')} className="px-4 py-2 rounded-lg text-white" style={{ backgroundColor: 'var(--color-teal)' }}>Submit</button>
             </div>
           </div>
         </div>

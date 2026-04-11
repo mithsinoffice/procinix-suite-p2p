@@ -12,18 +12,18 @@ export const ProcurementIntakePR = () => {
     <DeskLayoutShell deskName="Procurement Desk" pageName="Intake PR">
       <div style={{ 
         backgroundColor: '#FFFFFF', 
-        border: '1px solid #E1E6EA', 
+        border: '1px solid var(--color-silver)', 
         borderRadius: '8px', 
         padding: '20px'
       }}>
         <div style={{ 
           padding: '64px', 
-          backgroundColor: '#F6F9FC', 
-          border: '1px dashed #E1E6EA', 
+          backgroundColor: 'var(--color-cloud)', 
+          border: '1px dashed var(--color-silver)', 
           borderRadius: '4px',
           textAlign: 'center'
         }}>
-          <span style={{ fontSize: '12px', color: '#6E7A82' }}>PR Listing Table Placeholder</span>
+          <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>PR Listing Table Placeholder</span>
         </div>
       </div>
     </DeskLayoutShell>

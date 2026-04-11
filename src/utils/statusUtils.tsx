@@ -31,12 +31,12 @@ interface StatusStyle {
 export const getStatusStyle = (status: AllStatuses): StatusStyle => {
   // Draft → neutral grey
   if (status === 'Draft') {
-    return { bg: '#F6F9FC', color: '#6E7A82' };
+    return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' };
   }
   
   // Pending / Requested → amber
   if (status === 'Pending Approval' || status === 'Requested') {
-    return { bg: '#FFF3E0', color: '#F57C00' };
+    return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' };
   }
   
   // Approved / Issued / Released → blue
@@ -46,21 +46,21 @@ export const getStatusStyle = (status: AllStatuses): StatusStyle => {
   
   // Paid / Closed / Adjusted → green
   if (status === 'Paid' || status === 'Closed' || status === 'Adjusted') {
-    return { bg: '#E8F5E9', color: '#2E7D32' };
+    return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)' };
   }
   
   // Failed / Rejected / Cancelled → red
   if (status === 'Failed' || status === 'Rejected' || status === 'Cancelled') {
-    return { bg: '#FEE2E2', color: '#DC2626' };
+    return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' };
   }
   
   // On Hold / Partially Received → amber
   if (status === 'On Hold' || status === 'Partially Received') {
-    return { bg: '#FFF3E0', color: '#F57C00' };
+    return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' };
   }
   
   // Fallback
-  return { bg: '#F6F9FC', color: '#6E7A82' };
+  return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' };
 };
 
 // =============================================================================

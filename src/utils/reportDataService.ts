@@ -274,7 +274,7 @@ class ReportDataService {
         name: 'Strategic Vendors', 
         value: parseFloat((strategicSpend / 10000000).toFixed(1)), 
         percentage: parseFloat(((strategicSpend / total) * 100).toFixed(1)),
-        color: '#00A9B7' 
+        color: 'var(--color-teal)' 
       },
       { 
         name: 'Non-Strategic Vendors', 

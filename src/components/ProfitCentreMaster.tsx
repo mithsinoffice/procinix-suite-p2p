@@ -1,10 +1,11 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, TrendingUp, User, Building2, Edit, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface ProfitCentre {
   id: string;
@@ -174,107 +175,109 @@ export function ProfitCentreMaster() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Active': return '#00A9B7';
-      case 'Inactive': return '#6E7A82';
-      default: return '#6E7A82';
+      case 'Active': return 'var(--color-teal)';
+      case 'Inactive': return 'var(--color-mercury-grey)';
+      default: return 'var(--color-mercury-grey)';
     }
   };
 
   const getApprovalStatusColor = (status: string) => {
     switch (status) {
-      case 'Draft': return '#9AA6AF';
+      case 'Draft': return 'var(--color-slate)';
       case 'Pending Approval': return '#F59E0B';
-      case 'Approved': return '#00A9B7';
+      case 'Approved': return 'var(--color-teal)';
       case 'Rejected': return '#EF4444';
-      default: return '#6E7A82';
+      default: return 'var(--color-mercury-grey)';
     }
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [profitCentreCode, profitCentreName, department, headOfPC, revenueTarget, region, status];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [profitCentreCode, profitCentreName, department, headOfPC, revenueTarget, region, status]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showForm) {
     return (
-      <MasterFormPage
+      <FormShell
         title={isEditMode ? 'Edit Profit Centre' : 'Create Profit Centre'}
         subtitle="Manage profit centres linked to departments"
         modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
+        draftStatus={isEditMode ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={() => setShowForm(false)}
-        onCancel={() => {
-          setShowForm(false);
-          resetForm();
-        }}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onCancel={() => { setShowForm(false); resetForm(); }}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Profit Centre Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <input type="text" value={profitCentreCode} onChange={(e) => setProfitCentreCode(e.target.value)} className="w-full px-4 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} placeholder="e.g., PC-NORTH-001" />
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Profit Centre Name <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <input type="text" value={profitCentreName} onChange={(e) => setProfitCentreName(e.target.value)} className="w-full px-4 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} placeholder="e.g., North Region Sales" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Department <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <select value={department} onChange={(e) => setDepartment(e.target.value)} className="w-full px-4 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="">Select Department</option>
-                {departments.map((dept) => (
-                  <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Head of PC <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <input type="text" value={headOfPC} onChange={(e) => setHeadOfPC(e.target.value)} className="w-full px-4 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} placeholder="Head of profit centre" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Revenue Target (₹) <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <input type="number" value={revenueTarget} onChange={(e) => setRevenueTarget(e.target.value)} className="w-full px-4 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }} placeholder="e.g., 50000000" />
-            </div>
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Region <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <select value={region} onChange={(e) => setRegion(e.target.value)} className="w-full px-4 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="">Select Region</option>
-                {regions.map((regionValue) => (
-                  <option key={regionValue} value={regionValue}>{regionValue}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-4 py-3 rounded-xl" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </MasterFormPage>
+        <FormSection title="Profit Centre Details" columns={2}>
+          <PxFormField label="Profit Centre Code" required filled={!!profitCentreCode.trim()} hint="Unique identifier for the profit centre">
+            <input type="text" value={profitCentreCode} onChange={(e) => setProfitCentreCode(e.target.value)} placeholder="e.g., PC-NORTH-001" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Profit Centre Name" required filled={!!profitCentreName.trim()}>
+            <input type="text" value={profitCentreName} onChange={(e) => setProfitCentreName(e.target.value)} placeholder="e.g., North Region Sales" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Department" required filled={!!department.trim()}>
+            <select value={department} onChange={(e) => setDepartment(e.target.value)} className="px-select">
+              <option value="">Select Department</option>
+              {departments.map((dept) => (
+                <option key={dept} value={dept}>{dept}</option>
+              ))}
+            </select>
+          </PxFormField>
+          <PxFormField label="Head of PC" required filled={!!headOfPC.trim()}>
+            <input type="text" value={headOfPC} onChange={(e) => setHeadOfPC(e.target.value)} placeholder="Head of profit centre" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Revenue Target" required filled={!!revenueTarget.trim()} hint="Annual revenue target in INR">
+            <input type="number" value={revenueTarget} onChange={(e) => setRevenueTarget(e.target.value)} placeholder="e.g., 50000000" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Region" required filled={!!region.trim()}>
+            <select value={region} onChange={(e) => setRegion(e.target.value)} className="px-select">
+              <option value="">Select Region</option>
+              {regions.map((regionValue) => (
+                <option key={regionValue} value={regionValue}>{regionValue}</option>
+              ))}
+            </select>
+          </PxFormField>
+          <PxFormField label="Status" required filled={!!status.trim()}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </PxFormField>
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/masters')} 
             className="p-2 rounded-lg transition-colors hover:bg-white" 
-            style={{ color: '#6E7A82' }}
+            style={{ color: 'var(--color-mercury-grey)' }}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl mb-1" style={{ color: '#0A0F14' }}>Profit Centre Master</h1>
-            <p className="text-sm" style={{ color: '#6E7A82' }}>Manage profit centres linked to departments</p>
+            <h1 className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>Profit Centre Master</h1>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Manage profit centres linked to departments</p>
           </div>
         </div>
         <button
@@ -283,9 +286,9 @@ export function ProfitCentreMaster() {
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Add Profit Centre
@@ -293,68 +296,68 @@ export function ProfitCentreMaster() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl overflow-hidden" style={{ border: '2px solid #E1E6EA' }}>
+      <div className="bg-white rounded-xl overflow-hidden" style={{ border: '2px solid var(--color-silver)' }}>
         <table className="w-full">
-          <thead style={{ backgroundColor: '#F6F9FC' }}>
+          <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
             <tr>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Code
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Profit Centre Name
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Department
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Head of PC
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Revenue Target
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Region
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Status
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Approval Status
               </th>
-              <th className="text-center px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-center px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Actions
               </th>
             </tr>
           </thead>
           <tbody>
             {profitCentres.map((profitCentre) => (
-              <tr key={profitCentre.id} style={{ borderTop: '1px solid #E1E6EA' }}>
-                <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+              <tr key={profitCentre.id} style={{ borderTop: '1px solid var(--color-silver)' }}>
+                <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                   <div className="flex items-center gap-2">
-                    <Hash className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                    <Hash className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                     {profitCentre.profitCentreCode}
                   </div>
                 </td>
-                <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{profitCentre.profitCentreName}</td>
+                <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{profitCentre.profitCentreName}</td>
                 <td className="px-6 py-4">
-                  <div className="flex items-center gap-2" style={{ color: '#0A0F14' }}>
-                    <Building2 className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                  <div className="flex items-center gap-2" style={{ color: 'var(--color-ink)' }}>
+                    <Building2 className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                     {profitCentre.department}
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex items-center gap-2" style={{ color: '#0A0F14' }}>
-                    <User className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                  <div className="flex items-center gap-2" style={{ color: 'var(--color-ink)' }}>
+                    <User className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                     {profitCentre.headOfPC}
                   </div>
                 </td>
-                <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-4 h-4" style={{ color: '#10B981' }} />
                     ₹{profitCentre.revenueTarget.toLocaleString('en-IN')}
                   </div>
                 </td>
-                <td className="px-6 py-4" style={{ color: '#0A0F14' }}>{profitCentre.region}</td>
+                <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{profitCentre.region}</td>
                 <td className="px-6 py-4">
                   <span 
                     className="px-3 py-1 rounded-full text-xs"
@@ -385,9 +388,9 @@ export function ProfitCentreMaster() {
                       <button
                         onClick={() => handleReview(profitCentre)}
                         className="p-2 rounded-lg transition-colors"
-                        style={{ color: '#00A9B7', backgroundColor: '#00A9B710' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#00A9B720'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B710'}
+                        style={{ color: 'var(--color-teal)', backgroundColor: 'var(--color-teal)10' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)20'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)10'}
                         title="Review Changes"
                       >
                         <Eye className="w-4 h-4" />
@@ -396,9 +399,9 @@ export function ProfitCentreMaster() {
                     <button
                       onClick={() => handleEdit(profitCentre)}
                       className="p-2 rounded-lg transition-colors"
-                      style={{ color: '#6E7A82', backgroundColor: '#F6F9FC' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E1E6EA'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+                      style={{ color: 'var(--color-mercury-grey)', backgroundColor: 'var(--color-cloud)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-silver)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
                       title="Edit"
                     >
                       <Edit className="w-4 h-4" />
@@ -406,9 +409,9 @@ export function ProfitCentreMaster() {
                     <button
                       onClick={() => handleDelete(profitCentre.id)}
                       className="p-2 rounded-lg transition-colors"
-                      style={{ color: '#EF4444', backgroundColor: '#FEE2E2' }}
+                      style={{ color: '#EF4444', backgroundColor: 'var(--color-error-light)' }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FECACA'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FEE2E2'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-error-light)'}
                       title="Delete"
                       disabled={profitCentre.approvalStatus === 'Approved'}
                     >
@@ -425,9 +428,9 @@ export function ProfitCentreMaster() {
       {/* Add/Edit Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-8 max-w-2xl w-full mx-4" style={{ border: '2px solid #E1E6EA' }}>
+          <div className="bg-white rounded-xl p-8 max-w-2xl w-full mx-4" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl" style={{ color: '#0A0F14' }}>
+              <h2 className="text-2xl" style={{ color: 'var(--color-ink)' }}>
                 {isEditMode ? 'Edit Profit Centre' : 'Add New Profit Centre'}
               </h2>
               <button
@@ -436,7 +439,7 @@ export function ProfitCentreMaster() {
                   resetForm();
                 }}
                 className="p-2 rounded-lg transition-colors"
-                style={{ color: '#6E7A82' }}
+                style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -445,24 +448,24 @@ export function ProfitCentreMaster() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Profit Centre Code <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Profit Centre Code <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <input
                     type="text"
                     value={profitCentreCode}
                     onChange={(e) => setProfitCentreCode(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg"
-                    style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                    style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                     placeholder="e.g., PC-NORTH-001"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Profit Centre Name <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Profit Centre Name <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <input
                     type="text"
                     value={profitCentreName}
                     onChange={(e) => setProfitCentreName(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg"
-                    style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                    style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                     placeholder="e.g., North Region Sales"
                   />
                 </div>
@@ -470,12 +473,12 @@ export function ProfitCentreMaster() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Department <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Department <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <select
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg"
-                    style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                    style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                   >
                     <option value="">Select Department</option>
                     {departments.map(dept => (
@@ -484,13 +487,13 @@ export function ProfitCentreMaster() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Head of PC <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Head of PC <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <input
                     type="text"
                     value={headOfPC}
                     onChange={(e) => setHeadOfPC(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg"
-                    style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                    style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                     placeholder="Head name"
                   />
                 </div>
@@ -498,23 +501,23 @@ export function ProfitCentreMaster() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Revenue Target (₹) <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Revenue Target (₹) <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <input
                     type="number"
                     value={revenueTarget}
                     onChange={(e) => setRevenueTarget(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg"
-                    style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                    style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                     placeholder="e.g., 50000000"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Region <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Region <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <select
                     value={region}
                     onChange={(e) => setRegion(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg"
-                    style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                    style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                   >
                     <option value="">Select Region</option>
                     {regions.map(reg => (
@@ -525,12 +528,12 @@ export function ProfitCentreMaster() {
               </div>
 
               <div>
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
+                <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Status <span style={{ color: 'var(--color-error)' }}>*</span></label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg"
-                  style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                  style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
@@ -544,16 +547,16 @@ export function ProfitCentreMaster() {
                     resetForm();
                   }}
                   className="px-6 py-2 rounded-lg transition-colors"
-                  style={{ border: '1px solid #E1E6EA', color: '#6E7A82' }}
+                  style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)' }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSubmit}
                   className="px-6 py-2 rounded-lg text-white transition-colors"
-                  style={{ backgroundColor: '#00A9B7' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                  style={{ backgroundColor: 'var(--color-teal)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
                 >
                   {isEditMode ? 'Update Profit Centre' : 'Add Profit Centre'}
                 </button>

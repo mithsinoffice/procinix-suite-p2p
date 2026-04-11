@@ -146,7 +146,7 @@ export function PaymentsDashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid': return '#10B981';
-      case 'approved': return '#00A9B7';
+      case 'approved': return 'var(--color-teal)';
       case 'scheduled': return '#3B82F6';
       case 'pending': return '#F59E0B';
       case 'overdue': return '#EF4444';
@@ -158,11 +158,11 @@ export function PaymentsDashboard() {
     if (!riskFlag) return null;
 
     const riskConfig = {
-      duplicate: { label: 'Duplicate', color: '#EF4444', bg: '#FEE2E2' },
+      duplicate: { label: 'Duplicate', color: '#EF4444', bg: 'var(--color-error-light)' },
       suspicious: { label: 'Suspicious', color: '#F59E0B', bg: '#FEF3C7' },
-      'sla-breach': { label: 'SLA Breach', color: '#EF4444', bg: '#FEE2E2' },
+      'sla-breach': { label: 'SLA Breach', color: '#EF4444', bg: 'var(--color-error-light)' },
       'credit-term-breach': { label: 'Credit Breach', color: '#F59E0B', bg: '#FEF3C7' },
-      statutory: { label: 'Statutory', color: '#DC2626', bg: '#FEE2E2' },
+      statutory: { label: 'Statutory', color: 'var(--color-error-dark)', bg: 'var(--color-error-light)' },
     };
 
     const config = riskConfig[riskFlag as keyof typeof riskConfig];
@@ -187,24 +187,24 @@ export function PaymentsDashboard() {
   const categoryData = getCategoryBreakdown();
   const projectionData = getProjectedOutflow();
 
-  const COLORS = ['#00A9B7', '#3B82F6', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444'];
+  const COLORS = ['var(--color-teal)', '#3B82F6', '#F59E0B', '#10B981', '#007D87', '#EF4444'];
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div
         className="px-8 py-6"
         style={{
           backgroundColor: '#FFFFFF',
-          borderBottom: '2px solid #E1E6EA',
+          borderBottom: '2px solid var(--color-silver)',
         }}
       >
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+            <h1 className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
               Payments Dashboard
             </h1>
-            <p style={{ color: '#6E7A82', fontSize: '14px' }}>
+            <p style={{ color: 'var(--color-mercury-grey)', fontSize: '14px' }}>
               Real-time visibility into payment obligations, risks, and cash impact
             </p>
           </div>
@@ -213,8 +213,8 @@ export function PaymentsDashboard() {
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
                 backgroundColor: '#FFFFFF',
-                border: '1px solid #E1E6EA',
-                color: '#6E7A82',
+                border: '1px solid var(--color-silver)',
+                color: 'var(--color-mercury-grey)',
               }}
             >
               <RefreshCw className="w-4 h-4" />
@@ -224,8 +224,8 @@ export function PaymentsDashboard() {
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
                 backgroundColor: '#FFFFFF',
-                border: '1px solid #E1E6EA',
-                color: '#6E7A82',
+                border: '1px solid var(--color-silver)',
+                color: 'var(--color-mercury-grey)',
               }}
             >
               <Download className="w-4 h-4" />
@@ -234,9 +234,9 @@ export function PaymentsDashboard() {
             <button
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
-                backgroundColor: '#00A9B7',
+                backgroundColor: 'var(--color-teal)',
                 color: '#FFFFFF',
-                border: '1px solid #007D87',
+                border: '1px solid var(--color-teal-dark)',
               }}
             >
               <CreditCard className="w-4 h-4" />
@@ -246,7 +246,7 @@ export function PaymentsDashboard() {
         </div>
 
         {/* Last updated */}
-        <div className="flex items-center gap-2 text-xs" style={{ color: '#6E7A82' }}>
+        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
           <Clock className="w-3.5 h-3.5" />
           <span>Last updated: Dec 13, 2024 at 10:45 AM IST</span>
         </div>
@@ -259,7 +259,7 @@ export function PaymentsDashboard() {
           className="mb-6 p-5 rounded-lg cursor-pointer transition-all"
           style={{ 
             background: 'linear-gradient(135deg, #E0F2FE 0%, #F0FDFF 100%)',
-            border: '2px solid #00A9B7'
+            border: '2px solid var(--color-teal)'
           }}
           onClick={() => navigate('/ap/ai-suggested-payment-batch')}
           onMouseEnter={(e) => {
@@ -275,48 +275,48 @@ export function PaymentsDashboard() {
             <div className="flex items-center gap-4">
               <div 
                 className="w-14 h-14 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: '#00A9B7' }}
+                style={{ backgroundColor: 'var(--color-teal)' }}
               >
                 <Zap style={{ width: '28px', height: '28px', color: '#FFFFFF' }} />
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0A0F14', margin: 0 }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--color-ink)', margin: 0 }}>
                     AI Suggested Payment Batch Ready
                   </h3>
                   <span 
                     className="px-2 py-1 rounded-full flex items-center gap-1"
-                    style={{ backgroundColor: '#00A9B7', fontSize: '11px', fontWeight: '600', color: '#FFFFFF' }}
+                    style={{ backgroundColor: 'var(--color-teal)', fontSize: '11px', fontWeight: '600', color: '#FFFFFF' }}
                   >
                     <Sparkles style={{ width: '12px', height: '12px' }} />
                     NEW
                   </span>
                 </div>
-                <p style={{ fontSize: '14px', color: '#6E7A82', margin: 0 }}>
+                <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: 0 }}>
                   AI has prioritized 5 invoices worth ₹7.24L based on urgency, discounts, and cash availability. Save ₹3,790 in discounts and avoid ₹6,700 in penalties.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-6">
               <div className="text-center">
-                <div style={{ fontSize: '24px', fontWeight: '700', color: '#00A9B7' }}>5</div>
-                <div style={{ fontSize: '12px', color: '#6E7A82' }}>Invoices</div>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--color-teal)' }}>5</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Invoices</div>
               </div>
               <div className="text-center">
-                <div style={{ fontSize: '24px', fontWeight: '700', color: '#00A9B7' }}>₹7.24L</div>
-                <div style={{ fontSize: '12px', color: '#6E7A82' }}>Total Amount</div>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--color-teal)' }}>₹7.24L</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Total Amount</div>
               </div>
               <button
                 className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all"
                 style={{
-                  backgroundColor: '#00A9B7',
+                  backgroundColor: 'var(--color-teal)',
                   color: '#FFFFFF',
                   border: 'none',
                   fontSize: '14px',
                   fontWeight: '600'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
               >
                 <Zap style={{ width: '16px', height: '16px' }} />
                 View AI Batch
@@ -330,7 +330,7 @@ export function PaymentsDashboard() {
           {/* Total Outstanding */}
           <div
             className="bg-white rounded-lg p-4"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-start justify-between mb-3">
               <div
@@ -339,15 +339,15 @@ export function PaymentsDashboard() {
               >
                 <DollarSign className="w-5 h-5" style={{ color: '#3B82F6' }} />
               </div>
-              <ArrowUpRight className="w-4 h-4" style={{ color: '#6E7A82' }} />
+              <ArrowUpRight className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
             </div>
-            <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>
+            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
               Total Outstanding
             </div>
-            <div className="text-xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+            <div className="text-xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
               {formatCompactCurrency(totalOutstanding)}
             </div>
-            <div className="text-xs" style={{ color: '#6E7A82' }}>
+            <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               {mockPayments.filter(p => p.status !== 'paid').length} invoices
             </div>
           </div>
@@ -355,7 +355,7 @@ export function PaymentsDashboard() {
           {/* Due Today */}
           <div
             className="bg-white rounded-lg p-4"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-start justify-between mb-3">
               <div
@@ -368,13 +368,13 @@ export function PaymentsDashboard() {
                 TODAY
               </span>
             </div>
-            <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>
+            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
               Due Today
             </div>
-            <div className="text-xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+            <div className="text-xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
               {formatCompactCurrency(dueToday)}
             </div>
-            <div className="text-xs" style={{ color: '#6E7A82' }}>
+            <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               {mockPayments.filter(p => p.dueDate === '2024-12-13' && p.status !== 'paid').length} payments
             </div>
           </div>
@@ -382,26 +382,26 @@ export function PaymentsDashboard() {
           {/* Due This Week */}
           <div
             className="bg-white rounded-lg p-4"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-start justify-between mb-3">
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: '#00A9B715' }}
+                style={{ backgroundColor: 'var(--color-teal)15' }}
               >
-                <Clock className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                <Clock className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
-              <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: '#E0F2F1', color: '#00A9B7', fontWeight: '600' }}>
+              <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: '#E0F2F1', color: 'var(--color-teal)', fontWeight: '600' }}>
                 7 DAYS
               </span>
             </div>
-            <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>
+            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
               Due This Week
             </div>
-            <div className="text-xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+            <div className="text-xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
               {formatCompactCurrency(dueThisWeek)}
             </div>
-            <div className="text-xs" style={{ color: '#6E7A82' }}>
+            <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               {upcomingPayments.length} payments
             </div>
           </div>
@@ -414,21 +414,21 @@ export function PaymentsDashboard() {
             <div className="flex items-start justify-between mb-3">
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: '#FEE2E2' }}
+                style={{ backgroundColor: 'var(--color-error-light)' }}
               >
                 <AlertTriangle className="w-5 h-5" style={{ color: '#EF4444' }} />
               </div>
-              <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: '#FEE2E2', color: '#EF4444', fontWeight: '600' }}>
+              <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--color-error-light)', color: '#EF4444', fontWeight: '600' }}>
                 ALERT
               </span>
             </div>
-            <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>
+            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
               Overdue Amount
             </div>
             <div className="text-xl mb-1" style={{ color: '#EF4444', fontWeight: '700' }}>
               {formatCompactCurrency(overdue)}
             </div>
-            <div className="text-xs" style={{ color: '#6E7A82' }}>
+            <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               {mockPayments.filter(p => new Date(p.dueDate) < today && p.status !== 'paid').length} invoices
             </div>
           </div>
@@ -436,7 +436,7 @@ export function PaymentsDashboard() {
           {/* Early Payment Discount */}
           <div
             className="bg-white rounded-lg p-4"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-start justify-between mb-3">
               <div
@@ -449,13 +449,13 @@ export function PaymentsDashboard() {
                 SAVE
               </span>
             </div>
-            <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>
+            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
               Discount Available
             </div>
             <div className="text-xl mb-1" style={{ color: '#10B981', fontWeight: '700' }}>
               {formatCompactCurrency(earlyPaymentDiscount)}
             </div>
-            <div className="text-xs" style={{ color: '#6E7A82' }}>
+            <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               Early payment savings
             </div>
           </div>
@@ -463,26 +463,26 @@ export function PaymentsDashboard() {
           {/* Critical Payments */}
           <div
             className="bg-white rounded-lg p-4"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-start justify-between mb-3">
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: '#DC262615' }}
+                style={{ backgroundColor: 'var(--color-error-dark)15' }}
               >
-                <Flag className="w-5 h-5" style={{ color: '#DC2626' }} />
+                <Flag className="w-5 h-5" style={{ color: 'var(--color-error-dark)' }} />
               </div>
-              <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: '#FEE2E2', color: '#DC2626', fontWeight: '600' }}>
+              <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--color-error-light)', color: 'var(--color-error-dark)', fontWeight: '600' }}>
                 {criticalPaymentsCount}
               </span>
             </div>
-            <div className="text-xs mb-1" style={{ color: '#6E7A82' }}>
+            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
               Critical Payments
             </div>
-            <div className="text-xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+            <div className="text-xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
               High Priority
             </div>
-            <div className="text-xs" style={{ color: '#6E7A82' }}>
+            <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               Requires attention
             </div>
           </div>
@@ -491,20 +491,20 @@ export function PaymentsDashboard() {
 
       {/* Critical Alerts Section */}
       <div className="px-8 pb-6">
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center gap-2 mb-4">
             <AlertCircle className="w-5 h-5" style={{ color: '#EF4444' }} />
-            <h2 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+            <h2 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
               Critical Alerts
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* High Priority Payments */}
-            <div className="rounded-lg p-4" style={{ backgroundColor: '#FEE2E2', border: '1px solid #FECACA' }}>
+            <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--color-error-light)', border: '1px solid #FECACA' }}>
               <div className="flex items-center gap-2 mb-3">
-                <Shield className="w-4 h-4" style={{ color: '#DC2626' }} />
-                <span className="text-sm" style={{ color: '#DC2626', fontWeight: '700' }}>
+                <Shield className="w-4 h-4" style={{ color: 'var(--color-error-dark)' }} />
+                <span className="text-sm" style={{ color: 'var(--color-error-dark)', fontWeight: '700' }}>
                   High-Priority Payments
                 </span>
               </div>
@@ -512,14 +512,14 @@ export function PaymentsDashboard() {
                 {highPriorityPayments.map(payment => (
                   <div key={payment.id} className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                         {payment.vendor}
                       </div>
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                         {payment.category}
                       </div>
                     </div>
-                    <div className="text-xs" style={{ color: '#DC2626', fontWeight: '700' }}>
+                    <div className="text-xs" style={{ color: 'var(--color-error-dark)', fontWeight: '700' }}>
                       {formatCompactCurrency(payment.amount)}
                     </div>
                   </div>
@@ -539,10 +539,10 @@ export function PaymentsDashboard() {
                 {slaBreaches.map(payment => (
                   <div key={payment.id} className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                         {payment.vendor}
                       </div>
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                         Due: {new Date(payment.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                       </div>
                     </div>
@@ -566,10 +566,10 @@ export function PaymentsDashboard() {
                 {suspiciousPayments.map(payment => (
                   <div key={payment.id} className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                         {payment.vendor}
                       </div>
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                         {payment.riskFlag === 'duplicate' ? 'Possible duplicate' : 'New vendor flagged'}
                       </div>
                     </div>
@@ -588,52 +588,52 @@ export function PaymentsDashboard() {
       <div className="px-8 pb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Aging Analysis */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
-            <h3 className="mb-4" style={{ color: '#0A0F14', fontWeight: '700', fontSize: '15px' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+            <h3 className="mb-4" style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '15px' }}>
               Aging Analysis
             </h3>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={agingData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
                 <XAxis
                   dataKey="period"
-                  tick={{ fill: '#6E7A82', fontSize: 12 }}
-                  axisLine={{ stroke: '#E1E6EA' }}
+                  tick={{ fill: 'var(--color-mercury-grey)', fontSize: 12 }}
+                  axisLine={{ stroke: 'var(--color-silver)' }}
                 />
                 <YAxis
-                  tick={{ fill: '#6E7A82', fontSize: 12 }}
-                  axisLine={{ stroke: '#E1E6EA' }}
-                  label={{ value: 'Amount (Lakhs)', angle: -90, position: 'insideLeft', style: { fill: '#6E7A82', fontSize: 12 } }}
+                  tick={{ fill: 'var(--color-mercury-grey)', fontSize: 12 }}
+                  axisLine={{ stroke: 'var(--color-silver)' }}
+                  label={{ value: 'Amount (Lakhs)', angle: -90, position: 'insideLeft', style: { fill: 'var(--color-mercury-grey)', fontSize: 12 } }}
                 />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)', borderRadius: '8px' }}
                   formatter={(value: any) => [`₹${value}L`, 'Amount']}
                 />
-                <Bar dataKey="amount" fill="#00A9B7" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="amount" fill="var(--color-teal)" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* Payment Trend */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
-            <h3 className="mb-4" style={{ color: '#0A0F14', fontWeight: '700', fontSize: '15px' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+            <h3 className="mb-4" style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '15px' }}>
               Daily Payment Trend
             </h3>
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
                 <XAxis
                   dataKey="date"
-                  tick={{ fill: '#6E7A82', fontSize: 11 }}
-                  axisLine={{ stroke: '#E1E6EA' }}
+                  tick={{ fill: 'var(--color-mercury-grey)', fontSize: 11 }}
+                  axisLine={{ stroke: 'var(--color-silver)' }}
                 />
                 <YAxis
-                  tick={{ fill: '#6E7A82', fontSize: 12 }}
-                  axisLine={{ stroke: '#E1E6EA' }}
-                  label={{ value: 'Amount (Lakhs)', angle: -90, position: 'insideLeft', style: { fill: '#6E7A82', fontSize: 12 } }}
+                  tick={{ fill: 'var(--color-mercury-grey)', fontSize: 12 }}
+                  axisLine={{ stroke: 'var(--color-silver)' }}
+                  label={{ value: 'Amount (Lakhs)', angle: -90, position: 'insideLeft', style: { fill: 'var(--color-mercury-grey)', fontSize: 12 } }}
                 />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)', borderRadius: '8px' }}
                   formatter={(value: any) => [`₹${value}L`, '']}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -644,8 +644,8 @@ export function PaymentsDashboard() {
           </div>
 
           {/* Category Breakdown */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
-            <h3 className="mb-4" style={{ color: '#0A0F14', fontWeight: '700', fontSize: '15px' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+            <h3 className="mb-4" style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '15px' }}>
               Payables by Vendor Category
             </h3>
             <ResponsiveContainer width="100%" height={240}>
@@ -665,7 +665,7 @@ export function PaymentsDashboard() {
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)', borderRadius: '8px' }}
                   formatter={(value: any) => [`₹${value}L`, 'Amount']}
                 />
               </PieChart>
@@ -673,30 +673,30 @@ export function PaymentsDashboard() {
           </div>
 
           {/* Projected Outflow */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
-            <h3 className="mb-4" style={{ color: '#0A0F14', fontWeight: '700', fontSize: '15px' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+            <h3 className="mb-4" style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '15px' }}>
               Projected Cash Outflow (Next 30 Days)
             </h3>
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={projectionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
                 <XAxis
                   dataKey="date"
-                  tick={{ fill: '#6E7A82', fontSize: 12 }}
-                  axisLine={{ stroke: '#E1E6EA' }}
+                  tick={{ fill: 'var(--color-mercury-grey)', fontSize: 12 }}
+                  axisLine={{ stroke: 'var(--color-silver)' }}
                 />
                 <YAxis
-                  tick={{ fill: '#6E7A82', fontSize: 12 }}
-                  axisLine={{ stroke: '#E1E6EA' }}
-                  label={{ value: 'Amount (Lakhs)', angle: -90, position: 'insideLeft', style: { fill: '#6E7A82', fontSize: 12 } }}
+                  tick={{ fill: 'var(--color-mercury-grey)', fontSize: 12 }}
+                  axisLine={{ stroke: 'var(--color-silver)' }}
+                  label={{ value: 'Amount (Lakhs)', angle: -90, position: 'insideLeft', style: { fill: 'var(--color-mercury-grey)', fontSize: 12 } }}
                 />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA', borderRadius: '8px' }}
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)', borderRadius: '8px' }}
                   formatter={(value: any) => [`₹${value}L`, '']}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Area type="monotone" dataKey="projected" stackId="1" stroke="#F59E0B" fill="#FEF3C7" name="Projected" />
-                <Area type="monotone" dataKey="actual" stackId="2" stroke="#00A9B7" fill="#E0F2F1" name="Actual" />
+                <Area type="monotone" dataKey="actual" stackId="2" stroke="var(--color-teal)" fill="#E0F2F1" name="Actual" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -707,35 +707,35 @@ export function PaymentsDashboard() {
       <div className="px-8 pb-8">
         <div className="grid grid-cols-1 gap-6">
           {/* Critical Payments Table */}
-          <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <div className="px-6 py-4" style={{ borderBottom: '1px solid #E1E6EA' }}>
-              <h3 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '15px' }}>
+          <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+              <h3 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '15px' }}>
                 Critical Payments
               </h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
-                    <th className="text-left px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
+                    <th className="text-left px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       VENDOR
                     </th>
-                    <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       INVOICE NO
                     </th>
-                    <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       DUE DATE
                     </th>
-                    <th className="text-right px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       AMOUNT
                     </th>
-                    <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       PRIORITY
                     </th>
-                    <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       RISK FLAG
                     </th>
-                    <th className="text-center px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-center px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       ACTION
                     </th>
                   </tr>
@@ -746,24 +746,24 @@ export function PaymentsDashboard() {
                       key={payment.id}
                       style={{
                         backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFBFC',
-                        borderBottom: '1px solid #E1E6EA',
+                        borderBottom: '1px solid var(--color-silver)',
                       }}
                     >
                       <td className="px-6 py-4">
-                        <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                        <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                           {payment.vendor}
                         </div>
-                        <div className="text-xs" style={{ color: '#6E7A82' }}>
+                        <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                           {payment.vendorCategory}
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-sm" style={{ color: '#0A0F14', fontWeight: '500' }}>
+                        <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
                           {payment.invoiceNo}
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-sm" style={{ color: '#0A0F14' }}>
+                        <div className="text-sm" style={{ color: 'var(--color-ink)' }}>
                           {new Date(payment.dueDate).toLocaleDateString('en-GB', {
                             day: '2-digit',
                             month: 'short',
@@ -772,7 +772,7 @@ export function PaymentsDashboard() {
                         </div>
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                        <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                           {formatCompactCurrency(payment.amount)}
                         </div>
                       </td>
@@ -795,7 +795,7 @@ export function PaymentsDashboard() {
                         <button
                           className="px-3 py-1.5 rounded-lg text-xs transition-colors"
                           style={{
-                            backgroundColor: '#00A9B7',
+                            backgroundColor: 'var(--color-teal)',
                             color: '#FFFFFF',
                             fontWeight: '600',
                           }}
@@ -811,32 +811,32 @@ export function PaymentsDashboard() {
           </div>
 
           {/* Upcoming Payments Table */}
-          <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <div className="px-6 py-4" style={{ borderBottom: '1px solid #E1E6EA' }}>
-              <h3 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '15px' }}>
+          <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+              <h3 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '15px' }}>
                 Upcoming Payments (Next 7 Days)
               </h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
-                    <th className="text-left px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
+                    <th className="text-left px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       VENDOR
                     </th>
-                    <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       DUE DATE
                     </th>
-                    <th className="text-right px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       AMOUNT
                     </th>
-                    <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       PAYMENT MODE
                     </th>
-                    <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       STATUS
                     </th>
-                    <th className="text-center px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                    <th className="text-center px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                       ACTION
                     </th>
                   </tr>
@@ -847,31 +847,31 @@ export function PaymentsDashboard() {
                       key={payment.id}
                       style={{
                         backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFBFC',
-                        borderBottom: '1px solid #E1E6EA',
+                        borderBottom: '1px solid var(--color-silver)',
                       }}
                     >
                       <td className="px-6 py-4">
-                        <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                        <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                           {payment.vendor}
                         </div>
-                        <div className="text-xs" style={{ color: '#6E7A82' }}>
+                        <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                           {payment.invoiceNo}
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-sm" style={{ color: '#0A0F14' }}>
+                        <div className="text-sm" style={{ color: 'var(--color-ink)' }}>
                           {new Date(payment.dueDate).toLocaleDateString('en-GB', {
                             day: '2-digit',
                             month: 'short',
                             year: 'numeric',
                           })}
                         </div>
-                        <div className="text-xs" style={{ color: '#6E7A82' }}>
+                        <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                           {Math.ceil((new Date(payment.dueDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))} days
                         </div>
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                        <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                           {formatCompactCurrency(payment.amount)}
                         </div>
                         {payment.earlyPaymentDiscount && (
@@ -881,7 +881,7 @@ export function PaymentsDashboard() {
                         )}
                       </td>
                       <td className="px-4 py-4 text-center">
-                        <span className="text-sm" style={{ color: '#0A0F14', fontWeight: '500' }}>
+                        <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
                           {payment.paymentMode}
                         </span>
                       </td>
@@ -901,9 +901,9 @@ export function PaymentsDashboard() {
                         <button
                           className="px-3 py-1.5 rounded-lg text-xs transition-colors"
                           style={{
-                            backgroundColor: '#F6F9FC',
-                            color: '#00A9B7',
-                            border: '1px solid #00A9B7',
+                            backgroundColor: 'var(--color-cloud)',
+                            color: 'var(--color-teal)',
+                            border: '1px solid var(--color-teal)',
                             fontWeight: '600',
                           }}
                         >

@@ -17,21 +17,21 @@ export const CFOOverview = () => {
             key={title}
             style={{ 
               backgroundColor: '#FFFFFF', 
-              border: '1px solid #E1E6EA', 
+              border: '1px solid var(--color-silver)', 
               borderRadius: '8px', 
               padding: '20px',
               minHeight: '120px'
             }}
           >
-            <h3 style={{ fontSize: '14px', color: '#6E7A82', margin: '0 0 12px 0' }}>{title}</h3>
+            <h3 style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: '0 0 12px 0' }}>{title}</h3>
             <div style={{ 
               padding: '24px', 
-              backgroundColor: '#F6F9FC', 
-              border: '1px dashed #E1E6EA', 
+              backgroundColor: 'var(--color-cloud)', 
+              border: '1px dashed var(--color-silver)', 
               borderRadius: '4px',
               textAlign: 'center'
             }}>
-              <span style={{ fontSize: '12px', color: '#6E7A82' }}>KPI Value</span>
+              <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>KPI Value</span>
             </div>
           </div>
         ))}
@@ -41,17 +41,17 @@ export const CFOOverview = () => {
           style={{ 
             gridColumn: 'span 2',
             backgroundColor: '#FFFFFF', 
-            border: '1px solid #E1E6EA', 
+            border: '1px solid var(--color-silver)', 
             borderRadius: '8px', 
             padding: '20px',
             minHeight: '300px'
           }}
         >
-          <h3 style={{ fontSize: '14px', color: '#6E7A82', margin: '0 0 12px 0' }}>Cash Flow Trend</h3>
+          <h3 style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: '0 0 12px 0' }}>Cash Flow Trend</h3>
           <div style={{ 
             padding: '48px', 
-            backgroundColor: '#F6F9FC', 
-            border: '1px dashed #E1E6EA', 
+            backgroundColor: 'var(--color-cloud)', 
+            border: '1px dashed var(--color-silver)', 
             borderRadius: '4px',
             textAlign: 'center',
             height: '240px',
@@ -59,7 +59,7 @@ export const CFOOverview = () => {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Chart Placeholder</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Chart Placeholder</span>
           </div>
         </div>
 
@@ -67,21 +67,21 @@ export const CFOOverview = () => {
         <div 
           style={{ 
             backgroundColor: '#FFFFFF', 
-            border: '1px solid #E1E6EA', 
+            border: '1px solid var(--color-silver)', 
             borderRadius: '8px', 
             padding: '20px',
             minHeight: '300px'
           }}
         >
-          <h3 style={{ fontSize: '14px', color: '#6E7A82', margin: '0 0 12px 0' }}>Alerts</h3>
+          <h3 style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: '0 0 12px 0' }}>Alerts</h3>
           <div style={{ 
             padding: '24px', 
-            backgroundColor: '#F6F9FC', 
-            border: '1px dashed #E1E6EA', 
+            backgroundColor: 'var(--color-cloud)', 
+            border: '1px dashed var(--color-silver)', 
             borderRadius: '4px',
             textAlign: 'center'
           }}>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Alert List</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Alert List</span>
           </div>
         </div>
       </div>

@@ -64,23 +64,23 @@ export function POInvoicePolicyConfig() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F6F9FC' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-cloud)' }}>
       {/* Header */}
-      <div className="bg-white px-8 py-6" style={{ borderBottom: '2px solid #E1E6EA' }}>
+      <div className="bg-white px-8 py-6" style={{ borderBottom: '2px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/settings')}
               className="p-2 rounded-lg transition-colors"
-              style={{ border: '1px solid #E1E6EA' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+              style={{ border: '1px solid var(--color-silver)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
-              <ArrowLeft className="w-5 h-5" style={{ color: '#6E7A82' }} />
+              <ArrowLeft className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
             </button>
             <div>
-              <h1 className="text-2xl" style={{ color: '#0A0F14', fontWeight: '700' }}>PO Invoice Policy & Controls</h1>
-              <p className="text-sm mt-1" style={{ color: '#6E7A82' }}>
+              <h1 className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>PO Invoice Policy & Controls</h1>
+              <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                 Configure validation rules and approval workflows for PO-based invoice creation
               </p>
             </div>
@@ -88,9 +88,9 @@ export function POInvoicePolicyConfig() {
           <button
             onClick={handleSavePolicy}
             className="flex items-center gap-2 px-6 py-3 rounded-lg transition-all"
-            style={{ backgroundColor: '#00A9B7', color: '#FFFFFF', fontWeight: '600' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+            style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF', fontWeight: '600' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
           >
             <Save className="w-4 h-4" />
             Save Policy
@@ -100,28 +100,28 @@ export function POInvoicePolicyConfig() {
 
       <div className="max-w-7xl mx-auto p-8">
         {/* Core Control Settings */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E8F7F8' }}>
-              <Shield className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal-tint)' }}>
+              <Shield className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
             <div>
-              <h2 className="text-lg" style={{ color: '#0A0F14', fontWeight: '700' }}>Core Control Settings</h2>
-              <p className="text-sm" style={{ color: '#6E7A82' }}>Primary validation rules for PO-based invoices</p>
+              <h2 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>Core Control Settings</h2>
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Primary validation rules for PO-based invoices</p>
             </div>
           </div>
 
           <div className="space-y-6">
             {/* Hard Lock Rate */}
-            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>Hard Lock Rate to PO</h3>
-                  <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: '#E8F7F8', color: '#00A9B7', fontWeight: '600' }}>
+                  <h3 className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Hard Lock Rate to PO</h3>
+                  <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)', fontWeight: '600' }}>
                     RECOMMENDED
                   </span>
                 </div>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Invoice rate cannot exceed PO rate under any circumstances. Rate field is read-only and locked to PO value. 
                   Any rate increase requires PO amendment or exception approval workflow.
                 </p>
@@ -137,23 +137,23 @@ export function POInvoicePolicyConfig() {
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all" 
-                     style={{ backgroundColor: hardLockRate ? '#00A9B7' : '#E1E6EA' }}>
+                     style={{ backgroundColor: hardLockRate ? 'var(--color-teal)' : 'var(--color-silver)' }}>
                 </div>
               </label>
             </div>
 
             {/* Tolerance-Based Override */}
-            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>Allow Tolerance-Based Override</h3>
+                  <h3 className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Allow Tolerance-Based Override</h3>
                   {!hardLockRate && (
                     <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: '#FFF9E6', color: '#D97706', fontWeight: '600' }}>
                       REQUIRES APPROVAL
                     </span>
                   )}
                 </div>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Allow invoice rate to exceed PO rate within configured tolerance limits. Requires approval workflow if exceeded.
                   This option is disabled when "Hard Lock Rate" is enabled.
                 </p>
@@ -174,21 +174,21 @@ export function POInvoicePolicyConfig() {
                   className="sr-only peer"
                 />
                 <div className={`w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all ${hardLockRate ? 'opacity-50 cursor-not-allowed' : ''}`}
-                     style={{ backgroundColor: allowToleranceOverride ? '#00A9B7' : '#E1E6EA' }}>
+                     style={{ backgroundColor: allowToleranceOverride ? 'var(--color-teal)' : 'var(--color-silver)' }}>
                 </div>
               </label>
             </div>
 
             {/* Enforce 3-Way Match */}
-            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>Enforce 3-Way Match (PO → GRN → Invoice)</h3>
-                  <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: '#E8F7F8', color: '#00A9B7', fontWeight: '600' }}>
+                  <h3 className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Enforce 3-Way Match (PO → GRN → Invoice)</h3>
+                  <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)', fontWeight: '600' }}>
                     RECOMMENDED
                   </span>
                 </div>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Invoice quantity and amount must match GRN and PO within tolerance. Block submission if mismatch detected.
                 </p>
               </div>
@@ -200,16 +200,16 @@ export function POInvoicePolicyConfig() {
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
-                     style={{ backgroundColor: enforce3WayMatch ? '#00A9B7' : '#E1E6EA' }}>
+                     style={{ backgroundColor: enforce3WayMatch ? 'var(--color-teal)' : 'var(--color-silver)' }}>
                 </div>
               </label>
             </div>
 
             {/* Block Excessive Quantity */}
-            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
               <div className="flex-1">
-                <h3 className="text-sm mb-2" style={{ color: '#0A0F14', fontWeight: '600' }}>Block Excessive Quantity Invoicing</h3>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
+                <h3 className="text-sm mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Block Excessive Quantity Invoicing</h3>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Invoice quantity cannot exceed GRN quantity or PO remaining balance. Prevents over-invoicing.
                 </p>
               </div>
@@ -221,16 +221,16 @@ export function POInvoicePolicyConfig() {
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
-                     style={{ backgroundColor: blockExcessiveQuantity ? '#00A9B7' : '#E1E6EA' }}>
+                     style={{ backgroundColor: blockExcessiveQuantity ? 'var(--color-teal)' : 'var(--color-silver)' }}>
                 </div>
               </label>
             </div>
 
             {/* Require GRN */}
-            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
               <div className="flex-1">
-                <h3 className="text-sm mb-2" style={{ color: '#0A0F14', fontWeight: '600' }}>Require GRN for Invoice Creation</h3>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
+                <h3 className="text-sm mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Require GRN for Invoice Creation</h3>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Invoice can only be created after GRN is recorded. Ensures goods receipt verification before payment.
                 </p>
               </div>
@@ -242,16 +242,16 @@ export function POInvoicePolicyConfig() {
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
-                     style={{ backgroundColor: requireGRNForInvoice ? '#00A9B7' : '#E1E6EA' }}>
+                     style={{ backgroundColor: requireGRNForInvoice ? 'var(--color-teal)' : 'var(--color-silver)' }}>
                 </div>
               </label>
             </div>
 
             {/* Log All Attempts */}
-            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+            <div className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
               <div className="flex-1">
-                <h3 className="text-sm mb-2" style={{ color: '#0A0F14', fontWeight: '600' }}>Log All Validation Attempts</h3>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
+                <h3 className="text-sm mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Log All Validation Attempts</h3>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Record all attempts to override rate, quantity, or amount in audit trail. Required for compliance and forensic analysis.
                 </p>
               </div>
@@ -263,7 +263,7 @@ export function POInvoicePolicyConfig() {
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
-                     style={{ backgroundColor: logAllAttempts ? '#00A9B7' : '#E1E6EA' }}>
+                     style={{ backgroundColor: logAllAttempts ? 'var(--color-teal)' : 'var(--color-silver)' }}>
                 </div>
               </label>
             </div>
@@ -272,15 +272,15 @@ export function POInvoicePolicyConfig() {
 
         {/* Tolerance Rules Configuration */}
         {allowToleranceOverride && !hardLockRate && (
-          <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+          <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FFF9E6' }}>
                   <AlertCircle className="w-5 h-5" style={{ color: '#D97706' }} />
                 </div>
                 <div>
-                  <h2 className="text-lg" style={{ color: '#0A0F14', fontWeight: '700' }}>Tolerance Rules</h2>
-                  <p className="text-sm" style={{ color: '#6E7A82' }}>
+                  <h2 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>Tolerance Rules</h2>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                     Define acceptable variance limits by vendor category, item type, PO type, and department
                   </p>
                 </div>
@@ -288,9 +288,9 @@ export function POInvoicePolicyConfig() {
               <button
                 onClick={handleAddRule}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
-                style={{ backgroundColor: '#00A9B7', color: '#FFFFFF', fontWeight: '600' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF', fontWeight: '600' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
               >
                 <Plus className="w-4 h-4" />
                 Add Rule
@@ -300,47 +300,47 @@ export function POInvoicePolicyConfig() {
             {/* Tolerance Rules List */}
             <div className="space-y-4">
               {toleranceRules.map((rule) => (
-                <div key={rule.id} className="p-4 rounded-lg" style={{ border: '2px solid #E1E6EA' }}>
+                <div key={rule.id} className="p-4 rounded-lg" style={{ border: '2px solid var(--color-silver)' }}>
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="text-sm mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>{rule.name}</h3>
-                      <p className="text-xs" style={{ color: '#6E7A82' }}>{rule.applicableFor}</p>
+                      <h3 className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{rule.name}</h3>
+                      <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{rule.applicableFor}</p>
                     </div>
                     <button
                       onClick={() => handleDeleteRule(rule.id)}
                       className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
                     >
-                      <Trash2 className="w-4 h-4" style={{ color: '#FF4E5B' }} />
+                      <Trash2 className="w-4 h-4" style={{ color: 'var(--color-error)' }} />
                     </button>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-3">
-                    <div className="p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-                      <p className="text-xs mb-1" style={{ color: '#6E7A82', fontWeight: '600' }}>MAX % INCREASE</p>
-                      <p className="text-lg" style={{ color: '#0A0F14', fontWeight: '700' }}>{rule.maxPercentIncrease}%</p>
+                    <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                      <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>MAX % INCREASE</p>
+                      <p className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>{rule.maxPercentIncrease}%</p>
                     </div>
-                    <div className="p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-                      <p className="text-xs mb-1" style={{ color: '#6E7A82', fontWeight: '600' }}>MAX AMOUNT INCREASE</p>
-                      <p className="text-lg" style={{ color: '#0A0F14', fontWeight: '700' }}>₹{rule.maxAmountIncrease.toLocaleString()}</p>
+                    <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                      <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>MAX AMOUNT INCREASE</p>
+                      <p className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>₹{rule.maxAmountIncrease.toLocaleString()}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mb-3">
                     <div>
-                      <p className="text-xs mb-1" style={{ color: '#6E7A82', fontWeight: '600' }}>Vendor Categories</p>
-                      <p className="text-sm" style={{ color: '#0A0F14' }}>{rule.vendorCategories.join(', ')}</p>
+                      <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Vendor Categories</p>
+                      <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{rule.vendorCategories.join(', ')}</p>
                     </div>
                     <div>
-                      <p className="text-xs mb-1" style={{ color: '#6E7A82', fontWeight: '600' }}>Item Categories</p>
-                      <p className="text-sm" style={{ color: '#0A0F14' }}>{rule.itemCategories.join(', ')}</p>
+                      <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Item Categories</p>
+                      <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{rule.itemCategories.join(', ')}</p>
                     </div>
                   </div>
 
-                  <div className="pt-3" style={{ borderTop: '1px solid #E1E6EA' }}>
-                    <p className="text-xs mb-1" style={{ color: '#6E7A82', fontWeight: '600' }}>Approvers (if tolerance breached)</p>
+                  <div className="pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
+                    <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Approvers (if tolerance breached)</p>
                     <div className="flex items-center gap-2 mt-2">
                       {rule.approvers.map((approver) => (
-                        <span key={approver} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: '#E8F7F8', color: '#00A9B7', fontWeight: '500' }}>
+                        <span key={approver} className="px-2 py-1 rounded text-xs" style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)', fontWeight: '500' }}>
                           {approver}
                         </span>
                       ))}
@@ -353,11 +353,11 @@ export function POInvoicePolicyConfig() {
         )}
 
         {/* Info Banner */}
-        <div className="bg-blue-50 rounded-lg p-4 flex items-start gap-3" style={{ border: '1px solid #00A9B7' }}>
-          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#00A9B7' }} />
+        <div className="bg-blue-50 rounded-lg p-4 flex items-start gap-3" style={{ border: '1px solid var(--color-teal)' }}>
+          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-teal)' }} />
           <div>
-            <p className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>Policy Impact</p>
-            <p className="text-sm mt-1" style={{ color: '#6E7A82' }}>
+            <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Policy Impact</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
               These policies apply to all PO-based invoice creation across the organization. Changes will take effect immediately 
               and will be logged in the system audit trail. Users will see validation messages inline during invoice creation.
             </p>

@@ -18,22 +18,22 @@ import { useMasterData } from '../contexts/MasterDataContext';
 import type { VendorMaster } from '../contexts/MasterDataContext';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
 
-const surface = '#F6F9FC';
-const border = '#E1E6EA';
-const textMuted = '#6E7A82';
-const textMain = '#0A0F14';
-const accent = '#00A9B7';
+const surface = 'var(--color-cloud)';
+const border = 'var(--color-silver)';
+const textMuted = 'var(--color-mercury-grey)';
+const textMain = 'var(--color-ink)';
+const accent = 'var(--color-teal)';
 
 function statusChipStyle(status: VendorMaster['status']): CSSProperties {
   switch (status) {
     case 'Active':
       return { backgroundColor: `${accent}18`, color: accent, border: `1px solid ${accent}55` };
     case 'Inactive':
-      return { backgroundColor: '#F1F4F6', color: '#6E7A82', border: '1px solid #E1E6EA' };
+      return { backgroundColor: '#F1F4F6', color: 'var(--color-mercury-grey)', border: '1px solid var(--color-silver)' };
     case 'Blocked':
-      return { backgroundColor: '#FEE2E2', color: '#B91C1C', border: '1px solid #FECACA' };
+      return { backgroundColor: 'var(--color-error-light)', color: '#B91C1C', border: '1px solid #FECACA' };
     default:
-      return { backgroundColor: '#F1F4F6', color: '#6E7A82', border: '1px solid #E1E6EA' };
+      return { backgroundColor: '#F1F4F6', color: 'var(--color-mercury-grey)', border: '1px solid var(--color-silver)' };
   }
 }
 
@@ -157,7 +157,7 @@ export function Vendors() {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white shrink-0"
             style={{ backgroundColor: accent }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#007D87';
+              e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = accent;
@@ -189,14 +189,14 @@ export function Vendors() {
         <VendorKpiCard
           label="Inactive"
           value={kpis.inactive}
-          icon={<PauseCircle className="w-5 h-5" style={{ color: '#6E7A82' }} />}
-          iconColor="#6E7A82"
+          icon={<PauseCircle className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />}
+          iconColor="var(--color-mercury-grey)"
         />
         <VendorKpiCard
           label="Blocked"
           value={kpis.blocked}
-          icon={<Ban className="w-5 h-5" style={{ color: '#DC2626' }} />}
-          iconColor="#DC2626"
+          icon={<Ban className="w-5 h-5" style={{ color: 'var(--color-error-dark)' }} />}
+          iconColor="var(--color-error-dark)"
         />
       </div>
 
@@ -204,8 +204,8 @@ export function Vendors() {
         <VendorKpiCard
           label="Domestic"
           value={kpis.domestic}
-          icon={<Home className="w-5 h-5" style={{ color: '#007D87' }} />}
-          iconColor="#00A9B7"
+          icon={<Home className="w-5 h-5" style={{ color: 'var(--color-teal-dark)' }} />}
+          iconColor="var(--color-teal)"
         />
         <VendorKpiCard
           label="Import"
@@ -376,7 +376,7 @@ export function Vendors() {
                               <Chip
                                 style={{
                                   backgroundColor: `${accent}12`,
-                                  color: '#007D87',
+                                  color: 'var(--color-teal-dark)',
                                   border: `1px solid ${accent}40`,
                                 }}
                               >

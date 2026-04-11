@@ -46,14 +46,14 @@ export function StandardInput({
   maxLength
 }: StandardInputProps) {
   const paddingClass = icon ? 'pl-10 pr-3 py-2.5' : 'px-3 py-2.5';
-  const borderColor = error ? '#FF4E5B' : '#E1E6EA';
-  const bgColor = disabled || readOnly ? '#F6F9FC' : 'white';
-  const textColor = disabled || readOnly ? '#6E7A82' : '#0A0F14';
+  const borderColor = error ? 'var(--color-error)' : 'var(--color-silver)';
+  const bgColor = disabled || readOnly ? 'var(--color-cloud)' : 'white';
+  const textColor = disabled || readOnly ? 'var(--color-mercury-grey)' : 'var(--color-ink)';
 
   return (
     <div>
       {label && (
-        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
           {label}
           {required && <span style={{ color: '#EF4444' }}> *</span>}
         </label>
@@ -62,7 +62,7 @@ export function StandardInput({
         {icon && (
           <div 
             className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
-            style={{ color: '#6E7A82' }}
+            style={{ color: 'var(--color-mercury-grey)' }}
           >
             {icon}
           </div>
@@ -120,14 +120,14 @@ export function StandardSelect({
   placeholder
 }: StandardSelectProps) {
   const paddingClass = icon ? 'pl-10 pr-8 py-2.5' : 'px-3 pr-8 py-2.5';
-  const borderColor = error ? '#FF4E5B' : '#E1E6EA';
-  const bgColor = disabled ? '#F6F9FC' : 'white';
-  const textColor = disabled ? '#6E7A82' : '#0A0F14';
+  const borderColor = error ? 'var(--color-error)' : 'var(--color-silver)';
+  const bgColor = disabled ? 'var(--color-cloud)' : 'white';
+  const textColor = disabled ? 'var(--color-mercury-grey)' : 'var(--color-ink)';
 
   return (
     <div>
       {label && (
-        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
           {label}
           {required && <span style={{ color: '#EF4444' }}> *</span>}
         </label>
@@ -136,7 +136,7 @@ export function StandardSelect({
         {icon && (
           <div 
             className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
-            style={{ color: '#6E7A82' }}
+            style={{ color: 'var(--color-mercury-grey)' }}
           >
             {icon}
           </div>
@@ -202,14 +202,14 @@ export function StandardTextarea({
   required = false
 }: StandardTextareaProps) {
   const paddingClass = icon ? 'pl-10 pr-3 py-2.5' : 'px-3 py-2.5';
-  const borderColor = error ? '#FF4E5B' : '#E1E6EA';
-  const bgColor = disabled || readOnly ? '#F6F9FC' : 'white';
-  const textColor = disabled || readOnly ? '#6E7A82' : '#0A0F14';
+  const borderColor = error ? 'var(--color-error)' : 'var(--color-silver)';
+  const bgColor = disabled || readOnly ? 'var(--color-cloud)' : 'white';
+  const textColor = disabled || readOnly ? 'var(--color-mercury-grey)' : 'var(--color-ink)';
 
   return (
     <div>
       {label && (
-        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
           {label}
           {required && <span style={{ color: '#EF4444' }}> *</span>}
         </label>
@@ -218,7 +218,7 @@ export function StandardTextarea({
         {icon && (
           <div 
             className="absolute left-3 top-3 pointer-events-none"
-            style={{ color: '#6E7A82' }}
+            style={{ color: 'var(--color-mercury-grey)' }}
           >
             {icon}
           </div>

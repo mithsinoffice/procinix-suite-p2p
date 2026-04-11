@@ -22,9 +22,9 @@ export function OnboardingSLATrend() {
   };
 
   return (
-    <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
-      <h2 className="text-lg mb-6" style={{ color: '#0A0F14' }}>
-        PO Volume Trend {metrics.isConsolidated && <span style={{ color: '#6E7A82', fontSize: '0.875rem' }}>(All Entities)</span>}
+    <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+      <h2 className="text-lg mb-6" style={{ color: 'var(--color-ink)' }}>
+        PO Volume Trend {metrics.isConsolidated && <span style={{ color: 'var(--color-mercury-grey)', fontSize: '0.875rem' }}>(All Entities)</span>}
       </h2>
       
       {data.length === 0 ? (
@@ -33,25 +33,25 @@ export function OnboardingSLATrend() {
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          color: '#6E7A82'
+          color: 'var(--color-mercury-grey)'
         }}>
           No trend data available
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
             <XAxis 
               dataKey="month" 
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#6E7A82' }}
+              tick={{ fill: 'var(--color-mercury-grey)' }}
             />
             <YAxis 
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#6E7A82' }}
-              label={{ value: 'PO Count', angle: -90, position: 'insideLeft', fill: '#6E7A82' }}
+              tick={{ fill: 'var(--color-mercury-grey)' }}
+              label={{ value: 'PO Count', angle: -90, position: 'insideLeft', fill: 'var(--color-mercury-grey)' }}
             />
             <Tooltip 
               formatter={(value: number, name: string) => {
@@ -63,9 +63,9 @@ export function OnboardingSLATrend() {
             <Line 
               type="monotone" 
               dataKey="count" 
-              stroke="#00A9B7" 
+              stroke="var(--color-teal)" 
               strokeWidth={2}
-              dot={{ fill: '#007D87', r: 6, strokeWidth: 2, stroke: '#fff' }}
+              dot={{ fill: 'var(--color-teal-dark)', r: 6, strokeWidth: 2, stroke: '#fff' }}
             />
           </LineChart>
         </ResponsiveContainer>

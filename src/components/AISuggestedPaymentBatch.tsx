@@ -240,16 +240,16 @@ export function AISuggestedPaymentBatch() {
 
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
-      case 'critical': return '#FF4E5B';
+      case 'critical': return 'var(--color-error)';
       case 'high': return '#F59E0B';
-      case 'medium': return '#00A9B7';
-      case 'low': return '#6E7A82';
-      default: return '#6E7A82';
+      case 'medium': return 'var(--color-teal)';
+      case 'low': return 'var(--color-mercury-grey)';
+      default: return 'var(--color-mercury-grey)';
     }
   };
 
   const getReasonChipColor = (reason: string) => {
-    if (reason.includes('Overdue') || reason.includes('Penalty')) return { bg: '#FEE2E2', text: '#DC2626' };
+    if (reason.includes('Overdue') || reason.includes('Penalty')) return { bg: 'var(--color-error-light)', text: 'var(--color-error-dark)' };
     if (reason.includes('Due in') || reason.includes('expiring')) return { bg: '#FEF3C7', text: '#D97706' };
     if (reason.includes('Discount')) return { bg: '#D1FAE5', text: '#059669' };
     if (reason.includes('Critical')) return { bg: '#E0F2FE', text: '#0284C7' };
@@ -265,34 +265,34 @@ export function AISuggestedPaymentBatch() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh', padding: '24px' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh', padding: '24px' }}>
       {/* Page Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
               AI Suggested Payment Batch
             </h1>
             <div 
               className="flex items-center gap-1.5 px-3 py-1 rounded-full"
-              style={{ backgroundColor: '#E0F2FE', border: '1px solid #00A9B7' }}
+              style={{ backgroundColor: '#E0F2FE', border: '1px solid var(--color-teal)' }}
             >
-              <Sparkles style={{ width: '14px', height: '14px', color: '#00A9B7' }} />
-              <span style={{ fontSize: '12px', fontWeight: '600', color: '#00A9B7' }}>
+              <Sparkles style={{ width: '14px', height: '14px', color: 'var(--color-teal)' }} />
+              <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--color-teal)' }}>
                 AI Recommended
               </span>
             </div>
             <div className="relative group">
-              <Info style={{ width: '16px', height: '16px', color: '#6E7A82', cursor: 'help' }} />
+              <Info style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)', cursor: 'help' }} />
               <div 
                 className="absolute left-0 top-full mt-2 w-72 p-3 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50"
-                style={{ backgroundColor: '#0A0F14', color: '#FFFFFF', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                style={{ backgroundColor: 'var(--color-ink)', color: '#FFFFFF', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
               >
                 Based on due dates, vendor criticality, discount opportunities, penalty risks, and current cash constraints
               </div>
             </div>
           </div>
-          <p style={{ fontSize: '14px', color: '#6E7A82', margin: 0 }}>
+          <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: 0 }}>
             Intelligently prioritized invoices ready for payment approval
           </p>
         </div>
@@ -301,9 +301,9 @@ export function AISuggestedPaymentBatch() {
             onClick={() => setShowCashflowPanel(!showCashflowPanel)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
             style={{ 
-              backgroundColor: showCashflowPanel ? '#00A9B7' : '#FFFFFF',
-              color: showCashflowPanel ? '#FFFFFF' : '#0A0F14',
-              border: '1px solid #E1E6EA',
+              backgroundColor: showCashflowPanel ? 'var(--color-teal)' : '#FFFFFF',
+              color: showCashflowPanel ? '#FFFFFF' : 'var(--color-ink)',
+              border: '1px solid var(--color-silver)',
               fontSize: '14px',
               fontWeight: '500'
             }}
@@ -315,8 +315,8 @@ export function AISuggestedPaymentBatch() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
             style={{ 
               backgroundColor: '#FFFFFF',
-              color: '#0A0F14',
-              border: '1px solid #E1E6EA',
+              color: 'var(--color-ink)',
+              border: '1px solid var(--color-silver)',
               fontSize: '14px',
               fontWeight: '500'
             }}
@@ -327,14 +327,14 @@ export function AISuggestedPaymentBatch() {
           <button
             className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
             style={{ 
-              backgroundColor: '#00A9B7',
+              backgroundColor: 'var(--color-teal)',
               color: '#FFFFFF',
               border: 'none',
               fontSize: '14px',
               fontWeight: '500'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
           >
             <Send style={{ width: '16px', height: '16px' }} />
             Create Payment Batch
@@ -347,15 +347,15 @@ export function AISuggestedPaymentBatch() {
         {/* AI Recommended Amount */}
         <div 
           className="p-4 rounded-lg"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <Zap style={{ width: '16px', height: '16px', color: '#00A9B7' }} />
-            <span style={{ fontSize: '12px', color: '#6E7A82', fontWeight: '500' }}>
+            <Zap style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', fontWeight: '500' }}>
               AI Recommended Amount
             </span>
           </div>
-          <p style={{ fontSize: '20px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+          <p style={{ fontSize: '20px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
             {formatCurrency(totalAmount)}
           </p>
           <div className="flex items-center gap-1 mt-1">
@@ -367,49 +367,49 @@ export function AISuggestedPaymentBatch() {
         {/* Invoices Selected */}
         <div 
           className="p-4 rounded-lg"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <FileText style={{ width: '16px', height: '16px', color: '#6E7A82' }} />
-            <span style={{ fontSize: '12px', color: '#6E7A82', fontWeight: '500' }}>
+            <FileText style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', fontWeight: '500' }}>
               Invoices Selected
             </span>
           </div>
-          <p style={{ fontSize: '20px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+          <p style={{ fontSize: '20px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
             {selectedInvoices.length} / {invoices.length}
           </p>
-          <span style={{ fontSize: '11px', color: '#6E7A82' }}>invoices</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>invoices</span>
         </div>
 
         {/* Cash Before */}
         <div 
           className="p-4 rounded-lg"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <DollarSign style={{ width: '16px', height: '16px', color: '#6E7A82' }} />
-            <span style={{ fontSize: '12px', color: '#6E7A82', fontWeight: '500' }}>
+            <DollarSign style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', fontWeight: '500' }}>
               Cash Before
             </span>
           </div>
-          <p style={{ fontSize: '20px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+          <p style={{ fontSize: '20px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
             {formatCurrency(cashBalanceBefore)}
           </p>
-          <span style={{ fontSize: '11px', color: '#6E7A82' }}>Available balance</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>Available balance</span>
         </div>
 
         {/* Cash After */}
         <div 
           className="p-4 rounded-lg"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <DollarSign style={{ width: '16px', height: '16px', color: '#6E7A82' }} />
-            <span style={{ fontSize: '12px', color: '#6E7A82', fontWeight: '500' }}>
+            <DollarSign style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', fontWeight: '500' }}>
               Cash After
             </span>
           </div>
-          <p style={{ fontSize: '20px', fontWeight: '600', color: '#00A9B7', margin: 0 }}>
+          <p style={{ fontSize: '20px', fontWeight: '600', color: 'var(--color-teal)', margin: 0 }}>
             {formatCurrency(cashBalanceAfter)}
           </p>
           <div className="flex items-center gap-1 mt-1">
@@ -421,68 +421,68 @@ export function AISuggestedPaymentBatch() {
         {/* Discounts Captured */}
         <div 
           className="p-4 rounded-lg"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center gap-2 mb-2">
             <Award style={{ width: '16px', height: '16px', color: '#059669' }} />
-            <span style={{ fontSize: '12px', color: '#6E7A82', fontWeight: '500' }}>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', fontWeight: '500' }}>
               Discounts Captured
             </span>
           </div>
           <p style={{ fontSize: '20px', fontWeight: '600', color: '#059669', margin: 0 }}>
             {formatCurrency(discountsCaptured)}
           </p>
-          <span style={{ fontSize: '11px', color: '#6E7A82' }}>Savings earned</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>Savings earned</span>
         </div>
 
         {/* Penalties Avoided */}
         <div 
           className="p-4 rounded-lg"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center gap-2 mb-2">
             <Shield style={{ width: '16px', height: '16px', color: '#F59E0B' }} />
-            <span style={{ fontSize: '12px', color: '#6E7A82', fontWeight: '500' }}>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', fontWeight: '500' }}>
               Penalties Avoided
             </span>
           </div>
           <p style={{ fontSize: '20px', fontWeight: '600', color: '#F59E0B', margin: 0 }}>
             {formatCurrency(penaltiesAvoided)}
           </p>
-          <span style={{ fontSize: '11px', color: '#6E7A82' }}>Risk mitigated</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>Risk mitigated</span>
         </div>
 
         {/* Critical Vendors */}
         <div 
           className="p-4 rounded-lg"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center gap-2 mb-2">
             <Users style={{ width: '16px', height: '16px', color: '#0284C7' }} />
-            <span style={{ fontSize: '12px', color: '#6E7A82', fontWeight: '500' }}>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', fontWeight: '500' }}>
               Critical Vendors
             </span>
           </div>
           <p style={{ fontSize: '20px', fontWeight: '600', color: '#0284C7', margin: 0 }}>
             {criticalVendors}
           </p>
-          <span style={{ fontSize: '11px', color: '#6E7A82' }}>vendors covered</span>
+          <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>vendors covered</span>
         </div>
       </div>
 
       {/* Interactive Control Panel */}
       <div 
         className="p-5 rounded-lg mb-6"
-        style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+        style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <Target style={{ width: '18px', height: '18px', color: '#00A9B7' }} />
-          <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+          <Target style={{ width: '18px', height: '18px', color: 'var(--color-teal)' }} />
+          <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
             Optimization Controls
           </h3>
           <div 
             className="px-2 py-0.5 rounded text-xs"
-            style={{ backgroundColor: '#E8F7F8', color: '#00A9B7', fontSize: '11px', fontWeight: '500' }}
+            style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)', fontSize: '11px', fontWeight: '500' }}
           >
             Real-time adjustment
           </div>
@@ -494,10 +494,10 @@ export function AISuggestedPaymentBatch() {
             {/* Min Cash Buffer */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14' }}>
+                <label style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)' }}>
                   Minimum Cash Buffer
                 </label>
-                <span style={{ fontSize: '13px', fontWeight: '600', color: '#00A9B7' }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-teal)' }}>
                   {formatCurrency(cashBufferValue)}
                 </span>
               </div>
@@ -509,9 +509,9 @@ export function AISuggestedPaymentBatch() {
                 value={cashBufferValue}
                 onChange={(e) => setCashBufferValue(Number(e.target.value))}
                 className="w-full"
-                style={{ accentColor: '#00A9B7' }}
+                style={{ accentColor: 'var(--color-teal)' }}
               />
-              <p style={{ fontSize: '11px', color: '#6E7A82', marginTop: '4px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--color-mercury-grey)', marginTop: '4px' }}>
                 Ensures minimum cash reserve after payment
               </p>
             </div>
@@ -519,10 +519,10 @@ export function AISuggestedPaymentBatch() {
             {/* Max Batch Amount */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14' }}>
+                <label style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)' }}>
                   Max Payment Batch Amount
                 </label>
-                <span style={{ fontSize: '13px', fontWeight: '600', color: '#00A9B7' }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-teal)' }}>
                   {formatCurrency(maxBatchAmount)}
                 </span>
               </div>
@@ -534,9 +534,9 @@ export function AISuggestedPaymentBatch() {
                 value={maxBatchAmount}
                 onChange={(e) => setMaxBatchAmount(Number(e.target.value))}
                 className="w-full"
-                style={{ accentColor: '#00A9B7' }}
+                style={{ accentColor: 'var(--color-teal)' }}
               />
-              <p style={{ fontSize: '11px', color: '#6E7A82', marginTop: '4px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--color-mercury-grey)', marginTop: '4px' }}>
                 Limits total payment amount in this batch
               </p>
             </div>
@@ -546,7 +546,7 @@ export function AISuggestedPaymentBatch() {
           <div className="space-y-5">
             {/* Priority Mode Toggle */}
             <div>
-              <label style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14', display: 'block', marginBottom: '8px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', display: 'block', marginBottom: '8px' }}>
                 Optimization Priority
               </label>
               <div className="flex items-center gap-2">
@@ -554,9 +554,9 @@ export function AISuggestedPaymentBatch() {
                   onClick={() => setPriorityMode('risk')}
                   className="flex-1 px-4 py-2 rounded-lg transition-all"
                   style={{
-                    backgroundColor: priorityMode === 'risk' ? '#00A9B7' : '#F6F9FC',
-                    color: priorityMode === 'risk' ? '#FFFFFF' : '#6E7A82',
-                    border: `1px solid ${priorityMode === 'risk' ? '#00A9B7' : '#E1E6EA'}`,
+                    backgroundColor: priorityMode === 'risk' ? 'var(--color-teal)' : 'var(--color-cloud)',
+                    color: priorityMode === 'risk' ? '#FFFFFF' : 'var(--color-mercury-grey)',
+                    border: `1px solid ${priorityMode === 'risk' ? 'var(--color-teal)' : 'var(--color-silver)'}`,
                     fontSize: '13px',
                     fontWeight: '500'
                   }}
@@ -568,9 +568,9 @@ export function AISuggestedPaymentBatch() {
                   onClick={() => setPriorityMode('discount')}
                   className="flex-1 px-4 py-2 rounded-lg transition-all"
                   style={{
-                    backgroundColor: priorityMode === 'discount' ? '#00A9B7' : '#F6F9FC',
-                    color: priorityMode === 'discount' ? '#FFFFFF' : '#6E7A82',
-                    border: `1px solid ${priorityMode === 'discount' ? '#00A9B7' : '#E1E6EA'}`,
+                    backgroundColor: priorityMode === 'discount' ? 'var(--color-teal)' : 'var(--color-cloud)',
+                    color: priorityMode === 'discount' ? '#FFFFFF' : 'var(--color-mercury-grey)',
+                    border: `1px solid ${priorityMode === 'discount' ? 'var(--color-teal)' : 'var(--color-silver)'}`,
                     fontSize: '13px',
                     fontWeight: '500'
                   }}
@@ -579,7 +579,7 @@ export function AISuggestedPaymentBatch() {
                   Maximize Discounts
                 </button>
               </div>
-              <p style={{ fontSize: '11px', color: '#6E7A82', marginTop: '4px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--color-mercury-grey)', marginTop: '4px' }}>
                 Choose AI optimization strategy
               </p>
             </div>
@@ -587,7 +587,7 @@ export function AISuggestedPaymentBatch() {
             {/* Auto Exclude Risk */}
             <div>
               <div className="flex items-center justify-between">
-                <label style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14' }}>
+                <label style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)' }}>
                   Auto-exclude High-Risk Invoices
                 </label>
                 <button
@@ -596,7 +596,7 @@ export function AISuggestedPaymentBatch() {
                   style={{
                     width: '44px',
                     height: '24px',
-                    backgroundColor: autoExcludeRisk ? '#00A9B7' : '#E1E6EA'
+                    backgroundColor: autoExcludeRisk ? 'var(--color-teal)' : 'var(--color-silver)'
                   }}
                 >
                   <span
@@ -610,7 +610,7 @@ export function AISuggestedPaymentBatch() {
                   />
                 </button>
               </div>
-              <p style={{ fontSize: '11px', color: '#6E7A82', marginTop: '4px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--color-mercury-grey)', marginTop: '4px' }}>
                 Automatically moves suspicious invoices to review queue
               </p>
             </div>
@@ -620,7 +620,7 @@ export function AISuggestedPaymentBatch() {
           <div className="space-y-5">
             {/* Payment Date */}
             <div>
-              <label style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14', display: 'block', marginBottom: '8px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', display: 'block', marginBottom: '8px' }}>
                 Payment Date
               </label>
               <select
@@ -628,9 +628,9 @@ export function AISuggestedPaymentBatch() {
                 onChange={(e) => setPaymentDate(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg"
                 style={{
-                  backgroundColor: '#F6F9FC',
-                  border: '1px solid #E1E6EA',
-                  color: '#0A0F14',
+                  backgroundColor: 'var(--color-cloud)',
+                  border: '1px solid var(--color-silver)',
+                  color: 'var(--color-ink)',
                   fontSize: '13px'
                 }}
               >
@@ -638,7 +638,7 @@ export function AISuggestedPaymentBatch() {
                 <option value="next">Next Working Day (Dec 16, 2024)</option>
                 <option value="custom">Custom Date</option>
               </select>
-              <p style={{ fontSize: '11px', color: '#6E7A82', marginTop: '4px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--color-mercury-grey)', marginTop: '4px' }}>
                 When to execute this payment batch
               </p>
             </div>
@@ -646,15 +646,15 @@ export function AISuggestedPaymentBatch() {
             {/* Real-time Impact */}
             <div 
               className="p-3 rounded-lg"
-              style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}
+              style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}
             >
               <div className="flex items-start gap-2">
-                <Info style={{ width: '14px', height: '14px', color: '#00A9B7', marginTop: '2px', flexShrink: 0 }} />
+                <Info style={{ width: '14px', height: '14px', color: 'var(--color-teal)', marginTop: '2px', flexShrink: 0 }} />
                 <div>
-                  <p style={{ fontSize: '12px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+                  <p style={{ fontSize: '12px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
                     Impact Preview
                   </p>
-                  <p style={{ fontSize: '11px', color: '#6E7A82', margin: '4px 0 0 0', lineHeight: '1.5' }}>
+                  <p style={{ fontSize: '11px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0', lineHeight: '1.5' }}>
                     Adjusting controls will change invoice selection and cash balance in real-time
                   </p>
                 </div>
@@ -670,7 +670,7 @@ export function AISuggestedPaymentBatch() {
           onClick={() => setActiveTab('suggested')}
           className="relative px-4 py-2 transition-all"
           style={{
-            color: activeTab === 'suggested' ? '#00A9B7' : '#6E7A82',
+            color: activeTab === 'suggested' ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
             fontSize: '14px',
             fontWeight: '500',
             backgroundColor: 'transparent',
@@ -686,7 +686,7 @@ export function AISuggestedPaymentBatch() {
                 left: 0,
                 right: 0,
                 height: '2px',
-                backgroundColor: '#00A9B7'
+                backgroundColor: 'var(--color-teal)'
               }}
             />
           )}
@@ -695,7 +695,7 @@ export function AISuggestedPaymentBatch() {
           onClick={() => setActiveTab('review')}
           className="relative px-4 py-2 transition-all"
           style={{
-            color: activeTab === 'review' ? '#F59E0B' : '#6E7A82',
+            color: activeTab === 'review' ? '#F59E0B' : 'var(--color-mercury-grey)',
             fontSize: '14px',
             fontWeight: '500',
             backgroundColor: 'transparent',
@@ -730,37 +730,37 @@ export function AISuggestedPaymentBatch() {
       {activeTab === 'suggested' && (
         <div 
           className="rounded-lg overflow-hidden"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
         >
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82', width: '40px' }}>
-                    <input type="checkbox" style={{ accentColor: '#00A9B7' }} />
+                <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)', width: '40px' }}>
+                    <input type="checkbox" style={{ accentColor: 'var(--color-teal)' }} />
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Vendor Name
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Invoice Number
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Due Date
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Amount
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Aging
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Priority Score
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     AI Reasoning
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Recommended Pay Date
                   </th>
                 </tr>
@@ -771,11 +771,11 @@ export function AISuggestedPaymentBatch() {
                     key={invoice.id}
                     className="group transition-all"
                     style={{ 
-                      borderBottom: '1px solid #E1E6EA',
+                      borderBottom: '1px solid var(--color-silver)',
                       backgroundColor: invoice.selected ? '#F0FDFF' : 'transparent'
                     }}
                     onMouseEnter={(e) => {
-                      if (!invoice.selected) e.currentTarget.style.backgroundColor = '#F6F9FC';
+                      if (!invoice.selected) e.currentTarget.style.backgroundColor = 'var(--color-cloud)';
                     }}
                     onMouseLeave={(e) => {
                       if (!invoice.selected) e.currentTarget.style.backgroundColor = 'transparent';
@@ -786,7 +786,7 @@ export function AISuggestedPaymentBatch() {
                         type="checkbox" 
                         checked={invoice.selected}
                         onChange={() => toggleInvoiceSelection(invoice.id)}
-                        style={{ accentColor: '#00A9B7' }} 
+                        style={{ accentColor: 'var(--color-teal)' }} 
                       />
                     </td>
                     <td style={{ padding: '16px' }}>
@@ -799,26 +799,26 @@ export function AISuggestedPaymentBatch() {
                             borderRadius: '2px'
                           }}
                         />
-                        <span style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)' }}>
                           {invoice.vendorName}
                         </span>
                       </div>
                     </td>
-                    <td style={{ padding: '16px', fontSize: '13px', color: '#6E7A82' }}>
+                    <td style={{ padding: '16px', fontSize: '13px', color: 'var(--color-mercury-grey)' }}>
                       {invoice.invoiceNumber}
                     </td>
-                    <td style={{ padding: '16px', fontSize: '13px', color: '#0A0F14' }}>
+                    <td style={{ padding: '16px', fontSize: '13px', color: 'var(--color-ink)' }}>
                       {new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </td>
-                    <td style={{ padding: '16px', fontSize: '13px', fontWeight: '600', color: '#0A0F14', textAlign: 'right' }}>
+                    <td style={{ padding: '16px', fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)', textAlign: 'right' }}>
                       {formatCurrency(invoice.amount)}
                     </td>
                     <td style={{ padding: '16px', textAlign: 'center' }}>
                       <span 
                         className="px-2 py-1 rounded-full"
                         style={{
-                          backgroundColor: invoice.aging > 0 ? '#FEE2E2' : '#E8F7F8',
-                          color: invoice.aging > 0 ? '#DC2626' : '#00A9B7',
+                          backgroundColor: invoice.aging > 0 ? 'var(--color-error-light)' : 'var(--color-teal-tint)',
+                          color: invoice.aging > 0 ? 'var(--color-error-dark)' : 'var(--color-teal)',
                           fontSize: '12px',
                           fontWeight: '500'
                         }}
@@ -837,7 +837,7 @@ export function AISuggestedPaymentBatch() {
                               cx="16"
                               cy="16"
                               r="14"
-                              stroke="#E1E6EA"
+                              stroke="var(--color-silver)"
                               strokeWidth="3"
                               fill="none"
                             />
@@ -890,9 +890,9 @@ export function AISuggestedPaymentBatch() {
                         })}
                       </div>
                     </td>
-                    <td style={{ padding: '16px', fontSize: '13px', color: '#0A0F14' }}>
+                    <td style={{ padding: '16px', fontSize: '13px', color: 'var(--color-ink)' }}>
                       <div className="flex items-center gap-2">
-                        <Calendar style={{ width: '14px', height: '14px', color: '#6E7A82' }} />
+                        <Calendar style={{ width: '14px', height: '14px', color: 'var(--color-mercury-grey)' }} />
                         {new Date(invoice.recommendedPayDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                       </div>
                     </td>
@@ -908,7 +908,7 @@ export function AISuggestedPaymentBatch() {
       {activeTab === 'review' && (
         <div 
           className="rounded-lg overflow-hidden"
-          style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+          style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
         >
           {/* Warning Banner */}
           <div 
@@ -917,10 +917,10 @@ export function AISuggestedPaymentBatch() {
           >
             <AlertTriangle style={{ width: '20px', height: '20px', color: '#D97706', marginTop: '2px' }} />
             <div>
-              <p style={{ fontSize: '14px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+              <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
                 AI-Flagged Invoices Requiring Review
               </p>
-              <p style={{ fontSize: '13px', color: '#6E7A82', margin: '4px 0 0 0' }}>
+              <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>
                 These invoices have been automatically excluded from the payment batch due to detected risks. Manual verification required before payment.
               </p>
             </div>
@@ -929,26 +929,26 @@ export function AISuggestedPaymentBatch() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Vendor
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Invoice Number
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Amount
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Risk Type
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     AI Recommendation
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Action Required
                   </th>
-                  <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6E7A82' }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: 'var(--color-mercury-grey)' }}>
                     Actions
                   </th>
                 </tr>
@@ -958,25 +958,25 @@ export function AISuggestedPaymentBatch() {
                   <tr 
                     key={invoice.id}
                     className="transition-all"
-                    style={{ borderBottom: '1px solid #E1E6EA' }}
+                    style={{ borderBottom: '1px solid var(--color-silver)' }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF3C7'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <td style={{ padding: '16px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '500', color: '#0A0F14' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)' }}>
                         {invoice.vendorName}
                       </span>
                     </td>
-                    <td style={{ padding: '16px', fontSize: '13px', color: '#6E7A82' }}>
+                    <td style={{ padding: '16px', fontSize: '13px', color: 'var(--color-mercury-grey)' }}>
                       {invoice.invoiceNumber}
                     </td>
-                    <td style={{ padding: '16px', fontSize: '13px', fontWeight: '600', color: '#0A0F14', textAlign: 'right' }}>
+                    <td style={{ padding: '16px', fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)', textAlign: 'right' }}>
                       {formatCurrency(invoice.amount)}
                     </td>
                     <td style={{ padding: '16px' }}>
                       <div className="flex items-center gap-2">
                         {invoice.riskLevel === 'high' && (
-                          <Ban style={{ width: '14px', height: '14px', color: '#DC2626' }} />
+                          <Ban style={{ width: '14px', height: '14px', color: 'var(--color-error-dark)' }} />
                         )}
                         {invoice.riskLevel === 'medium' && (
                           <AlertCircle style={{ width: '14px', height: '14px', color: '#F59E0B' }} />
@@ -985,7 +985,7 @@ export function AISuggestedPaymentBatch() {
                           style={{
                             fontSize: '13px',
                             fontWeight: '500',
-                            color: invoice.riskLevel === 'high' ? '#DC2626' : '#F59E0B'
+                            color: invoice.riskLevel === 'high' ? 'var(--color-error-dark)' : '#F59E0B'
                           }}
                         >
                           {invoice.riskType}
@@ -996,7 +996,7 @@ export function AISuggestedPaymentBatch() {
                       <div 
                         className="px-3 py-2 rounded-lg inline-flex items-center gap-2"
                         style={{
-                          backgroundColor: invoice.riskLevel === 'high' ? '#FEE2E2' : '#FEF3C7',
+                          backgroundColor: invoice.riskLevel === 'high' ? 'var(--color-error-light)' : '#FEF3C7',
                           border: `1px solid ${invoice.riskLevel === 'high' ? '#FCA5A5' : '#FCD34D'}`
                         }}
                       >
@@ -1004,31 +1004,31 @@ export function AISuggestedPaymentBatch() {
                           style={{
                             fontSize: '12px',
                             fontWeight: '500',
-                            color: invoice.riskLevel === 'high' ? '#DC2626' : '#D97706'
+                            color: invoice.riskLevel === 'high' ? 'var(--color-error-dark)' : '#D97706'
                           }}
                         >
                           {invoice.aiRecommendation}
                         </span>
                       </div>
                     </td>
-                    <td style={{ padding: '16px', fontSize: '13px', color: '#6E7A82' }}>
+                    <td style={{ padding: '16px', fontSize: '13px', color: 'var(--color-mercury-grey)' }}>
                       {invoice.actionRequired}
                     </td>
                     <td style={{ padding: '16px' }}>
                       <div className="flex items-center justify-center gap-2">
                         <button
                           className="p-2 rounded-lg transition-all"
-                          style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                          style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                           title="View Details"
                         >
-                          <Eye style={{ width: '16px', height: '16px', color: '#6E7A82' }} />
+                          <Eye style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
                         </button>
                         <button
                           className="p-2 rounded-lg transition-all"
-                          style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                          style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                           title="Override & Approve"
                         >
-                          <CheckCircle style={{ width: '16px', height: '16px', color: '#00A9B7' }} />
+                          <CheckCircle style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
                         </button>
                       </div>
                     </td>
@@ -1054,35 +1054,35 @@ export function AISuggestedPaymentBatch() {
             {/* Panel Header */}
             <div 
               className="sticky top-0 flex items-center justify-between p-6"
-              style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #E1E6EA', zIndex: 10 }}
+              style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid var(--color-silver)', zIndex: 10 }}
             >
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
                   Cashflow Impact Analysis
                 </h2>
-                <p style={{ fontSize: '13px', color: '#6E7A82', margin: '4px 0 0 0' }}>
+                <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>
                   Treasury-grade scenario modeling
                 </p>
               </div>
               <button
                 onClick={() => setShowCashflowPanel(false)}
                 className="p-2 rounded-lg transition-all"
-                style={{ backgroundColor: '#F6F9FC' }}
+                style={{ backgroundColor: 'var(--color-cloud)' }}
               >
-                <X style={{ width: '20px', height: '20px', color: '#6E7A82' }} />
+                <X style={{ width: '20px', height: '20px', color: 'var(--color-mercury-grey)' }} />
               </button>
             </div>
 
             {/* Scenario Tabs */}
             <div 
               className="flex items-center gap-2 px-6 pt-4"
-              style={{ borderBottom: '1px solid #E1E6EA' }}
+              style={{ borderBottom: '1px solid var(--color-silver)' }}
             >
               <button
                 onClick={() => setScenarioTab('recommended')}
                 className="px-4 py-2 transition-all relative"
                 style={{
-                  color: scenarioTab === 'recommended' ? '#00A9B7' : '#6E7A82',
+                  color: scenarioTab === 'recommended' ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
                   fontSize: '13px',
                   fontWeight: '500',
                   backgroundColor: 'transparent',
@@ -1098,7 +1098,7 @@ export function AISuggestedPaymentBatch() {
                       left: 0,
                       right: 0,
                       height: '2px',
-                      backgroundColor: '#00A9B7'
+                      backgroundColor: 'var(--color-teal)'
                     }}
                   />
                 )}
@@ -1107,7 +1107,7 @@ export function AISuggestedPaymentBatch() {
                 onClick={() => setScenarioTab('delayed')}
                 className="px-4 py-2 transition-all relative"
                 style={{
-                  color: scenarioTab === 'delayed' ? '#00A9B7' : '#6E7A82',
+                  color: scenarioTab === 'delayed' ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
                   fontSize: '13px',
                   fontWeight: '500',
                   backgroundColor: 'transparent',
@@ -1123,7 +1123,7 @@ export function AISuggestedPaymentBatch() {
                       left: 0,
                       right: 0,
                       height: '2px',
-                      backgroundColor: '#00A9B7'
+                      backgroundColor: 'var(--color-teal)'
                     }}
                   />
                 )}
@@ -1132,7 +1132,7 @@ export function AISuggestedPaymentBatch() {
                 onClick={() => setScenarioTab('maximize')}
                 className="px-4 py-2 transition-all relative"
                 style={{
-                  color: scenarioTab === 'maximize' ? '#00A9B7' : '#6E7A82',
+                  color: scenarioTab === 'maximize' ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
                   fontSize: '13px',
                   fontWeight: '500',
                   backgroundColor: 'transparent',
@@ -1148,7 +1148,7 @@ export function AISuggestedPaymentBatch() {
                       left: 0,
                       right: 0,
                       height: '2px',
-                      backgroundColor: '#00A9B7'
+                      backgroundColor: 'var(--color-teal)'
                     }}
                   />
                 )}
@@ -1161,23 +1161,23 @@ export function AISuggestedPaymentBatch() {
               <div className="grid grid-cols-2 gap-4">
                 <div 
                   className="p-4 rounded-lg"
-                  style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                 >
-                  <p style={{ fontSize: '12px', color: '#6E7A82', margin: 0 }}>
+                  <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: 0 }}>
                     Opening Balance
                   </p>
-                  <p style={{ fontSize: '20px', fontWeight: '600', color: '#0A0F14', margin: '4px 0 0 0' }}>
+                  <p style={{ fontSize: '20px', fontWeight: '600', color: 'var(--color-ink)', margin: '4px 0 0 0' }}>
                     {formatCurrency(8500000)}
                   </p>
                 </div>
                 <div 
                   className="p-4 rounded-lg"
-                  style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}
+                  style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}
                 >
-                  <p style={{ fontSize: '12px', color: '#6E7A82', margin: 0 }}>
+                  <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: 0 }}>
                     Closing Balance
                   </p>
-                  <p style={{ fontSize: '20px', fontWeight: '600', color: '#00A9B7', margin: '4px 0 0 0' }}>
+                  <p style={{ fontSize: '20px', fontWeight: '600', color: 'var(--color-teal)', margin: '4px 0 0 0' }}>
                     {formatCurrency(7776000)}
                   </p>
                 </div>
@@ -1191,10 +1191,10 @@ export function AISuggestedPaymentBatch() {
                 <div className="flex items-center gap-3">
                   <CheckCircle style={{ width: '20px', height: '20px', color: '#059669' }} />
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>
+                    <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
                       Minimum Cash Threshold: Safe
                     </p>
-                    <p style={{ fontSize: '12px', color: '#6E7A82', margin: '4px 0 0 0' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>
                       Closing balance ₹77.8L exceeds minimum buffer of ₹50L by ₹27.8L
                     </p>
                   </div>
@@ -1203,36 +1203,36 @@ export function AISuggestedPaymentBatch() {
 
               {/* Cash Balance Trend */}
               <div>
-                <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#0A0F14', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-ink)', marginBottom: '12px' }}>
                   Cash Balance Trend (Next 7 Days)
                 </h3>
                 <div 
                   className="p-4 rounded-lg"
-                  style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                 >
                   <ResponsiveContainer width="100%" height={240}>
                     <AreaChart data={cashflowData}>
                       <defs>
                         <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#00A9B7" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#00A9B7" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="var(--color-teal)" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="var(--color-teal)" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
                       <XAxis 
                         dataKey="day" 
-                        stroke="#6E7A82"
+                        stroke="var(--color-mercury-grey)"
                         style={{ fontSize: '11px' }}
                       />
                       <YAxis 
-                        stroke="#6E7A82"
+                        stroke="var(--color-mercury-grey)"
                         style={{ fontSize: '11px' }}
                         tickFormatter={(value) => `₹${(value / 1000000).toFixed(1)}M`}
                       />
                       <RechartsTooltip 
                         contentStyle={{
                           backgroundColor: '#FFFFFF',
-                          border: '1px solid #E1E6EA',
+                          border: '1px solid var(--color-silver)',
                           borderRadius: '8px',
                           fontSize: '12px'
                         }}
@@ -1241,7 +1241,7 @@ export function AISuggestedPaymentBatch() {
                       <Area 
                         type="monotone" 
                         dataKey="balance" 
-                        stroke="#00A9B7" 
+                        stroke="var(--color-teal)" 
                         strokeWidth={2}
                         fillOpacity={1} 
                         fill="url(#colorBalance)" 
@@ -1250,7 +1250,7 @@ export function AISuggestedPaymentBatch() {
                       <Line 
                         type="monotone" 
                         dataKey={() => 5000000} 
-                        stroke="#DC2626" 
+                        stroke="var(--color-error-dark)" 
                         strokeWidth={2}
                         strokeDasharray="5 5"
                         dot={false}
@@ -1259,12 +1259,12 @@ export function AISuggestedPaymentBatch() {
                   </ResponsiveContainer>
                   <div className="flex items-center justify-center gap-6 mt-3">
                     <div className="flex items-center gap-2">
-                      <div style={{ width: '12px', height: '12px', backgroundColor: '#00A9B7', borderRadius: '2px' }} />
-                      <span style={{ fontSize: '11px', color: '#6E7A82' }}>Cash Balance</span>
+                      <div style={{ width: '12px', height: '12px', backgroundColor: 'var(--color-teal)', borderRadius: '2px' }} />
+                      <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>Cash Balance</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div style={{ width: '12px', height: '2px', backgroundColor: '#DC2626', borderRadius: '2px' }} />
-                      <span style={{ fontSize: '11px', color: '#6E7A82' }}>Min Buffer (₹50L)</span>
+                      <div style={{ width: '12px', height: '2px', backgroundColor: 'var(--color-error-dark)', borderRadius: '2px' }} />
+                      <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>Min Buffer (₹50L)</span>
                     </div>
                   </div>
                 </div>
@@ -1272,30 +1272,30 @@ export function AISuggestedPaymentBatch() {
 
               {/* Daily Cash Outflow */}
               <div>
-                <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#0A0F14', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-ink)', marginBottom: '12px' }}>
                   Daily Cash Outflow
                 </h3>
                 <div 
                   className="p-4 rounded-lg"
-                  style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                 >
                   <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={outflowData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
                       <XAxis 
                         dataKey="day" 
-                        stroke="#6E7A82"
+                        stroke="var(--color-mercury-grey)"
                         style={{ fontSize: '11px' }}
                       />
                       <YAxis 
-                        stroke="#6E7A82"
+                        stroke="var(--color-mercury-grey)"
                         style={{ fontSize: '11px' }}
                         tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
                       />
                       <RechartsTooltip 
                         contentStyle={{
                           backgroundColor: '#FFFFFF',
-                          border: '1px solid #E1E6EA',
+                          border: '1px solid var(--color-silver)',
                           borderRadius: '8px',
                           fontSize: '12px'
                         }}
@@ -1307,7 +1307,7 @@ export function AISuggestedPaymentBatch() {
                           return label;
                         }}
                       />
-                      <Bar dataKey="amount" fill="#00A9B7" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="amount" fill="var(--color-teal)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -1316,41 +1316,41 @@ export function AISuggestedPaymentBatch() {
               {/* Scenario Summary */}
               <div 
                 className="p-4 rounded-lg"
-                style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
               >
-                <h4 style={{ fontSize: '13px', fontWeight: '600', color: '#0A0F14', marginBottom: '12px' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)', marginBottom: '12px' }}>
                   Scenario Summary
                 </h4>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span style={{ fontSize: '12px', color: '#6E7A82' }}>Total Payment Amount</span>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#0A0F14' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Total Payment Amount</span>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)' }}>
                       {formatCurrency(724000)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span style={{ fontSize: '12px', color: '#6E7A82' }}>Number of Invoices</span>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#0A0F14' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Number of Invoices</span>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)' }}>
                       5 invoices
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span style={{ fontSize: '12px', color: '#6E7A82' }}>Discounts Captured</span>
+                    <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Discounts Captured</span>
                     <span style={{ fontSize: '13px', fontWeight: '600', color: '#059669' }}>
                       {formatCurrency(3790)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span style={{ fontSize: '12px', color: '#6E7A82' }}>Penalties Avoided</span>
+                    <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Penalties Avoided</span>
                     <span style={{ fontSize: '13px', fontWeight: '600', color: '#F59E0B' }}>
                       {formatCurrency(6700)}
                     </span>
                   </div>
                   <div 
-                    style={{ height: '1px', backgroundColor: '#E1E6EA', margin: '8px 0' }}
+                    style={{ height: '1px', backgroundColor: 'var(--color-silver)', margin: '8px 0' }}
                   />
                   <div className="flex items-center justify-between">
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#0A0F14' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)' }}>
                       Net Financial Impact
                     </span>
                     <span style={{ fontSize: '14px', fontWeight: '600', color: '#059669' }}>
@@ -1365,14 +1365,14 @@ export function AISuggestedPaymentBatch() {
                 <button
                   className="flex-1 px-4 py-3 rounded-lg transition-all"
                   style={{
-                    backgroundColor: '#00A9B7',
+                    backgroundColor: 'var(--color-teal)',
                     color: '#FFFFFF',
                     border: 'none',
                     fontSize: '14px',
                     fontWeight: '500'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
                 >
                   <CheckCircle style={{ width: '16px', height: '16px', display: 'inline', marginRight: '8px' }} />
                   Approve Scenario
@@ -1381,8 +1381,8 @@ export function AISuggestedPaymentBatch() {
                   className="px-4 py-3 rounded-lg transition-all"
                   style={{
                     backgroundColor: '#FFFFFF',
-                    color: '#6E7A82',
-                    border: '1px solid #E1E6EA',
+                    color: 'var(--color-mercury-grey)',
+                    border: '1px solid var(--color-silver)',
                     fontSize: '14px',
                     fontWeight: '500'
                   }}

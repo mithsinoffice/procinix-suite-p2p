@@ -4,9 +4,9 @@
  */
 import type { VendorInviteBasics, VendorSubmissionPayload } from '../types/vendorInvitation';
 
-const textMuted = '#6E7A82';
-const textMain = '#0A0F14';
-const border = '#E1E6EA';
+const textMuted = 'var(--color-mercury-grey)';
+const textMain = 'var(--color-ink)';
+const border = 'var(--color-silver)';
 
 export function InviteBasicsReadonly({ basic }: { basic: VendorInviteBasics }) {
   return (

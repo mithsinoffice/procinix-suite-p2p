@@ -71,17 +71,17 @@ export function PRSelectionPage() {
           <button
             onClick={() => navigate('/purchase-orders')}
             className="p-2 rounded-lg transition-colors"
-            style={{ color: '#6E7A82', border: '1px solid #E1E6EA' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+            style={{ color: 'var(--color-mercury-grey)', border: '1px solid var(--color-silver)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>
               Select Purchase Requests
             </h1>
-            <p style={{ color: '#6E7A82', marginTop: '8px' }}>
+            <p style={{ color: 'var(--color-mercury-grey)', marginTop: '8px' }}>
               Select one or more approved PRs to create a Purchase Order
             </p>
           </div>
@@ -92,17 +92,17 @@ export function PRSelectionPage() {
           disabled={selectedPRs.size === 0}
           className="px-6 py-2 rounded-lg text-white transition-colors"
           style={{
-            backgroundColor: selectedPRs.size === 0 ? '#9AA6AF' : '#00A9B7',
+            backgroundColor: selectedPRs.size === 0 ? 'var(--color-slate)' : 'var(--color-teal)',
             cursor: selectedPRs.size === 0 ? 'not-allowed' : 'pointer'
           }}
           onMouseEnter={(e) => {
             if (selectedPRs.size > 0) {
-              e.currentTarget.style.backgroundColor = '#007D87';
+              e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)';
             }
           }}
           onMouseLeave={(e) => {
             if (selectedPRs.size > 0) {
-              e.currentTarget.style.backgroundColor = '#00A9B7';
+              e.currentTarget.style.backgroundColor = 'var(--color-teal)';
             }
           }}
         >
@@ -111,11 +111,11 @@ export function PRSelectionPage() {
       </div>
 
       {/* Entity Info */}
-      <div className="bg-white rounded-lg p-4 mb-6" style={{ border: '1px solid #E1E6EA' }}>
-        <div style={{ color: '#6E7A82', fontSize: '14px' }}>
-          <strong style={{ color: '#0A0F14' }}>Entity:</strong> {currentCompany?.name || 'Unknown'}
+      <div className="bg-white rounded-lg p-4 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div style={{ color: 'var(--color-mercury-grey)', fontSize: '14px' }}>
+          <strong style={{ color: 'var(--color-ink)' }}>Entity:</strong> {currentCompany?.name || 'Unknown'}
         </div>
-        <div style={{ color: '#6E7A82', fontSize: '13px', marginTop: '4px' }}>
+        <div style={{ color: 'var(--color-mercury-grey)', fontSize: '13px', marginTop: '4px' }}>
           Only approved PRs from this entity are shown
         </div>
       </div>
@@ -138,20 +138,20 @@ export function PRSelectionPage() {
 
       {/* Selection Summary */}
       {selectedPRs.size > 0 && (
-        <div className="bg-white rounded-lg p-4 mb-6" style={{ border: '1px solid #00A9B7' }}>
+        <div className="bg-white rounded-lg p-4 mb-6" style={{ border: '1px solid var(--color-teal)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <div style={{ color: '#0A0F14', fontWeight: 500 }}>
+              <div style={{ color: 'var(--color-ink)', fontWeight: 500 }}>
                 {selectedPRs.size} PR(s) Selected
               </div>
-              <div style={{ color: '#6E7A82', fontSize: '13px', marginTop: '4px' }}>
+              <div style={{ color: 'var(--color-mercury-grey)', fontSize: '13px', marginTop: '4px' }}>
                 Total: {totalLineItems} line items · ₹{totalAmount.toLocaleString('en-IN')}
               </div>
             </div>
             <button
               onClick={() => setSelectedPRs(new Set())}
               style={{
-                color: '#00A9B7',
+                color: 'var(--color-teal)',
                 fontSize: '14px',
                 background: 'none',
                 border: 'none',
@@ -166,22 +166,22 @@ export function PRSelectionPage() {
       )}
 
       {/* PR Table */}
-      <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-silver)' }}>
         {availablePRs.length === 0 ? (
           <div className="p-12 text-center">
-            <AlertCircle className="w-12 h-12 mx-auto mb-4" style={{ color: '#9AA6AF' }} />
-            <div style={{ color: '#0A0F14', fontSize: '18px', marginBottom: '8px' }}>
+            <AlertCircle className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--color-slate)' }} />
+            <div style={{ color: 'var(--color-ink)', fontSize: '18px', marginBottom: '8px' }}>
               No Approved PRs Available
             </div>
-            <div style={{ color: '#6E7A82', fontSize: '14px' }}>
+            <div style={{ color: 'var(--color-mercury-grey)', fontSize: '14px' }}>
               There are no approved purchase requests available for this entity.
             </div>
             <button
               onClick={() => navigate('/purchase-orders')}
               className="mt-6 px-6 py-2 rounded-lg"
               style={{
-                border: '1px solid #E1E6EA',
-                color: '#0A0F14',
+                border: '1px solid var(--color-silver)',
+                color: 'var(--color-ink)',
                 background: 'white'
               }}
             >
@@ -212,13 +212,13 @@ export function PRSelectionPage() {
                       key={pr.id}
                       onClick={() => togglePRSelection(pr.id)}
                       style={{
-                        borderBottom: index !== availablePRs.length - 1 ? '1px solid #E1E6EA' : 'none',
+                        borderBottom: index !== availablePRs.length - 1 ? '1px solid var(--color-silver)' : 'none',
                         backgroundColor: isSelected ? '#F0FDFF' : 'white',
                         cursor: 'pointer'
                       }}
                       onMouseEnter={(e) => {
                         if (!isSelected) {
-                          e.currentTarget.style.backgroundColor = '#F6F9FC';
+                          e.currentTarget.style.backgroundColor = 'var(--color-cloud)';
                         }
                       }}
                       onMouseLeave={(e) => {
@@ -229,30 +229,30 @@ export function PRSelectionPage() {
                     >
                       <td className="px-6 py-4 text-center">
                         {isSelected ? (
-                          <CheckSquare className="w-5 h-5 mx-auto" style={{ color: '#00A9B7' }} />
+                          <CheckSquare className="w-5 h-5 mx-auto" style={{ color: 'var(--color-teal)' }} />
                         ) : (
-                          <Square className="w-5 h-5 mx-auto" style={{ color: '#9AA6AF' }} />
+                          <Square className="w-5 h-5 mx-auto" style={{ color: 'var(--color-slate)' }} />
                         )}
                       </td>
-                      <td className="px-6 py-4" style={{ color: '#0A0F14', fontWeight: 500 }}>
+                      <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: 500 }}>
                         {pr.prNumber}
                       </td>
-                      <td className="px-6 py-4" style={{ color: '#6E7A82' }}>
+                      <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
                         {pr.departmentName}
                       </td>
-                      <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                      <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                         {pr.vendorName}
                       </td>
-                      <td className="px-6 py-4 text-center" style={{ color: '#6E7A82' }}>
+                      <td className="px-6 py-4 text-center" style={{ color: 'var(--color-mercury-grey)' }}>
                         {pr.lineItems.length}
                       </td>
-                      <td className="px-6 py-4 text-right" style={{ color: '#0A0F14' }}>
+                      <td className="px-6 py-4 text-right" style={{ color: 'var(--color-ink)' }}>
                         {pr.currency} {pr.totalAmount.toLocaleString('en-IN')}
                       </td>
                       <td className="px-6 py-4">
                         <span
                           className="inline-block px-3 py-1 rounded-full text-white text-sm"
-                          style={{ backgroundColor: '#00A9B7' }}
+                          style={{ backgroundColor: 'var(--color-teal)' }}
                         >
                           {pr.status}
                         </span>
@@ -267,11 +267,11 @@ export function PRSelectionPage() {
       </div>
 
       {/* Helper Text */}
-      <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
-        <div style={{ color: '#0A0F14', fontWeight: 500, marginBottom: '8px' }}>
+      <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+        <div style={{ color: 'var(--color-ink)', fontWeight: 500, marginBottom: '8px' }}>
           Selection Guidelines:
         </div>
-        <ul style={{ color: '#6E7A82', fontSize: '14px', paddingLeft: '20px' }}>
+        <ul style={{ color: 'var(--color-mercury-grey)', fontSize: '14px', paddingLeft: '20px' }}>
           <li>Select one or more approved PRs</li>
           <li>All selected PRs must be for the same vendor</li>
           <li>All selected PRs must be from the same entity</li>

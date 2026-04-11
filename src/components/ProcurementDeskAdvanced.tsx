@@ -59,10 +59,10 @@ export function ProcurementDeskAdvanced() {
 
   // Spend by Category
   const categorySpendData = [
-    { category: 'Raw Materials', value: 145.8, percent: 42.5, color: '#00A9B7' },
+    { category: 'Raw Materials', value: 145.8, percent: 42.5, color: 'var(--color-teal)' },
     { category: 'Services', value: 78.5, percent: 22.9, color: '#F59E0B' },
     { category: 'IT & Technology', value: 52.3, percent: 15.2, color: '#3B82F6' },
-    { category: 'Facilities', value: 38.6, percent: 11.2, color: '#8B5CF6' },
+    { category: 'Facilities', value: 38.6, percent: 11.2, color: '#007D87' },
     { category: 'Professional Services', value: 28.2, percent: 8.2, color: '#EC4899' }
   ];
 
@@ -98,7 +98,7 @@ export function ProcurementDeskAdvanced() {
   const cycleTimeBreakdown = [
     { stage: 'Requisition', avgDays: 0.8, color: '#3B82F6' },
     { stage: 'Approval', avgDays: 1.2, color: '#F59E0B' },
-    { stage: 'Vendor Selection', avgDays: 1.5, color: '#8B5CF6' },
+    { stage: 'Vendor Selection', avgDays: 1.5, color: '#007D87' },
     { stage: 'PO Creation', avgDays: 0.7, color: '#10B981' }
   ];
 
@@ -146,10 +146,10 @@ export function ProcurementDeskAdvanced() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <h2 className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             Procurement Dashboard
           </h2>
-          <p className="text-sm" style={{ color: '#6E7A82' }}>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
             Strategic procurement metrics and supplier performance
           </p>
         </div>
@@ -158,7 +158,7 @@ export function ProcurementDeskAdvanced() {
             value={timeFilter}
             onChange={(e) => setTimeFilter(e.target.value as any)}
             className="px-4 py-2 rounded-lg text-sm"
-            style={{ border: '1px solid #E1E6EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}
+            style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', backgroundColor: '#FFFFFF' }}
           >
             <option value="month">This Month</option>
             <option value="quarter">This Quarter</option>
@@ -167,7 +167,7 @@ export function ProcurementDeskAdvanced() {
           </select>
           <button 
             className="px-4 py-2 rounded-lg text-sm flex items-center gap-2"
-            style={{ backgroundColor: '#00A9B7', color: '#FFFFFF' }}
+            style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF' }}
           >
             <Download className="w-4 h-4" />
             Export Report
@@ -178,7 +178,7 @@ export function ProcurementDeskAdvanced() {
       {/* Key Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Total PO Value */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#EFF6FF' }}>
               <DollarSign className="w-5 h-5" style={{ color: '#3B82F6' }} />
@@ -187,10 +187,10 @@ export function ProcurementDeskAdvanced() {
               YTD
             </span>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {formatCrores(totalPOValue / 10000000)}
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Total PO Value
           </div>
           <div className="text-xs flex items-center gap-1" style={{ color: '#10B981' }}>
@@ -200,7 +200,7 @@ export function ProcurementDeskAdvanced() {
         </div>
 
         {/* Active POs */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#DBEAFE' }}>
               <ShoppingCart className="w-5 h-5" style={{ color: '#3B82F6' }} />
@@ -209,37 +209,37 @@ export function ProcurementDeskAdvanced() {
               Active
             </span>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {activePOs}
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Active Purchase Orders
           </div>
-          <div className="text-xs" style={{ color: '#6E7A82' }}>
+          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
             Value: {formatCrores(activePOValue / 10000000)}
           </div>
         </div>
 
         {/* Active Suppliers */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
               <Users className="w-5 h-5" style={{ color: '#10B981' }} />
             </div>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {activeSuppliers}
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Active Suppliers
           </div>
-          <div className="text-xs" style={{ color: '#6E7A82' }}>
+          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
             {((activeSuppliers / totalSuppliers) * 100).toFixed(0)}% of total base
           </div>
         </div>
 
         {/* Cost Savings */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
               <TrendingDown className="w-5 h-5" style={{ color: '#10B981' }} />
@@ -248,10 +248,10 @@ export function ProcurementDeskAdvanced() {
               Savings
             </span>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {formatCrores(costSavingsYTD)}
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Cost Savings YTD
           </div>
           <div className="text-xs flex items-center gap-1" style={{ color: '#10B981' }}>
@@ -261,16 +261,16 @@ export function ProcurementDeskAdvanced() {
         </div>
 
         {/* Avg PO Cycle Time */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#F3E8FF' }}>
               <Clock className="w-5 h-5" style={{ color: '#9333EA' }} />
             </div>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {avgPOCycleTime}d
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Avg PO Cycle Time
           </div>
           <div className="text-xs flex items-center gap-1" style={{ color: '#10B981' }}>
@@ -295,7 +295,7 @@ export function ProcurementDeskAdvanced() {
               style={{ border: `1px solid ${borderColor}` }}
             >
               <div className="flex items-center justify-between mb-3">
-                <div className="text-xs" style={{ color: '#6E7A82' }}>{metric.metric}</div>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{metric.metric}</div>
                 <div 
                   className="text-xs px-2 py-0.5 rounded"
                   style={{ backgroundColor: bgColor, color: textColor }}
@@ -304,10 +304,10 @@ export function ProcurementDeskAdvanced() {
                 </div>
               </div>
               <div className="flex items-end justify-between mb-2">
-                <div className="text-2xl" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                <div className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                   {metric.current}%
                 </div>
-                <div className="text-xs" style={{ color: '#6E7A82' }}>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                   Target: {metric.target}%
                 </div>
               </div>
@@ -328,13 +328,13 @@ export function ProcurementDeskAdvanced() {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* PO Status Distribution */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 PO Status Distribution
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Current portfolio breakdown
               </p>
             </div>
@@ -364,7 +364,7 @@ export function ProcurementDeskAdvanced() {
             {poStatusData.map((status) => (
               <div key={status.name} className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded" style={{ backgroundColor: status.color }} />
-                <span className="text-xs" style={{ color: '#6E7A82' }}>
+                <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                   {status.name}: {status.value}
                 </span>
               </div>
@@ -373,13 +373,13 @@ export function ProcurementDeskAdvanced() {
         </div>
 
         {/* Monthly PO Trend */}
-        <div className="bg-white rounded-lg p-6 lg:col-span-2" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6 lg:col-span-2" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Monthly PO Trend
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 PO count and value over last 6 months
               </p>
             </div>
@@ -387,13 +387,13 @@ export function ProcurementDeskAdvanced() {
           <div style={{ height: '240px', minHeight: '240px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={240} debounce={1}>
               <ComposedChart data={monthlyPOTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="month" style={{ fontSize: '12px', fill: '#6E7A82' }} />
-                <YAxis yAxisId="left" style={{ fontSize: '12px', fill: '#6E7A82' }} />
-                <YAxis yAxisId="right" orientation="right" style={{ fontSize: '12px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="month" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis yAxisId="left" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis yAxisId="right" orientation="right" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar yAxisId="left" dataKey="pos" fill="#00A9B7" name="PO Count" />
+                <Bar yAxisId="left" dataKey="pos" fill="var(--color-teal)" name="PO Count" />
                 <Line yAxisId="right" type="monotone" dataKey="value" stroke="#F59E0B" strokeWidth={2} name="Value (Cr)" />
               </ComposedChart>
             </ResponsiveContainer>
@@ -404,13 +404,13 @@ export function ProcurementDeskAdvanced() {
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Spend by Category */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Spend by Category
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 YTD category distribution
               </p>
             </div>
@@ -418,9 +418,9 @@ export function ProcurementDeskAdvanced() {
           <div style={{ height: '280px', minHeight: '280px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={280} debounce={1}>
               <BarChart data={categorySpendData} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis type="category" dataKey="category" style={{ fontSize: '11px', fill: '#6E7A82' }} />
-                <YAxis type="number" style={{ fontSize: '11px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis type="category" dataKey="category" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis type="number" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Bar dataKey="value" name="Spend (Cr)">
                   {categorySpendData.map((entry, index) => (
@@ -433,13 +433,13 @@ export function ProcurementDeskAdvanced() {
         </div>
 
         {/* Cost Savings Analysis */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Cost Savings by Source
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 YTD savings breakdown
               </p>
             </div>
@@ -447,9 +447,9 @@ export function ProcurementDeskAdvanced() {
           <div style={{ height: '280px', minHeight: '280px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={280} debounce={1}>
               <BarChart data={savingsData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis type="number" style={{ fontSize: '11px', fill: '#6E7A82' }} />
-                <YAxis dataKey="source" type="category" width={140} style={{ fontSize: '11px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis type="number" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis dataKey="source" type="category" width={140} style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Bar dataKey="amount" fill="#10B981" name="Savings (Cr)" />
               </BarChart>
@@ -461,13 +461,13 @@ export function ProcurementDeskAdvanced() {
       {/* Charts Row 3 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Savings Trend */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Savings Achievement Trend
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Planned vs actual savings (last 6 months)
               </p>
             </div>
@@ -475,9 +475,9 @@ export function ProcurementDeskAdvanced() {
           <div style={{ height: '280px', minHeight: '280px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={280} debounce={1}>
               <LineChart data={savingsTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="month" style={{ fontSize: '12px', fill: '#6E7A82' }} />
-                <YAxis style={{ fontSize: '12px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="month" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Line type="monotone" dataKey="planned" stroke="#9CA3AF" strokeWidth={2} strokeDasharray="5 5" name="Planned (Cr)" />
@@ -488,13 +488,13 @@ export function ProcurementDeskAdvanced() {
         </div>
 
         {/* PO Cycle Time Breakdown */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 PO Cycle Time Breakdown
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Average days per stage
               </p>
             </div>
@@ -502,9 +502,9 @@ export function ProcurementDeskAdvanced() {
           <div style={{ height: '280px', minHeight: '280px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={280} debounce={1}>
               <BarChart data={cycleTimeBreakdown} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis type="category" dataKey="stage" style={{ fontSize: '12px', fill: '#6E7A82' }} />
-                <YAxis type="number" style={{ fontSize: '12px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis type="category" dataKey="stage" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis type="number" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Bar dataKey="avgDays" name="Avg Days">
                   {cycleTimeBreakdown.map((entry, index) => (
@@ -520,35 +520,35 @@ export function ProcurementDeskAdvanced() {
       {/* Bottom Section - Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Suppliers */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Top Suppliers by Spend
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 YTD performance metrics
               </p>
             </div>
           </div>
           <div className="overflow-auto" style={{ maxHeight: '320px' }}>
             <table className="w-full">
-              <thead style={{ backgroundColor: '#F6F9FC', position: 'sticky', top: 0 }}>
-                <tr style={{ borderBottom: '1px solid #E1E6EA' }}>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Supplier</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Spend (Cr)</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>POs</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>On-Time %</th>
+              <thead style={{ backgroundColor: 'var(--color-cloud)', position: 'sticky', top: 0 }}>
+                <tr style={{ borderBottom: '1px solid var(--color-silver)' }}>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Supplier</th>
+                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Spend (Cr)</th>
+                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>POs</th>
+                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>On-Time %</th>
                 </tr>
               </thead>
               <tbody>
                 {topSupplierSpend.map((supplier, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #F6F9FC' }}>
-                    <td className="px-3 py-3 text-xs" style={{ color: '#0A0F14' }}>{supplier.name}</td>
-                    <td className="px-3 py-3 text-xs text-right" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                    <td className="px-3 py-3 text-xs" style={{ color: 'var(--color-ink)' }}>{supplier.name}</td>
+                    <td className="px-3 py-3 text-xs text-right" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                       ₹{supplier.spend}
                     </td>
-                    <td className="px-3 py-3 text-xs text-right" style={{ color: '#6E7A82' }}>{supplier.pos}</td>
+                    <td className="px-3 py-3 text-xs text-right" style={{ color: 'var(--color-mercury-grey)' }}>{supplier.pos}</td>
                     <td className="px-3 py-3 text-xs text-right" style={{ color: parseFloat(supplier.onTimeRate) >= 85 ? '#10B981' : '#EF4444', fontWeight: '600' }}>
                       {supplier.onTimeRate}%
                     </td>
@@ -560,13 +560,13 @@ export function ProcurementDeskAdvanced() {
         </div>
 
         {/* Supplier Risk Analysis */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Supplier Risk Analysis
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Key risk areas requiring attention
               </p>
             </div>
@@ -574,7 +574,7 @@ export function ProcurementDeskAdvanced() {
           <div className="space-y-3">
             {supplierRiskData.map((risk, idx) => {
               const severityColors = {
-                high: { bg: '#FEE2E2', text: '#991B1B', border: '#EF4444' },
+                high: { bg: 'var(--color-error-light)', text: '#991B1B', border: '#EF4444' },
                 medium: { bg: '#FEF3C7', text: '#92400E', border: '#F59E0B' },
                 low: { bg: '#D1FAE5', text: '#065F46', border: '#10B981' }
               };
@@ -589,10 +589,10 @@ export function ProcurementDeskAdvanced() {
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="w-5 h-5" style={{ color: colors.border }} />
                     <div>
-                      <div className="text-sm mb-1" style={{ color: '#0A0F14', fontWeight: '500' }}>
+                      <div className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
                         {risk.risk}
                       </div>
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                         {risk.suppliers} suppliers • {formatCrores(risk.spend)} spend
                       </div>
                     </div>

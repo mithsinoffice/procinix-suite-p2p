@@ -95,19 +95,19 @@ export function Customers() {
 
   const getRiskColor = (risk: string) => {
     switch (risk) {
-      case 'Low': return { bg: '#E8F5E9', color: '#2E7D32', border: '#81C784' };
-      case 'Medium': return { bg: '#FFF3E0', color: '#F57C00', border: '#FFB74D' };
-      case 'High': return { bg: '#FEE2E2', color: '#DC2626', border: '#FCA5A5' };
-      default: return { bg: '#F6F9FC', color: '#6E7A82', border: '#E1E6EA' };
+      case 'Low': return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)', border: '#81C784' };
+      case 'Medium': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)', border: '#FFB74D' };
+      case 'High': return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)', border: '#FCA5A5' };
+      default: return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Active': return { bg: '#E8F5E9', color: '#2E7D32' };
-      case 'On-hold': return { bg: '#FFF3E0', color: '#F57C00' };
-      case 'Blocked': return { bg: '#FEE2E2', color: '#DC2626' };
-      default: return { bg: '#F6F9FC', color: '#6E7A82' };
+      case 'Active': return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)' };
+      case 'On-hold': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' };
+      case 'Blocked': return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' };
+      default: return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' };
     }
   };
 
@@ -120,28 +120,28 @@ export function Customers() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* PAGE HEADER */}
-      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl" style={{ color: '#0A0F14', margin: 0 }}>Customers</h1>
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded" style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}>
-                <Sparkles className="w-3.5 h-3.5" style={{ color: '#00A9B7' }} />
-                <span className="text-xs" style={{ color: '#00A9B7', fontWeight: '600' }}>AI RISK SCORING</span>
+              <h1 className="text-2xl" style={{ color: 'var(--color-ink)', margin: 0 }}>Customers</h1>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}>
+                <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--color-teal)' }} />
+                <span className="text-xs" style={{ color: 'var(--color-teal)', fontWeight: '600' }}>AI RISK SCORING</span>
               </div>
             </div>
-            <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
               Customer master with credit profiles and payment behavior analysis
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-4 py-2 rounded-lg transition-colors" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+            <button className="px-4 py-2 rounded-lg transition-colors" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
               <Filter className="w-4 h-4 inline mr-2" />
               Filter
             </button>
-            <button className="px-4 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: '#00A9B7' }}>
+            <button className="px-4 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }}>
               <Plus className="w-4 h-4 inline mr-2" />
               Add Customer
             </button>
@@ -150,12 +150,12 @@ export function Customers() {
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#6E7A82' }} />
+          <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
           <input
             type="text"
             placeholder="Search by customer name, code, or GSTIN..."
             className="w-full pl-10 pr-4 py-2 rounded-lg text-sm"
-            style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }}
+            style={{ border: '1px solid var(--color-silver)', backgroundColor: '#FFFFFF', color: 'var(--color-ink)' }}
           />
         </div>
       </div>
@@ -164,51 +164,51 @@ export function Customers() {
       <div className="p-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-5 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Total Customers</p>
-            <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: '600' }}>{stats.total}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Customers</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{stats.total}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Active</p>
-            <p className="text-2xl" style={{ color: '#2E7D32', fontWeight: '600' }}>{stats.active}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Active</p>
+            <p className="text-2xl" style={{ color: 'var(--color-success-dark)', fontWeight: '600' }}>{stats.active}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Total Outstanding</p>
-            <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: '600' }}>{formatCurrency(stats.totalOutstanding)}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Outstanding</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{formatCurrency(stats.totalOutstanding)}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Total Overdue</p>
-            <p className="text-2xl" style={{ color: '#DC2626', fontWeight: '600' }}>{formatCurrency(stats.totalOverdue)}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Overdue</p>
+            <p className="text-2xl" style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>{formatCurrency(stats.totalOverdue)}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Avg DSO</p>
-            <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: '600' }}>{stats.avgDSO} days</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Avg DSO</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{stats.avgDSO} days</p>
           </div>
         </div>
 
         {/* Customers Table */}
-        <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-          <div className="p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
-            <h3 className="text-base" style={{ color: '#0A0F14', margin: 0, fontWeight: '600' }}>Customer List</h3>
+        <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <div className="p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+            <h3 className="text-base" style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}>Customer List</h3>
           </div>
           
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ backgroundColor: '#F6F9FC' }}>
+              <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Customer</th>
-                  <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Code</th>
-                  <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Entity</th>
-                  <th className="px-6 py-3 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Credit Limit</th>
-                  <th className="px-6 py-3 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Outstanding</th>
-                  <th className="px-6 py-3 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Overdue</th>
-                  <th className="px-6 py-3 text-center text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>DSO</th>
-                  <th className="px-6 py-3 text-center text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Risk</th>
-                  <th className="px-6 py-3 text-center text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Status</th>
-                  <th className="px-6 py-3 text-center text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Actions</th>
+                  <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Customer</th>
+                  <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Code</th>
+                  <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Entity</th>
+                  <th className="px-6 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Credit Limit</th>
+                  <th className="px-6 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Outstanding</th>
+                  <th className="px-6 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Overdue</th>
+                  <th className="px-6 py-3 text-center text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>DSO</th>
+                  <th className="px-6 py-3 text-center text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Risk</th>
+                  <th className="px-6 py-3 text-center text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Status</th>
+                  <th className="px-6 py-3 text-center text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y" style={{ borderColor: '#E1E6EA' }}>
+              <tbody className="divide-y" style={{ borderColor: 'var(--color-silver)' }}>
                 {customers.map((customer) => {
                   const riskStyle = getRiskColor(customer.riskRating);
                   const statusStyle = getStatusColor(customer.status);
@@ -216,36 +216,36 @@ export function Customers() {
                   const isOverLimit = customer.outstanding > customer.creditLimit;
                   
                   return (
-                    <tr key={customer.id} style={{ backgroundColor: isOverLimit ? '#FEE2E2' : '#FFFFFF' }}>
+                    <tr key={customer.id} style={{ backgroundColor: isOverLimit ? 'var(--color-error-light)' : '#FFFFFF' }}>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="text-sm mb-1" style={{ color: '#0A0F14', fontWeight: '600', margin: 0 }}>
+                          <p className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600', margin: 0 }}>
                             {customer.name}
                           </p>
-                          <p className="text-xs" style={{ color: '#6E7A82', margin: 0 }}>
+                          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
                             {customer.gstin}
                           </p>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>{customer.code}</td>
-                      <td className="px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>{customer.entity}</td>
-                      <td className="px-6 py-4 text-sm text-right" style={{ color: '#0A0F14' }}>{formatCurrency(customer.creditLimit)}</td>
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{customer.code}</td>
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{customer.entity}</td>
+                      <td className="px-6 py-4 text-sm text-right" style={{ color: 'var(--color-ink)' }}>{formatCurrency(customer.creditLimit)}</td>
                       <td className="px-6 py-4 text-right">
-                        <p className="text-sm mb-1" style={{ color: isOverLimit ? '#DC2626' : '#0A0F14', fontWeight: '600', margin: 0 }}>
+                        <p className="text-sm mb-1" style={{ color: isOverLimit ? 'var(--color-error-dark)' : 'var(--color-ink)', fontWeight: '600', margin: 0 }}>
                           {formatCurrency(customer.outstanding)}
                         </p>
-                        <p className="text-xs" style={{ color: '#6E7A82', margin: 0 }}>
+                        <p className="text-xs" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
                           {creditUtilization.toFixed(0)}% utilized
                         </p>
                       </td>
-                      <td className="px-6 py-4 text-sm text-right" style={{ color: customer.overdue > 0 ? '#DC2626' : '#6E7A82', fontWeight: customer.overdue > 0 ? '600' : 'normal' }}>
+                      <td className="px-6 py-4 text-sm text-right" style={{ color: customer.overdue > 0 ? 'var(--color-error-dark)' : 'var(--color-mercury-grey)', fontWeight: customer.overdue > 0 ? '600' : 'normal' }}>
                         {customer.overdue > 0 ? formatCurrency(customer.overdue) : '—'}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <span className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>{customer.dso}</span>
-                          {customer.trend === 'improving' && <TrendingDown className="w-3.5 h-3.5" style={{ color: '#2E7D32' }} />}
-                          {customer.trend === 'declining' && <TrendingUp className="w-3.5 h-3.5" style={{ color: '#DC2626' }} />}
+                          <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{customer.dso}</span>
+                          {customer.trend === 'improving' && <TrendingDown className="w-3.5 h-3.5" style={{ color: 'var(--color-success-dark)' }} />}
+                          {customer.trend === 'declining' && <TrendingUp className="w-3.5 h-3.5" style={{ color: 'var(--color-error-dark)' }} />}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -261,10 +261,10 @@ export function Customers() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button className="p-1 rounded hover:bg-gray-100">
-                            <Eye className="w-4 h-4" style={{ color: '#00A9B7' }} />
+                            <Eye className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                           </button>
                           <button className="p-1 rounded hover:bg-gray-100">
-                            <Edit className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                            <Edit className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                           </button>
                         </div>
                       </td>
@@ -277,14 +277,14 @@ export function Customers() {
         </div>
 
         {/* AI Insights */}
-        <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}>
+        <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}>
           <div className="flex items-start gap-3">
-            <Sparkles className="w-5 h-5 mt-0.5" style={{ color: '#00A9B7' }} />
+            <Sparkles className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-teal)' }} />
             <div>
-              <h4 className="text-sm mb-2" style={{ color: '#0A0F14', margin: 0, fontWeight: '600' }}>
+              <h4 className="text-sm mb-2" style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}>
                 AI Risk Alert: Infosys Credit Limit Breach
               </h4>
-              <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
                 Customer CUST-004 (Infosys Technologies) has exceeded credit limit by ₹2.1 Cr with ₹8.9 Cr overdue.
                 Recommendation: Block new orders until outstanding is reduced below 90% of credit limit.
               </p>

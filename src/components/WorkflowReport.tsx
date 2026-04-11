@@ -305,12 +305,12 @@ export function WorkflowReport() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Draft': return '#9AA6AF';
+      case 'Draft': return 'var(--color-slate)';
       case 'Pending Approval': return '#F59E0B';
-      case 'Approved': return '#00A9B7';
+      case 'Approved': return 'var(--color-teal)';
       case 'Rejected': return '#EF4444';
-      case 'More Info Required': return '#8B5CF6';
-      default: return '#6E7A82';
+      case 'More Info Required': return '#007D87';
+      default: return 'var(--color-mercury-grey)';
     }
   };
 
@@ -351,27 +351,27 @@ export function WorkflowReport() {
   const rejectedRecords = workflowRecords.filter(r => r.currentStatus === 'Rejected').length;
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/reports')} 
             className="p-2 rounded-lg transition-colors hover:bg-white" 
-            style={{ color: '#6E7A82' }}
+            style={{ color: 'var(--color-mercury-grey)' }}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl mb-1" style={{ color: '#0A0F14' }}>Workflow Report</h1>
-            <p className="text-sm" style={{ color: '#6E7A82' }}>Track all transactions and their approval workflow history</p>
+            <h1 className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>Workflow Report</h1>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Track all transactions and their approval workflow history</p>
           </div>
         </div>
         <button
           onClick={handleExport}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Download className="w-5 h-5" />
           Export Report
@@ -380,22 +380,22 @@ export function WorkflowReport() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg p-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Total Records</p>
-              <p className="text-3xl" style={{ color: '#0A0F14' }}>{totalRecords}</p>
+              <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Records</p>
+              <p className="text-3xl" style={{ color: 'var(--color-ink)' }}>{totalRecords}</p>
             </div>
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F6F9FC' }}>
-              <FileText className="w-6 h-6" style={{ color: '#6E7A82' }} />
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <FileText className="w-6 h-6" style={{ color: 'var(--color-mercury-grey)' }} />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Pending Approval</p>
+              <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Pending Approval</p>
               <p className="text-3xl" style={{ color: '#F59E0B' }}>{pendingRecords}</p>
             </div>
             <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
@@ -404,25 +404,25 @@ export function WorkflowReport() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Approved</p>
-              <p className="text-3xl" style={{ color: '#00A9B7' }}>{approvedRecords}</p>
+              <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Approved</p>
+              <p className="text-3xl" style={{ color: 'var(--color-teal)' }}>{approvedRecords}</p>
             </div>
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-              <CheckCircle className="w-6 h-6" style={{ color: '#00A9B7' }} />
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+              <CheckCircle className="w-6 h-6" style={{ color: 'var(--color-teal)' }} />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Rejected</p>
+              <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Rejected</p>
               <p className="text-3xl" style={{ color: '#EF4444' }}>{rejectedRecords}</p>
             </div>
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEE2E2' }}>
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-error-light)' }}>
               <XCircle className="w-6 h-6" style={{ color: '#EF4444' }} />
             </div>
           </div>
@@ -430,17 +430,17 @@ export function WorkflowReport() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
         <div className="flex items-center gap-4">
-          <Filter className="w-5 h-5" style={{ color: '#6E7A82' }} />
+          <Filter className="w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Filter by Status</label>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Filter by Status</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 {statuses.map(status => (
                   <option key={status} value={status}>{status}</option>
@@ -448,12 +448,12 @@ export function WorkflowReport() {
               </select>
             </div>
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Filter by Record Type</label>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Filter by Record Type</label>
               <select
                 value={filterRecordType}
                 onChange={(e) => setFilterRecordType(e.target.value)}
                 className="w-full px-4 py-2 rounded-lg"
-                style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 {recordTypes.map(type => (
                   <option key={type} value={type}>{type}</option>
@@ -465,35 +465,35 @@ export function WorkflowReport() {
       </div>
 
       {/* Records Table */}
-      <div className="bg-white rounded-xl overflow-hidden" style={{ border: '2px solid #E1E6EA' }}>
+      <div className="bg-white rounded-xl overflow-hidden" style={{ border: '2px solid var(--color-silver)' }}>
         <table className="w-full">
-          <thead style={{ backgroundColor: '#F6F9FC' }}>
+          <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
             <tr>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Record Type
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Record Code
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Record Name
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Submitted By
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Submitted Date
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Status
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Current Approver
               </th>
-              <th className="text-left px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-left px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Days in Workflow
               </th>
-              <th className="text-center px-6 py-4 text-xs" style={{ color: '#6E7A82', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <th className="text-center px-6 py-4 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Actions
               </th>
             </tr>
@@ -502,25 +502,25 @@ export function WorkflowReport() {
             {filteredRecords.map((record) => {
               const StatusIcon = getStatusIcon(record.currentStatus);
               return (
-                <tr key={record.id} style={{ borderTop: '1px solid #E1E6EA' }}>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                <tr key={record.id} style={{ borderTop: '1px solid var(--color-silver)' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     {record.recordType}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     {record.recordCode}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     {record.recordName}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2" style={{ color: '#0A0F14' }}>
-                      <User className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                    <div className="flex items-center gap-2" style={{ color: 'var(--color-ink)' }}>
+                      <User className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                       {record.submittedBy}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2" style={{ color: '#0A0F14' }}>
-                      <Calendar className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                    <div className="flex items-center gap-2" style={{ color: 'var(--color-ink)' }}>
+                      <Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                       {record.submittedDate}
                     </div>
                   </td>
@@ -537,10 +537,10 @@ export function WorkflowReport() {
                       {record.currentStatus}
                     </span>
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     {record.currentApprover || '-'}
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                     <span className={record.daysInWorkflow > 3 ? 'text-red-600' : ''}>
                       {record.daysInWorkflow} {record.daysInWorkflow === 1 ? 'day' : 'days'}
                     </span>
@@ -550,9 +550,9 @@ export function WorkflowReport() {
                       <button
                         onClick={() => handleViewHistory(record)}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
-                        style={{ color: '#00A9B7', backgroundColor: '#00A9B710' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#00A9B720'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B710'}
+                        style={{ color: 'var(--color-teal)', backgroundColor: 'var(--color-teal)10' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)20'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)10'}
                       >
                         <Eye className="w-4 h-4" />
                         View History
@@ -569,11 +569,11 @@ export function WorkflowReport() {
       {/* Workflow History Modal */}
       {showHistoryModal && selectedRecord && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto" style={{ border: '2px solid #E1E6EA' }}>
+          <div className="bg-white rounded-xl p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl mb-2" style={{ color: '#0A0F14' }}>Workflow History</h2>
-                <div className="flex items-center gap-4 text-sm" style={{ color: '#6E7A82' }}>
+                <h2 className="text-2xl mb-2" style={{ color: 'var(--color-ink)' }}>Workflow History</h2>
+                <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   <span><strong>Record:</strong> {selectedRecord.recordCode} - {selectedRecord.recordName}</span>
                   <span><strong>Type:</strong> {selectedRecord.recordType}</span>
                 </div>
@@ -584,7 +584,7 @@ export function WorkflowReport() {
                   setSelectedRecord(null);
                 }}
                 className="p-2 rounded-lg transition-colors"
-                style={{ color: '#6E7A82' }}
+                style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <XCircle className="w-6 h-6" />
               </button>
@@ -605,15 +605,15 @@ export function WorkflowReport() {
                     return <StatusIcon className="w-6 h-6" style={{ color: getStatusColor(selectedRecord.currentStatus) }} />;
                   })()}
                   <div>
-                    <p className="text-sm" style={{ color: '#6E7A82' }}>Current Status</p>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Current Status</p>
                     <p className="text-lg" style={{ color: getStatusColor(selectedRecord.currentStatus), fontWeight: '600' }}>
                       {selectedRecord.currentStatus}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm" style={{ color: '#6E7A82' }}>Days in Workflow</p>
-                  <p className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Days in Workflow</p>
+                  <p className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                     {selectedRecord.daysInWorkflow} {selectedRecord.daysInWorkflow === 1 ? 'day' : 'days'}
                   </p>
                 </div>
@@ -622,7 +622,7 @@ export function WorkflowReport() {
 
             {/* Timeline */}
             <div className="space-y-4">
-              <h3 className="text-lg mb-4" style={{ color: '#0A0F14' }}>Timeline</h3>
+              <h3 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>Timeline</h3>
               {selectedRecord.workflowHistory.map((item, index) => {
                 const isLast = index === selectedRecord.workflowHistory.length - 1;
                 return (
@@ -641,20 +641,20 @@ export function WorkflowReport() {
                       {!isLast && (
                         <div 
                           className="w-0.5 flex-1 mt-2"
-                          style={{ backgroundColor: '#E1E6EA', minHeight: '40px' }}
+                          style={{ backgroundColor: 'var(--color-silver)', minHeight: '40px' }}
                         />
                       )}
                     </div>
 
                     {/* Timeline content */}
                     <div className="flex-1 pb-6">
-                      <div className="bg-white rounded-lg p-4" style={{ border: '1px solid #E1E6EA' }}>
+                      <div className="bg-white rounded-lg p-4" style={{ border: '1px solid var(--color-silver)' }}>
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <p className="text-sm mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                               {item.action}
                             </p>
-                            <div className="flex items-center gap-3 text-xs" style={{ color: '#6E7A82' }}>
+                            <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                               <span className="flex items-center gap-1">
                                 <User className="w-3 h-3" />
                                 {item.performedBy}
@@ -663,7 +663,7 @@ export function WorkflowReport() {
                               <span>{item.role}</span>
                             </div>
                           </div>
-                          <div className="text-right text-xs" style={{ color: '#6E7A82' }}>
+                          <div className="text-right text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
                               {item.date}
@@ -678,13 +678,13 @@ export function WorkflowReport() {
                         {item.comments && (
                           <div 
                             className="mt-3 p-3 rounded-lg"
-                            style={{ backgroundColor: '#F6F9FC' }}
+                            style={{ backgroundColor: 'var(--color-cloud)' }}
                           >
                             <div className="flex items-start gap-2">
-                              <MessageSquare className="w-4 h-4 mt-0.5" style={{ color: '#6E7A82' }} />
+                              <MessageSquare className="w-4 h-4 mt-0.5" style={{ color: 'var(--color-mercury-grey)' }} />
                               <div>
-                                <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Comments:</p>
-                                <p className="text-sm" style={{ color: '#0A0F14' }}>{item.comments}</p>
+                                <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Comments:</p>
+                                <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.comments}</p>
                               </div>
                             </div>
                           </div>
@@ -716,9 +716,9 @@ export function WorkflowReport() {
                   setSelectedRecord(null);
                 }}
                 className="px-6 py-2 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                style={{ backgroundColor: 'var(--color-teal)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
               >
                 Close
               </button>

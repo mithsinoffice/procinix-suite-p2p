@@ -94,18 +94,18 @@ export function BudgetPolicies() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC]">
+    <div className="min-h-screen bg-[var(--color-cloud)]">
       {/* Header */}
-      <div className="bg-white border-b border-[#E1E6EA]">
+      <div className="bg-white border-b border-[var(--color-silver)]">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-[#0A0F14]">Budget Policies & Controls</h1>
-              <p className="text-[#6E7A82] text-sm">Configure budget control policies and enforcement rules</p>
+              <h1 className="text-[var(--color-ink)]">Budget Policies & Controls</h1>
+              <p className="text-[var(--color-mercury-grey)] text-sm">Configure budget control policies and enforcement rules</p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-[#00A9B7] text-white rounded-lg hover:bg-[#007D87] transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-[var(--color-teal)] text-white rounded-lg hover:bg-[var(--color-teal-dark)] transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Create Policy
@@ -117,41 +117,41 @@ export function BudgetPolicies() {
       <div className="p-6">
         {/* Statistics */}
         <div className="grid grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Total Policies</span>
-              <Shield className="w-4 h-4 text-[#00A9B7]" />
+              <span className="text-sm text-[var(--color-mercury-grey)]">Total Policies</span>
+              <Shield className="w-4 h-4 text-[var(--color-teal)]" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.totalPolicies}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.totalPolicies}</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Active</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Active</span>
               <CheckCircle className="w-4 h-4 text-green-500" />
             </div>
             <div className="text-2xl text-green-600">{stats.active}</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Inactive</span>
-              <XCircle className="w-4 h-4 text-[#6E7A82]" />
+              <span className="text-sm text-[var(--color-mercury-grey)]">Inactive</span>
+              <XCircle className="w-4 h-4 text-[var(--color-mercury-grey)]" />
             </div>
-            <div className="text-2xl text-[#6E7A82]">{stats.inactive}</div>
+            <div className="text-2xl text-[var(--color-mercury-grey)]">{stats.inactive}</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Hard Stop</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Hard Stop</span>
               <XCircle className="w-4 h-4 text-red-500" />
             </div>
             <div className="text-2xl text-red-600">{stats.hardStop}</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Soft Warning</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Soft Warning</span>
               <AlertTriangle className="w-4 h-4 text-yellow-500" />
             </div>
             <div className="text-2xl text-yellow-600">{stats.softWarning}</div>
@@ -159,41 +159,41 @@ export function BudgetPolicies() {
         </div>
 
         {/* Search */}
-        <div className="bg-white rounded-lg border border-[#E1E6EA] p-4 mb-4">
+        <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4 mb-4">
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-[#6E7A82]" />
+            <Search className="w-4 h-4 absolute left-3 top-3 text-[var(--color-mercury-grey)]" />
             <input
               type="text"
               placeholder="Search policies..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+              className="w-full pl-10 pr-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
             />
           </div>
         </div>
 
         {/* Policies Table */}
-        <div className="bg-white rounded-lg border border-[#E1E6EA] overflow-hidden">
+        <div className="bg-white rounded-lg border border-[var(--color-silver)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-[#F6F9FC]">
+              <thead className="bg-[var(--color-cloud)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Policy Name</th>
-                  <th className="px-4 py-3 text-center text-xs text-[#6E7A82] uppercase">Control Type</th>
-                  <th className="px-4 py-3 text-center text-xs text-[#6E7A82] uppercase">Threshold</th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Applicable To</th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Override Permissions</th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Alert Recipients</th>
-                  <th className="px-4 py-3 text-center text-xs text-[#6E7A82] uppercase">Status</th>
-                  <th className="px-4 py-3 text-center text-xs text-[#6E7A82] uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Policy Name</th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Control Type</th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Threshold</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Applicable To</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Override Permissions</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Alert Recipients</th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Status</th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E1E6EA]">
+              <tbody className="divide-y divide-[var(--color-silver)]">
                 {filteredPolicies.map(policy => (
-                  <tr key={policy.id} className="hover:bg-[#F6F9FC]">
+                  <tr key={policy.id} className="hover:bg-[var(--color-cloud)]">
                     <td className="px-4 py-3">
-                      <div className="text-[#0A0F14]">{policy.policyName}</div>
-                      <div className="text-xs text-[#6E7A82] mt-1">{policy.id}</div>
+                      <div className="text-[var(--color-ink)]">{policy.policyName}</div>
+                      <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{policy.id}</div>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${getControlTypeColor(policy.controlType)}`}>
@@ -203,7 +203,7 @@ export function BudgetPolicies() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="inline-flex items-center gap-2">
-                        <div className="w-20 bg-[#E1E6EA] rounded-full h-2">
+                        <div className="w-20 bg-[var(--color-silver)] rounded-full h-2">
                           <div 
                             className={`h-2 rounded-full ${
                               policy.controlType === 'Hard Stop' ? 'bg-red-500' :
@@ -213,24 +213,24 @@ export function BudgetPolicies() {
                             style={{ width: `${policy.thresholdPercent}%` }}
                           ></div>
                         </div>
-                        <span className="text-sm text-[#0A0F14]">{policy.thresholdPercent}%</span>
+                        <span className="text-sm text-[var(--color-ink)]">{policy.thresholdPercent}%</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="space-y-1 text-sm">
                         {policy.applicableDimensions.department && (
-                          <div className="text-[#0A0F14]">Dept: {policy.applicableDimensions.department}</div>
+                          <div className="text-[var(--color-ink)]">Dept: {policy.applicableDimensions.department}</div>
                         )}
                         {policy.applicableDimensions.costCentre && (
-                          <div className="text-[#6E7A82]">CC: {policy.applicableDimensions.costCentre}</div>
+                          <div className="text-[var(--color-mercury-grey)]">CC: {policy.applicableDimensions.costCentre}</div>
                         )}
                         {policy.applicableDimensions.expenseCategory && (
-                          <div className="text-[#6E7A82]">Category: {policy.applicableDimensions.expenseCategory}</div>
+                          <div className="text-[var(--color-mercury-grey)]">Category: {policy.applicableDimensions.expenseCategory}</div>
                         )}
                         {!policy.applicableDimensions.department && 
                          !policy.applicableDimensions.costCentre && 
                          !policy.applicableDimensions.expenseCategory && (
-                          <span className="text-[#6E7A82]">Global</span>
+                          <span className="text-[var(--color-mercury-grey)]">Global</span>
                         )}
                       </div>
                     </td>
@@ -242,12 +242,12 @@ export function BudgetPolicies() {
                           </span>
                         ))}
                         {policy.overridePermissions.length === 0 && (
-                          <span className="text-xs text-[#6E7A82]">None</span>
+                          <span className="text-xs text-[var(--color-mercury-grey)]">None</span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-sm text-[#0A0F14]">
+                      <div className="text-sm text-[var(--color-ink)]">
                         {policy.alertRecipients.length} recipient(s)
                       </div>
                     </td>
@@ -257,7 +257,7 @@ export function BudgetPolicies() {
                         className="relative inline-flex items-center"
                       >
                         <div className={`w-10 h-5 rounded-full transition-colors ${
-                          policy.isActive ? 'bg-green-500' : 'bg-[#E1E6EA]'
+                          policy.isActive ? 'bg-green-500' : 'bg-[var(--color-silver)]'
                         }`}>
                           <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform transform ${
                             policy.isActive ? 'translate-x-5' : 'translate-x-0.5'
@@ -267,8 +267,8 @@ export function BudgetPolicies() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
-                        <button className="p-2 hover:bg-[#F6F9FC] rounded transition-colors">
-                          <Edit className="w-4 h-4 text-[#6E7A82]" />
+                        <button className="p-2 hover:bg-[var(--color-cloud)] rounded transition-colors">
+                          <Edit className="w-4 h-4 text-[var(--color-mercury-grey)]" />
                         </button>
                         <button className="p-2 hover:bg-red-50 rounded transition-colors">
                           <Trash2 className="w-4 h-4 text-red-600" />
@@ -286,30 +286,30 @@ export function BudgetPolicies() {
         {showCreateModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="px-6 py-4 border-b border-[#E1E6EA]">
-                <h2 className="text-[#0A0F14]">Create Budget Policy</h2>
-                <p className="text-sm text-[#6E7A82] mt-1">Configure budget control and enforcement rules</p>
+              <div className="px-6 py-4 border-b border-[var(--color-silver)]">
+                <h2 className="text-[var(--color-ink)]">Create Budget Policy</h2>
+                <p className="text-sm text-[var(--color-mercury-grey)] mt-1">Configure budget control and enforcement rules</p>
               </div>
 
               <div className="px-6 py-4 space-y-4">
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Policy Name <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Policy Name <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <input
                     type="text"
                     value={policyName}
                     onChange={(e) => setPolicyName(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     placeholder="e.g., IT Department Hard Stop at 95%"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-[#0A0F14] mb-2">Control Type <span style={{ color: '#FF4E5B' }}>*</span></label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">Control Type <span style={{ color: 'var(--color-error)' }}>*</span></label>
                     <select
                       value={controlType}
                       onChange={(e) => setControlType(e.target.value as ControlType)}
-                      className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                      className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     >
                       <option value="Hard Stop">Hard Stop - Block PO Creation</option>
                       <option value="Soft Warning">Soft Warning - Allow with Override</option>
@@ -318,7 +318,7 @@ export function BudgetPolicies() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-[#0A0F14] mb-2">Threshold Percentage <span style={{ color: '#FF4E5B' }}>*</span></label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">Threshold Percentage <span style={{ color: 'var(--color-error)' }}>*</span></label>
                     <div className="flex items-center gap-3">
                       <input
                         type="range"
@@ -335,25 +335,25 @@ export function BudgetPolicies() {
                         onChange={(e) => setThresholdPercent(Number(e.target.value))}
                         min="50"
                         max="100"
-                        className="w-20 px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                        className="w-20 px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t border-[#E1E6EA] pt-4">
-                  <h3 className="text-[#0A0F14] mb-3">Applicable Dimensions (Optional)</h3>
-                  <p className="text-sm text-[#6E7A82] mb-3">
+                <div className="border-t border-[var(--color-silver)] pt-4">
+                  <h3 className="text-[var(--color-ink)] mb-3">Applicable Dimensions (Optional)</h3>
+                  <p className="text-sm text-[var(--color-mercury-grey)] mb-3">
                     Leave blank to apply globally, or specify dimensions to target specific budgets
                   </p>
 
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm text-[#0A0F14] mb-2">Department</label>
+                      <label className="block text-sm text-[var(--color-ink)] mb-2">Department</label>
                       <select
                         value={department}
                         onChange={(e) => setDepartment(e.target.value)}
-                        className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                        className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                       >
                         <option value="">All Departments</option>
                         <option value="IT">IT</option>
@@ -365,22 +365,22 @@ export function BudgetPolicies() {
                     </div>
 
                     <div>
-                      <label className="block text-sm text-[#0A0F14] mb-2">Cost Centre</label>
+                      <label className="block text-sm text-[var(--color-ink)] mb-2">Cost Centre</label>
                       <input
                         type="text"
                         value={costCentre}
                         onChange={(e) => setCostCentre(e.target.value)}
-                        className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                        className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                         placeholder="e.g., CC-IT-001"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm text-[#0A0F14] mb-2">Expense Category</label>
+                      <label className="block text-sm text-[var(--color-ink)] mb-2">Expense Category</label>
                       <select
                         value={expenseCategory}
                         onChange={(e) => setExpenseCategory(e.target.value)}
-                        className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                        className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                       >
                         <option value="">All Categories</option>
                         <option value="Operating Expenses">Operating Expenses</option>
@@ -393,10 +393,10 @@ export function BudgetPolicies() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Override Permissions</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Override Permissions</label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {['CFO', 'Finance Manager', 'Department Head', 'Procurement Head'].map(role => (
-                      <label key={role} className="flex items-center gap-2 px-3 py-2 border border-[#E1E6EA] rounded-lg cursor-pointer hover:bg-[#F6F9FC]">
+                      <label key={role} className="flex items-center gap-2 px-3 py-2 border border-[var(--color-silver)] rounded-lg cursor-pointer hover:bg-[var(--color-cloud)]">
                         <input
                           type="checkbox"
                           checked={overridePermissions.includes(role)}
@@ -407,21 +407,21 @@ export function BudgetPolicies() {
                               setOverridePermissions(overridePermissions.filter(p => p !== role));
                             }
                           }}
-                          className="rounded text-[#00A9B7] focus:ring-[#00A9B7]"
+                          className="rounded text-[var(--color-teal)] focus:ring-[var(--color-teal)]"
                         />
-                        <span className="text-sm text-[#0A0F14]">{role}</span>
+                        <span className="text-sm text-[var(--color-ink)]">{role}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Alert Recipients (comma-separated emails)</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Alert Recipients (comma-separated emails)</label>
                   <textarea
                     value={alertRecipients}
                     onChange={(e) => setAlertRecipients(e.target.value)}
                     rows={2}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     placeholder="user1@company.com, user2@company.com"
                   />
                 </div>
@@ -459,16 +459,16 @@ export function BudgetPolicies() {
                 </div>
               </div>
 
-              <div className="px-6 py-4 border-t border-[#E1E6EA] flex justify-end gap-3">
+              <div className="px-6 py-4 border-t border-[var(--color-silver)] flex justify-end gap-3">
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 border border-[#E1E6EA] rounded-lg hover:bg-[#F6F9FC] transition-colors"
+                  className="px-4 py-2 border border-[var(--color-silver)] rounded-lg hover:bg-[var(--color-cloud)] transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreatePolicy}
-                  className="px-4 py-2 bg-[#00A9B7] text-white rounded-lg hover:bg-[#007D87] transition-colors"
+                  className="px-4 py-2 bg-[var(--color-teal)] text-white rounded-lg hover:bg-[var(--color-teal-dark)] transition-colors"
                 >
                   Create Policy
                 </button>

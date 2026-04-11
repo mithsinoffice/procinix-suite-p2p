@@ -139,8 +139,8 @@ export function InvoiceDetail() {
     switch (currentStatus) {
       case 'Draft':
         return {
-          color: '#9AA6AF',
-          bgColor: '#F6F9FC',
+          color: 'var(--color-slate)',
+          bgColor: 'var(--color-cloud)',
           icon: FileText,
           label: 'Draft',
           description: 'Invoice is in draft state. You can edit and make changes.',
@@ -149,7 +149,7 @@ export function InvoiceDetail() {
       case 'Validation Error':
         return {
           color: '#EF4444',
-          bgColor: '#FEE2E2',
+          bgColor: 'var(--color-error-light)',
           icon: XCircle,
           label: 'Validation Error',
           description: 'Invoice has validation errors that must be resolved before submission.',
@@ -166,8 +166,8 @@ export function InvoiceDetail() {
         };
       case 'Approved':
         return {
-          color: '#00A9B7',
-          bgColor: '#00A9B710',
+          color: 'var(--color-teal)',
+          bgColor: 'var(--color-teal)10',
           icon: CheckCircle,
           label: 'Approved',
           description: 'Invoice has been approved and is ready for ERP posting.',
@@ -175,8 +175,8 @@ export function InvoiceDetail() {
         };
       case 'Rejected':
         return {
-          color: '#DC2626',
-          bgColor: '#FEE2E2',
+          color: 'var(--color-error-dark)',
+          bgColor: 'var(--color-error-light)',
           icon: Ban,
           label: 'Rejected',
           description: 'Invoice has been rejected. Review comments and resubmit.',
@@ -193,8 +193,8 @@ export function InvoiceDetail() {
         };
       default:
         return {
-          color: '#6E7A82',
-          bgColor: '#F6F9FC',
+          color: 'var(--color-mercury-grey)',
+          bgColor: 'var(--color-cloud)',
           icon: FileText,
           label: 'Unknown',
           description: '',
@@ -242,22 +242,22 @@ export function InvoiceDetail() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white shadow-sm" style={{ borderBottom: '2px solid #E1E6EA' }}>
+      <div className="sticky top-0 z-10 bg-white shadow-sm" style={{ borderBottom: '2px solid var(--color-silver)' }}>
         <div className="px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => navigate('/invoices')}
                 className="p-2 rounded-lg transition-colors hover:bg-gray-100" 
-                style={{ color: '#6E7A82' }}
+                style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
                 <div className="flex items-center gap-3">
-                  <h1 className="text-2xl" style={{ color: '#0A0F14' }}>
+                  <h1 className="text-2xl" style={{ color: 'var(--color-ink)' }}>
                     Invoice {invoice.invoiceNumber}
                   </h1>
                   <span 
@@ -272,7 +272,7 @@ export function InvoiceDetail() {
                     <span style={{ fontWeight: '600' }}>{statusConfig.label}</span>
                   </span>
                 </div>
-                <p className="text-sm mt-1" style={{ color: '#6E7A82' }}>
+                <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                   {statusConfig.description}
                 </p>
               </div>
@@ -285,7 +285,7 @@ export function InvoiceDetail() {
                   <button
                     onClick={handleEdit}
                     className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
-                    style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}
+                    style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                   >
                     <Edit3 className="w-4 h-4" />
                     Edit
@@ -293,7 +293,7 @@ export function InvoiceDetail() {
                   <button
                     onClick={handleSubmitForApproval}
                     className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-                    style={{ backgroundColor: '#00A9B7' }}
+                    style={{ backgroundColor: 'var(--color-teal)' }}
                   >
                     <Send className="w-4 h-4" />
                     Submit for Approval
@@ -319,7 +319,7 @@ export function InvoiceDetail() {
                   <button
                     onClick={() => setShowCommentModal(true)}
                     className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
-                    style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}
+                    style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                   >
                     <MessageSquare className="w-4 h-4" />
                     Add Comment
@@ -335,7 +335,7 @@ export function InvoiceDetail() {
                   <button
                     onClick={handleApprove}
                     className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-                    style={{ backgroundColor: '#00A9B7' }}
+                    style={{ backgroundColor: 'var(--color-teal)' }}
                   >
                     <CheckCircle className="w-4 h-4" />
                     Approve
@@ -347,7 +347,7 @@ export function InvoiceDetail() {
                 <>
                   <button
                     className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
-                    style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}
+                    style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                   >
                     <Download className="w-4 h-4" />
                     Download
@@ -355,7 +355,7 @@ export function InvoiceDetail() {
                   <button
                     onClick={handlePostToERP}
                     className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-                    style={{ backgroundColor: '#00A9B7' }}
+                    style={{ backgroundColor: 'var(--color-teal)' }}
                   >
                     <ExternalLink className="w-4 h-4" />
                     Post to ERP
@@ -368,7 +368,7 @@ export function InvoiceDetail() {
                   <button
                     onClick={handleEdit}
                     className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-                    style={{ backgroundColor: '#00A9B7' }}
+                    style={{ backgroundColor: 'var(--color-teal)' }}
                   >
                     <RefreshCw className="w-4 h-4" />
                     Edit & Resubmit
@@ -380,14 +380,14 @@ export function InvoiceDetail() {
                 <>
                   <button
                     className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
-                    style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}
+                    style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                   >
                     <Download className="w-4 h-4" />
                     Download
                   </button>
                   <button
                     className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
-                    style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}
+                    style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                   >
                     <Printer className="w-4 h-4" />
                     Print
@@ -409,10 +409,10 @@ export function InvoiceDetail() {
       {/* Content */}
       <div className="p-8 max-w-7xl mx-auto">
         {/* State Switcher (for demo purposes) */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-4">
-            <Sparkles className="w-5 h-5" style={{ color: '#8B5CF6' }} />
-            <h3 style={{ color: '#0A0F14', fontWeight: '600' }}>Demo: Switch Invoice State</h3>
+            <Sparkles className="w-5 h-5" style={{ color: '#007D87' }} />
+            <h3 style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Demo: Switch Invoice State</h3>
           </div>
           <div className="flex flex-wrap gap-3">
             {(['Draft', 'Validation Error', 'Pending Approval', 'Approved', 'Rejected', 'Posted to ERP'] as InvoiceStatus[]).map((state) => (
@@ -421,8 +421,8 @@ export function InvoiceDetail() {
                 onClick={() => setStatus(state)}
                 className="px-4 py-2 rounded-lg transition-colors"
                 style={{
-                  backgroundColor: status === state ? getStatusConfig(state).color : '#F6F9FC',
-                  color: status === state ? '#FFFFFF' : '#0A0F14',
+                  backgroundColor: status === state ? getStatusConfig(state).color : 'var(--color-cloud)',
+                  color: status === state ? '#FFFFFF' : 'var(--color-ink)',
                   border: `2px solid ${getStatusConfig(state).color}`,
                   fontWeight: status === state ? '600' : '400'
                 }}
@@ -437,12 +437,12 @@ export function InvoiceDetail() {
         {status === 'Validation Error' && (
           <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #EF4444' }}>
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEE2E2' }}>
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-error-light)' }}>
                 <XCircle className="w-5 h-5" style={{ color: '#EF4444' }} />
               </div>
               <div>
-                <h2 className="text-xl" style={{ color: '#0A0F14' }}>Validation Errors</h2>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
+                <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Validation Errors</h2>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   {validationErrors.filter(e => e.severity === 'error').length} error(s) and {validationErrors.filter(e => e.severity === 'warning').length} warning(s) found
                 </p>
               </div>
@@ -454,7 +454,7 @@ export function InvoiceDetail() {
                   key={index}
                   className="p-4 rounded-lg flex items-start gap-3"
                   style={{ 
-                    backgroundColor: error.severity === 'error' ? '#FEE2E2' : '#FEF3C7',
+                    backgroundColor: error.severity === 'error' ? 'var(--color-error-light)' : '#FEF3C7',
                     border: `1px solid ${error.severity === 'error' ? '#FCA5A5' : '#FDE68A'}`
                   }}
                 >
@@ -464,7 +464,7 @@ export function InvoiceDetail() {
                     <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#F59E0B' }} />
                   )}
                   <div className="flex-1">
-                    <p className="text-sm mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                    <p className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                       {error.field}
                     </p>
                     <p className="text-sm" style={{ color: error.severity === 'error' ? '#7F1D1D' : '#78350F' }}>
@@ -486,18 +486,18 @@ export function InvoiceDetail() {
 
         {/* Rejection Details (only for Rejected state) */}
         {status === 'Rejected' && (
-          <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #DC2626' }}>
+          <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-error-dark)' }}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEE2E2' }}>
-                <Ban className="w-5 h-5" style={{ color: '#DC2626' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-error-light)' }}>
+                <Ban className="w-5 h-5" style={{ color: 'var(--color-error-dark)' }} />
               </div>
               <div>
-                <h2 className="text-xl" style={{ color: '#0A0F14' }}>Rejection Details</h2>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>Invoice was rejected by approver</p>
+                <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Rejection Details</h2>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoice was rejected by approver</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
+            <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
               <p className="text-sm mb-2" style={{ color: '#7F1D1D', fontWeight: '600' }}>
                 Rejected by: Rajesh Kumar (Finance Manager)
               </p>
@@ -529,8 +529,8 @@ export function InvoiceDetail() {
                 <CheckCheck className="w-5 h-5" style={{ color: '#10B981' }} />
               </div>
               <div>
-                <h2 className="text-xl" style={{ color: '#0A0F14' }}>ERP Integration Status</h2>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>Successfully posted to SAP ERP system</p>
+                <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>ERP Integration Status</h2>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Successfully posted to SAP ERP system</p>
               </div>
             </div>
 
@@ -563,87 +563,87 @@ export function InvoiceDetail() {
         )}
 
         {/* Invoice Details */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-              <FileText className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+              <FileText className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Invoice Details</h2>
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Invoice Details</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div>
-              <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>Invoice Number</label>
-              <p style={{ color: '#0A0F14', fontWeight: '600' }}>{invoice.invoiceNumber}</p>
+              <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Number</label>
+              <p style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{invoice.invoiceNumber}</p>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>Invoice Date</label>
+              <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Date</label>
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                <p style={{ color: '#0A0F14' }}>{invoice.invoiceDate}</p>
+                <Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                <p style={{ color: 'var(--color-ink)' }}>{invoice.invoiceDate}</p>
               </div>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>Due Date</label>
+              <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Due Date</label>
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                <p style={{ color: '#0A0F14' }}>{invoice.dueDate}</p>
+                <Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                <p style={{ color: 'var(--color-ink)' }}>{invoice.dueDate}</p>
               </div>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>Vendor Name</label>
+              <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Vendor Name</label>
               <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                <p style={{ color: '#0A0F14' }}>{invoice.vendorName}</p>
+                <Building2 className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorName}</p>
               </div>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>Vendor Code</label>
-              <p style={{ color: '#0A0F14' }}>{invoice.vendorCode}</p>
+              <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Vendor Code</label>
+              <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorCode}</p>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>GST Number</label>
-              <p style={{ color: '#0A0F14' }}>{invoice.vendorGST}</p>
+              <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>GST Number</label>
+              <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorGST}</p>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>PO Number</label>
+              <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>PO Number</label>
               <div className="flex items-center gap-2">
-                <Package className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                <p style={{ color: '#0A0F14', fontWeight: '600' }}>{invoice.poNumber}</p>
+                <Package className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                <p style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{invoice.poNumber}</p>
               </div>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>GRN Numbers</label>
-              <p style={{ color: '#0A0F14' }}>{invoice.grnNumbers.join(', ')}</p>
+              <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>GRN Numbers</label>
+              <p style={{ color: 'var(--color-ink)' }}>{invoice.grnNumbers.join(', ')}</p>
             </div>
             <div>
-              <label className="block text-sm mb-1" style={{ color: '#6E7A82' }}>Payment Terms</label>
-              <p style={{ color: '#0A0F14' }}>{invoice.paymentTerms}</p>
+              <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Payment Terms</label>
+              <p style={{ color: 'var(--color-ink)' }}>{invoice.paymentTerms}</p>
             </div>
           </div>
 
           {/* Line Items */}
-          <div className="mt-6 pt-6" style={{ borderTop: '2px solid #E1E6EA' }}>
-            <h3 className="mb-4" style={{ color: '#0A0F14', fontWeight: '600' }}>Line Items</h3>
+          <div className="mt-6 pt-6" style={{ borderTop: '2px solid var(--color-silver)' }}>
+            <h3 className="mb-4" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Line Items</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead style={{ backgroundColor: '#F6F9FC' }}>
+                <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Description</th>
-                    <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Quantity</th>
-                    <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Unit Price</th>
-                    <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Tax %</th>
-                    <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Line Amount</th>
+                    <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Description</th>
+                    <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Quantity</th>
+                    <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Unit Price</th>
+                    <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Tax %</th>
+                    <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Line Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {invoice.lineItems.map((item) => (
-                    <tr key={item.id} style={{ borderTop: '1px solid #E1E6EA' }}>
-                      <td className="px-4 py-3" style={{ color: '#0A0F14' }}>{item.description}</td>
-                      <td className="px-4 py-3" style={{ color: '#0A0F14' }}>{item.quantity}</td>
-                      <td className="px-4 py-3" style={{ color: '#0A0F14' }}>₹{item.unitPrice.toLocaleString('en-IN')}</td>
-                      <td className="px-4 py-3" style={{ color: '#0A0F14' }}>{item.taxPercent}%</td>
-                      <td className="px-4 py-3" style={{ color: '#0A0F14', fontWeight: '600' }}>₹{item.lineAmount.toLocaleString('en-IN')}</td>
+                    <tr key={item.id} style={{ borderTop: '1px solid var(--color-silver)' }}>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-ink)' }}>{item.description}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-ink)' }}>{item.quantity}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-ink)' }}>₹{item.unitPrice.toLocaleString('en-IN')}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-ink)' }}>{item.taxPercent}%</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>₹{item.lineAmount.toLocaleString('en-IN')}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -652,45 +652,45 @@ export function InvoiceDetail() {
           </div>
 
           {/* Totals */}
-          <div className="mt-6 pt-6 flex justify-end" style={{ borderTop: '2px solid #E1E6EA' }}>
+          <div className="mt-6 pt-6 flex justify-end" style={{ borderTop: '2px solid var(--color-silver)' }}>
             <div className="w-full md:w-1/2 space-y-3">
               <div className="flex justify-between">
-                <span style={{ color: '#6E7A82' }}>Subtotal:</span>
-                <span style={{ color: '#0A0F14', fontWeight: '600' }}>₹{invoice.subtotal.toLocaleString('en-IN')}</span>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>Subtotal:</span>
+                <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>₹{invoice.subtotal.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between">
-                <span style={{ color: '#6E7A82' }}>GST (18%):</span>
-                <span style={{ color: '#0A0F14', fontWeight: '600' }}>₹{invoice.gstAmount.toLocaleString('en-IN')}</span>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>GST (18%):</span>
+                <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>₹{invoice.gstAmount.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between">
-                <span style={{ color: '#6E7A82' }}>TDS (2%):</span>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>TDS (2%):</span>
                 <span style={{ color: '#EF4444', fontWeight: '600' }}>-₹{invoice.tdsAmount.toLocaleString('en-IN')}</span>
               </div>
-              <div className="pt-3 flex justify-between" style={{ borderTop: '2px solid #E1E6EA' }}>
-                <span className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>Total Amount:</span>
-                <span className="text-2xl" style={{ color: '#00A9B7', fontWeight: '700' }}>₹{invoice.totalAmount.toLocaleString('en-IN')}</span>
+              <div className="pt-3 flex justify-between" style={{ borderTop: '2px solid var(--color-silver)' }}>
+                <span className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Total Amount:</span>
+                <span className="text-2xl" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>₹{invoice.totalAmount.toLocaleString('en-IN')}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Linked Debit Notes / Adjustments */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
                 <FileMinus className="w-5 h-5" style={{ color: '#F59E0B' }} />
               </div>
               <div>
-                <h2 className="text-xl" style={{ color: '#0A0F14' }}>Adjustments</h2>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>Debit notes linked to this invoice</p>
+                <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Adjustments</h2>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Debit notes linked to this invoice</p>
               </div>
             </div>
             <button
               onClick={() => navigate(`/ap/debit-notes/create?invoice=${invoice.invoiceNumber}`)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
-              style={{ border: '1px solid #00A9B7', color: '#00A9B7', backgroundColor: 'white' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E8F7F8'}
+              style={{ border: '1px solid var(--color-teal)', color: 'var(--color-teal)', backgroundColor: 'white' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-tint)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
             >
               <FileMinus className="w-4 h-4" />
@@ -703,34 +703,34 @@ export function InvoiceDetail() {
             <div className="space-y-3">
               <div 
                 className="p-4 rounded-lg transition-colors cursor-pointer" 
-                style={{ border: '1px solid #E1E6EA' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+                style={{ border: '1px solid var(--color-silver)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                 onClick={() => navigate('/ap/debit-notes/detail/DN-001')}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span style={{ color: '#00A9B7', fontWeight: '600' }}>DN-2024-001</span>
+                    <span style={{ color: 'var(--color-teal)', fontWeight: '600' }}>DN-2024-001</span>
                     <span 
                       className="px-2 py-1 rounded-full text-xs"
-                      style={{ backgroundColor: '#E8F7F8', color: '#00A9B7' }}
+                      style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}
                     >
                       Issued
                     </span>
                   </div>
-                  <span style={{ color: '#0A0F14', fontWeight: '600' }}>-₹15,000</span>
+                  <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>-₹15,000</span>
                 </div>
                 <div className="flex items-center gap-4 text-sm">
-                  <span style={{ color: '#6E7A82' }}>Date: 15-Dec-2024</span>
-                  <span style={{ color: '#6E7A82' }}>•</span>
-                  <span style={{ color: '#6E7A82' }}>Reason: Short Supply</span>
+                  <span style={{ color: 'var(--color-mercury-grey)' }}>Date: 15-Dec-2024</span>
+                  <span style={{ color: 'var(--color-mercury-grey)' }}>•</span>
+                  <span style={{ color: 'var(--color-mercury-grey)' }}>Reason: Short Supply</span>
                 </div>
               </div>
             </div>
           ) : (
             <div className="text-center py-8">
-              <FileMinus className="w-12 h-12 mx-auto mb-3" style={{ color: '#E1E6EA' }} />
-              <p className="text-sm" style={{ color: '#6E7A82' }}>
+              <FileMinus className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--color-silver)' }} />
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                 No debit notes found for this invoice
               </p>
             </div>
@@ -738,20 +738,20 @@ export function InvoiceDetail() {
 
           {/* Net Payable Calculation */}
           {id && id === 'INV-001' && (
-            <div className="mt-6 pt-6" style={{ borderTop: '2px solid #E1E6EA' }}>
+            <div className="mt-6 pt-6" style={{ borderTop: '2px solid var(--color-silver)' }}>
               <div className="flex justify-end">
                 <div className="w-full md:w-1/2 space-y-2">
                   <div className="flex justify-between">
-                    <span style={{ color: '#6E7A82' }}>Invoice Amount:</span>
-                    <span style={{ color: '#0A0F14', fontWeight: '600' }}>₹{invoice.totalAmount.toLocaleString('en-IN')}</span>
+                    <span style={{ color: 'var(--color-mercury-grey)' }}>Invoice Amount:</span>
+                    <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>₹{invoice.totalAmount.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span style={{ color: '#6E7A82' }}>Debit Note Adjustments:</span>
+                    <span style={{ color: 'var(--color-mercury-grey)' }}>Debit Note Adjustments:</span>
                     <span style={{ color: '#EF4444', fontWeight: '600' }}>-₹15,000</span>
                   </div>
-                  <div className="pt-2 flex justify-between" style={{ borderTop: '1px solid #E1E6EA' }}>
-                    <span style={{ color: '#0A0F14', fontWeight: '600' }}>Net Payable:</span>
-                    <span className="text-xl" style={{ color: '#00A9B7', fontWeight: '700' }}>
+                  <div className="pt-2 flex justify-between" style={{ borderTop: '1px solid var(--color-silver)' }}>
+                    <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Net Payable:</span>
+                    <span className="text-xl" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
                       ₹{(invoice.totalAmount - 15000).toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -770,14 +770,14 @@ export function InvoiceDetail() {
       {/* Reject Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4" style={{ border: '2px solid #E1E6EA' }}>
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEE2E2' }}>
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-error-light)' }}>
                 <Ban className="w-5 h-5" style={{ color: '#EF4444' }} />
               </div>
-              <h3 className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>Reject Invoice</h3>
+              <h3 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Reject Invoice</h3>
             </div>
-            <p className="text-sm mb-4" style={{ color: '#6E7A82' }}>
+            <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
               Please provide a reason for rejecting this invoice.
             </p>
             <textarea
@@ -786,13 +786,13 @@ export function InvoiceDetail() {
               rows={4}
               placeholder="Enter rejection reason..."
               className="w-full px-4 py-2 rounded-lg mb-4"
-              style={{ border: '1px solid #E1E6EA', color: '#0A0F14', resize: 'vertical' }}
+              style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', resize: 'vertical' }}
             />
             <div className="flex items-center gap-3 justify-end">
               <button
                 onClick={() => setShowRejectModal(false)}
                 className="px-6 py-2 rounded-lg transition-colors"
-                style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}
+                style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 Cancel
               </button>
@@ -811,12 +811,12 @@ export function InvoiceDetail() {
       {/* Comment Modal */}
       {showCommentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4" style={{ border: '2px solid #E1E6EA' }}>
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#DBEAFE' }}>
                 <MessageSquare className="w-5 h-5" style={{ color: '#3B82F6' }} />
               </div>
-              <h3 className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>Add Comment</h3>
+              <h3 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Add Comment</h3>
             </div>
             <textarea
               value={comment}
@@ -824,13 +824,13 @@ export function InvoiceDetail() {
               rows={4}
               placeholder="Enter your comment..."
               className="w-full px-4 py-2 rounded-lg mb-4"
-              style={{ border: '1px solid #E1E6EA', color: '#0A0F14', resize: 'vertical' }}
+              style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', resize: 'vertical' }}
             />
             <div className="flex items-center gap-3 justify-end">
               <button
                 onClick={() => setShowCommentModal(false)}
                 className="px-6 py-2 rounded-lg transition-colors"
-                style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}
+                style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
               >
                 Cancel
               </button>
@@ -841,7 +841,7 @@ export function InvoiceDetail() {
                   setComment('');
                 }}
                 className="px-6 py-2 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#00A9B7' }}
+                style={{ backgroundColor: 'var(--color-teal)' }}
               >
                 Add Comment
               </button>

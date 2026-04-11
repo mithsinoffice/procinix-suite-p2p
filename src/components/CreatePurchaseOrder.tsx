@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowLeft, Plus, Trash2, Search, Calendar, FileText } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { POPreview } from './POPreview';
 import { getPRById, PRLineItem } from '../contexts/PurchaseRequestData';
+import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface LineItem {
   id: string;
@@ -186,6 +188,19 @@ export function CreatePurchaseOrder() {
   const totalTax = subtotal * taxRate;
   const totalPOValue = subtotal + totalTax;
 
+  // Form completeness
+  const completeness = useMemo(() => {
+    const fields = [poType, lineItems.length > 0 ? 'has-items' : ''];
+    const filled = fields.filter(Boolean).length;
+    return Math.round((filled / fields.length) * 100);
+  }, [poType, lineItems.length]);
+
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const handleSaveDraft = useCallback(() => {
+    alert('Purchase Order saved as draft');
+  }, []);
+  useFormKeyboardSave(handleSaveDraft);
+
   // PR-based mode logic
   useEffect(() => {
     if (mode === 'from-pr' && prIds.length > 0) {
@@ -222,80 +237,58 @@ export function CreatePurchaseOrder() {
   }, [mode, prIds.join(',')]);
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="mb-6">
-        <button 
-          onClick={() => navigate('/purchase-orders')}
-          className="flex items-center gap-2 mb-4 transition-colors"
-          style={{ color: '#6E7A82' }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#00A9B7'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#6E7A82'}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to List
-        </button>
-        
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>Purchase Order Creation</h1>
-            <p style={{ color: '#6E7A82' }}>Create, review and submit a purchase order to your vendor.</p>
-          </div>
-          
-          <div className="flex gap-3">
-            <button 
-              onClick={() => window.print()}
-              className="px-4 py-2 rounded-lg transition-colors"
-              style={{ 
-                border: '1px solid #E1E6EA',
-                color: '#0A0F14',
-                backgroundColor: 'white'
-              }}
-            >
-              Print PO
-            </button>
-            <button 
-              className="px-4 py-2 rounded-lg transition-colors"
-              style={{ 
-                border: '1px solid #E1E6EA',
-                color: '#0A0F14',
-                backgroundColor: 'white'
-              }}
-              onClick={() => setShowPreview(true)}
-            >
-              PO Preview
-            </button>
-            <button 
-              className="px-4 py-2 rounded-lg text-white transition-colors"
-              style={{ backgroundColor: '#00A9B7' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
-            >
-              Submit PO for Approval
-            </button>
-          </div>
-        </div>
-      </div>
+    <FormShell
+      title="Purchase Order Creation"
+      subtitle="Create, review and submit a purchase order to your vendor."
+      variant="transaction"
+      onBack={() => navigate('/purchase-orders')}
+      onSaveDraft={handleSaveDraft}
+      onSubmit={() => alert('PO submitted for approval')}
+      submitLabel="Submit PO for Approval"
+      draftLabel="Save Draft"
+      saveStatus={saveStatus}
+      completeness={completeness}
+      extraActions={
+        <>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="px-4 py-2 rounded-lg transition-colors"
+            style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', backgroundColor: 'white' }}
+          >
+            Print PO
+          </button>
+          <button
+            type="button"
+            className="px-4 py-2 rounded-lg transition-colors"
+            style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', backgroundColor: 'white' }}
+            onClick={() => setShowPreview(true)}
+          >
+            PO Preview
+          </button>
+        </>
+      }
+    >
 
       {/* PR-Based Mode Indicator */}
       {mode === 'from-pr' && linkedPRs.length > 0 && sourcePRData && (
-        <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#E3F2FD', border: '1px solid #00A9B7' }}>
+        <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#E3F2FD', border: '1px solid var(--color-teal)' }}>
           <div className="flex items-center gap-3">
-            <FileText className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <FileText className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             <div className="flex-1">
-              <div style={{ color: '#0A0F14', fontWeight: 500, marginBottom: '4px' }}>
+              <div style={{ color: 'var(--color-ink)', fontWeight: 500, marginBottom: '4px' }}>
                 Source: PR-Based PO
               </div>
-              <div style={{ color: '#6E7A82', fontSize: '14px' }}>
+              <div style={{ color: 'var(--color-mercury-grey)', fontSize: '14px' }}>
                 Created from Purchase Request(s): {sourcePRData.prNumber} · Vendor: {sourcePRData.vendorName}
               </div>
-              <div style={{ color: '#6E7A82', fontSize: '13px', marginTop: '4px' }}>
+              <div style={{ color: 'var(--color-mercury-grey)', fontSize: '13px', marginTop: '4px' }}>
                 {lineItems.length} line item(s) populated from selected PR(s). Quantities are editable but cannot exceed PR quantities.
               </div>
             </div>
             <div
               className="px-3 py-1 rounded-full text-sm"
-              style={{ backgroundColor: '#00A9B7', color: 'white' }}
+              style={{ backgroundColor: 'var(--color-teal)', color: 'white' }}
             >
               PR-Based
             </div>
@@ -304,62 +297,54 @@ export function CreatePurchaseOrder() {
       )}
 
       {/* Section 1: General & Vendor Information */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
-        <div className="flex items-start gap-3 mb-6">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#E3F2FD', color: '#00A9B7' }}>
+      <FormSection
+        title="General & Vendor Information"
+        subtitle="Vendor, PO type, billing & GST details"
+        columns={2}
+        icon={
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#E3F2FD', color: 'var(--color-teal)' }}>
             1
           </div>
-          <div>
-            <h2 className="text-xl mb-1" style={{ color: '#0A0F14' }}>General & Vendor Information</h2>
-            <p className="text-sm" style={{ color: '#00A9B7' }}>Vendor, PO type, billing & GST details</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-6">
-          {/* PO Type */}
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>PO Type</label>
+        }
+      >
+          <PxFormField label="PO Type">
             <select
               value={poType}
               onChange={(e) => setPoType(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg"
-              style={{ 
-                border: '1px solid #E1E6EA',
-                backgroundColor: '#F6F9FC',
-                color: '#0A0F14'
+              className="px-input w-full px-4 py-3 rounded-lg"
+              style={{
+                border: '1px solid var(--color-silver)',
+                backgroundColor: 'var(--color-cloud)',
+                color: 'var(--color-ink)'
               }}
             >
               <option>Catalogue PO</option>
               <option>Service PO</option>
               <option>Contract PO</option>
             </select>
-          </div>
+          </PxFormField>
 
-          {/* PO Number */}
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>PO Number</label>
+          <PxFormField label="PO Number">
             <input
               type="text"
               value="PO-IND-2025-00001"
               disabled
-              className="w-full px-4 py-3 rounded-lg"
-              style={{ 
-                border: '1px solid #E1E6EA',
-                backgroundColor: '#F6F9FC',
-                color: '#6E7A82'
+              className="px-input w-full px-4 py-3 rounded-lg"
+              style={{
+                border: '1px solid var(--color-silver)',
+                backgroundColor: 'var(--color-cloud)',
+                color: 'var(--color-mercury-grey)'
               }}
             />
-          </div>
+          </PxFormField>
 
-          {/* Vendor Name */}
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Vendor Name</label>
+          <PxFormField label="Vendor Name">
             <select
-              className="w-full px-4 py-3 rounded-lg"
-              style={{ 
-                border: '1px solid #E1E6EA',
+              className="px-input w-full px-4 py-3 rounded-lg"
+              style={{
+                border: '1px solid var(--color-silver)',
                 backgroundColor: 'white',
-                color: '#0A0F14'
+                color: 'var(--color-ink)'
               }}
             >
               <option>Select Vendor...</option>
@@ -368,17 +353,15 @@ export function CreatePurchaseOrder() {
               <option>Office Depot India</option>
               <option>Engineering Parts Co</option>
             </select>
-          </div>
+          </PxFormField>
 
-          {/* Vendor State */}
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Vendor State</label>
+          <PxFormField label="Vendor State">
             <select
-              className="w-full px-4 py-3 rounded-lg"
-              style={{ 
-                border: '1px solid #E1E6EA',
+              className="px-input w-full px-4 py-3 rounded-lg"
+              style={{
+                border: '1px solid var(--color-silver)',
                 backgroundColor: 'white',
-                color: '#0A0F14'
+                color: 'var(--color-ink)'
               }}
             >
               <option>Select State</option>
@@ -387,49 +370,43 @@ export function CreatePurchaseOrder() {
               <option>Tamil Nadu</option>
               <option>Delhi</option>
             </select>
-          </div>
+          </PxFormField>
 
-          {/* Vendor GSTIN */}
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Vendor GSTIN</label>
+          <PxFormField label="Vendor GSTIN">
             <input
               type="text"
               placeholder="-- Auto-Populated or Enter Manually --"
-              className="w-full px-4 py-3 rounded-lg"
-              style={{ 
-                border: '1px solid #E1E6EA',
+              className="px-input w-full px-4 py-3 rounded-lg"
+              style={{
+                border: '1px solid var(--color-silver)',
                 backgroundColor: 'white',
-                color: '#0A0F14'
+                color: 'var(--color-ink)'
               }}
             />
-          </div>
+          </PxFormField>
 
-          {/* Bill-To Entity */}
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Bill-To Entity</label>
+          <PxFormField label="Bill-To Entity">
             <select
-              className="w-full px-4 py-3 rounded-lg"
-              style={{ 
-                border: '1px solid #E1E6EA',
+              className="px-input w-full px-4 py-3 rounded-lg"
+              style={{
+                border: '1px solid var(--color-silver)',
                 backgroundColor: 'white',
-                color: '#0A0F14'
+                color: 'var(--color-ink)'
               }}
             >
               <option>Select Entity</option>
               <option>Procinix Solutions Pvt Ltd</option>
               <option>Procinix India Branch</option>
             </select>
-          </div>
+          </PxFormField>
 
-          {/* Payment Terms */}
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Payment Terms</label>
+          <PxFormField label="Payment Terms">
             <select
-              className="w-full px-4 py-3 rounded-lg"
-              style={{ 
-                border: '1px solid #E1E6EA',
+              className="px-input w-full px-4 py-3 rounded-lg"
+              style={{
+                border: '1px solid var(--color-silver)',
                 backgroundColor: 'white',
-                color: '#0A0F14'
+                color: 'var(--color-ink)'
               }}
             >
               <option>Select Terms</option>
@@ -438,11 +415,9 @@ export function CreatePurchaseOrder() {
               <option>Net 60</option>
               <option>Immediate</option>
             </select>
-          </div>
+          </PxFormField>
 
-          {/* Advance Required */}
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Advance Required?</label>
+          <PxFormField label="Advance Required?">
             <div className="flex items-center gap-6 mt-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -451,9 +426,9 @@ export function CreatePurchaseOrder() {
                   checked={advanceRequired === 'Yes'}
                   onChange={(e) => setAdvanceRequired(e.target.value)}
                   className="w-4 h-4"
-                  style={{ accentColor: '#00A9B7' }}
+                  style={{ accentColor: 'var(--color-teal)' }}
                 />
-                <span style={{ color: '#0A0F14' }}>Yes</span>
+                <span style={{ color: 'var(--color-ink)' }}>Yes</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -462,36 +437,32 @@ export function CreatePurchaseOrder() {
                   checked={advanceRequired === 'No'}
                   onChange={(e) => setAdvanceRequired(e.target.value)}
                   className="w-4 h-4"
-                  style={{ accentColor: '#00A9B7' }}
+                  style={{ accentColor: 'var(--color-teal)' }}
                 />
-                <span style={{ color: '#0A0F14' }}>No</span>
+                <span style={{ color: 'var(--color-ink)' }}>No</span>
               </label>
             </div>
-          </div>
-        </div>
-      </div>
+          </PxFormField>
+      </FormSection>
 
       {/* Section 2: Delivery Information */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
-        <div className="flex items-start gap-3 mb-6">
+      <FormSection
+        title="Delivery Information"
+        subtitle="Destination port, delivery port & final handover details"
+        columns={3}
+        icon={
           <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F3E5F5', color: '#9C27B0' }}>
             2
           </div>
-          <div>
-            <h2 className="text-xl mb-1" style={{ color: '#0A0F14' }}>Delivery Information</h2>
-            <p className="text-sm" style={{ color: '#9C27B0' }}>Destination port, delivery port & final handover details</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-6">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Destination Port</label>
+        }
+      >
+          <PxFormField label="Destination Port">
             <select
-              className="w-full px-4 py-3 rounded-lg"
-              style={{ 
-                border: '1px solid #E1E6EA',
+              className="px-input w-full px-4 py-3 rounded-lg"
+              style={{
+                border: '1px solid var(--color-silver)',
                 backgroundColor: 'white',
-                color: '#0A0F14'
+                color: 'var(--color-ink)'
               }}
             >
               <option>Select Destination Port</option>
@@ -499,16 +470,15 @@ export function CreatePurchaseOrder() {
               <option>Chennai Port</option>
               <option>Bangalore Warehouse</option>
             </select>
-          </div>
+          </PxFormField>
 
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Delivery Port</label>
+          <PxFormField label="Delivery Port">
             <select
-              className="w-full px-4 py-3 rounded-lg"
-              style={{ 
-                border: '1px solid #E1E6EA',
+              className="px-input w-full px-4 py-3 rounded-lg"
+              style={{
+                border: '1px solid var(--color-silver)',
                 backgroundColor: 'white',
-                color: '#0A0F14'
+                color: 'var(--color-ink)'
               }}
             >
               <option>Select Delivery Port</option>
@@ -516,16 +486,15 @@ export function CreatePurchaseOrder() {
               <option>Delhi Hub</option>
               <option>Bangalore Facility</option>
             </select>
-          </div>
+          </PxFormField>
 
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Final Delivery Port</label>
+          <PxFormField label="Final Delivery Port">
             <select
-              className="w-full px-4 py-3 rounded-lg"
-              style={{ 
-                border: '1px solid #E1E6EA',
+              className="px-input w-full px-4 py-3 rounded-lg"
+              style={{
+                border: '1px solid var(--color-silver)',
                 backgroundColor: 'white',
-                color: '#0A0F14'
+                color: 'var(--color-ink)'
               }}
             >
               <option>Select Final Delivery Port</option>
@@ -533,26 +502,25 @@ export function CreatePurchaseOrder() {
               <option>Branch Office - Bangalore</option>
               <option>Factory - Pune</option>
             </select>
-          </div>
-        </div>
-      </div>
+          </PxFormField>
+      </FormSection>
 
       {/* Section 3: PO Line Items & Logistics */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="flex items-start gap-3 mb-6">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#E8F5E9', color: '#4CAF50' }}>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-success-light)', color: '#4CAF50' }}>
             3
           </div>
           <div className="flex-1">
-            <h2 className="text-xl mb-1" style={{ color: '#0A0F14' }}>PO Line Items & Logistics</h2>
+            <h2 className="text-xl mb-1" style={{ color: 'var(--color-ink)' }}>PO Line Items & Logistics</h2>
             <p className="text-sm" style={{ color: '#4CAF50' }}>Add SKUs, quantities, GST, shipping & delivery</p>
           </div>
           <button 
             onClick={() => setShowAddItem(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-            style={{ backgroundColor: '#00A9B7' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+            style={{ backgroundColor: 'var(--color-teal)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
           >
             <Plus className="w-4 h-4" />
             Add Item
@@ -561,7 +529,7 @@ export function CreatePurchaseOrder() {
 
         {/* Add Item Form */}
         {showAddItem && (
-          <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
+          <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
             <div className="grid grid-cols-5 gap-4 mb-4">
               <input
                 type="text"
@@ -570,9 +538,9 @@ export function CreatePurchaseOrder() {
                 onChange={(e) => setNewItem({ ...newItem, sku: e.target.value })}
                 className="px-3 py-2 rounded-lg"
                 style={{ 
-                  border: '1px solid #E1E6EA',
+                  border: '1px solid var(--color-silver)',
                   backgroundColor: 'white',
-                  color: '#0A0F14'
+                  color: 'var(--color-ink)'
                 }}
               />
               <input
@@ -582,9 +550,9 @@ export function CreatePurchaseOrder() {
                 onChange={(e) => setNewItem({ ...newItem, productName: e.target.value })}
                 className="col-span-2 px-3 py-2 rounded-lg"
                 style={{ 
-                  border: '1px solid #E1E6EA',
+                  border: '1px solid var(--color-silver)',
                   backgroundColor: 'white',
-                  color: '#0A0F14'
+                  color: 'var(--color-ink)'
                 }}
               />
               <input
@@ -594,9 +562,9 @@ export function CreatePurchaseOrder() {
                 onChange={(e) => setNewItem({ ...newItem, qty: parseInt(e.target.value) || 0 })}
                 className="px-3 py-2 rounded-lg"
                 style={{ 
-                  border: '1px solid #E1E6EA',
+                  border: '1px solid var(--color-silver)',
                   backgroundColor: 'white',
-                  color: '#0A0F14'
+                  color: 'var(--color-ink)'
                 }}
               />
               <input
@@ -606,9 +574,9 @@ export function CreatePurchaseOrder() {
                 onChange={(e) => setNewItem({ ...newItem, rate: parseFloat(e.target.value) || 0 })}
                 className="px-3 py-2 rounded-lg"
                 style={{ 
-                  border: '1px solid #E1E6EA',
+                  border: '1px solid var(--color-silver)',
                   backgroundColor: 'white',
-                  color: '#0A0F14'
+                  color: 'var(--color-ink)'
                 }}
               />
               <input
@@ -618,9 +586,9 @@ export function CreatePurchaseOrder() {
                 onChange={(e) => setNewItem({ ...newItem, deliveryDate: e.target.value })}
                 className="px-3 py-2 rounded-lg"
                 style={{ 
-                  border: '1px solid #E1E6EA',
+                  border: '1px solid var(--color-silver)',
                   backgroundColor: 'white',
-                  color: '#0A0F14'
+                  color: 'var(--color-ink)'
                 }}
               />
               <input
@@ -630,9 +598,9 @@ export function CreatePurchaseOrder() {
                 onChange={(e) => setNewItem({ ...newItem, shipToLocation: e.target.value })}
                 className="px-3 py-2 rounded-lg"
                 style={{ 
-                  border: '1px solid #E1E6EA',
+                  border: '1px solid var(--color-silver)',
                   backgroundColor: 'white',
-                  color: '#0A0F14'
+                  color: 'var(--color-ink)'
                 }}
               />
               <input
@@ -642,9 +610,9 @@ export function CreatePurchaseOrder() {
                 onChange={(e) => setNewItem({ ...newItem, costCentre: e.target.value })}
                 className="px-3 py-2 rounded-lg"
                 style={{ 
-                  border: '1px solid #E1E6EA',
+                  border: '1px solid var(--color-silver)',
                   backgroundColor: 'white',
-                  color: '#0A0F14'
+                  color: 'var(--color-ink)'
                 }}
               />
               <input
@@ -654,9 +622,9 @@ export function CreatePurchaseOrder() {
                 onChange={(e) => setNewItem({ ...newItem, profitCentre: e.target.value })}
                 className="px-3 py-2 rounded-lg"
                 style={{ 
-                  border: '1px solid #E1E6EA',
+                  border: '1px solid var(--color-silver)',
                   backgroundColor: 'white',
-                  color: '#0A0F14'
+                  color: 'var(--color-ink)'
                 }}
               />
             </div>
@@ -664,7 +632,7 @@ export function CreatePurchaseOrder() {
               <button
                 onClick={handleAddItem}
                 className="px-4 py-2 rounded-lg text-white"
-                style={{ backgroundColor: '#00A9B7' }}
+                style={{ backgroundColor: 'var(--color-teal)' }}
               >
                 Add
               </button>
@@ -675,8 +643,8 @@ export function CreatePurchaseOrder() {
                 }}
                 className="px-4 py-2 rounded-lg"
                 style={{ 
-                  border: '1px solid #E1E6EA',
-                  color: '#6E7A82'
+                  border: '1px solid var(--color-silver)',
+                  color: 'var(--color-mercury-grey)'
                 }}
               >
                 Cancel
@@ -689,23 +657,23 @@ export function CreatePurchaseOrder() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
-                <th className="text-left px-4 py-3 text-sm" style={{ color: '#6E7A82' }}>SKU</th>
-                <th className="text-left px-4 py-3 text-sm" style={{ color: '#6E7A82' }}>Product Name</th>
-                <th className="text-right px-4 py-3 text-sm" style={{ color: '#6E7A82' }}>Qty</th>
-                <th className="text-right px-4 py-3 text-sm" style={{ color: '#6E7A82' }}>Rate</th>
-                <th className="text-right px-4 py-3 text-sm" style={{ color: '#6E7A82' }}>Total</th>
-                <th className="text-left px-4 py-3 text-sm" style={{ color: '#6E7A82' }}>Delivery Date</th>
-                <th className="text-left px-4 py-3 text-sm" style={{ color: '#6E7A82' }}>Ship To</th>
-                <th className="text-left px-4 py-3 text-sm" style={{ color: '#6E7A82' }}>Cost Centre</th>
-                <th className="text-left px-4 py-3 text-sm" style={{ color: '#6E7A82' }}>Profit Centre</th>
-                <th className="text-center px-4 py-3 text-sm" style={{ color: '#6E7A82' }}>Action</th>
+              <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
+                <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>SKU</th>
+                <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Product Name</th>
+                <th className="text-right px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Qty</th>
+                <th className="text-right px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Rate</th>
+                <th className="text-right px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Total</th>
+                <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Delivery Date</th>
+                <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Ship To</th>
+                <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Cost Centre</th>
+                <th className="text-left px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Profit Centre</th>
+                <th className="text-center px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {lineItems.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="text-center py-12" style={{ color: '#6E7A82' }}>
+                  <td colSpan={10} className="text-center py-12" style={{ color: 'var(--color-mercury-grey)' }}>
                     No Items Added
                   </td>
                 </tr>
@@ -713,24 +681,24 @@ export function CreatePurchaseOrder() {
                 lineItems.map((item, index) => (
                   <tr 
                     key={item.id}
-                    style={{ borderBottom: index !== lineItems.length - 1 ? '1px solid #E1E6EA' : 'none' }}
+                    style={{ borderBottom: index !== lineItems.length - 1 ? '1px solid var(--color-silver)' : 'none' }}
                   >
-                    <td className="px-4 py-3" style={{ color: '#6E7A82' }}>{item.sku}</td>
-                    <td className="px-4 py-3" style={{ color: '#0A0F14' }}>{item.productName}</td>
-                    <td className="px-4 py-3 text-right" style={{ color: '#0A0F14' }}>{item.qty}</td>
-                    <td className="px-4 py-3 text-right" style={{ color: '#0A0F14' }}>₹{item.rate.toLocaleString('en-IN')}</td>
-                    <td className="px-4 py-3 text-right" style={{ color: '#0A0F14' }}>₹{item.total.toLocaleString('en-IN')}</td>
-                    <td className="px-4 py-3" style={{ color: '#6E7A82' }}>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-mercury-grey)' }}>{item.sku}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-ink)' }}>{item.productName}</td>
+                    <td className="px-4 py-3 text-right" style={{ color: 'var(--color-ink)' }}>{item.qty}</td>
+                    <td className="px-4 py-3 text-right" style={{ color: 'var(--color-ink)' }}>₹{item.rate.toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-3 text-right" style={{ color: 'var(--color-ink)' }}>₹{item.total.toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-mercury-grey)' }}>
                       {item.deliveryDate ? new Date(item.deliveryDate).toLocaleDateString('en-IN') : '-'}
                     </td>
-                    <td className="px-4 py-3" style={{ color: '#6E7A82' }}>{item.shipToLocation || '-'}</td>
-                    <td className="px-4 py-3" style={{ color: '#6E7A82' }}>{item.costCentre || '-'}</td>
-                    <td className="px-4 py-3" style={{ color: '#6E7A82' }}>{item.profitCentre || '-'}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-mercury-grey)' }}>{item.shipToLocation || '-'}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-mercury-grey)' }}>{item.costCentre || '-'}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-mercury-grey)' }}>{item.profitCentre || '-'}</td>
                     <td className="px-4 py-3 text-center">
                       <button
                         onClick={() => handleRemoveItem(item.id)}
                         className="p-2 rounded-lg transition-colors"
-                        style={{ color: '#FF4E5B' }}
+                        style={{ color: 'var(--color-error)' }}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -744,13 +712,13 @@ export function CreatePurchaseOrder() {
       </div>
 
       {/* Section 4: Totals & Controls */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="flex items-start gap-3 mb-6">
           <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FCE4EC', color: '#E91E63' }}>
             4
           </div>
           <div>
-            <h2 className="text-xl mb-1" style={{ color: '#0A0F14' }}>Totals & Controls</h2>
+            <h2 className="text-xl mb-1" style={{ color: 'var(--color-ink)' }}>Totals & Controls</h2>
             <p className="text-sm" style={{ color: '#E91E63' }}>Review taxes, subtotal & PO value</p>
           </div>
         </div>
@@ -758,7 +726,7 @@ export function CreatePurchaseOrder() {
         <div className="space-y-6">
           {/* Tax Radio */}
           <div>
-            <label className="block text-sm mb-3" style={{ color: '#6E7A82' }}>Taxes Included in Unit Price?</label>
+            <label className="block text-sm mb-3" style={{ color: 'var(--color-mercury-grey)' }}>Taxes Included in Unit Price?</label>
             <div className="flex items-center gap-8">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -767,9 +735,9 @@ export function CreatePurchaseOrder() {
                   checked={taxInclusive === 'Exclusive'}
                   onChange={(e) => setTaxInclusive(e.target.value)}
                   className="w-4 h-4"
-                  style={{ accentColor: '#00A9B7' }}
+                  style={{ accentColor: 'var(--color-teal)' }}
                 />
-                <span style={{ color: '#0A0F14' }}>Exclusive (Taxes added)</span>
+                <span style={{ color: 'var(--color-ink)' }}>Exclusive (Taxes added)</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -778,9 +746,9 @@ export function CreatePurchaseOrder() {
                   checked={taxInclusive === 'Inclusive'}
                   onChange={(e) => setTaxInclusive(e.target.value)}
                   className="w-4 h-4"
-                  style={{ accentColor: '#00A9B7' }}
+                  style={{ accentColor: 'var(--color-teal)' }}
                 />
-                <span style={{ color: '#0A0F14' }}>Inclusive (Taxes in rate)</span>
+                <span style={{ color: 'var(--color-ink)' }}>Inclusive (Taxes in rate)</span>
               </label>
             </div>
           </div>
@@ -788,22 +756,22 @@ export function CreatePurchaseOrder() {
           {/* Totals */}
           <div className="grid grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Subtotal (Excl. Tax)</label>
-              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
-                <span style={{ color: '#0A0F14' }}>₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Subtotal (Excl. Tax)</label>
+              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+                <span style={{ color: 'var(--color-ink)' }}>₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Total Applicable Tax</label>
-              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
-                <span style={{ color: '#0A0F14' }}>₹{totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Applicable Tax</label>
+              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+                <span style={{ color: 'var(--color-ink)' }}>₹{totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Total PO Value</label>
-              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: '#00A9B7', border: '1px solid #00A9B7' }}>
+              <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total PO Value</label>
+              <div className="px-4 py-3 rounded-lg" style={{ backgroundColor: 'var(--color-teal)', border: '1px solid var(--color-teal)' }}>
                 <span className="text-white">₹{totalPOValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
@@ -812,13 +780,13 @@ export function CreatePurchaseOrder() {
       </div>
 
       {/* Section 5: Terms, Quoting & Automation */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="flex items-start gap-3 mb-6">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FFF3E0', color: '#FF9800' }}>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-warning-light)', color: '#FF9800' }}>
             5
           </div>
           <div>
-            <h2 className="text-xl mb-1" style={{ color: '#0A0F14' }}>Terms, Quoting & Automation</h2>
+            <h2 className="text-xl mb-1" style={{ color: 'var(--color-ink)' }}>Terms, Quoting & Automation</h2>
             <p className="text-sm" style={{ color: '#FF9800' }}>Payment milestones, comments & vendor communication</p>
           </div>
         </div>
@@ -826,7 +794,7 @@ export function CreatePurchaseOrder() {
         <div className="space-y-6">
           {/* General Terms */}
           <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+            <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
               General Terms and Conditions (Print on PO)
             </label>
             <textarea
@@ -834,9 +802,9 @@ export function CreatePurchaseOrder() {
               placeholder="Standard warranty terms apply. Governing law: India. Force Majeure applies."
               className="w-full px-4 py-3 rounded-lg"
               style={{ 
-                border: '1px solid #E1E6EA',
+                border: '1px solid var(--color-silver)',
                 backgroundColor: 'white',
-                color: '#0A0F14',
+                color: 'var(--color-ink)',
                 resize: 'vertical'
               }}
             />
@@ -844,7 +812,7 @@ export function CreatePurchaseOrder() {
 
           {/* Delivery Terms */}
           <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+            <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
               Delivery Terms and Conditions (Print on PO)
             </label>
             <textarea
@@ -852,9 +820,9 @@ export function CreatePurchaseOrder() {
               placeholder="Delivery must be accompanied by a commercial invoice and quality certificate. Goods are subject to inspection upon receipt."
               className="w-full px-4 py-3 rounded-lg"
               style={{ 
-                border: '1px solid #E1E6EA',
+                border: '1px solid var(--color-silver)',
                 backgroundColor: 'white',
-                color: '#0A0F14',
+                color: 'var(--color-ink)',
                 resize: 'vertical'
               }}
             />
@@ -863,15 +831,15 @@ export function CreatePurchaseOrder() {
           {/* Payment Milestones */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <label className="block text-sm" style={{ color: '#6E7A82' }}>
+              <label className="block text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                 Payment Milestones (Must equal 100% of Total PO Value)
               </label>
               <button
                 onClick={handleAddPaymentMilestone}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors text-sm"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                style={{ backgroundColor: 'var(--color-teal)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
               >
                 <Plus className="w-4 h-4" />
                 Add Milestone
@@ -881,9 +849,9 @@ export function CreatePurchaseOrder() {
             {paymentMilestones.length === 0 ? (
               <div 
                 className="text-center py-8 rounded-lg"
-                style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
               >
-                <p style={{ color: '#6E7A82' }}>
+                <p style={{ color: 'var(--color-mercury-grey)' }}>
                   No payment milestones added. Click "Add Milestone" to define payment schedule.
                 </p>
               </div>
@@ -894,11 +862,11 @@ export function CreatePurchaseOrder() {
                     <div
                       key={pm.id}
                       className="p-4 rounded-lg"
-                      style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                      style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                     >
                       <div className="grid grid-cols-5 gap-4">
                         <div className="col-span-2">
-                          <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                          <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                             Milestone Name
                           </label>
                           <input
@@ -908,14 +876,14 @@ export function CreatePurchaseOrder() {
                             placeholder="e.g., Advance Payment, On Delivery"
                             className="w-full px-3 py-2 rounded-lg"
                             style={{
-                              border: '1px solid #E1E6EA',
+                              border: '1px solid var(--color-silver)',
                               backgroundColor: 'white',
-                              color: '#0A0F14'
+                              color: 'var(--color-ink)'
                             }}
                           />
                         </div>
                         <div>
-                          <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                          <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                             Type
                           </label>
                           <select
@@ -923,9 +891,9 @@ export function CreatePurchaseOrder() {
                             onChange={(e) => handlePaymentMilestoneChange(pm.id, 'type', e.target.value)}
                             className="w-full px-3 py-2 rounded-lg"
                             style={{
-                              border: '1px solid #E1E6EA',
+                              border: '1px solid var(--color-silver)',
                               backgroundColor: 'white',
-                              color: '#0A0F14'
+                              color: 'var(--color-ink)'
                             }}
                           >
                             <option value="percentage">Percentage %</option>
@@ -933,7 +901,7 @@ export function CreatePurchaseOrder() {
                           </select>
                         </div>
                         <div>
-                          <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                          <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                             {pm.type === 'percentage' ? 'Percentage (%)' : 'Amount (₹)'}
                           </label>
                           <input
@@ -943,23 +911,23 @@ export function CreatePurchaseOrder() {
                             placeholder={pm.type === 'percentage' ? '30' : '10000'}
                             className="w-full px-3 py-2 rounded-lg"
                             style={{
-                              border: '1px solid #E1E6EA',
+                              border: '1px solid var(--color-silver)',
                               backgroundColor: 'white',
-                              color: '#0A0F14'
+                              color: 'var(--color-ink)'
                             }}
                           />
                         </div>
                         <div className="flex items-end gap-2">
                           <div className="flex-1">
-                            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                            <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                               Calculated Amount
                             </label>
                             <div
                               className="px-3 py-2 rounded-lg"
                               style={{
                                 backgroundColor: '#E3F2FD',
-                                border: '1px solid #00A9B7',
-                                color: '#00A9B7'
+                                border: '1px solid var(--color-teal)',
+                                color: 'var(--color-teal)'
                               }}
                             >
                               ₹{pm.calculatedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -968,7 +936,7 @@ export function CreatePurchaseOrder() {
                           <button
                             onClick={() => handleRemovePaymentMilestone(pm.id)}
                             className="p-2 rounded-lg transition-colors"
-                            style={{ color: '#FF4E5B' }}
+                            style={{ color: 'var(--color-error)' }}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -982,13 +950,13 @@ export function CreatePurchaseOrder() {
                 <div
                   className="p-4 rounded-lg"
                   style={{
-                    backgroundColor: isPaymentMilestonesValid() ? '#E8F5E9' : '#FFF3E0',
+                    backgroundColor: isPaymentMilestonesValid() ? 'var(--color-success-light)' : 'var(--color-warning-light)',
                     border: `1px solid ${isPaymentMilestonesValid() ? '#4CAF50' : '#FF9800'}`
                   }}
                 >
                   <div className="grid grid-cols-3 gap-6">
                     <div>
-                      <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Total Percentage</p>
+                      <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Percentage</p>
                       <p
                         className="text-xl"
                         style={{ color: isPaymentMilestonesValid() ? '#4CAF50' : '#FF9800' }}
@@ -997,7 +965,7 @@ export function CreatePurchaseOrder() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Total Amount</p>
+                      <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Amount</p>
                       <p
                         className="text-xl"
                         style={{ color: isPaymentMilestonesValid() ? '#4CAF50' : '#FF9800' }}
@@ -1006,8 +974,8 @@ export function CreatePurchaseOrder() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>Total PO Value</p>
-                      <p className="text-xl" style={{ color: '#0A0F14' }}>
+                      <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total PO Value</p>
+                      <p className="text-xl" style={{ color: 'var(--color-ink)' }}>
                         ₹{totalPOValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
@@ -1035,15 +1003,15 @@ export function CreatePurchaseOrder() {
                 checked={autoEmailVendor}
                 onChange={(e) => setAutoEmailVendor(e.target.checked)}
                 className="w-4 h-4"
-                style={{ accentColor: '#00A9B7' }}
+                style={{ accentColor: 'var(--color-teal)' }}
               />
-              <span style={{ color: '#0A0F14' }}>Auto-email vendor upon approval</span>
+              <span style={{ color: 'var(--color-ink)' }}>Auto-email vendor upon approval</span>
             </label>
           </div>
 
           {/* Internal Comments */}
           <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+            <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
               Internal Comments (Do NOT print on PO)
             </label>
             <textarea
@@ -1053,9 +1021,9 @@ export function CreatePurchaseOrder() {
               placeholder="Internal-only remarks for reviewers/approvers"
               className="w-full px-4 py-3 rounded-lg"
               style={{ 
-                border: '1px solid #E1E6EA',
+                border: '1px solid var(--color-silver)',
                 backgroundColor: 'white',
-                color: '#0A0F14',
+                color: 'var(--color-ink)',
                 resize: 'vertical'
               }}
             />
@@ -1064,16 +1032,16 @@ export function CreatePurchaseOrder() {
       </div>
 
       {/* Section 6: Delivery Milestone Tracking */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="flex items-start gap-3 mb-6">
           <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#E8EAF6', color: '#5E35B1' }}>
             6
           </div>
           <div className="flex-1">
-            <h2 className="text-xl mb-1" style={{ color: '#0A0F14' }}>Delivery Milestone Tracking</h2>
+            <h2 className="text-xl mb-1" style={{ color: 'var(--color-ink)' }}>Delivery Milestone Tracking</h2>
             <p className="text-sm" style={{ color: '#5E35B1' }}>Track sourcing, production & delivery delays</p>
             <div className="flex items-center gap-2 mt-2 px-3 py-2 rounded" style={{ backgroundColor: '#FFF8E1', border: '1px solid #FFE082' }}>
-              <span className="text-xs" style={{ color: '#F57C00' }}>
+              <span className="text-xs" style={{ color: 'var(--color-warning-dark)' }}>
                 ℹ️ This section remains editable post-approval. Updates trigger auto-calculation & email notifications to stakeholders.
               </span>
             </div>
@@ -1082,7 +1050,7 @@ export function CreatePurchaseOrder() {
 
         {milestones.length === 0 ? (
           <div className="text-center py-8 mb-6">
-            <p style={{ color: '#6E7A82' }} className="mb-4">
+            <p style={{ color: 'var(--color-mercury-grey)' }} className="mb-4">
               No milestones added yet. Use the buttons below to add milestones.
             </p>
           </div>
@@ -1093,11 +1061,11 @@ export function CreatePurchaseOrder() {
                 <div 
                   key={milestone.id} 
                   className="p-4 rounded-lg" 
-                  style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                 >
                   <div className="grid grid-cols-3 gap-4 mb-3">
                     <div>
-                      <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Milestone Name</label>
+                      <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Milestone Name</label>
                       <input
                         type="text"
                         value={milestone.name}
@@ -1105,14 +1073,14 @@ export function CreatePurchaseOrder() {
                         placeholder={milestone.type}
                         className="w-full px-3 py-2 rounded-lg"
                         style={{ 
-                          border: '1px solid #E1E6EA',
+                          border: '1px solid var(--color-silver)',
                           backgroundColor: 'white',
-                          color: '#0A0F14'
+                          color: 'var(--color-ink)'
                         }}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Estimated Completion Date</label>
+                      <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Estimated Completion Date</label>
                       <input
                         type="date"
                         value={milestone.estimatedDate}
@@ -1120,14 +1088,14 @@ export function CreatePurchaseOrder() {
                         placeholder="dd/mm/yyyy"
                         className="w-full px-3 py-2 rounded-lg"
                         style={{ 
-                          border: '1px solid #E1E6EA',
+                          border: '1px solid var(--color-silver)',
                           backgroundColor: 'white',
-                          color: '#0A0F14'
+                          color: 'var(--color-ink)'
                         }}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Actual Completion Date</label>
+                      <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Actual Completion Date</label>
                       <input
                         type="date"
                         value={milestone.actualDate}
@@ -1135,24 +1103,24 @@ export function CreatePurchaseOrder() {
                         placeholder="dd/mm/yyyy"
                         className="w-full px-3 py-2 rounded-lg"
                         style={{ 
-                          border: '1px solid #E1E6EA',
+                          border: '1px solid var(--color-silver)',
                           backgroundColor: 'white',
-                          color: '#0A0F14'
+                          color: 'var(--color-ink)'
                         }}
                       />
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span style={{ color: '#6E7A82' }}>Status: Pending | Delay:</span>
-                      <span style={{ color: '#FF4E5B' }}>
+                      <span style={{ color: 'var(--color-mercury-grey)' }}>Status: Pending | Delay:</span>
+                      <span style={{ color: 'var(--color-error)' }}>
                         {calculateMilestoneDelay(milestone.estimatedDate, milestone.actualDate)} days
                       </span>
                     </div>
                     <button
                       onClick={() => handleRemoveMilestone(milestone.id)}
                       className="p-2 rounded-lg transition-colors"
-                      style={{ color: '#FF4E5B' }}
+                      style={{ color: 'var(--color-error)' }}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -1162,19 +1130,19 @@ export function CreatePurchaseOrder() {
             </div>
 
             {/* Auto-calculated delay summary with notification */}
-            <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#FFF3E0', border: '1px solid #FFE082' }}>
+            <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-warning-light)', border: '1px solid #FFE082' }}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-4">
-                  <span style={{ color: '#0A0F14' }}>Overall Cumulative Delay:</span>
-                  <span style={{ color: '#FF4E5B' }} className="text-lg">
+                  <span style={{ color: 'var(--color-ink)' }}>Overall Cumulative Delay:</span>
+                  <span style={{ color: 'var(--color-error)' }} className="text-lg">
                     {calculateOverallDelay()} Days
                   </span>
                 </div>
                 <button
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-                  style={{ backgroundColor: '#00A9B7' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                  style={{ backgroundColor: 'var(--color-teal)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1182,7 +1150,7 @@ export function CreatePurchaseOrder() {
                   Send Update to Stakeholders
                 </button>
               </div>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Email notification will be sent to: Procurement Manager, Approver, Finance Team & Vendor
               </p>
             </div>
@@ -1223,6 +1191,6 @@ export function CreatePurchaseOrder() {
           totalPOValue={totalPOValue}
         />
       )}
-    </div>
+    </FormShell>
   );
 }

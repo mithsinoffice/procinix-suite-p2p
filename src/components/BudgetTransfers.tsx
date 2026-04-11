@@ -81,18 +81,18 @@ export function BudgetTransfers() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC]">
+    <div className="min-h-screen bg-[var(--color-cloud)]">
       {/* Header */}
-      <div className="bg-white border-b border-[#E1E6EA]">
+      <div className="bg-white border-b border-[var(--color-silver)]">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-[#0A0F14]">Budget Transfers</h1>
-              <p className="text-[#6E7A82] text-sm">Transfer budget allocations between departments, cost centres, or expense heads</p>
+              <h1 className="text-[var(--color-ink)]">Budget Transfers</h1>
+              <p className="text-[var(--color-mercury-grey)] text-sm">Transfer budget allocations between departments, cost centres, or expense heads</p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-[#00A9B7] text-white rounded-lg hover:bg-[#007D87] transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-[var(--color-teal)] text-white rounded-lg hover:bg-[var(--color-teal-dark)] transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Create Transfer
@@ -104,58 +104,58 @@ export function BudgetTransfers() {
       <div className="p-6">
         {/* Statistics */}
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Total Transfers</span>
-              <ArrowRight className="w-4 h-4 text-[#00A9B7]" />
+              <span className="text-sm text-[var(--color-mercury-grey)]">Total Transfers</span>
+              <ArrowRight className="w-4 h-4 text-[var(--color-teal)]" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.totalTransfers}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.totalTransfers}</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Pending Approval</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Pending Approval</span>
               <Clock className="w-4 h-4 text-yellow-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.pending}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.pending}</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Completed</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Completed</span>
               <CheckCircle className="w-4 h-4 text-green-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.approved}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.approved}</div>
           </div>
 
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Total Transferred</span>
-              <DollarSign className="w-4 h-4 text-[#00A9B7]" />
+              <span className="text-sm text-[var(--color-mercury-grey)]">Total Transferred</span>
+              <DollarSign className="w-4 h-4 text-[var(--color-teal)]" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">₹{(stats.totalAmount / 1000000).toFixed(1)}M</div>
+            <div className="text-2xl text-[var(--color-ink)]">₹{(stats.totalAmount / 1000000).toFixed(1)}M</div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg border border-[#E1E6EA] p-4 mb-4">
+        <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4 mb-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-3 text-[#6E7A82]" />
+              <Search className="w-4 h-4 absolute left-3 top-3 text-[var(--color-mercury-grey)]" />
               <input
                 type="text"
                 placeholder="Search transfers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                className="w-full pl-10 pr-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
               />
             </div>
             <div className="relative">
-              <Filter className="w-4 h-4 absolute left-3 top-3 text-[#6E7A82]" />
+              <Filter className="w-4 h-4 absolute left-3 top-3 text-[var(--color-mercury-grey)]" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                className="w-full pl-10 pr-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
               >
                 <option value="all">All Statuses</option>
                 <option value="Pending">Pending</option>
@@ -168,48 +168,48 @@ export function BudgetTransfers() {
         </div>
 
         {/* Transfers Table */}
-        <div className="bg-white rounded-lg border border-[#E1E6EA] overflow-hidden">
+        <div className="bg-white rounded-lg border border-[var(--color-silver)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-[#F6F9FC]">
+              <thead className="bg-[var(--color-cloud)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Transfer ID</th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Source Budget</th>
-                  <th className="px-4 py-3 text-center text-xs text-[#6E7A82] uppercase w-16"></th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Target Budget</th>
-                  <th className="px-4 py-3 text-right text-xs text-[#6E7A82] uppercase">Amount</th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Reason</th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Transfer Date</th>
-                  <th className="px-4 py-3 text-center text-xs text-[#6E7A82] uppercase">Status</th>
-                  <th className="px-4 py-3 text-center text-xs text-[#6E7A82] uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Transfer ID</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Source Budget</th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase w-16"></th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Target Budget</th>
+                  <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">Amount</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Reason</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Transfer Date</th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Status</th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E1E6EA]">
+              <tbody className="divide-y divide-[var(--color-silver)]">
                 {filteredTransfers.map(transfer => (
-                  <tr key={transfer.id} className="hover:bg-[#F6F9FC]">
+                  <tr key={transfer.id} className="hover:bg-[var(--color-cloud)]">
                     <td className="px-4 py-3">
-                      <span className="text-[#00A9B7]">{transfer.transferNumber}</span>
+                      <span className="text-[var(--color-teal)]">{transfer.transferNumber}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-[#0A0F14]">{transfer.sourceBudgetName}</div>
-                      <div className="text-xs text-[#6E7A82] mt-1">{transfer.sourceBudget}</div>
+                      <div className="text-[var(--color-ink)]">{transfer.sourceBudgetName}</div>
+                      <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{transfer.sourceBudget}</div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <ArrowRight className="w-5 h-5 text-[#00A9B7] mx-auto" />
+                      <ArrowRight className="w-5 h-5 text-[var(--color-teal)] mx-auto" />
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-[#0A0F14]">{transfer.targetBudgetName}</div>
-                      <div className="text-xs text-[#6E7A82] mt-1">{transfer.targetBudget}</div>
+                      <div className="text-[var(--color-ink)]">{transfer.targetBudgetName}</div>
+                      <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{transfer.targetBudget}</div>
                     </td>
-                    <td className="px-4 py-3 text-right text-[#0A0F14]">
+                    <td className="px-4 py-3 text-right text-[var(--color-ink)]">
                       INR {transfer.transferAmount.toLocaleString()}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-[#0A0F14] text-sm">{transfer.transferReason}</span>
+                      <span className="text-[var(--color-ink)] text-sm">{transfer.transferReason}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2 text-[#0A0F14]">
-                        <Calendar className="w-4 h-4 text-[#6E7A82]" />
+                      <div className="flex items-center gap-2 text-[var(--color-ink)]">
+                        <Calendar className="w-4 h-4 text-[var(--color-mercury-grey)]" />
                         {transfer.transferDate}
                       </div>
                     </td>
@@ -224,8 +224,8 @@ export function BudgetTransfers() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <button className="p-2 hover:bg-[#F6F9FC] rounded transition-colors">
-                        <Eye className="w-4 h-4 text-[#6E7A82]" />
+                      <button className="p-2 hover:bg-[var(--color-cloud)] rounded transition-colors">
+                        <Eye className="w-4 h-4 text-[var(--color-mercury-grey)]" />
                       </button>
                     </td>
                   </tr>
@@ -239,19 +239,19 @@ export function BudgetTransfers() {
         {showCreateModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="px-6 py-4 border-b border-[#E1E6EA]">
-                <h2 className="text-[#0A0F14]">Create Budget Transfer</h2>
-                <p className="text-sm text-[#6E7A82] mt-1">Transfer budget allocation between approved budgets</p>
+              <div className="px-6 py-4 border-b border-[var(--color-silver)]">
+                <h2 className="text-[var(--color-ink)]">Create Budget Transfer</h2>
+                <p className="text-sm text-[var(--color-mercury-grey)] mt-1">Transfer budget allocation between approved budgets</p>
               </div>
 
               <div className="px-6 py-4 space-y-6">
                 {/* Source Budget */}
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Source Budget <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Source Budget <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <select
                     value={sourceBudget}
                     onChange={(e) => setSourceBudget(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                   >
                     <option value="">Select source budget</option>
                     {budgets.filter(b => b.status === 'Approved' && b.available > 0).map(budget => (
@@ -261,9 +261,9 @@ export function BudgetTransfers() {
                     ))}
                   </select>
                   {sourceBudget && (
-                    <div className="mt-2 p-3 bg-[#F6F9FC] rounded-lg">
-                      <p className="text-sm text-[#6E7A82] mb-1">Available Balance</p>
-                      <p className="text-lg text-[#0A0F14]">
+                    <div className="mt-2 p-3 bg-[var(--color-cloud)] rounded-lg">
+                      <p className="text-sm text-[var(--color-mercury-grey)] mb-1">Available Balance</p>
+                      <p className="text-lg text-[var(--color-ink)]">
                         INR {budgets.find(b => b.id === sourceBudget)?.available.toLocaleString()}
                       </p>
                     </div>
@@ -280,9 +280,9 @@ export function BudgetTransfers() {
                       </p>
                     </div>
                     <div className="flex flex-col items-center gap-2">
-                      <ArrowRight className="w-8 h-8 text-[#00A9B7]" />
+                      <ArrowRight className="w-8 h-8 text-[var(--color-teal)]" />
                       {transferAmount > 0 && (
-                        <span className="text-sm text-[#00A9B7]">
+                        <span className="text-sm text-[var(--color-teal)]">
                           ₹{transferAmount.toLocaleString()}
                         </span>
                       )}
@@ -298,11 +298,11 @@ export function BudgetTransfers() {
 
                 {/* Target Budget */}
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Target Budget <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Target Budget <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <select
                     value={targetBudget}
                     onChange={(e) => setTargetBudget(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                   >
                     <option value="">Select target budget</option>
                     {budgets.filter(b => b.status === 'Approved' && b.id !== sourceBudget).map(budget => (
@@ -315,13 +315,13 @@ export function BudgetTransfers() {
 
                 {/* Transfer Amount */}
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Transfer Amount <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Transfer Amount <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <input
                     type="number"
                     value={transferAmount || ''}
                     onChange={(e) => setTransferAmount(Number(e.target.value))}
                     max={budgets.find(b => b.id === sourceBudget)?.available || 0}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     placeholder="0"
                   />
                   {sourceBudget && transferAmount > 0 && (
@@ -339,12 +339,12 @@ export function BudgetTransfers() {
 
                 {/* Transfer Reason */}
                 <div>
-                  <label className="block text-sm text-[#0A0F14] mb-2">Transfer Reason <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">Transfer Reason <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <textarea
                     value={transferReason}
                     onChange={(e) => setTransferReason(e.target.value)}
                     rows={4}
-                    className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                    className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     placeholder="Provide justification for budget transfer..."
                   />
                 </div>
@@ -366,16 +366,16 @@ export function BudgetTransfers() {
                 </div>
               </div>
 
-              <div className="px-6 py-4 border-t border-[#E1E6EA] flex justify-end gap-3">
+              <div className="px-6 py-4 border-t border-[var(--color-silver)] flex justify-end gap-3">
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 border border-[#E1E6EA] rounded-lg hover:bg-[#F6F9FC] transition-colors"
+                  className="px-4 py-2 border border-[var(--color-silver)] rounded-lg hover:bg-[var(--color-cloud)] transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreateTransfer}
-                  className="px-4 py-2 bg-[#00A9B7] text-white rounded-lg hover:bg-[#007D87] transition-colors"
+                  className="px-4 py-2 bg-[var(--color-teal)] text-white rounded-lg hover:bg-[var(--color-teal-dark)] transition-colors"
                 >
                   Submit Transfer Request
                 </button>

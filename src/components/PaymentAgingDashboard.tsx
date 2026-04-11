@@ -45,7 +45,7 @@ export function PaymentAgingDashboard() {
 
   const getRiskColor = (risk: string) => {
     switch (risk) {
-      case 'critical': return '#DC2626';
+      case 'critical': return 'var(--color-error-dark)';
       case 'high': return '#EF4444';
       case 'medium': return '#F59E0B';
       case 'low': return '#10B981';
@@ -55,7 +55,7 @@ export function PaymentAgingDashboard() {
 
   const getRiskBadge = (risk: string) => {
     const colors = {
-      critical: { bg: '#FEE2E2', color: '#DC2626' },
+      critical: { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' },
       high: { bg: '#FEF2F2', color: '#EF4444' },
       medium: { bg: '#FEF3C7', color: '#F59E0B' },
       low: { bg: '#D1FAE5', color: '#10B981' },
@@ -73,28 +73,28 @@ export function PaymentAgingDashboard() {
   };
 
   const getHeatmapColor = (percentage: number) => {
-    if (percentage >= 20) return '#DC2626';
+    if (percentage >= 20) return 'var(--color-error-dark)';
     if (percentage >= 15) return '#F59E0B';
     if (percentage >= 10) return '#FCD34D';
     return '#10B981';
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div
         className="px-8 py-6"
         style={{
           backgroundColor: '#FFFFFF',
-          borderBottom: '2px solid #E1E6EA',
+          borderBottom: '2px solid var(--color-silver)',
         }}
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+            <h1 className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
               Payment Aging & Liability Analysis
             </h1>
-            <p style={{ color: '#6E7A82', fontSize: '14px' }}>
+            <p style={{ color: 'var(--color-mercury-grey)', fontSize: '14px' }}>
               Payable exposure and vendor risk management
             </p>
           </div>
@@ -105,8 +105,8 @@ export function PaymentAgingDashboard() {
               className="px-4 py-2 rounded-lg text-sm"
               style={{
                 backgroundColor: '#FFFFFF',
-                border: '1px solid #E1E6EA',
-                color: '#0A0F14',
+                border: '1px solid var(--color-silver)',
+                color: 'var(--color-ink)',
               }}
             >
               <option value="current">Current Month</option>
@@ -118,8 +118,8 @@ export function PaymentAgingDashboard() {
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
                 backgroundColor: '#FFFFFF',
-                border: '1px solid #E1E6EA',
-                color: '#6E7A82',
+                border: '1px solid var(--color-silver)',
+                color: 'var(--color-mercury-grey)',
               }}
             >
               <Download className="w-4 h-4" />
@@ -133,10 +133,10 @@ export function PaymentAgingDashboard() {
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-6 mb-8">
           {/* Average DPO */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-4">
               <div className="p-2 rounded-lg" style={{ backgroundColor: '#E0F2F1' }}>
-                <Clock className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                <Clock className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
               {kpiData.averageDPO > kpiData.previousDPO ? (
                 <div className="flex items-center gap-1 text-xs" style={{ color: '#EF4444' }}>
@@ -150,76 +150,76 @@ export function PaymentAgingDashboard() {
                 </div>
               )}
             </div>
-            <div className="text-3xl mb-2" style={{ color: '#0A0F14', fontWeight: '700' }}>
+            <div className="text-3xl mb-2" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
               {kpiData.averageDPO}
             </div>
-            <div className="text-sm" style={{ color: '#6E7A82' }}>
+            <div className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               Avg Days Payable Outstanding
             </div>
-            <div className="text-xs mt-2" style={{ color: '#9AA6AF' }}>
+            <div className="text-xs mt-2" style={{ color: 'var(--color-slate)' }}>
               Previous: {kpiData.previousDPO} days
             </div>
           </div>
 
           {/* Overdue Invoices */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-4">
-              <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
+              <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
                 <AlertTriangle className="w-5 h-5" style={{ color: '#EF4444' }} />
               </div>
-              <div className="text-xs" style={{ color: '#6E7A82' }}>
+              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 {((kpiData.overdueInvoices / kpiData.totalInvoices) * 100).toFixed(1)}%
               </div>
             </div>
             <div className="text-3xl mb-2" style={{ color: '#EF4444', fontWeight: '700' }}>
               {kpiData.overdueInvoices}
             </div>
-            <div className="text-sm" style={{ color: '#6E7A82' }}>
+            <div className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               Overdue Invoices
             </div>
-            <div className="text-xs mt-2" style={{ color: '#9AA6AF' }}>
+            <div className="text-xs mt-2" style={{ color: 'var(--color-slate)' }}>
               Total: {kpiData.totalInvoices} invoices
             </div>
           </div>
 
           {/* Vendors on Hold */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-4">
               <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
                 <Pause className="w-5 h-5" style={{ color: '#F59E0B' }} />
               </div>
-              <div className="text-xs" style={{ color: '#6E7A82' }}>
+              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 {((kpiData.vendorsOnHold / kpiData.totalVendors) * 100).toFixed(1)}%
               </div>
             </div>
             <div className="text-3xl mb-2" style={{ color: '#F59E0B', fontWeight: '700' }}>
               {kpiData.vendorsOnHold}
             </div>
-            <div className="text-sm" style={{ color: '#6E7A82' }}>
+            <div className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               Vendors on Payment Hold
             </div>
-            <div className="text-xs mt-2" style={{ color: '#9AA6AF' }}>
+            <div className="text-xs mt-2" style={{ color: 'var(--color-slate)' }}>
               Total: {kpiData.totalVendors} vendors
             </div>
           </div>
 
           {/* SLA Breaches */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-4">
-              <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
-                <ShieldAlert className="w-5 h-5" style={{ color: '#DC2626' }} />
+              <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
+                <ShieldAlert className="w-5 h-5" style={{ color: 'var(--color-error-dark)' }} />
               </div>
-              <div className="text-xs" style={{ color: '#6E7A82' }}>
+              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 {((kpiData.slaBreaches / kpiData.totalDue) * 100).toFixed(1)}%
               </div>
             </div>
-            <div className="text-3xl mb-2" style={{ color: '#DC2626', fontWeight: '700' }}>
+            <div className="text-3xl mb-2" style={{ color: 'var(--color-error-dark)', fontWeight: '700' }}>
               {kpiData.slaBreaches}
             </div>
-            <div className="text-sm" style={{ color: '#6E7A82' }}>
+            <div className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               Payment SLA Breaches
             </div>
-            <div className="text-xs mt-2" style={{ color: '#9AA6AF' }}>
+            <div className="text-xs mt-2" style={{ color: 'var(--color-slate)' }}>
               Total due: {kpiData.totalDue} payments
             </div>
           </div>
@@ -228,26 +228,26 @@ export function PaymentAgingDashboard() {
         {/* Charts Row 1 */}
         <div className="grid grid-cols-2 gap-6 mb-6">
           {/* Aging Waterfall */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+                <h3 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
                   Aging Movement Trend
                 </h3>
-                <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                   Monthly movement across aging buckets
                 </p>
               </div>
             </div>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={agingMovementData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="month" tick={{ fill: '#6E7A82', fontSize: 12 }} />
-                <YAxis tick={{ fill: '#6E7A82', fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="month" tick={{ fill: 'var(--color-mercury-grey)', fontSize: 12 }} />
+                <YAxis tick={{ fill: 'var(--color-mercury-grey)', fontSize: 12 }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#FFFFFF',
-                    border: '1px solid #E1E6EA',
+                    border: '1px solid var(--color-silver)',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}
@@ -255,35 +255,35 @@ export function PaymentAgingDashboard() {
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Bar dataKey="current" name="Current" fill="#10B981" stackId="a" />
-                <Bar dataKey="days0_30" name="0-30 Days" fill="#00A9B7" stackId="a" />
+                <Bar dataKey="days0_30" name="0-30 Days" fill="var(--color-teal)" stackId="a" />
                 <Bar dataKey="days31_60" name="31-60 Days" fill="#F59E0B" stackId="a" />
                 <Bar dataKey="days61_90" name="61-90 Days" fill="#EF4444" stackId="a" />
-                <Bar dataKey="days90Plus" name="90+ Days" fill="#DC2626" stackId="a" />
+                <Bar dataKey="days90Plus" name="90+ Days" fill="var(--color-error-dark)" stackId="a" />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* Vendor-wise Aging */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+                <h3 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
                   Vendor-wise Aging Exposure
                 </h3>
-                <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                   Top 10 vendors by outstanding (in lakhs)
                 </p>
               </div>
             </div>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={vendorAgingChartData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis type="number" tick={{ fill: '#6E7A82', fontSize: 11 }} />
-                <YAxis dataKey="vendor" type="category" tick={{ fill: '#6E7A82', fontSize: 11 }} width={80} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis type="number" tick={{ fill: 'var(--color-mercury-grey)', fontSize: 11 }} />
+                <YAxis dataKey="vendor" type="category" tick={{ fill: 'var(--color-mercury-grey)', fontSize: 11 }} width={80} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#FFFFFF',
-                    border: '1px solid #E1E6EA',
+                    border: '1px solid var(--color-silver)',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}
@@ -293,39 +293,39 @@ export function PaymentAgingDashboard() {
                 <Bar dataKey="0-30" name="0-30" fill="#10B981" stackId="a" />
                 <Bar dataKey="31-60" name="31-60" fill="#F59E0B" stackId="a" />
                 <Bar dataKey="61-90" name="61-90" fill="#EF4444" stackId="a" />
-                <Bar dataKey="90+" name="90+" fill="#DC2626" stackId="a" />
+                <Bar dataKey="90+" name="90+" fill="var(--color-error-dark)" stackId="a" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Department Heatmap */}
-        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+              <h3 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
                 Department-wise Overdue Heatmap
               </h3>
-              <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                 Overdue percentage by department
               </p>
             </div>
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded" style={{ backgroundColor: '#10B981' }} />
-                <span style={{ color: '#6E7A82' }}>&lt;10%</span>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>&lt;10%</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded" style={{ backgroundColor: '#FCD34D' }} />
-                <span style={{ color: '#6E7A82' }}>10-15%</span>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>10-15%</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F59E0B' }} />
-                <span style={{ color: '#6E7A82' }}>15-20%</span>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>15-20%</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#DC2626' }} />
-                <span style={{ color: '#6E7A82' }}>&gt;20%</span>
+                <div className="w-4 h-4 rounded" style={{ backgroundColor: 'var(--color-error-dark)' }} />
+                <span style={{ color: 'var(--color-mercury-grey)' }}>&gt;20%</span>
               </div>
             </div>
           </div>
@@ -358,38 +358,38 @@ export function PaymentAgingDashboard() {
         </div>
 
         {/* Vendor Aging Table */}
-        <div className="bg-white rounded-lg overflow-hidden mb-6" style={{ border: '1px solid #E1E6EA' }}>
-          <div className="px-6 py-4" style={{ borderBottom: '1px solid #E1E6EA' }}>
-            <h3 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+        <div className="bg-white rounded-lg overflow-hidden mb-6" style={{ border: '1px solid var(--color-silver)' }}>
+          <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+            <h3 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
               Vendor Aging Summary
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
-                  <th className="text-left px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
+                  <th className="text-left px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     VENDOR
                   </th>
-                  <th className="text-right px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     0-30 DAYS
                   </th>
-                  <th className="text-right px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     31-60 DAYS
                   </th>
-                  <th className="text-right px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     61-90 DAYS
                   </th>
-                  <th className="text-right px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     90+ DAYS
                   </th>
-                  <th className="text-right px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     TOTAL OUTSTANDING
                   </th>
-                  <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     SLA BREACHES
                   </th>
-                  <th className="text-center px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-center px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     STATUS
                   </th>
                 </tr>
@@ -400,14 +400,14 @@ export function PaymentAgingDashboard() {
                     key={vendor.vendorCode}
                     style={{
                       backgroundColor: vendor.onHold ? '#FEF3C7' : (index % 2 === 0 ? '#FFFFFF' : '#FAFBFC'),
-                      borderBottom: '1px solid #E1E6EA',
+                      borderBottom: '1px solid var(--color-silver)',
                     }}
                   >
                     <td className="px-6 py-4">
-                      <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '13px' }}>
+                      <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '13px' }}>
                         {vendor.vendor}
                       </div>
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                         {vendor.vendorCode}
                       </div>
                     </td>
@@ -427,12 +427,12 @@ export function PaymentAgingDashboard() {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <span className="text-sm" style={{ color: '#DC2626', fontWeight: '700' }}>
+                      <span className="text-sm" style={{ color: 'var(--color-error-dark)', fontWeight: '700' }}>
                         {vendor.days90Plus > 0 ? formatCurrency(vendor.days90Plus) : '—'}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <span style={{ color: '#0A0F14', fontWeight: '700', fontSize: '14px' }}>
+                      <span style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '14px' }}>
                         {formatCurrency(vendor.totalOutstanding)}
                       </span>
                     </td>
@@ -440,7 +440,7 @@ export function PaymentAgingDashboard() {
                       {vendor.slaBreaches > 0 ? (
                         <span
                           className="px-2 py-1 rounded text-xs"
-                          style={{ backgroundColor: '#FEE2E2', color: '#EF4444', fontWeight: '700' }}
+                          style={{ backgroundColor: 'var(--color-error-light)', color: '#EF4444', fontWeight: '700' }}
                         >
                           {vendor.slaBreaches}
                         </span>
@@ -452,7 +452,7 @@ export function PaymentAgingDashboard() {
                       {vendor.onHold ? (
                         <span
                           className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs"
-                          style={{ backgroundColor: '#FEE2E2', color: '#EF4444', fontWeight: '600' }}
+                          style={{ backgroundColor: 'var(--color-error-light)', color: '#EF4444', fontWeight: '600' }}
                         >
                           <Pause className="w-3 h-3" />
                           On Hold
@@ -474,35 +474,35 @@ export function PaymentAgingDashboard() {
         </div>
 
         {/* Invoice Aging Detail */}
-        <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid #E1E6EA' }}>
-          <div className="px-6 py-4" style={{ borderBottom: '1px solid #E1E6EA' }}>
-            <h3 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+        <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-silver)' }}>
+          <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+            <h3 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
               Invoice Aging Detail
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
-                  <th className="text-left px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
+                  <th className="text-left px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     INVOICE NO
                   </th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     VENDOR
                   </th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     DUE DATE
                   </th>
-                  <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     AGING
                   </th>
-                  <th className="text-right px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     AMOUNT
                   </th>
-                  <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     RISK FLAG
                   </th>
-                  <th className="text-center px-6 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <th className="text-center px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     STATUS
                   </th>
                 </tr>
@@ -513,24 +513,24 @@ export function PaymentAgingDashboard() {
                     key={invoice.id}
                     style={{
                       backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FAFBFC',
-                      borderBottom: '1px solid #E1E6EA',
+                      borderBottom: '1px solid var(--color-silver)',
                     }}
                   >
                     <td className="px-6 py-4">
-                      <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '13px' }}>
+                      <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '13px' }}>
                         {invoice.invoiceNo}
                       </div>
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                         {invoice.category}
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <span className="text-sm" style={{ color: '#0A0F14' }}>
+                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                         {invoice.vendor}
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <span className="text-sm" style={{ color: '#0A0F14' }}>
+                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                         {new Date(invoice.dueDate).toLocaleDateString('en-GB', {
                           day: '2-digit',
                           month: 'short',
@@ -542,7 +542,7 @@ export function PaymentAgingDashboard() {
                       <span
                         className="px-2 py-1 rounded text-xs"
                         style={{
-                          backgroundColor: invoice.aging > 0 ? '#FEE2E2' : '#D1FAE5',
+                          backgroundColor: invoice.aging > 0 ? 'var(--color-error-light)' : '#D1FAE5',
                           color: invoice.aging > 0 ? '#EF4444' : '#10B981',
                           fontWeight: '700',
                         }}
@@ -551,7 +551,7 @@ export function PaymentAgingDashboard() {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <span style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                      <span style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                         {formatCurrency(invoice.amount)}
                       </span>
                     </td>
@@ -562,7 +562,7 @@ export function PaymentAgingDashboard() {
                       <span
                         className="px-2 py-1 rounded text-xs"
                         style={{
-                          backgroundColor: invoice.status === 'overdue' ? '#FEE2E2' :
+                          backgroundColor: invoice.status === 'overdue' ? 'var(--color-error-light)' :
                                           invoice.status === 'on-hold' ? '#FEF3C7' : '#D1FAE5',
                           color: invoice.status === 'overdue' ? '#EF4444' :
                                  invoice.status === 'on-hold' ? '#F59E0B' : '#10B981',

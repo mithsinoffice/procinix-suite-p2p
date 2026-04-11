@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, Save, Send, Trash2, Search, 
+import {
+  ArrowLeft, Save, Send, Trash2, Search,
   FileText, AlertCircle, Info, Calendar, Hash, Receipt, X, CheckCircle, MapPin, Building
 } from 'lucide-react';
 import { useMasterData } from '../contexts/MasterDataContext';
@@ -9,6 +9,8 @@ import { VendorSelector } from './shared/VendorSelector';
 import { StandardInput } from './shared/StandardInput';
 import { StandardSelect } from './shared/StandardInput';
 import { StandardTextarea } from './shared/StandardInput';
+import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface LineItem {
   id: string;
@@ -642,60 +644,35 @@ export function InvoiceFormDirect() {
     navigate('/invoices');
   };
 
+  // Form completeness
+  const completeness = useMemo(() => {
+    const fields = [vendorId, invoiceNumber, invoiceDate, billToLocationId, dueDate];
+    const filled = fields.filter(Boolean).length;
+    const hasLines = lineItems.length > 0 ? 1 : 0;
+    return Math.round(((filled + hasLines) / (fields.length + 1)) * 100);
+  }, [vendorId, invoiceNumber, invoiceDate, billToLocationId, dueDate, lineItems.length]);
+
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const handleKeyboardSave = useCallback(() => handleSaveDraft(), [vendorId, invoiceNumber]);
+  useFormKeyboardSave(handleKeyboardSave);
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F6F9FC' }}>
-      {/* Header */}
-      <div className="bg-white border-b-2" style={{ borderColor: '#E1E6EA' }}>
-        <div className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={handleCancel}
-                className="p-2 rounded-lg transition-colors hover:bg-gray-100" 
-                style={{ color: '#6E7A82' }}
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-2xl mb-1" style={{ color: '#0A0F14' }}>
-                  Create Direct Invoice
-                </h1>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
-                  Invoice without PO reference • Auto GST & TDS computation • Compliance checks
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSaveDraft}
-                className="flex items-center gap-2 px-6 py-3 rounded-lg transition-colors"
-                style={{ 
-                  backgroundColor: '#FFFFFF',
-                  border: '2px solid #E1E6EA',
-                  color: '#0A0F14'
-                }}
-              >
-                <Save className="w-4 h-4" />
-                Save Draft
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
-              >
-                <Send className="w-4 h-4" />
-                Submit for Approval
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <FormShell
+      title="Create Direct Invoice"
+      subtitle="Invoice without PO reference • Auto GST & TDS computation • Compliance checks"
+      variant="transaction"
+      onBack={handleCancel}
+      onSaveDraft={handleSaveDraft}
+      onSubmit={handleSubmit}
+      submitLabel="Submit for Approval"
+      draftLabel="Save Draft"
+      saveStatus={saveStatus}
+      completeness={completeness}
+    >
 
       {/* Validation Errors */}
       {errors.length > 0 && (
-        <div className="mx-8 mt-6 bg-white rounded-lg p-6" style={{ border: '2px solid #FEE2E2' }}>
+        <div className="mx-8 mt-6 bg-white rounded-lg p-6" style={{ border: '2px solid var(--color-error-light)' }}>
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: '#EF4444' }} />
             <div className="flex-1">
@@ -735,23 +712,22 @@ export function InvoiceFormDirect() {
         </div>
       )}
 
-      <div className="p-8">
         {/* Entity Context Display - READ-ONLY */}
         {entity && (
-          <div className="bg-white rounded-lg p-4 mb-4" style={{ border: '2px solid #E8F7F8', backgroundColor: '#E8F7F8' }}>
+          <div className="bg-white rounded-lg p-4 mb-4" style={{ border: '2px solid var(--color-teal-tint)', backgroundColor: 'var(--color-teal-tint)' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Building className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                <Building className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                 <div>
-                  <p className="text-xs" style={{ color: '#6E7A82' }}>Creating invoice for Entity</p>
-                  <p className="font-semibold" style={{ color: '#0A0F14' }}>
+                  <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Creating invoice for Entity</p>
+                  <p className="font-semibold" style={{ color: 'var(--color-ink)' }}>
                     {entity.name} ({entity.legalName})
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-xs" style={{ color: '#6E7A82' }}>Entity Code: {entity.code}</p>
-                <p className="text-xs" style={{ color: '#6E7A82' }}>GSTIN: {entity.gstin}</p>
+                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Entity Code: {entity.code}</p>
+                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>GSTIN: {entity.gstin}</p>
               </div>
             </div>
           </div>
@@ -759,14 +735,14 @@ export function InvoiceFormDirect() {
 
         {/* No Entity Warning */}
         {!entityId && (
-          <div className="bg-white rounded-lg p-6 mb-4" style={{ border: '2px solid #FEE2E2' }}>
+          <div className="bg-white rounded-lg p-6 mb-4" style={{ border: '2px solid var(--color-error-light)' }}>
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: '#EF4444' }} />
               <div className="flex-1">
                 <p className="font-semibold mb-1" style={{ color: '#EF4444' }}>
                   Entity not selected
                 </p>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   Please select an Entity from the top bar before creating an invoice. Entity context is required for tax determination and accounting.
                 </p>
               </div>
@@ -775,10 +751,7 @@ export function InvoiceFormDirect() {
         )}
 
         {/* Invoice Header */}
-        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
-          <h2 className="text-lg mb-6" style={{ color: '#0A0F14' }}>Invoice Header</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <FormSection title="Invoice Header" columns={2}>
             {/* Row 1: Vendor Name & Invoice Number */}
             <div>
               <VendorSelector
@@ -794,19 +767,19 @@ export function InvoiceFormDirect() {
                 requireCompleteBillingAddress={true}
               />
               {vendor && (
-                <div className="mt-2 p-3 rounded" style={{ backgroundColor: '#F6F9FC' }}>
-                  <div className="grid grid-cols-2 gap-3 text-xs" style={{ color: '#6E7A82' }}>
+                <div className="mt-2 p-3 rounded" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                  <div className="grid grid-cols-2 gap-3 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                     <div>
-                      <span className="font-semibold" style={{ color: '#0A0F14' }}>State:</span> {vendorState || 'N/A'}
+                      <span className="font-semibold" style={{ color: 'var(--color-ink)' }}>State:</span> {vendorState || 'N/A'}
                     </div>
                     <div>
-                      <span className="font-semibold" style={{ color: '#0A0F14' }}>TDS:</span> {vendor.tdsApplicable ? `Yes (${vendor.tdsSection})` : 'No'}
+                      <span className="font-semibold" style={{ color: 'var(--color-ink)' }}>TDS:</span> {vendor.tdsApplicable ? `Yes (${vendor.tdsSection})` : 'No'}
                     </div>
                     <div>
-                      <span className="font-semibold" style={{ color: '#0A0F14' }}>MSME:</span> {vendor.msmeRegistered ? 'Yes' : 'No'}
+                      <span className="font-semibold" style={{ color: 'var(--color-ink)' }}>MSME:</span> {vendor.msmeRegistered ? 'Yes' : 'No'}
                     </div>
                     <div>
-                      <span className="font-semibold" style={{ color: '#0A0F14' }}>GSTIN:</span> {vendorGstin || 'Unregistered'}
+                      <span className="font-semibold" style={{ color: 'var(--color-ink)' }}>GSTIN:</span> {vendorGstin || 'Unregistered'}
                     </div>
                   </div>
                 </div>
@@ -819,7 +792,7 @@ export function InvoiceFormDirect() {
               onChange={(e) => setInvoiceNumber(e.target.value)}
               placeholder="Enter invoice number"
               required={true}
-              icon={<Hash className="w-4 h-4" style={{ color: '#6E7A82' }} />}
+              icon={<Hash className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />}
             />
 
             {/* Row 2: Invoice Date & Due Date */}
@@ -845,7 +818,7 @@ export function InvoiceFormDirect() {
                 }}
                 placeholder="DD-MM-YYYY"
                 required={true}
-                icon={<Calendar className="w-4 h-4" style={{ color: '#6E7A82' }} />}
+                icon={<Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />}
                 error={!!invoiceDateError}
                 maxLength={10}
               />
@@ -877,7 +850,7 @@ export function InvoiceFormDirect() {
                 }}
                 placeholder="DD-MM-YYYY"
                 required={true}
-                icon={<Calendar className="w-4 h-4" style={{ color: '#6E7A82' }} />}
+                icon={<Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />}
                 error={!!dueDateError}
                 maxLength={10}
               />
@@ -892,7 +865,7 @@ export function InvoiceFormDirect() {
                 </p>
               )}
               {!dueDateError && !dueDateOverridden && paymentTerms && (
-                <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                   Auto-calculated from Payment Terms ({paymentTerms})
                 </p>
               )}
@@ -904,7 +877,7 @@ export function InvoiceFormDirect() {
               value={vendorGstin || 'Unregistered'}
               onChange={() => {}}
               disabled={true}
-              icon={<FileText className="w-4 h-4" style={{ color: '#6E7A82' }} />}
+              icon={<FileText className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />}
             />
 
             <div>
@@ -921,7 +894,7 @@ export function InvoiceFormDirect() {
                 ]}
                 required={true}
                 error={!billToLocationId && errors.length > 0}
-                icon={<Building className="w-4 h-4" style={{ color: '#6E7A82' }} />}
+                icon={<Building className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />}
               />
               {!billToLocationId && errors.length > 0 && (
                 <p className="text-xs mt-1" style={{ color: '#EF4444' }}>
@@ -937,7 +910,7 @@ export function InvoiceFormDirect() {
               onChange={(e) => setInvoiceClassification(e.target.value)}
               options={INVOICE_CLASSIFICATIONS}
               required={true}
-              icon={<FileText className="w-4 h-4" style={{ color: '#6E7A82' }} />}
+              icon={<FileText className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />}
             />
 
             <StandardInput
@@ -946,30 +919,29 @@ export function InvoiceFormDirect() {
               onChange={() => {}}
               disabled={true}
               placeholder="Select vendor to populate"
-              icon={<Receipt className="w-4 h-4" style={{ color: '#6E7A82' }} />}
+              icon={<Receipt className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />}
             />
-          </div>
 
           {/* Row 5 (Full Width): GST Applicability Panel */}
           {billToLocationId && vendorId && (
             <div className="mt-6 p-4 rounded-lg" style={{ 
-              backgroundColor: vendorState && entityState ? '#E8F7F8' : '#FEF3C7', 
-              border: vendorState && entityState ? '1px solid #00A9B7' : '1px solid #F59E0B'
+              backgroundColor: vendorState && entityState ? 'var(--color-teal-tint)' : '#FEF3C7', 
+              border: vendorState && entityState ? '1px solid var(--color-teal)' : '1px solid #F59E0B'
             }}>
               <div className="flex items-start gap-2">
                 {vendorState && entityState ? (
-                  <CheckCircle className="w-5 h-5 mt-0.5" style={{ color: '#00A9B7' }} />
+                  <CheckCircle className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-teal)' }} />
                 ) : (
                   <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: '#F59E0B' }} />
                 )}
                 <div className="flex-1">
-                  <p className="font-semibold mb-1" style={{ color: vendorState && entityState ? '#00A9B7' : '#F59E0B' }}>
+                  <p className="font-semibold mb-1" style={{ color: vendorState && entityState ? 'var(--color-teal)' : '#F59E0B' }}>
                     {vendorState && entityState 
                       ? `GST Applicability: ${gstType === 'CGST_SGST' ? 'CGST + SGST (Intra-state)' : 'IGST (Inter-state)'}`
                       : 'GST Applicability: Cannot determine - Missing vendor/entity state'
                     }
                   </p>
-                  <p className="text-sm" style={{ color: vendorState && entityState ? '#007D87' : '#92400E' }}>
+                  <p className="text-sm" style={{ color: vendorState && entityState ? 'var(--color-teal-dark)' : '#92400E' }}>
                     {vendorState && entityState ? (
                       <>
                         Entity State: {entityState} | Vendor State: {vendorState}
@@ -986,8 +958,8 @@ export function InvoiceFormDirect() {
           )}
 
           {/* E-Invoice / Return Verification Section */}
-          <div className="mt-6 pt-6 border-t-2" style={{ borderColor: '#E1E6EA' }}>
-            <h3 className="text-base mb-4" style={{ color: '#0A0F14' }}>E-Invoice / Return Verification</h3>
+          <div className="mt-6 pt-6 border-t-2" style={{ borderColor: 'var(--color-silver)' }}>
+            <h3 className="text-base mb-4" style={{ color: 'var(--color-ink)' }}>E-Invoice / Return Verification</h3>
             
             <div className="grid grid-cols-2 gap-6">
               {/* E-Invoice Available Toggle */}
@@ -998,9 +970,9 @@ export function InvoiceFormDirect() {
                     checked={eInvoiceAvailable}
                     onChange={(e) => setEInvoiceAvailable(e.target.checked)}
                     className="w-5 h-5 rounded"
-                    style={{ accentColor: '#00A9B7' }}
+                    style={{ accentColor: 'var(--color-teal)' }}
                   />
-                  <span className="text-sm" style={{ color: '#0A0F14' }}>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                     E-Invoice Available?
                   </span>
                 </label>
@@ -1014,7 +986,7 @@ export function InvoiceFormDirect() {
                     value={irn}
                     onChange={(e) => setIrn(e.target.value)}
                     placeholder="Enter IRN if available"
-                    icon={<Hash className="w-4 h-4" style={{ color: '#6E7A82' }} />}
+                    icon={<Hash className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />}
                   />
 
                   {/* Return Status */}
@@ -1027,11 +999,11 @@ export function InvoiceFormDirect() {
                       { value: 'Filed', label: 'Filed' },
                       { value: 'Not Filed', label: 'Not Filed' }
                     ]}
-                    icon={<FileText className="w-4 h-4" style={{ color: '#6E7A82' }} />}
+                    icon={<FileText className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />}
                   />
 
-                  <div className="col-span-2 p-3 rounded" style={{ backgroundColor: '#F6F9FC' }}>
-                    <p className="text-xs" style={{ color: '#6E7A82' }}>
+                  <div className="col-span-2 p-3 rounded" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                    <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                       <Info className="w-3 h-3 inline mr-1" />
                       Note: E-invoice verification status may require external integration with GST portal.
                     </p>
@@ -1040,21 +1012,21 @@ export function InvoiceFormDirect() {
               )}
             </div>
           </div>
-        </div>
+        </FormSection>
 
         {/* Line Items Section */}
-        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg" style={{ color: '#0A0F14' }}>Line Items</h2>
+            <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>Line Items</h2>
           </div>
 
           {/* Search Bar - SEARCH-FIRST ENTRY */}
           <div className="mb-6 relative">
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+            <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
               Search item or service
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: '#6E7A82' }} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
               <input
                 type="text"
                 value={searchTerm}
@@ -1065,7 +1037,7 @@ export function InvoiceFormDirect() {
                 onFocus={() => setShowSearchResults(true)}
                 placeholder="Type item name or code..."
                 className="w-full pl-10 pr-4 py-3 rounded-lg"
-                style={{ border: '2px solid #E1E6EA', color: '#0A0F14' }}
+                style={{ border: '2px solid var(--color-silver)', color: 'var(--color-ink)' }}
               />
             </div>
 
@@ -1078,21 +1050,21 @@ export function InvoiceFormDirect() {
                 />
                 <div 
                   className="absolute z-20 w-full mt-2 bg-white rounded-lg shadow-xl max-h-80 overflow-y-auto"
-                  style={{ border: '2px solid #E1E6EA' }}
+                  style={{ border: '2px solid var(--color-silver)' }}
                 >
                   {searchResults.map(item => (
                     <button
                       key={item.id}
                       onClick={() => handleSelectItem(item.id)}
                       className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b transition-colors"
-                      style={{ borderColor: '#E1E6EA' }}
+                      style={{ borderColor: 'var(--color-silver)' }}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-semibold" style={{ color: '#0A0F14' }}>
+                          <p className="font-semibold" style={{ color: 'var(--color-ink)' }}>
                             {item.code} - {item.name}
                           </p>
-                          <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+                          <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                             {item.itemType} | HSN: {item.hsnCode} | GST: {item.gstRate}%
                           </p>
                         </div>
@@ -1115,53 +1087,53 @@ export function InvoiceFormDirect() {
 
           {/* Line Items Grid */}
           {lineItems.length === 0 ? (
-            <div className="text-center py-12" style={{ backgroundColor: '#F6F9FC', borderRadius: '8px' }}>
-              <Search className="w-12 h-12 mx-auto mb-3" style={{ color: '#9AA6AF' }} />
-              <p style={{ color: '#6E7A82' }}>No line items added yet</p>
-              <p className="text-sm mt-1" style={{ color: '#9AA6AF' }}>
+            <div className="text-center py-12" style={{ backgroundColor: 'var(--color-cloud)', borderRadius: '8px' }}>
+              <Search className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--color-slate)' }} />
+              <p style={{ color: 'var(--color-mercury-grey)' }}>No line items added yet</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--color-slate)' }}>
                 Use the search bar above to add items
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead style={{ backgroundColor: '#F6F9FC' }}>
+                <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                   <tr>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Item Name</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Item Code</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>GL Name</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>GL Code</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Qty</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Rate</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Base Amt</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>GST %</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>CGST</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>SGST</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>IGST</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Total GST</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Gross Amt</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>TDS</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Net Payable</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Cost Centre</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Profit Centre</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Project/WBS</th>
-                    <th className="text-center px-3 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Actions</th>
+                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Item Name</th>
+                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Item Code</th>
+                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>GL Name</th>
+                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>GL Code</th>
+                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Qty</th>
+                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Rate</th>
+                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Base Amt</th>
+                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>GST %</th>
+                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>CGST</th>
+                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>SGST</th>
+                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>IGST</th>
+                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Total GST</th>
+                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Gross Amt</th>
+                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>TDS</th>
+                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Net Payable</th>
+                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Cost Centre</th>
+                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Profit Centre</th>
+                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Project/WBS</th>
+                    <th className="text-center px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {lineItems.map((line, index) => (
-                    <tr key={line.id} className="border-t" style={{ borderColor: '#E1E6EA' }}>
-                      <td className="px-3 py-3" style={{ color: '#0A0F14', fontWeight: '600' }}>{line.itemName}</td>
-                      <td className="px-3 py-3" style={{ color: '#6E7A82' }}>{line.itemCode}</td>
-                      <td className="px-3 py-3" style={{ color: '#0A0F14' }}>{line.glName}</td>
-                      <td className="px-3 py-3" style={{ color: '#6E7A82' }}>{line.glCode}</td>
+                    <tr key={line.id} className="border-t" style={{ borderColor: 'var(--color-silver)' }}>
+                      <td className="px-3 py-3" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{line.itemName}</td>
+                      <td className="px-3 py-3" style={{ color: 'var(--color-mercury-grey)' }}>{line.itemCode}</td>
+                      <td className="px-3 py-3" style={{ color: 'var(--color-ink)' }}>{line.glName}</td>
+                      <td className="px-3 py-3" style={{ color: 'var(--color-mercury-grey)' }}>{line.glCode}</td>
                       <td className="px-3 py-3">
                         <input
                           type="number"
                           value={line.quantity || ''}
                           onChange={(e) => handleLineItemChange(line.id, 'quantity', parseFloat(e.target.value) || 0)}
                           className="w-20 px-2 py-1 rounded text-right"
-                          style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                           min="0"
                           step="0.01"
                         />
@@ -1172,26 +1144,26 @@ export function InvoiceFormDirect() {
                           value={line.rate || ''}
                           onChange={(e) => handleLineItemChange(line.id, 'rate', parseFloat(e.target.value) || 0)}
                           className="w-24 px-2 py-1 rounded text-right"
-                          style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                           min="0"
                           step="0.01"
                         />
                       </td>
-                      <td className="px-3 py-3 text-right font-semibold" style={{ color: '#0A0F14' }}>₹{line.baseAmount.toFixed(2)}</td>
-                      <td className="px-3 py-3 text-right" style={{ color: '#6E7A82' }}>{line.gstPercent}%</td>
-                      <td className="px-3 py-3 text-right" style={{ color: '#0A0F14' }}>{line.cgstAmount > 0 ? `₹${line.cgstAmount.toFixed(2)}` : '-'}</td>
-                      <td className="px-3 py-3 text-right" style={{ color: '#0A0F14' }}>{line.sgstAmount > 0 ? `₹${line.sgstAmount.toFixed(2)}` : '-'}</td>
-                      <td className="px-3 py-3 text-right" style={{ color: '#0A0F14' }}>{line.igstAmount > 0 ? `₹${line.igstAmount.toFixed(2)}` : '-'}</td>
-                      <td className="px-3 py-3 text-right font-semibold" style={{ color: '#00A9B7' }}>₹{line.totalGstAmount.toFixed(2)}</td>
-                      <td className="px-3 py-3 text-right font-semibold" style={{ color: '#0A0F14' }}>₹{line.grossAmount.toFixed(2)}</td>
-                      <td className="px-3 py-3 text-right" style={{ color: line.tdsPayable > 0 ? '#EF4444' : '#6E7A82' }}>{line.tdsPayable > 0 ? `₹${line.tdsPayable.toFixed(2)}` : '-'}</td>
+                      <td className="px-3 py-3 text-right font-semibold" style={{ color: 'var(--color-ink)' }}>₹{line.baseAmount.toFixed(2)}</td>
+                      <td className="px-3 py-3 text-right" style={{ color: 'var(--color-mercury-grey)' }}>{line.gstPercent}%</td>
+                      <td className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)' }}>{line.cgstAmount > 0 ? `₹${line.cgstAmount.toFixed(2)}` : '-'}</td>
+                      <td className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)' }}>{line.sgstAmount > 0 ? `₹${line.sgstAmount.toFixed(2)}` : '-'}</td>
+                      <td className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)' }}>{line.igstAmount > 0 ? `₹${line.igstAmount.toFixed(2)}` : '-'}</td>
+                      <td className="px-3 py-3 text-right font-semibold" style={{ color: 'var(--color-teal)' }}>₹{line.totalGstAmount.toFixed(2)}</td>
+                      <td className="px-3 py-3 text-right font-semibold" style={{ color: 'var(--color-ink)' }}>₹{line.grossAmount.toFixed(2)}</td>
+                      <td className="px-3 py-3 text-right" style={{ color: line.tdsPayable > 0 ? '#EF4444' : 'var(--color-mercury-grey)' }}>{line.tdsPayable > 0 ? `₹${line.tdsPayable.toFixed(2)}` : '-'}</td>
                       <td className="px-3 py-3 text-right font-semibold" style={{ color: '#10B981' }}>₹{line.netPayable.toFixed(2)}</td>
                       <td className="px-3 py-3">
                         <select
                           value={line.costCentre}
                           onChange={(e) => handleLineItemChange(line.id, 'costCentre', e.target.value)}
                           className="w-full px-2 py-1 rounded text-sm"
-                          style={{ border: !line.costCentre ? '2px solid #EF4444' : '1px solid #E1E6EA', color: '#0A0F14' }}
+                          style={{ border: !line.costCentre ? '2px solid #EF4444' : '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                         >
                           <option value="">Select...</option>
                           {liveCostCentres.map(cc => (<option key={cc.id} value={cc.id}>{cc.name}</option>))}
@@ -1202,7 +1174,7 @@ export function InvoiceFormDirect() {
                           value={line.profitCentre}
                           onChange={(e) => handleLineItemChange(line.id, 'profitCentre', e.target.value)}
                           className="w-full px-2 py-1 rounded text-sm"
-                          style={{ border: !line.profitCentre ? '2px solid #EF4444' : '1px solid #E1E6EA', color: '#0A0F14' }}
+                          style={{ border: !line.profitCentre ? '2px solid #EF4444' : '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                         >
                           <option value="">Select...</option>
                           {liveProfitCentres.map(pc => (<option key={pc.id} value={pc.id}>{pc.name}</option>))}
@@ -1213,7 +1185,7 @@ export function InvoiceFormDirect() {
                           value={line.projectWbs}
                           onChange={(e) => handleLineItemChange(line.id, 'projectWbs', e.target.value)}
                           className="w-full px-2 py-1 rounded text-sm"
-                          style={{ border: !line.projectWbs ? '2px solid #EF4444' : '1px solid #E1E6EA', color: '#0A0F14' }}
+                          style={{ border: !line.projectWbs ? '2px solid #EF4444' : '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                         >
                           <option value="">Select...</option>
                           {PROJECTS.map(proj => (<option key={proj.id} value={proj.id}>{proj.name}</option>))}
@@ -1233,21 +1205,21 @@ export function InvoiceFormDirect() {
 
           {/* Totals Summary */}
           {lineItems.length > 0 && (
-            <div className="mt-6 pt-6 border-t-2" style={{ borderColor: '#E1E6EA' }}>
+            <div className="mt-6 pt-6 border-t-2" style={{ borderColor: 'var(--color-silver)' }}>
               <div className="grid grid-cols-4 gap-6">
-                <div className="p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-                  <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Base Amount</p>
-                  <p className="text-xl font-semibold" style={{ color: '#0A0F14' }}>₹{totals.baseAmount.toFixed(2)}</p>
+                <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                  <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Base Amount</p>
+                  <p className="text-xl font-semibold" style={{ color: 'var(--color-ink)' }}>₹{totals.baseAmount.toFixed(2)}</p>
                 </div>
-                <div className="p-4 rounded-lg" style={{ backgroundColor: '#E8F7F8' }}>
-                  <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Total GST {gstType === 'CGST_SGST' ? '(CGST+SGST)' : '(IGST)'}</p>
-                  <p className="text-xl font-semibold" style={{ color: '#00A9B7' }}>₹{totals.totalGstAmount.toFixed(2)}</p>
+                <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-teal-tint)' }}>
+                  <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total GST {gstType === 'CGST_SGST' ? '(CGST+SGST)' : '(IGST)'}</p>
+                  <p className="text-xl font-semibold" style={{ color: 'var(--color-teal)' }}>₹{totals.totalGstAmount.toFixed(2)}</p>
                   {gstType === 'CGST_SGST' && (
-                    <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>CGST: ₹{totals.cgstAmount.toFixed(2)} | SGST: ₹{totals.sgstAmount.toFixed(2)}</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>CGST: ₹{totals.cgstAmount.toFixed(2)} | SGST: ₹{totals.sgstAmount.toFixed(2)}</p>
                   )}
                 </div>
-                <div className="p-4 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
-                  <p className="text-xs mb-1" style={{ color: '#6E7A82' }}>Total TDS Payable</p>
+                <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
+                  <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total TDS Payable</p>
                   <p className="text-xl font-semibold" style={{ color: '#EF4444' }}>₹{totals.tdsPayable.toFixed(2)}</p>
                 </div>
                 <div className="p-4 rounded-lg" style={{ backgroundColor: '#DCFCE7', border: '2px solid #10B981' }}>
@@ -1261,8 +1233,8 @@ export function InvoiceFormDirect() {
         </div>
 
         {/* Retention Section */}
-        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
-          <h2 className="text-lg mb-6" style={{ color: '#0A0F14' }}>Retention Details</h2>
+        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
+          <h2 className="text-lg mb-6" style={{ color: 'var(--color-ink)' }}>Retention Details</h2>
 
           <div className="grid grid-cols-2 gap-6">
             {/* Retention Applicable Toggle */}
@@ -1273,9 +1245,9 @@ export function InvoiceFormDirect() {
                   checked={retentionApplicable}
                   onChange={(e) => setRetentionApplicable(e.target.checked)}
                   className="w-5 h-5 rounded"
-                  style={{ accentColor: '#00A9B7' }}
+                  style={{ accentColor: 'var(--color-teal)' }}
                 />
-                <span className="text-sm" style={{ color: '#0A0F14' }}>
+                <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                   Retention Applicable?
                 </span>
               </label>
@@ -1303,7 +1275,7 @@ export function InvoiceFormDirect() {
                   onChange={(e) => setRetentionValue(parseFloat(e.target.value) || 0)}
                   placeholder={retentionType === 'Percentage' ? 'Enter percentage' : 'Enter amount'}
                   required={true}
-                  icon={<Hash className="w-4 h-4" style={{ color: '#6E7A82' }} />}
+                  icon={<Hash className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />}
                 />
 
                 {/* Retention Amount - READ-ONLY */}
@@ -1321,7 +1293,7 @@ export function InvoiceFormDirect() {
                   value={retentionReleaseDate}
                   onChange={(e) => setRetentionReleaseDate(e.target.value)}
                   required={true}
-                  icon={<Calendar className="w-4 h-4" style={{ color: '#6E7A82' }} />}
+                  icon={<Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />}
                 />
 
                 {/* Retention Summary */}
@@ -1343,8 +1315,8 @@ export function InvoiceFormDirect() {
         </div>
 
         {/* Narration Section */}
-        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
-          <h2 className="text-lg mb-6" style={{ color: '#0A0F14' }}>Narration</h2>
+        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
+          <h2 className="text-lg mb-6" style={{ color: 'var(--color-ink)' }}>Narration</h2>
           
           <StandardTextarea
             label="Invoice Narration / Remarks"
@@ -1353,46 +1325,46 @@ export function InvoiceFormDirect() {
             placeholder="Enter any additional context, notes, or audit remarks for this invoice..."
             rows={4}
           />
-          <p className="text-xs mt-2" style={{ color: '#6E7A82' }}>
+          <p className="text-xs mt-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Optional but recommended for audit trail and context documentation
           </p>
         </div>
 
         {/* Accounting JV Preview */}
         {lineItems.length > 0 && (
-          <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+          <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center gap-2 mb-6">
-              <FileText className="w-5 h-5" style={{ color: '#00A9B7' }} />
-              <h2 className="text-lg" style={{ color: '#0A0F14' }}>Preview Accounting Entry (Read-Only)</h2>
+              <FileText className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+              <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>Preview Accounting Entry (Read-Only)</h2>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead style={{ backgroundColor: '#F6F9FC' }}>
+                <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                   <tr>
-                    <th className="text-left px-4 py-3" style={{ color: '#6E7A82', fontWeight: '600' }}>Account Code</th>
-                    <th className="text-left px-4 py-3" style={{ color: '#6E7A82', fontWeight: '600' }}>Account Name</th>
-                    <th className="text-right px-4 py-3" style={{ color: '#6E7A82', fontWeight: '600' }}>Debit (₹)</th>
-                    <th className="text-right px-4 py-3" style={{ color: '#6E7A82', fontWeight: '600' }}>Credit (₹)</th>
+                    <th className="text-left px-4 py-3" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Account Code</th>
+                    <th className="text-left px-4 py-3" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Account Name</th>
+                    <th className="text-right px-4 py-3" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Debit (₹)</th>
+                    <th className="text-right px-4 py-3" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Credit (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {accountingEntries.map((entry, index) => (
-                    <tr key={index} className="border-t" style={{ borderColor: '#E1E6EA' }}>
-                      <td className="px-4 py-3" style={{ color: '#6E7A82' }}>{entry.accountCode}</td>
-                      <td className="px-4 py-3" style={{ color: '#0A0F14' }}>{entry.account}</td>
-                      <td className="px-4 py-3 text-right font-semibold" style={{ color: entry.debit > 0 ? '#0A0F14' : '#9AA6AF' }}>
+                    <tr key={index} className="border-t" style={{ borderColor: 'var(--color-silver)' }}>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-mercury-grey)' }}>{entry.accountCode}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-ink)' }}>{entry.account}</td>
+                      <td className="px-4 py-3 text-right font-semibold" style={{ color: entry.debit > 0 ? 'var(--color-ink)' : 'var(--color-slate)' }}>
                         {entry.debit > 0 ? entry.debit.toFixed(2) : '-'}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold" style={{ color: entry.credit > 0 ? '#0A0F14' : '#9AA6AF' }}>
+                      <td className="px-4 py-3 text-right font-semibold" style={{ color: entry.credit > 0 ? 'var(--color-ink)' : 'var(--color-slate)' }}>
                         {entry.credit > 0 ? entry.credit.toFixed(2) : '-'}
                       </td>
                     </tr>
                   ))}
-                  <tr className="border-t-2" style={{ borderColor: '#E1E6EA', backgroundColor: '#F6F9FC' }}>
-                    <td className="px-4 py-3 font-semibold" style={{ color: '#0A0F14' }} colSpan={2}>TOTALS</td>
-                    <td className="px-4 py-3 text-right font-semibold" style={{ color: '#0A0F14' }}>{totalDebits.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right font-semibold" style={{ color: '#0A0F14' }}>{totalCredits.toFixed(2)}</td>
+                  <tr className="border-t-2" style={{ borderColor: 'var(--color-silver)', backgroundColor: 'var(--color-cloud)' }}>
+                    <td className="px-4 py-3 font-semibold" style={{ color: 'var(--color-ink)' }} colSpan={2}>TOTALS</td>
+                    <td className="px-4 py-3 text-right font-semibold" style={{ color: 'var(--color-ink)' }}>{totalDebits.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-semibold" style={{ color: 'var(--color-ink)' }}>{totalCredits.toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -1400,7 +1372,7 @@ export function InvoiceFormDirect() {
 
             {/* Balance Check */}
             <div className="mt-4 p-4 rounded-lg flex items-center gap-3" style={{ 
-              backgroundColor: Math.abs(totalDebits - totalCredits) < 0.01 ? '#DCFCE7' : '#FEE2E2',
+              backgroundColor: Math.abs(totalDebits - totalCredits) < 0.01 ? '#DCFCE7' : 'var(--color-error-light)',
               border: Math.abs(totalDebits - totalCredits) < 0.01 ? '1px solid #10B981' : '1px solid #EF4444'
             }}>
               {Math.abs(totalDebits - totalCredits) < 0.01 ? (
@@ -1420,8 +1392,8 @@ export function InvoiceFormDirect() {
               )}
             </div>
 
-            <div className="mt-4 p-3 rounded" style={{ backgroundColor: '#F6F9FC' }}>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+            <div className="mt-4 p-3 rounded" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 <Info className="w-3 h-3 inline mr-1" />
                 This is a preview only. Actual accounting entry will be posted upon approval and posting workflow.
               </p>
@@ -1430,16 +1402,16 @@ export function InvoiceFormDirect() {
         )}
 
         {/* Computation Rules Info */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '2px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '2px solid var(--color-silver)' }}>
           <div className="flex items-center gap-2 mb-4">
-            <Info className="w-5 h-5" style={{ color: '#00A9B7' }} />
-            <h2 className="text-lg" style={{ color: '#0A0F14' }}>Automatic Computation Rules</h2>
+            <Info className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+            <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>Automatic Computation Rules</h2>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 rounded" style={{ backgroundColor: '#F6F9FC' }}>
-              <p className="text-sm font-semibold mb-2" style={{ color: '#0A0F14' }}>GST Calculation</p>
-              <ul className="text-xs space-y-1" style={{ color: '#6E7A82' }}>
+            <div className="p-4 rounded" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <p className="text-sm font-semibold mb-2" style={{ color: 'var(--color-ink)' }}>GST Calculation</p>
+              <ul className="text-xs space-y-1" style={{ color: 'var(--color-mercury-grey)' }}>
                 <li>• GST % from Item Master</li>
                 <li>• Same state → CGST + SGST</li>
                 <li>• Different state → IGST</li>
@@ -1468,7 +1440,6 @@ export function InvoiceFormDirect() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </FormShell>
   );
 }

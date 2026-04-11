@@ -65,23 +65,23 @@ export function AdvancePaymentQueue() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F9FC]">
+    <div className="min-h-screen bg-[var(--color-cloud)]">
       {/* Header */}
-      <div className="bg-white border-b border-[#E1E6EA]">
+      <div className="bg-white border-b border-[var(--color-silver)]">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-[#0A0F14]">Advance Payment Queue</h1>
-              <p className="text-[#6E7A82] text-sm">Process approved vendor advance payments - centralized payment processing</p>
+              <h1 className="text-[var(--color-ink)]">Advance Payment Queue</h1>
+              <p className="text-[var(--color-mercury-grey)] text-sm">Process approved vendor advance payments - centralized payment processing</p>
             </div>
             <div className="flex gap-3">
               <button 
                 onClick={() => navigate('/ap/payments')}
-                className="px-4 py-2 border border-[#E1E6EA] rounded-lg hover:bg-[#F6F9FC] transition-colors"
+                className="px-4 py-2 border border-[var(--color-silver)] rounded-lg hover:bg-[var(--color-cloud)] transition-colors"
               >
                 Back to Payments
               </button>
-              <button className="px-4 py-2 border border-[#E1E6EA] rounded-lg hover:bg-[#F6F9FC] transition-colors flex items-center gap-2">
+              <button className="px-4 py-2 border border-[var(--color-silver)] rounded-lg hover:bg-[var(--color-cloud)] transition-colors flex items-center gap-2">
                 <Download className="w-4 h-4" />
                 Export Queue
               </button>
@@ -93,49 +93,49 @@ export function AdvancePaymentQueue() {
       {/* Statistics Cards */}
       <div className="p-6">
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Total Advances</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Total Advances</span>
               <CheckCircle className="w-4 h-4 text-green-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.totalAdvances}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.totalAdvances}</div>
           </div>
           
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Total Value</span>
-              <DollarSign className="w-4 h-4 text-[#00A9B7]" />
+              <span className="text-sm text-[var(--color-mercury-grey)]">Total Value</span>
+              <DollarSign className="w-4 h-4 text-[var(--color-teal)]" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">₹{stats.totalValue.toLocaleString()}</div>
+            <div className="text-2xl text-[var(--color-ink)]">₹{stats.totalValue.toLocaleString()}</div>
           </div>
           
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">Pending</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">Pending</span>
               <Clock className="w-4 h-4 text-yellow-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.pending}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.pending}</div>
           </div>
           
-          <div className="bg-white rounded-lg border border-[#E1E6EA] p-4">
+          <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#6E7A82]">In Queue</span>
+              <span className="text-sm text-[var(--color-mercury-grey)]">In Queue</span>
               <TrendingUp className="w-4 h-4 text-blue-500" />
             </div>
-            <div className="text-2xl text-[#0A0F14]">{stats.inQueue}</div>
+            <div className="text-2xl text-[var(--color-ink)]">{stats.inQueue}</div>
           </div>
         </div>
 
         {/* Payment Configuration */}
-        <div className="bg-white rounded-lg border border-[#E1E6EA] p-6 mb-4">
-          <h2 className="text-[#0A0F14] mb-4">Payment Configuration</h2>
+        <div className="bg-white rounded-lg border border-[var(--color-silver)] p-6 mb-4">
+          <h2 className="text-[var(--color-ink)] mb-4">Payment Configuration</h2>
           <div className="grid grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm text-[#0A0F14] mb-2">Payment Mode</label>
+              <label className="block text-sm text-[var(--color-ink)] mb-2">Payment Mode</label>
               <select
                 value={paymentMode}
                 onChange={(e) => setPaymentMode(e.target.value as any)}
-                className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
               >
                 <option value="NEFT">NEFT</option>
                 <option value="RTGS">RTGS</option>
@@ -145,11 +145,11 @@ export function AdvancePaymentQueue() {
             </div>
 
             <div>
-              <label className="block text-sm text-[#0A0F14] mb-2">Payment Date</label>
+              <label className="block text-sm text-[var(--color-ink)] mb-2">Payment Date</label>
               <input
                 type="date"
                 defaultValue={new Date().toISOString().split('T')[0]}
-                className="w-full px-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+                className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
               />
             </div>
 
@@ -157,7 +157,7 @@ export function AdvancePaymentQueue() {
               <button
                 onClick={handleProcessPayment}
                 disabled={selectedAdvances.length === 0}
-                className="w-full px-4 py-2 bg-[#00A9B7] text-white rounded-lg hover:bg-[#007D87] transition-colors disabled:bg-[#E1E6EA] disabled:text-[#6E7A82] disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full px-4 py-2 bg-[var(--color-teal)] text-white rounded-lg hover:bg-[var(--color-teal-dark)] transition-colors disabled:bg-[var(--color-silver)] disabled:text-[var(--color-mercury-grey)] disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <Send className="w-4 h-4" />
                 Process {selectedAdvances.length > 0 && `(${selectedAdvances.length})`} Payment{selectedAdvances.length !== 1 ? 's' : ''}
@@ -166,60 +166,60 @@ export function AdvancePaymentQueue() {
           </div>
 
           {selectedAdvances.length > 0 && (
-            <div className="mt-4 p-4 bg-[#F6F9FC] rounded-lg border border-[#E1E6EA]">
+            <div className="mt-4 p-4 bg-[var(--color-cloud)] rounded-lg border border-[var(--color-silver)]">
               <div className="flex items-center justify-between">
-                <span className="text-[#0A0F14]">Selected Payment Total:</span>
-                <span className="text-[#00A9B7]">₹{selectedTotal.toLocaleString()}</span>
+                <span className="text-[var(--color-ink)]">Selected Payment Total:</span>
+                <span className="text-[var(--color-teal)]">₹{selectedTotal.toLocaleString()}</span>
               </div>
             </div>
           )}
         </div>
 
         {/* Search */}
-        <div className="bg-white rounded-lg border border-[#E1E6EA] p-4 mb-4">
+        <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4 mb-4">
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-[#6E7A82]" />
+            <Search className="w-4 h-4 absolute left-3 top-3 text-[var(--color-mercury-grey)]" />
             <input
               type="text"
               placeholder="Search by advance ID or vendor name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-[#E1E6EA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A9B7]/20 focus:border-[#00A9B7]"
+              className="w-full pl-10 pr-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
             />
           </div>
         </div>
 
         {/* Payment Queue Table */}
-        <div className="bg-white rounded-lg border border-[#E1E6EA] overflow-hidden">
+        <div className="bg-white rounded-lg border border-[var(--color-silver)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-[#F6F9FC]">
+              <thead className="bg-[var(--color-cloud)]">
                 <tr>
                   <th className="px-4 py-3 text-left">
                     <button onClick={toggleAll} className="flex items-center gap-2">
                       {selectedAdvances.length === filteredAdvances.length && filteredAdvances.length > 0 ? (
-                        <CheckSquare className="w-4 h-4 text-[#00A9B7]" />
+                        <CheckSquare className="w-4 h-4 text-[var(--color-teal)]" />
                       ) : (
-                        <Square className="w-4 h-4 text-[#6E7A82]" />
+                        <Square className="w-4 h-4 text-[var(--color-mercury-grey)]" />
                       )}
                     </button>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Advance ID</th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Vendor</th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Type</th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">PO Reference</th>
-                  <th className="px-4 py-3 text-right text-xs text-[#6E7A82] uppercase">Net Payable</th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Approved Date</th>
-                  <th className="px-4 py-3 text-left text-xs text-[#6E7A82] uppercase">Payment Status</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Advance ID</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Vendor</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Type</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">PO Reference</th>
+                  <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">Net Payable</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Approved Date</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Payment Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E1E6EA]">
+              <tbody className="divide-y divide-[var(--color-silver)]">
                 {filteredAdvances.length > 0 ? (
                   filteredAdvances.map(advance => (
                     <tr 
                       key={advance.id}
-                      className={`hover:bg-[#F6F9FC] cursor-pointer ${
-                        selectedAdvances.includes(advance.id) ? 'bg-[#00A9B7]/5' : ''
+                      className={`hover:bg-[var(--color-cloud)] cursor-pointer ${
+                        selectedAdvances.includes(advance.id) ? 'bg-[var(--color-teal)]/5' : ''
                       }`}
                       onClick={() => toggleAdvanceSelection(advance.id)}
                     >
@@ -229,27 +229,27 @@ export function AdvancePaymentQueue() {
                           toggleAdvanceSelection(advance.id);
                         }}>
                           {selectedAdvances.includes(advance.id) ? (
-                            <CheckSquare className="w-4 h-4 text-[#00A9B7]" />
+                            <CheckSquare className="w-4 h-4 text-[var(--color-teal)]" />
                           ) : (
-                            <Square className="w-4 h-4 text-[#6E7A82]" />
+                            <Square className="w-4 h-4 text-[var(--color-mercury-grey)]" />
                           )}
                         </button>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-[#00A9B7]">{advance.requestNumber}</span>
+                        <span className="text-[var(--color-teal)]">{advance.requestNumber}</span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-[#6E7A82]" />
+                          <Building2 className="w-4 h-4 text-[var(--color-mercury-grey)]" />
                           <div>
-                            <div className="text-[#0A0F14]">{advance.vendor}</div>
-                            <div className="text-xs text-[#6E7A82]">{advance.vendorCode}</div>
+                            <div className="text-[var(--color-ink)]">{advance.vendor}</div>
+                            <div className="text-xs text-[var(--color-mercury-grey)]">{advance.vendorCode}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs ${
-                          advance.advanceType === 'PO-based' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                          advance.advanceType === 'PO-based' ? 'bg-blue-100 text-blue-700' : 'bg-px-teal-light text-px-teal-dark'
                         }`}>
                           {advance.advanceType}
                         </span>
@@ -257,27 +257,27 @@ export function AdvancePaymentQueue() {
                       <td className="px-4 py-3">
                         {advance.poNumber ? (
                           <div>
-                            <div className="text-[#0A0F14]">{advance.poNumber}</div>
+                            <div className="text-[var(--color-ink)]">{advance.poNumber}</div>
                             {advance.milestoneName && (
-                              <div className="text-xs text-[#6E7A82]">{advance.milestoneName}</div>
+                              <div className="text-xs text-[var(--color-mercury-grey)]">{advance.milestoneName}</div>
                             )}
                           </div>
                         ) : (
-                          <span className="text-[#6E7A82]">On-Account</span>
+                          <span className="text-[var(--color-mercury-grey)]">On-Account</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="text-[#0A0F14]">
+                        <div className="text-[var(--color-ink)]">
                           {advance.currency} {advance.netPayable.toLocaleString()}
                         </div>
                         {advance.tdsAmount > 0 && (
-                          <div className="text-xs text-[#6E7A82]">
+                          <div className="text-xs text-[var(--color-mercury-grey)]">
                             TDS: {advance.currency} {advance.tdsAmount.toLocaleString()}
                           </div>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2 text-[#6E7A82]">
+                        <div className="flex items-center gap-2 text-[var(--color-mercury-grey)]">
                           <Calendar className="w-4 h-4" />
                           {advance.approvedDate || '-'}
                         </div>
@@ -296,9 +296,9 @@ export function AdvancePaymentQueue() {
                 ) : (
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center">
-                      <CheckCircle className="w-12 h-12 mx-auto mb-3 text-[#6E7A82] opacity-50" />
-                      <p className="text-[#6E7A82]">No advances ready for payment</p>
-                      <p className="text-sm text-[#6E7A82] mt-1">
+                      <CheckCircle className="w-12 h-12 mx-auto mb-3 text-[var(--color-mercury-grey)] opacity-50" />
+                      <p className="text-[var(--color-mercury-grey)]">No advances ready for payment</p>
+                      <p className="text-sm text-[var(--color-mercury-grey)] mt-1">
                         {searchTerm 
                           ? 'Try adjusting your search'
                           : 'Approved advances will appear here for payment processing'}
@@ -312,12 +312,12 @@ export function AdvancePaymentQueue() {
         </div>
 
         {/* Processing Info */}
-        <div className="mt-4 bg-white rounded-lg border border-[#E1E6EA] p-4">
+        <div className="mt-4 bg-white rounded-lg border border-[var(--color-silver)] p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-[#00A9B7] mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-[var(--color-teal)] mt-0.5" />
             <div className="flex-1">
-              <h4 className="text-[#0A0F14] mb-1">Payment Processing</h4>
-              <p className="text-sm text-[#6E7A82]">
+              <h4 className="text-[var(--color-ink)] mb-1">Payment Processing</h4>
+              <p className="text-sm text-[var(--color-mercury-grey)]">
                 Selected advances will be included in the payment run. Payments will be processed via {paymentMode} and 
                 accounting entries will be automatically posted. TDS will be deducted as applicable.
               </p>

@@ -33,10 +33,10 @@ export function DashboardV2() {
   // PO Status Breakdown Chart Data
   const poStatusData = useMemo(() => [
     { name: 'Draft', value: metrics.poStatusBreakdown.draft, color: '#94A3B8' },
-    { name: 'Approved', value: metrics.poStatusBreakdown.approved, color: '#00A9B7' },
+    { name: 'Approved', value: metrics.poStatusBreakdown.approved, color: 'var(--color-teal)' },
     { name: 'Partially Received', value: metrics.poStatusBreakdown.partiallyReceived, color: '#D97706' },
     { name: 'Fully Received', value: metrics.poStatusBreakdown.fullyReceived, color: '#10B981' },
-    { name: 'Closed', value: metrics.poStatusBreakdown.closed, color: '#6E7A82' }
+    { name: 'Closed', value: metrics.poStatusBreakdown.closed, color: 'var(--color-mercury-grey)' }
   ].filter(item => item.value > 0), [metrics.poStatusBreakdown]);
 
   // PO Volume Trend Chart Data
@@ -51,9 +51,9 @@ export function DashboardV2() {
   // Invoice Status Breakdown Chart Data
   const invoiceStatusData = useMemo(() => [
     { name: 'Pending Approval', value: metrics.invoiceStatusBreakdown.pendingApproval, color: '#D97706' },
-    { name: 'Approved', value: metrics.invoiceStatusBreakdown.approved, color: '#00A9B7' },
+    { name: 'Approved', value: metrics.invoiceStatusBreakdown.approved, color: 'var(--color-teal)' },
     { name: 'Paid', value: metrics.invoiceStatusBreakdown.paid, color: '#10B981' },
-    { name: 'Overdue', value: metrics.invoiceStatusBreakdown.overdue, color: '#FF4E5B' }
+    { name: 'Overdue', value: metrics.invoiceStatusBreakdown.overdue, color: 'var(--color-error)' }
   ].filter(item => item.value > 0), [metrics.invoiceStatusBreakdown]);
 
   // Get entity display info
@@ -85,8 +85,8 @@ export function DashboardV2() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>Dashboard</h1>
-            <p className="text-sm mt-1" style={{ color: '#6E7A82' }}>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Dashboard</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
               Procurement & AP Performance Metrics
             </p>
           </div>
@@ -95,14 +95,14 @@ export function DashboardV2() {
           {entityInfo.isConsolidated && (
             <div 
               className="flex items-center gap-2 px-4 py-2 rounded-lg"
-              style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}
+              style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}
             >
-              <Layers style={{ width: '16px', height: '16px', color: '#00A9B7' }} />
+              <Layers style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
               <div>
-                <p style={{ fontSize: '13px', fontWeight: '600', color: '#00A9B7', margin: 0, lineHeight: '1.2' }}>
+                <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-teal)', margin: 0, lineHeight: '1.2' }}>
                   {entityInfo.name}
                 </p>
-                <p style={{ fontSize: '11px', color: '#007D87', margin: '2px 0 0 0', lineHeight: '1.2' }}>
+                <p style={{ fontSize: '11px', color: 'var(--color-teal-dark)', margin: '2px 0 0 0', lineHeight: '1.2' }}>
                   Base Currency: INR
                 </p>
               </div>
@@ -114,7 +114,7 @@ export function DashboardV2() {
       {/* Loading State */}
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#00A9B7' }}></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--color-teal)' }}></div>
         </div>
       )}
 
@@ -200,8 +200,8 @@ export function DashboardV2() {
           {/* Charts Row 1: PO Status & Volume Trend */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* PO Status Breakdown */}
-            <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
-              <h3 className="text-lg mb-4" style={{ color: '#0A0F14' }}>PO Status Breakdown</h3>
+            <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+              <h3 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>PO Status Breakdown</h3>
               {poStatusData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -223,36 +223,36 @@ export function DashboardV2() {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[300px]" style={{ color: '#6E7A82' }}>
+                <div className="flex items-center justify-center h-[300px]" style={{ color: 'var(--color-mercury-grey)' }}>
                   No PO data available
                 </div>
               )}
             </div>
 
             {/* PO Volume Trend */}
-            <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
-              <h3 className="text-lg mb-4" style={{ color: '#0A0F14' }}>PO Volume Trend</h3>
+            <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+              <h3 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>PO Volume Trend</h3>
               {poVolumeTrendData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={poVolumeTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                    <XAxis dataKey="month" stroke="#6E7A82" />
-                    <YAxis yAxisId="left" orientation="left" stroke="#6E7A82" />
-                    <YAxis yAxisId="right" orientation="right" stroke="#6E7A82" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                    <XAxis dataKey="month" stroke="var(--color-mercury-grey)" />
+                    <YAxis yAxisId="left" orientation="left" stroke="var(--color-mercury-grey)" />
+                    <YAxis yAxisId="right" orientation="right" stroke="var(--color-mercury-grey)" />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA' }}
+                      contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)' }}
                       formatter={(value: number, name: string) => {
                         if (name === 'value') return [`${formatCurrency(value * 1000)}`, 'PO Value'];
                         return [value, 'PO Count'];
                       }}
                     />
                     <Legend />
-                    <Bar yAxisId="left" dataKey="count" fill="#00A9B7" name="PO Count" />
+                    <Bar yAxisId="left" dataKey="count" fill="var(--color-teal)" name="PO Count" />
                     <Bar yAxisId="right" dataKey="value" fill="#D97706" name="Value (K)" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[300px]" style={{ color: '#6E7A82' }}>
+                <div className="flex items-center justify-center h-[300px]" style={{ color: 'var(--color-mercury-grey)' }}>
                   No trend data available
                 </div>
               )}
@@ -262,8 +262,8 @@ export function DashboardV2() {
           {/* Charts Row 2: Invoice Status & Summary Stats */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Invoice Status Breakdown */}
-            <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
-              <h3 className="text-lg mb-4" style={{ color: '#0A0F14' }}>Invoice Status Breakdown</h3>
+            <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+              <h3 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>Invoice Status Breakdown</h3>
               {invoiceStatusData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -285,43 +285,43 @@ export function DashboardV2() {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[300px]" style={{ color: '#6E7A82' }}>
+                <div className="flex items-center justify-center h-[300px]" style={{ color: 'var(--color-mercury-grey)' }}>
                   No invoice data available
                 </div>
               )}
             </div>
 
             {/* Summary Statistics */}
-            <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
-              <h3 className="text-lg mb-4" style={{ color: '#0A0F14' }}>Quick Stats</h3>
+            <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+              <h3 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>Quick Stats</h3>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+                <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
                   <div>
-                    <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>Total GRNs</p>
-                    <p className="text-xl" style={{ color: '#0A0F14', margin: '4px 0 0 0' }}>{metrics.grnCount}</p>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>Total GRNs</p>
+                    <p className="text-xl" style={{ color: 'var(--color-ink)', margin: '4px 0 0 0' }}>{metrics.grnCount}</p>
                   </div>
-                  <Package style={{ width: '32px', height: '32px', color: '#00A9B7' }} />
+                  <Package style={{ width: '32px', height: '32px', color: 'var(--color-teal)' }} />
                 </div>
 
                 <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: '#FFF9E6' }}>
                   <div>
-                    <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>Overdue Invoices</p>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>Overdue Invoices</p>
                     <p className="text-xl" style={{ color: '#D97706', margin: '4px 0 0 0' }}>{metrics.overdueInvoices}</p>
                   </div>
                   <AlertTriangle style={{ width: '32px', height: '32px', color: '#D97706' }} />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
+                <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
                   <div>
-                    <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>Debit Notes</p>
-                    <p className="text-xl" style={{ color: '#FF4E5B', margin: '4px 0 0 0' }}>{formatCurrency(metrics.totalDebitNotes)}</p>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>Debit Notes</p>
+                    <p className="text-xl" style={{ color: 'var(--color-error)', margin: '4px 0 0 0' }}>{formatCurrency(metrics.totalDebitNotes)}</p>
                   </div>
-                  <FileEdit style={{ width: '32px', height: '32px', color: '#FF4E5B' }} />
+                  <FileEdit style={{ width: '32px', height: '32px', color: 'var(--color-error)' }} />
                 </div>
 
                 {entityInfo.isConsolidated && (
-                  <div className="p-4 rounded-lg" style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}>
-                    <p className="text-xs" style={{ color: '#007D87', margin: 0 }}>
+                  <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}>
+                    <p className="text-xs" style={{ color: 'var(--color-teal-dark)', margin: 0 }}>
                       ℹ️ All values are converted to INR (base currency) for consolidated reporting.
                     </p>
                   </div>

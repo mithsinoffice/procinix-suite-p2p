@@ -37,11 +37,11 @@ import {
   sendVendorInvitationEmail,
 } from '../lib/vendorInvitationEmail';
 
-const surface = '#F6F9FC';
-const border = '#E1E6EA';
-const textMuted = '#6E7A82';
-const textMain = '#0A0F14';
-const accent = '#00A9B7';
+const surface = 'var(--color-cloud)';
+const border = 'var(--color-silver)';
+const textMuted = 'var(--color-mercury-grey)';
+const textMain = 'var(--color-ink)';
+const accent = 'var(--color-teal)';
 
 const CATEGORIES = [
   'Goods — Raw material',
@@ -395,7 +395,7 @@ export function InviteVendors() {
           value={kpis.accepted}
         />
         <KpiCard
-          icon={<XCircle className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: '#DC2626' }} />}
+          icon={<XCircle className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: 'var(--color-error-dark)' }} />}
           label="Expired"
           value={kpis.expired}
         />

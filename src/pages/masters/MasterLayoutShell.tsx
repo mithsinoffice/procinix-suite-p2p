@@ -17,11 +17,11 @@ export const MasterLayoutShell: React.FC<MasterLayoutShellProps> = ({
   children 
 }) => {
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh', padding: '32px' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh', padding: '32px' }}>
       {/* Master Header */}
       <div style={{ 
         backgroundColor: '#FFFFFF', 
-        border: '1px solid #E1E6EA', 
+        border: '1px solid var(--color-silver)', 
         borderRadius: '8px', 
         padding: '20px',
         marginBottom: '24px',
@@ -30,14 +30,14 @@ export const MasterLayoutShell: React.FC<MasterLayoutShellProps> = ({
         alignItems: 'center'
       }}>
         <div>
-          <h1 style={{ fontSize: '20px', color: '#0A0F14', margin: 0 }}>{masterName}</h1>
-          <p style={{ fontSize: '13px', color: '#6E7A82', marginTop: '4px' }}>
+          <h1 style={{ fontSize: '20px', color: 'var(--color-ink)', margin: 0 }}>{masterName}</h1>
+          <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', marginTop: '4px' }}>
             PLACEHOLDER: Master description
           </p>
         </div>
         <div style={{ 
           padding: '8px 16px', 
-          backgroundColor: '#00A9B7', 
+          backgroundColor: 'var(--color-teal)', 
           borderRadius: '6px'
         }}>
           <span style={{ fontSize: '13px', color: '#FFFFFF' }}>+ Create New</span>
@@ -47,7 +47,7 @@ export const MasterLayoutShell: React.FC<MasterLayoutShellProps> = ({
       {/* Filters */}
       <div style={{ 
         backgroundColor: '#FFFFFF', 
-        border: '1px solid #E1E6EA', 
+        border: '1px solid var(--color-silver)', 
         borderRadius: '8px', 
         padding: '16px',
         marginBottom: '24px',
@@ -59,12 +59,12 @@ export const MasterLayoutShell: React.FC<MasterLayoutShellProps> = ({
             key={filter}
             style={{ 
               padding: '8px 12px', 
-              backgroundColor: '#F6F9FC', 
-              border: '1px dashed #E1E6EA', 
+              backgroundColor: 'var(--color-cloud)', 
+              border: '1px dashed var(--color-silver)', 
               borderRadius: '4px'
             }}
           >
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>{filter}</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>{filter}</span>
           </div>
         ))}
       </div>
@@ -73,18 +73,18 @@ export const MasterLayoutShell: React.FC<MasterLayoutShellProps> = ({
       {children || (
         <div style={{ 
           backgroundColor: '#FFFFFF', 
-          border: '1px solid #E1E6EA', 
+          border: '1px solid var(--color-silver)', 
           borderRadius: '8px', 
           padding: '20px'
         }}>
           <div style={{ 
             padding: '64px', 
-            backgroundColor: '#F6F9FC', 
-            border: '1px dashed #E1E6EA', 
+            backgroundColor: 'var(--color-cloud)', 
+            border: '1px dashed var(--color-silver)', 
             borderRadius: '4px',
             textAlign: 'center'
           }}>
-            <span style={{ fontSize: '12px', color: '#6E7A82' }}>Master Data Table Placeholder</span>
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Master Data Table Placeholder</span>
           </div>
         </div>
       )}

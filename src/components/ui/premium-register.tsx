@@ -28,13 +28,13 @@ export function PremiumFilterMenu({
         className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm w-full justify-between"
         style={{
           backgroundColor: '#FFFFFF',
-          border: '1px solid #D7E3EA',
-          color: '#0A0F14',
+          border: '1px solid var(--color-fog)',
+          color: 'var(--color-ink)',
           boxShadow: '0 6px 18px rgba(15, 23, 42, 0.04)',
         }}
       >
         <span className="flex items-center gap-2 min-w-0">
-          <Filter className="w-4 h-4 shrink-0" style={{ color: '#00A9B7' }} />
+          <Filter className="w-4 h-4 shrink-0" style={{ color: 'var(--color-teal)' }} />
           <span className="truncate">{label}</span>
           {selected.length > 0 && (
             <span
@@ -45,7 +45,7 @@ export function PremiumFilterMenu({
             </span>
           )}
         </span>
-        <ChevronDown className="w-4 h-4 shrink-0" style={{ color: '#6E7A82' }} />
+        <ChevronDown className="w-4 h-4 shrink-0" style={{ color: 'var(--color-mercury-grey)' }} />
       </button>
 
       {open && (
@@ -53,13 +53,13 @@ export function PremiumFilterMenu({
           className="absolute left-0 top-full mt-2 w-64 rounded-2xl p-3 z-20"
           style={{
             backgroundColor: '#FFFFFF',
-            border: '1px solid #D7E3EA',
+            border: '1px solid var(--color-fog)',
             boxShadow: '0 24px 48px rgba(15, 23, 42, 0.12)',
           }}
         >
           <div className="flex flex-wrap gap-2 mb-3">
             {selected.length === 0 ? (
-              <span className="text-xs" style={{ color: '#6E7A82' }}>No filters selected</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>No filters selected</span>
             ) : (
               selected.map((value) => (
                 <span
@@ -83,7 +83,7 @@ export function PremiumFilterMenu({
                   className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm"
                   style={{
                     backgroundColor: isSelected ? '#E7FBFD' : '#FFFFFF',
-                    color: '#0A0F14',
+                    color: 'var(--color-ink)',
                     border: `1px solid ${isSelected ? '#7ADBE3' : 'transparent'}`,
                   }}
                 >
@@ -91,7 +91,7 @@ export function PremiumFilterMenu({
                   {isSelected && (
                     <span
                       className="px-2 py-0.5 rounded-full text-[11px]"
-                      style={{ backgroundColor: '#00A9B7', color: '#FFFFFF', fontWeight: 700 }}
+                      style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF', fontWeight: 700 }}
                     >
                       On
                     </span>
@@ -105,7 +105,7 @@ export function PremiumFilterMenu({
               type="button"
               onClick={() => setOpen(false)}
               className="w-full px-3 py-2 rounded-xl text-sm"
-              style={{ backgroundColor: '#0A0F14', color: '#FFFFFF', fontWeight: 600 }}
+              style={{ backgroundColor: 'var(--color-ink)', color: '#FFFFFF', fontWeight: 600 }}
             >
               Done
             </button>

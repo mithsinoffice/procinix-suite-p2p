@@ -15,6 +15,8 @@ import { ProcurementDataProvider } from './contexts/ProcurementDataContext';
 // Layout & Core
 import { DashboardLayout } from './components/DashboardLayout';
 import { Login } from './components/Login';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { NotFound } from './components/NotFound';
 
 // Procurement
 import { PurchaseOrders } from './components/PurchaseOrders';
@@ -30,8 +32,9 @@ import { CreateVendor } from './components/CreateVendor';
 // Invoices
 import { Invoices } from './components/Invoices';
 import { InvoiceFormPO } from './components/InvoiceFormPO';
-import { InvoiceFormDirect } from './components/InvoiceFormDirect';
+import { InvoiceFormDirectV2 as InvoiceFormDirect } from './components/InvoiceFormDirectV2';
 import { AIInvoiceCapture } from './components/AIInvoiceCapture';
+import { AIIngestionDashboard } from './components/AIIngestionDashboard';
 import { InvoiceDetail } from './components/InvoiceDetail';
 
 // Masters
@@ -201,6 +204,7 @@ function App() {
               <ProcurementDataProvider>
                 <BudgetDataProvider>
                   <DashboardDataProvider>
+                    <ErrorBoundary>
                     <Suspense fallback={<RouteFallback />}>
                     <Routes>
                     <Route path="/login" element={<Login />} />
@@ -280,6 +284,7 @@ function App() {
                       <Route path="invoices/create-po" element={<InvoiceFormPO />} />
                       <Route path="invoices/create-direct" element={<InvoiceFormDirect />} />
                       <Route path="invoices/ai-capture" element={<AIInvoiceCapture />} />
+                      <Route path="invoices/ai-ingestion" element={<AIIngestionDashboard />} />
                       <Route path="invoices/detail/:id" element={<InvoiceDetail />} />
                       <Route path="invoices/edit/:id" element={<InvoiceFormPO />} />
                       
@@ -412,9 +417,16 @@ function App() {
                       <Route path="procurement/pr/to-po-conversion" element={<PRtoPOConversion />} />
                       <Route path="procurement/pr/to-po-conversion-enhanced" element={<PRtoPOConversionEnhanced />} />
                       <Route path="procurement/po/creation-hub" element={<POCreationHub />} />
+
+                      {/* Catch-all 404 */}
+                      <Route path="*" element={<NotFound />} />
                     </Route>
+
+                    {/* Top-level catch-all for paths outside DashboardLayout */}
+                    <Route path="*" element={<NotFound />} />
                     </Routes>
                     </Suspense>
+                    </ErrorBoundary>
                   </DashboardDataProvider>
                 </BudgetDataProvider>
               </ProcurementDataProvider>

@@ -22,7 +22,7 @@ export function DashboardLayout() {
   }
 
   return (
-    <div className="flex h-screen" style={{ backgroundColor: '#F6F9FC' }}>
+    <div className="flex h-screen" style={{ backgroundColor: 'var(--color-cloud)' }}>
       {/* Subko Coffee Flat Navigation */}
       <SubkoCoffeeNavigation />
 

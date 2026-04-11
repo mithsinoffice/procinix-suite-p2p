@@ -40,8 +40,8 @@ export function MasterDataComplianceBadge({
         };
       case 'non-compliant':
         return {
-          bg: '#FEE2E2',
-          border: '#DC2626',
+          bg: 'var(--color-error-light)',
+          border: 'var(--color-error-dark)',
           text: '#991B1B',
           icon: AlertCircle,
           label: 'Needs Update'

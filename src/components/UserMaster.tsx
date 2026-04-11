@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Plus, Search, Edit, Trash2, Mail, Shield, Check, AlertCircle, Clock, Building2, Lock } from 'lucide-react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +8,8 @@ import {
   createUserEntityAccessRow,
   deriveUserRolesFromEntityRows,
 } from '../types/userMaster';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import {
   formColors,
   formSectionBlockStyle,
@@ -575,127 +576,132 @@ export function UserMaster() {
     return (id: string) => m.get(id.trim()) ?? '';
   }, [entityOptionsForSelect]);
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [formData.userCode, formData.employeeId, formData.name, formData.email];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    const hasEntityAccess = formData.userEntityAccess.some((r) => r.entityId.trim() && r.roleId.trim()) ? 1 : 0;
+    return { filled: filled + hasEntityAccess, total: fields.length + 1 };
+  }, [formData.userCode, formData.employeeId, formData.name, formData.email, formData.userEntityAccess]);
+
+  const handleSaveDraftUser = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit();
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(viewMode === 'form' ? handleSaveDraftUser : undefined);
+
   const formContent = (
     <>
-      <h3 style={sectionTitleStyle}>A. Basic Details</h3>
-      <div className={gridFormTwoColGap4} style={formSectionBlockStyle}>
-        <div className="min-w-0">
-          <label style={labelStyle}>
-            User Code <span style={{ color: '#FF4E5B' }}>*</span>
-          </label>
+      <FormSection title="User Details" columns={2}>
+        <PxFormField label="User Code" required filled={!!formData.userCode.trim()} hint="Unique user identifier">
           <input
             type="text"
             value={formData.userCode}
             onChange={(e) => setFormData({ ...formData, userCode: e.target.value })}
             placeholder="Unique user code"
-            style={inputStyle}
+            className="px-input"
           />
-        </div>
-        <div ref={employeeComboRef} className="min-w-0 relative">
-          <label style={labelStyle}>
-            Employee Name <span style={{ color: '#FF4E5B' }}>*</span>
-          </label>
-          <input
-            type="text"
-            value={employeeQuery}
-            onChange={(e) => {
-              const v = e.target.value;
-              setEmployeeQuery(v);
-              setEmployeeComboOpen(true);
-              if (formData.employeeMasterRecordId) {
-                setFormData((f) => ({ ...f, employeeMasterRecordId: '', employeeId: '' }));
-              }
-            }}
-            onFocus={() => setEmployeeComboOpen(true)}
-            placeholder="Type to search name, code, email, entity…"
-            style={inputStyle}
-            autoComplete="off"
-            role="combobox"
-            aria-expanded={employeeComboOpen}
-            aria-autocomplete="list"
-          />
-          {employeeComboOpen && (
-            <ul
-              className="absolute left-0 right-0 z-20 mt-1 max-h-52 overflow-y-auto rounded-lg border bg-white shadow-lg"
-              style={{ borderColor: '#E1E6EA', top: '100%' }}
-              role="listbox"
-            >
-              {employeeComboMatches.length === 0 ? (
-                <li className="px-3 py-2 text-sm" style={{ color: '#6E7A82' }}>
-                  No matching employees
-                </li>
-              ) : (
-                employeeComboMatches.map((emp) => (
-                  <li key={emp.id}>
-                    <button
-                      type="button"
-                      className="w-full text-left px-3 py-2.5 text-sm hover:bg-[#F6F9FC] border-0 bg-transparent cursor-pointer"
-                      style={{ color: '#0A0F14' }}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => pickEmployee(emp)}
-                    >
-                      <span style={{ fontWeight: 600 }}>{emp.empName}</span>
-                      <span style={{ color: '#6E7A82' }}> · {emp.empCode}</span>
-                      {emp.baseEntity ? (
-                        <span className="block text-xs mt-0.5" style={{ color: '#6E7A82' }}>
-                          {emp.baseEntity}
-                        </span>
-                      ) : null}
-                    </button>
+        </PxFormField>
+        <PxFormField label="Employee Name" required filled={!!formData.employeeMasterRecordId} hint="Search and select an employee">
+          <div ref={employeeComboRef} className="relative">
+            <input
+              type="text"
+              value={employeeQuery}
+              onChange={(e) => {
+                const v = e.target.value;
+                setEmployeeQuery(v);
+                setEmployeeComboOpen(true);
+                if (formData.employeeMasterRecordId) {
+                  setFormData((f) => ({ ...f, employeeMasterRecordId: '', employeeId: '' }));
+                }
+              }}
+              onFocus={() => setEmployeeComboOpen(true)}
+              placeholder="Type to search name, code, email, entity..."
+              className="px-input"
+              autoComplete="off"
+              role="combobox"
+              aria-expanded={employeeComboOpen}
+              aria-autocomplete="list"
+            />
+            {employeeComboOpen && (
+              <ul
+                className="absolute left-0 right-0 z-20 mt-1 max-h-52 overflow-y-auto rounded-lg border bg-white shadow-lg"
+                style={{ borderColor: 'var(--color-silver)', top: '100%' }}
+                role="listbox"
+              >
+                {employeeComboMatches.length === 0 ? (
+                  <li className="px-3 py-2 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                    No matching employees
                   </li>
-                ))
-              )}
-            </ul>
-          )}
-          <button
-            type="button"
-            className="mt-1 text-xs border-0 bg-transparent cursor-pointer"
-            style={{ color: '#00A9B7' }}
-            onClick={clearEmployeeSelection}
-          >
-            Clear selection
-          </button>
-        </div>
-        <div className="min-w-0">
-          <label style={labelStyle}>
-            Full Name <span style={{ color: '#FF4E5B' }}>*</span>
-          </label>
+                ) : (
+                  employeeComboMatches.map((emp) => (
+                    <li key={emp.id}>
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-[var(--color-cloud)] border-0 bg-transparent cursor-pointer"
+                        style={{ color: 'var(--color-ink)' }}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => pickEmployee(emp)}
+                      >
+                        <span style={{ fontWeight: 600 }}>{emp.empName}</span>
+                        <span style={{ color: 'var(--color-mercury-grey)' }}> · {emp.empCode}</span>
+                        {emp.baseEntity ? (
+                          <span className="block text-xs mt-0.5" style={{ color: 'var(--color-mercury-grey)' }}>
+                            {emp.baseEntity}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
+            <button
+              type="button"
+              className="mt-1 text-xs border-0 bg-transparent cursor-pointer"
+              style={{ color: 'var(--color-teal)' }}
+              onClick={clearEmployeeSelection}
+            >
+              Clear selection
+            </button>
+          </div>
+        </PxFormField>
+        <PxFormField label="Full Name" required filled={!!formData.name.trim()}>
           <input
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="From Employee Master (editable)"
-            style={inputStyle}
+            className="px-input"
           />
-        </div>
-        <div className="min-w-0">
-          <label style={labelStyle}>
-            Login Email <span style={{ color: '#FF4E5B' }}>*</span>
-          </label>
+        </PxFormField>
+        <PxFormField label="Login Email" required filled={!!formData.email.trim()}>
           <input
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             placeholder="Official email (editable)"
-            style={inputStyle}
+            className="px-input"
           />
-        </div>
-        <div className="min-w-0">
-          <label style={labelStyle}>Username</label>
+        </PxFormField>
+        <PxFormField label="Username" filled={!!formData.username.trim()}>
           <input
             type="text"
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             placeholder="From email or employee code (editable)"
-            style={inputStyle}
+            className="px-input"
           />
-        </div>
-        <div className="min-w-0">
-          <label style={labelStyle}>User Type</label>
+        </PxFormField>
+        <PxFormField label="User Type" filled={!!formData.userType}>
           <select
             value={formData.userType}
             onChange={(e) => setFormData({ ...formData, userType: e.target.value })}
-            style={selectStyle}
+            className="px-select"
           >
             <option value="">Select user type</option>
             {userTypeOptions.map((opt) => (
@@ -704,30 +710,23 @@ export function UserMaster() {
               </option>
             ))}
           </select>
-        </div>
-        <div className="min-w-0">
-          <label style={labelStyle}>Linked Employee (reference)</label>
+        </PxFormField>
+        <PxFormField label="Linked Employee (reference)" filled={!!formData.employeeId}>
           <input
             type="text"
-            value={formData.employeeId ? formData.employeeId : '—'}
+            value={formData.employeeId ? formData.employeeId : '\u2014'}
             readOnly
             tabIndex={-1}
-            style={readOnlyInputStyle}
+            className="px-input"
+            style={{ opacity: 0.6, cursor: 'default' }}
             title="Set by Employee Name selection"
           />
-        </div>
-        <div className="min-w-0" aria-hidden />
-      </div>
-      <input type="hidden" name="linked_employee_id" value={formData.employeeId} />
-
-      <h3 style={sectionTitleStyle}>B. System Access</h3>
-      <div className={gridFormTwoColGap4} style={formSectionBlockStyle}>
-        <div className="min-w-0">
-          <label style={labelStyle}>Login Method</label>
+        </PxFormField>
+        <PxFormField label="Login Method" filled={!!formData.loginMethod}>
           <select
             value={formData.loginMethod}
             onChange={(e) => setFormData({ ...formData, loginMethod: e.target.value })}
-            style={selectStyle}
+            className="px-select"
           >
             {LOGIN_METHOD_OPTIONS.map((m) => (
               <option key={m} value={m}>
@@ -735,9 +734,8 @@ export function UserMaster() {
               </option>
             ))}
           </select>
-        </div>
-        <div className="min-w-0">
-          <label style={labelStyle}>Active</label>
+        </PxFormField>
+        <PxFormField label="Active" filled={!!formData.status}>
           {selectedUser ? (
             <select
               value={formData.status}
@@ -747,7 +745,7 @@ export function UserMaster() {
                   status: e.target.value as UserMasterRecord['status'],
                 })
               }
-              style={selectStyle}
+              className="px-select"
             >
               <option value="Pending Approval">Pending Approval</option>
               <option value="Active">Active</option>
@@ -756,57 +754,41 @@ export function UserMaster() {
           ) : (
             <div style={readOnlyDisplayRowStyle}>Pending Approval (after create)</div>
           )}
-        </div>
-        <div className="min-w-0 flex items-center" style={{ minHeight: '42px' }}>
-          <label className="flex items-center gap-2 cursor-pointer" style={{ fontSize: '14px', color: '#0A0F14' }}>
-            <input
-              type="checkbox"
-              checked={formData.locked}
-              onChange={(e) => setFormData({ ...formData, locked: e.target.checked })}
-            />
-            Locked
-          </label>
-        </div>
-        <div className="min-w-0 flex items-center" style={{ minHeight: '42px' }}>
-          <label className="flex items-center gap-2 cursor-pointer" style={{ fontSize: '14px', color: '#0A0F14' }}>
-            <input
-              type="checkbox"
-              checked={formData.passwordResetRequired}
-              onChange={(e) => setFormData({ ...formData, passwordResetRequired: e.target.checked })}
-            />
-            Password reset required
-          </label>
-        </div>
-        <div className="min-w-0">
-          <label style={labelStyle}>Access expiry date</label>
+        </PxFormField>
+        <PxFormField label="Access Expiry Date" filled={!!formData.accessExpiryDate}>
           <input
             type="date"
             value={formData.accessExpiryDate}
             onChange={(e) => setFormData({ ...formData, accessExpiryDate: e.target.value })}
-            style={inputStyle}
+            className="px-input"
           />
-        </div>
-        <div className="min-w-0" aria-hidden />
-        <div className="min-w-0">
-          <label style={labelStyle}>
-            Login password {!selectedUser && <span style={{ color: '#FF4E5B' }}>*</span>}
-          </label>
+        </PxFormField>
+        <PxFormField label={`Login Password${!selectedUser ? ' *' : ''}`} required={!selectedUser} filled={!!formData.password.trim()} hint="Used by the login screen when the user is approved and active">
           <input
             type="password"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             placeholder={selectedUser ? 'Leave blank to keep existing password' : 'Set login password'}
-            style={inputStyle}
+            className="px-input"
           />
-          <p style={{ marginTop: '6px', fontSize: '12px', color: '#6E7A82' }}>
-            Used by the login screen when the user is approved and active.
-          </p>
-        </div>
-        <div className="min-w-0" aria-hidden />
-      </div>
+        </PxFormField>
+        <CheckCard
+          title="Locked"
+          subtitle="Prevent this user from logging in"
+          checked={formData.locked}
+          onChange={(v) => setFormData({ ...formData, locked: v })}
+        />
+        <CheckCard
+          title="Password Reset Required"
+          subtitle="Force password change on next login"
+          checked={formData.passwordResetRequired}
+          onChange={(v) => setFormData({ ...formData, passwordResetRequired: v })}
+        />
+      </FormSection>
+      <input type="hidden" name="linked_employee_id" value={formData.employeeId} />
 
       <h3 style={sectionTitleStyle}>C. Assigned entities &amp; roles</h3>
-      <p style={{ fontSize: '12px', color: '#6E7A82', margin: '0 0 12px 0' }}>
+      <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '0 0 12px 0' }}>
         The first row mirrors the default entity when one is set (for example from Employee Master{' '}
         <code style={{ fontSize: '11px' }}>baseEntity</code> matching Entity Master); that entity is fixed in the grid —
         choose role and validity only. Use <strong>Add row</strong> for more entities. Roles can be limited per entity
@@ -826,22 +808,22 @@ export function UserMaster() {
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
               <tr style={{ backgroundColor: formColors.tableHeaderBg }}>
-                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: '#6E7A82' }}>
-                  Entity <span style={{ color: '#FF4E5B' }}>*</span>
+                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: 'var(--color-mercury-grey)' }}>
+                  Entity <span style={{ color: 'var(--color-error)' }}>*</span>
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: '#6E7A82' }}>
-                  Role <span style={{ color: '#FF4E5B' }}>*</span>
+                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: 'var(--color-mercury-grey)' }}>
+                  Role <span style={{ color: 'var(--color-error)' }}>*</span>
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: '11px', color: '#6E7A82', width: '56px' }}>
+                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: '11px', color: 'var(--color-mercury-grey)', width: '56px' }}>
                   Def.
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: '#6E7A82', width: '100px' }}>
+                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: 'var(--color-mercury-grey)', width: '100px' }}>
                   Status
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: '#6E7A82', width: '108px' }}>
+                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: 'var(--color-mercury-grey)', width: '108px' }}>
                   Valid from
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: '#6E7A82', width: '108px' }}>
+                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: 'var(--color-mercury-grey)', width: '108px' }}>
                   Valid to
                 </th>
                 <th style={{ padding: '10px 8px', width: '40px' }} />
@@ -860,7 +842,7 @@ export function UserMaster() {
                         style={tableEntityLockedCellStyle}
                         title="Mirrors default entity when set (e.g. from employee entity match)"
                       >
-                        <Lock style={{ width: '14px', height: '14px', color: '#6E7A82', flexShrink: 0 }} />
+                        <Lock style={{ width: '14px', height: '14px', color: 'var(--color-mercury-grey)', flexShrink: 0 }} />
                         <span className="min-w-0 truncate">
                           {entityIdForRoles
                             ? entityLabel(row.entityId)
@@ -912,13 +894,13 @@ export function UserMaster() {
                       ) : (
                         <span
                           title="No default row entity — assign access using Add row"
-                          style={{ fontSize: '12px', color: '#6E7A82' }}
+                          style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}
                         >
                           —
                         </span>
                       )
                     ) : (
-                      <span style={{ fontSize: '12px', color: '#E1E6EA' }}>—</span>
+                      <span style={{ fontSize: '12px', color: 'var(--color-silver)' }}>—</span>
                     )}
                   </td>
                   <td style={{ padding: '8px', verticalAlign: 'middle' }}>
@@ -963,7 +945,7 @@ export function UserMaster() {
                         padding: '4px',
                       }}
                     >
-                      <Trash2 style={{ width: '16px', height: '16px', color: '#6E7A82' }} />
+                      <Trash2 style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
                     </button>
                   </td>
                 </tr>
@@ -972,7 +954,7 @@ export function UserMaster() {
             </tbody>
           </table>
         </div>
-        <div style={{ padding: '10px 12px', borderTop: '1px solid #E1E6EA', background: '#FAFBFC' }}>
+        <div style={{ padding: '10px 12px', borderTop: '1px solid var(--color-silver)', background: '#FAFBFC' }}>
           <button
             type="button"
             onClick={addEntityRow}
@@ -980,7 +962,7 @@ export function UserMaster() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#00A9B7',
+              color: 'var(--color-teal)',
               cursor: 'pointer',
               fontWeight: 500,
             }}
@@ -995,7 +977,7 @@ export function UserMaster() {
 
   if (viewMode === 'form') {
     return (
-      <MasterFormPage
+      <FormShell
         title="User Master"
         subtitle={
           selectedUser
@@ -1003,23 +985,27 @@ export function UserMaster() {
             : 'Create a user with identity, system access, and a role on each entity row.'
         }
         modeLabel={selectedUser ? 'Edit' : 'Create'}
-        chromeVariant="flat"
+        draftStatus={selectedUser ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={leaveForm}
         onCancel={leaveForm}
+        onSaveDraft={handleSaveDraftUser}
         onSubmit={handleSubmit}
         submitLabel={selectedUser ? 'Update User' : 'Create User'}
+        draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
         {formContent}
-      </MasterFormPage>
+      </FormShell>
     );
   }
 
   return (
-    <div style={{ padding: '24px', backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ padding: '24px', backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="flex items-center justify-between" style={{ marginBottom: '24px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#0A0F14', margin: 0 }}>User Master</h1>
-          <p style={{ fontSize: '14px', color: '#6E7A82', margin: '4px 0 0 0' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>User Master</h1>
+          <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>
             Manage system users and their access
           </p>
         </div>
@@ -1029,7 +1015,7 @@ export function UserMaster() {
           className="flex items-center gap-2 rounded-lg transition-all"
           style={{
             padding: '12px 20px',
-            backgroundColor: '#00A9B7',
+            backgroundColor: 'var(--color-teal)',
             color: '#FFFFFF',
             border: 'none',
             fontSize: '14px',
@@ -1037,10 +1023,10 @@ export function UserMaster() {
             cursor: 'pointer',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#007D87';
+            e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#00A9B7';
+            e.currentTarget.style.backgroundColor = 'var(--color-teal)';
           }}
         >
           <Plus style={{ width: '18px', height: '18px' }} />
@@ -1052,14 +1038,14 @@ export function UserMaster() {
         className="rounded-lg"
         style={{
           backgroundColor: '#FFFFFF',
-          border: '1px solid #E1E6EA',
+          border: '1px solid var(--color-silver)',
           padding: '16px',
           marginBottom: '16px',
         }}
       >
         <div className="flex items-center gap-2" style={{ position: 'relative' }}>
           <Search
-            style={{ position: 'absolute', left: '12px', width: '18px', height: '18px', color: '#6E7A82' }}
+            style={{ position: 'absolute', left: '12px', width: '18px', height: '18px', color: 'var(--color-mercury-grey)' }}
           />
           <input
             type="text"
@@ -1069,10 +1055,10 @@ export function UserMaster() {
             style={{
               flex: 1,
               padding: '10px 10px 10px 40px',
-              border: '1px solid #E1E6EA',
+              border: '1px solid var(--color-silver)',
               borderRadius: '8px',
               fontSize: '14px',
-              color: '#0A0F14',
+              color: 'var(--color-ink)',
               outline: 'none',
             }}
           />
@@ -1083,14 +1069,14 @@ export function UserMaster() {
         className="rounded-lg"
         style={{
           backgroundColor: '#FFFFFF',
-          border: '1px solid #E1E6EA',
+          border: '1px solid var(--color-silver)',
           overflow: 'hidden',
         }}
       >
         <div style={{ overflowX: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
-              <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '1px solid #E1E6EA' }}>
+              <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
                 {['User Code', 'Name', 'Email', 'Linked Emp.', 'Access', 'Status', 'Actions'].map((h) => (
                   <th
                     key={h}
@@ -1099,7 +1085,7 @@ export function UserMaster() {
                       textAlign: 'left',
                       fontSize: '12px',
                       fontWeight: '600',
-                      color: '#6E7A82',
+                      color: 'var(--color-mercury-grey)',
                       textTransform: 'uppercase',
                     }}
                   >
@@ -1110,12 +1096,12 @@ export function UserMaster() {
             </thead>
             <tbody>
               {filteredUsers.map((user) => (
-                <tr key={user.id} style={{ borderBottom: '1px solid #E1E6EA' }}>
+                <tr key={user.id} style={{ borderBottom: '1px solid var(--color-silver)' }}>
                   <td
                     style={{
                       padding: '16px',
                       fontSize: '14px',
-                      color: '#0A0F14',
+                      color: 'var(--color-ink)',
                       fontWeight: 500,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -1128,7 +1114,7 @@ export function UserMaster() {
                     style={{
                       padding: '16px',
                       fontSize: '14px',
-                      color: '#0A0F14',
+                      color: 'var(--color-ink)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -1140,7 +1126,7 @@ export function UserMaster() {
                     style={{
                       padding: '16px',
                       fontSize: '14px',
-                      color: '#6E7A82',
+                      color: 'var(--color-mercury-grey)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -1155,7 +1141,7 @@ export function UserMaster() {
                     style={{
                       padding: '16px',
                       fontSize: '14px',
-                      color: '#6E7A82',
+                      color: 'var(--color-mercury-grey)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -1163,7 +1149,7 @@ export function UserMaster() {
                   >
                     {user.employeeId || '—'}
                   </td>
-                  <td style={{ padding: '16px', fontSize: '14px', color: '#6E7A82' }}>
+                  <td style={{ padding: '16px', fontSize: '14px', color: 'var(--color-mercury-grey)' }}>
                     <div className="flex items-center gap-2 min-w-0 flex-wrap">
                       <Building2 style={{ width: '14px', height: '14px', flexShrink: 0 }} />
                       <span className="truncate">{summarizeEntities(user)}</span>
@@ -1179,34 +1165,34 @@ export function UserMaster() {
                         onClick={() => openFormEdit(user)}
                         className="p-2 rounded-lg transition-all"
                         style={{
-                          backgroundColor: '#F6F9FC',
-                          border: '1px solid #E1E6EA',
+                          backgroundColor: 'var(--color-cloud)',
+                          border: '1px solid var(--color-silver)',
                           cursor: 'pointer',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#E1E6EA';
+                          e.currentTarget.style.backgroundColor = 'var(--color-silver)';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = '#F6F9FC';
+                          e.currentTarget.style.backgroundColor = 'var(--color-cloud)';
                         }}
                         title="Edit User"
                       >
-                        <Edit style={{ width: '16px', height: '16px', color: '#00A9B7' }} />
+                        <Edit style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
                       </button>
                       {user.approvalStatus === 'Approved' && (
                         <button
                           type="button"
                           className="p-2 rounded-lg"
                           style={{
-                            backgroundColor: '#F6F9FC',
-                            border: '1px solid #E1E6EA',
+                            backgroundColor: 'var(--color-cloud)',
+                            border: '1px solid var(--color-silver)',
                             cursor: 'not-allowed',
                             opacity: 0.5,
                           }}
                           title="Cannot delete approved user"
                           disabled
                         >
-                          <Trash2 style={{ width: '16px', height: '16px', color: '#6E7A82' }} />
+                          <Trash2 style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
                         </button>
                       )}
                     </div>

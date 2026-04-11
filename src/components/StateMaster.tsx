@@ -1,11 +1,12 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, MapPin, Globe, FileText, Edit, Eye, Search, ArrowUpRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
-import { MasterFormPage } from './ui/MasterFormPage';
+import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface State {
   id: string;
@@ -187,78 +188,82 @@ export function StateMaster() {
   const getStatusBadgeStyle = (approvalStatus: string) => {
     switch (approvalStatus) {
       case 'Approved':
-        return { backgroundColor: '#E8F7F8', color: '#00A9B7' };
+        return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
       case 'Pending Approval':
         return { backgroundColor: '#FFF9E6', color: '#D97706' };
       case 'Draft':
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
       case 'Rejected':
-        return { backgroundColor: '#FFE8EA', color: '#FF4E5B' };
+        return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
       default:
-        return { backgroundColor: '#E5E7EB', color: '#6E7A82' };
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
     }
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [stateCode, stateName, country, status];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [stateCode, stateName, country, status]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit('Draft');
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (showForm) {
     return (
-      <MasterFormPage
+      <FormShell
         title="State Master"
         subtitle="Manage states with approval workflow"
         modeLabel={isEditMode ? 'Edit State' : 'Create State'}
+        draftStatus={isEditMode ? 'Draft' : 'New'}
+        completeness={completeness}
         onBack={() => setShowForm(false)}
         onCancel={() => setShowForm(false)}
-        onSaveDraft={() => handleSubmit('Draft')}
+        onSaveDraft={handleSaveDraft}
         onSubmit={() => handleSubmit('Pending Approval')}
         submitLabel="Submit"
         draftLabel="Save Draft"
+        saveStatus={saveStatus}
       >
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>State Code <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={stateCode} onChange={(e) => setStateCode(e.target.value)} placeholder="e.g., UP" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>State Name <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="e.g., Uttar Pradesh" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Country</label>
-            <div className="relative">
-              <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g., India" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
-            <div className="relative">
-              <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </MasterFormPage>
+        <FormSection title="State Details" columns={2}>
+          <PxFormField label="State Code" required filled={!!stateCode.trim()} hint="Two-letter state code">
+            <input type="text" value={stateCode} onChange={(e) => setStateCode(e.target.value)} placeholder="e.g., UP" className="px-input" />
+          </PxFormField>
+          <PxFormField label="State Name" required filled={!!stateName.trim()}>
+            <input type="text" value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="e.g., Uttar Pradesh" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Country" filled={!!country.trim()} hint="Parent country for this state">
+            <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g., India" className="px-input" />
+          </PxFormField>
+          <PxFormField label="Status" required filled={!!status.trim()}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </PxFormField>
+        </FormSection>
+      </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl" style={{ color: '#0A0F14' }}>State Master</h1>
-            <p style={{ color: '#6E7A82' }}>Manage states with approval workflow</p>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>State Master</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage states with approval workflow</p>
           </div>
         </div>
         <button
@@ -267,9 +272,9 @@ export function StateMaster() {
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Add State
@@ -279,42 +284,42 @@ export function StateMaster() {
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>
+            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
                 {isEditMode ? 'Edit State' : 'Add New State'}
               </h2>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: '#6E7A82' }}>
+              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>State Code <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>State Code <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input type="text" value={stateCode} onChange={(e) => setStateCode(e.target.value)} placeholder="e.g., UP" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <input type="text" value={stateCode} onChange={(e) => setStateCode(e.target.value)} placeholder="e.g., UP" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>State Name <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>State Name <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input type="text" value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="e.g., Uttar Pradesh" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <input type="text" value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="e.g., Uttar Pradesh" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Country</label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Country</label>
                   <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g., India" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }} />
+                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g., India" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>Status <span style={{ color: '#FF4E5B' }}>*</span></label>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Status <span style={{ color: 'var(--color-error)' }}>*</span></label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#6E7A82' }} />
-                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                     </select>
@@ -322,11 +327,11 @@ export function StateMaster() {
                 </div>
               </div>
             </div>
-            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: '#E1E6EA' }}>
-              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid #E1E6EA', color: '#6E7A82', backgroundColor: 'white' }}>
+            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
+              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}>
                 Cancel
               </button>
-              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: '#00A9B7' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}>
+              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
                 {isEditMode ? 'Update' : 'Save'}
               </button>
             </div>
@@ -345,19 +350,19 @@ export function StateMaster() {
         onRequestInfo={handleRequestInfo}
       />
 
-      <div className="rounded-[24px] overflow-hidden bg-white" style={{ border: '1px solid #D7E3EA', boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)' }}>
+      <div className="rounded-[24px] overflow-hidden bg-white" style={{ border: '1px solid var(--color-fog)', boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)' }}>
         <div className="overflow-x-auto">
           <div style={{ minWidth: '1080px' }}>
             <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.2fr 1.6fr 1.2fr 1fr 1.3fr 0.9fr', borderBottom: '1px solid #E8F0F4' }}>
               <div className="space-y-2">
                 <div className="relative w-full">
-                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#6E7A82' }} />
+                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
                   <input
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search states..."
                     className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm"
-                    style={{ backgroundColor: '#F8FBFD', border: '1px solid #D7E3EA', color: '#0A0F14' }}
+                    style={{ backgroundColor: '#F8FBFD', border: '1px solid var(--color-fog)', color: 'var(--color-ink)' }}
                   />
                 </div>
                 {hasActiveFilters && (
@@ -406,7 +411,7 @@ export function StateMaster() {
 
             <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.2fr 1.6fr 1.2fr 1fr 1.3fr 0.9fr', background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)', borderBottom: '1px solid #E4EDF2' }}>
               {['State Code', 'State Name', 'Country', 'Status', 'Approval Status', 'Action'].map((column) => (
-                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: '#6E7A82', fontWeight: 700 }}>
+                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
                   {column}
                 </div>
               ))}
@@ -423,11 +428,11 @@ export function StateMaster() {
                     backgroundColor: '#FFFFFF',
                   }}
                 >
-                  <div style={{ color: '#0A0F14', fontWeight: 700 }}>{state.stateCode}</div>
-                  <div style={{ color: '#0A0F14' }}>{state.stateName}</div>
-                  <div style={{ color: '#6E7A82' }}>{state.country}</div>
+                  <div style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{state.stateCode}</div>
+                  <div style={{ color: 'var(--color-ink)' }}>{state.stateName}</div>
+                  <div style={{ color: 'var(--color-mercury-grey)' }}>{state.country}</div>
                   <div>
-                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: state.status === 'Active' ? '#E8F7F8' : '#FFE8EA', color: state.status === 'Active' ? '#00A9B7' : '#FF4E5B', fontWeight: 700 }}>
+                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: state.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA', color: state.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)', fontWeight: 700 }}>
                       {state.status}
                     </span>
                   </div>
@@ -448,8 +453,8 @@ export function StateMaster() {
               ))}
               {filteredStates.length === 0 && (
                 <div className="px-8 py-16 text-center">
-                  <p className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: 700 }}>No states match the current filters</p>
-                  <p className="text-sm" style={{ color: '#6E7A82' }}>Clear one or more filters to bring the full register back.</p>
+                  <p className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>No states match the current filters</p>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Clear one or more filters to bring the full register back.</p>
                 </div>
               )}
             </div>

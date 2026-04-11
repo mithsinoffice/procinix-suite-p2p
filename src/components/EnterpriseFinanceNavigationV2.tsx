@@ -89,13 +89,13 @@ export function EnterpriseFinanceNavigationV2() {
           {/* MODULE HEADER - Enhanced Visual Hierarchy */}
           <div 
             className="flex items-center gap-2 px-4 py-3 mb-2"
-            style={{ borderBottom: '1px solid #E1E6EA' }}
+            style={{ borderBottom: '1px solid var(--color-silver)' }}
           >
-            <module.icon className="w-4 h-4" style={{ color: '#00A9B7' }} />
+            <module.icon className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
             <span 
               className="text-sm uppercase tracking-wide" 
               style={{ 
-                color: '#0A0F14', 
+                color: 'var(--color-ink)', 
                 fontWeight: '700',
                 letterSpacing: '0.05em'
               }}
@@ -120,15 +120,15 @@ export function EnterpriseFinanceNavigationV2() {
                     <div 
                       className="flex items-center gap-2 px-3 py-2.5 mb-1"
                       style={{ 
-                        borderLeft: '2px solid #00A9B7',
+                        borderLeft: '2px solid var(--color-teal)',
                         marginLeft: '8px'
                       }}
                     >
-                      <submodule.icon className="w-4 h-4" style={{ color: '#00A9B7' }} />
+                      <submodule.icon className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                       <span 
                         className="text-sm" 
                         style={{ 
-                          color: '#0A0F14', 
+                          color: 'var(--color-ink)', 
                           fontWeight: '600'
                         }}
                       >
@@ -149,21 +149,21 @@ export function EnterpriseFinanceNavigationV2() {
                             onClick={() => setShowContextualPanel(false)}
                             className="flex items-center gap-2.5 py-2 pl-8 pr-3 rounded-lg transition-all duration-200"
                             style={{
-                              backgroundColor: isNestedActive ? '#00A9B710' : 'transparent',
-                              color: isNestedActive ? '#00A9B7' : '#6E7A82',
-                              borderLeft: isNestedActive ? '3px solid #00A9B7' : '3px solid transparent',
+                              backgroundColor: isNestedActive ? 'var(--color-teal)10' : 'transparent',
+                              color: isNestedActive ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
+                              borderLeft: isNestedActive ? '3px solid var(--color-teal)' : '3px solid transparent',
                               marginLeft: '12px'
                             }}
                             onMouseEnter={(e) => {
                               if (!isNestedActive) {
-                                e.currentTarget.style.backgroundColor = '#F6F9FC';
-                                e.currentTarget.style.color = '#0A0F14';
+                                e.currentTarget.style.backgroundColor = 'var(--color-cloud)';
+                                e.currentTarget.style.color = 'var(--color-ink)';
                               }
                             }}
                             onMouseLeave={(e) => {
                               if (!isNestedActive) {
                                 e.currentTarget.style.backgroundColor = 'transparent';
-                                e.currentTarget.style.color = '#6E7A82';
+                                e.currentTarget.style.color = 'var(--color-mercury-grey)';
                               }
                             }}
                           >
@@ -186,21 +186,21 @@ export function EnterpriseFinanceNavigationV2() {
                   onClick={() => setShowContextualPanel(false)}
                   className="flex items-center gap-2.5 py-2.5 pl-4 pr-3 rounded-lg transition-all duration-200"
                   style={{
-                    backgroundColor: isSubActive ? '#00A9B710' : 'transparent',
-                    color: isSubActive ? '#00A9B7' : '#6E7A82',
-                    borderLeft: isSubActive ? '3px solid #00A9B7' : '3px solid transparent',
+                    backgroundColor: isSubActive ? 'var(--color-teal)10' : 'transparent',
+                    color: isSubActive ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
+                    borderLeft: isSubActive ? '3px solid var(--color-teal)' : '3px solid transparent',
                     marginLeft: '8px'
                   }}
                   onMouseEnter={(e) => {
                     if (!isSubActive) {
-                      e.currentTarget.style.backgroundColor = '#F6F9FC';
-                      e.currentTarget.style.color = '#0A0F14';
+                      e.currentTarget.style.backgroundColor = 'var(--color-cloud)';
+                      e.currentTarget.style.color = 'var(--color-ink)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isSubActive) {
                       e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = '#6E7A82';
+                      e.currentTarget.style.color = 'var(--color-mercury-grey)';
                     }
                   }}
                 >
@@ -224,12 +224,12 @@ export function EnterpriseFinanceNavigationV2() {
         onClick={() => setShowContextualPanel(false)}
         className="flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-all duration-200 mb-1"
         style={{
-          backgroundColor: isActive ? '#00A9B7' : 'transparent',
-          color: isActive ? '#FFFFFF' : '#0A0F14'
+          backgroundColor: isActive ? 'var(--color-teal)' : 'transparent',
+          color: isActive ? '#FFFFFF' : 'var(--color-ink)'
         }}
         onMouseEnter={(e) => {
           if (!isActive) {
-            e.currentTarget.style.backgroundColor = '#F6F9FC';
+            e.currentTarget.style.backgroundColor = 'var(--color-cloud)';
           }
         }}
         onMouseLeave={(e) => {
@@ -243,7 +243,7 @@ export function EnterpriseFinanceNavigationV2() {
           {module.label}
         </span>
         {isViewOnly && (
-          <Eye className="w-3.5 h-3.5" style={{ color: '#6E7A82' }} title="View Only Access" />
+          <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-mercury-grey)' }} title="View Only Access" />
         )}
       </Link>
     );
@@ -351,7 +351,7 @@ export function EnterpriseFinanceNavigationV2() {
         <div className="flex-1 px-3 py-6">
           <div className="mb-6">
             <div className="px-3 mb-3">
-              <span className="text-xs uppercase tracking-wider" style={{ color: '#9AA6AF', fontWeight: '600' }}>
+              <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
                 Modules
               </span>
             </div>
@@ -374,7 +374,7 @@ export function EnterpriseFinanceNavigationV2() {
                     onClick={() => handlePillarClick(pillar.key)}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200"
                     style={{
-                      backgroundColor: isActive ? '#00A9B7' : 'transparent',
+                      backgroundColor: isActive ? 'var(--color-teal)' : 'transparent',
                       color: isActive ? '#FFFFFF' : '#B8C5CE'
                     }}
                     onMouseEnter={(e) => {
@@ -402,7 +402,7 @@ export function EnterpriseFinanceNavigationV2() {
           {/* Global Navigation */}
           <div>
             <div className="px-3 mb-3">
-              <span className="text-xs uppercase tracking-wider" style={{ color: '#9AA6AF', fontWeight: '600' }}>
+              <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
                 Global
               </span>
             </div>
@@ -420,8 +420,8 @@ export function EnterpriseFinanceNavigationV2() {
                     to={section.route}
                     className="flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200"
                     style={{
-                      backgroundColor: isActive ? '#00A9B720' : 'transparent',
-                      color: isActive ? '#00A9B7' : '#B8C5CE'
+                      backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
+                      color: isActive ? 'var(--color-teal)' : '#B8C5CE'
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
@@ -460,7 +460,7 @@ export function EnterpriseFinanceNavigationV2() {
         {/* User Info */}
         <div className="px-6 py-4" style={{ borderTop: '1px solid #3a4a52' }}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00A9B7' }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)' }}>
               <span className="text-sm" style={{ color: '#FFFFFF', fontWeight: '600' }}>
                 {user?.name?.charAt(0) || 'U'}
               </span>
@@ -469,7 +469,7 @@ export function EnterpriseFinanceNavigationV2() {
               <p className="text-sm truncate" style={{ color: '#FFFFFF', fontWeight: '500' }}>
                 {user?.name}
               </p>
-              <p className="text-xs truncate" style={{ color: '#9AA6AF' }}>
+              <p className="text-xs truncate" style={{ color: 'var(--color-slate)' }}>
                 {currentRole?.roleName || 'User'}
               </p>
             </div>
@@ -484,27 +484,27 @@ export function EnterpriseFinanceNavigationV2() {
           style={{ 
             width: '320px',
             backgroundColor: '#FFFFFF',
-            borderRight: '1px solid #E1E6EA',
+            borderRight: '1px solid var(--color-silver)',
             boxShadow: '2px 0 8px rgba(0, 0, 0, 0.04)'
           }}
         >
           {/* Panel Header */}
-          <div className="px-6 py-5" style={{ borderBottom: '1px solid #E1E6EA' }}>
+          <div className="px-6 py-5" style={{ borderBottom: '1px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-1">
-              <h2 className="text-base" style={{ color: '#0A0F14', fontWeight: '700' }}>
+              <h2 className="text-base" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                 {selectedPillarData?.label}
               </h2>
               <button
                 onClick={() => setShowContextualPanel(false)}
                 className="p-1.5 rounded-lg transition-colors"
-                style={{ color: '#6E7A82' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F6F9FC'}
+                style={{ color: 'var(--color-mercury-grey)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs" style={{ color: '#6E7A82' }}>
+            <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               {accessibleModules.length} module{accessibleModules.length !== 1 ? 's' : ''} available
             </p>
           </div>

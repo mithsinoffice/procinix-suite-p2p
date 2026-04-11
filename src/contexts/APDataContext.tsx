@@ -963,6 +963,62 @@ export function APDataProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Fetch AI-ingested invoices from MySQL and merge into state
+  useEffect(() => {
+    if (isHydrating) return;
+    let cancelled = false;
+
+    const fetchIngested = async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:8787/api/invoices?source=email_ingestion');
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!json.success || !Array.isArray(json.data) || cancelled) return;
+
+        const mapped: Invoice[] = json.data.map((row: any) => {
+          const hasPO = !!row.po_number || !!row.po_id;
+          const statusMap: Record<string, Invoice['status']> = {
+            pending_approval: 'Pending Approval',
+            draft: 'Draft',
+            approved: 'Approved',
+            rejected: 'Rejected',
+            paid: 'Paid',
+          };
+          return {
+            id: row.id,
+            invoiceNumber: row.invoice_number || 'AI-Extracted',
+            invoiceDate: row.invoice_date ? String(row.invoice_date).split('T')[0] : '',
+            vendorName: row.vendor_name || '',
+            vendorCode: row.vendor_gstin || '',
+            invoiceType: hasPO ? 'PO' as const : 'Non-PO' as const,
+            poNumber: row.po_number || undefined,
+            totalAmount: Number(row.total_amount) || 0,
+            currency: row.currency || 'INR',
+            status: statusMap[row.status] || 'Pending Approval' as const,
+            dueDate: row.due_date ? String(row.due_date).split('T')[0] : undefined,
+            paymentStatus: 'Unpaid' as const,
+            matchStatus: hasPO ? '3-Way Matched' as const : undefined,
+            _source: 'ai_ingestion',
+            _dbId: row.id,
+            _hasPO: hasPO,
+          };
+        });
+
+        if (mapped.length > 0) {
+          setInvoices((current) => {
+            const existingIds = new Set(current.map((i) => i.id));
+            const newOnes = mapped.filter((m) => !existingIds.has(m.id));
+            return newOnes.length > 0 ? [...newOnes, ...current] : current;
+          });
+        }
+      } catch {
+        // API may not be running
+      }
+    };
+
+    fetchIngested();
+  }, [isHydrating]);
+
   useEffect(() => {
     if (isHydrating) {
       return;

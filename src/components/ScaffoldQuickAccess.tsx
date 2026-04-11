@@ -14,7 +14,7 @@ export const ScaffoldQuickAccess = () => {
     <div 
       style={{ 
         backgroundColor: '#FFFFFF', 
-        border: '2px solid #00A9B7',
+        border: '2px solid var(--color-teal)',
         borderRadius: '12px', 
         padding: '24px',
         cursor: 'pointer',
@@ -35,7 +35,7 @@ export const ScaffoldQuickAccess = () => {
         <div style={{ 
           width: '48px', 
           height: '48px', 
-          backgroundColor: '#00A9B7',
+          backgroundColor: 'var(--color-teal)',
           borderRadius: '8px',
           display: 'flex',
           alignItems: 'center',
@@ -50,12 +50,12 @@ export const ScaffoldQuickAccess = () => {
         {/* Content */}
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <h3 style={{ fontSize: '16px', color: '#0A0F14', margin: 0 }}>
+            <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: 0 }}>
               Desk-Based ERP Scaffold
             </h3>
             <span style={{ 
               fontSize: '11px', 
-              color: '#00A9B7', 
+              color: 'var(--color-teal)', 
               backgroundColor: '#F0FBFC',
               padding: '2px 8px',
               borderRadius: '4px',
@@ -66,7 +66,7 @@ export const ScaffoldQuickAccess = () => {
             </span>
           </div>
           
-          <p style={{ fontSize: '13px', color: '#6E7A82', margin: '0 0 12px 0', lineHeight: '1.5' }}>
+          <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: '0 0 12px 0', lineHeight: '1.5' }}>
             Browse the complete scaffold structure for the new desk-based navigation system. 
             Includes 48+ UI components across 4 role-based desks.
           </p>
@@ -76,37 +76,37 @@ export const ScaffoldQuickAccess = () => {
               <div style={{ 
                 width: '6px', 
                 height: '6px', 
-                backgroundColor: '#00A9B7', 
+                backgroundColor: 'var(--color-teal)', 
                 borderRadius: '50%' 
               }} />
-              <span style={{ fontSize: '12px', color: '#6E7A82' }}>4 Desks</span>
+              <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>4 Desks</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ 
                 width: '6px', 
                 height: '6px', 
-                backgroundColor: '#00A9B7', 
+                backgroundColor: 'var(--color-teal)', 
                 borderRadius: '50%' 
               }} />
-              <span style={{ fontSize: '12px', color: '#6E7A82' }}>10 Masters</span>
+              <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>10 Masters</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ 
                 width: '6px', 
                 height: '6px', 
-                backgroundColor: '#00A9B7', 
+                backgroundColor: 'var(--color-teal)', 
                 borderRadius: '50%' 
               }} />
-              <span style={{ fontSize: '12px', color: '#6E7A82' }}>7 Modules</span>
+              <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>7 Modules</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ 
                 width: '6px', 
                 height: '6px', 
-                backgroundColor: '#00A9B7', 
+                backgroundColor: 'var(--color-teal)', 
                 borderRadius: '50%' 
               }} />
-              <span style={{ fontSize: '12px', color: '#6E7A82' }}>UI Only</span>
+              <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>UI Only</span>
             </div>
           </div>
         </div>
@@ -115,7 +115,7 @@ export const ScaffoldQuickAccess = () => {
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          color: '#00A9B7',
+          color: 'var(--color-teal)',
           fontSize: '20px'
         }}>
           →

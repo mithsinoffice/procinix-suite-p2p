@@ -211,7 +211,7 @@ export function AIInvoiceCapture() {
   };
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.95) return '#00A9B7'; // Teal - High confidence
+    if (confidence >= 0.95) return 'var(--color-teal)'; // Teal - High confidence
     if (confidence >= 0.85) return '#F59E0B'; // Amber - Medium confidence
     return '#EF4444'; // Red - Low confidence
   };
@@ -224,11 +224,11 @@ export function AIInvoiceCapture() {
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return '#DC2626';
+      case 'critical': return 'var(--color-error-dark)';
       case 'high': return '#EF4444';
       case 'medium': return '#F59E0B';
-      case 'low': return '#8B5CF6';
-      default: return '#6E7A82';
+      case 'low': return '#007D87';
+      default: return 'var(--color-mercury-grey)';
     }
   };
 
@@ -267,37 +267,37 @@ export function AIInvoiceCapture() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Sticky Action Bar */}
-      <div className="sticky top-0 z-10 bg-white shadow-sm" style={{ borderBottom: '2px solid #E1E6EA' }}>
+      <div className="sticky top-0 z-10 bg-white shadow-sm" style={{ borderBottom: '2px solid var(--color-silver)' }}>
         <div className="px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button 
                 onClick={handleCancel}
                 className="p-2 rounded-lg transition-colors hover:bg-gray-100" 
-                style={{ color: '#6E7A82' }}
+                style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-2xl" style={{ color: '#0A0F14' }}>AI-Assisted Invoice Capture</h1>
-                  <div className="flex items-center gap-1 px-3 py-1 rounded-full" style={{ backgroundColor: '#00A9B710' }}>
-                    <Sparkles className="w-4 h-4" style={{ color: '#00A9B7' }} />
-                    <span className="text-xs" style={{ color: '#00A9B7', fontWeight: '600' }}>AI Powered</span>
+                  <h1 className="text-2xl" style={{ color: 'var(--color-ink)' }}>AI-Assisted Invoice Capture</h1>
+                  <div className="flex items-center gap-1 px-3 py-1 rounded-full" style={{ backgroundColor: 'var(--color-teal)10' }}>
+                    <Sparkles className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
+                    <span className="text-xs" style={{ color: 'var(--color-teal)', fontWeight: '600' }}>AI Powered</span>
                   </div>
                 </div>
-                <p className="text-sm" style={{ color: '#6E7A82' }}>Upload invoice document for automatic data extraction</p>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Upload invoice document for automatic data extraction</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleCancel}
                 className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
-                style={{ backgroundColor: '#E1E6EA', color: '#0A0F14' }}
+                style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#D1D6DA'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#E1E6EA'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-silver)'}
               >
                 <X className="w-4 h-4" />
                 Cancel
@@ -306,9 +306,9 @@ export function AIInvoiceCapture() {
                 onClick={handleSaveDraft}
                 disabled={!extractionComplete}
                 className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors disabled:opacity-50"
-                style={{ backgroundColor: '#6E7A82' }}
+                style={{ backgroundColor: 'var(--color-mercury-grey)' }}
                 onMouseEnter={(e) => !extractionComplete ? null : e.currentTarget.style.backgroundColor = '#5E6A72'}
-                onMouseLeave={(e) => !extractionComplete ? null : e.currentTarget.style.backgroundColor = '#6E7A82'}
+                onMouseLeave={(e) => !extractionComplete ? null : e.currentTarget.style.backgroundColor = 'var(--color-mercury-grey)'}
               >
                 <Save className="w-4 h-4" />
                 Save Draft
@@ -317,9 +317,9 @@ export function AIInvoiceCapture() {
                 onClick={handleSubmit}
                 disabled={!extractionComplete}
                 className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors disabled:opacity-50"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => !extractionComplete ? null : e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => !extractionComplete ? null : e.currentTarget.style.backgroundColor = '#00A9B7'}
+                style={{ backgroundColor: 'var(--color-teal)' }}
+                onMouseEnter={(e) => !extractionComplete ? null : e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                onMouseLeave={(e) => !extractionComplete ? null : e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
               >
                 <Send className="w-4 h-4" />
                 Submit for Approval
@@ -333,12 +333,12 @@ export function AIInvoiceCapture() {
       <div className="p-8 max-w-7xl mx-auto">
         {/* Upload Section */}
         {!extractionComplete && (
-          <div className="bg-white rounded-xl p-8 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+          <div className="bg-white rounded-xl p-8 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-                <Upload className="w-5 h-5" style={{ color: '#00A9B7' }} />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+                <Upload className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
-              <h2 className="text-xl" style={{ color: '#0A0F14' }}>Upload Invoice Document</h2>
+              <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Upload Invoice Document</h2>
             </div>
 
             <div className="flex items-center justify-center">
@@ -351,44 +351,44 @@ export function AIInvoiceCapture() {
                 />
                 <div 
                   className="border-2 border-dashed rounded-xl p-12 text-center hover:bg-gray-50 transition-colors"
-                  style={{ borderColor: '#E1E6EA', minWidth: '600px' }}
+                  style={{ borderColor: 'var(--color-silver)', minWidth: '600px' }}
                 >
                   {isExtracting ? (
                     <div>
-                      <Zap className="w-16 h-16 mx-auto mb-4 animate-pulse" style={{ color: '#00A9B7' }} />
-                      <p className="text-lg mb-2" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                      <Zap className="w-16 h-16 mx-auto mb-4 animate-pulse" style={{ color: 'var(--color-teal)' }} />
+                      <p className="text-lg mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                         AI Extracting Invoice Data...
                       </p>
-                      <p className="text-sm" style={{ color: '#6E7A82' }}>
+                      <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                         Processing document with OCR and intelligent field recognition
                       </p>
                       <div className="mt-4 w-64 mx-auto h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div 
                           className="h-full rounded-full animate-pulse"
-                          style={{ backgroundColor: '#00A9B7', width: '70%' }}
+                          style={{ backgroundColor: 'var(--color-teal)', width: '70%' }}
                         />
                       </div>
                     </div>
                   ) : uploadedFile ? (
                     <div>
-                      <FileText className="w-16 h-16 mx-auto mb-4" style={{ color: '#00A9B7' }} />
-                      <p className="text-lg mb-2" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                      <FileText className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--color-teal)' }} />
+                      <p className="text-lg mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                         {uploadedFile.name}
                       </p>
-                      <p className="text-sm" style={{ color: '#6E7A82' }}>
+                      <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                         Click to upload a different file
                       </p>
                     </div>
                   ) : (
                     <div>
-                      <Upload className="w-16 h-16 mx-auto mb-4" style={{ color: '#6E7A82' }} />
-                      <p className="text-lg mb-2" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                      <Upload className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                      <p className="text-lg mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                         Click to upload or drag and drop
                       </p>
-                      <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>
+                      <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
                         PDF, JPG, PNG up to 10MB
                       </p>
-                      <p className="text-xs mt-4" style={{ color: '#00A9B7' }}>
+                      <p className="text-xs mt-4" style={{ color: 'var(--color-teal)' }}>
                         ✨ AI will automatically extract vendor details, line items, amounts, and dates
                       </p>
                     </div>
@@ -398,14 +398,14 @@ export function AIInvoiceCapture() {
             </div>
 
             {!isExtracting && uploadedFile && (
-              <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: '#00A9B710', border: '1px solid #00A9B730' }}>
+              <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-teal)10', border: '1px solid var(--color-teal)30' }}>
                 <div className="flex items-start gap-3">
-                  <Sparkles className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#00A9B7' }} />
+                  <Sparkles className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-teal)' }} />
                   <div>
-                    <p className="text-sm mb-2" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                    <p className="text-sm mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                       AI Extraction Features:
                     </p>
-                    <ul className="text-sm space-y-1" style={{ color: '#6E7A82' }}>
+                    <ul className="text-sm space-y-1" style={{ color: 'var(--color-mercury-grey)' }}>
                       <li>• Intelligent OCR for scanned and digital invoices</li>
                       <li>• Auto-detection of vendor, invoice number, dates, and amounts</li>
                       <li>• Line item extraction with quantities and prices</li>
@@ -425,14 +425,14 @@ export function AIInvoiceCapture() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5" style={{ color: '#EF4444' }} />
-                <h3 className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                <h3 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                   Exceptions Detected ({exceptions.length})
                 </h3>
               </div>
               <button
                 onClick={() => setShowExceptions(false)}
                 className="text-sm px-4 py-2 rounded-lg transition-colors"
-                style={{ color: '#6E7A82', backgroundColor: '#F6F9FC' }}
+                style={{ color: 'var(--color-mercury-grey)', backgroundColor: 'var(--color-cloud)' }}
               >
                 Minimize
               </button>
@@ -457,7 +457,7 @@ export function AIInvoiceCapture() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
-                          <h4 style={{ color: '#0A0F14', fontWeight: '600' }}>
+                          <h4 style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                             {exception.message}
                           </h4>
                           <span 
@@ -475,28 +475,28 @@ export function AIInvoiceCapture() {
                         <button
                           onClick={() => dismissException(index)}
                           className="p-1 rounded-lg transition-colors"
-                          style={{ color: '#6E7A82' }}
+                          style={{ color: 'var(--color-mercury-grey)' }}
                           title="Dismiss exception"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                       
-                      <p className="text-sm mb-3" style={{ color: '#6E7A82' }}>
+                      <p className="text-sm mb-3" style={{ color: 'var(--color-mercury-grey)' }}>
                         {exception.details}
                       </p>
                       
                       {exception.suggestedAction && (
                         <div 
                           className="p-3 rounded-lg flex items-start gap-2"
-                          style={{ backgroundColor: '#F6F9FC' }}
+                          style={{ backgroundColor: 'var(--color-cloud)' }}
                         >
-                          <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#00A9B7' }} />
+                          <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-teal)' }} />
                           <div>
-                            <p className="text-xs mb-1" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                               Suggested Action:
                             </p>
-                            <p className="text-sm" style={{ color: '#0A0F14' }}>
+                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
                               {exception.suggestedAction}
                             </p>
                           </div>
@@ -514,7 +514,7 @@ export function AIInvoiceCapture() {
           <button
             onClick={() => setShowExceptions(true)}
             className="mb-6 w-full p-4 rounded-lg transition-colors flex items-center justify-between"
-            style={{ backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5' }}
+            style={{ backgroundColor: 'var(--color-error-light)', border: '1px solid #FCA5A5' }}
           >
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-5 h-5" style={{ color: '#EF4444' }} />
@@ -530,67 +530,67 @@ export function AIInvoiceCapture() {
         {extractionComplete && (
           <>
             {/* AI Extraction Summary */}
-            <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #00A9B7' }}>
+            <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-teal)' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-                    <Sparkles className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+                    <Sparkles className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                   </div>
                   <div>
-                    <h3 style={{ color: '#0A0F14', fontWeight: '600' }}>AI Extraction Complete</h3>
-                    <p className="text-sm" style={{ color: '#6E7A82' }}>
+                    <h3 style={{ color: 'var(--color-ink)', fontWeight: '600' }}>AI Extraction Complete</h3>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                       Review extracted fields below. Edit any field to correct AI predictions.
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-6">
                   <div className="text-center">
-                    <p className="text-2xl mb-1" style={{ color: '#00A9B7', fontWeight: '700' }}>98%</p>
-                    <p className="text-xs" style={{ color: '#6E7A82' }}>Avg Confidence</p>
+                    <p className="text-2xl mb-1" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>98%</p>
+                    <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Avg Confidence</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>12</p>
-                    <p className="text-xs" style={{ color: '#6E7A82' }}>Fields Extracted</p>
+                    <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>12</p>
+                    <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Fields Extracted</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl mb-1" style={{ color: '#EF4444', fontWeight: '700' }}>{exceptions.length}</p>
-                    <p className="text-xs" style={{ color: '#6E7A82' }}>Exceptions</p>
+                    <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Exceptions</p>
                   </div>
                 </div>
               </div>
 
               {/* Legend */}
-              <div className="mt-4 pt-4 flex items-center gap-6 text-sm" style={{ borderTop: '1px solid #E1E6EA' }}>
+              <div className="mt-4 pt-4 flex items-center gap-6 text-sm" style={{ borderTop: '1px solid var(--color-silver)' }}>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#00A9B720', border: '2px solid #00A9B7' }} />
-                  <span style={{ color: '#6E7A82' }}>AI Extracted</span>
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: 'var(--color-teal)20', border: '2px solid var(--color-teal)' }} />
+                  <span style={{ color: 'var(--color-mercury-grey)' }}>AI Extracted</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded flex items-center justify-center" style={{ backgroundColor: '#FEF3C7', border: '2px solid #F59E0B' }}>
                     <Edit3 className="w-2 h-2" style={{ color: '#F59E0B' }} />
                   </div>
-                  <span style={{ color: '#6E7A82' }}>User Edited</span>
+                  <span style={{ color: 'var(--color-mercury-grey)' }}>User Edited</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" style={{ color: '#EF4444' }} />
-                  <span style={{ color: '#6E7A82' }}>Has Exception</span>
+                  <span style={{ color: 'var(--color-mercury-grey)' }}>Has Exception</span>
                 </div>
               </div>
             </div>
 
             {/* Invoice Header with AI Indicators */}
-            <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+            <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-                  <FileText className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+                  <FileText className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                 </div>
-                <h2 className="text-xl" style={{ color: '#0A0F14' }}>Invoice Header</h2>
+                <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Invoice Header</h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Vendor Name */}
                 <div className="relative">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Vendor Name <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <div className="relative">
@@ -602,9 +602,9 @@ export function AIInvoiceCapture() {
                       style={{ 
                         border: extractedData.vendorName.isEdited 
                           ? '2px solid #F59E0B' 
-                          : '2px solid #00A9B7',
-                        backgroundColor: extractedData.vendorName.isEdited ? '#FEF3C7' : '#00A9B710',
-                        color: '#0A0F14'
+                          : '2px solid var(--color-teal)',
+                        backgroundColor: extractedData.vendorName.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                        color: 'var(--color-ink)'
                       }}
                     />
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -624,7 +624,7 @@ export function AIInvoiceCapture() {
                     </div>
                   </div>
                   {extractedData.vendorName.isEdited && (
-                    <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+                    <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                       Original: {extractedData.vendorName.originalValue}
                     </p>
                   )}
@@ -632,7 +632,7 @@ export function AIInvoiceCapture() {
 
                 {/* Vendor Code */}
                 <div className="relative">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Vendor Code
                   </label>
                   <div className="relative">
@@ -644,9 +644,9 @@ export function AIInvoiceCapture() {
                       style={{ 
                         border: extractedData.vendorCode.isEdited 
                           ? '2px solid #F59E0B' 
-                          : '2px solid #00A9B7',
-                        backgroundColor: extractedData.vendorCode.isEdited ? '#FEF3C7' : '#00A9B710',
-                        color: '#0A0F14'
+                          : '2px solid var(--color-teal)',
+                        backgroundColor: extractedData.vendorCode.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                        color: 'var(--color-ink)'
                       }}
                     />
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -669,7 +669,7 @@ export function AIInvoiceCapture() {
 
                 {/* Invoice Number with Exception */}
                 <div className="relative">
-                  <label className="block text-sm mb-2 flex items-center gap-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2 flex items-center gap-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Invoice Number <span style={{ color: '#EF4444' }}>*</span>
                     {exceptions.some(e => e.type === 'duplicate_invoice') && (
                       <AlertCircle className="w-4 h-4" style={{ color: '#EF4444' }} />
@@ -686,11 +686,11 @@ export function AIInvoiceCapture() {
                           ? '2px solid #EF4444'
                           : extractedData.invoiceNumber.isEdited 
                           ? '2px solid #F59E0B' 
-                          : '2px solid #00A9B7',
+                          : '2px solid var(--color-teal)',
                         backgroundColor: exceptions.some(e => e.type === 'duplicate_invoice')
-                          ? '#FEE2E2'
-                          : extractedData.invoiceNumber.isEdited ? '#FEF3C7' : '#00A9B710',
-                        color: '#0A0F14'
+                          ? 'var(--color-error-light)'
+                          : extractedData.invoiceNumber.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                        color: 'var(--color-ink)'
                       }}
                     />
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -713,7 +713,7 @@ export function AIInvoiceCapture() {
 
                 {/* Invoice Date */}
                 <div className="relative">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Invoice Date <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <div className="relative">
@@ -725,9 +725,9 @@ export function AIInvoiceCapture() {
                       style={{ 
                         border: extractedData.invoiceDate.isEdited 
                           ? '2px solid #F59E0B' 
-                          : '2px solid #00A9B7',
-                        backgroundColor: extractedData.invoiceDate.isEdited ? '#FEF3C7' : '#00A9B710',
-                        color: '#0A0F14'
+                          : '2px solid var(--color-teal)',
+                        backgroundColor: extractedData.invoiceDate.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                        color: 'var(--color-ink)'
                       }}
                     />
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -750,7 +750,7 @@ export function AIInvoiceCapture() {
 
                 {/* Invoice Amount */}
                 <div className="relative">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Invoice Amount <span style={{ color: '#EF4444' }}>*</span>
                   </label>
                   <div className="relative">
@@ -762,9 +762,9 @@ export function AIInvoiceCapture() {
                       style={{ 
                         border: extractedData.invoiceAmount.isEdited 
                           ? '2px solid #F59E0B' 
-                          : '2px solid #00A9B7',
-                        backgroundColor: extractedData.invoiceAmount.isEdited ? '#FEF3C7' : '#00A9B710',
-                        color: '#0A0F14'
+                          : '2px solid var(--color-teal)',
+                        backgroundColor: extractedData.invoiceAmount.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                        color: 'var(--color-ink)'
                       }}
                     />
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -787,7 +787,7 @@ export function AIInvoiceCapture() {
 
                 {/* Currency */}
                 <div className="relative">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Currency
                   </label>
                   <div className="relative">
@@ -798,9 +798,9 @@ export function AIInvoiceCapture() {
                       style={{ 
                         border: extractedData.currency.isEdited 
                           ? '2px solid #F59E0B' 
-                          : '2px solid #00A9B7',
-                        backgroundColor: extractedData.currency.isEdited ? '#FEF3C7' : '#00A9B710',
-                        color: '#0A0F14'
+                          : '2px solid var(--color-teal)',
+                        backgroundColor: extractedData.currency.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                        color: 'var(--color-ink)'
                       }}
                     >
                       <option value="INR">INR - Indian Rupee</option>
@@ -827,7 +827,7 @@ export function AIInvoiceCapture() {
 
                 {/* GST Number */}
                 <div className="relative">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     GST Number
                   </label>
                   <div className="relative">
@@ -839,9 +839,9 @@ export function AIInvoiceCapture() {
                       style={{ 
                         border: extractedData.gstNumber.isEdited 
                           ? '2px solid #F59E0B' 
-                          : '2px solid #00A9B7',
-                        backgroundColor: extractedData.gstNumber.isEdited ? '#FEF3C7' : '#00A9B710',
-                        color: '#0A0F14'
+                          : '2px solid var(--color-teal)',
+                        backgroundColor: extractedData.gstNumber.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                        color: 'var(--color-ink)'
                       }}
                     />
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -864,7 +864,7 @@ export function AIInvoiceCapture() {
 
                 {/* PO Number */}
                 <div className="relative">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     PO Number
                   </label>
                   <div className="relative">
@@ -876,9 +876,9 @@ export function AIInvoiceCapture() {
                       style={{ 
                         border: extractedData.poNumber.isEdited 
                           ? '2px solid #F59E0B' 
-                          : '2px solid #00A9B7',
-                        backgroundColor: extractedData.poNumber.isEdited ? '#FEF3C7' : '#00A9B710',
-                        color: '#0A0F14'
+                          : '2px solid var(--color-teal)',
+                        backgroundColor: extractedData.poNumber.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                        color: 'var(--color-ink)'
                       }}
                     />
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -901,7 +901,7 @@ export function AIInvoiceCapture() {
 
                 {/* Payment Terms */}
                 <div className="relative">
-                  <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                     Payment Terms
                   </label>
                   <div className="relative">
@@ -912,9 +912,9 @@ export function AIInvoiceCapture() {
                       style={{ 
                         border: extractedData.paymentTerms.isEdited 
                           ? '2px solid #F59E0B' 
-                          : '2px solid #00A9B7',
-                        backgroundColor: extractedData.paymentTerms.isEdited ? '#FEF3C7' : '#00A9B710',
-                        color: '#0A0F14'
+                          : '2px solid var(--color-teal)',
+                        backgroundColor: extractedData.paymentTerms.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                        color: 'var(--color-ink)'
                       }}
                     >
                       <option value="Net 15">Net 15 Days</option>
@@ -943,20 +943,20 @@ export function AIInvoiceCapture() {
             </div>
 
             {/* Line Items with AI Indicators */}
-            <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid #E1E6EA' }}>
+            <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#00A9B710' }}>
-                    <Hash className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)10' }}>
+                    <Hash className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                   </div>
-                  <h2 className="text-xl" style={{ color: '#0A0F14' }}>Line Item Details (AI Extracted)</h2>
+                  <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Line Item Details (AI Extracted)</h2>
                 </div>
                 <button
                   onClick={addLineItem}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-                  style={{ backgroundColor: '#00A9B7' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                  style={{ backgroundColor: 'var(--color-teal)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
                 >
                   <Plus className="w-4 h-4" />
                   Add Line
@@ -965,14 +965,14 @@ export function AIInvoiceCapture() {
 
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead style={{ backgroundColor: '#F6F9FC' }}>
+                  <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                     <tr>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Description</th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Quantity</th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Unit Price</th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Tax %</th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Line Amount</th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Actions</th>
+                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Description</th>
+                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Quantity</th>
+                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Unit Price</th>
+                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Tax %</th>
+                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Line Amount</th>
+                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -981,7 +981,7 @@ export function AIInvoiceCapture() {
                       const hasPriceException = exceptions.some(e => e.type === 'price_mismatch' && e.affectedField === 'unitPrice');
                       
                       return (
-                        <tr key={item.id} style={{ borderTop: index > 0 ? '1px solid #E1E6EA' : 'none' }}>
+                        <tr key={item.id} style={{ borderTop: index > 0 ? '1px solid var(--color-silver)' : 'none' }}>
                           <td className="px-4 py-3">
                             <div className="relative">
                               <input
@@ -990,9 +990,9 @@ export function AIInvoiceCapture() {
                                 onChange={(e) => handleLineItemEdit(item.id, 'description', e.target.value)}
                                 className="w-full px-3 py-2 pr-16 rounded-lg text-sm"
                                 style={{ 
-                                  border: item.description.isEdited ? '2px solid #F59E0B' : '2px solid #00A9B7',
-                                  backgroundColor: item.description.isEdited ? '#FEF3C7' : '#00A9B710',
-                                  color: '#0A0F14',
+                                  border: item.description.isEdited ? '2px solid #F59E0B' : '2px solid var(--color-teal)',
+                                  backgroundColor: item.description.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                                  color: 'var(--color-ink)',
                                   minWidth: '250px'
                                 }}
                               />
@@ -1013,11 +1013,11 @@ export function AIInvoiceCapture() {
                                 style={{ 
                                   border: hasQuantityException 
                                     ? '2px solid #EF4444'
-                                    : item.quantity.isEdited ? '2px solid #F59E0B' : '2px solid #00A9B7',
+                                    : item.quantity.isEdited ? '2px solid #F59E0B' : '2px solid var(--color-teal)',
                                   backgroundColor: hasQuantityException
-                                    ? '#FEE2E2'
-                                    : item.quantity.isEdited ? '#FEF3C7' : '#00A9B710',
-                                  color: '#0A0F14',
+                                    ? 'var(--color-error-light)'
+                                    : item.quantity.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                                  color: 'var(--color-ink)',
                                   minWidth: '120px'
                                 }}
                               />
@@ -1041,11 +1041,11 @@ export function AIInvoiceCapture() {
                                 style={{ 
                                   border: hasPriceException 
                                     ? '2px solid #EF4444'
-                                    : item.unitPrice.isEdited ? '2px solid #F59E0B' : '2px solid #00A9B7',
+                                    : item.unitPrice.isEdited ? '2px solid #F59E0B' : '2px solid var(--color-teal)',
                                   backgroundColor: hasPriceException
-                                    ? '#FEE2E2'
-                                    : item.unitPrice.isEdited ? '#FEF3C7' : '#00A9B710',
-                                  color: '#0A0F14',
+                                    ? 'var(--color-error-light)'
+                                    : item.unitPrice.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                                  color: 'var(--color-ink)',
                                   minWidth: '120px'
                                 }}
                               />
@@ -1066,9 +1066,9 @@ export function AIInvoiceCapture() {
                                 onChange={(e) => handleLineItemEdit(item.id, 'taxPercent', parseFloat(e.target.value))}
                                 className="w-full px-3 py-2 pr-16 rounded-lg text-sm"
                                 style={{ 
-                                  border: item.taxPercent.isEdited ? '2px solid #F59E0B' : '2px solid #00A9B7',
-                                  backgroundColor: item.taxPercent.isEdited ? '#FEF3C7' : '#00A9B710',
-                                  color: '#0A0F14',
+                                  border: item.taxPercent.isEdited ? '2px solid #F59E0B' : '2px solid var(--color-teal)',
+                                  backgroundColor: item.taxPercent.isEdited ? '#FEF3C7' : 'var(--color-teal)10',
+                                  color: 'var(--color-ink)',
                                   minWidth: '100px'
                                 }}
                               >
@@ -1086,7 +1086,7 @@ export function AIInvoiceCapture() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <div className="px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA', color: '#0A0F14', fontWeight: '600' }}>
+                            <div className="px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', color: 'var(--color-ink)', fontWeight: '600' }}>
                               ₹{item.lineAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </div>
                           </td>
@@ -1109,25 +1109,25 @@ export function AIInvoiceCapture() {
             </div>
 
             {/* Total Summary */}
-            <div className="bg-white rounded-xl p-6" style={{ border: '2px solid #E1E6EA' }}>
+            <div className="bg-white rounded-xl p-6" style={{ border: '2px solid var(--color-silver)' }}>
               <div className="flex items-center justify-between">
                 <div className="flex-1 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span style={{ color: '#6E7A82' }}>Subtotal:</span>
-                    <span style={{ color: '#0A0F14', fontWeight: '600' }}>
+                    <span style={{ color: 'var(--color-mercury-grey)' }}>Subtotal:</span>
+                    <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                       ₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span style={{ color: '#6E7A82' }}>GST (18%):</span>
-                    <span style={{ color: '#0A0F14', fontWeight: '600' }}>
+                    <span style={{ color: 'var(--color-mercury-grey)' }}>GST (18%):</span>
+                    <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                       ₹{calculateTax().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
-                  <div className="pt-3" style={{ borderTop: '2px solid #E1E6EA' }}>
+                  <div className="pt-3" style={{ borderTop: '2px solid var(--color-silver)' }}>
                     <div className="flex justify-between items-center">
-                      <span className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>Total Invoice Value:</span>
-                      <span className="text-2xl" style={{ color: '#00A9B7', fontWeight: '700' }}>
+                      <span className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Total Invoice Value:</span>
+                      <span className="text-2xl" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
                         ₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </span>
                     </div>

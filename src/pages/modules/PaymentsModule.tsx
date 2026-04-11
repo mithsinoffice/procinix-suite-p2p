@@ -7,31 +7,31 @@
 
 export const PaymentsModule = () => {
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh', padding: '32px' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh', padding: '32px' }}>
       <div style={{ 
         backgroundColor: '#FFFFFF', 
-        border: '1px solid #E1E6EA', 
+        border: '1px solid var(--color-silver)', 
         borderRadius: '8px', 
         padding: '20px',
         marginBottom: '24px'
       }}>
-        <h1 style={{ fontSize: '20px', color: '#0A0F14', margin: '0 0 8px 0' }}>Payments Module</h1>
+        <h1 style={{ fontSize: '20px', color: 'var(--color-ink)', margin: '0 0 8px 0' }}>Payments Module</h1>
       </div>
 
       <div style={{ 
         backgroundColor: '#FFFFFF', 
-        border: '1px solid #E1E6EA', 
+        border: '1px solid var(--color-silver)', 
         borderRadius: '8px', 
         padding: '20px'
       }}>
         <div style={{ 
           padding: '64px', 
-          backgroundColor: '#F6F9FC', 
-          border: '1px dashed #E1E6EA', 
+          backgroundColor: 'var(--color-cloud)', 
+          border: '1px dashed var(--color-silver)', 
           borderRadius: '4px',
           textAlign: 'center'
         }}>
-          <span style={{ fontSize: '12px', color: '#6E7A82' }}>Payments Module Content Placeholder</span>
+          <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Payments Module Content Placeholder</span>
         </div>
       </div>
     </div>

@@ -246,21 +246,21 @@ export function PaymentProposal() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div
         className="px-8 py-6"
         style={{
           backgroundColor: '#FFFFFF',
-          borderBottom: '2px solid #E1E6EA',
+          borderBottom: '2px solid var(--color-silver)',
         }}
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+            <h1 className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
               Payment Proposal & Run
             </h1>
-            <p style={{ color: '#6E7A82', fontSize: '14px' }}>
+            <p style={{ color: 'var(--color-mercury-grey)', fontSize: '14px' }}>
               Select invoices for payment and optimize cash usage
             </p>
           </div>
@@ -271,8 +271,8 @@ export function PaymentProposal() {
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
                 backgroundColor: '#FFFFFF',
-                border: '1px solid #E1E6EA',
-                color: '#6E7A82',
+                border: '1px solid var(--color-silver)',
+                color: 'var(--color-mercury-grey)',
                 opacity: selectedInvoices.size === 0 ? 0.5 : 1,
                 cursor: selectedInvoices.size === 0 ? 'not-allowed' : 'pointer'
               }}
@@ -285,8 +285,8 @@ export function PaymentProposal() {
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
                 backgroundColor: '#FFFFFF',
-                border: '1px solid #E1E6EA',
-                color: '#6E7A82',
+                border: '1px solid var(--color-silver)',
+                color: 'var(--color-mercury-grey)',
                 opacity: selectedInvoices.size === 0 ? 0.5 : 1,
                 cursor: selectedInvoices.size === 0 ? 'not-allowed' : 'pointer'
               }}
@@ -298,7 +298,7 @@ export function PaymentProposal() {
               disabled={selectedInvoices.size === 0}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
-                backgroundColor: selectedInvoices.size === 0 ? '#E1E6EA' : '#00A9B7',
+                backgroundColor: selectedInvoices.size === 0 ? 'var(--color-silver)' : 'var(--color-teal)',
                 color: '#FFFFFF',
                 border: 'none',
                 cursor: selectedInvoices.size === 0 ? 'not-allowed' : 'pointer'
@@ -314,18 +314,18 @@ export function PaymentProposal() {
       {/* Split Screen Layout */}
       <div className="flex h-[calc(100vh-120px)]">
         {/* Left Panel - Invoice Selection */}
-        <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#F6F9FC' }}>
+        <div className="flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--color-cloud)' }}>
           <div className="p-6">
             {/* Quick Actions */}
             <div className="mb-4 flex items-center gap-3">
-              <span className="text-sm" style={{ color: '#6E7A82', fontWeight: '600' }}>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                 Quick Select:
               </span>
               <button
                 onClick={() => applyQuickFilter('critical')}
                 className="px-3 py-1.5 rounded-lg text-xs transition-all"
                 style={{
-                  backgroundColor: '#FEE2E2',
+                  backgroundColor: 'var(--color-error-light)',
                   color: '#EF4444',
                   border: '1px solid #FECACA',
                   fontWeight: '600'
@@ -337,8 +337,8 @@ export function PaymentProposal() {
                 onClick={() => applyQuickFilter('statutory')}
                 className="px-3 py-1.5 rounded-lg text-xs transition-all"
                 style={{
-                  backgroundColor: '#FEE2E2',
-                  color: '#DC2626',
+                  backgroundColor: 'var(--color-error-light)',
+                  color: 'var(--color-error-dark)',
                   border: '1px solid #FECACA',
                   fontWeight: '600'
                 }}
@@ -374,7 +374,7 @@ export function PaymentProposal() {
                 className="px-3 py-1.5 rounded-lg text-xs transition-all"
                 style={{
                   backgroundColor: '#E0F2F1',
-                  color: '#00A9B7',
+                  color: 'var(--color-teal)',
                   border: '1px solid #B2DFDB',
                   fontWeight: '600'
                 }}
@@ -384,10 +384,10 @@ export function PaymentProposal() {
             </div>
 
             {/* Filters */}
-            <div className="bg-white rounded-lg p-4 mb-4" style={{ border: '1px solid #E1E6EA' }}>
+            <div className="bg-white rounded-lg p-4 mb-4" style={{ border: '1px solid var(--color-silver)' }}>
               <div className="flex items-center gap-2 mb-4">
-                <Filter className="w-4 h-4" style={{ color: '#00A9B7' }} />
-                <h3 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '14px' }}>
+                <Filter className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
+                <h3 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '14px' }}>
                   Filters
                 </h3>
               </div>
@@ -395,11 +395,11 @@ export function PaymentProposal() {
               <div className="grid grid-cols-4 gap-4">
                 {/* Search */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Search
                   </label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#9AA6AF' }} />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} />
                     <input
                       type="text"
                       value={searchQuery}
@@ -407,9 +407,9 @@ export function PaymentProposal() {
                       placeholder="Vendor, Invoice No..."
                       className="w-full pl-9 pr-3 py-1.5 rounded-lg text-xs"
                       style={{
-                        backgroundColor: '#F6F9FC',
-                        border: '1px solid #E1E6EA',
-                        color: '#0A0F14'
+                        backgroundColor: 'var(--color-cloud)',
+                        border: '1px solid var(--color-silver)',
+                        color: 'var(--color-ink)'
                       }}
                     />
                   </div>
@@ -417,7 +417,7 @@ export function PaymentProposal() {
 
                 {/* Due Date From */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Due From
                   </label>
                   <input
@@ -426,16 +426,16 @@ export function PaymentProposal() {
                     onChange={(e) => setDueDateFrom(e.target.value)}
                     className="w-full px-3 py-1.5 rounded-lg text-xs"
                     style={{
-                      backgroundColor: '#F6F9FC',
-                      border: '1px solid #E1E6EA',
-                      color: '#0A0F14'
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                      color: 'var(--color-ink)'
                     }}
                   />
                 </div>
 
                 {/* Due Date To */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Due To
                   </label>
                   <input
@@ -444,16 +444,16 @@ export function PaymentProposal() {
                     onChange={(e) => setDueDateTo(e.target.value)}
                     className="w-full px-3 py-1.5 rounded-lg text-xs"
                     style={{
-                      backgroundColor: '#F6F9FC',
-                      border: '1px solid #E1E6EA',
-                      color: '#0A0F14'
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                      color: 'var(--color-ink)'
                     }}
                   />
                 </div>
 
                 {/* Aging Bucket */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Aging Bucket
                   </label>
                   <select
@@ -461,9 +461,9 @@ export function PaymentProposal() {
                     onChange={(e) => setAgingBucket(e.target.value)}
                     className="w-full px-3 py-1.5 rounded-lg text-xs"
                     style={{
-                      backgroundColor: '#F6F9FC',
-                      border: '1px solid #E1E6EA',
-                      color: '#0A0F14'
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                      color: 'var(--color-ink)'
                     }}
                   >
                     <option value="all">All</option>
@@ -476,7 +476,7 @@ export function PaymentProposal() {
 
                 {/* Priority */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Priority
                   </label>
                   <select
@@ -484,9 +484,9 @@ export function PaymentProposal() {
                     onChange={(e) => setPriorityFilter(e.target.value)}
                     className="w-full px-3 py-1.5 rounded-lg text-xs"
                     style={{
-                      backgroundColor: '#F6F9FC',
-                      border: '1px solid #E1E6EA',
-                      color: '#0A0F14'
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                      color: 'var(--color-ink)'
                     }}
                   >
                     <option value="all">All Priorities</option>
@@ -499,7 +499,7 @@ export function PaymentProposal() {
 
                 {/* Payment Mode */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Payment Mode
                   </label>
                   <select
@@ -507,9 +507,9 @@ export function PaymentProposal() {
                     onChange={(e) => setPaymentModeFilter(e.target.value)}
                     className="w-full px-3 py-1.5 rounded-lg text-xs"
                     style={{
-                      backgroundColor: '#F6F9FC',
-                      border: '1px solid #E1E6EA',
-                      color: '#0A0F14'
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                      color: 'var(--color-ink)'
                     }}
                   >
                     <option value="all">All Modes</option>
@@ -523,7 +523,7 @@ export function PaymentProposal() {
 
                 {/* Discount Filter */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Early Discount
                   </label>
                   <select
@@ -531,9 +531,9 @@ export function PaymentProposal() {
                     onChange={(e) => setDiscountFilter(e.target.value)}
                     className="w-full px-3 py-1.5 rounded-lg text-xs"
                     style={{
-                      backgroundColor: '#F6F9FC',
-                      border: '1px solid #E1E6EA',
-                      color: '#0A0F14'
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                      color: 'var(--color-ink)'
                     }}
                   >
                     <option value="all">All Invoices</option>
@@ -544,7 +544,7 @@ export function PaymentProposal() {
 
                 {/* Status */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     Status
                   </label>
                   <select
@@ -552,9 +552,9 @@ export function PaymentProposal() {
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="w-full px-3 py-1.5 rounded-lg text-xs"
                     style={{
-                      backgroundColor: '#F6F9FC',
-                      border: '1px solid #E1E6EA',
-                      color: '#0A0F14'
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                      color: 'var(--color-ink)'
                     }}
                   >
                     <option value="all">All Status</option>
@@ -566,42 +566,42 @@ export function PaymentProposal() {
             </div>
 
             {/* Invoice Table */}
-            <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid #E1E6EA' }}>
+            <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-silver)' }}>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '2px solid #E1E6EA' }}>
+                    <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '2px solid var(--color-silver)' }}>
                       <th className="px-4 py-3" style={{ width: '40px' }}>
                         <input
                           type="checkbox"
                           checked={selectedInvoices.size === filteredInvoices.length && filteredInvoices.length > 0}
                           onChange={(e) => e.target.checked ? selectAll() : clearSelection()}
                           className="w-4 h-4"
-                          style={{ accentColor: '#00A9B7' }}
+                          style={{ accentColor: 'var(--color-teal)' }}
                         />
                       </th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                         VENDOR
                       </th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                         INVOICE NO
                       </th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                         INVOICE DATE
                       </th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                         DUE DATE
                       </th>
-                      <th className="text-right px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                      <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                         AMOUNT
                       </th>
-                      <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                      <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                         AGING
                       </th>
-                      <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                      <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                         PRIORITY
                       </th>
-                      <th className="text-center px-4 py-3 text-xs" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                      <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                         DISCOUNT
                       </th>
                     </tr>
@@ -612,7 +612,7 @@ export function PaymentProposal() {
                         key={invoice.id}
                         style={{
                           backgroundColor: selectedInvoices.has(invoice.id) ? '#E0F2F1' : (index % 2 === 0 ? '#FFFFFF' : '#FAFBFC'),
-                          borderBottom: '1px solid #E1E6EA',
+                          borderBottom: '1px solid var(--color-silver)',
                           cursor: 'pointer'
                         }}
                         onClick={() => toggleInvoiceSelection(invoice.id)}
@@ -623,39 +623,39 @@ export function PaymentProposal() {
                             checked={selectedInvoices.has(invoice.id)}
                             onChange={() => {}}
                             className="w-4 h-4"
-                            style={{ accentColor: '#00A9B7' }}
+                            style={{ accentColor: 'var(--color-teal)' }}
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '13px' }}>
+                          <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '13px' }}>
                             {invoice.vendor}
                           </div>
-                          <div className="text-xs" style={{ color: '#6E7A82' }}>
+                          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                             {invoice.vendorCode}
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-sm" style={{ color: '#0A0F14', fontWeight: '500' }}>
+                          <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
                             {invoice.invoiceNo}
                           </div>
                           {invoice.isStatutory && (
-                            <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: '#FEE2E2', color: '#DC2626', fontWeight: '600' }}>
+                            <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--color-error-light)', color: 'var(--color-error-dark)', fontWeight: '600' }}>
                               STATUTORY
                             </span>
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-sm" style={{ color: '#0A0F14' }}>
+                          <div className="text-sm" style={{ color: 'var(--color-ink)' }}>
                             {new Date(invoice.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-sm" style={{ color: '#0A0F14' }}>
+                          <div className="text-sm" style={{ color: 'var(--color-ink)' }}>
                             {new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                          <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                             {formatCompactCurrency(invoice.amount, invoice.currency)}
                           </div>
                         </td>
@@ -690,7 +690,7 @@ export function PaymentProposal() {
                               <span className="text-xs" style={{ color: '#10B981', fontWeight: '700' }}>
                                 {formatCompactCurrency(invoice.earlyPaymentDiscount.amount, invoice.currency)}
                               </span>
-                              <span className="text-xs" style={{ color: '#6E7A82' }}>
+                              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                                 ({invoice.earlyPaymentDiscount.percentage}%)
                               </span>
                             </div>
@@ -706,7 +706,7 @@ export function PaymentProposal() {
             </div>
 
             {/* Results count */}
-            <div className="mt-4 text-sm" style={{ color: '#6E7A82' }}>
+            <div className="mt-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               Showing {filteredInvoices.length} invoices • {selectedInvoices.size} selected
             </div>
           </div>
@@ -717,35 +717,35 @@ export function PaymentProposal() {
           className="w-[420px] overflow-y-auto"
           style={{ 
             backgroundColor: '#FFFFFF',
-            borderLeft: '2px solid #E1E6EA'
+            borderLeft: '2px solid var(--color-silver)'
           }}
         >
           <div className="p-6 sticky top-0">
             <div className="flex items-center gap-2 mb-6">
-              <DollarSign className="w-5 h-5" style={{ color: '#00A9B7' }} />
-              <h2 style={{ color: '#0A0F14', fontWeight: '700', fontSize: '16px' }}>
+              <DollarSign className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+              <h2 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
                 Payment Summary
               </h2>
             </div>
 
             {/* Selection Summary */}
-            <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
+            <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm" style={{ color: '#6E7A82' }}>Invoices Selected</span>
-                <span className="text-xl" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoices Selected</span>
+                <span className="text-xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                   {summary.count}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: '#6E7A82' }}>Total Amount</span>
-                <span className="text-xl" style={{ color: '#00A9B7', fontWeight: '700' }}>
+                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Total Amount</span>
+                <span className="text-xl" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
                   {summary.currencies.INR ? formatCompactCurrency(summary.currencies.INR, 'INR') : '₹0'}
                 </span>
               </div>
               {summary.currencies.USD && (
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-sm" style={{ color: '#6E7A82' }}>USD Amount</span>
-                  <span className="text-lg" style={{ color: '#00A9B7', fontWeight: '700' }}>
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>USD Amount</span>
+                  <span className="text-lg" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
                     {formatCompactCurrency(summary.currencies.USD, 'USD')}
                   </span>
                 </div>
@@ -773,37 +773,37 @@ export function PaymentProposal() {
             {/* Cash Impact - INR */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
-                <Building2 className="w-4 h-4" style={{ color: '#00A9B7' }} />
-                <span className="text-sm" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                <Building2 className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
+                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                   Cash Impact - INR
                 </span>
               </div>
               
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs" style={{ color: '#6E7A82' }}>Balance Before</span>
-                  <span className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Balance Before</span>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                     {formatCompactCurrency(summary.inrBalanceBefore, 'INR')}
                   </span>
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <span className="text-xs" style={{ color: '#6E7A82' }}>Payment Amount</span>
+                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Payment Amount</span>
                   <span className="text-sm" style={{ color: '#EF4444', fontWeight: '600' }}>
                     -{formatCompactCurrency(summary.currencies.INR || 0, 'INR')}
                   </span>
                 </div>
 
-                <div className="pt-3" style={{ borderTop: '1px solid #E1E6EA' }}>
+                <div className="pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm" style={{ color: '#6E7A82', fontWeight: '700' }}>Balance After</span>
-                    <span className="text-lg" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                    <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>Balance After</span>
+                    <span className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                       {formatCompactCurrency(summary.inrBalanceAfter, 'INR')}
                     </span>
                   </div>
                   
                   {/* Utilization bar */}
-                  <div className="w-full h-2 rounded-full" style={{ backgroundColor: '#E1E6EA' }}>
+                  <div className="w-full h-2 rounded-full" style={{ backgroundColor: 'var(--color-silver)' }}>
                     <div
                       className="h-2 rounded-full transition-all"
                       style={{
@@ -812,7 +812,7 @@ export function PaymentProposal() {
                       }}
                     />
                   </div>
-                  <div className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+                  <div className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                     {summary.inrUtilization.toFixed(1)}% cash utilization
                   </div>
                 </div>
@@ -821,39 +821,39 @@ export function PaymentProposal() {
 
             {/* Cash Impact - USD */}
             {summary.currencies.USD && (
-              <div className="mb-4 pt-4" style={{ borderTop: '1px solid #E1E6EA' }}>
+              <div className="mb-4 pt-4" style={{ borderTop: '1px solid var(--color-silver)' }}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Building2 className="w-4 h-4" style={{ color: '#00A9B7' }} />
-                  <span className="text-sm" style={{ color: '#6E7A82', fontWeight: '700' }}>
+                  <Building2 className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
                     Cash Impact - USD
                   </span>
                 </div>
                 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: '#6E7A82' }}>Balance Before</span>
-                    <span className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                    <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Balance Before</span>
+                    <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                       {formatCompactCurrency(summary.usdBalanceBefore, 'USD')}
                     </span>
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: '#6E7A82' }}>Payment Amount</span>
+                    <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Payment Amount</span>
                     <span className="text-sm" style={{ color: '#EF4444', fontWeight: '600' }}>
                       -{formatCompactCurrency(summary.currencies.USD, 'USD')}
                     </span>
                   </div>
 
-                  <div className="pt-3" style={{ borderTop: '1px solid #E1E6EA' }}>
+                  <div className="pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm" style={{ color: '#6E7A82', fontWeight: '700' }}>Balance After</span>
-                      <span className="text-lg" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>Balance After</span>
+                      <span className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                         {formatCompactCurrency(summary.usdBalanceAfter, 'USD')}
                       </span>
                     </div>
                     
                     {/* Utilization bar */}
-                    <div className="w-full h-2 rounded-full" style={{ backgroundColor: '#E1E6EA' }}>
+                    <div className="w-full h-2 rounded-full" style={{ backgroundColor: 'var(--color-silver)' }}>
                       <div
                         className="h-2 rounded-full transition-all"
                         style={{
@@ -862,7 +862,7 @@ export function PaymentProposal() {
                         }}
                       />
                     </div>
-                    <div className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+                    <div className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                       {summary.usdUtilization.toFixed(1)}% cash utilization
                     </div>
                   </div>
@@ -890,7 +890,7 @@ export function PaymentProposal() {
                   <div className="text-sm mb-1" style={{ color: getRiskColor(summary.riskLevel), fontWeight: '700' }}>
                     {summary.riskLevel === 'high' ? 'High Risk' : summary.riskLevel === 'medium' ? 'Medium Risk' : 'Low Risk'}
                   </div>
-                  <div className="text-xs" style={{ color: '#6E7A82' }}>
+                  <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                     {summary.riskMessage}
                   </div>
                 </div>
@@ -898,31 +898,31 @@ export function PaymentProposal() {
             </div>
 
             {/* Account Details */}
-            <div className="mt-6 pt-6" style={{ borderTop: '2px solid #E1E6EA' }}>
-              <div className="text-xs mb-3" style={{ color: '#6E7A82', fontWeight: '700', textTransform: 'uppercase' }}>
+            <div className="mt-6 pt-6" style={{ borderTop: '2px solid var(--color-silver)' }}>
+              <div className="text-xs mb-3" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', textTransform: 'uppercase' }}>
                 Payment Accounts
               </div>
               
               {/* INR Account */}
-              <div className="mb-3 p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+              <div className="mb-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     {cashBalances.INR.accountName}
                   </span>
                 </div>
-                <div className="text-xs" style={{ color: '#9AA6AF' }}>
+                <div className="text-xs" style={{ color: 'var(--color-slate)' }}>
                   A/C: {cashBalances.INR.accountNo}
                 </div>
               </div>
 
               {/* USD Account */}
-              <div className="p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+              <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                     {cashBalances.USD.accountName}
                   </span>
                 </div>
-                <div className="text-xs" style={{ color: '#9AA6AF' }}>
+                <div className="text-xs" style={{ color: 'var(--color-slate)' }}>
                   A/C: {cashBalances.USD.accountNo}
                 </div>
               </div>

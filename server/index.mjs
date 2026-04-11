@@ -1,7 +1,7 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import http from 'node:http';
 import { URL } from 'node:url';
-import { pingDatabase, query } from './mysql.mjs';
+import { pingDatabase, query, closePool, withTransaction, connExecute } from './mysql.mjs';
 import {
   MASTER_STORAGE,
   getQualifiedAuditTableName,
@@ -9,9 +9,70 @@ import {
 } from './masterStorage.mjs';
 import { sendVendorInvitationEmailServer } from './vendorInvitationMail.mjs';
 import { sendPortalWelcomeEmailServer } from './portalWelcomeMail.mjs';
+import { startEmailPoller, pollOnce, checkAnthropicKey } from './services/invoiceIngestion/emailPoller.mjs';
+import { processInvoiceEmail } from './services/invoiceIngestion/orchestrator.mjs';
+import { extractInvoiceData } from './services/invoiceIngestion/claudeOCR.mjs';
+import { validateInvoiceData } from './services/invoiceIngestion/validator.mjs';
+import { matchToPO } from './services/invoiceIngestion/poMatcher.mjs';
+import { createInvoiceFromExtraction } from './services/invoiceIngestion/invoiceCreator.mjs';
+import { handleExceptions } from './services/invoiceIngestion/exceptionHandler.mjs';
+import { triggerWorkflow } from './services/invoiceIngestion/workflowTrigger.mjs';
 
 const MASTER_SCHEMA_NAMES = [...new Set(Object.values(MASTER_STORAGE).map((storage) => storage.database))];
 const PENDING_APPROVAL_STATUSES = ['Draft', 'Pending Approval', 'Pending', 'Changes Requested'];
+
+// --- CORS ---
+const ALLOWED_ORIGINS = new Set(
+  (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
+);
+
+function getAllowedOrigin(req) {
+  const origin = req.headers['origin'];
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    return origin;
+  }
+  return undefined;
+}
+
+// --- Auth ---
+const API_KEY = process.env.API_SECRET_KEY || '';
+const PUBLIC_PATHS = new Set(['/health', '/api/mysql/health']);
+
+function isAuthenticated(req, pathname) {
+  if (PUBLIC_PATHS.has(pathname)) {
+    return true;
+  }
+  // Vendor invite portal is semi-public (token in URL validates on its own)
+  if (pathname === '/api/vendor-invitations/send') {
+    // still require auth — only internal callers should send invites
+  }
+
+  if (!API_KEY) {
+    // If no API_SECRET_KEY is configured, auth is disabled (dev mode).
+    return true;
+  }
+
+  const authHeader = req.headers['authorization'] ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token) {
+    return false;
+  }
+
+  // Timing-safe comparison to prevent timing attacks
+  try {
+    const expected = Buffer.from(API_KEY, 'utf8');
+    const received = Buffer.from(token, 'utf8');
+    if (expected.length !== received.length) {
+      return false;
+    }
+    return timingSafeEqual(expected, received);
+  } catch {
+    return false;
+  }
+}
 const MASTER_WORKFLOW_TARGETS = new Set([
   'Category Master',
   'Item Master',
@@ -40,18 +101,29 @@ const MASTER_WORKFLOW_TARGETS = new Set([
 ]);
 
 function sendJson(res, statusCode, payload) {
-  res.writeHead(statusCode, {
+  const headers = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  });
+  };
+  if (res._corsOrigin) {
+    headers['Access-Control-Allow-Origin'] = res._corsOrigin;
+    headers['Vary'] = 'Origin';
+  }
+  res.writeHead(statusCode, headers);
   res.end(JSON.stringify(payload));
 }
 
+const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5 MB
+
 async function readJsonBody(req) {
   const chunks = [];
+  let totalBytes = 0;
   for await (const chunk of req) {
+    totalBytes += chunk.length;
+    if (totalBytes > MAX_BODY_BYTES) {
+      throw Object.assign(new Error('Request body too large'), { statusCode: 413 });
+    }
     chunks.push(chunk);
   }
 
@@ -60,6 +132,37 @@ async function readJsonBody(req) {
   }
 
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
+
+function parseMultipart(raw, boundary) {
+  const parts = [];
+  const sep = Buffer.from(`--${boundary}`);
+  let start = 0;
+  while (true) {
+    const idx = raw.indexOf(sep, start);
+    if (idx === -1) break;
+    if (start > 0) {
+      const chunk = raw.slice(start, idx);
+      const headerEnd = chunk.indexOf('\r\n\r\n');
+      if (headerEnd !== -1) {
+        const headerStr = chunk.slice(0, headerEnd).toString('utf8');
+        const body = chunk.slice(headerEnd + 4, chunk.length - 2); // strip trailing \r\n
+        const nameMatch = headerStr.match(/name="([^"]+)"/);
+        const filenameMatch = headerStr.match(/filename="([^"]+)"/);
+        const ctMatch = headerStr.match(/Content-Type:\s*(.+)/i);
+        parts.push({
+          name: nameMatch?.[1] || '',
+          filename: filenameMatch?.[1] || '',
+          contentType: ctMatch?.[1]?.trim() || '',
+          data: body,
+        });
+      }
+    }
+    start = idx + sep.length;
+    if (raw[start] === 0x2d && raw[start + 1] === 0x2d) break; // --boundary--
+    if (raw[start] === 0x0d) start += 2; // skip \r\n
+  }
+  return parts;
 }
 
 function mapItemRow(row) {
@@ -319,101 +422,135 @@ function applyApprovalActionToRecord(record, nextStatus, action, actor, comments
 
 async function updateGenericMasterApproval(masterKey, recordId, nextStatus, action, actor, comments) {
   const tableName = getQualifiedTableName(masterKey);
-  const rows = await query(
-    `
-      SELECT id, payload, approval_status, created_at, updated_at
-      FROM ${tableName}
-      WHERE id = ?
-      LIMIT 1
-    `,
-    [recordId]
-  );
+  const auditTableName = getQualifiedAuditTableName(masterKey);
 
-  if (!rows[0]) {
-    return null;
-  }
+  return withTransaction(async (conn) => {
+    const rows = await connExecute(
+      conn,
+      `
+        SELECT id, payload, approval_status, created_at, updated_at
+        FROM ${tableName}
+        WHERE id = ?
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [recordId]
+    );
 
-  const previousRecord = mapGenericMasterRow(rows[0]);
-  const updatedRecord = applyApprovalActionToRecord(previousRecord, nextStatus, action, actor, comments);
+    if (!rows[0]) {
+      return null;
+    }
 
-  await query(
-    `
-      UPDATE ${tableName}
-      SET
-        record_code = ?,
-        record_name = ?,
-        status = ?,
-        approval_status = ?,
-        payload = CAST(? AS JSON),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `,
-    [
-      inferRecordCode(updatedRecord),
-      inferRecordName(updatedRecord),
-      inferStatus(updatedRecord),
-      inferApprovalStatus(updatedRecord),
-      JSON.stringify(updatedRecord),
-      recordId,
-    ]
-  );
+    const previousRecord = mapGenericMasterRow(rows[0]);
+    const updatedRecord = applyApprovalActionToRecord(previousRecord, nextStatus, action, actor, comments);
 
-  await appendMasterVersion(
-    masterKey,
-    recordId,
-    previousRecord,
-    {
-      ...updatedRecord,
-      _workflowActor: actor,
-      _workflowComments: comments,
-    },
-    action.toUpperCase(),
-  );
+    await connExecute(
+      conn,
+      `
+        UPDATE ${tableName}
+        SET
+          record_code = ?,
+          record_name = ?,
+          status = ?,
+          approval_status = ?,
+          payload = CAST(? AS JSON),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `,
+      [
+        inferRecordCode(updatedRecord),
+        inferRecordName(updatedRecord),
+        inferStatus(updatedRecord),
+        inferApprovalStatus(updatedRecord),
+        JSON.stringify(updatedRecord),
+        recordId,
+      ]
+    );
 
-  return updatedRecord;
+    if (auditTableName) {
+      await connExecute(
+        conn,
+        `
+          INSERT INTO ${auditTableName} (
+            id, record_id, action_type, old_values, new_values, changed_at
+          ) VALUES (?, ?, ?, CAST(? AS JSON), CAST(? AS JSON), CURRENT_TIMESTAMP(6))
+        `,
+        [
+          randomUUID(),
+          recordId,
+          action.toUpperCase(),
+          JSON.stringify(previousRecord),
+          JSON.stringify({
+            ...updatedRecord,
+            _workflowActor: actor,
+            _workflowComments: comments,
+          }),
+        ]
+      );
+    }
+
+    return updatedRecord;
+  });
 }
 
 async function updateItemApproval(recordId, nextStatus, action, actor, comments) {
   const tableName = getQualifiedTableName('item_master');
-  const rows = await query(
-    `
-      SELECT *
-      FROM ${tableName}
-      WHERE id = ?
-      LIMIT 1
-    `,
-    [recordId]
-  );
+  const auditTableName = getQualifiedAuditTableName('item_master');
 
-  if (!rows[0]) {
-    return null;
-  }
+  return withTransaction(async (conn) => {
+    const rows = await connExecute(
+      conn,
+      `
+        SELECT *
+        FROM ${tableName}
+        WHERE id = ?
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [recordId]
+    );
 
-  const previousRecord = mapItemRow(rows[0]);
-  const updatedRecord = applyApprovalActionToRecord(previousRecord, nextStatus, action, actor, comments);
+    if (!rows[0]) {
+      return null;
+    }
 
-  await query(
-    `
-      UPDATE ${tableName}
-      SET approval_status = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `,
-    [nextStatus, recordId]
-  );
+    const previousRecord = mapItemRow(rows[0]);
+    const updatedRecord = applyApprovalActionToRecord(previousRecord, nextStatus, action, actor, comments);
 
-  await appendMasterVersion(
-    'item_master',
-    recordId,
-    previousRecord,
-    {
-      ...updatedRecord,
-      _workflowActor: actor,
-      _workflowComments: comments,
-    },
-    action.toUpperCase(),
-  );
+    await connExecute(
+      conn,
+      `
+        UPDATE ${tableName}
+        SET approval_status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `,
+      [nextStatus, recordId]
+    );
 
-  return updatedRecord;
+    if (auditTableName) {
+      await connExecute(
+        conn,
+        `
+          INSERT INTO ${auditTableName} (
+            id, record_id, action_type, old_values, new_values, changed_at
+          ) VALUES (?, ?, ?, CAST(? AS JSON), CAST(? AS JSON), CURRENT_TIMESTAMP(6))
+        `,
+        [
+          randomUUID(),
+          recordId,
+          action.toUpperCase(),
+          JSON.stringify(previousRecord),
+          JSON.stringify({
+            ...updatedRecord,
+            _workflowActor: actor,
+            _workflowComments: comments,
+          }),
+        ]
+      );
+    }
+
+    return updatedRecord;
+  });
 }
 
 const server = http.createServer(async (req, res) => {
@@ -421,17 +558,29 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 400, { ok: false, error: 'Invalid request' });
   }
 
+  res._corsOrigin = getAllowedOrigin(req);
+
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
+    const headers = {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    });
+      'Access-Control-Max-Age': '86400',
+    };
+    if (res._corsOrigin) {
+      headers['Access-Control-Allow-Origin'] = res._corsOrigin;
+      headers['Vary'] = 'Origin';
+    }
+    res.writeHead(204, headers);
     return res.end();
   }
 
   const url = new URL(req.url, 'http://127.0.0.1');
   const pathname = url.pathname;
+
+  // Auth gate
+  if (!isAuthenticated(req, pathname)) {
+    return sendJson(res, 401, { ok: false, error: 'Unauthorized' });
+  }
 
   try {
     if (req.method === 'GET' && pathname === '/health') {
@@ -623,6 +772,7 @@ const server = http.createServer(async (req, res) => {
 
       const body = await readJsonBody(req);
       const records = Array.isArray(body.records) ? body.records : [];
+      const purgeAbsent = body.purgeAbsent === true;
       const existingRows = await query(
         `
           SELECT id, payload
@@ -682,23 +832,27 @@ const server = http.createServer(async (req, res) => {
         seenIds.add(id);
       }
 
-      for (const [id, previous] of existingById.entries()) {
-        if (seenIds.has(id)) {
-          continue;
+      let deletedCount = 0;
+      if (purgeAbsent) {
+        for (const [id, previous] of existingById.entries()) {
+          if (seenIds.has(id)) {
+            continue;
+          }
+
+          await query(
+            `
+              DELETE FROM ${tableName}
+              WHERE id = ?
+            `,
+            [id]
+          );
+
+          await appendMasterVersion(masterKey, id, previous, {}, 'DELETE');
+          deletedCount++;
         }
-
-        await query(
-          `
-            DELETE FROM ${tableName}
-            WHERE id = ?
-          `,
-          [id]
-        );
-
-        await appendMasterVersion(masterKey, id, previous, {}, 'DELETE');
       }
 
-      return sendJson(res, 200, { success: true, count: records.length });
+      return sendJson(res, 200, { success: true, count: records.length, deletedCount });
     }
 
     if (req.method === 'GET' && pathname === '/api/workflows/approval-levels') {
@@ -870,42 +1024,148 @@ const server = http.createServer(async (req, res) => {
 
       if (req.method === 'PUT') {
         const body = await readJsonBody(req);
-        const previousRows = await query(`SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1`, [id]);
-        const existingRows = previousRows;
-        if (existingRows.length === 0) {
+        const itemAuditTable = getQualifiedAuditTableName('item_master');
+
+        const result = await withTransaction(async (conn) => {
+          const previousRows = await connExecute(conn, `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1 FOR UPDATE`, [id]);
+          if (previousRows.length === 0) {
+            return { notFound: true };
+          }
+
+          await connExecute(
+            conn,
+            `
+              UPDATE ${itemTableName}
+              SET
+                item_code = ?,
+                item_name = ?,
+                item_alias = ?,
+                item_status = ?,
+                item_description = ?,
+                uom = ?,
+                item_group_master = ?,
+                procurement_category = ?,
+                entity_name = ?,
+                expenditure_type = ?,
+                gl_account_code = ?,
+                gl_account_description = ?,
+                nature = ?,
+                rcm_applicable = ?,
+                hsn_code = ?,
+                sac_code = ?,
+                gst_rate = ?,
+                default_itc_eligibility = ?,
+                po_required = ?,
+                reorder_level = ?,
+                max_order_qty = ?,
+                approval_status = ?,
+                updated_at = CURRENT_TIMESTAMP
+              WHERE id = ?
+            `,
+            [
+              body.itemCode ?? '',
+              body.itemName ?? '',
+              body.itemAlias ?? '',
+              body.itemStatus ?? 'Active',
+              body.itemDescription ?? '',
+              body.uom ?? '',
+              body.itemGroupMaster ?? '',
+              body.procurementCategory ?? '',
+              body.entityName ?? '',
+              body.expenditureType ?? '',
+              body.glAccountCode ?? '',
+              body.glAccountDescription ?? '',
+              body.nature ?? 'Product',
+              body.rcmApplicable ?? 'No',
+              body.hsnCode ?? '',
+              body.sacCode ?? '',
+              body.gstRate ?? '',
+              body.defaultITCEligibility ?? '',
+              body.poRequired ?? 'No',
+              body.reorderLevel ?? '',
+              body.maxOrderQty ?? '',
+              body.approvalStatus ?? 'Draft',
+              id,
+            ]
+          );
+
+          const updatedRows = await connExecute(conn, `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1`, [id]);
+
+          if (itemAuditTable) {
+            await connExecute(
+              conn,
+              `INSERT INTO ${itemAuditTable} (id, record_id, action_type, old_values, new_values, changed_at) VALUES (?, ?, 'UPDATE', CAST(? AS JSON), CAST(? AS JSON), CURRENT_TIMESTAMP(6))`,
+              [randomUUID(), id, JSON.stringify(mapItemRow(previousRows[0])), JSON.stringify(mapItemRow(updatedRows[0]))]
+            );
+          }
+
+          return { data: mapItemRow(updatedRows[0]) };
+        });
+
+        if (result.notFound) {
           return sendJson(res, 404, { success: false, error: 'Item not found' });
         }
+        return sendJson(res, 200, { success: true, data: result.data });
+      }
 
-        await query(
+      if (req.method === 'DELETE') {
+        const itemAuditTable = getQualifiedAuditTableName('item_master');
+
+        const result = await withTransaction(async (conn) => {
+          const existingRows = await connExecute(conn, `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1 FOR UPDATE`, [id]);
+          if (existingRows.length === 0) {
+            return { notFound: true };
+          }
+          if (existingRows[0].approval_status === 'Approved') {
+            return { forbidden: true };
+          }
+
+          await connExecute(conn, `DELETE FROM ${itemTableName} WHERE id = ?`, [id]);
+
+          if (itemAuditTable) {
+            await connExecute(
+              conn,
+              `INSERT INTO ${itemAuditTable} (id, record_id, action_type, old_values, new_values, changed_at) VALUES (?, ?, 'DELETE', CAST(? AS JSON), CAST('{}' AS JSON), CURRENT_TIMESTAMP(6))`,
+              [randomUUID(), id, JSON.stringify(mapItemRow(existingRows[0]))]
+            );
+          }
+
+          return { deleted: true };
+        });
+
+        if (result.notFound) {
+          return sendJson(res, 404, { success: false, error: 'Item not found' });
+        }
+        if (result.forbidden) {
+          return sendJson(res, 403, {
+            success: false,
+            error: 'Cannot delete approved items. Please deactivate instead.',
+          });
+        }
+        return sendJson(res, 200, { success: true, message: 'Item deleted successfully' });
+      }
+    }
+
+    if (req.method === 'POST' && pathname === '/api/items') {
+      const body = await readJsonBody(req);
+      const id = randomUUID(); // always server-generated
+      const itemTableName = getQualifiedTableName('item_master');
+      const itemAuditTable = getQualifiedAuditTableName('item_master');
+
+      const data = await withTransaction(async (conn) => {
+        await connExecute(
+          conn,
           `
-            UPDATE ${itemTableName}
-            SET
-              item_code = ?,
-              item_name = ?,
-              item_alias = ?,
-              item_status = ?,
-              item_description = ?,
-              uom = ?,
-              item_group_master = ?,
-              procurement_category = ?,
-              entity_name = ?,
-              expenditure_type = ?,
-              gl_account_code = ?,
-              gl_account_description = ?,
-              nature = ?,
-              rcm_applicable = ?,
-              hsn_code = ?,
-              sac_code = ?,
-              gst_rate = ?,
-              default_itc_eligibility = ?,
-              po_required = ?,
-              reorder_level = ?,
-              max_order_qty = ?,
-              approval_status = ?,
-              updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            INSERT INTO ${itemTableName} (
+              id, item_code, item_name, item_alias, item_status, item_description,
+              uom, item_group_master, procurement_category, entity_name, expenditure_type,
+              gl_account_code, gl_account_description, nature, rcm_applicable,
+              hsn_code, sac_code, gst_rate, default_itc_eligibility, po_required,
+              reorder_level, max_order_qty, approval_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
+            id,
             body.itemCode ?? '',
             body.itemName ?? '',
             body.itemAlias ?? '',
@@ -928,110 +1188,224 @@ const server = http.createServer(async (req, res) => {
             body.reorderLevel ?? '',
             body.maxOrderQty ?? '',
             body.approvalStatus ?? 'Draft',
-            id,
           ]
         );
 
-        const updatedRows = await query(`SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1`, [id]);
-        await appendMasterVersion('item_master', id, mapItemRow(previousRows[0]), mapItemRow(updatedRows[0]), 'UPDATE');
-        return sendJson(res, 200, { success: true, data: mapItemRow(updatedRows[0]) });
-      }
+        const createdRows = await connExecute(conn, `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1`, [id]);
 
-      if (req.method === 'DELETE') {
-        const existingRows = await query(
-          `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1`,
-          [id]
-        );
-
-        if (existingRows.length === 0) {
-          return sendJson(res, 404, { success: false, error: 'Item not found' });
+        if (itemAuditTable) {
+          await connExecute(
+            conn,
+            `INSERT INTO ${itemAuditTable} (id, record_id, action_type, old_values, new_values, changed_at) VALUES (?, ?, 'CREATE', CAST('{}' AS JSON), CAST(? AS JSON), CURRENT_TIMESTAMP(6))`,
+            [randomUUID(), id, JSON.stringify(mapItemRow(createdRows[0]))]
+          );
         }
 
-        if (existingRows[0].approval_status === 'Approved') {
-          return sendJson(res, 403, {
-            success: false,
-            error: 'Cannot delete approved items. Please deactivate instead.',
-          });
-        }
+        return mapItemRow(createdRows[0]);
+      });
 
-        await query(`DELETE FROM ${itemTableName} WHERE id = ?`, [id]);
-        await appendMasterVersion('item_master', id, mapItemRow(existingRows[0]), {}, 'DELETE');
-        return sendJson(res, 200, { success: true, message: 'Item deleted successfully' });
-      }
+      return sendJson(res, 201, { success: true, data });
     }
 
-    if (req.method === 'POST' && pathname === '/api/items') {
-      const body = await readJsonBody(req);
-      const id = body.id || randomUUID();
-      const itemTableName = getQualifiedTableName('item_master');
+    // ── Parsed Invoice API ────────────────────────────────
+    if (req.method === 'GET' && pathname.startsWith('/api/invoices/') && !pathname.includes('ingestion')) {
+      const invoiceId = pathname.replace('/api/invoices/', '');
+      const rows = await query('SELECT * FROM invoices WHERE id = ? LIMIT 1', [invoiceId]);
+      if (rows.length === 0) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+      const invoice = rows[0];
+      invoice.metadata = typeof invoice.metadata === 'string' ? JSON.parse(invoice.metadata) : invoice.metadata;
+      invoice.bank_details = typeof invoice.bank_details === 'string' ? JSON.parse(invoice.bank_details) : invoice.bank_details;
+      const lineItems = await query('SELECT * FROM invoice_line_items WHERE invoice_id = ? ORDER BY line_number', [invoiceId]);
+      return sendJson(res, 200, { success: true, data: { ...invoice, line_items: lineItems } });
+    }
 
+    if (req.method === 'GET' && pathname === '/api/invoices') {
+      const source = url.searchParams.get('source');
+      const status = url.searchParams.get('status');
+      let sql = 'SELECT id, invoice_number, invoice_date, due_date, vendor_name, vendor_gstin, currency, subtotal, tax_amount, total_amount, po_number, po_id, status, source, ingestion_log_id, created_at FROM invoices';
+      const conditions = [];
+      const params = [];
+      if (source) { conditions.push('source = ?'); params.push(source); }
+      if (status) { conditions.push('status = ?'); params.push(status); }
+      if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
+      sql += ' ORDER BY created_at DESC LIMIT 100';
+      const rows = await query(sql, params);
+      return sendJson(res, 200, { success: true, data: rows });
+    }
+
+    // ── Invoice Ingestion API ──────────────────────────────
+    if (req.method === 'POST' && pathname === '/api/invoice-ingestion/trigger') {
+      const { emails, results } = await pollOnce();
+      for (const email of emails) {
+        try { await processInvoiceEmail(email); } catch (err) {
+          console.error('[Ingestion] trigger process error:', err.message);
+        }
+      }
+      return sendJson(res, 200, { success: true, ...results });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/invoice-ingestion/logs') {
+      const status = url.searchParams.get('status');
+      const limit = Math.min(Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 50), 200);
+      const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0);
+      let sql = 'SELECT * FROM invoice_ingestion_log';
+      const params = [];
+      if (status) { sql += ' WHERE status = ?'; params.push(status); }
+      sql += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+      const rows = await query(sql, params);
+      return sendJson(res, 200, { success: true, data: rows });
+    }
+
+    if (req.method === 'GET' && pathname.startsWith('/api/invoice-ingestion/logs/')) {
+      const logId = pathname.replace('/api/invoice-ingestion/logs/', '');
+      const rows = await query('SELECT * FROM invoice_ingestion_log WHERE id = ? LIMIT 1', [logId]);
+      if (rows.length === 0) return sendJson(res, 404, { success: false, error: 'Log not found' });
+      return sendJson(res, 200, { success: true, data: rows[0] });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/invoice-ingestion/exceptions') {
+      const severity = url.searchParams.get('severity');
+      const invoiceId = url.searchParams.get('invoice_id');
+      let sql = 'SELECT * FROM invoice_exceptions WHERE resolved = FALSE';
+      const params = [];
+      if (severity) { sql += ' AND severity = ?'; params.push(severity); }
+      if (invoiceId) { sql += ' AND invoice_id = ?'; params.push(invoiceId); }
+      sql += ' ORDER BY created_at DESC';
+      const rows = await query(sql, params);
+      return sendJson(res, 200, { success: true, data: rows });
+    }
+
+    if (req.method === 'PATCH' && pathname.startsWith('/api/invoice-ingestion/exceptions/') && pathname.endsWith('/resolve')) {
+      const exId = pathname.split('/')[4];
       await query(
-        `
-          INSERT INTO ${itemTableName} (
-            id,
-            item_code,
-            item_name,
-            item_alias,
-            item_status,
-            item_description,
-            uom,
-            item_group_master,
-            procurement_category,
-            entity_name,
-            expenditure_type,
-            gl_account_code,
-            gl_account_description,
-            nature,
-            rcm_applicable,
-            hsn_code,
-            sac_code,
-            gst_rate,
-            default_itc_eligibility,
-            po_required,
-            reorder_level,
-            max_order_qty,
-            approval_status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        [
-          id,
-          body.itemCode ?? '',
-          body.itemName ?? '',
-          body.itemAlias ?? '',
-          body.itemStatus ?? 'Active',
-          body.itemDescription ?? '',
-          body.uom ?? '',
-          body.itemGroupMaster ?? '',
-          body.procurementCategory ?? '',
-          body.entityName ?? '',
-          body.expenditureType ?? '',
-          body.glAccountCode ?? '',
-          body.glAccountDescription ?? '',
-          body.nature ?? 'Product',
-          body.rcmApplicable ?? 'No',
-          body.hsnCode ?? '',
-          body.sacCode ?? '',
-          body.gstRate ?? '',
-          body.defaultITCEligibility ?? '',
-          body.poRequired ?? 'No',
-          body.reorderLevel ?? '',
-          body.maxOrderQty ?? '',
-          body.approvalStatus ?? 'Draft',
-        ]
+        'UPDATE invoice_exceptions SET resolved = TRUE, resolved_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [exId]
+      );
+      return sendJson(res, 200, { success: true });
+    }
+
+    if (req.method === 'POST' && pathname.startsWith('/api/invoice-ingestion/reprocess/')) {
+      const logId = pathname.replace('/api/invoice-ingestion/reprocess/', '');
+      const logs = await query('SELECT * FROM invoice_ingestion_log WHERE id = ? LIMIT 1', [logId]);
+      if (logs.length === 0) return sendJson(res, 404, { success: false, error: 'Log not found' });
+      await query('UPDATE invoice_ingestion_log SET status = ?, error_message = NULL WHERE id = ?', ['received', logId]);
+      return sendJson(res, 200, { success: true, message: 'Queued for reprocessing' });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/invoice-ingestion/manual-upload') {
+      // Check API key before OCR
+      if (!checkAnthropicKey()) {
+        return sendJson(res, 503, { success: false, error: 'ANTHROPIC_API_KEY not configured — cannot run OCR' });
+      }
+
+      let buffer, mimeType, filename;
+      const contentType = req.headers['content-type'] || '';
+
+      if (contentType.includes('multipart/form-data')) {
+        // Parse multipart/form-data
+        const boundary = contentType.split('boundary=')[1];
+        if (!boundary) return sendJson(res, 400, { success: false, error: 'Missing multipart boundary' });
+        const rawChunks = [];
+        for await (const chunk of req) rawChunks.push(chunk);
+        const raw = Buffer.concat(rawChunks);
+        const parts = parseMultipart(raw, boundary);
+        const filePart = parts.find((p) => p.name === 'invoice' || p.name === 'file');
+        if (!filePart || !filePart.data || filePart.data.length === 0) {
+          return sendJson(res, 400, { success: false, error: 'No file found in form-data. Use field name "invoice" or "file"' });
+        }
+        buffer = filePart.data;
+        filename = filePart.filename || 'manual-upload.pdf';
+        mimeType = filePart.contentType || 'application/pdf';
+      } else {
+        // JSON with base64 file
+        const body = await readJsonBody(req);
+        const fileData = body.file;
+        if (!fileData) return sendJson(res, 400, { success: false, error: 'file (base64) is required' });
+        buffer = Buffer.from(fileData, 'base64');
+        mimeType = body.mimeType || 'application/pdf';
+        filename = body.filename || 'manual-upload.pdf';
+      }
+
+      console.log(`[ManualUpload] Processing ${filename} (${(buffer.length / 1024).toFixed(1)} KB, ${mimeType})`);
+
+      const logId = randomUUID();
+      await query(
+        `INSERT INTO invoice_ingestion_log (id, message_id, sender_email, sender_name, subject, received_at, attachment_count, status)
+         VALUES (?, ?, 'manual', 'Manual Upload', ?, CURRENT_TIMESTAMP, 1, 'processing')`,
+        [logId, `manual-${logId}`, filename]
       );
 
-      const createdRows = await query(`SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1`, [id]);
-      await appendMasterVersion('item_master', id, {}, mapItemRow(createdRows[0]), 'CREATE');
-      return sendJson(res, 201, { success: true, data: mapItemRow(createdRows[0]) });
+      try {
+        console.log('[ManualUpload] Step 1: Claude OCR...');
+        const extracted = await extractInvoiceData(buffer, mimeType);
+        console.log('[ManualUpload] Step 1 done. Invoice:', extracted.invoice_number, 'Vendor:', extracted.vendor_name, 'Amount:', extracted.total_amount, 'Confidence:', extracted.confidence_score);
+
+        console.log('[ManualUpload] Step 2: Validating...');
+        const validation = validateInvoiceData(extracted);
+        console.log('[ManualUpload] Step 2 done. Valid:', validation.valid, 'Errors:', validation.errors.length, 'Warnings:', validation.warnings.length);
+
+        console.log('[ManualUpload] Step 3: PO matching...');
+        const match = await matchToPO(extracted, null);
+        console.log('[ManualUpload] Step 3 done. Matched:', match.matched, 'Type:', match.matchType);
+
+        console.log('[ManualUpload] Step 4: Creating invoice...');
+        const { invoiceId, status } = await createInvoiceFromExtraction(extracted, validation, match, logId, null, buffer, filename);
+        console.log('[ManualUpload] Step 4 done. Invoice ID:', invoiceId, 'Status:', status);
+
+        console.log('[ManualUpload] Step 5: Checking exceptions...');
+        const exceptions = await handleExceptions(invoiceId, extracted, validation, match);
+        console.log('[ManualUpload] Step 5 done. Exceptions:', exceptions.length);
+
+        console.log('[ManualUpload] Step 6: Triggering workflow...');
+        await triggerWorkflow(invoiceId, validation, match);
+        console.log('[ManualUpload] Step 6 done.');
+
+        await query('UPDATE invoice_ingestion_log SET status = ?, processed_at = CURRENT_TIMESTAMP WHERE id = ?', ['processed', logId]);
+        console.log('[ManualUpload] ✓ Complete. Invoice', invoiceId, 'created.');
+        return sendJson(res, 201, { success: true, invoiceId, status, extracted, validation, match, exceptions });
+      } catch (err) {
+        console.error('[ManualUpload] ✗ Failed:', err.message);
+        console.error(err.stack);
+        await query('UPDATE invoice_ingestion_log SET status = ?, error_message = ? WHERE id = ?', ['failed', err.message, logId]);
+        return sendJson(res, 500, { ok: false, error: err.message });
+      }
     }
 
     return sendJson(res, 404, { ok: false, error: 'Route not found' });
   } catch (error) {
-    return sendJson(res, 500, { ok: false, error: String(error) });
+    let statusCode = error.statusCode ?? 500;
+    let clientMessage = 'Internal server error';
+
+    if (error instanceof SyntaxError && error.message.includes('JSON')) {
+      statusCode = 400;
+      clientMessage = 'Invalid JSON in request body';
+    } else if (statusCode === 413) {
+      clientMessage = 'Request body too large';
+    }
+
+    if (statusCode >= 500) {
+      console.error('[API Error]', req.method, req.url, error);
+    }
+    return sendJson(res, statusCode, { ok: false, error: clientMessage });
   }
 });
 
 const port = Number(process.env.APP_PORT ?? 8787);
 server.listen(port, '127.0.0.1', () => {
   console.log(`Azure MySQL API listening on http://127.0.0.1:${port}`);
+  checkAnthropicKey();
+  startEmailPoller(processInvoiceEmail);
 });
+
+async function gracefulShutdown(signal) {
+  console.log(`\n${signal} received — shutting down gracefully…`);
+  server.close(() => {
+    console.log('HTTP server closed');
+  });
+  await closePool();
+  console.log('MySQL pool closed');
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

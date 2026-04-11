@@ -89,21 +89,21 @@ export function RolePermissionMatrix() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div 
         className="px-8 py-6"
         style={{ 
           backgroundColor: '#FFFFFF',
-          borderBottom: '2px solid #E1E6EA'
+          borderBottom: '2px solid var(--color-silver)'
         }}
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+            <h1 className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
               Role-Permission Matrix
             </h1>
-            <p style={{ color: '#6E7A82', fontSize: '14px' }}>
+            <p style={{ color: 'var(--color-mercury-grey)', fontSize: '14px' }}>
               Manage access control across all finance automation modules
             </p>
           </div>
@@ -112,9 +112,9 @@ export function RolePermissionMatrix() {
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
-                backgroundColor: showFilters ? '#00A9B710' : '#FFFFFF',
-                border: `1px solid ${showFilters ? '#00A9B7' : '#E1E6EA'}`,
-                color: showFilters ? '#00A9B7' : '#6E7A82'
+                backgroundColor: showFilters ? 'var(--color-teal)10' : '#FFFFFF',
+                border: `1px solid ${showFilters ? 'var(--color-teal)' : 'var(--color-silver)'}`,
+                color: showFilters ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
               }}
             >
               <Filter className="w-4 h-4" />
@@ -124,9 +124,9 @@ export function RolePermissionMatrix() {
               onClick={handleExport}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
-                backgroundColor: '#00A9B7',
+                backgroundColor: 'var(--color-teal)',
                 color: '#FFFFFF',
-                border: '1px solid #007D87'
+                border: '1px solid var(--color-teal-dark)'
               }}
             >
               <Download className="w-4 h-4" />
@@ -139,17 +139,17 @@ export function RolePermissionMatrix() {
         {showFilters && (
           <div 
             className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg"
-            style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+            style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
           >
             {/* Search */}
             <div>
-              <label className="block text-xs mb-2" style={{ color: '#6E7A82', fontWeight: '600' }}>
+              <label className="block text-xs mb-2" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                 Search Modules
               </label>
               <div className="relative">
                 <Search 
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" 
-                  style={{ color: '#9AA6AF' }}
+                  style={{ color: 'var(--color-slate)' }}
                 />
                 <input
                   type="text"
@@ -159,8 +159,8 @@ export function RolePermissionMatrix() {
                   className="w-full pl-10 pr-4 py-2 rounded-lg text-sm"
                   style={{
                     backgroundColor: '#FFFFFF',
-                    border: '1px solid #E1E6EA',
-                    color: '#0A0F14'
+                    border: '1px solid var(--color-silver)',
+                    color: 'var(--color-ink)'
                   }}
                 />
               </div>
@@ -168,7 +168,7 @@ export function RolePermissionMatrix() {
 
             {/* Section Filter */}
             <div>
-              <label className="block text-xs mb-2" style={{ color: '#6E7A82', fontWeight: '600' }}>
+              <label className="block text-xs mb-2" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                 Filter by Section
               </label>
               <select
@@ -177,8 +177,8 @@ export function RolePermissionMatrix() {
                 className="w-full px-4 py-2 rounded-lg text-sm"
                 style={{
                   backgroundColor: '#FFFFFF',
-                  border: '1px solid #E1E6EA',
-                  color: '#0A0F14'
+                  border: '1px solid var(--color-silver)',
+                  color: 'var(--color-ink)'
                 }}
               >
                 <option value="all">All Sections</option>
@@ -190,7 +190,7 @@ export function RolePermissionMatrix() {
 
             {/* Role Filter */}
             <div>
-              <label className="block text-xs mb-2" style={{ color: '#6E7A82', fontWeight: '600' }}>
+              <label className="block text-xs mb-2" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                 Filter by Role
               </label>
               <select
@@ -199,8 +199,8 @@ export function RolePermissionMatrix() {
                 className="w-full px-4 py-2 rounded-lg text-sm"
                 style={{
                   backgroundColor: '#FFFFFF',
-                  border: '1px solid #E1E6EA',
-                  color: '#0A0F14'
+                  border: '1px solid var(--color-silver)',
+                  color: 'var(--color-ink)'
                 }}
               >
                 <option value="all">All Roles</option>
@@ -217,29 +217,29 @@ export function RolePermissionMatrix() {
       <div className="p-8">
         <div 
           className="bg-white rounded-lg overflow-hidden"
-          style={{ border: '1px solid #E1E6EA', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
+          style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
         >
           {/* Table Container with Horizontal Scroll */}
           <div className="overflow-x-auto">
             <table className="w-full" style={{ minWidth: '1200px' }}>
               {/* Table Header */}
               <thead>
-                <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '2px solid #E1E6EA' }}>
+                <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '2px solid var(--color-silver)' }}>
                   {/* Sticky Role Column Header */}
                   <th 
                     className="text-left px-6 py-4"
                     style={{ 
                       position: 'sticky',
                       left: 0,
-                      backgroundColor: '#F6F9FC',
+                      backgroundColor: 'var(--color-cloud)',
                       zIndex: 20,
                       minWidth: '200px',
-                      borderRight: '2px solid #E1E6EA'
+                      borderRight: '2px solid var(--color-silver)'
                     }}
                   >
                     <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4" style={{ color: '#00A9B7' }} />
-                      <span style={{ color: '#0A0F14', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase' }}>
+                      <Shield className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
+                      <span style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase' }}>
                         Role
                       </span>
                     </div>
@@ -250,10 +250,10 @@ export function RolePermissionMatrix() {
                     className="text-left px-4 py-4"
                     style={{ 
                       minWidth: '180px',
-                      borderRight: '1px solid #E1E6EA'
+                      borderRight: '1px solid var(--color-silver)'
                     }}
                   >
-                    <span style={{ color: '#0A0F14', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase' }}>
+                    <span style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase' }}>
                       Module
                     </span>
                   </th>
@@ -265,12 +265,12 @@ export function RolePermissionMatrix() {
                       className="text-center px-3 py-4"
                       style={{ 
                         minWidth: '100px',
-                        borderRight: idx < actions.length - 1 ? '1px solid #E1E6EA' : 'none'
+                        borderRight: idx < actions.length - 1 ? '1px solid var(--color-silver)' : 'none'
                       }}
                     >
                       <div className="flex flex-col items-center gap-1">
-                        <action.icon className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                        <span style={{ color: '#0A0F14', fontWeight: '600', fontSize: '11px' }}>
+                        <action.icon className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                        <span style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '11px' }}>
                           {action.label}
                         </span>
                       </div>
@@ -295,7 +295,7 @@ export function RolePermissionMatrix() {
                         key={`${role.id}-${module.id}`}
                         style={{
                           backgroundColor: roleIndex % 2 === 0 ? '#FFFFFF' : '#FAFBFC',
-                          borderBottom: '1px solid #E1E6EA'
+                          borderBottom: '1px solid var(--color-silver)'
                         }}
                       >
                         {/* Sticky Role Cell */}
@@ -308,7 +308,7 @@ export function RolePermissionMatrix() {
                               left: 0,
                               backgroundColor: roleIndex % 2 === 0 ? '#FFFFFF' : '#FAFBFC',
                               zIndex: 10,
-                              borderRight: '2px solid #E1E6EA',
+                              borderRight: '2px solid var(--color-silver)',
                               verticalAlign: 'top'
                             }}
                           >
@@ -320,12 +320,12 @@ export function RolePermissionMatrix() {
                                 <Shield className="w-5 h-5" style={{ color: role.color }} />
                               </div>
                               <div>
-                                <div style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                                <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
                                   {role.name}
                                 </div>
                                 <div 
                                   className="text-xs mt-1"
-                                  style={{ color: '#6E7A82', lineHeight: '1.4' }}
+                                  style={{ color: 'var(--color-mercury-grey)', lineHeight: '1.4' }}
                                 >
                                   {role.description}
                                 </div>
@@ -340,8 +340,8 @@ export function RolePermissionMatrix() {
                                         key={action.id}
                                         className="px-2 py-0.5 rounded text-xs"
                                         style={{
-                                          backgroundColor: '#F6F9FC',
-                                          color: '#6E7A82',
+                                          backgroundColor: 'var(--color-cloud)',
+                                          color: 'var(--color-mercury-grey)',
                                           fontWeight: '600'
                                         }}
                                         title={`${count} modules with ${action.label} permission`}
@@ -359,17 +359,17 @@ export function RolePermissionMatrix() {
                         {/* Module Cell with Section Header */}
                         <td 
                           className="px-4 py-3"
-                          style={{ borderRight: '1px solid #E1E6EA' }}
+                          style={{ borderRight: '1px solid var(--color-silver)' }}
                         >
                           {isNewSection && (
                             <div 
                               className="mb-2 pb-2"
-                              style={{ borderBottom: '2px solid #E1E6EA' }}
+                              style={{ borderBottom: '2px solid var(--color-silver)' }}
                             >
                               <span 
                                 className="text-xs uppercase tracking-wider"
                                 style={{ 
-                                  color: '#00A9B7',
+                                  color: 'var(--color-teal)',
                                   fontWeight: '700'
                                 }}
                               >
@@ -377,7 +377,7 @@ export function RolePermissionMatrix() {
                               </span>
                             </div>
                           )}
-                          <div style={{ color: '#0A0F14', fontWeight: '500', fontSize: '14px' }}>
+                          <div style={{ color: 'var(--color-ink)', fontWeight: '500', fontSize: '14px' }}>
                             {module.name}
                           </div>
                         </td>
@@ -391,24 +391,24 @@ export function RolePermissionMatrix() {
                               key={action.id}
                               className="text-center px-3 py-3"
                               style={{ 
-                                borderRight: idx < actions.length - 1 ? '1px solid #E1E6EA' : 'none'
+                                borderRight: idx < actions.length - 1 ? '1px solid var(--color-silver)' : 'none'
                               }}
                             >
                               <div className="flex justify-center">
                                 {hasPermission ? (
                                   <div
                                     className="w-8 h-8 rounded-lg flex items-center justify-center"
-                                    style={{ backgroundColor: '#00A9B715' }}
+                                    style={{ backgroundColor: 'var(--color-teal)15' }}
                                   >
                                     <Check 
                                       className="w-5 h-5" 
-                                      style={{ color: '#00A9B7', strokeWidth: 2.5 }} 
+                                      style={{ color: 'var(--color-teal)', strokeWidth: 2.5 }} 
                                     />
                                   </div>
                                 ) : (
                                   <div
                                     className="w-8 h-8 rounded-lg flex items-center justify-center"
-                                    style={{ backgroundColor: '#F6F9FC' }}
+                                    style={{ backgroundColor: 'var(--color-cloud)' }}
                                   >
                                     <X 
                                       className="w-4 h-4" 
@@ -433,7 +433,7 @@ export function RolePermissionMatrix() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
           <div 
             className="bg-white rounded-lg p-4"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center gap-3">
               <div 
@@ -443,8 +443,8 @@ export function RolePermissionMatrix() {
                 <Shield className="w-5 h-5" style={{ color: '#3B82F6' }} />
               </div>
               <div>
-                <div className="text-xs" style={{ color: '#6E7A82' }}>Total Roles</div>
-                <div className="text-2xl" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Total Roles</div>
+                <div className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                   {filteredRoles.length}
                 </div>
               </div>
@@ -453,7 +453,7 @@ export function RolePermissionMatrix() {
 
           <div 
             className="bg-white rounded-lg p-4"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center gap-3">
               <div 
@@ -463,8 +463,8 @@ export function RolePermissionMatrix() {
                 <FileSpreadsheet className="w-5 h-5" style={{ color: '#10B981' }} />
               </div>
               <div>
-                <div className="text-xs" style={{ color: '#6E7A82' }}>Total Modules</div>
-                <div className="text-2xl" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Total Modules</div>
+                <div className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                   {filteredModules.length}
                 </div>
               </div>
@@ -473,7 +473,7 @@ export function RolePermissionMatrix() {
 
           <div 
             className="bg-white rounded-lg p-4"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center gap-3">
               <div 
@@ -483,8 +483,8 @@ export function RolePermissionMatrix() {
                 <Settings className="w-5 h-5" style={{ color: '#F59E0B' }} />
               </div>
               <div>
-                <div className="text-xs" style={{ color: '#6E7A82' }}>Sections</div>
-                <div className="text-2xl" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Sections</div>
+                <div className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                   {selectedSection === 'all' ? 3 : 1}
                 </div>
               </div>
@@ -493,18 +493,18 @@ export function RolePermissionMatrix() {
 
           <div 
             className="bg-white rounded-lg p-4"
-            style={{ border: '1px solid #E1E6EA' }}
+            style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center gap-3">
               <div 
                 className="w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: '#00A9B715' }}
+                style={{ backgroundColor: 'var(--color-teal)15' }}
               >
-                <Check className="w-5 h-5" style={{ color: '#00A9B7' }} />
+                <Check className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
               <div>
-                <div className="text-xs" style={{ color: '#6E7A82' }}>Total Permissions</div>
-                <div className="text-2xl" style={{ color: '#0A0F14', fontWeight: '700' }}>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Total Permissions</div>
+                <div className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                   {filteredRoles.reduce((total, role) => {
                     return total + filteredModules.reduce((moduleTotal, module) => {
                       const perms = permissionMatrix[role.id]?.[module.id];

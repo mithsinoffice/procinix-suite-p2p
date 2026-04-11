@@ -4,11 +4,11 @@ import { ArrowLeft, CheckCircle, XCircle, Send } from 'lucide-react';
 import { useVendorInvitations } from '../contexts/VendorInvitationContext';
 import { InviteBasicsReadonly, VendorMasterFormReadonly } from './VendorSubmissionReadonlySections';
 
-const surface = '#F6F9FC';
-const border = '#E1E6EA';
-const textMuted = '#6E7A82';
-const textMain = '#0A0F14';
-const accent = '#00A9B7';
+const surface = 'var(--color-cloud)';
+const border = 'var(--color-silver)';
+const textMuted = 'var(--color-mercury-grey)';
+const textMain = 'var(--color-ink)';
+const accent = 'var(--color-teal)';
 
 export function VendorInvitationReviewDetail() {
   const { invitationId } = useParams<{ invitationId: string }>();

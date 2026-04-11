@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { ArrowLeft, Plus, Trash2, Calendar, CheckCircle, XCircle } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ComplianceValidationSummary } from './ComplianceValidationSummary';
 import { useMasterData } from '../contexts/MasterDataContext';
 import type { VendorMaster } from '../contexts/MasterDataContext';
+import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface BankAccount {
   id: string;
@@ -554,17 +556,34 @@ export function CreateVendor() {
     navigate(listPath);
   };
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [vendorName, contactPerson, emailID, phoneNumber, panNumber];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [vendorName, contactPerson, emailID, phoneNumber, panNumber]);
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    handleSubmit();
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSubmit]);
+
+  useFormKeyboardSave(handleSaveDraft);
+
   if (vendorId && vendors.length > 0 && !getVendorById(vendorId)) {
     return (
-      <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100%' }}>
-        <p className="text-sm mb-4" style={{ color: '#6E7A82' }}>
+      <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100%' }}>
+        <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
           This vendor could not be found.
         </p>
         <button
           type="button"
           onClick={() => navigate(listPath)}
           className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-          style={{ backgroundColor: '#00A9B7' }}
+          style={{ backgroundColor: 'var(--color-teal)' }}
         >
           Back to list
         </button>
@@ -575,76 +594,30 @@ export function CreateVendor() {
   const isEditMode = Boolean(vendorId);
 
   return (
-    <div className="p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => navigate(listPath)}
-            className="p-2 rounded-lg transition-colors"
-            style={{ color: '#6E7A82' }}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-3xl" style={{ color: '#0A0F14' }}>
-            {isEditMode ? 'Edit Vendor Master' : 'Create Vendor Master'}
-          </h1>
-        </div>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          className="px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#007D87';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#00A9B7';
-          }}
-        >
-          {isEditMode ? 'Save changes' : 'Submit Vendor'}
-        </button>
-      </div>
-
+    <FormShell
+      title={isEditMode ? 'Edit Vendor Master' : 'Create Vendor Master'}
+      subtitle="Manage vendor master records with statutory compliance"
+      modeLabel={isEditMode ? 'Edit Transaction' : 'New Transaction'}
+      variant="transaction"
+      completeness={completeness}
+      onBack={() => navigate(listPath)}
+      onCancel={() => navigate(listPath)}
+      onSaveDraft={handleSaveDraft}
+      onSubmit={handleSubmit}
+      submitLabel={isEditMode ? 'Save changes' : 'Submit Vendor'}
+      draftLabel="Save Draft"
+      saveStatus={saveStatus}
+    >
       <div className="space-y-6">
         {/* Section 1: General Details */}
-        <div className="bg-white rounded-lg p-6 space-y-6" style={{ border: '1px solid #E1E6EA' }}>
-          <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>General Details</h2>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Vendor Name <span style={{ color: '#FF4E5B' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={vendorName}
-                onChange={(e) => setVendorName(e.target.value)}
-                placeholder="Enter vendor name"
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              />
-            </div>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+          <FormSection title="General Details" columns={2}>
+            <PxFormField label="Vendor Name" required filled={!!vendorName.trim()}>
+              <input type="text" value={vendorName} onChange={(e) => setVendorName(e.target.value)} placeholder="Enter vendor name" className="px-input" />
+            </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Vendor Group
-              </label>
-              <select
-                value={vendorGroup}
-                onChange={(e) => setVendorGroup(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              >
+            <PxFormField label="Vendor Group" filled={!!vendorGroup}>
+              <select value={vendorGroup} onChange={(e) => setVendorGroup(e.target.value)} className="px-input">
                 <option value="">-- Select Vendor Group --</option>
                 {vendorGroups.map(group => (
                   <option key={group.code} value={`${group.code} - ${group.name}`}>
@@ -652,406 +625,184 @@ export function CreateVendor() {
                   </option>
                 ))}
               </select>
-            </div>
+            </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Vendor Alias
-              </label>
-              <input
-                type="text"
-                value={vendorAlias}
-                onChange={(e) => setVendorAlias(e.target.value)}
-                placeholder="Enter alias"
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              />
-            </div>
+            <PxFormField label="Vendor Alias" filled={!!vendorAlias.trim()}>
+              <input type="text" value={vendorAlias} onChange={(e) => setVendorAlias(e.target.value)} placeholder="Enter alias" className="px-input" />
+            </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Vendor Status
-              </label>
-              <select
-                value={vendorStatus}
-                onChange={(e) => setVendorStatus(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              >
+            <PxFormField label="Vendor Status" filled={!!vendorStatus}>
+              <select value={vendorStatus} onChange={(e) => setVendorStatus(e.target.value)} className="px-input">
                 <option>Active</option>
                 <option>Inactive</option>
                 <option>Pending Approval</option>
                 <option>Blocked</option>
               </select>
-            </div>
+            </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Vendor Type
-              </label>
-              <select
-                value={vendorType}
-                onChange={(e) => setVendorType(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              >
+            <PxFormField label="Vendor Type" filled={!!vendorType}>
+              <select value={vendorType} onChange={(e) => setVendorType(e.target.value)} className="px-input">
                 <option>Both</option>
                 <option>Goods</option>
                 <option>Services</option>
                 <option>Import</option>
               </select>
-            </div>
+            </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Risk Category
-              </label>
-              <select
-                value={riskCategory}
-                onChange={(e) => setRiskCategory(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              >
+            <PxFormField label="Risk Category" filled={!!riskCategory}>
+              <select value={riskCategory} onChange={(e) => setRiskCategory(e.target.value)} className="px-input">
                 <option>Low</option>
                 <option>Medium</option>
                 <option>High</option>
               </select>
-            </div>
+            </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Internal SPOC
-              </label>
-              <input
-                type="text"
-                value={internalSPOC}
-                onChange={(e) => setInternalSPOC(e.target.value)}
-                placeholder="e.g., John Doe (Procurement)"
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              />
-            </div>
-          </div>
+            <PxFormField label="Internal SPOC" filled={!!internalSPOC.trim()}>
+              <input type="text" value={internalSPOC} onChange={(e) => setInternalSPOC(e.target.value)} placeholder="e.g., John Doe (Procurement)" className="px-input" />
+            </PxFormField>
+          </FormSection>
         </div>
 
         {/* Section 2: Contact Details */}
-        <div className="bg-white rounded-lg p-6 space-y-6" style={{ border: '1px solid #E1E6EA' }}>
-          <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Contact Details</h2>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Contact Person <span style={{ color: '#FF4E5B' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={contactPerson}
-                onChange={(e) => setContactPerson(e.target.value)}
-                placeholder="Enter contact person name"
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              />
-            </div>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+          <FormSection title="Contact Details" columns={2}>
+            <PxFormField label="Contact Person" required filled={!!contactPerson.trim()}>
+              <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} placeholder="Enter contact person name" className="px-input" />
+            </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Designation
-              </label>
-              <input
-                type="text"
-                value={designation}
-                onChange={(e) => setDesignation(e.target.value)}
-                placeholder="e.g., Head of Sales"
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              />
-            </div>
+            <PxFormField label="Designation" filled={!!designation.trim()}>
+              <input type="text" value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g., Head of Sales" className="px-input" />
+            </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Email ID <span style={{ color: '#FF4E5B' }}>*</span>
-              </label>
-              <input
-                type="email"
-                value={emailID}
-                onChange={(e) => setEmailID(e.target.value)}
-                placeholder="contact@vendor.com"
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              />
-            </div>
+            <PxFormField label="Email ID" required filled={!!emailID.trim()}>
+              <input type="email" value={emailID} onChange={(e) => setEmailID(e.target.value)} placeholder="contact@vendor.com" className="px-input" />
+            </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Phone Number <span style={{ color: '#FF4E5B' }}>*</span>
-              </label>
-              <input
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="9876543210"
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              />
-            </div>
-          </div>
+            <PxFormField label="Phone Number" required filled={!!phoneNumber.trim()}>
+              <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="9876543210" className="px-input" />
+            </PxFormField>
+          </FormSection>
         </div>
 
         {/* Section 3: Statutory Compliance & Audit */}
         <div className="grid grid-cols-3 gap-6">
           {/* Left: Main Form - 2 columns */}
-          <div className="col-span-2 bg-white rounded-lg p-6 space-y-6" style={{ border: '1px solid #E1E6EA' }}>
-            <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Statutory Compliance & Audit</h2>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                PAN Number <span style={{ color: '#FF4E5B' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={panNumber}
-                onChange={(e) => setPanNumber(e.target.value)}
-                placeholder="ABCDE1234E"
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              />
-              <button
-                onClick={validatePAN}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors text-sm"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
-              >
-                {validatingPan ? (
-                  <Calendar className="w-4 h-4" />
-                ) : (
-                  <Plus className="w-4 h-4" />
-                )}
-                {panValidationStatus === 'PENDING' ? 'Validate PAN' : panValidationStatus}
-              </button>
-            </div>
+          <div className="col-span-2 bg-white rounded-lg p-6 space-y-6" style={{ border: '1px solid var(--color-silver)' }}>
+            <FormSection title="Statutory Compliance & Audit" columns={2}>
+              <PxFormField label="PAN Number" required filled={!!panNumber.trim()}>
+                <input type="text" value={panNumber} onChange={(e) => setPanNumber(e.target.value)} placeholder="ABCDE1234E" className="px-input" />
+                <button
+                  onClick={validatePAN}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors text-sm mt-1"
+                  style={{ backgroundColor: 'var(--color-teal)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+                >
+                  {validatingPan ? <Calendar className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {panValidationStatus === 'PENDING' ? 'Validate PAN' : panValidationStatus}
+                </button>
+              </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                CIN Number
-              </label>
-              <input
-                type="text"
-                value={cinNumber}
-                onChange={(e) => setCinNumber(e.target.value)}
-                placeholder="U21090RJ2002PTC017849"
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              />
-              <button
-                onClick={validateCIN}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors text-sm"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
-              >
-                {validatingCin ? (
-                  <Calendar className="w-4 h-4" />
-                ) : (
-                  <Plus className="w-4 h-4" />
-                )}
-                {cinValidationStatus === 'PENDING' ? 'Validate CIN' : cinValidationStatus}
-              </button>
-            </div>
+              <PxFormField label="CIN Number" filled={!!cinNumber.trim()}>
+                <input type="text" value={cinNumber} onChange={(e) => setCinNumber(e.target.value)} placeholder="U21090RJ2002PTC017849" className="px-input" />
+                <button
+                  onClick={validateCIN}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors text-sm mt-1"
+                  style={{ backgroundColor: 'var(--color-teal)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+                >
+                  {validatingCin ? <Calendar className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {cinValidationStatus === 'PENDING' ? 'Validate CIN' : cinValidationStatus}
+                </button>
+              </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Verified Entity Type
-              </label>
-              <select
-                value={verifiedEntityType}
-                onChange={(e) => setVerifiedEntityType(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              >
-                <option>Company (Pvt Ltd / Ltd)</option>
-                <option>Partnership</option>
-                <option>Proprietorship</option>
-                <option>LLP</option>
-              </select>
-            </div>
+              <PxFormField label="Verified Entity Type" filled={!!verifiedEntityType}>
+                <select value={verifiedEntityType} onChange={(e) => setVerifiedEntityType(e.target.value)} className="px-input">
+                  <option>Company (Pvt Ltd / Ltd)</option>
+                  <option>Partnership</option>
+                  <option>Proprietorship</option>
+                  <option>LLP</option>
+                </select>
+              </PxFormField>
 
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={isMSMERegistered}
-                onChange={(e) => setIsMSMERegistered(e.target.checked)}
-                className="w-5 h-5 rounded"
-                style={{ accentColor: '#00A9B7' }}
-              />
-              <label className="text-sm" style={{ color: '#0A0F14' }}>
-                Is MSME Registered?
-              </label>
-            </div>
-          </div>
+              <PxFormField label="MSME Registration" filled={isMSMERegistered}>
+                <div className="flex items-center gap-3 py-2">
+                  <input
+                    type="checkbox"
+                    checked={isMSMERegistered}
+                    onChange={(e) => setIsMSMERegistered(e.target.checked)}
+                    className="w-5 h-5 rounded"
+                    style={{ accentColor: 'var(--color-teal)' }}
+                  />
+                  <label className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                    Is MSME Registered?
+                  </label>
+                </div>
+              </PxFormField>
+            </FormSection>
 
           {isMSMERegistered && (
-            <div className="grid grid-cols-2 gap-6 p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-              <div>
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                  Udyam Registration No
-                </label>
-                <input
-                  type="text"
-                  value={udyamRegistrationNo}
-                  onChange={(e) => setUdyamRegistrationNo(e.target.value)}
-                  placeholder="UDYAM-MH-01-0000001"
-                  className="w-full px-3 py-2 rounded-lg"
-                  style={{
-                    border: '1px solid #E1E6EA',
-                    backgroundColor: 'white',
-                    color: '#0A0F14'
-                  }}
-                />
-                <button
-                  onClick={validateUdyam}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors text-sm"
-                  style={{ backgroundColor: '#00A9B7' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
-                >
-                  {validatingUdyam ? (
-                    <Calendar className="w-4 h-4" />
-                  ) : (
-                    <Plus className="w-4 h-4" />
-                  )}
-                  {udyamValidationStatus === 'PENDING' ? 'Validate Udyam' : udyamValidationStatus}
-                </button>
-              </div>
+            <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <FormSection title="MSME Details" columns={2}>
+                <PxFormField label="Udyam Registration No" filled={!!udyamRegistrationNo.trim()}>
+                  <input type="text" value={udyamRegistrationNo} onChange={(e) => setUdyamRegistrationNo(e.target.value)} placeholder="UDYAM-MH-01-0000001" className="px-input" />
+                  <button
+                    onClick={validateUdyam}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors text-sm mt-1"
+                    style={{ backgroundColor: 'var(--color-teal)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+                  >
+                    {validatingUdyam ? <Calendar className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    {udyamValidationStatus === 'PENDING' ? 'Validate Udyam' : udyamValidationStatus}
+                  </button>
+                </PxFormField>
 
-              <div>
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                  MSME Type
-                </label>
-                <select
-                  value={msmeType}
-                  onChange={(e) => setMsmeType(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg"
-                  style={{
-                    border: '1px solid #E1E6EA',
-                    backgroundColor: 'white',
-                    color: '#0A0F14'
-                  }}
-                >
-                  <option>Udyam</option>
-                  <option>UAM</option>
-                </select>
-              </div>
+                <PxFormField label="MSME Type" filled={!!msmeType}>
+                  <select value={msmeType} onChange={(e) => setMsmeType(e.target.value)} className="px-input">
+                    <option>Udyam</option>
+                    <option>UAM</option>
+                  </select>
+                </PxFormField>
 
-              <div>
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                  MSME Classification
-                </label>
-                <select
-                  value={msmeClassification}
-                  onChange={(e) => setMsmeClassification(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg"
-                  style={{
-                    border: '1px solid #E1E6EA',
-                    backgroundColor: 'white',
-                    color: '#0A0F14'
-                  }}
-                >
-                  <option>Micro</option>
-                  <option>Small</option>
-                  <option>Medium</option>
-                </select>
-              </div>
+                <PxFormField label="MSME Classification" filled={!!msmeClassification}>
+                  <select value={msmeClassification} onChange={(e) => setMsmeClassification(e.target.value)} className="px-input">
+                    <option>Micro</option>
+                    <option>Small</option>
+                    <option>Medium</option>
+                  </select>
+                </PxFormField>
+              </FormSection>
             </div>
           )}
 
           {/* TDS Section */}
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                TDS Sections (e.g., 194C, 194J)
-              </label>
-              <input
-                type="text"
-                value={tdsSections}
-                onChange={(e) => setTdsSections(e.target.value)}
-                placeholder="194C, 194J"
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              />
-            </div>
+          <FormSection title="TDS Details" columns={2}>
+            <PxFormField label="TDS Sections (e.g., 194C, 194J)" filled={!!tdsSections.trim()}>
+              <input type="text" value={tdsSections} onChange={(e) => setTdsSections(e.target.value)} placeholder="194C, 194J" className="px-input" />
+            </PxFormField>
 
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={section206AB}
-                onChange={(e) => setSection206AB(e.target.checked)}
-                className="w-5 h-5 rounded"
-                style={{ accentColor: '#00A9B7' }}
-              />
-              <label className="text-sm" style={{ color: '#0A0F14' }}>
-                Section 206AB Applicable (Higher TDS Rate)
-              </label>
-            </div>
-          </div>
+            <PxFormField label="Section 206AB" filled={section206AB}>
+              <div className="flex items-center gap-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={section206AB}
+                  onChange={(e) => setSection206AB(e.target.checked)}
+                  className="w-5 h-5 rounded"
+                  style={{ accentColor: 'var(--color-teal)' }}
+                />
+                <label className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                  Section 206AB Applicable (Higher TDS Rate)
+                </label>
+              </div>
+            </PxFormField>
+          </FormSection>
 
           {/* GST Details */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg" style={{ color: '#0A0F14' }}>GST Details</h3>
+              <h3 className="text-lg" style={{ color: 'var(--color-ink)' }}>GST Details</h3>
               <button
                 onClick={() => {
                   const newGST: GSTDetail = {
@@ -1064,9 +815,9 @@ export function CreateVendor() {
                   setGstDetails([...gstDetails, newGST]);
                 }}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors text-sm"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                style={{ backgroundColor: 'var(--color-teal)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
               >
                 <Plus className="w-4 h-4" />
                 Add GST Registration
@@ -1076,9 +827,9 @@ export function CreateVendor() {
             {gstDetails.length === 0 ? (
               <div 
                 className="text-center py-8 rounded-lg"
-                style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
               >
-                <p style={{ color: '#6E7A82' }}>
+                <p style={{ color: 'var(--color-mercury-grey)' }}>
                   No GST registrations added.
                 </p>
               </div>
@@ -1088,11 +839,11 @@ export function CreateVendor() {
                   <div
                     key={gst.id}
                     className="p-4 rounded-lg"
-                    style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                    style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                   >
                     <div className="grid grid-cols-5 gap-4">
                       <div>
-                        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           GSTIN
                         </label>
                         <input
@@ -1106,17 +857,17 @@ export function CreateVendor() {
                           placeholder="29ABCDE1234F1Z5"
                           className="w-full px-3 py-2 rounded-lg"
                           style={{
-                            border: '1px solid #E1E6EA',
+                            border: '1px solid var(--color-silver)',
                             backgroundColor: 'white',
-                            color: '#0A0F14'
+                            color: 'var(--color-ink)'
                           }}
                         />
                         <button
                           onClick={() => validateGST(gst.id, gst.gstin)}
                           className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors text-sm"
-                          style={{ backgroundColor: '#00A9B7' }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                          style={{ backgroundColor: 'var(--color-teal)' }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
                         >
                           {validatingGst[gst.id] ? (
                             <Calendar className="w-4 h-4" />
@@ -1128,7 +879,7 @@ export function CreateVendor() {
                       </div>
 
                       <div>
-                        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           Registered State
                         </label>
                         <input
@@ -1142,15 +893,15 @@ export function CreateVendor() {
                           placeholder="Karnataka"
                           className="w-full px-3 py-2 rounded-lg"
                           style={{
-                            border: '1px solid #E1E6EA',
+                            border: '1px solid var(--color-silver)',
                             backgroundColor: 'white',
-                            color: '#0A0F14'
+                            color: 'var(--color-ink)'
                           }}
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           Registration Status
                         </label>
                         <select
@@ -1162,9 +913,9 @@ export function CreateVendor() {
                           }}
                           className="w-full px-3 py-2 rounded-lg"
                           style={{
-                            border: '1px solid #E1E6EA',
+                            border: '1px solid var(--color-silver)',
                             backgroundColor: 'white',
-                            color: '#0A0F14'
+                            color: 'var(--color-ink)'
                           }}
                         >
                           <option>Active</option>
@@ -1174,7 +925,7 @@ export function CreateVendor() {
                       </div>
 
                       <div>
-                        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           Detailed Address
                         </label>
                         <input
@@ -1188,9 +939,9 @@ export function CreateVendor() {
                           placeholder="Registered address"
                           className="w-full px-3 py-2 rounded-lg"
                           style={{
-                            border: '1px solid #E1E6EA',
+                            border: '1px solid var(--color-silver)',
                             backgroundColor: 'white',
-                            color: '#0A0F14'
+                            color: 'var(--color-ink)'
                           }}
                         />
                       </div>
@@ -1199,7 +950,7 @@ export function CreateVendor() {
                         <button
                           onClick={() => setGstDetails(gstDetails.filter(g => g.id !== gst.id))}
                           className="p-2 rounded-lg transition-colors"
-                          style={{ color: '#FF4E5B' }}
+                          style={{ color: 'var(--color-error)' }}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1214,13 +965,13 @@ export function CreateVendor() {
           {/* Bank Accounts */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg" style={{ color: '#0A0F14' }}>Bank Accounts</h3>
+              <h3 className="text-lg" style={{ color: 'var(--color-ink)' }}>Bank Accounts</h3>
               <button
                 onClick={handleAddBankAccount}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors text-sm"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                style={{ backgroundColor: 'var(--color-teal)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
               >
                 <Plus className="w-4 h-4" />
                 Add Bank Account
@@ -1230,9 +981,9 @@ export function CreateVendor() {
             {bankAccounts.length === 0 ? (
               <div 
                 className="text-center py-8 rounded-lg"
-                style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
               >
-                <p style={{ color: '#6E7A82' }}>
+                <p style={{ color: 'var(--color-mercury-grey)' }}>
                   No bank accounts added.
                 </p>
               </div>
@@ -1242,7 +993,7 @@ export function CreateVendor() {
                   <div
                     key={bank.id}
                     className="p-4 rounded-lg"
-                    style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                    style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                   >
                     <div className="grid grid-cols-5 gap-4">
                       <div className="flex items-center">
@@ -1256,13 +1007,13 @@ export function CreateVendor() {
                             })));
                           }}
                           className="w-4 h-4 mr-2"
-                          style={{ accentColor: '#00A9B7' }}
+                          style={{ accentColor: 'var(--color-teal)' }}
                         />
-                        <label className="text-sm" style={{ color: '#0A0F14' }}>Primary</label>
+                        <label className="text-sm" style={{ color: 'var(--color-ink)' }}>Primary</label>
                       </div>
 
                       <div>
-                        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           Account Number
                         </label>
                         <input
@@ -1276,15 +1027,15 @@ export function CreateVendor() {
                           placeholder="9876543210"
                           className="w-full px-3 py-2 rounded-lg"
                           style={{
-                            border: '1px solid #E1E6EA',
+                            border: '1px solid var(--color-silver)',
                             backgroundColor: 'white',
-                            color: '#0A0F14'
+                            color: 'var(--color-ink)'
                           }}
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           IFSC Code
                         </label>
                         <input
@@ -1298,15 +1049,15 @@ export function CreateVendor() {
                           placeholder="HDFC0000087"
                           className="w-full px-3 py-2 rounded-lg"
                           style={{
-                            border: '1px solid #E1E6EA',
+                            border: '1px solid var(--color-silver)',
                             backgroundColor: 'white',
-                            color: '#0A0F14'
+                            color: 'var(--color-ink)'
                           }}
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           Holder Name
                         </label>
                         <input
@@ -1320,9 +1071,9 @@ export function CreateVendor() {
                           placeholder="Account holder name"
                           className="w-full px-3 py-2 rounded-lg"
                           style={{
-                            border: '1px solid #E1E6EA',
+                            border: '1px solid var(--color-silver)',
                             backgroundColor: 'white',
-                            color: '#0A0F14'
+                            color: 'var(--color-ink)'
                           }}
                         />
                       </div>
@@ -1331,7 +1082,7 @@ export function CreateVendor() {
                         <button
                           onClick={() => handleRemoveBankAccount(bank.id)}
                           className="p-2 rounded-lg transition-colors"
-                          style={{ color: '#FF4E5B' }}
+                          style={{ color: 'var(--color-error)' }}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1344,61 +1095,19 @@ export function CreateVendor() {
           </div>
 
           {/* Validation Schedule */}
-          <div>
-            <h3 className="text-lg mb-4" style={{ color: '#0A0F14' }}>Validation Schedule</h3>
-            <div className="grid grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                  Frequency (Months)
-                </label>
-                <input
-                  type="number"
-                  value={frequencyMonths}
-                  onChange={(e) => setFrequencyMonths(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg"
-                  style={{
-                    border: '1px solid #E1E6EA',
-                    backgroundColor: 'white',
-                    color: '#0A0F14'
-                  }}
-                />
-              </div>
+          <FormSection title="Validation Schedule" columns={3}>
+            <PxFormField label="Frequency (Months)" filled={frequencyMonths > 0}>
+              <input type="number" value={frequencyMonths} onChange={(e) => setFrequencyMonths(parseInt(e.target.value))} className="px-input" />
+            </PxFormField>
 
-              <div>
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                  Last Validated On
-                </label>
-                <input
-                  type="date"
-                  value={lastValidatedOn}
-                  onChange={(e) => setLastValidatedOn(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg"
-                  style={{
-                    border: '1px solid #E1E6EA',
-                    backgroundColor: 'white',
-                    color: '#0A0F14'
-                  }}
-                />
-              </div>
+            <PxFormField label="Last Validated On" filled={!!lastValidatedOn}>
+              <input type="date" value={lastValidatedOn} onChange={(e) => setLastValidatedOn(e.target.value)} className="px-input" />
+            </PxFormField>
 
-              <div>
-                <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                  Next Validation Date
-                </label>
-                <input
-                  type="date"
-                  value={nextValidationDate}
-                  onChange={(e) => setNextValidationDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg"
-                  style={{
-                    border: '1px solid #E1E6EA',
-                    backgroundColor: 'white',
-                    color: '#0A0F14'
-                  }}
-                />
-              </div>
-            </div>
-          </div>
+            <PxFormField label="Next Validation Date" filled={!!nextValidationDate}>
+              <input type="date" value={nextValidationDate} onChange={(e) => setNextValidationDate(e.target.value)} className="px-input" />
+            </PxFormField>
+          </FormSection>
           </div>
 
           {/* Right: Compliance Validation Summary - 1 column */}
@@ -1422,57 +1131,27 @@ export function CreateVendor() {
         </div>
 
         {/* Section 4: Financial Mapping & Accounts */}
-        <div className="bg-white rounded-lg p-6 space-y-6" style={{ border: '1px solid #E1E6EA' }}>
-          <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Financial Mapping & Accounts</h2>
-          
-          {/* Mapped Services */}
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-              Mapped Services (Comma separated)
-            </label>
-            <input
-              type="text"
-              value={mappedServices.join(', ')}
-              onChange={(e) => setMappedServices(e.target.value.split(',').map(s => s.trim()))}
-              placeholder="e.g., Consulting, Apparel Production"
-              className="w-full px-3 py-2 rounded-lg"
-              style={{
-                border: '1px solid #E1E6EA',
-                backgroundColor: 'white',
-                color: '#0A0F14'
-              }}
-            />
-          </div>
+        <div className="bg-white rounded-lg p-6 space-y-6" style={{ border: '1px solid var(--color-silver)' }}>
+          <FormSection title="Financial Mapping & Accounts" columns={2}>
+            <PxFormField label="Mapped Services (Comma separated)" filled={mappedServices.length > 0 && mappedServices[0] !== ''}>
+              <input type="text" value={mappedServices.join(', ')} onChange={(e) => setMappedServices(e.target.value.split(',').map(s => s.trim()))} placeholder="e.g., Consulting, Apparel Production" className="px-input" />
+            </PxFormField>
 
-          {/* Mapped Departments */}
-          <div>
-            <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-              Mapped Departments (Comma separated)
-            </label>
-            <input
-              type="text"
-              value={mappedDepartments.join(', ')}
-              onChange={(e) => setMappedDepartments(e.target.value.split(',').map(d => d.trim()))}
-              placeholder="e.g., Finance, Production"
-              className="w-full px-3 py-2 rounded-lg"
-              style={{
-                border: '1px solid #E1E6EA',
-                backgroundColor: 'white',
-                color: '#0A0F14'
-              }}
-            />
-          </div>
+            <PxFormField label="Mapped Departments (Comma separated)" filled={mappedDepartments.length > 0 && mappedDepartments[0] !== ''}>
+              <input type="text" value={mappedDepartments.join(', ')} onChange={(e) => setMappedDepartments(e.target.value.split(',').map(d => d.trim()))} placeholder="e.g., Finance, Production" className="px-input" />
+            </PxFormField>
+          </FormSection>
 
           {/* Entity Account Mapping */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg" style={{ color: '#0A0F14' }}>Entity Account Mapping</h3>
+              <h3 className="text-lg" style={{ color: 'var(--color-ink)' }}>Entity Account Mapping</h3>
               <button
                 onClick={handleAddEntityMapping}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors text-sm"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                style={{ backgroundColor: 'var(--color-teal)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
               >
                 <Plus className="w-4 h-4" />
                 Add Mapping
@@ -1482,9 +1161,9 @@ export function CreateVendor() {
             {entityMappings.length === 0 ? (
               <div 
                 className="text-center py-8 rounded-lg"
-                style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
               >
-                <p style={{ color: '#6E7A82' }}>
+                <p style={{ color: 'var(--color-mercury-grey)' }}>
                   No entity mappings added.
                 </p>
               </div>
@@ -1494,11 +1173,11 @@ export function CreateVendor() {
                   <div
                     key={mapping.id}
                     className="p-4 rounded-lg"
-                    style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                    style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                   >
                     <div className="grid grid-cols-4 gap-4">
                       <div>
-                        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           Your Entity
                         </label>
                         <input
@@ -1512,15 +1191,15 @@ export function CreateVendor() {
                           placeholder="e.g., IND"
                           className="w-full px-3 py-2 rounded-lg"
                           style={{
-                            border: '1px solid #E1E6EA',
+                            border: '1px solid var(--color-silver)',
                             backgroundColor: 'white',
-                            color: '#0A0F14'
+                            color: 'var(--color-ink)'
                           }}
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           Default GL Account Code
                         </label>
                         <input
@@ -1534,15 +1213,15 @@ export function CreateVendor() {
                           placeholder="211005 (AP-Trade)"
                           className="w-full px-3 py-2 rounded-lg"
                           style={{
-                            border: '1px solid #E1E6EA',
+                            border: '1px solid var(--color-silver)',
                             backgroundColor: 'white',
-                            color: '#0A0F14'
+                            color: 'var(--color-ink)'
                           }}
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                        <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           Payment Terms Override
                         </label>
                         <input
@@ -1556,9 +1235,9 @@ export function CreateVendor() {
                           placeholder="Net 30"
                           className="w-full px-3 py-2 rounded-lg"
                           style={{
-                            border: '1px solid #E1E6EA',
+                            border: '1px solid var(--color-silver)',
                             backgroundColor: 'white',
-                            color: '#0A0F14'
+                            color: 'var(--color-ink)'
                           }}
                         />
                       </div>
@@ -1567,7 +1246,7 @@ export function CreateVendor() {
                         <button
                           onClick={() => handleRemoveEntityMapping(mapping.id)}
                           className="p-2 rounded-lg transition-colors"
-                          style={{ color: '#FF4E5B' }}
+                          style={{ color: 'var(--color-error)' }}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1581,15 +1260,15 @@ export function CreateVendor() {
         </div>
 
         {/* Section 5: Document Validity */}
-        <div className="bg-white rounded-lg p-6 space-y-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6 space-y-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl" style={{ color: '#0A0F14' }}>Document Validity</h2>
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Document Validity</h2>
             <button
               onClick={handleAddDocument}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-white transition-colors"
-              style={{ backgroundColor: '#00A9B7' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+              style={{ backgroundColor: 'var(--color-teal)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
             >
               <Plus className="w-4 h-4" />
               Add Document
@@ -1599,9 +1278,9 @@ export function CreateVendor() {
           {documents.length === 0 ? (
             <div 
               className="text-center py-8 rounded-lg"
-              style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+              style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
             >
-              <p style={{ color: '#6E7A82' }}>
+              <p style={{ color: 'var(--color-mercury-grey)' }}>
                 No documents added. Click "Add Document" to track validity dates.
               </p>
             </div>
@@ -1611,11 +1290,11 @@ export function CreateVendor() {
                 <div
                   key={doc.id}
                   className="p-4 rounded-lg"
-                  style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
                 >
                   <div className="grid grid-cols-4 gap-4">
                     <div>
-                      <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                      <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                         Document Name
                       </label>
                       <input
@@ -1629,15 +1308,15 @@ export function CreateVendor() {
                         placeholder="e.g., NDA Agreement"
                         className="w-full px-3 py-2 rounded-lg"
                         style={{
-                          border: '1px solid #E1E6EA',
+                          border: '1px solid var(--color-silver)',
                           backgroundColor: 'white',
-                          color: '#0A0F14'
+                          color: 'var(--color-ink)'
                         }}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                      <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                         Valid From
                       </label>
                       <input
@@ -1650,15 +1329,15 @@ export function CreateVendor() {
                         }}
                         className="w-full px-3 py-2 rounded-lg"
                         style={{
-                          border: '1px solid #E1E6EA',
+                          border: '1px solid var(--color-silver)',
                           backgroundColor: 'white',
-                          color: '#0A0F14'
+                          color: 'var(--color-ink)'
                         }}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
+                      <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                         Valid To (Expiry)
                       </label>
                       <input
@@ -1671,9 +1350,9 @@ export function CreateVendor() {
                         }}
                         className="w-full px-3 py-2 rounded-lg"
                         style={{
-                          border: '1px solid #E1E6EA',
+                          border: '1px solid var(--color-silver)',
                           backgroundColor: 'white',
-                          color: '#0A0F14'
+                          color: 'var(--color-ink)'
                         }}
                       />
                     </div>
@@ -1682,7 +1361,7 @@ export function CreateVendor() {
                       <button
                         onClick={() => handleRemoveDocument(doc.id)}
                         className="p-2 rounded-lg transition-colors"
-                        style={{ color: '#FF4E5B' }}
+                        style={{ color: 'var(--color-error)' }}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1695,54 +1374,25 @@ export function CreateVendor() {
         </div>
 
         {/* Section 6: Workflow Details */}
-        <div className="bg-white rounded-lg p-6 space-y-6" style={{ border: '1px solid #E1E6EA' }}>
-          <h2 className="text-xl mb-4" style={{ color: '#0A0F14' }}>Workflow Details</h2>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Workflow Status
-              </label>
-              <select
-                value={workflowStatus}
-                onChange={(e) => setWorkflowStatus(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: 'white',
-                  color: '#0A0F14'
-                }}
-              >
+        <div className="bg-white rounded-lg p-6 space-y-6" style={{ border: '1px solid var(--color-silver)' }}>
+          <FormSection title="Workflow Details" columns={2}>
+            <PxFormField label="Workflow Status" filled={!!workflowStatus}>
+              <select value={workflowStatus} onChange={(e) => setWorkflowStatus(e.target.value)} className="px-input">
                 <option>Draft/Awaiting Submission</option>
                 <option>Pending Approval</option>
                 <option>Approved</option>
                 <option>Rejected</option>
               </select>
-            </div>
+            </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                ERP Vendor Code
-              </label>
-              <input
-                type="text"
-                value={erpVendorCode}
-                onChange={(e) => setErpVendorCode(e.target.value)}
-                placeholder="-- Not Synced --"
-                disabled
-                className="w-full px-3 py-2 rounded-lg"
-                style={{
-                  border: '1px solid #E1E6EA',
-                  backgroundColor: '#F6F9FC',
-                  color: '#6E7A82'
-                }}
-              />
-            </div>
-          </div>
+            <PxFormField label="ERP Vendor Code" filled={erpVendorCode !== '-- Not Synced --'}>
+              <input type="text" value={erpVendorCode} onChange={(e) => setErpVendorCode(e.target.value)} placeholder="-- Not Synced --" disabled className="px-input" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }} />
+            </PxFormField>
+          </FormSection>
 
           <div 
             className="p-4 rounded-lg"
-            style={{ backgroundColor: '#FFF3E0', border: '1px solid #FF9800' }}
+            style={{ backgroundColor: 'var(--color-warning-light)', border: '1px solid #FF9800' }}
           >
             <p className="text-sm" style={{ color: '#FF9800' }}>
               ℹ️ ERP Vendor Code will be auto-generated once the vendor is approved and synced to ERP system.
@@ -1750,6 +1400,6 @@ export function CreateVendor() {
           </div>
         </div>
       </div>
-    </div>
+    </FormShell>
   );
 }

@@ -206,7 +206,7 @@ export function InvoiceWorkflowView() {
     const percentElapsed = (step.elapsedHours / step.slaHours) * 100;
     
     if (percentElapsed >= 90) {
-      return { label: 'SLA Critical', color: '#DC2626', bg: '#FEE2E2' };
+      return { label: 'SLA Critical', color: 'var(--color-error-dark)', bg: 'var(--color-error-light)' };
     } else if (percentElapsed >= 70) {
       return { label: 'SLA Warning', color: '#D97706', bg: '#FEF3C7' };
     }
@@ -214,32 +214,32 @@ export function InvoiceWorkflowView() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }} className="p-8">
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="p-8">
       {/* Header */}
       <div className="mb-6">
         <button
           onClick={() => navigate('/ap/my-invoices')}
-          className="flex items-center gap-2 text-[#6E7A82] hover:text-[#0A0F14] mb-4"
+          className="flex items-center gap-2 text-[var(--color-mercury-grey)] hover:text-[var(--color-ink)] mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to My Invoices
         </button>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>Invoice Workflow</h1>
-            <p style={{ color: '#6E7A82' }}>Track approval progress and audit trail</p>
+            <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>Invoice Workflow</h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Track approval progress and audit trail</p>
           </div>
           <div className="flex gap-3">
             <button
               className="flex items-center gap-2 px-4 py-2 rounded-lg border-2"
-              style={{ borderColor: '#E1E6EA', color: '#6E7A82' }}
+              style={{ borderColor: 'var(--color-silver)', color: 'var(--color-mercury-grey)' }}
             >
               <Download className="w-4 h-4" />
               Download PDF
             </button>
             <button
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-white"
-              style={{ backgroundColor: '#00A9B7' }}
+              style={{ backgroundColor: 'var(--color-teal)' }}
             >
               <Eye className="w-4 h-4" />
               View Invoice
@@ -252,9 +252,9 @@ export function InvoiceWorkflowView() {
         {/* Left Column - Invoice Summary */}
         <div className="space-y-6">
           {/* Invoice Header */}
-          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: '#E1E6EA' }}>
+          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-4">
-              <h3 style={{ color: '#0A0F14' }}>Invoice Details</h3>
+              <h3 style={{ color: 'var(--color-ink)' }}>Invoice Details</h3>
               <span 
                 className="px-3 py-1 rounded-full text-sm"
                 style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}
@@ -265,68 +265,68 @@ export function InvoiceWorkflowView() {
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Invoice Number</label>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Number</label>
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-[#00A9B7]" />
-                  <span style={{ color: '#0A0F14' }}>{invoice.invoiceNumber}</span>
+                  <FileText className="w-4 h-4 text-[var(--color-teal)]" />
+                  <span style={{ color: 'var(--color-ink)' }}>{invoice.invoiceNumber}</span>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Vendor</label>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</label>
                 <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                  <Building2 className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   <div>
-                    <p style={{ color: '#0A0F14' }}>{invoice.vendorName}</p>
-                    <p className="text-sm" style={{ color: '#6E7A82' }}>{invoice.vendorCode}</p>
+                    <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorName}</p>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.vendorCode}</p>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>PO Number</label>
-                  <p style={{ color: '#0A0F14' }}>{invoice.poNumber}</p>
+                  <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>PO Number</label>
+                  <p style={{ color: 'var(--color-ink)' }}>{invoice.poNumber}</p>
                 </div>
                 <div>
-                  <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>GRN Number</label>
-                  <p style={{ color: '#0A0F14' }}>{invoice.grnNumber}</p>
+                  <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>GRN Number</label>
+                  <p style={{ color: 'var(--color-ink)' }}>{invoice.grnNumber}</p>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: '#6E7A82' }}>Invoice Date</label>
+                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Date</label>
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" style={{ color: '#6E7A82' }} />
-                  <span style={{ color: '#0A0F14' }}>{invoice.invoiceDate}</span>
+                  <Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                  <span style={{ color: 'var(--color-ink)' }}>{invoice.invoiceDate}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Amount Summary */}
-          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: '#E1E6EA' }}>
-            <h3 className="mb-4" style={{ color: '#0A0F14' }}>Amount Summary</h3>
+          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
+            <h3 className="mb-4" style={{ color: 'var(--color-ink)' }}>Amount Summary</h3>
             
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span style={{ color: '#6E7A82' }}>Invoice Amount</span>
-                <span style={{ color: '#0A0F14' }}>₹{invoice.invoiceAmount.toLocaleString('en-IN')}</span>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>Invoice Amount</span>
+                <span style={{ color: 'var(--color-ink)' }}>₹{invoice.invoiceAmount.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between">
-                <span style={{ color: '#6E7A82' }}>GST</span>
-                <span style={{ color: '#0A0F14' }}>₹{invoice.gstAmount.toLocaleString('en-IN')}</span>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>GST</span>
+                <span style={{ color: 'var(--color-ink)' }}>₹{invoice.gstAmount.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between">
-                <span style={{ color: '#6E7A82' }}>TDS</span>
-                <span style={{ color: '#DC2626' }}>-₹{invoice.tdsAmount.toLocaleString('en-IN')}</span>
+                <span style={{ color: 'var(--color-mercury-grey)' }}>TDS</span>
+                <span style={{ color: 'var(--color-error-dark)' }}>-₹{invoice.tdsAmount.toLocaleString('en-IN')}</span>
               </div>
-              <div className="border-t-2 pt-3" style={{ borderColor: '#E1E6EA' }}>
+              <div className="border-t-2 pt-3" style={{ borderColor: 'var(--color-silver)' }}>
                 <div className="flex justify-between items-center">
-                  <span style={{ color: '#0A0F14' }}>Net Payable</span>
+                  <span style={{ color: 'var(--color-ink)' }}>Net Payable</span>
                   <div className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-[#00A9B7]" />
-                    <span className="text-xl" style={{ color: '#00A9B7' }}>
+                    <DollarSign className="w-5 h-5 text-[var(--color-teal)]" />
+                    <span className="text-xl" style={{ color: 'var(--color-teal)' }}>
                       ₹{invoice.netPayable.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -342,8 +342,8 @@ export function InvoiceWorkflowView() {
         {/* Middle Column - Workflow Timeline */}
         <div className="col-span-2 space-y-6">
           {/* Workflow Progress */}
-          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: '#E1E6EA' }}>
-            <h3 className="mb-6" style={{ color: '#0A0F14' }}>Approval Workflow</h3>
+          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
+            <h3 className="mb-6" style={{ color: 'var(--color-ink)' }}>Approval Workflow</h3>
 
             <div className="space-y-6">
               {workflowSteps.map((step, idx) => {
@@ -356,7 +356,7 @@ export function InvoiceWorkflowView() {
                     {idx < workflowSteps.length - 1 && (
                       <div 
                         className="absolute left-4 top-8 bottom-0 w-0.5"
-                        style={{ backgroundColor: step.status === 'completed' ? '#047857' : '#E1E6EA' }}
+                        style={{ backgroundColor: step.status === 'completed' ? '#047857' : 'var(--color-silver)' }}
                       />
                     )}
                     
@@ -364,7 +364,7 @@ export function InvoiceWorkflowView() {
                       <div 
                         className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 relative z-10"
                         style={{ 
-                          backgroundColor: step.status === 'pending' ? '#F6F9FC' : `${stepColor}20`,
+                          backgroundColor: step.status === 'pending' ? 'var(--color-cloud)' : `${stepColor}20`,
                           border: `2px solid ${stepColor}`
                         }}
                       >
@@ -374,11 +374,11 @@ export function InvoiceWorkflowView() {
                       <div className="flex-1 pb-6">
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <h4 style={{ color: '#0A0F14' }}>{step.stage}</h4>
+                            <h4 style={{ color: 'var(--color-ink)' }}>{step.stage}</h4>
                             {step.approver && (
                               <div className="flex items-center gap-2 mt-1">
-                                <User className="w-3 h-3" style={{ color: '#6E7A82' }} />
-                                <span className="text-sm" style={{ color: '#6E7A82' }}>{step.approver}</span>
+                                <User className="w-3 h-3" style={{ color: 'var(--color-mercury-grey)' }} />
+                                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{step.approver}</span>
                               </div>
                             )}
                           </div>
@@ -393,22 +393,22 @@ export function InvoiceWorkflowView() {
                         </div>
 
                         {step.action && (
-                          <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>{step.action}</p>
+                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>{step.action}</p>
                         )}
 
                         {step.timestamp && (
-                          <p className="text-xs" style={{ color: '#6E7A82' }}>{step.timestamp}</p>
+                          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{step.timestamp}</p>
                         )}
 
                         {step.status === 'current' && step.slaHours > 0 && (
-                          <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+                          <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
                             <div className="flex items-center justify-between text-xs mb-2">
-                              <span style={{ color: '#6E7A82' }}>SLA Progress</span>
-                              <span style={{ color: '#0A0F14' }}>
+                              <span style={{ color: 'var(--color-mercury-grey)' }}>SLA Progress</span>
+                              <span style={{ color: 'var(--color-ink)' }}>
                                 {step.elapsedHours}h / {step.slaHours}h
                               </span>
                             </div>
-                            <div className="w-full bg-[#E1E6EA] rounded-full h-2">
+                            <div className="w-full bg-[var(--color-silver)] rounded-full h-2">
                               <div 
                                 className="h-2 rounded-full transition-all"
                                 style={{ 
@@ -422,8 +422,8 @@ export function InvoiceWorkflowView() {
 
                         {step.comments && (
                           <div className="mt-2 flex items-start gap-2">
-                            <MessageSquare className="w-3 h-3 mt-0.5" style={{ color: '#6E7A82' }} />
-                            <p className="text-sm" style={{ color: '#6E7A82' }}>{step.comments}</p>
+                            <MessageSquare className="w-3 h-3 mt-0.5" style={{ color: 'var(--color-mercury-grey)' }} />
+                            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{step.comments}</p>
                           </div>
                         )}
                       </div>
@@ -435,50 +435,50 @@ export function InvoiceWorkflowView() {
           </div>
 
           {/* Audit Trail */}
-          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: '#E1E6EA' }}>
-            <h3 className="mb-4" style={{ color: '#0A0F14' }}>Audit Trail</h3>
+          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
+            <h3 className="mb-4" style={{ color: 'var(--color-ink)' }}>Audit Trail</h3>
 
             <div className="space-y-4">
               {auditTrail.map((entry, idx) => (
                 <div 
                   key={idx} 
                   className="flex gap-4 p-4 rounded-lg border-2"
-                  style={{ borderColor: '#E1E6EA' }}
+                  style={{ borderColor: 'var(--color-silver)' }}
                 >
                   <div className="flex-shrink-0">
                     <div 
                       className="w-8 h-8 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: '#00A9B710' }}
+                      style={{ backgroundColor: 'var(--color-teal)10' }}
                     >
                       {entry.aiRecommendation ? (
-                        <Zap className="w-4 h-4 text-[#00A9B7]" />
+                        <Zap className="w-4 h-4 text-[var(--color-teal)]" />
                       ) : (
-                        <User className="w-4 h-4 text-[#00A9B7]" />
+                        <User className="w-4 h-4 text-[var(--color-teal)]" />
                       )}
                     </div>
                   </div>
                   
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-1">
-                      <p style={{ color: '#0A0F14' }}>{entry.action}</p>
-                      <span className="text-xs" style={{ color: '#6E7A82' }}>{entry.timestamp}</span>
+                      <p style={{ color: 'var(--color-ink)' }}>{entry.action}</p>
+                      <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{entry.timestamp}</span>
                     </div>
                     
-                    <p className="text-sm mb-1" style={{ color: '#6E7A82' }}>
+                    <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
                       by {entry.user}
                     </p>
                     
                     {entry.comments && (
-                      <p className="text-sm mt-2 p-2 rounded" style={{ backgroundColor: '#F6F9FC', color: '#6E7A82' }}>
+                      <p className="text-sm mt-2 p-2 rounded" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}>
                         {entry.comments}
                       </p>
                     )}
                     
                     {entry.aiRecommendation && (
-                      <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: '#00A9B710', borderLeft: '3px solid #00A9B7' }}>
+                      <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-teal)10', borderLeft: '3px solid var(--color-teal)' }}>
                         <div className="flex items-start gap-2">
-                          <Zap className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#00A9B7]" />
-                          <p className="text-sm" style={{ color: '#0A0F14' }}>{entry.aiRecommendation}</p>
+                          <Zap className="w-4 h-4 flex-shrink-0 mt-0.5 text-[var(--color-teal)]" />
+                          <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{entry.aiRecommendation}</p>
                         </div>
                       </div>
                     )}

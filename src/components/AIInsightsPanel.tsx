@@ -46,8 +46,8 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
     const configs = {
       blocker: {
         icon: XCircle,
-        color: '#DC2626',
-        bg: '#FEE2E2',
+        color: 'var(--color-error-dark)',
+        bg: 'var(--color-error-light)',
         borderColor: '#FCA5A5',
         label: 'Blocker'
       },
@@ -110,28 +110,28 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
                     }}>
                       {config.label}
                     </span>
-                    <span className="text-xs" style={{ color: '#6E7A82' }}>
+                    <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                       {insight.category}
                     </span>
                   </div>
-                  <h4 className="text-sm mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+                  <h4 className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                     {insight.title}
                   </h4>
-                  <p className="text-xs" style={{ color: '#6E7A82' }}>
+                  <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                     {insight.description}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" style={{ color: '#00A9B7' }} />
-                    <span className="text-xs" style={{ color: '#00A9B7', fontWeight: '600' }}>
+                    <Sparkles className="w-3 h-3" style={{ color: 'var(--color-teal)' }} />
+                    <span className="text-xs" style={{ color: 'var(--color-teal)', fontWeight: '600' }}>
                       {insight.confidence}%
                     </span>
                   </div>
                   {isExpanded ? (
-                    <ChevronUp className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                    <ChevronUp className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   ) : (
-                    <ChevronDown className="w-4 h-4" style={{ color: '#6E7A82' }} />
+                    <ChevronDown className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   )}
                 </div>
               </div>
@@ -141,13 +141,13 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
 
         {/* Expanded Details */}
         {isExpanded && (
-          <div className="px-3 pb-3 pt-0 border-t" style={{ borderColor: '#E1E6EA' }}>
+          <div className="px-3 pb-3 pt-0 border-t" style={{ borderColor: 'var(--color-silver)' }}>
             {/* Why Detected */}
             <div className="mb-3 mt-3">
-              <p className="text-xs mb-1" style={{ color: '#6E7A82', fontWeight: '600' }}>
+              <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                 Why Detected:
               </p>
-              <p className="text-xs" style={{ color: '#0A0F14' }}>
+              <p className="text-xs" style={{ color: 'var(--color-ink)' }}>
                 {insight.reason}
               </p>
             </div>
@@ -155,14 +155,14 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
             {/* Evidence */}
             {insight.evidence.length > 0 && (
               <div className="mb-3">
-                <p className="text-xs mb-1" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                   Evidence:
                 </p>
                 <ul className="space-y-1">
                   {insight.evidence.map((ev, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <span className="text-xs mt-0.5" style={{ color: '#00A9B7' }}>•</span>
-                      <span className="text-xs" style={{ color: '#0A0F14' }}>{ev}</span>
+                      <span className="text-xs mt-0.5" style={{ color: 'var(--color-teal)' }}>•</span>
+                      <span className="text-xs" style={{ color: 'var(--color-ink)' }}>{ev}</span>
                     </li>
                   ))}
                 </ul>
@@ -172,14 +172,14 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
             {/* Recommended Actions */}
             {insight.recommendedActions.length > 0 && (
               <div className="mb-3">
-                <p className="text-xs mb-1" style={{ color: '#6E7A82', fontWeight: '600' }}>
+                <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
                   Recommended Actions:
                 </p>
                 <ul className="space-y-1">
                   {insight.recommendedActions.map((action, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <CheckCircle className="w-3 h-3 mt-0.5" style={{ color: '#00A9B7' }} />
-                      <span className="text-xs" style={{ color: '#0A0F14' }}>{action}</span>
+                      <CheckCircle className="w-3 h-3 mt-0.5" style={{ color: 'var(--color-teal)' }} />
+                      <span className="text-xs" style={{ color: 'var(--color-ink)' }}>{action}</span>
                     </li>
                   ))}
                 </ul>
@@ -188,8 +188,8 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
 
             {/* Bypass Option for Blockers in Approval Mode */}
             {mode === 'approval' && insight.severity === 'blocker' && insight.canBypass && onBypass && (
-              <div className="mt-3 pt-3 border-t" style={{ borderColor: '#E1E6EA' }}>
-                <p className="text-xs mb-2" style={{ color: '#DC2626', fontWeight: '600' }}>
+              <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--color-silver)' }}>
+                <p className="text-xs mb-2" style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>
                   Override Blocker (requires justification):
                 </p>
                 <textarea
@@ -200,7 +200,7 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
                     [insight.id]: e.target.value
                   })}
                   className="w-full px-3 py-2 rounded-lg border-2 text-xs mb-2"
-                  style={{ borderColor: '#E1E6EA', color: '#0A0F14' }}
+                  style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                   rows={2}
                 />
                 <button
@@ -212,9 +212,9 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
                     }
                   }}
                   className="px-3 py-1.5 rounded-lg text-xs text-white transition-colors"
-                  style={{ backgroundColor: '#DC2626' }}
+                  style={{ backgroundColor: 'var(--color-error-dark)' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#B91C1C'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#DC2626'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-error-dark)'}
                 >
                   Override with Justification
                 </button>
@@ -227,37 +227,37 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
   };
 
   return (
-    <div className="bg-white rounded-xl border-2" style={{ borderColor: '#E1E6EA', height: 'fit-content', position: 'sticky', top: '24px' }}>
+    <div className="bg-white rounded-xl border-2" style={{ borderColor: 'var(--color-silver)', height: 'fit-content', position: 'sticky', top: '24px' }}>
       {/* Panel Header */}
-      <div className="p-4 border-b-2" style={{ borderColor: '#E1E6EA' }}>
+      <div className="p-4 border-b-2" style={{ borderColor: 'var(--color-silver)' }}>
         <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-5 h-5" style={{ color: '#00A9B7' }} />
-          <h3 className="text-base" style={{ color: '#0A0F14', fontWeight: '600' }}>
+          <Sparkles className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+          <h3 className="text-base" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
             AI Insights
           </h3>
         </div>
-        <p className="text-xs" style={{ color: '#6E7A82' }}>
+        <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
           Automated analysis and recommendations
         </p>
       </div>
 
       {/* Summary Counts */}
-      <div className="px-4 py-3 border-b-2" style={{ borderColor: '#E1E6EA' }}>
+      <div className="px-4 py-3 border-b-2" style={{ borderColor: 'var(--color-silver)' }}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
-            <XCircle className="w-4 h-4" style={{ color: '#DC2626' }} />
-            <span className="text-xs" style={{ color: '#6E7A82' }}>Blockers:</span>
-            <span className="text-xs" style={{ color: '#0A0F14', fontWeight: '600' }}>{blockers.length}</span>
+            <XCircle className="w-4 h-4" style={{ color: 'var(--color-error-dark)' }} />
+            <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Blockers:</span>
+            <span className="text-xs" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{blockers.length}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <AlertTriangle className="w-4 h-4" style={{ color: '#D97706' }} />
-            <span className="text-xs" style={{ color: '#6E7A82' }}>Warnings:</span>
-            <span className="text-xs" style={{ color: '#0A0F14', fontWeight: '600' }}>{warnings.length}</span>
+            <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Warnings:</span>
+            <span className="text-xs" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{warnings.length}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Info className="w-4 h-4" style={{ color: '#2563EB' }} />
-            <span className="text-xs" style={{ color: '#6E7A82' }}>Info:</span>
-            <span className="text-xs" style={{ color: '#0A0F14', fontWeight: '600' }}>{infoInsights.length}</span>
+            <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Info:</span>
+            <span className="text-xs" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{infoInsights.length}</span>
           </div>
         </div>
       </div>
@@ -267,7 +267,7 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
         {/* Blockers */}
         {blockers.length > 0 && (
           <div className="mb-4">
-            <h4 className="text-xs mb-2" style={{ color: '#DC2626', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h4 className="text-xs mb-2" style={{ color: 'var(--color-error-dark)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Blockers ({blockers.length})
             </h4>
             {blockers.map(renderInsightCard)}
@@ -298,10 +298,10 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
         {insights.length === 0 && (
           <div className="text-center py-8">
             <CheckCircle className="w-12 h-12 mx-auto mb-3" style={{ color: '#047857' }} />
-            <p className="text-sm" style={{ color: '#0A0F14', fontWeight: '600' }}>
+            <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
               All Clear!
             </p>
-            <p className="text-xs mt-1" style={{ color: '#6E7A82' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
               No issues detected by AI analysis
             </p>
           </div>

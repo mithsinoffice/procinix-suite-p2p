@@ -1,13 +1,15 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  ArrowLeft, Save, Send, Calendar, Building2, FileText, 
+import {
+  ArrowLeft, Save, Send, Calendar, Building2, FileText,
   Hash, AlertCircle, Upload, Eye, EyeOff, Trash2,
   DollarSign, TrendingUp, Package2, Info, RotateCcw
 } from 'lucide-react';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { useAPData } from '../contexts/APDataContext';
 import { StandardInput, StandardSelect } from './shared/StandardInput';
+import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
+import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
 interface DebitNoteLineItem {
   id: string;
@@ -817,7 +819,7 @@ export function DebitNoteFormV2Enhanced() {
 
   const getStatusBadge = () => {
     const statusConfig = {
-      Draft: { bg: '#F6F9FC', color: '#6E7A82', border: '#E1E6EA' },
+      Draft: { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', border: 'var(--color-silver)' },
       Submitted: { bg: '#FFF4ED', color: '#C4320A', border: '#FECDCA' },
       Approved: { bg: '#D1FAE5', color: '#065F46', border: '#6EE7B7' },
       Issued: { bg: '#DBEAFE', color: '#1E40AF', border: '#93C5FD' },
@@ -838,31 +840,40 @@ export function DebitNoteFormV2Enhanced() {
 
   const isPriceDifference = reasonType === 'price-difference';
 
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  const completeness = useMemo(() => {
+    const fields = [reasonId, vendorId, poId, grnId, debitNoteDate];
+    const filled = fields.filter((v) => String(v).trim().length > 0).length;
+    return { filled, total: fields.length };
+  }, [reasonId, vendorId, poId, grnId, debitNoteDate]);
+
+  const handleSaveDraftKb = useCallback(() => {
+    setSaveStatus('saving');
+    handleSaveDraft();
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
+  }, [handleSaveDraft]);
+
+  useFormKeyboardSave(handleSaveDraftKb);
+
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleCancel}
-            className="p-2 rounded-lg transition-colors hover:bg-white"
-            style={{ color: '#6E7A82' }}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>
-              {isEditMode ? 'Edit Debit Note' : 'Create Debit Note'}
-            </h1>
-            <p style={{ color: '#6E7A82' }}>
-              Create a debit note with full PR-PO-GRN-Invoice visibility
-            </p>
-          </div>
-        </div>
-        <div>
-          {getStatusBadge()}
-        </div>
-      </div>
+    <FormShell
+      title={isEditMode ? 'Edit Debit Note' : 'Create Debit Note'}
+      subtitle="Create a debit note with full PR-PO-GRN-Invoice visibility"
+      modeLabel={isEditMode ? 'Edit Transaction' : 'New Transaction'}
+      variant="transaction"
+      draftStatus={debitNoteStatus}
+      completeness={completeness}
+      onBack={handleCancel}
+      onCancel={handleCancel}
+      onSaveDraft={debitNoteStatus === 'Draft' ? handleSaveDraftKb : undefined}
+      onSubmit={handleSubmitForApproval}
+      submitLabel="Submit for Approval"
+      draftLabel="Save as Draft"
+      submitDisabled={debitNoteStatus !== 'Draft'}
+      saveStatus={saveStatus}
+    >
 
       {/* Errors */}
       {errors.length > 0 && (
@@ -887,14 +898,14 @@ export function DebitNoteFormV2Enhanced() {
 
       {/* Reason Behavior Info */}
       {reasonId && (
-        <div className="bg-white p-4 rounded-lg mb-6" style={{ border: '1px solid #00A9B7' }}>
+        <div className="bg-white p-4 rounded-lg mb-6" style={{ border: '1px solid var(--color-teal)' }}>
           <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#00A9B7' }} />
+            <Info className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-teal)' }} />
             <div className="flex-1">
-              <h3 className="mb-1" style={{ color: '#00A9B7' }}>
+              <h3 className="mb-1" style={{ color: 'var(--color-teal)' }}>
                 {isPriceDifference ? 'Price Difference Mode' : 'Quantity-Based Mode'}
               </h3>
-              <p className="text-sm" style={{ color: '#6E7A82' }}>
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                 {isPriceDifference 
                   ? 'Price variance detected. Debit Rate (Delta) is suggested from Invoice Rate − PO Rate. You may adjust where allowed.'
                   : 'Debit Qty is suggested from quantity mismatch. Review and adjust where allowed.'}
@@ -905,151 +916,111 @@ export function DebitNoteFormV2Enhanced() {
       )}
 
       {/* Main Form */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
+      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
         {/* STEP 1: Header (System Controlled) */}
-        <div className="mb-6 pb-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
-          <h2 className="text-lg mb-4" style={{ color: '#0A0F14' }}>System Information</h2>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Debit Note Number
-              </label>
-              <StandardInput
-                type="text"
-                value={debitNoteNumber}
-                onChange={() => {}}
-                readOnly
-                icon={<Hash className="w-4 h-4" />}
-              />
-            </div>
+        <FormSection title="System Information" columns={2}>
+          <PxFormField label="Debit Note Number" filled={!!debitNoteNumber}>
+            <StandardInput
+              type="text"
+              value={debitNoteNumber}
+              onChange={() => {}}
+              readOnly
+              icon={<Hash className="w-4 h-4" />}
+            />
+          </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Debit Note Date *
-              </label>
-              <StandardInput
-                type="date"
-                value={debitNoteDate}
-                onChange={(e) => setDebitNoteDate(e.target.value)}
-                disabled={debitNoteStatus !== 'Draft'}
-                icon={<Calendar className="w-4 h-4" />}
-              />
-            </div>
-          </div>
-        </div>
+          <PxFormField label="Debit Note Date" required filled={!!debitNoteDate}>
+            <StandardInput
+              type="date"
+              value={debitNoteDate}
+              onChange={(e) => setDebitNoteDate(e.target.value)}
+              disabled={debitNoteStatus !== 'Draft'}
+              icon={<Calendar className="w-4 h-4" />}
+            />
+          </PxFormField>
+        </FormSection>
 
         {/* STEP 2: Commercial Context */}
-        <div className="mb-6 pb-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
-          <h2 className="text-lg mb-4" style={{ color: '#0A0F14' }}>Commercial Context</h2>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Debit Note Reason *
-              </label>
-              <StandardSelect
-                value={reasonId}
-                onChange={(e) => handleReasonChange(e.target.value)}
-                disabled={debitNoteStatus !== 'Draft'}
-                icon={<FileText className="w-4 h-4" />}
-              >
-                <option value="">Select Reason</option>
-                {debitNoteReasons.filter(r => r.status === 'Active').map(reason => (
-                  <option key={reason.id} value={reason.id}>
-                    {reason.name}
-                  </option>
-                ))}
-              </StandardSelect>
-            </div>
+        <FormSection title="Commercial Context" columns={2}>
+          <PxFormField label="Debit Note Reason" required filled={!!reasonId}>
+            <StandardSelect
+              value={reasonId}
+              onChange={(e) => handleReasonChange(e.target.value)}
+              disabled={debitNoteStatus !== 'Draft'}
+              icon={<FileText className="w-4 h-4" />}
+            >
+              <option value="">Select Reason</option>
+              {debitNoteReasons.filter(r => r.status === 'Active').map(reason => (
+                <option key={reason.id} value={reason.id}>
+                  {reason.name}
+                </option>
+              ))}
+            </StandardSelect>
+          </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                Vendor *
-              </label>
-              <StandardSelect
-                value={vendorId}
-                onChange={(e) => handleVendorChange(e.target.value)}
-                disabled={debitNoteStatus !== 'Draft'}
-                icon={<Building2 className="w-4 h-4" />}
-              >
-                <option value="">Select Vendor</option>
-                {vendors.filter(v => v.status === 'Active').map(vendor => (
-                  <option key={vendor.id} value={vendor.id}>
-                    {vendor.name} ({vendor.code})
-                  </option>
-                ))}
-              </StandardSelect>
-            </div>
-          </div>
-        </div>
+          <PxFormField label="Vendor" required filled={!!vendorId}>
+            <StandardSelect
+              value={vendorId}
+              onChange={(e) => handleVendorChange(e.target.value)}
+              disabled={debitNoteStatus !== 'Draft'}
+              icon={<Building2 className="w-4 h-4" />}
+            >
+              <option value="">Select Vendor</option>
+              {vendors.filter(v => v.status === 'Active').map(vendor => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.name} ({vendor.code})
+                </option>
+              ))}
+            </StandardSelect>
+          </PxFormField>
+        </FormSection>
 
         {/* STEP 3: Reference Selection (GRN-Driven) */}
-        <div className="mb-6 pb-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
-          <h2 className="text-lg mb-4" style={{ color: '#0A0F14' }}>Reference Selection</h2>
-          
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                PO Number *
-              </label>
-              <StandardSelect
-                value={poId}
-                onChange={(e) => handlePOChange(e.target.value)}
-                disabled={debitNoteStatus !== 'Draft' || !vendorId}
-                icon={<Package2 className="w-4 h-4" />}
-              >
-                <option value="">Select PO with GRN</option>
-                {availablePOs.map(po => (
-                  <option key={po.id} value={po.id}>
-                    {po.poNumber}
-                  </option>
-                ))}
-              </StandardSelect>
-              {vendorId && availablePOs.length === 0 && (
-                <p className="text-xs mt-1" style={{ color: '#F59E0B' }}>
-                  No POs with GRN available for this vendor
-                </p>
-              )}
-            </div>
+        <FormSection title="Reference Selection" columns={2}>
+          <PxFormField label="PO Number" required filled={!!poId} hint={vendorId && availablePOs.length === 0 ? 'No POs with GRN available for this vendor' : undefined}>
+            <StandardSelect
+              value={poId}
+              onChange={(e) => handlePOChange(e.target.value)}
+              disabled={debitNoteStatus !== 'Draft' || !vendorId}
+              icon={<Package2 className="w-4 h-4" />}
+            >
+              <option value="">Select PO with GRN</option>
+              {availablePOs.map(po => (
+                <option key={po.id} value={po.id}>
+                  {po.poNumber}
+                </option>
+              ))}
+            </StandardSelect>
+          </PxFormField>
 
-            <div>
-              <label className="block text-sm mb-2" style={{ color: '#6E7A82' }}>
-                GRN Number *
-              </label>
-              <StandardSelect
-                value={grnId}
-                onChange={(e) => handleGRNChange(e.target.value)}
-                disabled={debitNoteStatus !== 'Draft' || !poId}
-                icon={<FileText className="w-4 h-4" />}
-              >
-                <option value="">Select GRN</option>
-                {availableGRNs.map(grn => (
-                  <option key={grn.id} value={grn.id}>
-                    {grn.grnNumber} - {grn.status}
-                  </option>
-                ))}
-              </StandardSelect>
-              {poId && availableGRNs.length === 0 && (
-                <p className="text-xs mt-1" style={{ color: '#F59E0B' }}>
-                  No GRNs available for this PO
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+          <PxFormField label="GRN Number" required filled={!!grnId} hint={poId && availableGRNs.length === 0 ? 'No GRNs available for this PO' : undefined}>
+            <StandardSelect
+              value={grnId}
+              onChange={(e) => handleGRNChange(e.target.value)}
+              disabled={debitNoteStatus !== 'Draft' || !poId}
+              icon={<FileText className="w-4 h-4" />}
+            >
+              <option value="">Select GRN</option>
+              {availableGRNs.map(grn => (
+                <option key={grn.id} value={grn.id}>
+                  {grn.grnNumber} - {grn.status}
+                </option>
+              ))}
+            </StandardSelect>
+          </PxFormField>
+        </FormSection>
 
         {/* STEP 4: Line Item Table with Full Visibility */}
         {lineItems.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-lg mb-4" style={{ color: '#0A0F14' }}>
+            <h2 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>
               Line Items - Full PR→PO→GRN→Invoice Visibility
             </h2>
             
             {/* System Suggestion Banner */}
             {lineItems.length > 0 && (
-              <div className="mb-4 p-3 rounded" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
-                <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <div className="mb-4 p-3 rounded" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                   💡 Suggested values have been pre-filled based on PO, GRN and Invoice. You can adjust where allowed.
                 </p>
               </div>
@@ -1057,72 +1028,72 @@ export function DebitNoteFormV2Enhanced() {
             
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead style={{ backgroundColor: '#F6F9FC' }}>
+                <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                   <tr>
                     {/* Identification */}
-                    <th className="px-3 py-3 text-left text-xs" style={{ color: '#6E7A82', minWidth: '200px' }}>
+                    <th className="px-3 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '200px' }}>
                       Item Name
                     </th>
-                    <th className="px-3 py-3 text-left text-xs" style={{ color: '#6E7A82', minWidth: '120px' }}>
+                    <th className="px-3 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '120px' }}>
                       Category
                     </th>
-                    <th className="px-3 py-3 text-left text-xs" style={{ color: '#6E7A82', minWidth: '100px' }}>
+                    <th className="px-3 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
                       GL Account
                     </th>
                     {/* Quantity Comparison - Show PR Qty and PO Qty only for qty-based */}
                     {!isPriceDifference && (
                       <>
-                        <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '80px' }}>
+                        <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}>
                           PR Qty
                         </th>
-                        <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '80px' }}>
+                        <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}>
                           PO Qty
                         </th>
                       </>
                     )}
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '80px' }}>
+                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}>
                       GRN Qty
                     </th>
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '80px' }}>
+                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}>
                       Inv Qty
                     </th>
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '100px' }}>
+                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
                       Debit Qty {isPriceDifference ? '(Auto)' : '*'}
                     </th>
                     {/* Rate Comparison - Show PO/Inv/Delta only for Price Difference */}
                     {isPriceDifference ? (
                       <>
-                        <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '100px' }}>
+                        <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
                           PO Rate
                         </th>
-                        <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '100px' }}>
+                        <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
                           Inv Rate
                         </th>
-                        <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '140px' }}>
+                        <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '140px' }}>
                           <div>Debit Rate (Delta) *</div>
                           <div style={{ fontWeight: 'normal', fontSize: '10px', marginTop: '2px', color: '#9CA3AF' }}>Invoice Rate − PO Rate</div>
                         </th>
                       </>
                     ) : (
-                      <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '100px' }}>
+                      <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
                         PO Rate
                       </th>
                     )}
                     {/* Financial Calculation */}
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '100px' }}>
+                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
                       Debit Amt
                     </th>
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '70px' }}>
+                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '70px' }}>
                       GST %
                     </th>
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: '#6E7A82', minWidth: '90px' }}>
+                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '90px' }}>
                       GST Amt
                     </th>
                     {/* Allocation */}
-                    <th className="px-3 py-3 text-left text-xs" style={{ color: '#6E7A82', minWidth: '100px' }}>
+                    <th className="px-3 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
                       Cost Center
                     </th>
-                    <th className="px-3 py-3 text-left text-xs" style={{ color: '#6E7A82', minWidth: '100px' }}>
+                    <th className="px-3 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
                       Profit Center
                     </th>
                   </tr>
@@ -1130,51 +1101,51 @@ export function DebitNoteFormV2Enhanced() {
                 <tbody>
                   {lineItems.map((item) => (
                     <Fragment key={item.id}>
-                    <tr style={{ borderTop: '1px solid #E1E6EA' }}>
+                    <tr style={{ borderTop: '1px solid var(--color-silver)' }}>
                       {/* Identification */}
                       <td className="px-3 py-3">
                         <div>
-                          <div className="text-sm" style={{ color: '#0A0F14' }}>{item.itemName}</div>
-                          <div className="text-xs" style={{ color: '#6E7A82' }}>{item.itemCode}</div>
+                          <div className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.itemName}</div>
+                          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{item.itemCode}</div>
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        <span className="text-sm" style={{ color: '#6E7A82' }}>{item.itemCategory}</span>
+                        <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{item.itemCategory}</span>
                       </td>
                       <td className="px-3 py-3">
                         <div>
-                          <div className="text-sm" style={{ color: '#0A0F14' }}>{item.glAccountCode}</div>
-                          <div className="text-xs" style={{ color: '#6E7A82' }}>{item.glAccountName}</div>
+                          <div className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.glAccountCode}</div>
+                          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{item.glAccountName}</div>
                         </div>
                       </td>
                       {/* Quantity Comparison - Show PR Qty and PO Qty only for qty-based */}
                       {!isPriceDifference && (
                         <>
                           <td className="px-3 py-3 text-right">
-                            <span className="text-sm" style={{ color: '#6E7A82' }}>
+                            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                               {item.prQty} {item.uom}
                             </span>
                           </td>
                           <td className="px-3 py-3 text-right">
-                            <span className="text-sm" style={{ color: '#6E7A82' }}>
+                            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                               {item.poQty} {item.uom}
                             </span>
                           </td>
                         </>
                       )}
                       <td className="px-3 py-3 text-right">
-                        <span className="text-sm" style={{ color: '#0A0F14' }}>
+                        <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                           {item.grnQty} {item.uom}
                         </span>
                       </td>
                       <td className="px-3 py-3 text-right">
-                        <span className="text-sm" style={{ color: '#0A0F14' }}>
+                        <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                           {item.invoiceQty} {item.uom}
                         </span>
                       </td>
                       <td className="px-3 py-3 text-right">
                         {isPriceDifference ? (
-                          <span className="text-sm px-2 py-1.5 rounded" style={{ color: '#6E7A82', backgroundColor: '#F6F9FC' }}>
+                          <span className="text-sm px-2 py-1.5 rounded" style={{ color: 'var(--color-mercury-grey)', backgroundColor: 'var(--color-cloud)' }}>
                             {item.debitQty} {item.uom}
                           </span>
                         ) : (
@@ -1188,7 +1159,7 @@ export function DebitNoteFormV2Enhanced() {
                               onChange={(e) => handleDebitQtyChange(item.id, parseFloat(e.target.value) || 0)}
                               disabled={debitNoteStatus !== 'Draft'}
                               className="w-20 px-2 py-1.5 text-right rounded text-sm"
-                              style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                              style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                               placeholder="0"
                             />
                             {(() => {
@@ -1200,7 +1171,7 @@ export function DebitNoteFormV2Enhanced() {
                                   type="button"
                                   onClick={() => resetToSuggested(item.id)}
                                   className="p-1 rounded hover:bg-white transition-colors"
-                                  style={{ color: '#00A9B7' }}
+                                  style={{ color: 'var(--color-teal)' }}
                                   title="Reset to Suggested"
                                 >
                                   <RotateCcw className="w-3.5 h-3.5" />
@@ -1214,7 +1185,7 @@ export function DebitNoteFormV2Enhanced() {
                       {isPriceDifference ? (
                         <>
                           <td className="px-3 py-3 text-right">
-                            <span className="text-sm" style={{ color: '#0A0F14' }}>
+                            <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                               {currency} {item.poRate.toLocaleString('en-IN')}
                             </span>
                           </td>
@@ -1235,8 +1206,8 @@ export function DebitNoteFormV2Enhanced() {
                                 disabled={debitNoteStatus !== 'Draft'}
                                 className="w-24 px-2 py-1.5 text-right rounded text-sm"
                                 style={{ 
-                                  border: '1px solid #E1E6EA', 
-                                  color: '#0A0F14',
+                                  border: '1px solid var(--color-silver)', 
+                                  color: 'var(--color-ink)',
                                   backgroundColor: 'white'
                                 }}
                                 placeholder="0"
@@ -1246,7 +1217,7 @@ export function DebitNoteFormV2Enhanced() {
                                   type="button"
                                   onClick={() => resetToSuggested(item.id)}
                                   className="p-1 rounded hover:bg-white transition-colors"
-                                  style={{ color: '#00A9B7' }}
+                                  style={{ color: 'var(--color-teal)' }}
                                   title="Reset to Suggested Delta"
                                 >
                                   <RotateCcw className="w-3.5 h-3.5" />
@@ -1257,37 +1228,37 @@ export function DebitNoteFormV2Enhanced() {
                         </>
                       ) : (
                         <td className="px-3 py-3 text-right">
-                          <span className="text-sm" style={{ color: '#0A0F14' }}>
+                          <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                             {currency} {item.poRate.toLocaleString('en-IN')}
                           </span>
                         </td>
                       )}
                       {/* Financial Calculation */}
                       <td className="px-3 py-3 text-right">
-                        <span className="text-sm" style={{ color: '#0A0F14' }}>
+                        <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                           {currency} {item.debitAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </td>
                       <td className="px-3 py-3 text-right">
-                        <span className="text-sm" style={{ color: '#6E7A82' }}>
+                        <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                           {item.gstPercent}%
                         </span>
                       </td>
                       <td className="px-3 py-3 text-right">
-                        <span className="text-sm" style={{ color: '#0A0F14' }}>
+                        <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                           {currency} {item.gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </td>
                       {/* Allocation */}
                       <td className="px-3 py-3">
-                        <span className="text-sm" style={{ color: '#6E7A82' }}>{item.costCenter}</span>
+                        <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{item.costCenter}</span>
                       </td>
                       <td className="px-3 py-3">
-                        <span className="text-sm" style={{ color: '#6E7A82' }}>{item.profitCenter}</span>
+                        <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{item.profitCenter}</span>
                       </td>
                     </tr>
                     {isPriceDifference && item.invoiceRate <= item.poRate && (
-                      <tr style={{ borderTop: '1px solid #E1E6EA' }}>
+                      <tr style={{ borderTop: '1px solid var(--color-silver)' }}>
                         <td colSpan={13} className="px-3 py-2" style={{ backgroundColor: '#FEF3C7' }}>
                           <div className="flex items-center gap-2">
                             <AlertCircle className="w-4 h-4" style={{ color: '#F59E0B' }} />
@@ -1305,8 +1276,8 @@ export function DebitNoteFormV2Enhanced() {
             </div>
 
             {/* Calculation Explanation */}
-            <div className="mt-4 p-3 rounded" style={{ backgroundColor: '#F6F9FC' }}>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+            <div className="mt-4 p-3 rounded" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 {isPriceDifference 
                   ? '💡 Calculation: Debit Amount = Debit Rate (Delta) × Debit Qty, where Debit Rate (Delta) = Invoice Rate − PO Rate.'
                   : '💡 Calculation: Debit Amount = Debit Qty × PO Rate.'}
@@ -1317,24 +1288,24 @@ export function DebitNoteFormV2Enhanced() {
 
         {/* STEP 5: Totals Section */}
         {lineItems.length > 0 && (
-          <div className="pt-6" style={{ borderTop: '1px solid #E1E6EA' }}>
+          <div className="pt-6" style={{ borderTop: '1px solid var(--color-silver)' }}>
             <div className="flex justify-end">
               <div className="w-96 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm" style={{ color: '#6E7A82' }}>Subtotal</span>
-                  <span className="text-sm" style={{ color: '#0A0F14' }}>
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Subtotal</span>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                     {currency} {calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm" style={{ color: '#6E7A82' }}>Total GST</span>
-                  <span className="text-sm" style={{ color: '#0A0F14' }}>
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Total GST</span>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                     {currency} {calculateTotalGST().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid #E1E6EA' }}>
-                  <span style={{ color: '#0A0F14' }}>Debit Note Total</span>
-                  <span className="text-xl" style={{ color: '#0A0F14' }}>
+                <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
+                  <span style={{ color: 'var(--color-ink)' }}>Debit Note Total</span>
+                  <span className="text-xl" style={{ color: 'var(--color-ink)' }}>
                     {currency} {calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -1345,15 +1316,15 @@ export function DebitNoteFormV2Enhanced() {
       </div>
 
       {/* STEP 6: Supporting Documents */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
-        <h2 className="text-lg mb-4" style={{ color: '#0A0F14' }}>Supporting Documents</h2>
+      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <h2 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>Supporting Documents</h2>
 
         {/* Upload Area */}
         {debitNoteStatus === 'Draft' && (
-          <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
+          <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
             <div className="grid grid-cols-4 gap-4 mb-3">
               <div>
-                <label className="block text-xs mb-1.5" style={{ color: '#6E7A82' }}>
+                <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)' }}>
                   Document Type *
                 </label>
                 <select
@@ -1363,7 +1334,7 @@ export function DebitNoteFormV2Enhanced() {
                     setDocValidationError('');
                   }}
                   className="w-full px-2 py-2 rounded text-sm"
-                  style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                  style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option value="">Select</option>
                   <option value="GRN">GRN</option>
@@ -1375,7 +1346,7 @@ export function DebitNoteFormV2Enhanced() {
               </div>
 
               <div>
-                <label className="block text-xs mb-1.5" style={{ color: '#6E7A82' }}>
+                <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)' }}>
                   Reference No {['GRN', 'Invoice Copy', 'QC / Inspection Report'].includes(uploadingDocType) && '*'}
                 </label>
                 <select
@@ -1385,7 +1356,7 @@ export function DebitNoteFormV2Enhanced() {
                     setDocValidationError('');
                   }}
                   className="w-full px-2 py-2 rounded text-sm"
-                  style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                  style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option value="">Select</option>
                   {getReferenceSuggestions().map((ref, idx) => (
@@ -1395,14 +1366,14 @@ export function DebitNoteFormV2Enhanced() {
               </div>
 
               <div>
-                <label className="block text-xs mb-1.5" style={{ color: '#6E7A82' }}>
+                <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)' }}>
                   Visibility *
                 </label>
                 <select
                   value={uploadingVisibility}
                   onChange={(e) => setUploadingVisibility(e.target.value as 'Internal Only' | 'Vendor Visible')}
                   className="w-full px-2 py-2 rounded text-sm"
-                  style={{ border: '1px solid #E1E6EA', color: '#0A0F14' }}
+                  style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                 >
                   <option value="Internal Only">Internal Only</option>
                   <option value="Vendor Visible">Vendor Visible</option>
@@ -1410,14 +1381,14 @@ export function DebitNoteFormV2Enhanced() {
               </div>
 
               <div>
-                <label className="block text-xs mb-1.5" style={{ color: '#6E7A82' }}>
+                <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)' }}>
                   File *
                 </label>
                 <label
                   className="flex items-center justify-center gap-2 px-3 py-2 rounded cursor-pointer transition-colors text-sm text-white"
-                  style={{ backgroundColor: '#00A9B7' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+                  style={{ backgroundColor: 'var(--color-teal)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
                 >
                   <Upload className="w-4 h-4" />
                   Upload
@@ -1437,7 +1408,7 @@ export function DebitNoteFormV2Enhanced() {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Or drag & drop • PDF, JPG, PNG, XLSX • Max 20 MB
               </p>
             </div>
@@ -1455,47 +1426,47 @@ export function DebitNoteFormV2Enhanced() {
         {supportingDocuments.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ backgroundColor: '#F6F9FC' }}>
+              <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>Document Type</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>File Name</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>Reference</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>Visibility</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>Uploaded By</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>Uploaded On</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>Status</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Document Type</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>File Name</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Reference</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Visibility</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Uploaded By</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Uploaded On</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
                   {debitNoteStatus === 'Draft' && (
-                    <th className="px-3 py-2 text-center text-xs" style={{ color: '#6E7A82' }}>Actions</th>
+                    <th className="px-3 py-2 text-center text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
                   )}
                 </tr>
               </thead>
               <tbody>
                 {supportingDocuments.map((doc) => (
-                  <tr key={doc.id} style={{ borderTop: '1px solid #E1E6EA' }}>
+                  <tr key={doc.id} style={{ borderTop: '1px solid var(--color-silver)' }}>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: '#0A0F14' }}>{doc.documentType}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{doc.documentType}</span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: '#0A0F14' }}>{doc.fileName}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{doc.fileName}</span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: '#6E7A82' }}>{doc.referenceDocNo || '-'}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{doc.referenceDocNo || '-'}</span>
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1">
                         {doc.visibility === 'Vendor Visible' ? (
-                          <Eye className="w-3 h-3" style={{ color: '#00A9B7' }} />
+                          <Eye className="w-3 h-3" style={{ color: 'var(--color-teal)' }} />
                         ) : (
-                          <EyeOff className="w-3 h-3" style={{ color: '#6E7A82' }} />
+                          <EyeOff className="w-3 h-3" style={{ color: 'var(--color-mercury-grey)' }} />
                         )}
-                        <span className="text-xs" style={{ color: '#6E7A82' }}>{doc.visibility}</span>
+                        <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{doc.visibility}</span>
                       </div>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: '#6E7A82' }}>{doc.uploadedBy}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{doc.uploadedBy}</span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: '#6E7A82' }}>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                         {new Date(doc.uploadedDate).toLocaleDateString('en-GB', { 
                           day: '2-digit', 
                           month: 'short', 
@@ -1531,8 +1502,8 @@ export function DebitNoteFormV2Enhanced() {
             </table>
           </div>
         ) : (
-          <div className="text-center py-6" style={{ color: '#6E7A82' }}>
-            <FileText className="w-10 h-10 mx-auto mb-2" style={{ color: '#E1E6EA' }} />
+          <div className="text-center py-6" style={{ color: 'var(--color-mercury-grey)' }}>
+            <FileText className="w-10 h-10 mx-auto mb-2" style={{ color: 'var(--color-silver)' }} />
             <p className="text-sm">No supporting documents uploaded</p>
             {debitNoteStatus === 'Draft' && (
               <p className="text-xs mt-1">At least one GRN, Invoice, or QC Report is required</p>
@@ -1543,69 +1514,69 @@ export function DebitNoteFormV2Enhanced() {
 
       {/* STEP 8: Accounting Preview (Post-Approval) */}
       {(debitNoteStatus === 'Approved' || showAccountingPreview) && calculateTotal() > 0 && (
-        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg" style={{ color: '#0A0F14' }}>Accounting Preview - Journal Entry</h2>
-            <div className="flex items-center gap-2 px-3 py-1 rounded" style={{ backgroundColor: '#F6F9FC' }}>
-              <DollarSign className="w-4 h-4" style={{ color: '#6E7A82' }} />
-              <span className="text-sm" style={{ color: '#6E7A82' }}>Read-only preview</span>
+            <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>Accounting Preview - Journal Entry</h2>
+            <div className="flex items-center gap-2 px-3 py-1 rounded" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <DollarSign className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Read-only preview</span>
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ backgroundColor: '#F6F9FC' }}>
+              <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>Line</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>GL Account</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>Account Name</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>Cost Center</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: '#6E7A82' }}>Profit Center</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: '#6E7A82' }}>Debit</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: '#6E7A82' }}>Credit</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Line</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>GL Account</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Account Name</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Cost Center</th>
+                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Profit Center</th>
+                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Debit</th>
+                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Credit</th>
                 </tr>
               </thead>
               <tbody>
                 {generateJournalLines().map((line) => (
-                  <tr key={line.lineNo} style={{ borderTop: '1px solid #E1E6EA' }}>
+                  <tr key={line.lineNo} style={{ borderTop: '1px solid var(--color-silver)' }}>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: '#6E7A82' }}>{line.lineNo}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{line.lineNo}</span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: '#0A0F14' }}>{line.glAccount}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{line.glAccount}</span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: '#6E7A82' }}>{line.glAccountName}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{line.glAccountName}</span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: '#6E7A82' }}>{line.costCenter}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{line.costCenter}</span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: '#6E7A82' }}>{line.profitCenter}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{line.profitCenter}</span>
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <span className="text-sm" style={{ color: line.debit > 0 ? '#0A0F14' : '#6E7A82' }}>
+                      <span className="text-sm" style={{ color: line.debit > 0 ? 'var(--color-ink)' : 'var(--color-mercury-grey)' }}>
                         {line.debit > 0 ? `${currency} ${line.debit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <span className="text-sm" style={{ color: line.credit > 0 ? '#0A0F14' : '#6E7A82' }}>
+                      <span className="text-sm" style={{ color: line.credit > 0 ? 'var(--color-ink)' : 'var(--color-mercury-grey)' }}>
                         {line.credit > 0 ? `${currency} ${line.credit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
                       </span>
                     </td>
                   </tr>
                 ))}
-                <tr style={{ borderTop: '2px solid #E1E6EA', backgroundColor: '#F6F9FC' }}>
+                <tr style={{ borderTop: '2px solid var(--color-silver)', backgroundColor: 'var(--color-cloud)' }}>
                   <td colSpan={5} className="px-3 py-2 text-right">
-                    <span style={{ color: '#0A0F14' }}>Total</span>
+                    <span style={{ color: 'var(--color-ink)' }}>Total</span>
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <span style={{ color: '#0A0F14' }}>
+                    <span style={{ color: 'var(--color-ink)' }}>
                       {currency} {calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <span style={{ color: '#0A0F14' }}>
+                    <span style={{ color: 'var(--color-ink)' }}>
                       {currency} {calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </td>
@@ -1616,57 +1587,19 @@ export function DebitNoteFormV2Enhanced() {
         </div>
       )}
 
-      {/* STEP 7: Action Buttons */}
-      <div className="flex justify-between items-center">
-        <div>
-          {debitNoteStatus === 'Draft' && calculateTotal() > 0 && (
-            <button
-              onClick={() => setShowAccountingPreview(!showAccountingPreview)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-colors text-sm"
-              style={{ border: '1px solid #E1E6EA', color: '#6E7A82', backgroundColor: 'white' }}
-            >
-              <TrendingUp className="w-4 h-4" />
-              {showAccountingPreview ? 'Hide' : 'Preview'} Journal Entry
-            </button>
-          )}
-        </div>
-
-        <div className="flex gap-3">
+      {/* STEP 7: Journal Entry Toggle */}
+      {debitNoteStatus === 'Draft' && calculateTotal() > 0 && (
+        <div className="mb-6">
           <button
-            onClick={handleCancel}
-            className="px-6 py-2.5 rounded-lg transition-colors"
-            style={{ border: '1px solid #E1E6EA', color: '#6E7A82', backgroundColor: 'white' }}
+            onClick={() => setShowAccountingPreview(!showAccountingPreview)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-colors text-sm"
+            style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}
           >
-            Cancel
+            <TrendingUp className="w-4 h-4" />
+            {showAccountingPreview ? 'Hide' : 'Preview'} Journal Entry
           </button>
-          
-          {debitNoteStatus === 'Draft' && (
-            <>
-              <button
-                onClick={handleSaveDraft}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-lg transition-colors"
-                style={{ border: '1px solid #00A9B7', color: '#00A9B7', backgroundColor: 'white' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E8F7F8'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
-              >
-                <Save className="w-4 h-4" />
-                Save as Draft
-              </button>
-              
-              <button
-                onClick={handleSubmitForApproval}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#00A9B7' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
-              >
-                <Send className="w-4 h-4" />
-                Submit for Approval
-              </button>
-            </>
-          )}
         </div>
-      </div>
-    </div>
+      )}
+    </FormShell>
   );
 }

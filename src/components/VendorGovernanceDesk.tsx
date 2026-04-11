@@ -18,11 +18,11 @@ import { fetchVendorGovernanceSummary } from '../lib/vendorGovernanceApi';
 import { isMysqlApiEnabled } from '../lib/mysql/client';
 import type { VendorGovernanceDeskModel, VendorGovernanceSummaryApiPayload } from '../types/vendorGovernance';
 
-const surface = '#F6F9FC';
-const border = '#E1E6EA';
-const textMuted = '#6E7A82';
-const textMain = '#0A0F14';
-const accent = '#00A9B7';
+const surface = 'var(--color-cloud)';
+const border = 'var(--color-silver)';
+const textMuted = 'var(--color-mercury-grey)';
+const textMain = 'var(--color-ink)';
+const accent = 'var(--color-teal)';
 
 function formatTrendLine(pct: number | null): { trend: 'up' | 'down' | 'flat'; label: string } | null {
   if (pct === null || Number.isNaN(pct)) {
@@ -98,7 +98,7 @@ function StatusBadge({ label, tone }: { label: string; tone: 'yellow' | 'blue' |
   const map = {
     yellow: { bg: '#FFFBEB', color: '#B45309', border: '#FDE68A' },
     blue: { bg: '#EEF2FF', color: '#4338CA', border: '#C7D2FE' },
-    gray: { bg: '#F1F4F6', color: '#6E7A82', border: '#E1E6EA' },
+    gray: { bg: '#F1F4F6', color: 'var(--color-mercury-grey)', border: 'var(--color-silver)' },
     green: { bg: '#ECFDF5', color: '#047857', border: '#A7F3D0' },
   };
   const s = map[tone];
@@ -116,7 +116,7 @@ function DueBadge({ label, tone }: { label: string; tone: 'orange' | 'amber' | '
   const map = {
     orange: { bg: '#FFF7ED', color: '#C2410C' },
     amber: { bg: '#FFFBEB', color: '#B45309' },
-    soft: { bg: '#F1F4F6', color: '#6E7A82' },
+    soft: { bg: '#F1F4F6', color: 'var(--color-mercury-grey)' },
   };
   const s = map[tone];
   return (
@@ -463,7 +463,7 @@ export function VendorGovernanceDesk() {
                 [
                   { label: 'Completed', n: model.validationSummary.completed, color: '#16A34A' },
                   { label: 'In progress', n: model.validationSummary.inProgress, color: '#CA8A04' },
-                  { label: 'Blocked', n: model.validationSummary.blocked, color: '#DC2626' },
+                  { label: 'Blocked', n: model.validationSummary.blocked, color: 'var(--color-error-dark)' },
                 ] as const
               ).map((row) => (
                 <div key={row.label}>

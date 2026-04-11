@@ -117,23 +117,23 @@ export function SalesInvoices() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Draft': return { bg: '#F6F9FC', color: '#6E7A82', border: '#E1E6EA' };
-      case 'Issued': return { bg: '#E8F7F8', color: '#00A9B7', border: '#00A9B7' };
-      case 'Delivered': return { bg: '#E8F5E9', color: '#2E7D32', border: '#81C784' };
-      case 'Partially Paid': return { bg: '#FFF3E0', color: '#F57C00', border: '#FFB74D' };
-      case 'Paid': return { bg: '#E8F5E9', color: '#2E7D32', border: '#81C784' };
-      case 'Disputed': return { bg: '#FEE2E2', color: '#DC2626', border: '#FCA5A5' };
-      default: return { bg: '#F6F9FC', color: '#6E7A82', border: '#E1E6EA' };
+      case 'Draft': return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
+      case 'Issued': return { bg: 'var(--color-teal-tint)', color: 'var(--color-teal)', border: 'var(--color-teal)' };
+      case 'Delivered': return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)', border: '#81C784' };
+      case 'Partially Paid': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)', border: '#FFB74D' };
+      case 'Paid': return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)', border: '#81C784' };
+      case 'Disputed': return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)', border: '#FCA5A5' };
+      default: return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
     }
   };
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
-      case 'Paid': return { bg: '#E8F5E9', color: '#2E7D32' };
-      case 'Unpaid': return { bg: '#FFF3E0', color: '#F57C00' };
-      case 'Overdue': return { bg: '#FEE2E2', color: '#DC2626' };
-      case 'Partial': return { bg: '#E8F7F8', color: '#00A9B7' };
-      default: return { bg: '#F6F9FC', color: '#6E7A82' };
+      case 'Paid': return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)' };
+      case 'Unpaid': return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' };
+      case 'Overdue': return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' };
+      case 'Partial': return { bg: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
+      default: return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' };
     }
   };
 
@@ -153,28 +153,28 @@ export function SalesInvoices() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* PAGE HEADER */}
-      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl" style={{ color: '#0A0F14', margin: 0 }}>Sales Invoices</h1>
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded" style={{ backgroundColor: '#E8F7F8', border: '1px solid #00A9B7' }}>
-                <Sparkles className="w-3.5 h-3.5" style={{ color: '#00A9B7' }} />
-                <span className="text-xs" style={{ color: '#00A9B7', fontWeight: '600' }}>AI INSIGHTS</span>
+              <h1 className="text-2xl" style={{ color: 'var(--color-ink)', margin: 0 }}>Sales Invoices</h1>
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}>
+                <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--color-teal)' }} />
+                <span className="text-xs" style={{ color: 'var(--color-teal)', fontWeight: '600' }}>AI INSIGHTS</span>
               </div>
             </div>
-            <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
               Complete invoice lifecycle from creation to payment
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="px-4 py-2 rounded-lg transition-colors" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E1E6EA', color: '#0A0F14' }}>
+            <button className="px-4 py-2 rounded-lg transition-colors" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
               <Filter className="w-4 h-4 inline mr-2" />
               Filter
             </button>
-            <button className="px-4 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: '#00A9B7' }}>
+            <button className="px-4 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }}>
               <Plus className="w-4 h-4 inline mr-2" />
               Create Invoice
             </button>
@@ -183,12 +183,12 @@ export function SalesInvoices() {
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#6E7A82' }} />
+          <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
           <input
             type="text"
             placeholder="Search by invoice number, customer name, or PO number..."
             className="w-full pl-10 pr-4 py-2 rounded-lg text-sm"
-            style={{ border: '1px solid #E1E6EA', backgroundColor: '#FFFFFF', color: '#0A0F14' }}
+            style={{ border: '1px solid var(--color-silver)', backgroundColor: '#FFFFFF', color: 'var(--color-ink)' }}
           />
         </div>
       </div>
@@ -197,30 +197,30 @@ export function SalesInvoices() {
       <div className="p-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-5 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Total Invoices</p>
-            <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: '600' }}>{stats.total}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Invoices</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{stats.total}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Issued</p>
-            <p className="text-2xl" style={{ color: '#00A9B7', fontWeight: '600' }}>{stats.issued}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Issued</p>
+            <p className="text-2xl" style={{ color: 'var(--color-teal)', fontWeight: '600' }}>{stats.issued}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Overdue</p>
-            <p className="text-2xl" style={{ color: '#DC2626', fontWeight: '600' }}>{stats.overdue}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Overdue</p>
+            <p className="text-2xl" style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>{stats.overdue}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Total Value</p>
-            <p className="text-2xl" style={{ color: '#0A0F14', fontWeight: '600' }}>{formatCurrency(stats.totalValue)}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Value</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{formatCurrency(stats.totalValue)}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-            <p className="text-sm mb-2" style={{ color: '#6E7A82' }}>Outstanding</p>
-            <p className="text-2xl" style={{ color: '#F57C00', fontWeight: '600' }}>{formatCurrency(stats.outstanding)}</p>
+          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Outstanding</p>
+            <p className="text-2xl" style={{ color: 'var(--color-warning-dark)', fontWeight: '600' }}>{formatCurrency(stats.outstanding)}</p>
           </div>
         </div>
 
         {/* Status Tabs */}
-        <div className="bg-white rounded-lg mb-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg mb-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center gap-4 p-4">
             {['all', 'issued', 'overdue', 'partial', 'disputed'].map((tab) => (
               <button
@@ -228,9 +228,9 @@ export function SalesInvoices() {
                 onClick={() => setSelectedTab(tab)}
                 className="px-4 py-2 rounded-lg text-sm transition-colors"
                 style={{
-                  backgroundColor: selectedTab === tab ? '#E8F7F8' : 'transparent',
-                  color: selectedTab === tab ? '#00A9B7' : '#6E7A82',
-                  border: selectedTab === tab ? '1px solid #00A9B7' : '1px solid transparent',
+                  backgroundColor: selectedTab === tab ? 'var(--color-teal-tint)' : 'transparent',
+                  color: selectedTab === tab ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
+                  border: selectedTab === tab ? '1px solid var(--color-teal)' : '1px solid transparent',
                   fontWeight: selectedTab === tab ? '600' : 'normal'
                 }}
               >
@@ -241,66 +241,66 @@ export function SalesInvoices() {
         </div>
 
         {/* Invoices Table */}
-        <div className="bg-white rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
-          <div className="p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
-            <h3 className="text-base" style={{ color: '#0A0F14', margin: 0, fontWeight: '600' }}>Sales Invoices</h3>
+        <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <div className="p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+            <h3 className="text-base" style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}>Sales Invoices</h3>
           </div>
           
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ backgroundColor: '#F6F9FC' }}>
+              <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Invoice #</th>
-                  <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Customer</th>
-                  <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Date</th>
-                  <th className="px-6 py-3 text-left text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Due Date</th>
-                  <th className="px-6 py-3 text-right text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Amount</th>
-                  <th className="px-6 py-3 text-center text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Days O/S</th>
-                  <th className="px-6 py-3 text-center text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Status</th>
-                  <th className="px-6 py-3 text-center text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Payment</th>
-                  <th className="px-6 py-3 text-center text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>AI Risk</th>
-                  <th className="px-6 py-3 text-center text-xs" style={{ color: '#6E7A82', fontWeight: '600' }}>Actions</th>
+                  <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Invoice #</th>
+                  <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Customer</th>
+                  <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Date</th>
+                  <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Due Date</th>
+                  <th className="px-6 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Amount</th>
+                  <th className="px-6 py-3 text-center text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Days O/S</th>
+                  <th className="px-6 py-3 text-center text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Status</th>
+                  <th className="px-6 py-3 text-center text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Payment</th>
+                  <th className="px-6 py-3 text-center text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>AI Risk</th>
+                  <th className="px-6 py-3 text-center text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y" style={{ borderColor: '#E1E6EA' }}>
+              <tbody className="divide-y" style={{ borderColor: 'var(--color-silver)' }}>
                 {invoices.map((invoice) => {
                   const statusStyle = getStatusColor(invoice.status);
                   const paymentStyle = getPaymentStatusColor(invoice.paymentStatus);
                   const riskLevel = getRiskLevel(invoice.aiRisk);
-                  const riskColor = riskLevel === 'High' ? '#DC2626' : riskLevel === 'Medium' ? '#F57C00' : '#2E7D32';
+                  const riskColor = riskLevel === 'High' ? 'var(--color-error-dark)' : riskLevel === 'Medium' ? 'var(--color-warning-dark)' : 'var(--color-success-dark)';
                   
                   return (
-                    <tr key={invoice.id} style={{ backgroundColor: invoice.paymentStatus === 'Overdue' ? '#FEE2E2' : '#FFFFFF' }}>
+                    <tr key={invoice.id} style={{ backgroundColor: invoice.paymentStatus === 'Overdue' ? 'var(--color-error-light)' : '#FFFFFF' }}>
                       <td className="px-6 py-4">
-                        <p className="text-sm" style={{ color: '#0A0F14', fontWeight: '600', margin: 0 }}>
+                        <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600', margin: 0 }}>
                           {invoice.id}
                         </p>
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="text-sm mb-1" style={{ color: '#0A0F14', margin: 0 }}>
+                          <p className="text-sm mb-1" style={{ color: 'var(--color-ink)', margin: 0 }}>
                             {invoice.customer}
                           </p>
-                          <p className="text-xs" style={{ color: '#6E7A82', margin: 0 }}>
+                          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
                             {invoice.customerCode}
                           </p>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>{invoice.date}</td>
-                      <td className="px-6 py-4 text-sm" style={{ color: '#6E7A82' }}>{invoice.dueDate}</td>
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.date}</td>
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.dueDate}</td>
                       <td className="px-6 py-4 text-right">
-                        <p className="text-sm" style={{ color: '#0A0F14', fontWeight: '600', margin: 0 }}>
+                        <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600', margin: 0 }}>
                           {formatCurrency(invoice.netAmount)}
                         </p>
                         {invoice.paidAmount && (
-                          <p className="text-xs mt-1" style={{ color: '#2E7D32', margin: 0 }}>
+                          <p className="text-xs mt-1" style={{ color: 'var(--color-success-dark)', margin: 0 }}>
                             Paid: {formatCurrency(invoice.paidAmount)}
                           </p>
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className="text-sm" style={{ 
-                          color: invoice.daysOutstanding > 30 ? '#DC2626' : '#0A0F14',
+                          color: invoice.daysOutstanding > 30 ? 'var(--color-error-dark)' : 'var(--color-ink)',
                           fontWeight: invoice.daysOutstanding > 30 ? '600' : 'normal'
                         }}>
                           {invoice.daysOutstanding}
@@ -327,7 +327,7 @@ export function SalesInvoices() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button className="p-1 rounded hover:bg-gray-100">
-                            <Eye className="w-4 h-4" style={{ color: '#00A9B7' }} />
+                            <Eye className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                           </button>
                         </div>
                       </td>
@@ -340,14 +340,14 @@ export function SalesInvoices() {
         </div>
 
         {/* AI Insights */}
-        <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5' }}>
+        <div className="mt-8 p-6 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)', border: '1px solid #FCA5A5' }}>
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 mt-0.5" style={{ color: '#DC2626' }} />
+            <AlertTriangle className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-error-dark)' }} />
             <div>
-              <h4 className="text-sm mb-2" style={{ color: '#0A0F14', margin: 0, fontWeight: '600' }}>
+              <h4 className="text-sm mb-2" style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}>
                 High Risk Alert: INV-2024-004
               </h4>
-              <p className="text-sm" style={{ color: '#6E7A82', margin: 0 }}>
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
                 Invoice INV-2024-004 for Infosys Technologies is 55 days outstanding with 85% probability of payment delay beyond 90 days.
                 Customer has exceeded credit limit. Recommend: Escalate to collections team and consider dispute resolution.
               </p>

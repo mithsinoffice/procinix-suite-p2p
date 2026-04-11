@@ -17,17 +17,17 @@ export function DebitNotes() {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'Draft':
-        return { color: '#6E7A82', bgColor: '#F6F9FC' };
+        return { color: 'var(--color-mercury-grey)', bgColor: 'var(--color-cloud)' };
       case 'Pending Approval':
         return { color: '#D97706', bgColor: '#FEF3C7' };
       case 'Issued':
-        return { color: '#00A9B7', bgColor: '#E8F7F8' };
+        return { color: 'var(--color-teal)', bgColor: 'var(--color-teal-tint)' };
       case 'Adjusted':
         return { color: '#F59E0B', bgColor: '#FEF3C7' };
       case 'Closed':
         return { color: '#10B981', bgColor: '#D1FAE5' };
       default:
-        return { color: '#6E7A82', bgColor: '#F6F9FC' };
+        return { color: 'var(--color-mercury-grey)', bgColor: 'var(--color-cloud)' };
     }
   };
 
@@ -66,19 +66,19 @@ export function DebitNotes() {
   };
 
   return (
-    <div className="p-8" style={{ backgroundColor: '#F6F9FC', minHeight: '100vh' }}>
+    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl mb-2" style={{ color: '#0A0F14' }}>Debit Notes</h1>
-          <p style={{ color: '#6E7A82' }}>Manage vendor debit notes for commercial adjustments</p>
+          <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>Debit Notes</h1>
+          <p style={{ color: 'var(--color-mercury-grey)' }}>Manage vendor debit notes for commercial adjustments</p>
         </div>
         <button
           onClick={handleCreate}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#00A9B7' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#00A9B7'}
+          style={{ backgroundColor: 'var(--color-teal)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
         >
           <Plus className="w-5 h-5" />
           Create Debit Note
@@ -87,54 +87,54 @@ export function DebitNotes() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-              <FileText className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <FileText className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
-            <span className="text-sm" style={{ color: '#6E7A82' }}>Total Debit Notes</span>
+            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Total Debit Notes</span>
           </div>
-          <div className="text-2xl" style={{ color: '#0A0F14' }}>{debitNotes.length}</div>
+          <div className="text-2xl" style={{ color: 'var(--color-ink)' }}>{debitNotes.length}</div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
-              <DollarSign className="w-5 h-5" style={{ color: '#00A9B7' }} />
+            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <DollarSign className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
             </div>
-            <span className="text-sm" style={{ color: '#6E7A82' }}>Total Debit Amount</span>
+            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Total Debit Amount</span>
           </div>
-          <div className="text-2xl" style={{ color: '#0A0F14' }}>
+          <div className="text-2xl" style={{ color: 'var(--color-ink)' }}>
             ₹{debitNotes.reduce((sum, dn) => sum + dn.debitAmount, 0).toLocaleString('en-IN')}
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
               <AlertCircle className="w-5 h-5" style={{ color: '#F59E0B' }} />
             </div>
-            <span className="text-sm" style={{ color: '#6E7A82' }}>Draft</span>
+            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Draft</span>
           </div>
-          <div className="text-2xl" style={{ color: '#0A0F14' }}>
+          <div className="text-2xl" style={{ color: 'var(--color-ink)' }}>
             {debitNotes.filter(dn => dn.status === 'Draft').length}
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
               <AlertCircle className="w-5 h-5" style={{ color: '#D97706' }} />
             </div>
-            <span className="text-sm" style={{ color: '#6E7A82' }}>Pending Approval</span>
+            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Pending Approval</span>
           </div>
-          <div className="text-2xl" style={{ color: '#0A0F14' }}>
+          <div className="text-2xl" style={{ color: 'var(--color-ink)' }}>
             {debitNotes.filter(dn => dn.status === 'Pending Approval').length}
           </div>
         </div>
       </div>
 
-      <div className="rounded-[28px] overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D7E3EA', boxShadow: '0 24px 52px rgba(15, 23, 42, 0.07)' }}>
+      <div className="rounded-[28px] overflow-hidden" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)', boxShadow: '0 24px 52px rgba(15, 23, 42, 0.07)' }}>
         <div className="flex items-center justify-between gap-4 px-6 py-4" style={{ borderBottom: '1px solid #E8F0F4' }}>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FFE9EF 0%, #FFDCE7 100%)', boxShadow: '0 14px 30px rgba(190, 24, 93, 0.12)' }}>
@@ -149,7 +149,7 @@ export function DebitNotes() {
               </span>
             </div>
           </div>
-          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm" style={{ border: '1px solid #D7E3EA', color: '#0A0F14', backgroundColor: '#FFFFFF' }}>
+          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm" style={{ border: '1px solid var(--color-fog)', color: 'var(--color-ink)', backgroundColor: '#FFFFFF' }}>
             <Download className="w-4 h-4" />
             Export
           </button>
@@ -160,8 +160,8 @@ export function DebitNotes() {
             <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '2fr 1fr 1.8fr 1fr 1fr 1.3fr 1fr 1fr 0.9fr', borderBottom: '1px solid #E8F0F4' }}>
               <div className="space-y-2">
                 <div className="relative w-full">
-                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#6E7A82' }} />
-                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search debit note..." className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm" style={{ backgroundColor: '#F8FBFD', border: '1px solid #D7E3EA', color: '#0A0F14' }} />
+                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
+                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search debit note..." className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm" style={{ backgroundColor: '#F8FBFD', border: '1px solid var(--color-fog)', color: 'var(--color-ink)' }} />
                 </div>
                 {hasActiveFilters && (
                   <button type="button" onClick={() => { setSearch(''); setStatusFilter([]); setReferenceFilter([]); }} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm" style={{ backgroundColor: '#FFF5F5', border: '1px solid #FED7D7', color: '#C53030', fontWeight: 600 }}>
@@ -185,21 +185,21 @@ export function DebitNotes() {
 
             <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '2fr 1fr 1.8fr 1fr 1fr 1.3fr 1fr 1fr 0.9fr', background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)', borderBottom: '1px solid #E4EDF2' }}>
               {['Debit Note', 'Date', 'Vendor', 'Reference', 'Reference No', 'Reason', 'Amount', 'Status', 'Action'].map((column) => (
-                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: '#6E7A82', fontWeight: 700 }}>
+                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
                   {column}
                 </div>
               ))}
             </div>
 
             {filteredDebitNotes.length === 0 ? (
-                <div className="px-6 py-12 text-center" style={{ color: '#6E7A82' }}>
+                <div className="px-6 py-12 text-center" style={{ color: 'var(--color-mercury-grey)' }}>
                     <div className="flex flex-col items-center gap-3">
-                      <FileText className="w-12 h-12" style={{ color: '#E1E6EA' }} />
+                      <FileText className="w-12 h-12" style={{ color: 'var(--color-silver)' }} />
                       <p>No debit notes found</p>
                       <button
                         onClick={handleCreate}
                         className="mt-2 px-4 py-2 rounded-lg text-white text-sm"
-                        style={{ backgroundColor: '#00A9B7' }}
+                        style={{ backgroundColor: 'var(--color-teal)' }}
                       >
                         Create First Debit Note
                       </button>
@@ -218,11 +218,11 @@ export function DebitNotes() {
                       <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FFE9EF 0%, #FFDCE7 100%)' }}>
                         <Hash className="w-4 h-4" style={{ color: '#BE123C' }} />
                       </div>
-                      <div style={{ color: '#00A9B7', fontWeight: 700 }}>
+                      <div style={{ color: 'var(--color-teal)', fontWeight: 700 }}>
                         {dn.debitNoteNumber}
                       </div>
                     </div>
-                    <div style={{ color: '#0A0F14' }}>
+                    <div style={{ color: 'var(--color-ink)' }}>
                       {new Date(dn.debitNoteDate).toLocaleDateString('en-IN', {
                         day: '2-digit',
                         month: 'short',
@@ -231,28 +231,28 @@ export function DebitNotes() {
                     </div>
                     <div>
                       <div>
-                        <div style={{ color: '#0A0F14' }}>{dn.vendorName}</div>
-                        <div className="text-sm" style={{ color: '#6E7A82' }}>{dn.vendorCode}</div>
+                        <div style={{ color: 'var(--color-ink)' }}>{dn.vendorName}</div>
+                        <div className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{dn.vendorCode}</div>
                       </div>
                     </div>
                     <div>
                       <span 
                         className="px-3 py-1 rounded-full text-sm"
                         style={{ 
-                          backgroundColor: dn.referenceType === 'Invoice' ? '#E8F7F8' : '#FEF3C7',
-                          color: dn.referenceType === 'Invoice' ? '#00A9B7' : '#F59E0B'
+                          backgroundColor: dn.referenceType === 'Invoice' ? 'var(--color-teal-tint)' : '#FEF3C7',
+                          color: dn.referenceType === 'Invoice' ? 'var(--color-teal)' : '#F59E0B'
                         }}
                       >
                         {dn.referenceType}
                       </span>
                     </div>
-                    <div style={{ color: '#0A0F14' }}>
+                    <div style={{ color: 'var(--color-ink)' }}>
                       {dn.referenceNumber}
                     </div>
-                    <div style={{ color: '#6E7A82' }}>
+                    <div style={{ color: 'var(--color-mercury-grey)' }}>
                       {dn.reasonName}
                     </div>
-                    <div style={{ color: '#0A0F14' }}>
+                    <div style={{ color: 'var(--color-ink)' }}>
                       {dn.currency} {dn.debitAmount.toLocaleString('en-IN')}
                     </div>
                     <div>

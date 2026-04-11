@@ -49,16 +49,16 @@ export function Dashboard() {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl" style={{ color: '#0A0F14' }}>
-          Dashboard {metrics.isConsolidated && <span style={{ color: '#6E7A82', fontSize: '1.5rem' }}>(Consolidated View)</span>}
+        <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>
+          Dashboard {metrics.isConsolidated && <span style={{ color: 'var(--color-mercury-grey)', fontSize: '1.5rem' }}>(Consolidated View)</span>}
         </h1>
         {metrics.isConsolidated && (
           <div style={{
             padding: '8px 16px',
-            background: '#F6F9FC',
-            border: '1px solid #E1E6EA',
+            background: 'var(--color-cloud)',
+            border: '1px solid var(--color-silver)',
             borderRadius: '6px',
-            color: '#6E7A82',
+            color: 'var(--color-mercury-grey)',
             fontSize: '14px'
           }}>
             All amounts converted to {metrics.currency}

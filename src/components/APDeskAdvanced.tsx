@@ -49,7 +49,7 @@ export function APDeskAdvanced() {
     { name: 'Pending', value: pendingInvoices, color: '#F59E0B' },
     { name: 'Approved', value: approvedInvoices, color: '#10B981' },
     { name: 'Rejected', value: rejectedInvoices, color: '#EF4444' },
-    { name: 'Overdue', value: overdueInvoices, color: '#DC2626' }
+    { name: 'Overdue', value: overdueInvoices, color: 'var(--color-error-dark)' }
   ];
 
   // Monthly Invoice Trend (Last 6 months)
@@ -119,7 +119,7 @@ export function APDeskAdvanced() {
       {/* Key Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Total Invoices */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#EFF6FF' }}>
               <FileText className="w-5 h-5" style={{ color: '#3B82F6' }} />
@@ -128,10 +128,10 @@ export function APDeskAdvanced() {
               MTD
             </span>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {totalInvoices}
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Total Invoices
           </div>
           <div className="text-xs flex items-center gap-1" style={{ color: '#10B981' }}>
@@ -141,7 +141,7 @@ export function APDeskAdvanced() {
         </div>
 
         {/* Pending Invoices */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
               <Clock className="w-5 h-5" style={{ color: '#F59E0B' }} />
@@ -150,51 +150,51 @@ export function APDeskAdvanced() {
               Action Needed
             </span>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {pendingInvoices}
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Pending Approval
           </div>
-          <div className="text-xs" style={{ color: '#6E7A82' }}>
+          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
             Value: {formatCrores(pendingValue / 10000000)}
           </div>
         </div>
 
         {/* Approved Invoices */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
               <CheckCircle className="w-5 h-5" style={{ color: '#10B981' }} />
             </div>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {approvedInvoices}
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Approved Invoices
           </div>
-          <div className="text-xs" style={{ color: '#6E7A82' }}>
+          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
             Value: {formatCrores(approvedValue / 10000000)}
           </div>
         </div>
 
         {/* Overdue Invoices */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
               <AlertTriangle className="w-5 h-5" style={{ color: '#EF4444' }} />
             </div>
             {overdueInvoices > 0 && (
-              <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#FEE2E2', color: '#991B1B' }}>
+              <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-error-light)', color: '#991B1B' }}>
                 Critical
               </span>
             )}
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {overdueInvoices}
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Overdue Invoices
           </div>
           <div className="text-xs" style={{ color: '#EF4444' }}>
@@ -203,16 +203,16 @@ export function APDeskAdvanced() {
         </div>
 
         {/* Avg Processing Time */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#F3E8FF' }}>
               <TrendingDown className="w-5 h-5" style={{ color: '#9333EA' }} />
             </div>
           </div>
-          <div className="text-2xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
+          <div className="text-2xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
             {avgProcessingTime}d
           </div>
-          <div className="text-xs mb-2" style={{ color: '#6E7A82' }}>
+          <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
             Avg Processing Time
           </div>
           <div className="text-xs flex items-center gap-1" style={{ color: '#10B981' }}>
@@ -225,13 +225,13 @@ export function APDeskAdvanced() {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Invoice Status Distribution */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Invoice Status Distribution
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Current month breakdown
               </p>
             </div>
@@ -261,7 +261,7 @@ export function APDeskAdvanced() {
             {statusData.map((status) => (
               <div key={status.name} className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded" style={{ backgroundColor: status.color }} />
-                <span className="text-xs" style={{ color: '#6E7A82' }}>
+                <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                   {status.name}: {status.value}
                 </span>
               </div>
@@ -270,13 +270,13 @@ export function APDeskAdvanced() {
         </div>
 
         {/* Monthly Invoice Trend */}
-        <div className="bg-white rounded-lg p-6 lg:col-span-2" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6 lg:col-span-2" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Monthly Invoice Trend
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Invoice count and value over last 6 months
               </p>
             </div>
@@ -284,13 +284,13 @@ export function APDeskAdvanced() {
           <div style={{ height: '280px', minHeight: '280px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={280} debounce={1}>
               <AreaChart data={monthlyTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="month" style={{ fontSize: '12px', fill: '#6E7A82' }} />
-                <YAxis yAxisId="left" style={{ fontSize: '12px', fill: '#6E7A82' }} />
-                <YAxis yAxisId="right" orientation="right" style={{ fontSize: '12px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="month" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis yAxisId="left" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis yAxisId="right" orientation="right" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Area yAxisId="left" type="monotone" dataKey="invoices" stroke="#00A9B7" fill="#00A9B7" fillOpacity={0.3} name="Invoice Count" />
+                <Area yAxisId="left" type="monotone" dataKey="invoices" stroke="var(--color-teal)" fill="var(--color-teal)" fillOpacity={0.3} name="Invoice Count" />
                 <Area yAxisId="right" type="monotone" dataKey="value" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.3} name="Value (Cr)" />
               </AreaChart>
             </ResponsiveContainer>
@@ -301,13 +301,13 @@ export function APDeskAdvanced() {
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Vendors by Invoice Count */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Top Vendors by Invoice Count
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Top 10 vendors this month
               </p>
             </div>
@@ -315,24 +315,24 @@ export function APDeskAdvanced() {
           <div style={{ height: '300px', minHeight: '300px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={300} minHeight={300}>
               <BarChart data={vendorInvoiceCount} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis type="number" style={{ fontSize: '11px', fill: '#6E7A82' }} />
-                <YAxis dataKey="name" type="category" width={120} style={{ fontSize: '11px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis type="number" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis dataKey="name" type="category" width={120} style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
-                <Bar dataKey="count" fill="#00A9B7" name="Invoice Count" />
+                <Bar dataKey="count" fill="var(--color-teal)" name="Invoice Count" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Processing Time Trend */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Processing Time Trend
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Average days vs target (last 4 weeks)
               </p>
             </div>
@@ -340,12 +340,12 @@ export function APDeskAdvanced() {
           <div style={{ height: '300px', minHeight: '300px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={300} minHeight={300}>
               <LineChart data={processingTimeTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="week" style={{ fontSize: '12px', fill: '#6E7A82' }} />
-                <YAxis style={{ fontSize: '12px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="week" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Line type="monotone" dataKey="time" stroke="#00A9B7" strokeWidth={2} name="Actual Time" />
+                <Line type="monotone" dataKey="time" stroke="var(--color-teal)" strokeWidth={2} name="Actual Time" />
                 <Line type="monotone" dataKey="target" stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" name="Target" />
               </LineChart>
             </ResponsiveContainer>
@@ -356,13 +356,13 @@ export function APDeskAdvanced() {
       {/* Exception Analysis & Aging */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Exception Analysis */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Exception Analysis
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Invoice exceptions requiring attention
               </p>
             </div>
@@ -370,7 +370,7 @@ export function APDeskAdvanced() {
           <div className="space-y-3">
             {exceptionData.map((exception, idx) => {
               const severityColors = {
-                critical: { bg: '#FEE2E2', text: '#991B1B', border: '#EF4444' },
+                critical: { bg: 'var(--color-error-light)', text: '#991B1B', border: '#EF4444' },
                 high: { bg: '#FED7AA', text: '#9A3412', border: '#F97316' },
                 medium: { bg: '#FEF3C7', text: '#92400E', border: '#F59E0B' }
               };
@@ -385,10 +385,10 @@ export function APDeskAdvanced() {
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="w-5 h-5" style={{ color: colors.border }} />
                     <div>
-                      <div className="text-sm" style={{ color: '#0A0F14', fontWeight: '500' }}>
+                      <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
                         {exception.type}
                       </div>
-                      <div className="text-xs" style={{ color: '#6E7A82' }}>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                         {exception.count} invoices affected
                       </div>
                     </div>
@@ -406,13 +406,13 @@ export function APDeskAdvanced() {
         </div>
 
         {/* Aging Analysis */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid #E1E6EA' }}>
+        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: '#0A0F14', fontWeight: '600' }}>
+              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
                 Invoice Aging Analysis
               </h3>
-              <p className="text-xs" style={{ color: '#6E7A82' }}>
+              <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Pending invoices by age bucket
               </p>
             </div>
@@ -420,12 +420,12 @@ export function APDeskAdvanced() {
           <div style={{ height: '260px', minHeight: '260px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={260} minHeight={260}>
               <BarChart data={agingData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1E6EA" />
-                <XAxis dataKey="range" style={{ fontSize: '11px', fill: '#6E7A82' }} />
-                <YAxis style={{ fontSize: '11px', fill: '#6E7A82' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
+                <XAxis dataKey="range" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
+                <YAxis style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="count" fill="#00A9B7" name="Invoice Count" />
+                <Bar dataKey="count" fill="var(--color-teal)" name="Invoice Count" />
                 <Bar dataKey="value" fill="#F59E0B" name="Value (Cr)" />
               </BarChart>
             </ResponsiveContainer>
