@@ -582,19 +582,23 @@ export function APValidationWorkbench() {
               <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: 600 }}>Document Preview</span>
             </div>
             <div className="p-4">
-              <div
-                className="rounded-lg flex flex-col items-center justify-center"
-                style={{
-                  backgroundColor: 'var(--color-cloud)',
-                  border: '2px dashed var(--color-silver)',
-                  minHeight: 420,
-                }}
-              >
-                <FileText className="w-12 h-12 mb-3" style={{ color: 'var(--color-silver)' }} />
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: 600 }}>PDF Preview</p>
-                <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>{inv.invoice_number}.pdf</p>
-                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Source: {inv.source || 'email'}</p>
-              </div>
+              {inv.attachment_path ? (
+                <embed
+                  src={`http://127.0.0.1:8787/api/invoices/${inv.id}/pdf`}
+                  type="application/pdf"
+                  className="w-full rounded-lg"
+                  style={{ height: 520, border: '1px solid var(--color-silver)' }}
+                />
+              ) : (
+                <div
+                  className="rounded-lg flex flex-col items-center justify-center"
+                  style={{ backgroundColor: 'var(--color-cloud)', border: '2px dashed var(--color-silver)', minHeight: 420 }}
+                >
+                  <FileText className="w-12 h-12 mb-3" style={{ color: 'var(--color-silver)' }} />
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: 600 }}>No PDF available</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>Source: {inv.source || 'manual'}</p>
+                </div>
+              )}
               <div className="mt-3 flex items-center justify-between text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 <span>Invoice #{inv.invoice_number}</span>
                 <span>{inv.currency} {Number(inv.total_amount).toLocaleString('en-IN')}</span>

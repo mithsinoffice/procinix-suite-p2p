@@ -1208,6 +1208,34 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 201, { success: true, data });
     }
 
+    // ── PDF file serving ──────────────────────────────────
+    if (req.method === 'GET' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/pdf')) {
+      const invoiceId = pathname.split('/')[3];
+      const rows = await query('SELECT attachment_path FROM invoices WHERE id = ? LIMIT 1', [invoiceId]);
+      if (rows.length === 0 || !rows[0].attachment_path) {
+        return sendJson(res, 404, { success: false, error: 'PDF not found' });
+      }
+      const fs = await import('node:fs');
+      const filePath = rows[0].attachment_path;
+      try {
+        const stat = fs.statSync(filePath);
+        const headers = {
+          'Content-Type': 'application/pdf',
+          'Content-Length': stat.size,
+          'Content-Disposition': 'inline',
+        };
+        if (res._corsOrigin) {
+          headers['Access-Control-Allow-Origin'] = res._corsOrigin;
+          headers['Vary'] = 'Origin';
+        }
+        res.writeHead(200, headers);
+        fs.createReadStream(filePath).pipe(res);
+        return;
+      } catch {
+        return sendJson(res, 404, { success: false, error: 'PDF file not accessible' });
+      }
+    }
+
     // ── Parsed Invoice API ────────────────────────────────
     if (req.method === 'GET' && pathname.startsWith('/api/invoices/') && !pathname.includes('ingestion')) {
       const invoiceId = pathname.replace('/api/invoices/', '');
