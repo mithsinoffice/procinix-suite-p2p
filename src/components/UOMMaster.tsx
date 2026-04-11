@@ -6,6 +6,8 @@ import { ApprovalModal } from './ApprovalModal';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface UOM {
   id: string;
@@ -43,6 +45,8 @@ export function UOMMaster() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<UOM | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
@@ -57,7 +61,8 @@ export function UOMMaster() {
         description,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
       
       setUOMs(uoms.map(u => u.id === editingId ? updatedUOM : u));
@@ -68,7 +73,8 @@ export function UOMMaster() {
         name,
         description,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setUOMs([...uoms, newUOM]);
     }
@@ -82,6 +88,7 @@ export function UOMMaster() {
     setName('');
     setDescription('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -93,6 +100,7 @@ export function UOMMaster() {
     setName(uom.name);
     setDescription(uom.description);
     setStatus(uom.status);
+    setEntityMappings(uom.entityMappings || []);
     setShowForm(true);
   };
 
@@ -211,6 +219,7 @@ export function UOMMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

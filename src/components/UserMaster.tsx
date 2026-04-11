@@ -10,6 +10,8 @@ import {
 } from '../types/userMaster';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 import {
   formColors,
   formSectionBlockStyle,
@@ -221,6 +223,7 @@ export function UserMaster() {
   const [formData, setFormData] = useState<UserFormState>(() => emptyFormState());
   const [employeeQuery, setEmployeeQuery] = useState('');
   const [employeeComboOpen, setEmployeeComboOpen] = useState(false);
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
   const employeeComboRef = useRef<HTMLDivElement>(null);
 
   const normalizedUsers = useMemo(() => users.map((u) => normalizeUserMasterRecord(u)), [users]);
@@ -369,6 +372,7 @@ export function UserMaster() {
     );
     setEmployeeQuery(m ? `${m.empName} (${m.empCode})` : '');
     setEmployeeComboOpen(false);
+    setEntityMappings(n.entityMappings || []);
     setViewMode('form');
   };
 
@@ -378,6 +382,7 @@ export function UserMaster() {
     setFormData(emptyFormState());
     setEmployeeQuery('');
     setEmployeeComboOpen(false);
+    setEntityMappings([]);
   };
 
   const setAccessRows = (rows: UserEntityAccessRow[]) => {
@@ -531,12 +536,12 @@ export function UserMaster() {
       setUsers((prev) =>
         prev.map((u) =>
           String((u as UserMasterRecord).id) === selectedUser.id
-            ? ({ ...payload, approvalStatus: 'Pending' as const } as UserMasterRecord)
+            ? ({ ...payload, approvalStatus: 'Pending' as const, entityMappings } as UserMasterRecord)
             : u,
         ),
       );
     } else {
-      setUsers((prev) => [...prev, { ...payload, approvalStatus: 'Pending' as const } as UserMasterRecord]);
+      setUsers((prev) => [...prev, { ...payload, approvalStatus: 'Pending' as const, entityMappings } as UserMasterRecord]);
     }
 
     leaveForm();
@@ -784,6 +789,7 @@ export function UserMaster() {
           checked={formData.passwordResetRequired}
           onChange={(v) => setFormData({ ...formData, passwordResetRequired: v })}
         />
+        <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
       </FormSection>
       <input type="hidden" name="linked_employee_id" value={formData.employeeId} />
 

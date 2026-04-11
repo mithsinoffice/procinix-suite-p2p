@@ -7,6 +7,8 @@ import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface State {
   id: string;
@@ -42,6 +44,8 @@ export function StateMaster() {
   const [stateName, setStateName] = useState('');
   const [country, setCountry] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<State | null>(null);
@@ -79,7 +83,8 @@ export function StateMaster() {
         country,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
       
       setStates(states.map(s => s.id === editingId ? updatedState : s));
@@ -90,7 +95,8 @@ export function StateMaster() {
         stateName,
         country,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setStates([...states, newState]);
     }
@@ -104,6 +110,7 @@ export function StateMaster() {
     setStateName('');
     setCountry('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -115,6 +122,7 @@ export function StateMaster() {
     setStateName(state.stateName);
     setCountry(state.country);
     setStatus(state.status);
+    setEntityMappings(state.entityMappings || []);
     setShowForm(true);
   };
 
@@ -249,6 +257,7 @@ export function StateMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

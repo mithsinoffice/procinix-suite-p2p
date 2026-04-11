@@ -8,6 +8,8 @@ import { COUNTRY_MASTER_SEED, type CountryMasterRow } from '../lib/countryMaster
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 type Country = CountryMasterRow;
 
@@ -29,6 +31,8 @@ export function CountryMaster() {
   const [countryName, setCountryName] = useState('');
   const [currency, setCurrency] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<Country | null>(null);
@@ -66,7 +70,8 @@ export function CountryMaster() {
         currency,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
       
       setCountries(countries.map(c => c.id === editingId ? updatedCountry : c));
@@ -77,7 +82,8 @@ export function CountryMaster() {
         countryName,
         currency,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setCountries([...countries, newCountry]);
     }
@@ -91,6 +97,7 @@ export function CountryMaster() {
     setCountryName('');
     setCurrency('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -102,6 +109,7 @@ export function CountryMaster() {
     setCountryName(country.countryName);
     setCurrency(country.currency);
     setStatus(country.status);
+    setEntityMappings(country.entityMappings || []);
     setShowForm(true);
   };
 
@@ -236,6 +244,7 @@ export function CountryMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

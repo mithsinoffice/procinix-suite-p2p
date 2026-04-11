@@ -9,6 +9,8 @@ import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecord
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface Contract {
   id: string;
@@ -129,6 +131,7 @@ export function ContractMaster() {
   const [status, setStatus] = useState('Active');
   const [paymentTerms, setPaymentTerms] = useState('');
   const [contractAttachment, setContractAttachment] = useState<File | null>(null);
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<Contract | null>(null);
@@ -231,6 +234,7 @@ export function ContractMaster() {
         contractAttachment,
         approvalStatus,
         originalData: originalRecord,
+        entityMappings,
         updatedBy: 'Admin',
         updatedAt: new Date().toISOString()
       };
@@ -263,6 +267,7 @@ export function ContractMaster() {
         paymentTerms,
         contractAttachment,
         approvalStatus,
+        entityMappings,
         createdBy: 'Admin',
         createdAt: new Date().toISOString()
       };
@@ -297,6 +302,7 @@ export function ContractMaster() {
     setIsEditMode(false);
     setEditingId(null);
     setErrors({});
+    setEntityMappings([]);
   };
 
   const handleEdit = (contract: Contract) => {
@@ -314,6 +320,7 @@ export function ContractMaster() {
     setStatus(contract.status);
     setPaymentTerms(contract.paymentTerms);
     setContractAttachment(contract.contractAttachment || null);
+    setEntityMappings(contract.entityMappings || []);
     setShowForm(true);
   };
 
@@ -589,6 +596,7 @@ export function ContractMaster() {
             <input type="file" accept=".pdf" onChange={handleFileChange} className="px-input" />
             {errors.contractAttachment && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.contractAttachment}</p>}
           </PxFormField>
+          <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

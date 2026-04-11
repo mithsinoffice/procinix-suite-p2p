@@ -6,6 +6,8 @@ import { ApprovalModal } from './ApprovalModal';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface DebitNoteReason {
   id: string;
@@ -41,6 +43,8 @@ export function DebitNoteReasonMaster() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<DebitNoteReason | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
@@ -55,7 +59,8 @@ export function DebitNoteReasonMaster() {
         description,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
       
       setReasons(reasons.map(r => r.id === editingId ? updatedReason : r));
@@ -66,7 +71,8 @@ export function DebitNoteReasonMaster() {
         name,
         description,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setReasons([...reasons, newReason]);
     }
@@ -80,6 +86,7 @@ export function DebitNoteReasonMaster() {
     setName('');
     setDescription('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -91,6 +98,7 @@ export function DebitNoteReasonMaster() {
     setName(reason.name);
     setDescription(reason.description);
     setStatus(reason.status);
+    setEntityMappings(reason.entityMappings || []);
     setShowForm(true);
   };
 
@@ -209,6 +217,7 @@ export function DebitNoteReasonMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

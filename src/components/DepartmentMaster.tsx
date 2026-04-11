@@ -6,6 +6,8 @@ import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecord
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface Department {
   id: string;
@@ -41,6 +43,8 @@ export function DepartmentMaster() {
   const [deptName, setDeptName] = useState('');
   const [headOfDept, setHeadOfDept] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<Department | null>(null);
@@ -57,7 +61,8 @@ export function DepartmentMaster() {
         headOfDept,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
       
       setDepartments(departments.map(d => d.id === editingId ? updatedDept : d));
@@ -68,7 +73,8 @@ export function DepartmentMaster() {
         deptName,
         headOfDept,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setDepartments([...departments, newDept]);
     }
@@ -82,6 +88,7 @@ export function DepartmentMaster() {
     setDeptName('');
     setHeadOfDept('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -93,6 +100,7 @@ export function DepartmentMaster() {
     setDeptName(dept.deptName);
     setHeadOfDept(dept.headOfDept);
     setStatus(dept.status);
+    setEntityMappings(dept.entityMappings || []);
     setShowForm(true);
   };
 
@@ -227,6 +235,7 @@ export function DepartmentMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

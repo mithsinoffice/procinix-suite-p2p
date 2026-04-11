@@ -6,6 +6,8 @@ import { ApprovalModal } from './ApprovalModal';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface ItemCategory {
   id: string;
@@ -39,6 +41,8 @@ export function ItemCategoryMaster() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<ItemCategory | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
@@ -53,7 +57,8 @@ export function ItemCategoryMaster() {
         description,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
 
       setCategories(categories.map(c => c.id === editingId ? updatedCategory : c));
@@ -64,7 +69,8 @@ export function ItemCategoryMaster() {
         name,
         description,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setCategories([...categories, newCategory]);
     }
@@ -78,6 +84,7 @@ export function ItemCategoryMaster() {
     setName('');
     setDescription('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -89,6 +96,7 @@ export function ItemCategoryMaster() {
     setName(category.name);
     setDescription(category.description);
     setStatus(category.status);
+    setEntityMappings(category.entityMappings || []);
     setShowForm(true);
   };
 
@@ -210,6 +218,7 @@ export function ItemCategoryMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

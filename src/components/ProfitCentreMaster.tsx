@@ -6,6 +6,8 @@ import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecord
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface ProfitCentre {
   id: string;
@@ -47,6 +49,8 @@ export function ProfitCentreMaster() {
   const [revenueTarget, setRevenueTarget] = useState('');
   const [region, setRegion] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<ProfitCentre | null>(null);
@@ -76,7 +80,8 @@ export function ProfitCentreMaster() {
         region,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
       
       setProfitCentres(profitCentres.map(p => p.id === editingId ? updatedProfitCentre : p));
@@ -90,7 +95,8 @@ export function ProfitCentreMaster() {
         revenueTarget: parseFloat(revenueTarget),
         region,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setProfitCentres([...profitCentres, newProfitCentre]);
     }
@@ -107,6 +113,7 @@ export function ProfitCentreMaster() {
     setRevenueTarget('');
     setRegion('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -121,6 +128,7 @@ export function ProfitCentreMaster() {
     setRevenueTarget(profitCentre.revenueTarget.toString());
     setRegion(profitCentre.region);
     setStatus(profitCentre.status);
+    setEntityMappings(profitCentre.entityMappings || []);
     setShowForm(true);
   };
 
@@ -259,6 +267,7 @@ export function ProfitCentreMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

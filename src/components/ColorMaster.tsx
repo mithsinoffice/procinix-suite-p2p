@@ -7,6 +7,8 @@ import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface Color {
   id: string;
@@ -42,6 +44,7 @@ export function ColorMaster() {
   const [colorName, setColorName] = useState('');
   const [hexCode, setHexCode] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<Color | null>(null);
@@ -73,9 +76,10 @@ export function ColorMaster() {
         hexCode,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
-      
+
       setColors(colors.map(c => c.id === editingId ? updatedColor : c));
     } else {
       const newColor: Color = {
@@ -84,7 +88,8 @@ export function ColorMaster() {
         colorName,
         hexCode,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setColors([...colors, newColor]);
     }
@@ -98,6 +103,7 @@ export function ColorMaster() {
     setColorName('');
     setHexCode('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -109,6 +115,7 @@ export function ColorMaster() {
     setColorName(color.colorName);
     setHexCode(color.hexCode);
     setStatus(color.status);
+    setEntityMappings(color.entityMappings || []);
     setShowForm(true);
   };
 
@@ -249,6 +256,7 @@ export function ColorMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+          <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

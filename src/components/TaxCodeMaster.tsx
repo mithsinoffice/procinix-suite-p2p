@@ -7,6 +7,8 @@ import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface TaxCode {
   id: string;
@@ -42,6 +44,8 @@ export function TaxCodeMaster() {
   const [description, setDescription] = useState('');
   const [taxRate, setTaxRate] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<TaxCode | null>(null);
@@ -73,7 +77,8 @@ export function TaxCodeMaster() {
         taxRate,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
       
       setTaxCodes(taxCodes.map(t => t.id === editingId ? updatedTaxCode : t));
@@ -84,7 +89,8 @@ export function TaxCodeMaster() {
         description,
         taxRate,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setTaxCodes([...taxCodes, newTaxCode]);
     }
@@ -98,6 +104,7 @@ export function TaxCodeMaster() {
     setDescription('');
     setTaxRate('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -109,6 +116,7 @@ export function TaxCodeMaster() {
     setDescription(tax.description);
     setTaxRate(tax.taxRate);
     setStatus(tax.status);
+    setEntityMappings(tax.entityMappings || []);
     setShowForm(true);
   };
 
@@ -246,6 +254,7 @@ export function TaxCodeMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

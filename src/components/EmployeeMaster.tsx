@@ -9,6 +9,8 @@ import { useMasterData } from '../contexts/MasterDataContext';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface Employee {
   id: string;
@@ -66,6 +68,7 @@ export function EmployeeMaster() {
   const [status, setStatus] = useState('Active');
   const [defaultFunctionalContext, setDefaultFunctionalContext] = useState('');
   const [profilePic, setProfilePic] = useState<string | null>(null);
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
 
   // Approval modal state
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -201,7 +204,8 @@ export function EmployeeMaster() {
         defaultFunctionalContext,
         profilePic: profilePic || undefined,
         approvalStatus,
-        originalData: originalRecord // Keep original data for comparison
+        originalData: originalRecord, // Keep original data for comparison
+        entityMappings,
       };
       
       nextEmployees = employees.map(e => e.id === editingId ? updatedEmployee : e);
@@ -223,7 +227,8 @@ export function EmployeeMaster() {
         status,
         defaultFunctionalContext,
         profilePic: profilePic || undefined,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       nextEmployees = [...employees, newEmployee];
     }
@@ -257,6 +262,7 @@ export function EmployeeMaster() {
     setStatus('Active');
     setDefaultFunctionalContext('');
     setProfilePic(null);
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -278,6 +284,7 @@ export function EmployeeMaster() {
     setStatus(employee.status);
     setDefaultFunctionalContext(employee.defaultFunctionalContext || '');
     setProfilePic(employee.profilePic || null);
+    setEntityMappings(employee.entityMappings || []);
     setShowForm(true);
   };
 
@@ -554,6 +561,7 @@ export function EmployeeMaster() {
               </div>
             )}
           </PxFormField>
+          <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     ) : (

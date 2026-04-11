@@ -4,6 +4,8 @@ import { ArrowLeft, Plus, X, Edit, Eye, Trash2, Upload, Camera } from 'lucide-re
 import { isMysqlApiEnabled, mysqlApiRequest } from '../lib/mysql/client';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface Item {
   id: string;
@@ -105,6 +107,7 @@ export function ItemMaster() {
   const [poRequired, setPoRequired] = useState('No');
   const [reorderLevel, setReorderLevel] = useState('');
   const [maxOrderQty, setMaxOrderQty] = useState('');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
 
   const handleSubmit = async (approvalStatus: Item['approvalStatus'] = 'Pending Approval') => {
     const newItem: Omit<Item, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -129,9 +132,10 @@ export function ItemMaster() {
       poRequired,
       reorderLevel,
       maxOrderQty,
-      approvalStatus
+      approvalStatus,
+      entityMappings,
     };
-    
+
     try {
       if (!isMysqlApiEnabled()) {
         throw new Error('Azure MySQL API is not configured');
@@ -177,6 +181,7 @@ export function ItemMaster() {
     setPoRequired('No');
     setReorderLevel('');
     setMaxOrderQty('');
+    setEntityMappings([]);
   };
 
   const handleDelete = async (id: string) => {
@@ -222,6 +227,7 @@ export function ItemMaster() {
     setPoRequired(item.poRequired);
     setReorderLevel(item.reorderLevel);
     setMaxOrderQty(item.maxOrderQty);
+    setEntityMappings(item.entityMappings || []);
     setShowForm(true);
   };
 
@@ -250,9 +256,10 @@ export function ItemMaster() {
         reorderLevel,
         maxOrderQty,
         approvalStatus,
-        originalData: editingItem
+        originalData: editingItem,
+        entityMappings,
       };
-      
+
       try {
         if (!isMysqlApiEnabled()) {
           throw new Error('Azure MySQL API is not configured');
@@ -481,6 +488,7 @@ export function ItemMaster() {
           <PxFormField label="Max Order Qty" filled={!!maxOrderQty.trim()}>
             <input type="text" value={maxOrderQty} onChange={(e) => setMaxOrderQty(e.target.value)} placeholder="Optional" className="px-input" />
           </PxFormField>
+          <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

@@ -7,6 +7,8 @@ import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecord
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface Change {
   field: string;
@@ -41,6 +43,8 @@ export function CurrencyMaster() {
   const [decimalPrecision, setDecimalPrecision] = useState('2');
   const [isBaseCurrency, setIsBaseCurrency] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
 
   const resetForm = () => {
     setEditingId(null);
@@ -50,6 +54,7 @@ export function CurrencyMaster() {
     setDecimalPrecision('2');
     setIsBaseCurrency(false);
     setIsActive(true);
+    setEntityMappings([]);
   };
 
   const handleEdit = (currency: CurrencyRecord) => {
@@ -60,6 +65,7 @@ export function CurrencyMaster() {
     setDecimalPrecision(String(currency.decimalPrecision));
     setIsBaseCurrency(currency.isBaseCurrency);
     setIsActive(currency.isActive);
+    setEntityMappings(currency.entityMappings || []);
     setShowForm(true);
   };
 
@@ -75,6 +81,7 @@ export function CurrencyMaster() {
       isActive,
       approvalStatus,
       originalData: editingId ? originalRecord : undefined,
+      entityMappings,
     };
 
     if (editingId) {
@@ -208,6 +215,7 @@ export function CurrencyMaster() {
             checked={isActive}
             onChange={setIsActive}
           />
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

@@ -4,6 +4,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface Product {
   id: string;
@@ -80,6 +82,8 @@ export function ProductMaster() {
   const [description, setDescription] = useState('');
   const [hsnCode, setHsnCode] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
 
   const handleSubmit = (approvalStatus: NonNullable<Product['approvalStatus']> = 'Pending Approval') => {
     const newProduct: Product = {
@@ -91,7 +95,8 @@ export function ProductMaster() {
       description,
       hsnCode,
       status,
-      approvalStatus
+      approvalStatus,
+      entityMappings,
     };
     setProducts([...products, newProduct]);
     setShowForm(false);
@@ -106,6 +111,7 @@ export function ProductMaster() {
     setDescription('');
     setHsnCode('');
     setStatus('Active');
+    setEntityMappings([]);
   };
 
   const handleDelete = (id: string) => {
@@ -188,6 +194,7 @@ export function ProductMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

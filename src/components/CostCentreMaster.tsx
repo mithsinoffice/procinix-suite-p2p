@@ -6,6 +6,8 @@ import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecord
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface CostCentre {
   id: string;
@@ -45,6 +47,8 @@ export function CostCentreMaster() {
   const [manager, setManager] = useState('');
   const [budgetLimit, setBudgetLimit] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<CostCentre | null>(null);
@@ -69,7 +73,8 @@ export function CostCentreMaster() {
         budgetLimit: parseFloat(budgetLimit),
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
       
       setCostCentres(costCentres.map(c => c.id === editingId ? updatedCostCentre : c));
@@ -82,7 +87,8 @@ export function CostCentreMaster() {
         manager,
         budgetLimit: parseFloat(budgetLimit),
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setCostCentres([...costCentres, newCostCentre]);
     }
@@ -98,6 +104,7 @@ export function CostCentreMaster() {
     setManager('');
     setBudgetLimit('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -111,6 +118,7 @@ export function CostCentreMaster() {
     setManager(costCentre.manager);
     setBudgetLimit(costCentre.budgetLimit.toString());
     setStatus(costCentre.status);
+    setEntityMappings(costCentre.entityMappings || []);
     setShowForm(true);
   };
 
@@ -243,6 +251,7 @@ export function CostCentreMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

@@ -6,6 +6,8 @@ import { ApprovalModal } from './ApprovalModal';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface PaymentTerm {
   id: string;
@@ -38,6 +40,8 @@ export function VendorPaymentTermsMaster() {
   const [description, setDescription] = useState('');
   const [creditDays, setCreditDays] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<PaymentTerm | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
@@ -52,7 +56,8 @@ export function VendorPaymentTermsMaster() {
         creditDays,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
 
       setPaymentTerms(paymentTerms.map(t => t.id === editingId ? updatedTerm : t));
@@ -63,7 +68,8 @@ export function VendorPaymentTermsMaster() {
         description,
         creditDays,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setPaymentTerms([...paymentTerms, newTerm]);
     }
@@ -77,6 +83,7 @@ export function VendorPaymentTermsMaster() {
     setDescription('');
     setCreditDays('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -88,6 +95,7 @@ export function VendorPaymentTermsMaster() {
     setDescription(term.description);
     setCreditDays(term.creditDays);
     setStatus(term.status);
+    setEntityMappings(term.entityMappings || []);
     setShowForm(true);
   };
 
@@ -209,6 +217,7 @@ export function VendorPaymentTermsMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

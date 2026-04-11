@@ -6,6 +6,8 @@ import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecord
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface Category {
   id: string;
@@ -65,6 +67,7 @@ export function CategoryMaster() {
   const [parentCategory, setParentCategory] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<Category | null>(null);
@@ -82,9 +85,10 @@ export function CategoryMaster() {
         description,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
-      
+
       setCategories(categories.map(c => c.id === editingId ? updatedCategory : c));
     } else {
       const newCategory: Category = {
@@ -94,7 +98,8 @@ export function CategoryMaster() {
         parentCategory,
         description,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setCategories([...categories, newCategory]);
     }
@@ -109,6 +114,7 @@ export function CategoryMaster() {
     setParentCategory('');
     setDescription('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -121,6 +127,7 @@ export function CategoryMaster() {
     setParentCategory(category.parentCategory);
     setDescription(category.description);
     setStatus(category.status);
+    setEntityMappings(category.entityMappings || []);
     setShowForm(true);
   };
 
@@ -266,6 +273,7 @@ export function CategoryMaster() {
           <PxFormField label="Description" filled={!!description.trim()}>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Enter category description" rows={4} className="px-input" />
           </PxFormField>
+          <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

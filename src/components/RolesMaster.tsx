@@ -3,6 +3,8 @@ import { Plus, Search, Edit, Trash2, X, Shield, Users, Check, AlertCircle, Clock
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface Role {
   id: string;
@@ -95,6 +97,7 @@ export function RolesMaster() {
     permissions: [] as string[],
     status: 'Pending Approval' as const
   });
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
 
   const availablePermissions = [
     'Create PO', 'View PO', 'Edit Draft PO', 'Delete Draft PO',
@@ -138,7 +141,8 @@ export function RolesMaster() {
       ...formData,
       userCount: 0,
       createdDate: new Date().toISOString().split('T')[0],
-      approvalStatus: 'Pending'
+      approvalStatus: 'Pending',
+      entityMappings,
     };
     setRoles([...roles, newRole]);
     setShowCreateModal(false);
@@ -149,6 +153,7 @@ export function RolesMaster() {
       permissions: [],
       status: 'Pending Approval'
     });
+    setEntityMappings([]);
   };
 
   const handleEdit = (role: Role) => {
@@ -160,12 +165,13 @@ export function RolesMaster() {
       permissions: role.permissions,
       status: role.status
     });
+    setEntityMappings(role.entityMappings || []);
     setShowCreateModal(true);
   };
 
   const handleUpdate = () => {
     if (selectedRole) {
-      setRoles(roles.map(r => r.id === selectedRole.id ? { ...r, ...formData, approvalStatus: 'Pending' } : r));
+      setRoles(roles.map(r => r.id === selectedRole.id ? { ...r, ...formData, approvalStatus: 'Pending', entityMappings } : r));
       setShowCreateModal(false);
       setSelectedRole(null);
       setFormData({
@@ -175,6 +181,7 @@ export function RolesMaster() {
         permissions: [],
         status: 'Pending Approval'
       });
+      setEntityMappings([]);
     }
   };
 
@@ -313,6 +320,7 @@ export function RolesMaster() {
               ))}
             </div>
           </PxFormField>
+          <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

@@ -7,6 +7,8 @@ import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecord
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface Change {
   field: string;
@@ -41,6 +43,8 @@ export function ExchangeRateMaster() {
   const [rateType, setRateType] = useState('Standard');
   const [effectiveFromDate, setEffectiveFromDate] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
 
   const resetForm = () => {
     setEditingId(null);
@@ -50,6 +54,7 @@ export function ExchangeRateMaster() {
     setRateType('Standard');
     setEffectiveFromDate('');
     setIsActive(true);
+    setEntityMappings([]);
   };
 
   const handleEdit = (rate: ExchangeRateRecord) => {
@@ -60,6 +65,7 @@ export function ExchangeRateMaster() {
     setRateType(rate.rateType);
     setEffectiveFromDate(rate.effectiveFromDate);
     setIsActive(rate.isActive);
+    setEntityMappings(rate.entityMappings || []);
     setShowForm(true);
   };
 
@@ -75,6 +81,7 @@ export function ExchangeRateMaster() {
       isActive,
       approvalStatus,
       originalData: editingId ? originalRecord : undefined,
+      entityMappings,
     };
 
     if (editingId) {
@@ -218,6 +225,7 @@ export function ExchangeRateMaster() {
             checked={isActive}
             onChange={setIsActive}
           />
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

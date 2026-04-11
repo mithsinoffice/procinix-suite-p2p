@@ -4,6 +4,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface SKU {
   id: string;
@@ -57,6 +59,7 @@ export function SKUMaster() {
   const [styleCode, setStyleCode] = useState('');
   const [season, setSeason] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
 
   // Variation Generator State
   const [parentItemCode, setParentItemCode] = useState('');
@@ -107,7 +110,8 @@ export function SKUMaster() {
       size: sizeCode || 'M',
       color: colorCode || 'Black',
       status,
-      approvalStatus
+      approvalStatus,
+      entityMappings,
     };
     setSKUs([...skus, newSKU]);
     setShowAddForm(false);
@@ -126,6 +130,7 @@ export function SKUMaster() {
     setStyleCode('');
     setSeason('');
     setStatus('Active');
+    setEntityMappings([]);
   };
 
   const handleGenerateCombinations = () => {
@@ -322,6 +327,7 @@ export function SKUMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+          <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );

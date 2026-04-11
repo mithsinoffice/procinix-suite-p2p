@@ -6,6 +6,8 @@ import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecord
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { EntityMappingSelector } from './shared/EntityMappingSelector';
+import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 
 interface Size {
   id: string;
@@ -43,6 +45,8 @@ export function SizeMaster() {
   const [sizeCategory, setSizeCategory] = useState('');
   const [sortOrder, setSortOrder] = useState('');
   const [status, setStatus] = useState('Active');
+  const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<Size | null>(null);
@@ -60,7 +64,8 @@ export function SizeMaster() {
         sortOrder,
         status,
         approvalStatus,
-        originalData: originalRecord
+        originalData: originalRecord,
+        entityMappings,
       };
       
       setSizes(sizes.map(s => s.id === editingId ? updatedSize : s));
@@ -72,7 +77,8 @@ export function SizeMaster() {
         sizeCategory,
         sortOrder,
         status,
-        approvalStatus
+        approvalStatus,
+        entityMappings,
       };
       setSizes([...sizes, newSize]);
     }
@@ -87,6 +93,7 @@ export function SizeMaster() {
     setSizeCategory('');
     setSortOrder('');
     setStatus('Active');
+    setEntityMappings([]);
     setIsEditMode(false);
     setEditingId(null);
   };
@@ -99,6 +106,7 @@ export function SizeMaster() {
     setSizeCategory(size.sizeCategory);
     setSortOrder(size.sortOrder);
     setStatus(size.status);
+    setEntityMappings(size.entityMappings || []);
     setShowForm(true);
   };
 
@@ -244,6 +252,7 @@ export function SizeMaster() {
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
+                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );
