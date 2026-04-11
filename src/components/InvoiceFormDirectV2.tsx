@@ -635,6 +635,39 @@ export function InvoiceFormDirectV2() {
   const activeEntities = useMemo(() => allEntities.filter((e: any) => e.isActive !== false), [allEntities]);
   const activeDepartments = useMemo(() => allDepartments.filter((d: any) => d.isActive !== false && (d.status !== 'Inactive')), [allDepartments]);
 
+  // Derived: selected entity object + entity-filtered data
+  const selectedEntityObj = useMemo(() => activeEntities.find((e: any) => (e.name || e.legalName) === entityName), [activeEntities, entityName]);
+  const selectedEntityId = selectedEntityObj?.id;
+  const selectedEntityCurrency = (selectedEntityObj as any)?.currency;
+
+  const { currencies: allCurrencies } = useMasterData();
+
+  const filteredCurrencies = useMemo(() => {
+    if (!selectedEntityId) return allCurrencies.filter((c: any) => c.isActive !== false);
+    return allCurrencies.filter((c: any) => {
+      if (c.isActive === false) return false;
+      if (c.code === selectedEntityCurrency) return true;
+      const mappings = Array.isArray(c.entityMappings) ? c.entityMappings : [];
+      return mappings.length === 0 || mappings.some((m: any) => m.entityId === selectedEntityId);
+    });
+  }, [allCurrencies, selectedEntityId, selectedEntityCurrency]);
+
+  const filteredVendors = useMemo(() => {
+    if (!selectedEntityId) return activeVendors;
+    return activeVendors.filter((v: any) => {
+      const mappings = Array.isArray(v.entityMappings) ? v.entityMappings : [];
+      return mappings.length === 0 || mappings.some((m: any) => m.entityId === selectedEntityId);
+    });
+  }, [activeVendors, selectedEntityId]);
+
+  const filteredDepartments = useMemo(() => {
+    if (!selectedEntityId) return activeDepartments;
+    return activeDepartments.filter((d: any) => {
+      const mappings = Array.isArray(d.entityMappings) ? d.entityMappings : [];
+      return mappings.length === 0 || mappings.some((m: any) => m.entityId === selectedEntityId);
+    });
+  }, [activeDepartments, selectedEntityId]);
+
   /* ---- AI invoice hydration state ---- */
   const [aiInvoiceData, setAiInvoiceData] = useState<any>(null);
   const [aiHydrated, setAiHydrated] = useState(false);
@@ -667,14 +700,14 @@ export function InvoiceFormDirectV2() {
   /* ---- form field state (populated by AI or manual entry) ---- */
   const [vendorName, setVendorName] = useState('');
   const [vendorGroup, setVendorGroup] = useState('');
-  const [entityName, setEntityName] = useState('');
+  const [entityName, setEntityName] = useState(() => currentCompany?.name || '');
   const [vendorLocation, setVendorLocation] = useState('');
   const [vendorGstin, setVendorGstin] = useState('');
   const [vendorState, setVendorState] = useState('');
   const [vendorPan, setVendorPan] = useState('');
-  const [billingLocation, setBillingLocation] = useState('');
-  const [billToGstin, setBillToGstin] = useState('');
-  const [invoiceCurrency, setInvoiceCurrency] = useState('INR');
+  const [billingLocation, setBillingLocation] = useState(() => currentCompany?.name || '');
+  const [billToGstin, setBillToGstin] = useState(() => (currentCompany as any)?.gstin || '');
+  const [invoiceCurrency, setInvoiceCurrency] = useState(() => (currentCompany as any)?.currency || 'INR');
   const [department, setDepartment] = useState('');
   const [subDepartment, setSubDepartment] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -1087,13 +1120,17 @@ export function InvoiceFormDirectV2() {
                       const ent = activeEntities.find((ee: any) => (ee.name || ee.legalName) === name);
                       if (ent) {
                         setBillToGstin((ent as any).gstin || '');
-                        setBillingLocation((ent as any).name || '');
-                        // Reset vendor when entity changes
+                        setBillingLocation((ent as any).name || (ent as any).legalName || '');
+                        // Auto-set currency from entity
+                        setInvoiceCurrency((ent as any).currency || 'INR');
+                        // Reset dependent fields when entity changes
                         setVendorName('');
                         setVendorGstin('');
                         setVendorPan('');
                         setVendorGroup('');
                         setVendorState('');
+                        setDepartment('');
+                        setSubDepartment('');
                       }
                     }}
                   >
@@ -1131,21 +1168,9 @@ export function InvoiceFormDirectV2() {
                     }}
                   >
                     <option value="">Select vendor...</option>
-                    {(() => {
-                      // Filter vendors by selected entity mapping
-                      const selectedEntity = activeEntities.find((ee: any) => (ee.name || ee.legalName) === entityName);
-                      const entityId = selectedEntity?.id;
-                      const filtered = entityId
-                        ? activeVendors.filter((v: any) => {
-                            const mappings = Array.isArray(v.entityMappings) ? v.entityMappings : [];
-                            // Show vendor if: mapped to this entity, or has no mappings (global)
-                            return mappings.length === 0 || mappings.some((m: any) => m.entityId === entityId);
-                          })
-                        : activeVendors;
-                      return filtered.map((v: any) => (
-                        <option key={v.id} value={v.name || v.legalName}>{v.name || v.legalName}{v.code ? ` (${v.code})` : ''}</option>
-                      ));
-                    })()}
+                    {filteredVendors.map((v: any) => (
+                      <option key={v.id} value={v.name || v.legalName}>{v.name || v.legalName}{v.code ? ` (${v.code})` : ''}</option>
+                    ))}
                     {vendorName && !activeVendors.some((v: any) => (v.name || v.legalName) === vendorName) && (
                       <option value={vendorName}>{vendorName} (OCR extracted)</option>
                     )}
@@ -1194,16 +1219,17 @@ export function InvoiceFormDirectV2() {
                     )}
                   </div>
                 </div>
-                {/* Currency */}
+                {/* Currency (auto-set from entity, filtered by entity mapping) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Currency</span> {invoiceCurrency && <OcrBadge />}</div>
+                  <div style={S.fieldLabel}><span>Currency</span> <AutoBadge /></div>
                   <select className="px-select" value={invoiceCurrency} onChange={(e) => setInvoiceCurrency(e.target.value)}>
-                    <option value="INR">INR — Indian Rupee</option>
-                    <option value="USD">USD — US Dollar</option>
-                    <option value="EUR">EUR — Euro</option>
-                    <option value="GBP">GBP — British Pound</option>
-                    <option value="AED">AED — UAE Dirham</option>
-                    <option value="SGD">SGD — Singapore Dollar</option>
+                    <option value="">Select currency...</option>
+                    {filteredCurrencies.map((c: any) => (
+                      <option key={c.id} value={c.code}>{c.code}{c.name ? ` — ${c.name}` : ''}{c.code === selectedEntityCurrency ? ' (Entity default)' : ''}</option>
+                    ))}
+                    {invoiceCurrency && !filteredCurrencies.some((c: any) => c.code === invoiceCurrency) && (
+                      <option value={invoiceCurrency}>{invoiceCurrency}</option>
+                    )}
                   </select>
                 </div>
                 {/* Department (from Department Master) */}
@@ -1211,7 +1237,7 @@ export function InvoiceFormDirectV2() {
                   <div style={S.fieldLabel}><span>Department</span><span style={S.required}>*</span></div>
                   <select className="px-select" value={department} onChange={(e) => setDepartment(e.target.value)}>
                     <option value="">Select department...</option>
-                    {activeDepartments.map((d: any) => (
+                    {filteredDepartments.map((d: any) => (
                       <option key={d.id} value={d.deptName || d.name}>{d.deptName || d.name}{d.deptCode || d.code ? ` (${d.deptCode || d.code})` : ''}</option>
                     ))}
                   </select>
