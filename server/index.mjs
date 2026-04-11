@@ -1223,11 +1223,9 @@ const server = http.createServer(async (req, res) => {
           'Content-Type': 'application/pdf',
           'Content-Length': stat.size,
           'Content-Disposition': 'inline',
+          // Always allow CORS for PDF serving (embed/iframe needs it)
+          'Access-Control-Allow-Origin': '*',
         };
-        if (res._corsOrigin) {
-          headers['Access-Control-Allow-Origin'] = res._corsOrigin;
-          headers['Vary'] = 'Origin';
-        }
         res.writeHead(200, headers);
         fs.createReadStream(filePath).pipe(res);
         return;
@@ -1251,7 +1249,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/invoices') {
       const source = url.searchParams.get('source');
       const status = url.searchParams.get('status');
-      let sql = 'SELECT id, invoice_number, invoice_date, due_date, vendor_name, vendor_gstin, currency, subtotal, tax_amount, total_amount, po_number, po_id, status, source, ingestion_log_id, created_at FROM invoices';
+      let sql = 'SELECT id, invoice_number, invoice_date, due_date, vendor_name, vendor_gstin, currency, subtotal, tax_amount, total_amount, po_number, po_id, status, source, ingestion_log_id, attachment_path, lane, created_at FROM invoices';
       const conditions = [];
       const params = [];
       if (source) { conditions.push('source = ?'); params.push(source); }
@@ -1423,7 +1421,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/ap/invoices') {
       const lane = url.searchParams.get('lane');
       const status = url.searchParams.get('status');
-      let sql = 'SELECT id, invoice_number, invoice_date, due_date, vendor_name, vendor_gstin, currency, subtotal, tax_amount, total_amount, po_number, po_id, status, source, lane, posting_readiness_score, processing_status, auto_post_flag, human_touched_flag, created_at FROM invoices WHERE source = ?';
+      let sql = 'SELECT id, invoice_number, invoice_date, due_date, vendor_name, vendor_gstin, currency, subtotal, tax_amount, total_amount, po_number, po_id, status, source, lane, posting_readiness_score, processing_status, auto_post_flag, human_touched_flag, attachment_path, created_at FROM invoices WHERE source = ?';
       const params = ['email_ingestion'];
       if (lane) { sql += ' AND lane = ?'; params.push(lane); }
       if (status) { sql += ' AND processing_status = ?'; params.push(status); }

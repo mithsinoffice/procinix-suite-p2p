@@ -118,6 +118,55 @@ const AGENT_ICONS: Record<string, typeof Shield> = {
 /* ═══════════════════════════════════════════════════════════════════
    COMPONENT
    ═══════════════════════════════════════════════════════════════════ */
+function PdfViewer({ invoiceId }: { invoiceId: string }) {
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    const loadPdf = async () => {
+      try {
+        const res = await fetch(`${API}/api/invoices/${invoiceId}/pdf`);
+        if (!res.ok) { setError(true); return; }
+        const blob = await res.blob();
+        objectUrl = URL.createObjectURL(blob);
+        setPdfUrl(objectUrl);
+      } catch {
+        setError(true);
+      }
+    };
+    loadPdf();
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [invoiceId]);
+
+  if (error) {
+    return (
+      <div className="rounded-lg flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--color-cloud)', border: '2px dashed var(--color-silver)', minHeight: 420 }}>
+        <AlertCircle className="w-10 h-10 mb-3" style={{ color: 'var(--color-error)' }} />
+        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Unable to load PDF</p>
+      </div>
+    );
+  }
+
+  if (!pdfUrl) {
+    return (
+      <div className="rounded-lg flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--color-cloud)', minHeight: 420 }}>
+        <Loader2 className="w-8 h-8 animate-spin mb-3" style={{ color: 'var(--color-teal)' }} />
+        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Loading PDF...</p>
+      </div>
+    );
+  }
+
+  return (
+    <iframe
+      src={pdfUrl}
+      className="w-full rounded-lg"
+      style={{ height: 520, border: '1px solid var(--color-silver)' }}
+      title="Invoice PDF"
+    />
+  );
+}
+
 export function APValidationWorkbench() {
   const navigate = useNavigate();
 
@@ -583,12 +632,7 @@ export function APValidationWorkbench() {
             </div>
             <div className="p-4">
               {inv.attachment_path ? (
-                <embed
-                  src={`http://127.0.0.1:8787/api/invoices/${inv.id}/pdf`}
-                  type="application/pdf"
-                  className="w-full rounded-lg"
-                  style={{ height: 520, border: '1px solid var(--color-silver)' }}
-                />
+                <PdfViewer invoiceId={inv.id} />
               ) : (
                 <div
                   className="rounded-lg flex flex-col items-center justify-center"
