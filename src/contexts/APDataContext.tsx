@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { ensureDomainDocument, saveDomainDocument } from '../lib/supabase/documentStore';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 
 // ============= INTERFACES =============
 
@@ -31,6 +31,7 @@ export interface PurchaseOrder {
   openAmount: number; // Amount yet to be invoiced
   status: 'Draft' | 'Issued' | 'Partially Received' | 'Fully Received' | 'Closed / Cancelled';
   department: string;
+  shipToState?: string;
   type: 'Goods' | 'Services';
   currency: 'INR' | 'USD' | 'EUR' | 'GBP';
   milestones?: Milestone[]; // Optional milestones for PO-based advances
@@ -70,6 +71,7 @@ export interface POLineItem {
   igst: number;
   grossAmount: number;
   tdsPercent: number;
+  tdsSection?: string;
   tdsAmount: number;
   netAmount: number;
   costCentre: string;
@@ -89,6 +91,7 @@ export interface GRN {
   status: 'Pending' | 'Partial' | 'Complete';
   allocationStatus: 'Not Allocated' | 'Partially Allocated' | 'Fully Allocated' | 'Accepted';
   lineItems: GRNLineItem[];
+  po?: PurchaseOrder;
 }
 
 export interface GRNLineItem {
@@ -926,21 +929,21 @@ export function APDataProvider({ children }: { children: ReactNode }) {
     debitNotes: mockDebitNotes,
   };
 
-  const [vendors, setVendors] = useState<Vendor[]>(defaultDocument.vendors);
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(defaultDocument.purchaseOrders);
-  const [grns, setGRNs] = useState<GRN[]>(defaultDocument.grns);
-  const [advances, setAdvances] = useState<Advance[]>(defaultDocument.advances);
-  const [advanceRequests, setAdvanceRequests] = useState<AdvanceRequest[]>(defaultDocument.advanceRequests);
-  const [advanceUtilizations, setAdvanceUtilizations] = useState<AdvanceUtilization[]>(defaultDocument.advanceUtilizations);
-  const [invoices, setInvoices] = useState<Invoice[]>(defaultDocument.invoices);
-  const [debitNotes, setDebitNotes] = useState<DebitNote[]>(defaultDocument.debitNotes);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [grns, setGRNs] = useState<GRN[]>([]);
+  const [advances, setAdvances] = useState<Advance[]>([]);
+  const [advanceRequests, setAdvanceRequests] = useState<AdvanceRequest[]>([]);
+  const [advanceUtilizations, setAdvanceUtilizations] = useState<AdvanceUtilization[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [debitNotes, setDebitNotes] = useState<DebitNote[]>([]);
   const [isHydrating, setIsHydrating] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
     const hydrate = async () => {
-      const document = await ensureDomainDocument('ap_data', defaultDocument);
+      const document = await ensureDomainDocument('ap_data', defaultDocument, { seedIfMissing: false });
       if (!isMounted) {
         return;
       }
@@ -970,7 +973,7 @@ export function APDataProvider({ children }: { children: ReactNode }) {
 
     const fetchIngested = async () => {
       try {
-        const res = await fetch('http://127.0.0.1:8787/api/invoices?source=email_ingestion');
+        const res = await fetch('/api/invoices?source=email_ingestion');
         if (!res.ok) return;
         const json = await res.json();
         if (!json.success || !Array.isArray(json.data) || cancelled) return;

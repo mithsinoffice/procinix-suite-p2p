@@ -39,7 +39,7 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 async function apiFetch(path: string, opts: RequestInit = {}) {
-  const res = await fetch(`http://127.0.0.1:8787${path}`, {
+  const res = await fetch(`${path}`, {
     ...opts,
     headers: { 'Content-Type': 'application/json', ...getAuthHeaders(), ...opts.headers },
   });

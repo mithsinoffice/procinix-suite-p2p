@@ -208,7 +208,7 @@ export function EnterpriseFinanceNavigation() {
               <Eye 
                 className="w-3.5 h-3.5" 
                 style={{ color: 'var(--color-slate)' }} 
-                title="View Only Access"
+                aria-label="View Only Access"
               />
             )}
           </>

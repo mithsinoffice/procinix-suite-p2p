@@ -87,7 +87,7 @@ const AGENTS: AgentMeta[] = [
   },
 ];
 
-const API_BASE = 'http://127.0.0.1:8787/api/ap/agent-config';
+const API_BASE = `${import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || ''}/api/ap/agent-config`;
 
 /* ─── Component ────────────────────────────────────────────────── */
 export function AgentConfigEngine() {

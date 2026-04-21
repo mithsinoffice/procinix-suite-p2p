@@ -62,6 +62,7 @@ export const SUBKO_VENDORS: VendorMaster[] = [
     }],
     createdBy: 'Admin',
     createdDate: '2024-01-05',
+    approvalStatus: 'Approved',
     approvedBy: 'Procurement Head',
     approvedDate: '2024-01-08'
   },
@@ -78,6 +79,7 @@ export const SUBKO_VENDORS: VendorMaster[] = [
     vendorType: 'Domestic',
     msmeRegistered: false,
     status: 'Active',
+    approvalStatus: 'Pending Approval',
     paymentTerms: 'Net 15 Days',
     creditDays: 15,
     tdsApplicable: false, // Goods supplier - no TDS
@@ -118,9 +120,7 @@ export const SUBKO_VENDORS: VendorMaster[] = [
       isPrimary: true
     }],
     createdBy: 'Admin',
-    createdDate: '2024-02-10',
-    approvedBy: 'Procurement Head',
-    approvedDate: '2024-02-12'
+    createdDate: '2024-02-10'
   },
   {
     id: 'VEN-SUBKO-003',
@@ -137,6 +137,7 @@ export const SUBKO_VENDORS: VendorMaster[] = [
     msmeNumber: 'MSME-KA-29-234567',
     msmeCategory: 'Micro',
     status: 'Active',
+    approvalStatus: 'Draft',
     paymentTerms: 'Net 45 Days',
     creditDays: 45,
     tdsApplicable: false, // Goods supplier - no TDS
@@ -165,9 +166,7 @@ export const SUBKO_VENDORS: VendorMaster[] = [
       isPrimary: true
     }],
     createdBy: 'Admin',
-    createdDate: '2024-02-25',
-    approvedBy: 'Procurement Head',
-    approvedDate: '2024-02-28'
+    createdDate: '2024-02-25'
   },
   {
     id: 'VEN-SUBKO-004',
@@ -184,6 +183,7 @@ export const SUBKO_VENDORS: VendorMaster[] = [
     msmeNumber: 'MSME-KA-29-345678',
     msmeCategory: 'Small',
     status: 'Active',
+    approvalStatus: 'Rejected',
     paymentTerms: 'Net 7 Days',
     creditDays: 7,
     tdsApplicable: false, // Goods supplier - no TDS
@@ -212,9 +212,7 @@ export const SUBKO_VENDORS: VendorMaster[] = [
       isPrimary: true
     }],
     createdBy: 'Admin',
-    createdDate: '2024-01-15',
-    approvedBy: 'Procurement Head',
-    approvedDate: '2024-01-18'
+    createdDate: '2024-01-15'
   },
   {
     id: 'VEN-SUBKO-005',

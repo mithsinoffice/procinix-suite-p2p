@@ -1,5 +1,6 @@
 import { BookOpen, AlertCircle } from 'lucide-react';
 import { useMasterData } from '../../contexts/MasterDataContext';
+import { isRecordMappedToEntity } from '../../lib/masters/entityMapping';
 
 /**
  * ACCOUNT CODE SELECTOR - SHARED COMPONENT
@@ -17,6 +18,7 @@ interface AccountCodeSelectorProps {
   disabled?: boolean;
   error?: string;
   filterByType?: 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense';
+  entityId?: string;
 }
 
 export function AccountCodeSelector({
@@ -27,11 +29,14 @@ export function AccountCodeSelector({
   required = false,
   disabled = false,
   error,
-  filterByType
+  filterByType,
+  entityId
 }: AccountCodeSelectorProps) {
   const { accountCodes, getActiveAccountCodes, getAccountCodeById } = useMasterData();
   
-  let availableAccountCodes = getActiveAccountCodes();
+  let availableAccountCodes = entityId
+    ? accountCodes.filter((ac) => ac.isActive && isRecordMappedToEntity(ac, entityId))
+    : getActiveAccountCodes();
   if (filterByType) {
     availableAccountCodes = availableAccountCodes.filter(ac => ac.accountType === filterByType);
   }

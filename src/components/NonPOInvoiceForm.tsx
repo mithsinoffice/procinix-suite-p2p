@@ -1,14 +1,24 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Upload, FileText, Plus, Trash2, AlertCircle,
   CheckCircle, Save, Send, Eye, Building2, Calendar, DollarSign,
   Package, Target, BookOpen, Receipt, Info
 } from 'lucide-react';
-import { VendorSelector, ItemSelector, EntitySelector, CostCentreSelector, TaxCodeSelector, AccountCodeSelector } from './shared';
+import {
+  VendorSelector,
+  ItemSelector,
+  EntitySelector,
+  CostCentreSelector,
+  TaxCodeSelector,
+  AccountCodeSelector,
+  DepartmentSelector,
+} from './shared';
 import { useMasterData } from '../contexts/MasterDataContext';
+import { useAPData } from '../contexts/APDataContext';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { JournalEntryPreview, LineItemRow, NarrationField, TDSThresholdTracker } from './invoice';
 
 /**
  * NON-PO INVOICE CREATION FORM
@@ -70,7 +80,18 @@ interface OCRData {
 
 export function NonPOInvoiceForm() {
   const navigate = useNavigate();
-  const { getVendorById, getItemById, getCostCentreById, getTaxCodeById } = useMasterData();
+  const {
+    getVendorById,
+    getItemById,
+    getCostCentreById,
+    getTaxCodeById,
+    getActiveTDSSections,
+    getTDSSectionByCode,
+    currentCompany,
+  } = useMasterData();
+  const { addInvoice } = useAPData();
+  const activeTdsSections = getActiveTDSSections();
+  const defaultTdsSection = activeTdsSections[0];
 
   // Upload & OCR State
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -82,43 +103,25 @@ export function NonPOInvoiceForm() {
   const [vendorId, setVendorId] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
-  const [entityId, setEntityId] = useState('ENT-001'); // From context
+  const [entityId, setEntityId] = useState(currentCompany?.id || '');
   const [supplyType, setSupplyType] = useState<'Goods' | 'Services'>('Services');
-  const [placeOfSupply, setPlaceOfSupply] = useState('KA');
+  const [placeOfSupply, setPlaceOfSupply] = useState('');
   const [expenseCategory, setExpenseCategory] = useState('');
   const [natureOfExpense, setNatureOfExpense] = useState('');
   const [costCentreId, setCostCentreId] = useState('');
+  const [departmentName, setDepartmentName] = useState('');
   const [profitCentreId, setProfitCentreId] = useState('');
   const [projectId, setProjectId] = useState('');
   const [accountCodeId, setAccountCodeId] = useState('');
   const [currency, setCurrency] = useState('INR');
-  const [paymentTerms, setPaymentTerms] = useState('Net 30 Days');
+  const [paymentTerms, setPaymentTerms] = useState('');
+  const [narration, setNarration] = useState('');
+  const [vendorNarration, setVendorNarration] = useState('');
+  const [internalRemarks, setInternalRemarks] = useState('');
 
   // Line Items
-  const [lineItems, setLineItems] = useState<LineItem[]>([
-    {
-      id: '1',
-      itemId: '',
-      itemCode: '',
-      description: '',
-      quantity: 1,
-      unitRate: 0,
-      baseAmount: 0,
-      gstRate: 18,
-      gstAmount: 0,
-      cgst: 0,
-      sgst: 0,
-      igst: 0,
-      grossAmount: 0,
-      tdsSection: '194J',
-      tdsRate: 10,
-      tdsAmount: 0,
-      netPayable: 0,
-      costCentreId: '',
-      profitCentreId: '',
-      projectId: ''
-    }
-  ]);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const selectedVendor = vendorId ? getVendorById(vendorId) : undefined;
 
   // Advance & Retention
   const [showAdvanceSection, setShowAdvanceSection] = useState(false);
@@ -131,11 +134,87 @@ export function NonPOInvoiceForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showValidation, setShowValidation] = useState(false);
 
-  // Mock open advances for selected vendor
-  const openAdvances = [
-    { id: 'ADV-001', amount: 25000, date: '2024-11-15', reference: 'Advance Payment 1' },
-    { id: 'ADV-002', amount: 25000, date: '2024-11-20', reference: 'Advance Payment 2' }
-  ];
+  const validateTDSRules = (items: LineItem[]) => {
+    const tdsErrors: string[] = [];
+    items.forEach((item, index) => {
+      const rate = Number(item.tdsRate || 0);
+      if (rate <= 0) {
+        return;
+      }
+
+      if (!item.tdsSection) {
+        tdsErrors.push(`Line ${index + 1}: TDS section is required when TDS rate is applied.`);
+        return;
+      }
+
+      const section = getTDSSectionByCode(item.tdsSection);
+      if (!section || section.status !== 'Active' || (section.approvalStatus ?? 'Approved') !== 'Approved') {
+        tdsErrors.push(`Line ${index + 1}: TDS section ${item.tdsSection} is inactive or not approved.`);
+        return;
+      }
+
+      const thresholdAmount = Number(section.thresholdAmount || 0);
+      if (thresholdAmount > 0 && item.baseAmount < thresholdAmount) {
+        tdsErrors.push(
+          `Line ${index + 1}: ${item.tdsSection} threshold ₹${thresholdAmount.toLocaleString('en-IN')} not met (base ₹${item.baseAmount.toLocaleString('en-IN')}).`
+        );
+      }
+    });
+
+    return tdsErrors;
+  };
+
+  const getTdsLineError = (item: LineItem, index: number): string => {
+    if ((item.tdsRate || 0) <= 0) {
+      return '';
+    }
+    if (!item.tdsSection) {
+      return `Line ${index + 1}: TDS section is required when TDS rate is applied.`;
+    }
+
+    const section = getTDSSectionByCode(item.tdsSection);
+    if (!section || section.status !== 'Active' || (section.approvalStatus ?? 'Approved') !== 'Approved') {
+      return `Line ${index + 1}: TDS section ${item.tdsSection} is inactive or not approved.`;
+    }
+
+    const thresholdAmount = Number(section.thresholdAmount || 0);
+    if (thresholdAmount > 0 && item.baseAmount < thresholdAmount) {
+      return `Line ${index + 1}: ${item.tdsSection} threshold ₹${thresholdAmount.toLocaleString('en-IN')} not met (base ₹${item.baseAmount.toLocaleString('en-IN')}).`;
+    }
+
+    return '';
+  };
+
+  const tdsLineErrors = useMemo(
+    () =>
+      lineItems.reduce<Record<string, string>>((acc, item, index) => {
+        const error = getTdsLineError(item, index);
+        if (error) {
+          acc[item.id] = error;
+        }
+        return acc;
+      }, {}),
+    [lineItems]
+  );
+
+  useEffect(() => {
+    if (currentCompany?.id) {
+      setEntityId(currentCompany.id);
+    }
+  }, [currentCompany?.id]);
+
+  useEffect(() => {
+    setVendorId('');
+    setCostCentreId('');
+    setDepartmentName('');
+    setAccountCodeId('');
+    setProfitCentreId('');
+    setProjectId('');
+    setSelectedAdvances([]);
+  }, [entityId]);
+
+  // Open advances for selected vendor (to be populated from backend)
+  const openAdvances: { id: string; amount: number; date: string; reference: string }[] = [];
 
   // File upload handler
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,29 +226,21 @@ export function NonPOInvoiceForm() {
       // Simulate OCR processing
       setTimeout(() => {
         const mockOCRData: OCRData = {
-          vendorName: 'Tech Consulting Services Pvt Ltd',
-          vendorGSTIN: '29AABCT1234F1Z5',
-          invoiceNumber: 'INV-2024-987',
-          invoiceDate: '2024-12-10',
-          invoiceAmount: 125000,
-          currency: 'INR',
-          lineItems: [
-            {
-              description: 'IT Consulting Services - December 2024',
-              quantity: 40,
-              rate: 2500,
-              tax: 18,
-              confidence: 0.95
-            }
-          ],
+          vendorName: '',
+          vendorGSTIN: '',
+          invoiceNumber: '',
+          invoiceDate: '',
+          invoiceAmount: 0,
+          currency: '',
+          lineItems: [],
           confidence: {
-            vendorName: 0.92,
-            invoiceNumber: 0.98,
-            invoiceDate: 0.95,
-            invoiceAmount: 0.97
+            vendorName: 0,
+            invoiceNumber: 0,
+            invoiceDate: 0,
+            invoiceAmount: 0
           }
         };
-        
+
         setOcrData(mockOCRData);
         setOcrStatus('complete');
         setShowOCRReview(true);
@@ -240,6 +311,9 @@ export function NonPOInvoiceForm() {
 
   // Add new line item
   const addLineItem = () => {
+    const baseRate = defaultTdsSection
+      ? (defaultTdsSection.rateCompany || defaultTdsSection.rateIndividual || 0)
+      : 0;
     const newItem: LineItem = {
       id: Date.now().toString(),
       itemId: '',
@@ -254,8 +328,8 @@ export function NonPOInvoiceForm() {
       sgst: 0,
       igst: 0,
       grossAmount: 0,
-      tdsSection: '194J',
-      tdsRate: 10,
+      tdsSection: defaultTdsSection?.sectionCode || '',
+      tdsRate: baseRate,
       tdsAmount: 0,
       netPayable: 0,
       costCentreId: costCentreId,
@@ -271,6 +345,31 @@ export function NonPOInvoiceForm() {
       const updatedItems = lineItems.filter((_, i) => i !== index);
       setLineItems(updatedItems);
     }
+  };
+
+  const handleSharedRowChange = (index: number, updatedLine: any) => {
+    const updatedItems = [...lineItems];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      description: updatedLine.description || updatedLine.itemName || '',
+      quantity: Number(updatedLine.qty || 0),
+      unitRate: Number(updatedLine.rate || 0),
+      baseAmount: Number(updatedLine.taxableAmount || 0),
+      gstRate: Number(updatedLine.gstRate || 0),
+      gstAmount: Number(updatedLine.igst || 0) + Number(updatedLine.cgst || 0) + Number(updatedLine.sgst || 0),
+      igst: Number(updatedLine.igst || 0),
+      cgst: Number(updatedLine.cgst || 0),
+      sgst: Number(updatedLine.sgst || 0),
+      grossAmount: Number(updatedLine.taxableAmount || 0) + Number(updatedLine.igst || 0) + Number(updatedLine.cgst || 0) + Number(updatedLine.sgst || 0),
+      tdsSection: updatedLine.tdsSection || '',
+      tdsRate: Number(updatedLine.tdsRate || 0),
+      tdsAmount: Number(updatedLine.tdsAmount || 0),
+      netPayable: Number(updatedLine.netPayable || 0),
+      costCentreId: updatedLine.costCentre || updatedItems[index].costCentreId,
+      profitCentreId: updatedLine.profitCentre || updatedItems[index].profitCentreId,
+      projectId: updatedLine.wbsProject || updatedItems[index].projectId,
+    };
+    setLineItems(updatedItems);
   };
 
   // Calculate totals
@@ -292,6 +391,7 @@ export function NonPOInvoiceForm() {
     if (!invoiceNumber) newErrors.invoiceNumber = 'Invoice number is required';
     if (!invoiceDate) newErrors.invoiceDate = 'Invoice date is required';
     if (!costCentreId) newErrors.costCentre = 'Cost centre is required';
+    if (!departmentName) newErrors.department = 'Department is required';
     if (!accountCodeId) newErrors.accountCode = 'Account code is required';
     if (!expenseCategory) newErrors.expenseCategory = 'Expense category is required';
     
@@ -301,24 +401,70 @@ export function NonPOInvoiceForm() {
       if (item.unitRate <= 0) newErrors[`line${index}_rate`] = 'Rate must be > 0';
       if (!item.costCentreId) newErrors[`line${index}_cc`] = 'Cost centre required';
     });
+
+    const tdsErrors = validateTDSRules(lineItems);
+    if (tdsErrors.length > 0) {
+      newErrors.tds = tdsErrors.join(' | ');
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const persistInvoice = (status: 'Draft' | 'Pending Approval') => {
+    const vendor = vendorId ? getVendorById(vendorId) : undefined;
+    if (!vendor || !invoiceNumber || !invoiceDate) {
+      alert('Vendor, invoice number, and invoice date are required.');
+      return false;
+    }
+
+    addInvoice({
+      id: `NPO-${Date.now()}`,
+      invoiceNumber,
+      invoiceDate,
+      vendorName: vendor.name,
+      vendorCode: vendor.code,
+      invoiceType: 'Non-PO',
+      totalAmount: finalNetPayable,
+      currency,
+      status,
+      approver: 'AP Team',
+      paymentStatus: 'Unpaid',
+      matchStatus: 'Unmatched',
+      notes: narration || undefined,
+      metadata: {
+        vendorNarration,
+        internalRemarks,
+      },
+    });
+    return true;
+  };
+
   // Save draft
   const handleSaveDraft = () => {
-    alert('Non-PO Invoice saved as draft');
-    navigate('/ap/my-invoices');
+    if (persistInvoice('Draft')) {
+      navigate('/ap/my-invoices');
+    }
   };
 
   // Submit for approval
   const handleSubmit = () => {
     setShowValidation(true);
     if (validateForm()) {
-      alert('Non-PO Invoice submitted for approval');
-      navigate('/ap/my-invoices');
+      const tdsErrors = validateTDSRules(lineItems);
+      if (tdsErrors.length > 0) {
+        alert(`TDS threshold validation failed:\n${tdsErrors.join('\n')}`);
+        return;
+      }
+      if (persistInvoice('Pending Approval')) {
+        navigate('/ap/my-invoices');
+      }
     } else {
+      const tdsErrors = validateTDSRules(lineItems);
+      if (tdsErrors.length > 0) {
+        alert(`TDS validation failed:\n${tdsErrors.join('\n')}`);
+        return;
+      }
       alert('Please fix validation errors before submitting');
     }
   };
@@ -425,6 +571,61 @@ export function NonPOInvoiceForm() {
               )}
             </div>
           )}
+        </div>
+
+        <div className="space-y-4 mb-6">
+          <TDSThresholdTracker
+            lineItems={lineItems.map((item) => ({
+              id: item.id,
+              qty: item.quantity,
+              rate: item.unitRate,
+              taxableAmount: item.baseAmount,
+              tdsSection: item.tdsSection || 'None',
+              tdsRate: item.tdsRate,
+              tdsAmount: item.tdsAmount,
+              netPayable: item.netPayable,
+              description: item.description,
+            } as any))}
+          />
+          <JournalEntryPreview
+            compact
+            formValues={{
+              header: {
+                invoiceType: 'Non PO',
+                invoiceNumber,
+                invoiceDate,
+                rcm: false,
+                exempt: false,
+                sez: false,
+              } as any,
+              vendor: {
+                id: vendorId || 'vendor',
+                name: getVendorById(vendorId)?.name || '',
+                vendorType: 'company',
+                panValid: true,
+                lowerCert: false,
+                lowerRate: 0,
+                tdsExempt: false,
+                itrFiled: true,
+                gstReg: 'reg',
+              } as any,
+              lineItems: lineItems.map((item) => ({
+                id: item.id,
+                description: item.description,
+                qty: item.quantity,
+                rate: item.unitRate,
+                taxableAmount: item.baseAmount,
+                gstRate: item.gstRate,
+                igst: item.igst,
+                cgst: item.cgst,
+                sgst: item.sgst,
+                tdsSection: item.tdsSection || 'None',
+                tdsRate: item.tdsRate,
+                tdsAmount: item.tdsAmount,
+                netPayable: item.netPayable,
+              })),
+            }}
+          />
         </div>
 
         {/* OCR Review Modal */}
@@ -574,6 +775,7 @@ export function NonPOInvoiceForm() {
                 setVendorId(id);
                 setShowAdvanceSection(true);
               }}
+              entityId={entityId}
               required
               showMSMEBadge
               error={showValidation ? errors.vendor : undefined}
@@ -611,6 +813,14 @@ export function NonPOInvoiceForm() {
               onChange={setEntityId}
               required
               disabled
+            />
+
+            <DepartmentSelector
+              value={departmentName}
+              onChange={setDepartmentName}
+              entityId={entityId}
+              required
+              error={showValidation ? errors.department : undefined}
             />
 
             <PxFormField label="Supply Type" required>
@@ -673,6 +883,7 @@ export function NonPOInvoiceForm() {
             <CostCentreSelector
               value={costCentreId}
               onChange={setCostCentreId}
+              entityId={entityId}
               required
               error={showValidation ? errors.costCentre : undefined}
             />
@@ -680,6 +891,7 @@ export function NonPOInvoiceForm() {
             <AccountCodeSelector
               value={accountCodeId}
               onChange={setAccountCodeId}
+              entityId={entityId}
               required
               filterByType="Expense"
               error={showValidation ? errors.accountCode : undefined}
@@ -737,6 +949,7 @@ export function NonPOInvoiceForm() {
                   <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Base Amt</th>
                   <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>GST%</th>
                   <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>GST Amt</th>
+                  <th className="px-3 py-3 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>TDS Section</th>
                   <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>TDS%</th>
                   <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>TDS Amt</th>
                   <th className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Net</th>
@@ -745,97 +958,48 @@ export function NonPOInvoiceForm() {
               </thead>
               <tbody>
                 {lineItems.map((item, index) => (
-                  <tr key={item.id} className="border-t" style={{ borderColor: 'var(--color-silver)' }}>
-                    <td className="px-3 py-3">
-                      <input
-                        type="text"
-                        value={item.description}
-                        onChange={(e) => {
-                          const updated = [...lineItems];
-                          updated[index].description = e.target.value;
-                          setLineItems(updated);
-                        }}
-                        placeholder="Description"
-                        className="w-full px-2 py-1 rounded border"
-                        style={{ borderColor: 'var(--color-silver)', fontSize: '14px' }}
-                      />
-                    </td>
-                    <td className="px-3 py-3">
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => {
-                          const updated = [...lineItems];
-                          updated[index].quantity = parseFloat(e.target.value) || 0;
-                          calculateLineItem(index, updated);
-                        }}
-                        className="w-20 px-2 py-1 rounded border text-right"
-                        style={{ borderColor: 'var(--color-silver)', fontSize: '14px' }}
-                      />
-                    </td>
-                    <td className="px-3 py-3">
-                      <input
-                        type="number"
-                        value={item.unitRate}
-                        onChange={(e) => {
-                          const updated = [...lineItems];
-                          updated[index].unitRate = parseFloat(e.target.value) || 0;
-                          calculateLineItem(index, updated);
-                        }}
-                        className="w-24 px-2 py-1 rounded border text-right"
-                        style={{ borderColor: 'var(--color-silver)', fontSize: '14px' }}
-                      />
-                    </td>
-                    <td className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-ink)' }}>
-                      ₹{item.baseAmount.toLocaleString('en-IN')}
-                    </td>
-                    <td className="px-3 py-3">
-                      <input
-                        type="number"
-                        value={item.gstRate}
-                        onChange={(e) => {
-                          const updated = [...lineItems];
-                          updated[index].gstRate = parseFloat(e.target.value) || 0;
-                          calculateLineItem(index, updated);
-                        }}
-                        className="w-16 px-2 py-1 rounded border text-right"
-                        style={{ borderColor: 'var(--color-silver)', fontSize: '14px' }}
-                      />
-                    </td>
-                    <td className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-ink)' }}>
-                      ₹{item.gstAmount.toLocaleString('en-IN')}
-                    </td>
-                    <td className="px-3 py-3">
-                      <input
-                        type="number"
-                        value={item.tdsRate}
-                        onChange={(e) => {
-                          const updated = [...lineItems];
-                          updated[index].tdsRate = parseFloat(e.target.value) || 0;
-                          calculateLineItem(index, updated);
-                        }}
-                        className="w-16 px-2 py-1 rounded border text-right"
-                        style={{ borderColor: 'var(--color-silver)', fontSize: '14px' }}
-                      />
-                    </td>
-                    <td className="px-3 py-3 text-right text-sm" style={{ color: 'var(--color-error-dark)' }}>
-                      -₹{item.tdsAmount.toLocaleString('en-IN')}
-                    </td>
-                    <td className="px-3 py-3 text-right" style={{ color: 'var(--color-teal)' }}>
-                      ₹{item.netPayable.toLocaleString('en-IN')}
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      {lineItems.length > 1 && (
-                        <button
-                          onClick={() => removeLineItem(index)}
-                          className="p-1 rounded hover:bg-red-50"
-                          style={{ color: 'var(--color-error-dark)' }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+                  <LineItemRow
+                    key={item.id}
+                    line={{
+                      id: item.id,
+                      description: item.description,
+                      qty: item.quantity,
+                      rate: item.unitRate,
+                      taxableAmount: item.baseAmount,
+                      gstRate: item.gstRate,
+                      igst: item.igst,
+                      cgst: item.cgst,
+                      sgst: item.sgst,
+                      tdsSection: item.tdsSection || 'None',
+                      tdsRate: item.tdsRate,
+                      tdsAmount: item.tdsAmount,
+                      netPayable: item.netPayable,
+                      costCentre: item.costCentreId,
+                      profitCentre: item.profitCentreId,
+                      wbsProject: item.projectId,
+                      itemName: item.description,
+                    } as any}
+                    vendorMaster={{
+                      id: selectedVendor?.id || 'vendor',
+                      name: selectedVendor?.name || '',
+                      vendorType: 'company',
+                      panValid: true,
+                      lowerCert: false,
+                      lowerRate: 0,
+                      tdsExempt: false,
+                      itrFiled: true,
+                      gstReg: 'reg',
+                    } as any}
+                    invoiceFlags={{
+                      rcm: false,
+                      exempt: false,
+                      sez: false,
+                      interState: placeOfSupply !== 'KA',
+                      import: false,
+                    }}
+                    onChange={(updated) => handleSharedRowChange(index, updated)}
+                    onDelete={() => removeLineItem(index)}
+                  />
                 ))}
               </tbody>
               <tfoot>
@@ -850,6 +1014,7 @@ export function NonPOInvoiceForm() {
                   <td className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)' }}>
                     <strong>₹{totals.gstAmount.toLocaleString('en-IN')}</strong>
                   </td>
+                  <td></td>
                   <td></td>
                   <td className="px-3 py-3 text-right" style={{ color: 'var(--color-error-dark)' }}>
                     <strong>-₹{totals.tdsAmount.toLocaleString('en-IN')}</strong>
@@ -964,6 +1129,23 @@ export function NonPOInvoiceForm() {
             </div>
           </div>
         )}
+
+        <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: 'var(--color-silver)' }}>
+          <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Narration & Remarks</h2>
+          <NarrationField
+            value={{ narration, vendorNarration, internalRemarks }}
+            onChange={(next) => {
+              setNarration(next.narration || '');
+              setVendorNarration(next.vendorNarration || '');
+              setInternalRemarks(next.internalRemarks || '');
+            }}
+            formContext={{
+              invoiceNo: invoiceNumber,
+              invoiceDate,
+              vendorName: selectedVendor?.name || '',
+            }}
+          />
+        </div>
 
         {/* Final Payment Summary */}
         <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>

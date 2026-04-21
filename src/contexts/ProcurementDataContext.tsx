@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
-import { ensureDomainDocument, saveDomainDocument } from '../lib/supabase/documentStore';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 
 export type PurchaseRequestType =
   | 'Catalogue'
@@ -78,7 +78,7 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
 
     const hydrate = async () => {
-      const document = await ensureDomainDocument('procurement_data', defaultProcurementData);
+      const document = await ensureDomainDocument('procurement_data', defaultProcurementData, { seedIfMissing: false });
       if (!isMounted) {
         return;
       }

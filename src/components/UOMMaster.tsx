@@ -1,5 +1,7 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, Type, FileText, Edit, Eye } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { ApprovalModal } from './ApprovalModal';
@@ -16,6 +18,7 @@ interface UOM {
   description: string;
   status: string;
   approvalStatus?: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected' | 'Changes Requested';
+  entityMappings?: EntityScopeMapping[];
   originalData?: UOM;
 }
 
@@ -50,6 +53,19 @@ export function UOMMaster() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<UOM | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
+  const filteredUOMs = useMemo(() => {
+    return uoms.filter((uom) => {
+      const haystack = [uom.code, uom.name, uom.description].join(' ').toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(uom.status);
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(uom.approvalStatus ?? 'Approved');
+      return matchesSearch && matchesStatus && matchesApproval;
+    });
+  }, [uoms, searchTerm, statusFilter, approvalFilter]);
 
   const handleSubmit = (approvalStatus: NonNullable<UOM['approvalStatus']> = 'Pending Approval') => {
     if (isEditMode && editingId) {
@@ -189,7 +205,7 @@ export function UOMMaster() {
 
   if (showForm) {
     return (
-      <FormShell
+      <FormShell masterName="Unit of Measure Master"
         title={editingId ? 'Edit UOM' : 'Create UOM'}
         subtitle="Manage units of measure for items and services"
         modeLabel={editingId ? 'Edit Master Record' : 'Create Master Record'}
@@ -226,17 +242,8 @@ export function UOMMaster() {
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>UOM Master</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage units of measure for items and services</p>
-          </div>
-        </div>
+    <MasterPageShell masterName="Unit of Measure Master" description="Manage units of measurement">
+      <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
             resetForm();
@@ -310,6 +317,30 @@ export function UOMMaster() {
         </div>
       )}
 
+      <MasterListToolbar
+        masterName="UOM Master"
+        masterKey="uom_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredUOMs}
+        columns={[
+          { key: 'code', label: 'UOM Code' },
+          { key: 'name', label: 'UOM Name' },
+          { key: 'description', label: 'Description' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
+
       <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -324,7 +355,7 @@ export function UOMMaster() {
               </tr>
             </thead>
             <tbody>
-              {uoms.map((uom, index) => (
+              {filteredUOMs.map((uom, index) => (
                 <tr key={uom.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
                   <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{uom.code}</td>
                   <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{uom.name}</td>
@@ -371,6 +402,6 @@ export function UOMMaster() {
         onReject={handleReject}
         onRequestInfo={handleRequestInfo}
       />
-    </div>
+    </MasterPageShell>
   );
 }

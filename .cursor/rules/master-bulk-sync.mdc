@@ -1,0 +1,16 @@
+---
+description: Keep master form fields in sync with bulk upload, download, templates, and schema
+alwaysApply: true
+---
+
+# Master bulk sync (always follow)
+
+When changing any master screen or master data shape, update the bulk upload/download flow in the same task.
+
+- Treat **master form fields**, **`src/lib/masters/masterSchemaRegistry.ts`**, **bulk upload mapping/validation**, and **download/template columns** as one connected surface.
+- If a field is added, removed, renamed, reordered, made required/optional, or changed to enum/boolean/reference, reflect that in the master schema and any related bulk import/export logic immediately.
+- Do not leave master UI changes partially wired. A master change is incomplete until upload templates, parsing, validation, and downloads reflect the same fields.
+- For enum fields, keep allowed values aligned between the screen and schema.
+- Verify affected master flows after edits, at minimum by checking the relevant schema-driven bulk flow and running build/lint.
+
+Example: adding `Region` to `Entity Master` also requires updating the `entity_master` schema so upload/download/template behavior includes `Region`.

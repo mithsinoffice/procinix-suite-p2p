@@ -6,6 +6,7 @@ import { useMasterData } from '../contexts/MasterDataContext';
 import type { VendorMaster } from '../contexts/MasterDataContext';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 
 interface BankAccount {
   id: string;
@@ -46,30 +47,40 @@ interface AuditLog {
   systemStatus: 'VALIDATED' | 'FAILED';
 }
 
-// Vendor Group Master Data
-const vendorGroups = [
-  { code: 'VG001', name: 'Tata Group' },
-  { code: 'VG002', name: 'Reliance Group' },
-  { code: 'VG003', name: 'Aditya Birla Group' },
-  { code: 'VG004', name: 'Mahindra Group' },
-  { code: 'VG005', name: 'Jindal Group' },
-  { code: 'VG006', name: 'Vedanta Group' },
-  { code: 'VG007', name: 'Adani Group' },
-  { code: 'VG008', name: 'Larsen & Toubro Group' },
-  { code: 'VG009', name: 'Wipro Group' },
-  { code: 'VG010', name: 'Infosys Group' },
-  { code: 'VG011', name: 'HCL Group' },
-  { code: 'VG012', name: 'Tech Mahindra Group' },
-  { code: 'VG013', name: 'Essar Group' },
-  { code: 'VG014', name: 'Bajaj Group' },
-  { code: 'VG015', name: 'Independent Vendors' },
-];
+function workflowStatusToApprovalStatus(
+  workflowStatus: string
+): NonNullable<VendorMaster['approvalStatus']> {
+  switch (workflowStatus) {
+    case 'Approved':
+      return 'Approved';
+    case 'Pending Approval':
+      return 'Pending Approval';
+    case 'Rejected':
+      return 'Rejected';
+    case 'Changes Requested':
+      return 'Changes Requested';
+    case 'Draft/Awaiting Submission':
+    default:
+      return 'Draft';
+  }
+}
+
+function approvalStatusToWorkflowStatus(approvalStatus?: string, approvedBy?: string) {
+  if (approvalStatus === 'Approved') return 'Approved';
+  if (approvalStatus === 'Pending Approval') return 'Pending Approval';
+  if (approvalStatus === 'Rejected') return 'Rejected';
+  if (approvalStatus === 'Changes Requested') return 'Changes Requested';
+  if (approvedBy) return 'Approved';
+  return 'Draft/Awaiting Submission';
+}
 
 export function CreateVendor() {
   const navigate = useNavigate();
   const location = useLocation();
   const { vendorId } = useParams<{ vendorId?: string }>();
-  const { addVendor, updateVendor, getVendorById, entities, vendors } = useMasterData();
+  const { addVendor, updateVendor, getVendorById, entities, vendors, vendorGroups } = useMasterData();
+  const [paymentTermsMaster] = useIncrementalMasterRecords<{ id: string; code: string; description: string; creditDays: string; status: string; approvalStatus?: string }>('vendor_payment_terms_master', []);
+  const activePaymentTerms = useMemo(() => paymentTermsMaster.filter(t => t.status === 'Active'), [paymentTermsMaster]);
   const hydratedRef = useRef<string | null>(null);
   const listPath = (location.state as { returnTo?: string } | null)?.returnTo ?? '/vendors';
 
@@ -204,7 +215,7 @@ export function CreateVendor() {
     } else {
       setEntityMappings([]);
     }
-    setWorkflowStatus(v.approvedBy ? 'Approved' : 'Draft/Awaiting Submission');
+    setWorkflowStatus(approvalStatusToWorkflowStatus(v.approvalStatus, v.approvedBy));
     setPanValidationStatus('PENDING');
     setCinValidationStatus('PENDING');
     setUdyamValidationStatus('PENDING');
@@ -473,23 +484,26 @@ export function CreateVendor() {
     }, 2000);
   };
 
-  const handleSubmit = () => {
+  const buildPayload = (workflowOverride?: string): VendorMaster | null => {
     const primaryEntity = entities[0];
     const existing = vendorId ? getVendorById(vendorId) : undefined;
     if (vendorId && !existing) {
       alert('Vendor not found.');
-      return;
+      return null;
     }
 
     const newId = `VEN-${Date.now()}`;
+    const effectiveWorkflowStatus = workflowOverride ?? workflowStatus;
+    const approvalStatus = workflowStatusToApprovalStatus(effectiveWorkflowStatus);
     const masterStatus: VendorMaster['status'] =
       vendorStatus === 'Inactive' ? 'Inactive' : vendorStatus === 'Blocked' ? 'Blocked' : 'Active';
 
-    const payload: VendorMaster = {
+    return {
       id: existing?.id ?? newId,
       code: existing?.code ?? newId,
-      name: vendorName || vendorAlias || 'New Vendor',
-      legalName: vendorName || vendorAlias || 'New Vendor',
+      name: vendorName || existing?.name || 'New Vendor',
+      legalName: vendorAlias || vendorName || existing?.legalName || 'New Vendor',
+      approvalStatus,
       pan: panNumber,
       gstin: gstDetails[0]?.gstin ?? '',
       email: emailID,
@@ -529,9 +543,9 @@ export function CreateVendor() {
       createdBy: existing?.createdBy ?? (internalSPOC || 'System'),
       createdDate: existing?.createdDate ?? new Date().toISOString().split('T')[0],
       approvedBy:
-        workflowStatus === 'Approved' ? internalSPOC || existing?.approvedBy || 'System' : existing?.approvedBy,
+        approvalStatus === 'Approved' ? internalSPOC || existing?.approvedBy || 'System' : existing?.approvedBy,
       approvedDate:
-        workflowStatus === 'Approved'
+        approvalStatus === 'Approved'
           ? existing?.approvedDate ?? new Date().toISOString().split('T')[0]
           : existing?.approvedDate,
       entityId: existing?.entityId ?? primaryEntity?.id,
@@ -547,8 +561,15 @@ export function CreateVendor() {
       section206ABApplicable: existing?.section206ABApplicable,
       effectiveTdsRate: existing?.effectiveTdsRate,
     };
+  };
 
-    if (existing) {
+  const handleSubmit = () => {
+    const payload = buildPayload('Pending Approval');
+    if (!payload) {
+      return;
+    }
+
+    if (vendorId) {
       updateVendor(payload);
     } else {
       addVendor(payload);
@@ -566,10 +587,20 @@ export function CreateVendor() {
 
   const handleSaveDraft = useCallback(() => {
     setSaveStatus('saving');
-    handleSubmit();
+    const payload = buildPayload('Draft/Awaiting Submission');
+    if (!payload) {
+      setSaveStatus('error');
+      return;
+    }
+    if (vendorId) {
+      updateVendor(payload);
+    } else {
+      addVendor(payload);
+    }
+    navigate(listPath);
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
-  }, [handleSubmit]);
+  }, [vendorId, vendorName, vendorAlias, vendorStatus, riskCategory, internalSPOC, contactPerson, designation, emailID, phoneNumber, panNumber, cinNumber, tdsSections, section206AB, verifiedEntityType, isMSMERegistered, udyamRegistrationNo, msmeType, msmeClassification, frequencyMonths, lastValidatedOn, nextValidationDate, gstDetails, bankAccounts, mappedServices, mappedDepartments, entityMappings, documents, auditLogs, workflowStatus, erpVendorCode, addVendor, updateVendor, navigate, listPath, entities, getVendorById, vendors]);
 
   useFormKeyboardSave(handleSaveDraft);
 
@@ -1222,22 +1253,28 @@ export function CreateVendor() {
                         <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
                           Payment Terms Override
                         </label>
-                        <input
-                          type="text"
+                        <select
                           value={mapping.paymentTermsOverride}
                           onChange={(e) => {
-                            setEntityMappings(entityMappings.map(m => 
+                            setEntityMappings(entityMappings.map(m =>
                               m.id === mapping.id ? { ...m, paymentTermsOverride: e.target.value } : m
                             ));
                           }}
-                          placeholder="Net 30"
                           className="w-full px-3 py-2 rounded-lg"
                           style={{
                             border: '1px solid var(--color-silver)',
                             backgroundColor: 'white',
                             color: 'var(--color-ink)'
                           }}
-                        />
+                        >
+                          <option value="">Select payment terms...</option>
+                          {activePaymentTerms.map((term) => (
+                            <option key={term.id} value={term.code}>{term.code} - {term.description} ({term.creditDays} days)</option>
+                          ))}
+                          {mapping.paymentTermsOverride && !activePaymentTerms.some(t => t.code === mapping.paymentTermsOverride) && (
+                            <option value={mapping.paymentTermsOverride}>{mapping.paymentTermsOverride}</option>
+                          )}
+                        </select>
                       </div>
 
                       <div className="flex items-end">
@@ -1378,8 +1415,8 @@ export function CreateVendor() {
               <select value={workflowStatus} onChange={(e) => setWorkflowStatus(e.target.value)} className="px-input">
                 <option>Draft/Awaiting Submission</option>
                 <option>Pending Approval</option>
-                <option>Approved</option>
                 <option>Rejected</option>
+                <option>Changes Requested</option>
               </select>
             </PxFormField>
 

@@ -4,7 +4,7 @@ interface KPICardProps {
   title: string;
   value: string;
   change?: string;
-  changeType?: 'positive' | 'negative';
+  changeType?: 'positive' | 'negative' | 'neutral';
   subtitle?: string;
   icon: LucideIcon;
   iconBg: string;
@@ -34,7 +34,12 @@ export function KPICard({
       
       {change && (
         <p className="text-sm" style={{ 
-          color: changeType === 'positive' ? 'var(--color-teal)' : 'var(--color-error)'
+          color:
+            changeType === 'positive'
+              ? 'var(--color-teal)'
+              : changeType === 'negative'
+                ? 'var(--color-error)'
+                : 'var(--color-mercury-grey)'
         }}>
           {change}
         </p>

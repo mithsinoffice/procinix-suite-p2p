@@ -198,7 +198,7 @@ export function AssetCapexPRForm() {
                         <div>
                           <label className="block text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Vendor <span style={{ color: 'var(--color-error)' }}>*</span></label>
                           <select value={asset.vendor} onChange={(e) => handleUpdateAsset(asset.id, 'vendor', e.target.value)} className="w-full px-2 py-1.5 rounded text-sm" style={{ border: '1px solid var(--color-silver)', backgroundColor: '#FFFFFF', color: 'var(--color-ink)' }}>
-                            {vendors.map(v => <option key={v}>{v}</option>)}
+                            {activeVendors.map((vendorName) => <option key={vendorName} value={vendorName}>{vendorName}</option>)}
                           </select>
                         </div>
                         <div>

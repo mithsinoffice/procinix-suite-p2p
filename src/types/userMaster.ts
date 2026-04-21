@@ -44,6 +44,7 @@ export interface UserMasterRecord {
   status: 'Active' | 'Inactive' | 'Pending Approval';
   createdDate: string;
   approvalStatus?: 'Approved' | 'Pending' | 'Rejected';
+  entityMappings?: { entityId: string; entityName?: string }[];
   userEntityAccess: UserEntityAccessRow[];
   userRoles: UserRoleAssignmentRow[];
 }
@@ -269,4 +270,37 @@ export function normalizeUserMasterRecord(raw: unknown): UserMasterRecord {
     userEntityAccess,
     userRoles,
   };
+}
+
+/**
+ * Primary entity for defaulting AP/invoice context: `defaultEntityId`, else default access row, else first active access row.
+ */
+export function getPrimaryEntityIdForUser(user: UserMasterRecord): string {
+  const n = normalizeUserMasterRecord(user);
+  if (n.defaultEntityId.trim()) return n.defaultEntityId.trim();
+  const defRow = n.userEntityAccess.find(
+    (r) => r.isDefault && r.status !== 'Inactive' && r.entityId.trim(),
+  );
+  if (defRow) return defRow.entityId.trim();
+  const first = n.userEntityAccess.find((r) => r.status !== 'Inactive' && r.entityId.trim());
+  return first?.entityId.trim() ?? '';
+}
+
+/**
+ * Entity ids the user is allowed to work in for dropdown filtering. Includes `defaultEntityId` when set.
+ */
+export function getUserAccessibleEntityIds(user: UserMasterRecord): string[] {
+  const n = normalizeUserMasterRecord(user);
+  const fromRows = [
+    ...new Set(
+      n.userEntityAccess
+        .filter((r) => r.status !== 'Inactive' && r.entityId.trim())
+        .map((r) => r.entityId.trim()),
+    ),
+  ];
+  const def = n.defaultEntityId.trim();
+  if (def && !fromRows.includes(def)) return [def, ...fromRows];
+  if (fromRows.length) return fromRows;
+  if (def) return [def];
+  return [];
 }

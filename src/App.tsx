@@ -15,6 +15,9 @@ import { ProcurementDataProvider } from './contexts/ProcurementDataContext';
 // Layout & Core
 import { DashboardLayout } from './components/DashboardLayout';
 import { Login } from './components/Login';
+import { SuperAdminLogin } from './components/SuperAdminLogin';
+import { SuperAdminLayout } from './components/SuperAdminLayout';
+import { SuperAdminConsole } from './components/SuperAdminConsole';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NotFound } from './components/NotFound';
 
@@ -25,25 +28,23 @@ import { PRSelectionPage } from './components/PRSelectionPage';
 import { POUpdate } from './components/POUpdate';
 import { GoodsReceipt } from './components/GoodsReceipt';
 
-// Vendors
+// Vendors (legacy imports kept for reference; routes now use VendorMaster)
 import { Vendors } from './components/Vendors';
 import { CreateVendor } from './components/CreateVendor';
 
 // Invoices
 import { Invoices } from './components/Invoices';
 import { InvoiceFormPO } from './components/InvoiceFormPO';
-import { InvoiceFormDirectV2 as InvoiceFormDirect } from './components/InvoiceFormDirectV2';
+import { InvoiceFormDirectV2 } from './components/InvoiceFormDirectV2';
 import { AIInvoiceCapture } from './components/AIInvoiceCapture';
 import { AIIngestionDashboard } from './components/AIIngestionDashboard';
 import { APValidationWorkbench } from './components/APValidationWorkbench';
 import { AgentConfigEngine } from './components/AgentConfigEngine';
-import { InvoiceDetail } from './components/InvoiceDetail';
 
 // Masters
 import { ItemMaster } from './components/ItemMaster';
 
 // Approvals & Quick Actions
-import { GlobalApprovalsDashboard } from './components/GlobalApprovalsDashboard';
 import { QuickCreate } from './components/QuickCreate';
 
 // Debit Notes
@@ -129,6 +130,7 @@ const VendorGovernanceDesk = lazy(() =>
   import('./components/VendorGovernanceDesk').then((module) => ({ default: module.VendorGovernanceDesk }))
 );
 const WorkflowManagement = lazy(() => import('./components/WorkflowManagement').then((module) => ({ default: module.WorkflowManagement })));
+const MasterBulkUpload = lazy(() => import('./components/MasterBulkUpload').then((module) => ({ default: module.MasterBulkUpload })));
 const CategoryMaster = lazy(() => import('./components/CategoryMaster').then((module) => ({ default: module.CategoryMaster })));
 const ProductMaster = lazy(() => import('./components/ProductMaster').then((module) => ({ default: module.ProductMaster })));
 const ColorMaster = lazy(() => import('./components/ColorMaster').then((module) => ({ default: module.ColorMaster })));
@@ -149,10 +151,23 @@ const UserMaster = lazy(() => import('./components/UserMaster').then((module) =>
 const RolesMaster = lazy(() => import('./components/RolesMaster').then((module) => ({ default: module.RolesMaster })));
 const AccessPrivilege = lazy(() => import('./components/AccessPrivilege').then((module) => ({ default: module.AccessPrivilege })));
 const WorkflowConfigurator = lazy(() => import('./components/WorkflowConfigurator').then((module) => ({ default: module.WorkflowConfigurator })));
+const AgentConfiguratorList = lazy(() => import('./components/agents/AgentConfiguratorList').then((m) => ({ default: m.AgentConfiguratorList })));
+const AgentConfiguratorCreate = lazy(() => import('./components/agents/AgentConfiguratorCreate').then((m) => ({ default: m.AgentConfiguratorCreate })));
+const AgentConfigurationMaster = lazy(() => import('./components/agents/AgentConfigurationMaster').then((m) => ({ default: m.AgentConfigurationMaster })));
+const AgentLogs = lazy(() => import('./components/agents/AgentLogs').then((m) => ({ default: m.AgentLogs })));
+const MyApprovalsPage = lazy(() => import('./pages/Approvals'));
+const PaymentMethodMaster = lazy(() => import('./components/PaymentMethodMaster').then((m) => ({ default: m.PaymentMethodMaster })));
+const TDSSectionMaster = lazy(() => import('./components/TDSSectionMaster').then((m) => ({ default: m.TDSSectionMaster })));
+const LocationMaster = lazy(() => import('./components/LocationMaster').then((m) => ({ default: m.LocationMaster })));
+const GLCodeMaster = lazy(() => import('./components/GLCodeMaster').then((m) => ({ default: m.GLCodeMaster })));
+const VendorGroupMaster = lazy(() => import('./components/VendorGroupMaster').then((m) => ({ default: m.VendorGroupMaster })));
 const UOMMaster = lazy(() => import('./components/UOMMaster').then((module) => ({ default: module.UOMMaster })));
 const DebitNoteReasonMaster = lazy(() => import('./components/DebitNoteReasonMaster').then((module) => ({ default: module.DebitNoteReasonMaster })));
 const ItemCategoryMaster = lazy(() => import('./components/ItemCategoryMaster').then((module) => ({ default: module.ItemCategoryMaster })));
 const VendorPaymentTermsMaster = lazy(() => import('./components/VendorPaymentTermsMaster').then((module) => ({ default: module.VendorPaymentTermsMaster })));
+const VendorMasterPage = lazy(() => import('./components/VendorMaster').then((module) => ({ default: module.VendorMaster })));
+const VendorMasterCreate = lazy(() => import('./components/VendorMasterCreate').then((m) => ({ default: m.VendorMasterCreate })));
+const SettingsIntegrations = lazy(() => import('./components/SettingsIntegrations').then((m) => ({ default: m.SettingsIntegrations })));
 const Reports = lazy(() => import('./components/Reports').then((module) => ({ default: module.Reports })));
 const AuditTrailReport = lazy(() => import('./components/AuditTrailReport').then((module) => ({ default: module.AuditTrailReport })));
 const OperationalDashboard = lazy(() => import('./components/OperationalDashboard').then((module) => ({ default: module.OperationalDashboard })));
@@ -210,6 +225,10 @@ function App() {
                     <Suspense fallback={<RouteFallback />}>
                     <Routes>
                     <Route path="/login" element={<Login />} />
+                    <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+                    <Route path="/super-admin" element={<SuperAdminLayout />}>
+                      <Route index element={<SuperAdminConsole />} />
+                    </Route>
                     <Route path="/vendor-invite/:token" element={<VendorInvitationPortal />} />
                     <Route path="/" element={<DashboardLayout />}>
                       <Route index element={<Dashboard />} />
@@ -230,12 +249,15 @@ function App() {
                         <Route path="invite-vendors" element={<InviteVendors />} />
                         <Route path="review" element={<VendorReview />} />
                         <Route path="review/:invitationId" element={<VendorInvitationReviewDetail />} />
-                        <Route path="master" element={<Vendors />} />
+                        <Route path="master" element={<VendorMasterPage />} />
                         <Route path="portal-users" element={<PortalUsers />} />
                       </Route>
-                      <Route path="vendors" element={<Vendors />} />
-                      <Route path="add-vendor/:vendorId" element={<CreateVendor />} />
-                      <Route path="add-vendor" element={<CreateVendor />} />
+                      <Route path="vendors" element={<VendorMasterPage />} />
+                      <Route path="vendors/create" element={<VendorMasterCreate />} />
+                      <Route path="vendors/edit/:vendorId" element={<VendorMasterCreate />} />
+                      <Route path="add-vendor/:vendorId" element={<VendorMasterPage />} />
+                      <Route path="add-vendor" element={<VendorMasterPage />} />
+                      <Route path="masters/vendor-master" element={<VendorMasterPage />} />
                       
                       {/* Reports */}
                       <Route path="reports" element={<Reports />} />
@@ -248,6 +270,7 @@ function App() {
                       
                       {/* Masters */}
                       <Route path="masters" element={<Masters />} />
+                      <Route path="masters/bulk-upload" element={<MasterBulkUpload />} />
                       <Route path="masters/approval-workflow" element={<Navigate to="/workflow-engine" replace />} />
                       <Route path="masters/category-master" element={<CategoryMaster />} />
                       <Route path="masters/item-master" element={<ItemMaster />} />
@@ -272,6 +295,11 @@ function App() {
                       <Route path="masters/workflow-configurator" element={<Navigate to="/workflow-engine/designer" replace />} />
                       
                       {/* Workflow Engine */}
+                      <Route path="agent-configurator" element={<AgentConfiguratorList />} />
+                      <Route path="agent-configurator/new" element={<AgentConfiguratorCreate />} />
+                      <Route path="agent-configurator/edit/:id" element={<AgentConfiguratorCreate />} />
+                      <Route path="agent-configurator/master" element={<AgentConfigurationMaster />} />
+                      <Route path="agent-configurator/logs" element={<AgentLogs />} />
                       <Route path="workflow-engine" element={<WorkflowManagement />} />
                       <Route path="workflow-engine/approval-levels" element={<Navigate to="/workflow-engine" replace />} />
                       <Route path="workflow-engine/designer" element={<WorkflowConfigurator />} />
@@ -279,21 +307,27 @@ function App() {
                       <Route path="masters/debit-note-reason-master" element={<DebitNoteReasonMaster />} />
                       <Route path="masters/item-category-master" element={<ItemCategoryMaster />} />
                       <Route path="masters/vendor-payment-terms-master" element={<VendorPaymentTermsMaster />} />
+                      <Route path="masters/payment-method-master" element={<PaymentMethodMaster />} />
+                      <Route path="masters/tds-section-master" element={<TDSSectionMaster />} />
+                      <Route path="masters/location-master" element={<LocationMaster />} />
+                      <Route path="masters/gl-code-master" element={<GLCodeMaster />} />
+                      <Route path="masters/vendor-group-master" element={<VendorGroupMaster />} />
                       
                       {/* Invoices */}
                       <Route path="invoices" element={<Invoices />} />
                       <Route path="invoices/create" element={<InvoiceFormPO />} />
                       <Route path="invoices/create-po" element={<InvoiceFormPO />} />
-                      <Route path="invoices/create-direct" element={<InvoiceFormDirect />} />
+                      <Route path="invoices/create-direct" element={<InvoiceFormDirectV2 />} />
+                      <Route path="invoices/create-legacy" element={<Navigate to="/invoices/create-po" replace />} />
+                      <Route path="invoices/create-direct-legacy" element={<Navigate to="/invoices/create-direct" replace />} />
                       <Route path="invoices/ai-capture" element={<AIInvoiceCapture />} />
                       <Route path="invoices/ai-ingestion" element={<APValidationWorkbench />} />
                       <Route path="invoices/agent-config" element={<AgentConfigEngine />} />
-                      <Route path="invoices/detail/:id" element={<InvoiceDetail />} />
                       <Route path="invoices/edit/:id" element={<InvoiceFormPO />} />
                       
                       {/* Approvals */}
-                      <Route path="approval-dashboard" element={<GlobalApprovalsDashboard />} />
-                      <Route path="approvals" element={<GlobalApprovalsDashboard />} />
+                      <Route path="approval-dashboard" element={<MyApprovalsPage />} />
+                      <Route path="approvals" element={<MyApprovalsPage />} />
                       <Route path="create" element={<QuickCreate />} />
                       <Route path="quick-create" element={<QuickCreate />} />
                       <Route path="tasks" element={<Navigate to="/create" replace />} />
@@ -346,6 +380,7 @@ function App() {
                       
                       {/* Settings */}
                       <Route path="settings" element={<Settings />} />
+                      <Route path="settings/integrations" element={<SettingsIntegrations />} />
                       
                       {/* Budget */}
                       <Route path="budget-dashboard" element={<BudgetDashboard />} />

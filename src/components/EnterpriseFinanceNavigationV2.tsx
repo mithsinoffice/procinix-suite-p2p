@@ -243,7 +243,7 @@ export function EnterpriseFinanceNavigationV2() {
           {module.label}
         </span>
         {isViewOnly && (
-          <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-mercury-grey)' }} title="View Only Access" />
+          <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-mercury-grey)' }} aria-label="View Only Access" />
         )}
       </Link>
     );

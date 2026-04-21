@@ -39,9 +39,10 @@ type MasterDomain =
   | 'Identity'
   | 'Organization'
   | 'Commercial'
-  | 'Reference';
+  | 'Reference'
+  | 'Supply Chain';
 
-type MasterScope = 'Global' | 'Entity Scoped' | 'Multi Entity';
+type MasterScope = 'Global' | 'Entity Scoped' | 'Multi Entity' | 'Entity';
 type MasterStatus = 'Live' | 'Workflow Enabled';
 type MasterAccess = 'Admin' | 'Operational' | 'Controlled';
 
@@ -141,7 +142,7 @@ const masterRegister: MasterRegisterRow[] = [
     id: 'vendor-master',
     title: 'Vendor Master',
     description: 'Supplier governance, tax, banking, entity applicability and contact data.',
-    route: '/vendors',
+    route: '/masters/vendor-master',
     domain: 'Commercial',
     scope: 'Multi Entity',
     entity: 'Multi Entity',
@@ -151,6 +152,21 @@ const masterRegister: MasterRegisterRow[] = [
     icon: Truck,
     iconTint: '#0E7490',
     iconBg: 'linear-gradient(135deg, #DFF7FF 0%, #CBEFFF 100%)',
+  },
+  {
+    id: 'vendor-group-master',
+    title: 'Vendor Group Master',
+    description: 'Define vendor groups and relationship types for vendor mapping and compliance views.',
+    route: '/masters/vendor-group-master',
+    domain: 'Commercial',
+    scope: 'Multi Entity',
+    entity: 'Multi Entity',
+    access: 'Controlled',
+    status: 'Workflow Enabled',
+    badge: 'Supplier',
+    icon: Users,
+    iconTint: '#7C3AED',
+    iconBg: 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)',
   },
   {
     id: 'vendor-payment-terms-master',
@@ -391,6 +407,66 @@ const masterRegister: MasterRegisterRow[] = [
     icon: TrendingUp,
     iconTint: '#047857',
     iconBg: 'linear-gradient(135deg, #E4FFF1 0%, #D0FAE5 100%)',
+  },
+  {
+    id: 'payment-method-master',
+    title: 'Payment Method Master',
+    description: 'Configure payment methods — NEFT, RTGS, IMPS, UPI, cheque, wire transfers.',
+    route: '/masters/payment-method-master',
+    domain: 'Finance',
+    scope: 'Global',
+    entity: 'All Entities',
+    access: 'Controlled',
+    status: 'Workflow Enabled',
+    badge: 'Payments',
+    icon: CreditCard,
+    iconTint: '#0369A1',
+    iconBg: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)',
+  },
+  {
+    id: 'tds-section-master',
+    title: 'TDS Section Master',
+    description: 'Tax deducted at source sections — rates, thresholds, and applicability rules.',
+    route: '/masters/tds-section-master',
+    domain: 'Finance',
+    scope: 'Global',
+    entity: 'All Entities',
+    access: 'Controlled',
+    status: 'Workflow Enabled',
+    badge: 'Tax',
+    icon: Landmark,
+    iconTint: '#7C3AED',
+    iconBg: 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)',
+  },
+  {
+    id: 'gl-code-master',
+    title: 'GL Code Master',
+    description: 'General ledger codes for entity-level accounting, expense booking and tax mapping.',
+    route: '/masters/gl-code-master',
+    domain: 'Finance',
+    scope: 'Entity Scoped',
+    entity: 'Entity Mapped',
+    access: 'Controlled',
+    status: 'Workflow Enabled',
+    badge: 'Finance',
+    icon: Landmark,
+    iconTint: '#0F766E',
+    iconBg: 'linear-gradient(135deg, #DDFBF4 0%, #C8F7EC 100%)',
+  },
+  {
+    id: 'location-master',
+    title: 'Location Master',
+    description: 'Warehouses, stores, offices, and factories — delivery and inventory locations.',
+    route: '/masters/location-master',
+    domain: 'Supply Chain',
+    scope: 'Entity',
+    entity: 'Per Entity',
+    access: 'Operational',
+    status: 'Workflow Enabled',
+    badge: 'Logistics',
+    icon: MapPinned,
+    iconTint: '#EA580C',
+    iconBg: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
   },
   {
     id: 'color-master',

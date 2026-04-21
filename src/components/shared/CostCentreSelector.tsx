@@ -1,5 +1,6 @@
 import { Target, AlertCircle } from 'lucide-react';
 import { useMasterData } from '../../contexts/MasterDataContext';
+import { isRecordMappedToEntity } from '../../lib/masters/entityMapping';
 
 /**
  * COST CENTRE SELECTOR - SHARED COMPONENT
@@ -16,6 +17,7 @@ interface CostCentreSelectorProps {
   required?: boolean;
   disabled?: boolean;
   error?: string;
+  entityId?: string;
 }
 
 export function CostCentreSelector({
@@ -25,10 +27,13 @@ export function CostCentreSelector({
   placeholder = 'Select cost centre...',
   required = false,
   disabled = false,
-  error
+  error,
+  entityId
 }: CostCentreSelectorProps) {
   const { costCentres, getActiveCostCentres, getCostCentreById } = useMasterData();
-  const activeCostCentres = getActiveCostCentres();
+  const activeCostCentres = entityId
+    ? costCentres.filter((cc) => cc.isActive && isRecordMappedToEntity(cc, entityId))
+    : getActiveCostCentres();
   const selectedCostCentre = value ? getCostCentreById(value) : undefined;
 
   return (

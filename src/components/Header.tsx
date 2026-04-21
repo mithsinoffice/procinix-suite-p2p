@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useMasterData } from '../contexts/MasterDataContext';
+import { fetchPendingMasterApprovals, type MasterApprovalItem } from '../lib/masters/masterApproval';
 import { Bell, ChevronDown, User, LogOut, Building, Settings, HelpCircle, X, CheckCircle, Layers, ChevronRight, Eye, UserCircle, Mail, MapPin, Package, Users, FileText, Clock, Phone, Building2 } from 'lucide-react';
 
 /**
@@ -34,6 +35,25 @@ export function Header() {
   const [showNotificationPopover, setShowNotificationPopover] = useState(false);
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [pendingApprovals, setPendingApprovals] = useState<MasterApprovalItem[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      fetchPendingMasterApprovals()
+        .then((items) => {
+          if (!cancelled) setPendingApprovals(items);
+        })
+        .catch((err) => console.warn('Header: failed to load pending approvals', err));
+    };
+    load();
+    const onMasterSaved = () => load();
+    window.addEventListener('master-saved', onMasterSaved);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('master-saved', onMasterSaved);
+    };
+  }, []);
   
   const { user, logout, switchEntity } = useAuth();
   const { 
@@ -355,21 +375,24 @@ export function Header() {
           >
             <Bell style={{ width: '18px', height: '18px', color: 'var(--color-mercury-grey)' }} />
             {/* Notification Badge */}
-            <span
-              className="absolute rounded-full flex items-center justify-center"
-              style={{
-                top: '2px',
-                right: '2px',
-                width: '16px',
-                height: '16px',
-                backgroundColor: 'var(--color-error)',
-                color: '#FFFFFF',
-                fontSize: '10px',
-                fontWeight: '600'
-              }}
-            >
-              3
-            </span>
+            {pendingApprovals.length > 0 && (
+              <span
+                className="absolute rounded-full flex items-center justify-center"
+                style={{
+                  top: '2px',
+                  right: '2px',
+                  minWidth: '16px',
+                  height: '16px',
+                  padding: '0 4px',
+                  backgroundColor: 'var(--color-error)',
+                  color: '#FFFFFF',
+                  fontSize: '10px',
+                  fontWeight: '600'
+                }}
+              >
+                {pendingApprovals.length > 99 ? '99+' : pendingApprovals.length}
+              </span>
+            )}
           </button>
 
           {/* Notification Popover - 260px width */}
@@ -392,156 +415,97 @@ export function Header() {
                   <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
                     Pending Approvals
                   </p>
-                  <span 
-                    className="rounded-full flex items-center justify-center"
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      backgroundColor: 'var(--color-error)',
-                      color: '#FFFFFF',
-                      fontSize: '11px',
-                      fontWeight: '600'
-                    }}
-                  >
-                    3
-                  </span>
+                  {pendingApprovals.length > 0 && (
+                    <span
+                      className="rounded-full flex items-center justify-center"
+                      style={{
+                        minWidth: '20px',
+                        height: '20px',
+                        padding: '0 6px',
+                        backgroundColor: 'var(--color-error)',
+                        color: '#FFFFFF',
+                        fontSize: '11px',
+                        fontWeight: '600'
+                      }}
+                    >
+                      {pendingApprovals.length}
+                    </span>
+                  )}
                 </div>
               </div>
 
               {/* Notification Items */}
               <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
-                {/* PO Approval */}
-                <div
-                  className="transition-all cursor-pointer"
-                  style={{
-                    padding: '12px',
-                    borderBottom: '1px solid var(--color-silver)',
-                    backgroundColor: 'transparent'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onClick={() => {
-                    navigate('/approval-dashboard');
-                    setShowNotificationPopover(false);
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div 
-                      className="rounded-lg flex items-center justify-center"
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        backgroundColor: 'var(--color-teal-tint)',
-                        flexShrink: 0
-                      }}
-                    >
-                      <FileText style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', margin: 0 }}>
-                        Purchase Order Approval
-                      </p>
-                      <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
-                        PO-2024-001 • ₹2,45,000
-                      </p>
-                      <div className="flex items-center gap-1" style={{ marginTop: '4px' }}>
-                        <Clock style={{ width: '12px', height: '12px', color: 'var(--color-mercury-grey)' }} />
-                        <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>2 hours ago</span>
-                      </div>
-                    </div>
+                {pendingApprovals.length === 0 ? (
+                  <div style={{ padding: '24px 16px', textAlign: 'center' }}>
+                    <CheckCircle style={{ width: '32px', height: '32px', color: 'var(--color-silver)', margin: '0 auto 8px' }} />
+                    <p style={{ fontSize: '13px', color: 'var(--color-ink)', margin: 0, fontWeight: 500 }}>
+                      All caught up
+                    </p>
+                    <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>
+                      No pending approvals
+                    </p>
                   </div>
-                </div>
-
-                {/* GRN Approval */}
-                <div
-                  className="transition-all cursor-pointer"
-                  style={{
-                    padding: '12px',
-                    borderBottom: '1px solid var(--color-silver)',
-                    backgroundColor: 'transparent'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onClick={() => {
-                    navigate('/approval-dashboard');
-                    setShowNotificationPopover(false);
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div 
-                      className="rounded-lg flex items-center justify-center"
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        backgroundColor: '#FFF9E6',
-                        flexShrink: 0
-                      }}
-                    >
-                      <Package style={{ width: '16px', height: '16px', color: '#D97706' }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', margin: 0 }}>
-                        GRN Location Acceptance
-                      </p>
-                      <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
-                        GRN-2024-045 • Mumbai Warehouse
-                      </p>
-                      <div className="flex items-center gap-1" style={{ marginTop: '4px' }}>
-                        <Clock style={{ width: '12px', height: '12px', color: 'var(--color-mercury-grey)' }} />
-                        <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>5 hours ago</span>
+                ) : (
+                  pendingApprovals.slice(0, 8).map((item) => {
+                    const submittedAt = new Date(item.submittedDate);
+                    const diffMs = Math.max(0, Date.now() - submittedAt.getTime());
+                    const mins = Math.floor(diffMs / 60_000);
+                    const hrs = Math.floor(mins / 60);
+                    const days = Math.floor(hrs / 24);
+                    const ago = days > 0 ? `${days}d ago` : hrs > 0 ? `${hrs}h ago` : `${mins}m ago`;
+                    return (
+                      <div
+                        key={item.id}
+                        className="transition-all cursor-pointer"
+                        style={{
+                          padding: '12px',
+                          borderBottom: '1px solid var(--color-silver)',
+                          backgroundColor: 'transparent'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        onClick={() => {
+                          navigate(item.route || '/approvals');
+                          setShowNotificationPopover(false);
+                        }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="rounded-lg flex items-center justify-center"
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              backgroundColor: 'var(--color-teal-tint)',
+                              flexShrink: 0
+                            }}
+                          >
+                            <FileText style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', margin: 0 }} className="truncate">
+                              {item.title}
+                            </p>
+                            <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }} className="truncate">
+                              {item.details?.recordCode || item.details?.workflowName || 'Pending review'}
+                            </p>
+                            <div className="flex items-center gap-1" style={{ marginTop: '4px' }}>
+                              <Clock style={{ width: '12px', height: '12px', color: 'var(--color-mercury-grey)' }} />
+                              <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>{ago}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Master Approval */}
-                <div
-                  className="transition-all cursor-pointer"
-                  style={{
-                    padding: '12px',
-                    borderBottom: '1px solid var(--color-silver)',
-                    backgroundColor: 'transparent'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onClick={() => {
-                    navigate('/approval-dashboard');
-                    setShowNotificationPopover(false);
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div 
-                      className="rounded-lg flex items-center justify-center"
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        backgroundColor: '#F3E5F5',
-                        flexShrink: 0
-                      }}
-                    >
-                      <Users style={{ width: '16px', height: '16px', color: '#7B1FA2' }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', margin: 0 }}>
-                        Vendor Master Update
-                      </p>
-                      <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
-                        Tech Solutions Pvt Ltd
-                      </p>
-                      <div className="flex items-center gap-1" style={{ marginTop: '4px' }}>
-                        <Clock style={{ width: '12px', height: '12px', color: 'var(--color-mercury-grey)' }} />
-                        <span style={{ fontSize: '11px', color: 'var(--color-mercury-grey)' }}>1 day ago</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                    );
+                  })
+                )}
               </div>
 
               {/* View All Button */}
               <div style={{ padding: '12px' }}>
                 <button
                   onClick={() => {
-                    navigate('/approval-dashboard');
+                    navigate('/approvals');
                     setShowNotificationPopover(false);
                   }}
                   className="w-full rounded-lg transition-all"

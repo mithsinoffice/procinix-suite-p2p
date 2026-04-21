@@ -1,4 +1,4 @@
-import { extractInvoiceData } from './claudeOCR.mjs';
+import { extractInvoiceData } from './geminiOCR.mjs';
 import { validateInvoiceData } from './validator.mjs';
 import { matchToPO } from './poMatcher.mjs';
 import { createInvoiceFromExtraction } from './invoiceCreator.mjs';

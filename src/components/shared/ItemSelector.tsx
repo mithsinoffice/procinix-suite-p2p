@@ -1,5 +1,6 @@
 import { Package, AlertCircle } from 'lucide-react';
 import { useMasterData } from '../../contexts/MasterDataContext';
+import { isRecordMappedToEntity } from '../../lib/masters/entityMapping';
 
 /**
  * ITEM SELECTOR - SHARED COMPONENT
@@ -23,6 +24,7 @@ interface ItemSelectorProps {
   error?: string;
   filterByCategory?: string;
   filterByType?: 'Goods' | 'Services';
+  entityId?: string;
 }
 
 export function ItemSelector({
@@ -34,10 +36,13 @@ export function ItemSelector({
   disabled = false,
   error,
   filterByCategory,
-  filterByType
+  filterByType,
+  entityId
 }: ItemSelectorProps) {
   const { items, getActiveItems, getItemById } = useMasterData();
-  let activeItems = getActiveItems();
+  let activeItems = entityId
+    ? items.filter((item) => item.status === 'Active' && isRecordMappedToEntity(item, entityId))
+    : getActiveItems();
   
   // Apply filters
   if (filterByCategory) {

@@ -48,14 +48,13 @@
         '@radix-ui/react-aspect-ratio@1.1.2': '@radix-ui/react-aspect-ratio',
         '@radix-ui/react-alert-dialog@1.1.6': '@radix-ui/react-alert-dialog',
         '@radix-ui/react-accordion@1.2.3': '@radix-ui/react-accordion',
-        '@jsr/supabase__supabase-js@2.49.8': '@jsr/supabase__supabase-js',
         '@': path.resolve(__dirname, './src'),
       },
     },
     build: {
       target: 'esnext',
       outDir: 'build',
-      chunkSizeWarningLimit: 900,
+      chunkSizeWarningLimit: 2000,
       rollupOptions: {
         output: {
           manualChunks(id) {
@@ -77,13 +76,6 @@
             }
 
             if (
-              id.includes('/node_modules/@supabase/') ||
-              id.includes('/node_modules/@jsr/supabase__supabase-js/')
-            ) {
-              return 'supabase';
-            }
-
-            if (
               id.includes('/node_modules/lucide-react/') ||
               id.includes('/node_modules/class-variance-authority/') ||
               id.includes('/node_modules/clsx/') ||
@@ -100,5 +92,11 @@
     server: {
       port: 3000,
       open: true,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8787',
+          changeOrigin: true,
+        },
+      },
     },
   });

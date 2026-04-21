@@ -1,5 +1,7 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, Type, FileText, Edit, Eye } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { ApprovalModal } from './ApprovalModal';
@@ -16,6 +18,7 @@ interface DebitNoteReason {
   description: string;
   status: string;
   approvalStatus?: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected' | 'Changes Requested';
+  entityMappings?: EntityScopeMapping[];
   originalData?: DebitNoteReason;
 }
 
@@ -48,6 +51,19 @@ export function DebitNoteReasonMaster() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<DebitNoteReason | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
+  const filteredReasons = useMemo(() => {
+    return reasons.filter((r) => {
+      const haystack = [r.code, r.name, r.description].join(' ').toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(r.status);
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(r.approvalStatus ?? 'Approved');
+      return matchesSearch && matchesStatus && matchesApproval;
+    });
+  }, [reasons, searchTerm, statusFilter, approvalFilter]);
 
   const handleSubmit = (approvalStatus: DebitNoteReason['approvalStatus'] = 'Pending Approval') => {
     if (isEditMode && editingId) {
@@ -187,7 +203,7 @@ export function DebitNoteReasonMaster() {
 
   if (showForm) {
     return (
-      <FormShell
+      <FormShell masterName="Debit Note Reason Master"
         title={editingId ? 'Edit Debit Note Reason' : 'Create Debit Note Reason'}
         subtitle="Manage reasons for creating debit notes"
         modeLabel={editingId ? 'Edit Master Record' : 'Create Master Record'}
@@ -224,17 +240,8 @@ export function DebitNoteReasonMaster() {
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Debit Note Reason Master</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage reasons for creating debit notes</p>
-          </div>
-        </div>
+    <MasterPageShell masterName="Debit Note Reason Master" description="Manage debit note reason codes">
+      <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
             resetForm();
@@ -308,6 +315,30 @@ export function DebitNoteReasonMaster() {
         </div>
       )}
 
+      <MasterListToolbar
+        masterName="Debit Note Reasons"
+        masterKey="debit_note_reason_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected', 'Changes Requested'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredReasons}
+        columns={[
+          { key: 'code', label: 'Code' },
+          { key: 'name', label: 'Name' },
+          { key: 'description', label: 'Description' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
+
       <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -322,7 +353,7 @@ export function DebitNoteReasonMaster() {
               </tr>
             </thead>
             <tbody>
-              {reasons.map((reason, index) => (
+              {filteredReasons.map((reason, index) => (
                 <tr key={reason.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
                   <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{reason.code}</td>
                   <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{reason.name}</td>
@@ -369,6 +400,6 @@ export function DebitNoteReasonMaster() {
         onReject={handleReject}
         onRequestInfo={handleRequestInfo}
       />
-    </div>
+    </MasterPageShell>
   );
 }

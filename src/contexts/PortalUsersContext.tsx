@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ensureDomainDocument, saveDomainDocument } from '../lib/supabase/documentStore';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 import type { PortalUser, PortalUserStatus } from '../types/portalUser';
 
 export type PortalUsersDocument = { users: PortalUser[] };

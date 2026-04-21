@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Shield, Lock, Eye, Edit, Trash2, Check, X as XIcon, Search } from 'lucide-react';
 import { useMasterData } from '../contexts/MasterDataContext';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 
 interface AccessRule {
   id: string;
@@ -33,10 +34,35 @@ const mockAccessRules: AccessRule[] = [
 
 export function AccessPrivilege() {
   const { availableCompanies } = useMasterData();
-  const [accessRules, setAccessRules] = useState<AccessRule[]>(mockAccessRules);
+  const [isHydrated, setHydrated] = useState(false);
+  const [accessRules, setAccessRules] = useState<AccessRule[]>([]);
   const [selectedRole, setSelectedRole] = useState('Admin');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>(['ALL']);
+
+  useEffect(() => {
+    let cancelled = false;
+    ensureDomainDocument<{ accessRules: AccessRule[] }>('access_rules', { accessRules: mockAccessRules })
+      .then((doc) => {
+        if (cancelled) return;
+        setAccessRules(doc.accessRules ?? mockAccessRules);
+        setHydrated(true);
+      })
+      .catch((error) => {
+        console.warn('Failed to hydrate access_rules document', error);
+        if (cancelled) return;
+        setAccessRules(mockAccessRules);
+        setHydrated(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    void saveDomainDocument('access_rules', { accessRules });
+  }, [isHydrated, accessRules]);
 
   const toggleEntityScope = (entityId: string) => {
     if (entityId === 'ALL') {

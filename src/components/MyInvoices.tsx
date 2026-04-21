@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAPData } from '../contexts/APDataContext';
 import { 
   FileText, Filter, Search, Download, Eye, Edit2, Copy, 
   XCircle, AlertTriangle, CheckCircle, Clock, DollarSign,
@@ -26,97 +27,52 @@ interface Invoice {
 
 export function MyInvoices() {
   const navigate = useNavigate();
+  const { invoices: apInvoices } = useAPData();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [riskFilter, setRiskFilter] = useState<string>('All');
   const [invoiceTypeFilter, setInvoiceTypeFilter] = useState<string>('All'); // Added invoice type filter
   const [showFilters, setShowFilters] = useState(false);
 
-  // Mock data - would come from backend
-  const [invoices] = useState<Invoice[]>([
-    {
-      id: 'INV-001',
-      invoiceNumber: 'INV-2024-00123',
-      invoiceType: 'PO',
-      vendorName: 'Tech Solutions Pvt Ltd',
-      vendorCode: 'VEN-1001',
-      poNumber: 'PO-2024-001',
-      invoiceDate: '2024-12-10',
-      invoiceAmount: 125000,
-      status: 'In Review',
-      aiRisk: 'Low',
-      paymentStatus: 'Pending',
-      createdBy: 'John Doe',
-      createdDate: '2024-12-11',
-      currentApprover: 'Sarah Manager',
-      daysInStatus: 2
-    },
-    {
-      id: 'INV-002',
-      invoiceNumber: 'INV-2024-00124',
-      invoiceType: 'PO',
-      vendorName: 'ABC Manufacturing Ltd',
-      vendorCode: 'VEN-1002',
-      poNumber: 'PO-2024-002',
-      invoiceDate: '2024-12-08',
-      invoiceAmount: 350000,
-      status: 'Approved',
-      aiRisk: 'Medium',
-      paymentStatus: 'Pending',
-      createdBy: 'John Doe',
-      createdDate: '2024-12-09',
-      daysInStatus: 3
-    },
-    {
-      id: 'INV-003',
-      invoiceNumber: 'INV-2024-00125',
-      invoiceType: 'PO',
-      vendorName: 'XYZ Services Inc',
-      vendorCode: 'VEN-1003',
-      poNumber: 'PO-2024-003',
-      invoiceDate: '2024-12-12',
-      invoiceAmount: 85000,
-      status: 'Draft',
-      aiRisk: 'Low',
-      paymentStatus: 'Pending',
-      createdBy: 'John Doe',
-      createdDate: '2024-12-13',
-      daysInStatus: 1
-    },
-    {
-      id: 'INV-004',
-      invoiceNumber: 'INV-2024-00126',
-      invoiceType: 'PO',
-      vendorName: 'Global Suppliers Co',
-      vendorCode: 'VEN-1004',
-      poNumber: 'PO-2024-004',
-      invoiceDate: '2024-12-05',
-      invoiceAmount: 450000,
-      status: 'On Hold',
-      aiRisk: 'High',
-      paymentStatus: 'Pending',
-      createdBy: 'John Doe',
-      createdDate: '2024-12-06',
-      currentApprover: 'Finance Head',
-      daysInStatus: 7
-    },
-    {
-      id: 'INV-005',
-      invoiceNumber: 'INV-2024-00127',
-      invoiceType: 'PO',
-      vendorName: 'Tech Solutions Pvt Ltd',
-      vendorCode: 'VEN-1001',
-      poNumber: 'PO-2024-005',
-      invoiceDate: '2024-11-28',
-      invoiceAmount: 200000,
-      status: 'Paid',
-      aiRisk: 'Low',
-      paymentStatus: 'Paid',
-      createdBy: 'John Doe',
-      createdDate: '2024-11-29',
-      daysInStatus: 14
-    }
-  ]);
+  const invoices = useMemo<Invoice[]>(
+    () =>
+      apInvoices.map((invoice) => {
+        const daysInStatus = Math.max(
+          0,
+          Math.floor((Date.now() - new Date(invoice.invoiceDate).getTime()) / (1000 * 60 * 60 * 24))
+        );
+        return {
+          id: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          invoiceType: invoice.invoiceType === 'Expense' ? 'Non-PO' : invoice.invoiceType,
+          vendorName: invoice.vendorName,
+          vendorCode: invoice.vendorCode,
+          poNumber: invoice.poNumber,
+          invoiceDate: invoice.invoiceDate,
+          invoiceAmount: invoice.totalAmount,
+          status:
+            invoice.status === 'Pending Approval'
+              ? 'Submitted'
+              : invoice.status === 'Under Review'
+                ? 'In Review'
+                : invoice.status === 'Partially Paid'
+                  ? 'Ready for Payment'
+                  : invoice.status,
+          aiRisk: invoice.matchStatus === 'Unmatched' ? 'High' : invoice.matchStatus === 'Partially Matched' ? 'Medium' : 'Low',
+          paymentStatus:
+            invoice.paymentStatus === 'Unpaid'
+              ? 'Pending'
+              : invoice.paymentStatus === 'Partially Paid'
+                ? 'Scheduled'
+                : 'Paid',
+          createdBy: invoice.approver || 'Current User',
+          createdDate: invoice.invoiceDate,
+          currentApprover: invoice.status === 'Pending Approval' || invoice.status === 'Under Review' ? (invoice.approver || 'AP Team') : undefined,
+          daysInStatus,
+        };
+      }),
+    [apInvoices]
+  );
 
   const getStatusStyle = (status: Invoice['status']) => {
     const styles = {

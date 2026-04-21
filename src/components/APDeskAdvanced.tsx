@@ -74,8 +74,8 @@ export function APDeskAdvanced() {
   const vendorInvoiceCount = safeVendors
     .map(vendor => ({
       name: vendor.name.length > 25 ? vendor.name.substring(0, 25) + '...' : vendor.name,
-      count: safeInvoices.filter(inv => inv.vendorId === vendor.id).length,
-      value: safeInvoices.filter(inv => inv.vendorId === vendor.id).reduce((sum, inv) => sum + inv.totalAmount, 0) / 100000 // in lakhs
+      count: safeInvoices.filter(inv => inv.vendorCode === vendor.code).length,
+      value: safeInvoices.filter(inv => inv.vendorCode === vendor.code).reduce((sum, inv) => sum + inv.totalAmount, 0) / 100000 // in lakhs
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);

@@ -160,7 +160,7 @@ export function KitBundlePRForm() {
       itemCount: bundles.reduce((sum, bundle) => sum + bundle.skus.length, 0),
       justification: `Bundle PR with ${bundles.length} kit(s)`,
       policyFlags: [],
-      lineItems: bundles
+      lineItems: bundles as unknown as Array<Record<string, unknown>>
     });
 
     navigate('/procurement/pr/my-prs');

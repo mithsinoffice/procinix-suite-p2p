@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAPData } from '../contexts/APDataContext';
 import { 
   CheckCircle, XCircle, MessageSquare, Eye, Filter, Search,
   AlertTriangle, Clock, TrendingUp, FileText, Calendar, DollarSign,
@@ -26,6 +27,7 @@ interface PendingInvoice {
 
 export function InvoicesForApproval() {
   const navigate = useNavigate();
+  const { invoices: apInvoices } = useAPData();
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string>('All');
   const [riskFilter, setRiskFilter] = useState<string>('All');
@@ -33,77 +35,39 @@ export function InvoicesForApproval() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
 
-  // Mock data
-  const [invoices] = useState<PendingInvoice[]>([
-    {
-      id: 'INV-001',
-      invoiceNumber: 'INV-2024-00123',
-      vendorName: 'Tech Solutions Pvt Ltd',
-      vendorCode: 'VEN-1001',
-      poNumber: 'PO-2024-001',
-      invoiceDate: '2024-12-10',
-      invoiceAmount: 125000,
-      netPayable: 134000,
-      agingDays: 2,
-      aiRiskFlags: [],
-      priority: 'Low',
-      submittedBy: 'John Doe',
-      submittedDate: '2024-12-11',
-      dueDate: '2025-01-09',
-      level: 'L1'
-    },
-    {
-      id: 'INV-002',
-      invoiceNumber: 'INV-2024-00124',
-      vendorName: 'ABC Manufacturing Ltd',
-      vendorCode: 'VEN-1002',
-      poNumber: 'PO-2024-002',
-      invoiceDate: '2024-12-08',
-      invoiceAmount: 350000,
-      netPayable: 385000,
-      agingDays: 5,
-      aiRiskFlags: ['Amount variance 5% above PO'],
-      priority: 'Medium',
-      submittedBy: 'Jane Smith',
-      submittedDate: '2024-12-09',
-      dueDate: '2025-01-07',
-      level: 'L1'
-    },
-    {
-      id: 'INV-003',
-      invoiceNumber: 'INV-2024-00125',
-      vendorName: 'Global Suppliers Co',
-      vendorCode: 'VEN-1004',
-      poNumber: 'PO-2024-004',
-      invoiceDate: '2024-12-05',
-      invoiceAmount: 450000,
-      netPayable: 495000,
-      agingDays: 8,
-      aiRiskFlags: ['Possible duplicate found', 'Overdue payment by 3 days'],
-      priority: 'High',
-      submittedBy: 'Mike Johnson',
-      submittedDate: '2024-12-06',
-      dueDate: '2025-01-04',
-      level: 'L2'
-    },
-    {
-      id: 'INV-004',
-      invoiceNumber: 'INV-2024-00126',
-      vendorName: 'XYZ Services Inc',
-      vendorCode: 'VEN-1003',
-      poNumber: 'PO-2024-003',
-      invoiceDate: '2024-12-12',
-      invoiceAmount: 85000,
-      netPayable: 91800,
-      agingDays: 1,
-      aiRiskFlags: [],
-      priority: 'Low',
-      submittedBy: 'Sarah Williams',
-      submittedDate: '2024-12-13',
-      dueDate: '2025-01-11',
-      level: 'L1'
-    }
-  ]);
+  const invoices = useMemo<PendingInvoice[]>(
+    () =>
+      apInvoices
+        .filter((invoice) => invoice.status === 'Pending Approval' || invoice.status === 'Under Review')
+        .map((invoice) => {
+          const agingDays = Math.max(
+            0,
+            Math.floor((Date.now() - new Date(invoice.invoiceDate).getTime()) / (1000 * 60 * 60 * 24))
+          );
+          const aiRiskFlags = [
+            ...(invoice.matchStatus === 'Unmatched' ? ['Invoice is unmatched'] : []),
+            ...(invoice.matchStatus === 'Partially Matched' ? ['Partial PO/GRN match'] : []),
+          ];
+          return {
+            id: invoice.id,
+            invoiceNumber: invoice.invoiceNumber,
+            vendorName: invoice.vendorName,
+            vendorCode: invoice.vendorCode,
+            poNumber: invoice.poNumber || 'Direct',
+            invoiceDate: invoice.invoiceDate,
+            invoiceAmount: invoice.totalAmount,
+            netPayable: invoice.totalAmount,
+            agingDays,
+            aiRiskFlags,
+            priority: invoice.totalAmount >= 500000 ? 'High' : invoice.totalAmount >= 100000 ? 'Medium' : 'Low',
+            submittedBy: invoice.approver || 'AP Team',
+            submittedDate: invoice.invoiceDate,
+            dueDate: invoice.dueDate || '',
+            level: invoice.totalAmount >= 500000 ? 'L2' : 'L1',
+          };
+        }),
+    [apInvoices]
+  );
 
   const getPriorityStyle = (priority: PendingInvoice['priority']) => {
     const styles = {

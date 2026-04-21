@@ -242,8 +242,10 @@ export async function fetchPendingMasterApprovals(): Promise<MasterApprovalItem[
         const changes = getMasterChanges(record, item.latestAudit);
         const submittedSource = item.latestAudit?.changedAt ?? item.updatedAt ?? item.createdAt ?? new Date().toISOString();
         const submittedTimestamp = new Date(submittedSource);
-        const submittedDate = submittedTimestamp.toISOString().split('T')[0];
-        const submittedTime = submittedTimestamp.toLocaleTimeString('en-IN', { hour12: false });
+        const submittedDate = Number.isNaN(submittedTimestamp.getTime())
+          ? new Date().toISOString()
+          : submittedTimestamp.toISOString();
+        const submittedTime = '';
         const approvalStatus = getApprovalStatus(record);
         const submittedBy =
           typeof item.latestAudit?.newValues?._workflowActor === 'string'

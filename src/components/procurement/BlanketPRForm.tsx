@@ -84,7 +84,7 @@ export function BlanketPRForm() {
       itemCount: releases.length || 1,
       justification: `Blanket PR for ${item.itemName || 'scheduled procurement'}`,
       policyFlags: scheduledQty === totalQty ? [] : ['Release Schedule Mismatch'],
-      lineItems: releases
+      lineItems: releases as unknown as Array<Record<string, unknown>>
     });
 
     navigate('/procurement/pr/my-prs');

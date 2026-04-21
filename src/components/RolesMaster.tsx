@@ -1,6 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, Search, Edit, Trash2, X, Shield, Users, Check, AlertCircle, Clock } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, X, Shield, Users, Check, AlertCircle, Clock, Eye } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
+import { ApprovalModal } from './ApprovalModal';
+import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { EntityMappingSelector } from './shared/EntityMappingSelector';
@@ -15,7 +19,15 @@ interface Role {
   permissions: string[];
   status: 'Active' | 'Inactive' | 'Pending Approval';
   createdDate: string;
-  approvalStatus?: 'Approved' | 'Pending' | 'Rejected';
+  entityMappings?: EntityScopeMapping[];
+  approvalStatus?: 'Approved' | 'Pending' | 'Pending Approval' | 'Rejected';
+  originalData?: Role;
+}
+
+interface Change {
+  field: string;
+  oldValue: string;
+  newValue: string;
 }
 
 interface UserAssignment {
@@ -24,6 +36,14 @@ interface UserAssignment {
   roles?: string[] | string;
   status?: string;
   approvalStatus?: string;
+}
+
+interface RoleFormData {
+  roleCode: string;
+  roleName: string;
+  description: string;
+  permissions: string[];
+  status: Role['status'];
 }
 
 const mockRoles: Role[] = [
@@ -90,14 +110,20 @@ export function RolesMaster() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RoleFormData>({
     roleCode: '',
     roleName: '',
     description: '',
     permissions: [] as string[],
-    status: 'Pending Approval' as const
+    status: 'Pending Approval'
   });
   const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [currentReviewRecord, setCurrentReviewRecord] = useState<Role | null>(null);
+  const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
 
   const availablePermissions = [
     'Create PO', 'View PO', 'Edit Draft PO', 'Delete Draft PO',
@@ -110,11 +136,15 @@ export function RolesMaster() {
     'System Configuration', 'All Modules'
   ];
 
-  const filteredRoles = roles.filter(role =>
-    role.roleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    role.roleCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    role.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRoles = useMemo(() => {
+    return roles.filter(role => {
+      const haystack = [role.roleCode, role.roleName, role.description].join(' ').toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(role.status);
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(role.approvalStatus ?? 'Approved');
+      return matchesSearch && matchesStatus && matchesApproval;
+    });
+  }, [roles, searchTerm, statusFilter, approvalFilter]);
 
   const getAssignedUserCount = (role: Role) => users.filter((user) => {
     if (user.status === 'Inactive' || user.approvalStatus !== 'Approved') {
@@ -185,6 +215,50 @@ export function RolesMaster() {
     }
   };
 
+  const handleReview = (role: Role) => {
+    const changes: Change[] = [];
+    if (role.originalData) {
+      const original = role.originalData;
+      if (original.roleCode !== role.roleCode) changes.push({ field: 'Role Code', oldValue: original.roleCode, newValue: role.roleCode });
+      if (original.roleName !== role.roleName) changes.push({ field: 'Role Name', oldValue: original.roleName, newValue: role.roleName });
+      if (original.description !== role.description) changes.push({ field: 'Description', oldValue: original.description, newValue: role.description });
+      if (original.status !== role.status) changes.push({ field: 'Status', oldValue: original.status, newValue: role.status });
+      if (JSON.stringify(original.permissions) !== JSON.stringify(role.permissions)) changes.push({ field: 'Permissions', oldValue: original.permissions.join(', '), newValue: role.permissions.join(', ') });
+    }
+    setCurrentReviewRecord(role);
+    setDetectedChanges(changes);
+    setShowApprovalModal(true);
+  };
+
+  const handleApprove = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction('roles_master', roles, currentReviewRecord.id, 'approve');
+      setRoles(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleReject = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction('roles_master', roles, currentReviewRecord.id, 'reject');
+      setRoles(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleRequestInfo = async () => {
+    if (currentReviewRecord) {
+      const comments = window.prompt('Enter comments for the request:', '');
+      if (comments === null) return;
+      const nextRecords = await applyMasterApprovalAction('roles_master', roles, currentReviewRecord.id, 'request_info', comments);
+      setRoles(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
   const togglePermission = (permission: string) => {
     setFormData({
       ...formData,
@@ -237,7 +311,7 @@ export function RolesMaster() {
 
   if (showCreateModal) {
     return (
-      <FormShell
+      <FormShell masterName="Roles Master"
         title={selectedRole ? 'Edit Role' : 'Create Role'}
         subtitle="Define and manage user roles with permissions"
         modeLabel={selectedRole ? 'Edit Master Record' : 'Create Master Record'}
@@ -327,17 +401,9 @@ export function RolesMaster() {
   }
 
   return (
-    <div style={{ padding: '24px', backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
+    <MasterPageShell masterName="Roles Master" description="Manage user roles and permissions">
       {/* Header */}
-      <div className="flex items-center justify-between" style={{ marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
-            Roles Master
-          </h1>
-          <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>
-            Define and manage user roles with permissions
-          </p>
-        </div>
+      <div className="flex items-center justify-end" style={{ marginBottom: '24px' }}>
         <button
           onClick={() => { setSelectedRole(null); setShowCreateModal(true); }}
           className="flex items-center gap-2 rounded-lg transition-all"
@@ -358,35 +424,32 @@ export function RolesMaster() {
         </button>
       </div>
 
-      {/* Search */}
-      <div
-        className="rounded-lg"
-        style={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid var(--color-silver)',
-          padding: '16px',
-          marginBottom: '16px'
+      <MasterListToolbar
+        masterName="Roles Master"
+        masterKey="roles_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive', 'Pending Approval'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Approved', 'Pending', 'Rejected'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
         }}
-      >
-        <div className="flex items-center gap-2" style={{ position: 'relative' }}>
-          <Search style={{ position: 'absolute', left: '12px', width: '18px', height: '18px', color: 'var(--color-mercury-grey)' }} />
-          <input
-            type="text"
-            placeholder="Search by role name, code, or description..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '10px 10px 10px 40px',
-              border: '1px solid var(--color-silver)',
-              borderRadius: '8px',
-              fontSize: '14px',
-              color: 'var(--color-ink)',
-              outline: 'none'
-            }}
-          />
-        </div>
-      </div>
+        records={filteredRoles}
+        columns={[
+          { key: 'roleCode', label: 'Role Code' },
+          { key: 'roleName', label: 'Role Name' },
+          { key: 'description', label: 'Description' },
+          { key: 'userCount', label: 'User Count' },
+          { key: 'permissions', label: 'Permissions' },
+          { key: 'createdDate', label: 'Created Date' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
 
       {/* Roles Table */}
       <div
@@ -471,6 +534,16 @@ export function RolesMaster() {
                   </td>
                   <td style={{ padding: '16px' }}>
                     <div className="flex items-center gap-2">
+                      {role.approvalStatus === 'Pending' && (
+                        <button
+                          onClick={() => handleReview(role)}
+                          className="p-2 rounded-lg transition-all"
+                          style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', cursor: 'pointer' }}
+                          title="Review Changes"
+                        >
+                          <Eye style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleEdit(role)}
                         className="p-2 rounded-lg transition-all"
@@ -499,6 +572,17 @@ export function RolesMaster() {
           </table>
         </div>
       </div>
-    </div>
+
+      <ApprovalModal
+        isOpen={showApprovalModal}
+        onClose={() => setShowApprovalModal(false)}
+        recordType="Roles Master"
+        recordId={currentReviewRecord?.roleCode || ''}
+        changes={detectedChanges}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onRequestInfo={handleRequestInfo}
+      />
+    </MasterPageShell>
   );
 }

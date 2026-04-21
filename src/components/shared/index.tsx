@@ -15,6 +15,7 @@
  * - CostCentreSelector: For cost allocation (Procurement, AP, Budgeting)
  * - TaxCodeSelector: For tax selection (Procurement, AP)
  * - AccountCodeSelector: For GL account selection (AP, Payments, Budgeting)
+ * - DepartmentSelector: For department selection scoped by entity (AP invoices, etc.)
  * 
  * USAGE EXAMPLE:
  * ```tsx
@@ -41,3 +42,4 @@ export { EntitySelector } from './EntitySelector';
 export { CostCentreSelector } from './CostCentreSelector';
 export { TaxCodeSelector } from './TaxCodeSelector';
 export { AccountCodeSelector } from './AccountCodeSelector';
+export { DepartmentSelector } from './DepartmentSelector';

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAPData } from '../contexts/APDataContext';
 import { 
   ArrowLeft, FileText, Building2, Calendar, DollarSign,
   CheckCircle, Clock, AlertTriangle, User, MessageSquare,
@@ -29,30 +30,41 @@ interface AuditEntry {
 export function InvoiceWorkflowView() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { invoices } = useAPData();
 
-  // Mock invoice data
-  const invoice = {
-    id: 'INV-001',
-    invoiceNumber: 'INV-2024-00123',
-    vendorName: 'Tech Solutions Pvt Ltd',
-    vendorCode: 'VEN-1001',
-    vendorGSTIN: '29AABCT1234F1Z5',
-    poNumber: 'PO-2024-001',
-    grnNumber: 'GRN-2024-056',
-    invoiceDate: '2024-12-10',
-    invoiceAmount: 125000,
-    gstAmount: 11250,
-    tdsAmount: 2250,
-    netPayable: 134000,
-    status: 'In Review',
-    aiRisk: 'Low',
-    createdBy: 'John Doe',
-    createdDate: '2024-12-11 10:30 AM',
-    submittedDate: '2024-12-11 11:00 AM',
-    currency: 'INR',
-    paymentTerms: 'Net 30 Days',
-    dueDate: '2025-01-09'
-  };
+  const sourceInvoice = invoices.find((entry) => entry.id === id) ?? invoices[0];
+  const invoice = sourceInvoice
+    ? {
+        id: sourceInvoice.id,
+        invoiceNumber: sourceInvoice.invoiceNumber,
+        vendorName: sourceInvoice.vendorName,
+        vendorCode: sourceInvoice.vendorCode,
+        vendorGSTIN: '',
+        poNumber: sourceInvoice.poNumber || 'Direct',
+        grnNumber: 'Pending',
+        invoiceDate: sourceInvoice.invoiceDate,
+        invoiceAmount: sourceInvoice.totalAmount,
+        gstAmount: 0,
+        tdsAmount: 0,
+        netPayable: sourceInvoice.totalAmount,
+        status: sourceInvoice.status === 'Pending Approval' ? 'Submitted' : sourceInvoice.status === 'Under Review' ? 'In Review' : sourceInvoice.status,
+        aiRisk: sourceInvoice.matchStatus === 'Unmatched' ? 'High' : sourceInvoice.matchStatus === 'Partially Matched' ? 'Medium' : 'Low',
+        createdBy: sourceInvoice.approver || 'Current User',
+        createdDate: sourceInvoice.invoiceDate,
+        submittedDate: sourceInvoice.invoiceDate,
+        currency: sourceInvoice.currency,
+        paymentTerms: 'Net 30 Days',
+        dueDate: sourceInvoice.dueDate || '',
+      }
+    : null;
+
+  if (!invoice) {
+    return (
+      <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
+        <p style={{ color: 'var(--color-mercury-grey)' }}>No invoice found.</p>
+      </div>
+    );
+  }
 
   const workflowSteps: WorkflowStep[] = [
     {

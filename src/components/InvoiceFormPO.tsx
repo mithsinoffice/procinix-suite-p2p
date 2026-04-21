@@ -13,8 +13,11 @@ import { generateAIInsights, generateAIActions } from '../utils/aiInsightsGenera
 import { GSTDetermination } from './GSTDetermination';
 import { EntityCurrencyBadge } from './shared/EntityCurrencyBadge';
 import { useMasterData } from '../contexts/MasterDataContext';
+import { isRecordMappedToEntity } from '../lib/masters/entityMapping';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { JournalEntryPreview, TDSThresholdTracker } from './invoice';
+import { deriveApprovalMatrix } from '../utils/poInvoicePolicy';
 
 // OCR Types
 interface ExtractedField {
@@ -120,8 +123,16 @@ const getStatesListWithCodes = (): Array<{ code: string; name: string }> => {
 export function InvoiceFormPO() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { vendors, getPOsByVendor, getGRNsByPO, getAdvancesByVendor, getVendorByCode, getPOByNumber } = useAPData();
-  const { costCentres: liveCostCentres, profitCentres: liveProfitCentres, accountCodes: liveAccountCodes } = useMasterData();
+  const { vendors, getPOsByVendor, getGRNsByPO, getAdvancesByVendor, getVendorByCode, getPOByNumber, addInvoice } = useAPData();
+  const {
+    costCentres: liveCostCentres,
+    profitCentres: liveProfitCentres,
+    accountCodes: liveAccountCodes,
+    getActiveTDSSections,
+    getTDSSectionByCode,
+    currentCompany,
+  } = useMasterData();
+  const invoiceEntityId = currentCompany?.id ?? undefined;
   
   // OCR Upload Mode State
   const [entryMode, setEntryMode] = useState<'choose' | 'upload' | 'manual'>('choose');
@@ -157,7 +168,7 @@ export function InvoiceFormPO() {
   const [showOpenPOs, setShowOpenPOs] = useState(false);
   
   // GST Determination state
-  const [companyGSTIN, setCompanyGSTIN] = useState('27AABCU9603R1ZM'); // Example company GSTIN (Maharashtra)
+  const [companyGSTIN, setCompanyGSTIN] = useState(''); // Populated from entity master
   const [companyState, setCompanyState] = useState('');
   const [supplierState, setSupplierState] = useState('');
   const [placeOfSupply, setPlaceOfSupply] = useState('');
@@ -188,6 +199,8 @@ export function InvoiceFormPO() {
   const [exceptionModalOpen, setExceptionModalOpen] = useState(false);
   const [exceptionLineItem, setExceptionLineItem] = useState<LineItem | null>(null);
   const [rateErrors, setRateErrors] = useState<{[key: string]: string}>({});
+  const [gstr2bMatched, setGstr2bMatched] = useState(false);
+  const [requiredApprovers, setRequiredApprovers] = useState<string[]>([]);
 
   // AI Insights state
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
@@ -203,7 +216,7 @@ export function InvoiceFormPO() {
 
     const fetchAIInvoice = async () => {
       try {
-        const res = await fetch(`http://127.0.0.1:8787/api/invoices/${state.dbId}`);
+        const res = await fetch(`/api/invoices/${state.dbId}`);
         if (!res.ok) return;
         const json = await res.json();
         if (!json.success) return;
@@ -264,73 +277,28 @@ export function InvoiceFormPO() {
     fetchAIInvoice();
   }, [location.state, vendors]);
 
-  // Mock PO-wise line items (would be populated from backend)
-  const [lineItems, setLineItems] = useState<LineItem[]>([
-    {
-      id: '1',
-      itemName: 'Cotton Fabric - Premium Quality',
-      itemCode: 'ITM-FAB-001',
-      itemDescription: 'High quality cotton fabric for garment production',
-      accountCode: '5100',
-      accountDescription: 'Raw Materials - Fabrics',
-      unitPrice: 450.00,
-      poRate: 450.00,
-      qty: 100,
-      amount: 45000.00,
-      gstPercent: 12,
-      gstTotal: 5400.00,
-      cgst: 2700.00,
-      sgst: 2700.00,
-      igst: 0,
-      grossAmount: 50400.00,
-      tdsPercent: 2,
-      tdsSection: '194C',
-      tds: 900.00,
-      netPayable: 49500.00,
-      costCentre: 'CC-MFG-001',
-      profitCentre: 'PC-APPAREL-01',
-      project: 'PRJ-2024-Q4',
-      poNumber: 'PO-2024-001',
-      grnNumber: 'GRN-2024-056',
-      poQty: 150,
-      grnQty: 100,
-      previouslyInvoicedQty: 0,
-      remainingQtyBalance: 100,
-      remainingAmountBalance: 45000
-    },
-    {
-      id: '2',
-      itemName: 'Polyester Thread Spools',
-      itemCode: 'ITM-THR-045',
-      itemDescription: 'Industrial grade polyester thread - 1000m spools',
-      accountCode: '5120',
-      accountDescription: 'Raw Materials - Accessories',
-      unitPrice: 85.00,
-      poRate: 85.00,
-      qty: 500,
-      amount: 42500.00,
-      gstPercent: 18,
-      gstTotal: 7650.00,
-      cgst: 3825.00,
-      sgst: 3825.00,
-      igst: 0,
-      grossAmount: 50150.00,
-      tdsPercent: 2,
-      tdsSection: '194C',
-      tds: 850.00,
-      netPayable: 49300.00,
-      costCentre: 'CC-MFG-001',
-      profitCentre: 'PC-APPAREL-01',
-      project: 'PRJ-2024-Q4',
-      poNumber: 'PO-2024-001',
-      grnNumber: 'GRN-2024-057',
-      poQty: 600,
-      grnQty: 500,
-      previouslyInvoicedQty: 0,
-      remainingQtyBalance: 500,
-      remainingAmountBalance: 42500
-    }
-  ]);
+  // Line items (populated from PO/GRN selection or manual entry)
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const activeTdsSections = getActiveTDSSections();
+  const defaultTdsSection = activeTdsSections[0];
+  const defaultTdsSectionCode = defaultTdsSection?.sectionCode || '';
+  const tdsSectionNameMap = useMemo(
+    () =>
+      activeTdsSections.reduce<Record<string, string>>((acc, section) => {
+        acc[section.sectionCode] = section.sectionName;
+        return acc;
+      }, {}),
+    [activeTdsSections]
+  );
+  const tdsRateOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          activeTdsSections.map((section) => section.rateCompany || section.rateIndividual || 0)
+        )
+      ).sort((a, b) => a - b),
+    [activeTdsSections]
+  );
 
   // OCR Upload Handlers
   const handleFileSelect = (file: File) => {
@@ -392,18 +360,16 @@ export function InvoiceFormPO() {
 
   const generateMockOCRData = (): OCRData => {
     return {
-      vendorName: { value: 'Tech Solutions Pvt Ltd', confidence: 'High', isEdited: false },
-      vendorGSTIN: { value: '29AABCT1234F1Z5', confidence: 'High', isEdited: false },
-      invoiceNumber: { value: 'INV-2025-00123', confidence: 'High', isEdited: false },
-      invoiceDate: { value: '2025-01-10', confidence: 'High', isEdited: false },
-      invoiceAmount: { value: '125000.00', confidence: 'High', isEdited: false },
-      currency: { value: 'INR', confidence: 'High', isEdited: false },
-      poNumber: { value: 'PO-2024-001', confidence: 'Medium', isEdited: false },
-      grnNumber: { value: 'GRN-2024-056', confidence: 'Medium', isEdited: false },
-      paymentTerms: { value: 'Net 30 Days', confidence: 'Medium', isEdited: false },
-      dueDate: { value: '2025-02-09', confidence: 'High', isEdited: false },
-      cgstTotal: { value: '5625.00', confidence: 'High', isEdited: false },
-      sgstTotal: { value: '5625.00', confidence: 'High', isEdited: false },
+      vendorName: { value: '', confidence: 'Low', isEdited: false },
+      vendorGSTIN: { value: '', confidence: 'Low', isEdited: false },
+      invoiceNumber: { value: '', confidence: 'Low', isEdited: false },
+      invoiceDate: { value: '', confidence: 'Low', isEdited: false },
+      invoiceAmount: { value: '', confidence: 'Low', isEdited: false },
+      currency: { value: '', confidence: 'Low', isEdited: false },
+      poNumber: { value: '', confidence: 'Low', isEdited: false },
+      grnNumber: { value: '', confidence: 'Low', isEdited: false },
+      paymentTerms: { value: '', confidence: 'Low', isEdited: false },
+      dueDate: { value: '', confidence: 'Low', isEdited: false },
       lineItems: []
     };
   };
@@ -442,21 +408,37 @@ export function InvoiceFormPO() {
   const availableGRNs = selectedPO ? getGRNsByPO(selectedPO) : [];
   const vendorAdvances = selectedVendor ? getAdvancesByVendor(selectedVendor) : [];
 
-  const costCentres = liveCostCentres.length > 0
-    ? liveCostCentres.map((costCentre) => costCentre.code)
-    : ['CC-MFG-001', 'CC-MFG-002', 'CC-ADMIN-001', 'CC-SALES-001'];
-  const profitCentres = liveProfitCentres.length > 0
-    ? liveProfitCentres.map((profitCentre) => profitCentre.code)
-    : ['PC-APPAREL-01', 'PC-APPAREL-02', 'PC-HOME-01', 'PC-EXPORT-01'];
-  const accountCodes = liveAccountCodes.length > 0
-    ? liveAccountCodes.map((accountCode) => ({ code: accountCode.code, description: accountCode.name }))
-    : [
-        { code: '5100', description: 'Raw Materials - Fabrics' },
-        { code: '5120', description: 'Raw Materials - Accessories' },
-        { code: '5200', description: 'Packaging Materials' },
-        { code: '6100', description: 'Utilities - Electricity' },
-        { code: '6200', description: 'Professional Services' }
-      ];
+  const costCentres = useMemo(() => {
+    const scoped = liveCostCentres.filter(
+      (cc) =>
+        cc.isActive &&
+        (!invoiceEntityId || isRecordMappedToEntity(cc, invoiceEntityId))
+    );
+    if (scoped.length > 0) return scoped.map((cc) => cc.code);
+    return [];
+  }, [liveCostCentres, invoiceEntityId]);
+
+  const profitCentres = useMemo(() => {
+    const scoped = liveProfitCentres.filter(
+      (pc) =>
+        pc.isActive &&
+        (!invoiceEntityId || isRecordMappedToEntity(pc, invoiceEntityId))
+    );
+    if (scoped.length > 0) return scoped.map((pc) => pc.code);
+    return [];
+  }, [liveProfitCentres, invoiceEntityId]);
+
+  const accountCodes = useMemo(() => {
+    const scoped = liveAccountCodes.filter(
+      (ac) =>
+        ac.isActive &&
+        (!invoiceEntityId || isRecordMappedToEntity(ac, invoiceEntityId))
+    );
+    if (scoped.length > 0) {
+      return scoped.map((accountCode) => ({ code: accountCode.code, description: accountCode.name }));
+    }
+    return [];
+  }, [liveAccountCodes, invoiceEntityId]);
 
   // Auto-derive states from GSTINs
   useEffect(() => {
@@ -604,7 +586,7 @@ export function InvoiceFormPO() {
         igst: poLine.igst,
         grossAmount: poLine.grossAmount,
         tdsPercent: poLine.tdsPercent || 0,
-        tdsSection: poLine.tdsSection || '194C',
+        tdsSection: poLine.tdsSection || defaultTdsSectionCode,
         tds: poLine.tdsAmount || 0,
         netPayable: poLine.netAmount,
         costCentre: poLine.costCentre,
@@ -670,7 +652,7 @@ export function InvoiceFormPO() {
                 igst: itemIgst,
                 grossAmount: grnLine.amount + itemGstTotal,
                 tdsPercent: poLine.tdsPercent || 0,
-                tdsSection: poLine.tdsSection || '194C',
+                tdsSection: poLine.tdsSection || defaultTdsSectionCode,
                 tds: itemTds,
                 netPayable: grnLine.amount + itemGstTotal - itemTds,
                 costCentre: poLine.costCentre,
@@ -745,16 +727,27 @@ export function InvoiceFormPO() {
         // Calculate gross amount
         updated.grossAmount = updated.amount + updated.gstTotal;
         
-        // Smart TDS Section suggestion when TDS rate changes
+        // Suggest TDS Section based on configured TDS section master rates.
         if (field === 'tdsPercent') {
-          // Auto-suggest TDS section based on common rate-to-section mappings
-          if (value === 0.1) updated.tdsSection = '194Q'; // Purchase of goods
-          else if (value === 1) updated.tdsSection = '194I'; // Rent
-          else if (value === 2) updated.tdsSection = '194C'; // Contractors (most common)
-          else if (value === 5) updated.tdsSection = '194J'; // Professional services
-          else if (value === 10) updated.tdsSection = '194J'; // Professional services
-          else if (value === 20) updated.tdsSection = '194C'; // Higher rate contractors
-          else if (value === 0) updated.tdsSection = '194C'; // Default when no TDS
+          if (value === 0) {
+            updated.tdsSection = '';
+          } else {
+            const matched = activeTdsSections.find(
+              (section) => (section.rateCompany || section.rateIndividual || 0) === value
+            );
+            if (matched) {
+              updated.tdsSection = matched.sectionCode;
+            } else if (!updated.tdsSection && defaultTdsSectionCode) {
+              updated.tdsSection = defaultTdsSectionCode;
+            }
+          }
+        }
+
+        if (field === 'tdsSection') {
+          const selectedSection = getTDSSectionByCode(String(value));
+          if (selectedSection) {
+            updated.tdsPercent = selectedSection.rateCompany || selectedSection.rateIndividual || 0;
+          }
         }
         
         // Calculate TDS
@@ -799,6 +792,53 @@ export function InvoiceFormPO() {
     return totals;
   };
 
+  const getTDSLineError = (item: LineItem, index: number): string => {
+    const rate = Number(item.tdsPercent || 0);
+    if (rate <= 0) {
+      return '';
+    }
+
+    if (!item.tdsSection) {
+      return `Line ${index + 1}: TDS section is required when TDS rate is applied.`;
+    }
+
+    const section = getTDSSectionByCode(item.tdsSection);
+    if (!section || section.status !== 'Active' || (section.approvalStatus ?? 'Approved') !== 'Approved') {
+      return `Line ${index + 1}: TDS section ${item.tdsSection} is inactive or not approved.`;
+    }
+
+    const thresholdAmount = Number(section.thresholdAmount || 0);
+    if (thresholdAmount > 0 && item.amount < thresholdAmount) {
+      return `Line ${index + 1}: ${item.tdsSection} threshold ₹${thresholdAmount.toLocaleString('en-IN')} not met (base ₹${item.amount.toLocaleString('en-IN')}).`;
+    }
+
+    return '';
+  };
+
+  const validateTDSRules = (items: LineItem[]) => {
+    const tdsErrors: string[] = [];
+    items.forEach((item, index) => {
+      const lineError = getTDSLineError(item, index);
+      if (lineError) {
+        tdsErrors.push(lineError);
+      }
+    });
+
+    return tdsErrors;
+  };
+
+  const tdsLineErrors = useMemo(
+    () =>
+      lineItems.reduce<Record<string, string>>((acc, item, index) => {
+        const lineError = getTDSLineError(item, index);
+        if (lineError) {
+          acc[item.id] = lineError;
+        }
+        return acc;
+      }, {}),
+    [lineItems]
+  );
+
   const handleRetentionToggle = (type: string) => {
     if (retentionRequired.includes(type)) {
       setRetentionRequired(retentionRequired.filter(r => r !== type));
@@ -808,13 +848,110 @@ export function InvoiceFormPO() {
     }
   };
 
-  const handleSubmit = () => {
-    alert('Invoice submitted for approval');
-    navigate('/invoices');
+  const checkDuplicateInvoice = async () => {
+    const vendor = getVendorByCode(vendorCode || selectedVendor);
+    if (!vendor || !invoiceNumber) return true;
+    try {
+      const response = await fetch(
+        `/api/invoices?vendorId=${encodeURIComponent(vendor.id || '')}&invoiceNo=${encodeURIComponent(invoiceNumber)}`,
+        {
+          headers: authHeaders(),
+        }
+      );
+      if (!response.ok) return true;
+      const json = await response.json();
+      const matches = Array.isArray(json?.data) ? json.data : [];
+      if (matches.length === 0) return true;
+      const confirmProceed = window.confirm(
+        `Duplicate invoice detected (${matches[0].invoice_number}) for vendor ${matches[0].vendor_name}. Proceed anyway?`
+      );
+      return confirmProceed;
+    } catch {
+      return true;
+    }
+  };
+
+  const runThreeWayMatchValidation = () => {
+    const errors: string[] = [];
+    for (const item of lineItems) {
+      if (!item.selected) continue;
+      if (item.grnQty != null && item.qty > item.grnQty) {
+        errors.push(`${item.itemName || item.itemCode}: Invoice qty (${item.qty}) exceeds GRN qty (${item.grnQty})`);
+      }
+      if (item.poRate != null && item.unitPrice > item.poRate * (1 + policyConfig.maxTolerancePercent / 100)) {
+        setExceptionLineItem(item);
+        setExceptionModalOpen(true);
+      }
+    }
+    return errors;
+  };
+
+  const computeMsmeDueDate = () => {
+    const vendor = getVendorByCode(vendorCode || selectedVendor);
+    if (!vendor || vendor.category !== 'MSME' || !invoiceDate) return null;
+    const due = new Date(invoiceDate);
+    due.setDate(due.getDate() + 45);
+    return due;
+  };
+
+  const persistInvoice = (status: 'Draft' | 'Pending Approval') => {
+    const resolvedVendorCode = vendorCode || selectedVendor;
+    const vendor = getVendorByCode(resolvedVendorCode);
+    if (!vendor || !invoiceNumber || !invoiceDate) {
+      alert('Vendor, invoice number, and invoice date are required.');
+      return false;
+    }
+
+    addInvoice({
+      id: `PO-INV-${Date.now()}`,
+      invoiceNumber,
+      invoiceDate,
+      vendorName: vendor.name,
+      vendorCode: vendor.code,
+      invoiceType: 'PO',
+      poNumber: selectedPO || undefined,
+      totalAmount: calculateTotals().netPayable,
+      currency: invoiceCurrency,
+      status,
+      approver: 'AP Team',
+      paymentStatus: 'Unpaid',
+      matchStatus: selectedGRNs.length > 0 ? '3-Way Matched' : 'Partially Matched',
+    });
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    const tdsErrors = validateTDSRules(lineItems);
+    if (tdsErrors.length > 0) {
+      alert(`Cannot submit due to TDS validation errors:\n${tdsErrors.join('\n')}`);
+      return;
+    }
+
+    if (!gstr2bMatched) {
+      alert('Warning: ITC claim at risk — vendor has not filed GSTR-1 for this period. ITC may be reversed under Rule 37A.');
+    }
+
+    const dueDate = computeMsmeDueDate();
+    if (dueDate && dueDate < new Date()) {
+      alert(`MSME due date breached (${dueDate.toISOString().slice(0, 10)}). MSMED Act interest may apply at 3x bank rate.`);
+    }
+
+    const canProceed = await checkDuplicateInvoice();
+    if (!canProceed) return;
+
+    const threeWayErrors = runThreeWayMatchValidation();
+    if (threeWayErrors.length > 0) {
+      alert(`3-way match failed:\n${threeWayErrors.join('\n')}`);
+      return;
+    }
+
+    if (persistInvoice('Pending Approval')) {
+      navigate('/invoices');
+    }
   };
 
   const handleSaveDraft = () => {
-    alert('Invoice saved as draft');
+    persistInvoice('Draft');
   };
 
   const handleCancel = () => {
@@ -900,6 +1037,11 @@ export function InvoiceFormPO() {
     }
   }, [selectedVendor, invoiceNumber, invoiceDate, lineItems, selectedPO, selectedGRNs, vendorGSTNumber, ignoredInsights]);
 
+  useEffect(() => {
+    const totalAmount = lineItems.reduce((sum, item) => sum + (item.netPayable || 0), 0);
+    setRequiredApprovers(deriveApprovalMatrix(totalAmount));
+  }, [lineItems]);
+
   // Handle AI action clicks
   const handleAIActionClick = (insightId: string, action: string) => {
     const insight = aiInsights.find(ins => ins.id === insightId);
@@ -911,10 +1053,11 @@ export function InvoiceFormPO() {
         break;
       case 'apply-tds':
         if (insight.relatedData) {
+          const tdsRecommendation = insight.relatedData as { section?: string; rate?: number };
           const updatedItems = lineItems.map(item => ({
             ...item,
-            tdsSection: insight.relatedData.section,
-            tdsPercent: insight.relatedData.rate
+            tdsSection: tdsRecommendation.section ?? item.tdsSection,
+            tdsPercent: tdsRecommendation.rate ?? item.tdsPercent
           }));
           setLineItems(updatedItems);
         }
@@ -1673,7 +1816,7 @@ export function InvoiceFormPO() {
         )}
 
         {/* Line Items Table (Auto-populated from PO and GRN) */}
-        {selectedPO && (selectedGRNs.length > 0 || availableGRNs.filter(grn => grn.po === selectedPO).length === 0) && (
+        {selectedPO && (selectedGRNs.length > 0 || availableGRNs.filter(grn => grn.poNumber === selectedPO).length === 0) && (
           <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
             {/* Smart Validation Info Banner */}
             {policyConfig.hardLockRate && (
@@ -1749,7 +1892,13 @@ export function InvoiceFormPO() {
                 </thead>
                 <tbody>
                   {lineItems.filter(item => selectedGRNs.includes(item.grnNumber)).map((item, index) => (
-                    <tr key={item.id} style={{ borderTop: index > 0 ? '1px solid var(--color-silver)' : 'none' }}>
+                    <tr
+                      key={item.id}
+                      style={{
+                        borderTop: index > 0 ? '1px solid var(--color-silver)' : 'none',
+                        backgroundColor: tdsLineErrors[item.id] ? 'var(--color-error-light)' : 'transparent'
+                      }}
+                    >
                       {/* 1. Item Name */}
                       <td className="px-3 py-3">
                         <input
@@ -1932,15 +2081,12 @@ export function InvoiceFormPO() {
                           onChange={(e) => updateLineItem(item.id, 'tdsPercent', parseFloat(e.target.value))}
                           className="w-full px-2 py-2 rounded text-sm"
                           style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                          title="Select TDS rate - Section will be auto-suggested"
+                          title="Select TDS rate from configured TDS master sections"
                         >
                           <option value={0}>0%</option>
-                          <option value={0.1}>0.1%</option>
-                          <option value={1}>1%</option>
-                          <option value={2}>2%</option>
-                          <option value={5}>5%</option>
-                          <option value={10}>10%</option>
-                          <option value={20}>20%</option>
+                          {tdsRateOptions.map((rate) => (
+                            <option key={rate} value={rate}>{rate}%</option>
+                          ))}
                         </select>
                       </td>
                       {/* 14. TDS Section */}
@@ -1952,14 +2098,18 @@ export function InvoiceFormPO() {
                           style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                           title="TDS Section determines the nature of payment and applicable rate"
                         >
-                          <option value="194C">194C - Contractors</option>
-                          <option value="194J">194J - Professional Services</option>
-                          <option value="194H">194H - Commission/Brokerage</option>
-                          <option value="194I">194I - Rent</option>
-                          <option value="194A">194A - Interest</option>
-                          <option value="194Q">194Q - Purchase of Goods</option>
-                          <option value="194O">194O - E-commerce</option>
+                          <option value="">Select section</option>
+                          {activeTdsSections.map((section) => (
+                            <option key={section.id} value={section.sectionCode}>
+                              {section.sectionCode} - {section.sectionName}
+                            </option>
+                          ))}
                         </select>
+                        {tdsLineErrors[item.id] && (
+                          <p className="mt-1 text-xs" style={{ color: 'var(--color-error-dark)' }}>
+                            {tdsLineErrors[item.id]}
+                          </p>
+                        )}
                       </td>
                       {/* 15. TDS Amount */}
                       <td className="px-3 py-3">
@@ -2220,16 +2370,6 @@ export function InvoiceFormPO() {
                     const sectionBase = sectionItems.reduce((sum, item) => sum + item.amount, 0);
                     const avgRate = sectionItems.length > 0 ? sectionItems[0].tdsPercent : 0;
                     
-                    const sectionNames: {[key: string]: string} = {
-                      '194C': 'Contractors',
-                      '194J': 'Professional Services',
-                      '194H': 'Commission',
-                      '194I': 'Rent',
-                      '194A': 'Interest',
-                      '194Q': 'Purchase of Goods',
-                      '194O': 'E-commerce'
-                    };
-                    
                     return (
                       <div key={section} className="p-3 rounded-lg" style={{ backgroundColor: '#FFFFFF', border: '1px solid #FCA5A5' }}>
                         <div className="flex items-center justify-between mb-2">
@@ -2240,7 +2380,9 @@ export function InvoiceFormPO() {
                             {avgRate}%
                           </span>
                         </div>
-                        <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>{sectionNames[section]}</p>
+                        <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                          {tdsSectionNameMap[section] || 'Configured section'}
+                        </p>
                         <div className="space-y-1">
                           <div className="flex justify-between text-xs">
                             <span style={{ color: 'var(--color-mercury-grey)' }}>Base Amount:</span>
@@ -2257,11 +2399,68 @@ export function InvoiceFormPO() {
                 </div>
               </div>
             )}
+
+            <div className="mt-6 grid gap-4">
+              <TDSThresholdTracker
+                lineItems={lineItems.map((line) => ({
+                  id: line.id,
+                  qty: line.qty,
+                  rate: line.unitPrice,
+                  taxableAmount: line.amount,
+                  tdsSection: line.tdsSection || 'None',
+                  tdsRate: line.tdsPercent || 0,
+                  tdsAmount: line.tds || 0,
+                  netPayable: line.netPayable || 0,
+                  description: line.itemDescription || line.itemName || '',
+                } as any))}
+              />
+              <JournalEntryPreview
+                compact
+                formValues={{
+                  header: {
+                    invoiceType,
+                    invoiceNumber,
+                    invoiceDate,
+                    rcm: reverseChargeApplicable,
+                    exempt: false,
+                    sez: isSEZ,
+                  } as any,
+                  vendor: {
+                    id: selectedVendor || 'vendor',
+                    name: selectedVendor || '',
+                    vendorType: 'company',
+                    panValid: true,
+                    lowerCert: false,
+                    lowerRate: 0,
+                    tdsExempt: false,
+                    itrFiled: true,
+                    gstReg: 'reg',
+                  } as any,
+                  lineItems: lineItems.map((line) => ({
+                    id: line.id,
+                    description: line.itemDescription || line.itemName || '',
+                    qty: line.qty,
+                    rate: line.unitPrice,
+                    taxableAmount: line.amount,
+                    gstRate: line.gstPercent,
+                    igst: line.igst,
+                    cgst: line.cgst,
+                    sgst: line.sgst,
+                    tdsSection: line.tdsSection || 'None',
+                    tdsRate: line.tdsPercent || 0,
+                    tdsAmount: line.tds || 0,
+                    netPayable: line.netPayable || 0,
+                    glCode: line.accountCode || '',
+                    costCentre: line.costCentre || '',
+                  })),
+                }}
+              />
+            </div>
           </div>
         )}
 
         {/* Retention Capture Section */}
-        {selectedPO && (selectedGRNs.length > 0 || availableGRNs.filter(grn => grn.po === selectedPO).length === 0) && (
+        {selectedPO && (selectedGRNs.length > 0 || availableGRNs.filter(grn => grn.poNumber === selectedPO).length === 0) && (
           <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -2369,7 +2568,7 @@ export function InvoiceFormPO() {
         )}
 
         {/* Advance Adjustment Section */}
-        {selectedPO && (selectedGRNs.length > 0 || availableGRNs.filter(grn => grn.po === selectedPO).length === 0) && (
+        {selectedPO && (selectedGRNs.length > 0 || availableGRNs.filter(grn => grn.poNumber === selectedPO).length === 0) && (
           <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -2555,11 +2754,39 @@ export function InvoiceFormPO() {
               </div>
             </div>
 
+            <div className="mb-4 space-y-3">
+              <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-ink)' }}>
+                <input
+                  type="checkbox"
+                  checked={gstr2bMatched}
+                  onChange={(e) => setGstr2bMatched(e.target.checked)}
+                  style={{ accentColor: 'var(--color-teal)' }}
+                />
+                Vendor invoice appears in GSTR-2B
+              </label>
+              {!gstr2bMatched && (
+                <div className="px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+                  ITC claim at risk — vendor has not filed GSTR-1 for this period. ITC may be reversed under Rule 37A.
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {requiredApprovers.map((approver) => (
+                  <span
+                    key={approver}
+                    className="px-2 py-1 rounded-full text-xs"
+                    style={{ backgroundColor: '#E0F2FE', color: '#075985' }}
+                  >
+                    Required approver: {approver}
+                  </span>
+                ))}
+              </div>
+            </div>
+
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4" style={{ borderTop: '2px solid var(--color-silver)' }}>
               <button
                 onClick={() => {
-                  // Save as draft logic
+                  handleSaveDraft();
                   alert('Invoice saved as draft');
                 }}
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors"
@@ -2577,6 +2804,10 @@ export function InvoiceFormPO() {
                   if (!selectedPO) errors.push('PO not selected');
                   if (!invoiceNumber) errors.push('Invoice number missing');
                   if (!invoiceDate) errors.push('Invoice date missing');
+                  const tdsErrors = validateTDSRules(lineItems);
+                  if (tdsErrors.length > 0) {
+                    errors.push(...tdsErrors);
+                  }
                   
                   if (errors.length > 0) {
                     alert('Validation Errors:\n' + errors.join('\n'));
@@ -2592,19 +2823,22 @@ export function InvoiceFormPO() {
               </button>
               
               <button
-                onClick={() => {
+                onClick={async () => {
                   // Submit logic
                   const errors = [];
                   if (!selectedVendor) errors.push('Vendor not selected');
                   if (!selectedPO) errors.push('PO not selected');
                   if (!invoiceNumber) errors.push('Invoice number missing');
                   if (!invoiceDate) errors.push('Invoice date missing');
+                  const tdsErrors = validateTDSRules(lineItems);
+                  if (tdsErrors.length > 0) {
+                    errors.push(...tdsErrors);
+                  }
                   
                   if (errors.length > 0) {
                     alert('Cannot Submit - Validation Errors:\n' + errors.join('\n'));
                   } else {
-                    alert('✓ Invoice submitted for approval!');
-                    navigate('/invoices');
+                    await handleSubmit();
                   }
                 }}
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors"

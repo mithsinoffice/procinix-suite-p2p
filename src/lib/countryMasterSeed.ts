@@ -1,4 +1,6 @@
 /** Shared seed for Country Master and invitation country dropdown (same table key). */
+import type { EntityScopeMapping } from './masters/entityMapping';
+
 export type CountryMasterRow = {
   id: string;
   countryCode: string;
@@ -6,6 +8,7 @@ export type CountryMasterRow = {
   currency: string;
   status: string;
   approvalStatus: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  entityMappings?: EntityScopeMapping[];
   originalData?: CountryMasterRow;
 };
 

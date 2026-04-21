@@ -149,6 +149,33 @@ export function Invoices() {
     setMatchFilter([]);
   };
 
+  const getInvoiceNavigationTarget = (invoice: Invoice) => {
+    if (invoice._source === 'ai_ingestion' && invoice._dbId) {
+      if (invoice._hasPO) {
+        return {
+          path: `/invoices/edit/${invoice.id}`,
+          state: { fromAI: true, dbId: invoice._dbId },
+        };
+      }
+      return {
+        path: '/invoices/create-direct',
+        state: { fromAI: true, dbId: invoice._dbId },
+      };
+    }
+
+    if (invoice.invoiceType === 'Non-PO' || invoice.invoiceType === 'Expense') {
+      return {
+        path: '/invoices/create-direct',
+        state: { invoiceId: invoice.id },
+      };
+    }
+
+    return {
+      path: `/invoices/edit/${invoice.id}`,
+      state: undefined,
+    };
+  };
+
   return (
     <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Header */}
@@ -377,15 +404,8 @@ export function Invoices() {
                     className="w-full grid gap-4 px-6 py-4 text-left transition-colors"
                     style={{ gridTemplateColumns: '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr', borderBottom: index === filteredInvoices.length - 1 ? 'none' : '1px solid #EDF3F7', backgroundColor: '#FFFFFF' }}
                     onClick={() => {
-                      if (invoice._source === 'ai_ingestion' && invoice._dbId) {
-                        // Route to correct form based on PO match
-                        const formPath = invoice._hasPO
-                          ? `/invoices/edit/${invoice.id}`   // PO-based form
-                          : `/invoices/create-direct`;       // Direct/Non-PO form
-                        navigate(formPath, { state: { fromAI: true, dbId: invoice._dbId } });
-                      } else {
-                        navigate(`/invoices/detail/${invoice.id}`);
-                      }
+                      const target = getInvoiceNavigationTarget(invoice);
+                      navigate(target.path, { state: target.state });
                     }}
                     onMouseEnter={(event) => {
                       event.currentTarget.style.backgroundColor = '#F8FCFE';
@@ -495,21 +515,30 @@ export function Invoices() {
                         label="View invoice"
                         icon={<Eye className="w-4 h-4" />}
                         tone="teal"
-                        onClick={() => navigate(`/invoices/detail/${invoice.id}`)}
+                        onClick={() => {
+                          const target = getInvoiceNavigationTarget(invoice);
+                          navigate(target.path, { state: target.state });
+                        }}
                       />
                       {invoice.status === 'Draft' && (
                         <PremiumActionButton
                           label="Edit invoice"
                           icon={<PencilLine className="w-4 h-4" />}
                           tone="violet"
-                          onClick={() => navigate(`/invoices/detail/${invoice.id}`)}
+                          onClick={() => {
+                            const target = getInvoiceNavigationTarget(invoice);
+                            navigate(target.path, { state: target.state });
+                          }}
                         />
                       )}
                       <PremiumActionButton
                         label="Open invoice"
                         icon={<ArrowUpRight className="w-4 h-4" />}
                         tone="blue"
-                        onClick={() => navigate(`/invoices/detail/${invoice.id}`)}
+                        onClick={() => {
+                          const target = getInvoiceNavigationTarget(invoice);
+                          navigate(target.path, { state: target.state });
+                        }}
                       />
                     </div>
                   </button>

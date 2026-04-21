@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, X, GitBranch, Check, AlertCircle, Clock, ChevronDown, ChevronRight, ChevronLeft, DollarSign, Users, ArrowRight, Send, Filter, GripVertical, MousePointer2, Route, ShieldCheck, Sparkles, Bot, Wand2 } from 'lucide-react';
 import { isMysqlApiEnabled, mysqlApiRequest } from '../lib/mysql/client';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 
 interface WorkflowStep {
   id: string;
@@ -289,7 +290,7 @@ function inferWorkflowCategory(module: string): WorkflowCategory {
 export function WorkflowConfigurator() {
   const navigate = useNavigate();
   const canvasScrollRef = useRef<HTMLDivElement | null>(null);
-  const [workflows, setWorkflows] = useState<Workflow[]>(mockWorkflows);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
@@ -335,36 +336,65 @@ export function WorkflowConfigurator() {
   ];
 
   useEffect(() => {
-    if (!isMysqlApiEnabled()) {
-      setIsHydrating(false);
-      return;
-    }
-
-    mysqlApiRequest<{ success: boolean; data: Workflow[] }>('/workflows/configurations')
-      .then((response) => {
-        if (response.data.length > 0) {
-          setWorkflows(response.data);
-        }
+    let cancelled = false;
+    ensureDomainDocument<{ listings?: unknown[]; configurations?: Workflow[] }>(
+      'workflows_config',
+      { configurations: mockWorkflows }
+    )
+      .then((doc) => {
+        if (cancelled) return;
+        setWorkflows(doc.configurations ?? mockWorkflows);
       })
       .catch((error) => {
-        console.warn('Failed to load workflow configurations from MySQL API', error);
+        console.warn('Failed to hydrate workflows_config document', error);
+        if (cancelled) return;
+        setWorkflows(mockWorkflows);
       })
       .finally(() => {
-        setIsHydrating(false);
+        if (!cancelled) setIsHydrating(false);
       });
+
+    if (isMysqlApiEnabled()) {
+      mysqlApiRequest<{ success: boolean; data: Workflow[] }>('/workflows/configurations')
+        .then((response) => {
+          if (cancelled) return;
+          if (response.data && response.data.length > 0) {
+            setWorkflows(response.data);
+          }
+        })
+        .catch((error) => {
+          console.warn('Failed to load workflow configurations from MySQL API', error);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    if (!isMysqlApiEnabled() || isHydrating) {
+    if (isHydrating) {
       return;
     }
 
-    mysqlApiRequest('/workflows/configurations', {
-      method: 'PUT',
-      body: JSON.stringify({ workflows }),
-    }).catch((error) => {
-      console.warn('Failed to save workflow configurations to MySQL API', error);
+    void ensureDomainDocument<{ listings?: unknown[]; configurations?: Workflow[] }>(
+      'workflows_config',
+      { configurations: mockWorkflows }
+    ).then((existing) => {
+      void saveDomainDocument('workflows_config', {
+        ...existing,
+        configurations: workflows,
+      });
     });
+
+    if (isMysqlApiEnabled()) {
+      mysqlApiRequest('/workflows/configurations', {
+        method: 'PUT',
+        body: JSON.stringify({ workflows }),
+      }).catch((error) => {
+        console.warn('Failed to save workflow configurations to MySQL API', error);
+      });
+    }
   }, [isHydrating, workflows]);
 
   const filteredWorkflows = workflows.filter(wf =>

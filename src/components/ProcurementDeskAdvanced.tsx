@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, ComposedChart, ScatterChart, Scatter } from 'recharts';
 import { useMasterData } from '../contexts/MasterDataContext';
+import { useProcurementData } from '../contexts/ProcurementDataContext';
 
 /**
  * PROCUREMENT DESK ADVANCED DASHBOARD
@@ -13,22 +14,23 @@ import { useMasterData } from '../contexts/MasterDataContext';
  */
 
 export function ProcurementDeskAdvanced() {
-  const { vendors, purchaseOrders } = useMasterData();
+  const { vendors } = useMasterData();
+  const { purchaseRequests } = useProcurementData();
   const [timeFilter, setTimeFilter] = useState<'month' | 'quarter' | 'ytd' | 'year'>('ytd');
 
   // Safety checks for undefined data
   const safeVendors = vendors || [];
-  const safePOs = purchaseOrders || [];
+  const safePOs = purchaseRequests || [];
 
   // Calculate Key Procurement Metrics
   const totalPOs = safePOs.length;
-  const activePOs = safePOs.filter(po => po.status === 'Open' || po.status === 'Partially Received').length;
-  const completedPOs = safePOs.filter(po => po.status === 'Closed').length;
+  const activePOs = safePOs.filter(po => po.status === 'Approved' || po.status === 'Converted to PO').length;
+  const completedPOs = safePOs.filter(po => po.status === 'Cancelled').length;
   const pendingApprovalPOs = safePOs.filter(po => po.status === 'Pending Approval' || po.status === 'Draft').length;
 
   const totalPOValue = safePOs.reduce((sum, po) => sum + po.totalAmount, 0);
   const activePOValue = safePOs
-    .filter(po => po.status === 'Open' || po.status === 'Partially Received')
+    .filter(po => po.status === 'Approved' || po.status === 'Converted to PO')
     .reduce((sum, po) => sum + po.totalAmount, 0);
 
   const activeSuppliers = safeVendors.filter(v => v.status === 'Active').length;

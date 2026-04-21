@@ -1,5 +1,7 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, MapPin, Globe, FileText, Edit, Eye, Search, ArrowUpRight } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useMemo, useState, useCallback } from 'react';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
@@ -18,6 +20,7 @@ interface State {
   country: string;
   status: string;
   approvalStatus: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  entityMappings?: EntityScopeMapping[];
   originalData?: State;
 }
 
@@ -230,7 +233,7 @@ export function StateMaster() {
 
   if (showForm) {
     return (
-      <FormShell
+      <FormShell masterName="State Master"
         title="State Master"
         subtitle="Manage states with approval workflow"
         modeLabel={isEditMode ? 'Edit State' : 'Create State'}
@@ -267,17 +270,8 @@ export function StateMaster() {
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>State Master</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage states with approval workflow</p>
-          </div>
-        </div>
+    <MasterPageShell masterName="State Master" description="Manage state and province definitions">
+      <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
             resetForm();
@@ -343,7 +337,7 @@ export function StateMaster() {
               <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}>
                 Cancel
               </button>
-              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
+              <button onClick={() => handleSubmit()} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
                 {isEditMode ? 'Update' : 'Save'}
               </button>
             </div>
@@ -362,65 +356,35 @@ export function StateMaster() {
         onRequestInfo={handleRequestInfo}
       />
 
+      <MasterListToolbar
+        masterName="State Master"
+        masterKey="state_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'country', label: 'Country', options: [...new Set(states.map((s) => s.country).filter(Boolean))], selected: countryFilter },
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'country') setCountryFilter(values);
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredStates}
+        columns={[
+          { key: 'stateCode', label: 'State Code' },
+          { key: 'stateName', label: 'State Name' },
+          { key: 'country', label: 'Country' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
+
       <div className="rounded-[24px] overflow-hidden bg-white" style={{ border: '1px solid var(--color-fog)', boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)' }}>
         <div className="overflow-x-auto">
           <div style={{ minWidth: '1080px' }}>
-            <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.2fr 1.6fr 1.2fr 1fr 1.3fr 0.9fr', borderBottom: '1px solid #E8F0F4' }}>
-              <div className="space-y-2">
-                <div className="relative w-full">
-                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
-                  <input
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search states..."
-                    className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm"
-                    style={{ backgroundColor: '#F8FBFD', border: '1px solid var(--color-fog)', color: 'var(--color-ink)' }}
-                  />
-                </div>
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchTerm('');
-                      setCountryFilter([]);
-                      setStatusFilter([]);
-                      setApprovalFilter([]);
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
-                    style={{ backgroundColor: '#FFF5F5', border: '1px solid #FED7D7', color: '#C53030', fontWeight: 600 }}
-                  >
-                    Clear Filters
-                  </button>
-                )}
-              </div>
-              <div />
-              <div className="flex items-start">
-                <PremiumFilterMenu
-                  label="Country"
-                  options={[...new Set(states.map((state) => state.country).filter(Boolean))]}
-                  selected={countryFilter}
-                  onToggle={(value) => setCountryFilter((current) => toggleMultiSelect(current, value))}
-                />
-              </div>
-              <div className="flex items-start">
-                <PremiumFilterMenu
-                  label="Status"
-                  options={['Active', 'Inactive']}
-                  selected={statusFilter}
-                  onToggle={(value) => setStatusFilter((current) => toggleMultiSelect(current, value))}
-                />
-              </div>
-              <div className="flex items-start">
-                <PremiumFilterMenu
-                  label="Approval"
-                  options={['Draft', 'Pending Approval', 'Approved', 'Rejected']}
-                  selected={approvalFilter}
-                  onToggle={(value) => setApprovalFilter((current) => toggleMultiSelect(current, value))}
-                />
-              </div>
-              <div />
-            </div>
-
             <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.2fr 1.6fr 1.2fr 1fr 1.3fr 0.9fr', background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)', borderBottom: '1px solid #E4EDF2' }}>
               {['State Code', 'State Name', 'Country', 'Status', 'Approval Status', 'Action'].map((column) => (
                 <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
@@ -473,6 +437,6 @@ export function StateMaster() {
           </div>
         </div>
       </div>
-    </div>
+    </MasterPageShell>
   );
 }

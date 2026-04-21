@@ -1,7 +1,11 @@
-import { ArrowLeft, Plus, Trash2, X, Hash, FileText, Tag, Info } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, X, Hash, FileText, Tag, Info, Edit, Eye } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
 import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
+import { ApprovalModal } from './ApprovalModal';
+import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { EntityMappingSelector } from './shared/EntityMappingSelector';
@@ -16,7 +20,15 @@ interface Product {
   description: string;
   hsnCode: string;
   status: string;
+  entityMappings?: EntityScopeMapping[];
   approvalStatus?: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  originalData?: Product;
+}
+
+interface Change {
+  field: string;
+  oldValue: string;
+  newValue: string;
 }
 
 export function ProductMaster() {
@@ -83,22 +95,58 @@ export function ProductMaster() {
   const [hsnCode, setHsnCode] = useState('');
   const [status, setStatus] = useState('Active');
   const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [currentReviewRecord, setCurrentReviewRecord] = useState<Product | null>(null);
+  const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      const haystack = [p.productCode, p.productName, p.category, p.description].join(' ').toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(p.status);
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(p.approvalStatus ?? 'Approved');
+      return matchesSearch && matchesStatus && matchesApproval;
+    });
+  }, [products, searchTerm, statusFilter, approvalFilter]);
 
   const handleSubmit = (approvalStatus: NonNullable<Product['approvalStatus']> = 'Pending Approval') => {
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      productId: productId || 'PROD-NEW',
-      productName,
-      productCode,
-      category: catalogue,
-      description,
-      hsnCode,
-      status,
-      approvalStatus,
-      entityMappings,
-    };
-    setProducts([...products, newProduct]);
+    if (isEditMode && editingId) {
+      const originalRecord = products.find(p => p.id === editingId);
+      const updatedProduct: Product = {
+        id: editingId,
+        productId,
+        productName,
+        productCode,
+        category: catalogue,
+        description,
+        hsnCode,
+        status,
+        approvalStatus,
+        originalData: originalRecord,
+        entityMappings,
+      };
+      setProducts(products.map(p => p.id === editingId ? updatedProduct : p));
+    } else {
+      const newProduct: Product = {
+        id: Date.now().toString(),
+        productId: productId || 'PROD-NEW',
+        productName,
+        productCode,
+        category: catalogue,
+        description,
+        hsnCode,
+        status,
+        approvalStatus,
+        entityMappings,
+      };
+      setProducts([...products, newProduct]);
+    }
     setShowForm(false);
     resetForm();
   };
@@ -112,10 +160,86 @@ export function ProductMaster() {
     setHsnCode('');
     setStatus('Active');
     setEntityMappings([]);
+    setIsEditMode(false);
+    setEditingId(null);
+  };
+
+  const handleEdit = (product: Product) => {
+    setIsEditMode(true);
+    setEditingId(product.id);
+    setProductId(product.productId);
+    setProductName(product.productName);
+    setProductCode(product.productCode);
+    setCatalogue(product.category);
+    setDescription(product.description);
+    setHsnCode(product.hsnCode);
+    setStatus(product.status);
+    setEntityMappings((product as any).entityMappings || []);
+    setShowForm(true);
   };
 
   const handleDelete = (id: string) => {
-    setProducts(products.filter(product => product.id !== id));
+    const product = products.find(p => p.id === id);
+    if (product?.approvalStatus === 'Approved') {
+      alert('Cannot delete approved/live records. You can only modify them through the approval workflow.');
+      return;
+    }
+    setProducts(products.filter(p => p.id !== id));
+  };
+
+  const handleReview = (product: Product) => {
+    const changes: Change[] = [];
+    if (product.originalData) {
+      const original = product.originalData;
+      if (original.productName !== product.productName) changes.push({ field: 'Product Name', oldValue: original.productName, newValue: product.productName });
+      if (original.productCode !== product.productCode) changes.push({ field: 'Product Code', oldValue: original.productCode, newValue: product.productCode });
+      if (original.category !== product.category) changes.push({ field: 'Category', oldValue: original.category, newValue: product.category });
+      if (original.description !== product.description) changes.push({ field: 'Description', oldValue: original.description, newValue: product.description });
+      if (original.hsnCode !== product.hsnCode) changes.push({ field: 'HSN Code', oldValue: original.hsnCode, newValue: product.hsnCode });
+      if (original.status !== product.status) changes.push({ field: 'Status', oldValue: original.status, newValue: product.status });
+    }
+    setCurrentReviewRecord(product);
+    setDetectedChanges(changes);
+    setShowApprovalModal(true);
+  };
+
+  const handleApprove = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction('product_master', products, currentReviewRecord.id, 'approve');
+      setProducts(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleReject = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction('product_master', products, currentReviewRecord.id, 'reject');
+      setProducts(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleRequestInfo = async () => {
+    if (currentReviewRecord) {
+      const comments = window.prompt('Enter comments for the request:', '');
+      if (comments === null) return;
+      const nextRecords = await applyMasterApprovalAction('product_master', products, currentReviewRecord.id, 'request_info', comments);
+      setProducts(nextRecords);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const getStatusBadgeStyle = (approvalStatus: string) => {
+    switch (approvalStatus) {
+      case 'Approved': return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
+      case 'Pending Approval': return { backgroundColor: '#FFF9E6', color: '#D97706' };
+      case 'Draft': return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
+      case 'Rejected': return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
+      default: return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
+    }
   };
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -137,7 +261,7 @@ export function ProductMaster() {
 
   if (showForm) {
     return (
-      <FormShell
+      <FormShell masterName="Product Master"
         title="Create Product"
         subtitle="Define products with codes, descriptions, and HSN classification"
         modeLabel="Create Master Record"
@@ -201,24 +325,11 @@ export function ProductMaster() {
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
+    <MasterPageShell masterName="Product Master" description="Manage product definitions">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/masters')}
-            className="p-2 rounded-lg transition-colors"
-            style={{ color: 'var(--color-mercury-grey)' }}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Product Master</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Dummy product data for now.</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-end mb-8">
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => { resetForm(); setShowForm(true); }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
           style={{ backgroundColor: 'var(--color-teal)' }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
@@ -229,77 +340,92 @@ export function ProductMaster() {
         </button>
       </div>
 
+      <ApprovalModal
+        isOpen={showApprovalModal}
+        onClose={() => setShowApprovalModal(false)}
+        recordType="Product Master"
+        recordId={currentReviewRecord?.productCode || ''}
+        changes={detectedChanges}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onRequestInfo={handleRequestInfo}
+      />
+
+      <MasterListToolbar
+        masterName="Product Master"
+        masterKey="product_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredProducts}
+        columns={[
+          { key: 'productId', label: 'Product ID' },
+          { key: 'productName', label: 'Product Name' },
+          { key: 'productCode', label: 'Product Code' },
+          { key: 'category', label: 'Category' },
+          { key: 'description', label: 'Description' },
+          { key: 'hsnCode', label: 'HSN Code' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
+
       {/* Products List */}
       <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                  PRODUCT ID
-                </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                  PRODUCT NAME
-                </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                  CODE
-                </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                  CATEGORY
-                </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                  DESCRIPTION
-                </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                  STATUS
-                </th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                  ACTIONS
-                </th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Product ID</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Product Name</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Code</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Category</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Description</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval Status</th>
+                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {products.map((product, index) => (
-                <tr
-                  key={product.id}
-                  style={{
-                    borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)'
-                  }}
-                >
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
-                    {product.productId}
-                  </td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
-                    {product.productName}
-                  </td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
-                    {product.productCode}
-                  </td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
-                    {product.category}
-                  </td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
-                    {product.description}
-                  </td>
+              {filteredProducts.map((product, index) => (
+                <tr key={product.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{product.productId}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{product.productName}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{product.productCode}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{product.category}</td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{product.description}</td>
                   <td className="px-6 py-4">
-                    <span
-                      className="px-3 py-1 rounded-full text-sm"
-                      style={{
-                        backgroundColor: product.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA',
-                        color: product.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)'
-                      }}
-                    >
+                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: product.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA', color: product.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)' }}>
                       {product.status}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="p-2 rounded-lg transition-colors"
-                      style={{ color: 'var(--color-error)' }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <span className="px-3 py-1 rounded-full text-sm" style={getStatusBadgeStyle(product.approvalStatus || 'Approved')}>
+                      {product.approvalStatus || 'Approved'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      {product.approvalStatus === 'Pending Approval' && (
+                        <button onClick={() => handleReview(product)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-teal)' }} title="Review Changes">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button onClick={() => handleEdit(product)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }} title="Edit">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(product.id)} className="p-2 rounded-lg transition-colors" style={{ color: product.approvalStatus === 'Approved' ? '#C4C4C4' : 'var(--color-error)', cursor: product.approvalStatus === 'Approved' ? 'not-allowed' : 'pointer' }} title={product.approvalStatus === 'Approved' ? 'Cannot delete approved records' : 'Delete'} disabled={product.approvalStatus === 'Approved'}>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -307,6 +433,6 @@ export function ProductMaster() {
           </table>
         </div>
       </div>
-    </div>
+    </MasterPageShell>
   );
 }

@@ -5,6 +5,14 @@ import path from 'node:path';
 
 const UPLOADS_DIR = path.resolve('uploads', 'ingested');
 
+function sanitizeDateForMysql(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  // JS silently fixes invalid dates (Apr 31 → May 1). Use the corrected date.
+  return d.toISOString().split('T')[0];
+}
+
 export async function createInvoiceFromExtraction(
   extractedData,
   validationResult,
@@ -54,8 +62,8 @@ export async function createInvoiceFromExtraction(
       [
         invoiceId,
         extractedData.invoice_number,
-        extractedData.invoice_date,
-        extractedData.due_date || null,
+        sanitizeDateForMysql(extractedData.invoice_date),
+        sanitizeDateForMysql(extractedData.due_date),
         extractedData.vendor_name,
         extractedData.vendor_gstin || null,
         extractedData.vendor_pan || null,
@@ -80,12 +88,77 @@ export async function createInvoiceFromExtraction(
           extractedData,
           validationResult,
           matchResult,
+          vendorGroupCode: extractedData.vendorGroupCode || null,
+          vendorGroupName: extractedData.vendorGroupName || null,
+          gstr2bMatched: Boolean(extractedData.gstr2bMatched),
+          msmePaymentDueDate: extractedData.msmePaymentDueDate || null,
+          journalEntries: extractedData.journalEntries || [],
+          retentionAmount: extractedData.retentionAmount || 0,
+          retentionGLCode: extractedData.retentionGLCode || null,
+          retentionReleaseCondition: extractedData.retentionReleaseCondition || null,
+          advanceAdjustments: extractedData.advanceAdjustments || [],
+          boeDetails: extractedData.boeDetails || null,
+          narration: extractedData.narration || null,
+          vendorNarration: extractedData.vendorNarration || null,
+          internalRemarks: extractedData.internalRemarks || null,
+          approvalMatrix: extractedData.approvalMatrix || [],
           confidence_score: extractedData.confidence_score,
+          ocrScores: {
+            fields: extractedData.ocr_field_scores || {},
+            conflicts: extractedData.ocr_conflicts || {},
+            overall_confidence: extractedData.ocr_overall_confidence ?? extractedData.confidence_score ?? 0,
+            fields_matched: extractedData.fields_matched ?? 0,
+            fields_conflicted: extractedData.fields_conflicted ?? 0,
+            fields_low_confidence: extractedData.fields_low_confidence ?? 0,
+            fields_not_found: extractedData.fields_not_found ?? 0,
+            touchless_eligible: Boolean(extractedData.touchless_eligible),
+          },
         }),
         attachmentPath,
         entityId || null,
       ]
     );
+
+    const vendorRows = await connExecute(
+      conn,
+      `SELECT v.id, vpc.msme_category
+       FROM vendors v
+       LEFT JOIN vendor_pan_compliance vpc ON vpc.vendor_id = v.id
+       WHERE v.vendor_legal_name = ? OR v.vendor_trade_name = ? OR v.vendor_code = ?
+       LIMIT 1`,
+      [
+        extractedData.vendor_name || '',
+        extractedData.vendor_name || '',
+        extractedData.vendor_code || '',
+      ]
+    );
+    const vendorInfo = vendorRows?.[0];
+    if (vendorInfo?.msme_category) {
+      const invoiceDate = sanitizeDateForMysql(extractedData.invoice_date) ? new Date(sanitizeDateForMysql(extractedData.invoice_date)) : new Date();
+      const deadline = new Date(invoiceDate);
+      deadline.setDate(deadline.getDate() + 45);
+      await connExecute(
+        conn,
+        `UPDATE invoices SET
+          is_msme_vendor = 1,
+          msme_category = ?,
+          msme_45day_deadline = ?,
+          msme_days_remaining = DATEDIFF(?, CURDATE())
+        WHERE id = ?`,
+        [vendorInfo.msme_category, deadline.toISOString().slice(0, 10), deadline.toISOString().slice(0, 10), invoiceId]
+      );
+    }
+
+    if (status === 'pending_approval') {
+      await connExecute(
+        conn,
+        `INSERT INTO approvals (
+          id, module, reference_id, status, assigned_to, submitted_by,
+          created_at, approval_priority
+        ) VALUES (?, 'ap_invoice', ?, 'pending', ?, ?, NOW(), 'normal')`,
+        [randomUUID(), invoiceId, entityId || '1', entityId || '1']
+      );
+    }
 
     // Insert line items
     if (Array.isArray(extractedData.line_items)) {
@@ -117,9 +190,27 @@ export async function createInvoiceFromExtraction(
     await connExecute(
       conn,
       `UPDATE invoice_ingestion_log
-       SET invoice_ids = JSON_ARRAY_APPEND(COALESCE(invoice_ids, JSON_ARRAY()), '$', ?)
+       SET
+         invoice_ids = JSON_ARRAY_APPEND(COALESCE(invoice_ids, JSON_ARRAY()), '$', ?),
+         ocr_field_scores = CAST(? AS JSON),
+         ocr_conflicts = CAST(? AS JSON),
+         ocr_overall_confidence = ?,
+         fields_matched = ?,
+         fields_conflicted = ?,
+         fields_low_confidence = ?,
+         fields_not_found = ?
        WHERE id = ?`,
-      [invoiceId, ingestionLogId]
+      [
+        invoiceId,
+        JSON.stringify(extractedData.ocr_field_scores || {}),
+        JSON.stringify(extractedData.ocr_conflicts || {}),
+        Number((extractedData.ocr_overall_confidence ?? 0) * 100),
+        Number(extractedData.fields_matched ?? 0),
+        Number(extractedData.fields_conflicted ?? 0),
+        Number(extractedData.fields_low_confidence ?? 0),
+        Number(extractedData.fields_not_found ?? 0),
+        ingestionLogId,
+      ]
     );
 
     return { invoiceId, status };

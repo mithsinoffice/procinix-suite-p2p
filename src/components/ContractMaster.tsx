@@ -1,5 +1,7 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, FileText, Calendar, Building, Edit, Eye, Upload, IndianRupee, Package, Barcode, Clock } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useState, useMemo, useCallback } from 'react';
 import { ApprovalModal } from './ApprovalModal';
 import { AdvancedFilter, FilterConfig } from './AdvancedFilter';
@@ -11,6 +13,7 @@ import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from 
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { EntityMappingSelector } from './shared/EntityMappingSelector';
 import type { EntityScopeMapping } from '../lib/masters/entityMapping';
+import { useMasterData } from '../contexts/MasterDataContext';
 
 interface Contract {
   id: string;
@@ -27,6 +30,7 @@ interface Contract {
   paymentTerms: string;
   contractAttachment?: File | null;
   approvalStatus: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  entityMappings?: EntityScopeMapping[];
   originalData?: Contract;
   createdBy?: string;
   createdAt?: string;
@@ -40,15 +44,6 @@ interface Change {
   newValue: string;
 }
 
-// Mock vendor and product data
-const mockVendors = [
-  { id: 'V001', name: 'Tata Steel Ltd.' },
-  { id: 'V002', name: 'Reliance Industries' },
-  { id: 'V003', name: 'Hindustan Unilever Ltd.' },
-  { id: 'V004', name: 'Larsen & Toubro Ltd.' },
-  { id: 'V005', name: 'Asian Paints Ltd.' }
-];
-
 const mockProducts = [
   { id: 'P001', name: 'Steel Rod 12mm' },
   { id: 'P002', name: 'Cement Portland 53 Grade' },
@@ -59,6 +54,7 @@ const mockProducts = [
 
 export function ContractMaster() {
   const navigate = useNavigate();
+  const { getActiveVendors } = useMasterData();
   const [contracts, setContracts] = useIncrementalMasterRecords<Contract>('contract_master', [
     { 
       id: '1', 
@@ -136,6 +132,7 @@ export function ContractMaster() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<Contract | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const vendorOptions = getActiveVendors();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -445,6 +442,10 @@ export function ContractMaster() {
     }
   };
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
   // Filter configuration
   const filterFields = [
     { key: 'contractId', label: 'Contract ID', type: 'text' as const },
@@ -479,8 +480,15 @@ export function ContractMaster() {
 
   // Apply filters using useMemo for performance
   const filteredContracts = useMemo(() => {
-    return applyFilters(contracts, filterConfig);
-  }, [contracts, filterConfig]);
+    const baseFiltered = applyFilters(contracts, filterConfig);
+    return baseFiltered.filter((contract) => {
+      const haystack = [contract.contractId, contract.vendor, contract.productId, contract.status].join(' ').toLowerCase();
+      const matchesSearch = !searchTerm.trim() || haystack.includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(contract.status);
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(contract.approvalStatus);
+      return matchesSearch && matchesStatus && matchesApproval;
+    });
+  }, [contracts, filterConfig, searchTerm, statusFilter, approvalFilter]);
 
   const handleApplyFilter = (config: FilterConfig) => {
     setFilterConfig(config);
@@ -509,7 +517,7 @@ export function ContractMaster() {
 
   if (showForm) {
     return (
-      <FormShell
+      <FormShell masterName="Contract Master"
         title={isEditMode ? 'Edit Contract' : 'Create Contract'}
         subtitle="Manage vendor contracts with approval workflow"
         modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
@@ -536,7 +544,11 @@ export function ContractMaster() {
           <PxFormField label="Vendor" required filled={!!vendor}>
             <select value={vendor} onChange={(e) => setVendor(e.target.value)} className="px-select">
               <option value="">Select vendor</option>
-              {mockVendors.map((v) => <option key={v.id} value={v.name}>{v.name}</option>)}
+              {vendorOptions.map((vendorOption) => (
+                <option key={vendorOption.id} value={vendorOption.name}>
+                  {vendorOption.name}
+                </option>
+              ))}
             </select>
             {errors.vendor && <p className="text-xs mt-1" style={{ color: 'var(--color-error)' }}>{errors.vendor}</p>}
           </PxFormField>
@@ -603,17 +615,8 @@ export function ContractMaster() {
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Contract Master</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage vendor contracts with approval workflow</p>
-          </div>
-        </div>
+    <MasterPageShell masterName="Contract Master" description="Manage vendor contracts">
+      <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
             resetForm();
@@ -672,8 +675,10 @@ export function ContractMaster() {
                       }}
                     >
                       <option value="">Select vendor</option>
-                      {mockVendors.map(v => (
-                        <option key={v.id} value={v.name}>{v.name}</option>
+                      {vendorOptions.map((vendorOption) => (
+                        <option key={vendorOption.id} value={vendorOption.name}>
+                          {vendorOption.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -892,7 +897,7 @@ export function ContractMaster() {
               <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}>
                 Cancel
               </button>
-              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
+              <button onClick={() => handleSubmit()} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
                 {isEditMode ? 'Update' : 'Save'}
               </button>
             </div>
@@ -911,19 +916,40 @@ export function ContractMaster() {
         onRequestInfo={handleRequestInfo}
       />
 
-      {/* Filter and Records Summary */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <AdvancedFilter
-            fields={filterFields}
-            onApplyFilter={handleApplyFilter}
-            onClearFilter={handleClearFilter}
-          />
-          <div className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-            Showing {filteredContracts.length} of {contracts.length} records
-          </div>
-        </div>
-      </div>
+      <MasterListToolbar
+        masterName="Contract Master"
+        masterKey="contract_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive', 'Expired', 'Terminated'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredContracts}
+        columns={[
+          { key: 'contractId', label: 'Contract ID' },
+          { key: 'vendor', label: 'Vendor' },
+          { key: 'skuId', label: 'SKU ID' },
+          { key: 'contractStartDate', label: 'Contract Start Date' },
+          { key: 'contractEndDate', label: 'Contract End Date' },
+          { key: 'productId', label: 'Product ID' },
+          { key: 'ratePerUnit', label: 'Rate Per Unit' },
+          { key: 'currency', label: 'Currency' },
+          { key: 'leadTime', label: 'Lead Time' },
+          { key: 'paymentTerms', label: 'Payment Terms' },
+          { key: 'createdBy', label: 'Created By' },
+          { key: 'createdAt', label: 'Created At' },
+          { key: 'updatedBy', label: 'Updated By' },
+          { key: 'updatedAt', label: 'Updated At' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
 
       <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
@@ -977,6 +1003,6 @@ export function ContractMaster() {
           </table>
         </div>
       </div>
-    </div>
+    </MasterPageShell>
   );
 }

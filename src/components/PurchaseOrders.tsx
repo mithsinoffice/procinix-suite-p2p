@@ -13,25 +13,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
-
-interface PurchaseOrder {
-  id: string;
-  poNumber: string;
-  vendor: string;
-  date: string;
-  amount: number;
-  status: 'Draft' | 'Issued' | 'Partially Received' | 'Fully Received' | 'Closed / Cancelled';
-  department: string;
-}
-
-const mockPurchaseOrders: PurchaseOrder[] = [
-  { id: '1', poNumber: 'PO-2024-001', vendor: 'Acme Supplies Ltd', date: '2024-12-10', amount: 125000, status: 'Issued', department: 'IT' },
-  { id: '2', poNumber: 'PO-2024-002', vendor: 'Global Tech Solutions', date: '2024-12-09', amount: 89500, status: 'Partially Received', department: 'Operations' },
-  { id: '3', poNumber: 'PO-2024-003', vendor: 'Office Depot India', date: '2024-12-08', amount: 45200, status: 'Fully Received', department: 'Admin' },
-  { id: '4', poNumber: 'PO-2024-004', vendor: 'Engineering Parts Co', date: '2024-12-07', amount: 210000, status: 'Issued', department: 'Manufacturing' },
-  { id: '5', poNumber: 'PO-2024-005', vendor: 'Marketing Materials Inc', date: '2024-12-06', amount: 68000, status: 'Draft', department: 'Marketing' },
-  { id: '6', poNumber: 'PO-2024-006', vendor: 'Facility Services Ltd', date: '2024-12-05', amount: 32500, status: 'Closed / Cancelled', department: 'Facilities' },
-];
+import { useAPData, PurchaseOrder } from '../contexts/APDataContext';
 
 const statusTone = (status: PurchaseOrder['status']) => {
   switch (status) {
@@ -52,6 +34,7 @@ const statusTone = (status: PurchaseOrder['status']) => {
 
 export function PurchaseOrders() {
   const navigate = useNavigate();
+  const { purchaseOrders } = useAPData();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [departmentFilter, setDepartmentFilter] = useState<string[]>([]);
@@ -59,7 +42,7 @@ export function PurchaseOrders() {
 
   const filteredOrders = useMemo(
     () =>
-      mockPurchaseOrders.filter((order) => {
+      purchaseOrders.filter((order) => {
         const searchValue = searchTerm.trim().toLowerCase();
         const matchesSearch =
           !searchValue ||
@@ -255,7 +238,7 @@ export function PurchaseOrders() {
               <div className="flex items-start">
                 <PremiumFilterMenu
                   label="Department"
-                  options={[...new Set(mockPurchaseOrders.map((order) => order.department))]}
+                  options={[...new Set(purchaseOrders.map((order) => order.department))]}
                   selected={departmentFilter}
                   onToggle={(value) => setDepartmentFilter((current) => toggleMultiSelect(current, value))}
                 />
@@ -372,7 +355,7 @@ export function PurchaseOrders() {
 
         <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: '1px solid #E8F0F4' }}>
           <span style={{ color: 'var(--color-mercury-grey)' }}>
-            Showing {filteredOrders.length} of {mockPurchaseOrders.length} orders
+            Showing {filteredOrders.length} of {purchaseOrders.length} orders
           </span>
           <div className="flex gap-2">
             <button className="px-4 py-2 rounded-xl" style={{ border: '1px solid var(--color-fog)', color: 'var(--color-mercury-grey)' }}>

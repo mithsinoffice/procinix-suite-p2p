@@ -60,9 +60,11 @@ interface ApprovalItem {
   submittedDate: string;
   submittedTime: string;
   value?: string;
-  priority: 'High' | 'Medium' | 'Low';
+  priority: string;
   daysWaiting: number;
   details: any;
+  masterKey?: string;
+  recordId?: string;
   changes?: Array<{
     field: string;
     oldValue: string;
@@ -82,448 +84,6 @@ type ApprovalTabKey =
   | 'VENDOR_ONBOARDING'
   | 'MASTER'
   | 'LOCATION';
-
-const mockApprovalData: Array<Omit<ApprovalItem, 'category'>> = [
-  // ========== PROCUREMENT: PURCHASE REQUISITIONS (PRs) ==========
-  {
-    id: 'PR-2024-002',
-    type: 'PR',
-    module: 'Procurement',
-    title: 'Purchase Requisition #PR-2024-002 - Raw Materials',
-    submittedBy: 'Priya Sharma',
-    submittedDate: '2024-12-12',
-    submittedTime: '09:30:00',
-    value: '₹12,50,000',
-    priority: 'High',
-    daysWaiting: 3,
-    details: {
-      prType: 'Regular',
-      entity: 'India HQ',
-      department: 'Operations',
-      costCentre: 'CC-OPS-002',
-      itemCount: 8,
-      needByDate: '2024-12-25',
-      justification: 'Raw material procurement for Q1 production schedule',
-      aiRiskLevel: 'Medium',
-      policyFlags: ['Price Variance']
-    },
-    route: '/procurement/pr-detail/PR-2024-002'
-  },
-  {
-    id: 'PR-2024-003',
-    type: 'PR',
-    module: 'Procurement',
-    title: 'Purchase Requisition #PR-2024-003 - Cloud Services',
-    submittedBy: 'Amit Patel',
-    submittedDate: '2024-12-13',
-    submittedTime: '11:15:00',
-    value: '₹8,50,000',
-    priority: 'Medium',
-    daysWaiting: 2,
-    details: {
-      prType: 'Service',
-      entity: 'India Manufacturing',
-      department: 'IT',
-      costCentre: 'CC-IT-MFG',
-      itemCount: 1,
-      needByDate: '2025-01-05',
-      justification: 'Cloud infrastructure upgrade for scalability',
-      aiRiskLevel: 'Low',
-      policyFlags: ['Missing Docs']
-    },
-    route: '/procurement/pr-detail/PR-2024-003'
-  },
-  {
-    id: 'PR-2024-006',
-    type: 'PR',
-    module: 'Procurement',
-    title: 'Purchase Requisition #PR-2024-006 - Industrial Equipment',
-    submittedBy: 'Ramesh Gupta',
-    submittedDate: '2024-12-08',
-    submittedTime: '14:00:00',
-    value: '₹55,00,000',
-    priority: 'High',
-    daysWaiting: 7,
-    details: {
-      prType: 'Asset/CAPEX',
-      entity: 'India HQ',
-      department: 'Operations',
-      costCentre: 'CC-OPS-001',
-      itemCount: 1,
-      needByDate: '2025-01-15',
-      justification: 'Industrial equipment for capacity expansion',
-      aiRiskLevel: 'Medium',
-      policyFlags: []
-    },
-    route: '/procurement/pr-detail/PR-2024-006'
-  },
-  {
-    id: 'PR-2024-009',
-    type: 'PR',
-    module: 'Procurement',
-    title: 'Purchase Requisition #PR-2024-009 - Networking Equipment',
-    submittedBy: 'Deepak Verma',
-    submittedDate: '2024-12-13',
-    submittedTime: '10:00:00',
-    value: '₹9,20,000',
-    priority: 'Medium',
-    daysWaiting: 2,
-    details: {
-      prType: 'Regular',
-      entity: 'India HQ',
-      department: 'IT',
-      costCentre: 'CC-IT-002',
-      itemCount: 6,
-      needByDate: '2024-12-30',
-      justification: 'Networking equipment upgrade',
-      aiRiskLevel: 'Medium',
-      policyFlags: ['Vendor Risk']
-    },
-    route: '/procurement/pr-detail/PR-2024-009'
-  },
-  {
-    id: 'PR-2024-010',
-    type: 'PR',
-    module: 'Procurement',
-    title: 'Purchase Requisition #PR-2024-010 - Office Supplies',
-    submittedBy: 'Sanjay Kumar',
-    submittedDate: '2024-12-14',
-    submittedTime: '15:30:00',
-    value: '₹1,85,000',
-    priority: 'Low',
-    daysWaiting: 1,
-    details: {
-      prType: 'Catalogue',
-      entity: 'India HQ',
-      department: 'IT',
-      costCentre: 'CC-IT-003',
-      itemCount: 15,
-      needByDate: '2024-12-28',
-      justification: 'Standard office supplies replenishment',
-      aiRiskLevel: 'Low',
-      policyFlags: []
-    },
-    route: '/procurement/pr-detail/PR-2024-010'
-  },
-
-  // ========== ACCOUNTS PAYABLE: PO-BASED INVOICES ==========
-  {
-    id: 'INV-2024-001',
-    type: 'Invoice',
-    module: 'Accounts Payable',
-    title: 'Invoice #INV-2024-001 - Tech Solutions Pvt Ltd',
-    submittedBy: 'John Doe',
-    submittedDate: '2024-12-10',
-    submittedTime: '10:30:00',
-    value: '₹1,25,000',
-    priority: 'High',
-    daysWaiting: 2,
-    details: {
-      invoiceNumber: 'INV-2024-001',
-      vendor: 'Tech Solutions Pvt Ltd',
-      poNumber: 'PO-2024-001',
-      grnNumber: 'GRN-2024-045',
-      amount: 125000,
-      dueDate: '2025-01-09'
-    },
-    route: '/ap/invoice-approval/INV-2024-001'
-  },
-  {
-    id: 'INV-2024-002',
-    type: 'Invoice',
-    module: 'Accounts Payable',
-    title: 'Invoice #INV-2024-002 - ABC Manufacturing Ltd',
-    submittedBy: 'John Doe',
-    submittedDate: '2024-12-11',
-    submittedTime: '14:45:00',
-    value: '₹3,50,000',
-    priority: 'High',
-    daysWaiting: 1,
-    details: {
-      invoiceNumber: 'INV-2024-002',
-      vendor: 'ABC Manufacturing Ltd',
-      poNumber: 'PO-2024-002',
-      grnNumber: 'GRN-2024-046',
-      amount: 350000,
-      dueDate: '2025-01-10'
-    },
-    route: '/ap/invoice-approval/INV-2024-002'
-  },
-
-  // ========== ACCOUNTS PAYABLE: NON-PO INVOICES ==========
-  {
-    id: 'NPOINV-001',
-    type: 'NonPOInvoice',
-    module: 'Accounts Payable',
-    title: 'Non-PO Invoice #INV-VENDOR-2024-456 - Tech Consulting Services',
-    submittedBy: 'Jane Smith',
-    submittedDate: '2024-12-11',
-    submittedTime: '11:00:00',
-    value: '₹65,000',
-    priority: 'Medium',
-    daysWaiting: 1,
-    details: {
-      invoiceNumber: 'INV-VENDOR-2024-456',
-      vendor: 'Tech Consulting Services Pvt Ltd',
-      expenseCategory: 'Professional Services',
-      netPayable: 65000,
-      gstRetained: 18000,
-      advanceAdjusted: 25000
-    },
-    route: '/ap/non-po-invoice-approval/NPOINV-001'
-  },
-  {
-    id: 'NPOINV-002',
-    type: 'NonPOInvoice',
-    module: 'Accounts Payable',
-    title: 'Non-PO Invoice #INV-VENDOR-2024-457 - Legal Services',
-    submittedBy: 'Jane Smith',
-    submittedDate: '2024-12-09',
-    submittedTime: '15:20:00',
-    value: '₹1,50,000',
-    priority: 'High',
-    daysWaiting: 3,
-    details: {
-      invoiceNumber: 'INV-VENDOR-2024-457',
-      vendor: 'Corporate Legal Advisors LLP',
-      expenseCategory: 'Legal Services',
-      netPayable: 150000,
-      gstRetained: 0,
-      advanceAdjusted: 0
-    },
-    route: '/ap/non-po-invoice-approval/NPOINV-002'
-  },
-
-  // ========== PROCUREMENT: PURCHASE ORDERS ==========
-  {
-    id: 'PO-2024-0156',
-    type: 'PO',
-    module: 'Procurement',
-    title: 'Purchase Order #PO-2024-0156 - Tata Steel Ltd',
-    submittedBy: 'Priya Sharma',
-    submittedDate: '2024-12-10',
-    submittedTime: '10:30:00',
-    value: '₹2,45,000',
-    priority: 'High',
-    daysWaiting: 2,
-    details: {
-      vendor: 'Tata Steel Ltd.',
-      items: 5,
-      deliveryDate: '2024-12-20',
-      department: 'Manufacturing'
-    },
-    route: '/procurement/po-approval/PO-2024-0156'
-  },
-  {
-    id: 'PO-2024-0157',
-    type: 'PO',
-    module: 'Procurement',
-    title: 'Purchase Order #PO-2024-0157 - Hindustan Unilever',
-    submittedBy: 'Priya Sharma',
-    submittedDate: '2024-12-11',
-    submittedTime: '14:45:00',
-    value: '₹89,500',
-    priority: 'Medium',
-    daysWaiting: 1,
-    details: {
-      vendor: 'Hindustan Unilever Ltd.',
-      items: 3,
-      deliveryDate: '2024-12-18',
-      department: 'Procurement'
-    },
-    route: '/procurement/po-approval/PO-2024-0157'
-  },
-
-  // ========== PAYMENTS: PAYMENT BATCHES ==========
-  {
-    id: 'PAY-BATCH-001',
-    type: 'PaymentBatch',
-    module: 'Payments',
-    title: 'Payment Batch #PAY-BATCH-001 - 15 Invoices',
-    submittedBy: 'Finance Team',
-    submittedDate: '2024-12-12',
-    submittedTime: '09:00:00',
-    value: '₹12,45,000',
-    priority: 'High',
-    daysWaiting: 0,
-    details: {
-      batchId: 'PAY-BATCH-001',
-      invoiceCount: 15,
-      vendorCount: 8,
-      paymentDate: '2024-12-15',
-      paymentMethod: 'NEFT'
-    },
-    route: '/payments/batch-approval/PAY-BATCH-001'
-  },
-  {
-    id: 'PAY-BATCH-002',
-    type: 'PaymentBatch',
-    module: 'Payments',
-    title: 'Payment Batch #PAY-BATCH-002 - MSME Priority',
-    submittedBy: 'Finance Team',
-    submittedDate: '2024-12-11',
-    submittedTime: '16:00:00',
-    value: '₹5,67,800',
-    priority: 'High',
-    daysWaiting: 1,
-    details: {
-      batchId: 'PAY-BATCH-002',
-      invoiceCount: 8,
-      vendorCount: 5,
-      paymentDate: '2024-12-14',
-      paymentMethod: 'RTGS',
-      msmeOnly: true
-    },
-    route: '/payments/batch-approval/PAY-BATCH-002'
-  },
-
-  // ========== VENDOR ADVANCES ==========
-  {
-    id: 'ADV-REQ-001',
-    type: 'VendorAdvance',
-    module: 'Vendor Advances',
-    title: 'Advance Request #ADV-REQ-001 - XYZ Corp',
-    submittedBy: 'Procurement Head',
-    submittedDate: '2024-12-10',
-    submittedTime: '13:30:00',
-    value: '₹5,00,000',
-    priority: 'Medium',
-    daysWaiting: 2,
-    details: {
-      vendor: 'XYZ Corporation Ltd',
-      advanceType: 'On-Account',
-      justification: 'Long-term contract requirement',
-      repaymentTerms: '6 months'
-    },
-    route: '/vendor-advances/approval/ADV-REQ-001'
-  },
-  {
-    id: 'ADV-REQ-002',
-    type: 'VendorAdvance',
-    module: 'Vendor Advances',
-    title: 'Advance Request #ADV-REQ-002 - ABC Suppliers',
-    submittedBy: 'Procurement Head',
-    submittedDate: '2024-12-11',
-    submittedTime: '10:15:00',
-    value: '₹2,50,000',
-    priority: 'Low',
-    daysWaiting: 1,
-    details: {
-      vendor: 'ABC Suppliers Pvt Ltd',
-      advanceType: 'Against PO',
-      poNumber: 'PO-2024-0145',
-      justification: 'Raw material procurement advance'
-    },
-    route: '/vendor-advances/approval/ADV-REQ-002'
-  },
-
-  // ========== VENDOR ONBOARDING ==========
-  {
-    id: 'VON-001',
-    type: 'VendorOnboarding',
-    module: 'Vendor Onboarding',
-    title: 'New Vendor Onboarding - Global Tech Solutions Inc',
-    submittedBy: 'Vendor Onboarding Team',
-    submittedDate: '2024-12-09',
-    submittedTime: '11:45:00',
-    priority: 'Medium',
-    daysWaiting: 3,
-    details: {
-      vendorName: 'Global Tech Solutions Inc',
-      category: 'IT Services',
-      country: 'USA',
-      kycStatus: 'Complete',
-      riskRating: 'Low'
-    },
-    route: '/vendor-onboarding/approval/VON-001'
-  },
-  {
-    id: 'VON-002',
-    type: 'VendorOnboarding',
-    module: 'Vendor Onboarding',
-    title: 'New Vendor Onboarding - Mahindra & Mahindra',
-    submittedBy: 'Vendor Onboarding Team',
-    submittedDate: '2024-12-11',
-    submittedTime: '15:45:00',
-    priority: 'High',
-    daysWaiting: 1,
-    details: {
-      vendorName: 'Mahindra & Mahindra Ltd',
-      category: 'Automobile Parts',
-      country: 'India',
-      kycStatus: 'Complete',
-      riskRating: 'Low'
-    },
-    route: '/vendor-onboarding/approval/VON-002'
-  },
-
-  // ========== MASTERS: UPDATES ==========
-  {
-    id: 'VENDOR-UPD-0023',
-    type: 'Master',
-    module: 'Masters',
-    title: 'Vendor Master Update - Reliance Industries',
-    submittedBy: 'Rajesh Kumar',
-    submittedDate: '2024-12-09',
-    submittedTime: '09:15:00',
-    priority: 'High',
-    daysWaiting: 3,
-    details: {
-      recordType: 'Vendor',
-      recordName: 'Reliance Industries Ltd.'
-    },
-    changes: [
-      { field: 'Payment Terms', oldValue: 'Net 30', newValue: 'Net 45' },
-      { field: 'Credit Limit', oldValue: '₹10,00,000', newValue: '₹15,00,000' },
-      { field: 'Bank Account', oldValue: 'ICICI-****1234', newValue: 'HDFC-****5678' }
-    ],
-    route: '/masters/approval/VENDOR-UPD-0023'
-  },
-  {
-    id: 'ITEM-NEW-0089',
-    type: 'Master',
-    module: 'Masters',
-    title: 'New Item Master - Steel Rod 12mm',
-    submittedBy: 'Priya Sharma',
-    submittedDate: '2024-12-10',
-    submittedTime: '10:00:00',
-    priority: 'Medium',
-    daysWaiting: 2,
-    details: {
-      recordType: 'Item',
-      recordName: 'Steel Rod 12mm'
-    },
-    changes: [
-      { field: 'Item Code', oldValue: '-', newValue: 'SR-12MM-001' },
-      { field: 'Category', oldValue: '-', newValue: 'Raw Material' },
-      { field: 'Unit of Measure', oldValue: '-', newValue: 'KG' },
-      { field: 'Standard Price', oldValue: '-', newValue: '₹65.50' }
-    ],
-    route: '/masters/approval/ITEM-NEW-0089'
-  },
-
-  // ========== GRN LOCATION ACCEPTANCES ==========
-  {
-    id: 'GRN-LOC-0234',
-    type: 'Location',
-    module: 'Procurement',
-    title: 'GRN Location Acceptance - Mumbai Warehouse',
-    submittedBy: 'Sunita Reddy',
-    submittedDate: '2024-12-11',
-    submittedTime: '12:00:00',
-    value: '₹1,24,500',
-    priority: 'High',
-    daysWaiting: 1,
-    details: {
-      grnNumber: 'GRN-2024-0234',
-      poNumber: 'PO-2024-0145',
-      location: 'Mumbai Warehouse',
-      allocatedQty: 500,
-      items: 2
-    },
-    route: '/procurement/grn-location-approval/GRN-LOC-0234'
-  }
-];
 
 export function GlobalApprovalsDashboard() {
   const { user } = useAuth();
@@ -551,25 +111,33 @@ export function GlobalApprovalsDashboard() {
   useEffect(() => {
     let isMounted = true;
 
-    fetchPendingMasterApprovals()
-      .then((items) => {
-        if (isMounted) {
-          setMasterApprovals(items);
-        }
-      })
-      .catch((error) => {
-        console.warn('Failed to load pending master approvals', error);
-      });
+    const loadApprovals = () => {
+      fetchPendingMasterApprovals()
+        .then((items) => {
+          if (isMounted) {
+            setMasterApprovals(items);
+          }
+        })
+        .catch((error) => {
+          console.warn('Failed to load pending master approvals', error);
+        });
+    };
+
+    loadApprovals();
+
+    const onMasterSaved = () => loadApprovals();
+    window.addEventListener('master-saved', onMasterSaved);
 
     return () => {
       isMounted = false;
+      window.removeEventListener('master-saved', onMasterSaved);
     };
   }, []);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
       setNowTick(Date.now());
-    }, 60_000);
+    }, 10_000);
 
     return () => {
       window.clearInterval(interval);
@@ -597,12 +165,13 @@ export function GlobalApprovalsDashboard() {
   const calculateETA = (submittedDate: string, submittedTime?: string) => {
     const submitted = getApprovalTimestamp(submittedDate, submittedTime);
     const diffMs = Math.max(0, nowTick - submitted.getTime());
-    
+
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return { days, hours, minutes, totalHours: Math.floor(diffMs / (1000 * 60 * 60)) };
+    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+    return { days, hours, minutes, seconds, totalHours: Math.floor(diffMs / (1000 * 60 * 60)) };
   };
 
   // Get ETA color based on elapsed time
@@ -619,13 +188,15 @@ export function GlobalApprovalsDashboard() {
   };
 
   // Format ETA display
-  const formatETA = (eta: { days: number; hours: number; minutes: number }) => {
+  const formatETA = (eta: { days: number; hours: number; minutes: number; seconds?: number }) => {
     if (eta.days > 0) {
       return `${eta.days}d ${eta.hours}h`;
     } else if (eta.hours > 0) {
       return `${eta.hours}h ${eta.minutes}m`;
+    } else if (eta.minutes > 0) {
+      return `${eta.minutes}m ${eta.seconds ?? 0}s`;
     } else {
-      return `${eta.minutes}m`;
+      return `${eta.seconds ?? 0}s`;
     }
   };
 
@@ -774,25 +345,52 @@ export function GlobalApprovalsDashboard() {
     switch (tab) {
       case 'All':
         return true;
+      case 'MASTER':
+        return item.type === 'Master' || item.category === 'MASTER';
+      case 'PR':
+        return item.category === 'PR' || item.type === 'PR';
+      case 'PO':
+        return item.category === 'PO' || item.type === 'PO';
+      case 'AP_INVOICES':
+        return item.category === 'AP_INVOICES' || item.type === 'Invoice' || item.type === 'NonPOInvoice';
+      case 'DEBIT_NOTES':
+        return item.category === 'DEBIT_NOTES' || item.module === 'Debit Notes';
+      case 'PAYMENTS':
+        return item.category === 'PAYMENTS' || item.type === 'PaymentBatch';
+      case 'VENDOR_ADVANCES':
+        return item.category === 'VENDOR_ADVANCES' || item.type === 'VendorAdvance';
+      case 'VENDOR_ONBOARDING':
+        return item.category === 'VENDOR_ONBOARDING' || item.type === 'VendorOnboarding';
+      case 'LOCATION':
+        return item.category === 'LOCATION' || item.type === 'Location';
       default:
         return item.category === tab;
     }
   };
 
-  const normalizedMasterApprovals = useMemo(
+  const normalizedMasterApprovals = useMemo<ApprovalItem[]>(
     () =>
       masterApprovals.map((item) => ({
         ...item,
         category: 'MASTER' as const,
+        value: undefined,
       })),
     [masterApprovals]
   );
 
   const allApprovals = [...liveOperationalApprovals, ...normalizedMasterApprovals];
-  const approvals = allApprovals.filter((item) => matchesTab(item, selectedTab));
+  const getApprovalsByTab = (tab: ApprovalTabKey) => {
+    // Hard guard: Master tab must only render backend master approval items.
+    if (tab === 'MASTER') {
+      return normalizedMasterApprovals;
+    }
+    return allApprovals.filter((item) => matchesTab(item, tab));
+  };
+
+  const approvals = getApprovalsByTab(selectedTab);
 
   const getCountByType = (type: ApprovalTabKey) => {
-    return allApprovals.filter((item) => matchesTab(item, type)).length;
+    return getApprovalsByTab(type).length;
   };
 
   const getPriorityColor = (priority: string) => {
@@ -922,7 +520,7 @@ export function GlobalApprovalsDashboard() {
     item: ApprovalItem,
     action: 'approve' | 'reject' | 'request_info',
   ) => {
-    const masterItem = item as MasterApprovalItem;
+    const masterItem = item as unknown as MasterApprovalItem;
 
     const nextComments =
       action === 'request_info'

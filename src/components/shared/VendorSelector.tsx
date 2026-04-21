@@ -1,5 +1,6 @@
 import { Building2, Check, AlertCircle } from 'lucide-react';
 import { useMasterData } from '../../contexts/MasterDataContext';
+import { isRecordMappedToEntity } from '../../lib/masters/entityMapping';
 
 /**
  * VENDOR SELECTOR - SHARED COMPONENT
@@ -23,6 +24,7 @@ interface VendorSelectorProps {
   showMSMEBadge?: boolean;
   error?: string;
   requireCompleteBillingAddress?: boolean; // NEW: Filter vendors with complete billing address
+  entityId?: string;
 }
 
 export function VendorSelector({
@@ -34,10 +36,13 @@ export function VendorSelector({
   disabled = false,
   showMSMEBadge = true,
   error,
-  requireCompleteBillingAddress = false // NEW: Default false for backward compatibility
+  requireCompleteBillingAddress = false, // NEW: Default false for backward compatibility
+  entityId
 }: VendorSelectorProps) {
   const { vendors, getActiveVendors, getVendorById } = useMasterData();
-  const activeVendors = getActiveVendors();
+  const activeVendors = entityId
+    ? vendors.filter((vendor) => vendor.status === 'Active' && isRecordMappedToEntity(vendor, entityId))
+    : getActiveVendors();
   
   // Filter vendors based on billing address completeness if required
   const availableVendors = requireCompleteBillingAddress

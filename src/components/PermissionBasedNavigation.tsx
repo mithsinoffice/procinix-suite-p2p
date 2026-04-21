@@ -129,7 +129,7 @@ export function PermissionBasedNavigation() {
                 {item.label}
               </span>
               {PermissionIcon && permissionType === 'view' && (
-                <PermissionIcon className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} title="View Only" />
+                <PermissionIcon className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} aria-label="View Only" />
               )}
               {item.badge && (
                 <span 
@@ -185,7 +185,7 @@ export function PermissionBasedNavigation() {
               {item.label}
             </span>
             {PermissionIcon && permissionType === 'view' && (
-              <PermissionIcon className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} title="View Only" />
+              <PermissionIcon className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} aria-label="View Only" />
             )}
             {item.badge && (
               <span 
@@ -490,7 +490,7 @@ export function PermissionBasedNavigation() {
                     {section.label}
                   </span>
                   {permissionType === 'view' && (
-                    <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} title="View Only" />
+                    <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} aria-label="View Only" />
                   )}
                   {section.badge && section.badge > 0 && (
                     <span 

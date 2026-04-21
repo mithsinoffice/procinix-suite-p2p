@@ -10,11 +10,13 @@ interface ApprovalModalProps {
   isOpen: boolean;
   onClose: () => void;
   recordType: string;
-  recordId: string;
+  recordId?: string;
+  recordName?: string;
   changes: Change[];
-  onApprove: () => void;
-  onReject: () => void;
-  onRequestInfo: () => void;
+  onApprove: (...args: any[]) => void;
+  onReject: (...args: any[]) => void;
+  onRequestInfo?: (...args: any[]) => void;
+  onMoreInfo?: (...args: any[]) => void;
 }
 
 export function ApprovalModal({
@@ -22,10 +24,12 @@ export function ApprovalModal({
   onClose,
   recordType,
   recordId,
+  recordName,
   changes,
   onApprove,
   onReject,
-  onRequestInfo
+  onRequestInfo,
+  onMoreInfo
 }: ApprovalModalProps) {
   if (!isOpen) return null;
 
@@ -36,7 +40,9 @@ export function ApprovalModal({
         <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
           <div>
             <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Review Changes - {recordType}</h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>Record ID: {recordId}</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
+              {recordId ? `Record ID: ${recordId}` : recordName ? `Record: ${recordName}` : 'Review record changes'}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -109,13 +115,14 @@ export function ApprovalModal({
           style={{ borderColor: 'var(--color-silver)' }}
         >
           <button
-            onClick={onRequestInfo}
+            onClick={onRequestInfo ?? onMoreInfo}
             className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
             style={{
               border: '1px solid var(--color-silver)',
               color: 'var(--color-mercury-grey)',
               backgroundColor: 'white'
             }}
+            disabled={!(onRequestInfo ?? onMoreInfo)}
           >
             <MessageSquare className="w-4 h-4" />
             Request More Info

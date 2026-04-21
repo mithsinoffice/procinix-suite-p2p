@@ -146,7 +146,13 @@ export function DebitNoteFormV2Enhanced() {
     }
 
     setDebitNoteDate(existing.debitNoteDate);
-    setDebitNoteStatus(existing.status === 'Pending Approval' ? 'Submitted' : existing.status);
+    setDebitNoteStatus(
+      existing.status === 'Pending Approval'
+        ? 'Submitted'
+        : existing.status === 'Rejected'
+          ? 'Draft'
+          : existing.status
+    );
     setReasonId(existing.reasonId);
     setVendorId(existing.vendorId || existing.vendorCode);
     setVendorName(existing.vendorName);
@@ -603,7 +609,6 @@ export function DebitNoteFormV2Enhanced() {
 
     const reasonName =
       debitNoteReasons.find((reason) => reason.id === reasonId)?.name ??
-      debitNoteReasons.find((reason) => reason.id === reasonId)?.reasonName ??
       'Debit Note';
 
     const debitNoteRecord = {
@@ -660,7 +665,6 @@ export function DebitNoteFormV2Enhanced() {
 
     const reasonName =
       debitNoteReasons.find((reason) => reason.id === reasonId)?.name ??
-      debitNoteReasons.find((reason) => reason.id === reasonId)?.reasonName ??
       'Debit Note';
 
     const debitNoteRecord = {

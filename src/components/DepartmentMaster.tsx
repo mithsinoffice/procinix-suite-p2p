@@ -1,5 +1,7 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, Briefcase, User, FileText, Edit, Eye } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useState, useMemo, useCallback } from 'react';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
@@ -16,6 +18,7 @@ interface Department {
   headOfDept: string;
   status: string;
   approvalStatus: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  entityMappings?: EntityScopeMapping[];
   originalData?: Department;
 }
 
@@ -49,6 +52,19 @@ export function DepartmentMaster() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<Department | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
+  const filteredDepartments = useMemo(() => {
+    return departments.filter((dept) => {
+      const haystack = [dept.deptCode, dept.deptName, dept.headOfDept, dept.status, dept.approvalStatus].join(' ').toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(dept.status || ((dept as any).isActive ? 'Active' : 'Inactive'));
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(dept.approvalStatus);
+      return matchesSearch && matchesStatus && matchesApproval;
+    });
+  }, [departments, searchTerm, statusFilter, approvalFilter]);
 
   const handleSubmit = (approvalStatus: Department['approvalStatus'] = 'Pending Approval') => {
     if (isEditMode && editingId) {
@@ -205,7 +221,7 @@ export function DepartmentMaster() {
 
   if (showForm) {
     return (
-      <FormShell
+      <FormShell masterName="Department Master"
         title={editingId ? 'Edit Department' : 'Create Department'}
         subtitle="Manage departments with approval workflow"
         modeLabel={editingId ? 'Edit Master Record' : 'Create Master Record'}
@@ -242,17 +258,8 @@ export function DepartmentMaster() {
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Department Master</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage departments with approval workflow</p>
-          </div>
-        </div>
+    <MasterPageShell masterName="Department Master" description="Manage organizational departments">
+      <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
             resetForm();
@@ -318,7 +325,7 @@ export function DepartmentMaster() {
               <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}>
                 Cancel
               </button>
-              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
+              <button onClick={() => handleSubmit()} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
                 {isEditMode ? 'Update' : 'Save'}
               </button>
             </div>
@@ -337,6 +344,30 @@ export function DepartmentMaster() {
         onRequestInfo={handleRequestInfo}
       />
 
+      <MasterListToolbar
+        masterName="Department Master"
+        masterKey="department_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredDepartments}
+        columns={[
+          { key: 'deptCode', label: 'Dept Code' },
+          { key: 'deptName', label: 'Dept Name' },
+          { key: 'headOfDept', label: 'Head of Dept' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
+
       <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -351,7 +382,7 @@ export function DepartmentMaster() {
               </tr>
             </thead>
             <tbody>
-              {departments.map((dept, index) => (
+              {filteredDepartments.map((dept, index) => (
                 <tr key={dept.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
                   <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{dept.deptCode || (dept as any).code || ''}</td>
                   <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{dept.deptName || (dept as any).name || ''}</td>
@@ -387,6 +418,6 @@ export function DepartmentMaster() {
           </table>
         </div>
       </div>
-    </div>
+    </MasterPageShell>
   );
 }

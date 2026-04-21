@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Package, AlertCircle, ChevronRight, Building2, Users, MapPin, Calendar, TrendingUp } from 'lucide-react';
+import { useProcurementData } from '../../contexts/ProcurementDataContext';
 
 type PRType = 'Catalogue' | 'Regular' | 'Service' | 'Kit/Bundle' | 'Asset/CAPEX' | 'Blanket';
 
@@ -33,26 +34,39 @@ interface POPreview {
 
 type GroupingMode = 'vendor' | 'shipTo' | 'costCentre' | 'needByDate';
 
-const mockApprovedPRs: ApprovedPR[] = [
-  { id: 'PR-2024-001', prType: 'Catalogue', entity: 'India HQ', requestor: 'Rajesh Kumar', department: 'IT', costCentre: 'CC-IT-001', needByDate: '2024-12-20', totalAmount: 325000, itemCount: 3, vendor: 'Dell India', shipTo: 'Bangalore Office', createdDate: '2024-12-10' },
-  { id: 'PR-2024-006', prType: 'Asset/CAPEX', entity: 'India HQ', requestor: 'Ramesh Gupta', department: 'Operations', costCentre: 'CC-OPS-001', needByDate: '2025-01-15', totalAmount: 5500000, itemCount: 1, vendor: 'Siemens India', shipTo: 'Mumbai Plant', createdDate: '2024-12-08' },
-  { id: 'PR-2024-008', prType: 'Kit/Bundle', entity: 'India HQ', requestor: 'Arun Joshi', department: 'Production', costCentre: 'CC-PROD-001', project: 'Product Launch 2025', needByDate: '2025-01-10', totalAmount: 780000, itemCount: 12, vendor: 'Component Supplies Co', shipTo: 'Mumbai Plant', createdDate: '2024-12-09' },
-  { id: 'PR-2024-011', prType: 'Service', entity: 'India HQ', requestor: 'Meera Nair', department: 'IT', costCentre: 'CC-IT-001', needByDate: '2025-01-08', totalAmount: 650000, itemCount: 1, vendor: 'Cloud Services Inc', shipTo: 'All Locations', createdDate: '2024-12-15' },
-  { id: 'PR-2024-013', prType: 'Regular', entity: 'India HQ', requestor: 'Vijay Krishnan', department: 'Operations', costCentre: 'CC-OPS-002', needByDate: '2024-12-28', totalAmount: 450000, itemCount: 6, vendor: 'Office Supplies Ltd', shipTo: 'Bangalore Office', createdDate: '2024-12-14' },
-  { id: 'PR-2024-014', prType: 'Catalogue', entity: 'India HQ', requestor: 'Lakshmi Iyer', department: 'IT', costCentre: 'CC-IT-002', needByDate: '2024-12-25', totalAmount: 280000, itemCount: 4, vendor: 'Dell India', shipTo: 'Bangalore Office', createdDate: '2024-12-13' },
-  { id: 'PR-2024-015', prType: 'Regular', entity: 'India Manufacturing', requestor: 'Sunil Patil', department: 'Production', costCentre: 'CC-PROD-MFG', needByDate: '2025-01-05', totalAmount: 890000, itemCount: 8, vendor: 'Raw Materials Corp', shipTo: 'Pune Factory', createdDate: '2024-12-12' },
-];
-
 export function PRtoPOConversion() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preSelectedPRIds = searchParams.get('prIds')?.split(',') || [];
+  const { purchaseRequests } = useProcurementData();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedPRs, setSelectedPRs] = useState<string[]>(preSelectedPRIds);
   const [selectedEntity, setSelectedEntity] = useState<string>('India HQ');
   const [groupingMode, setGroupingMode] = useState<GroupingMode>('vendor');
   const [poPreview, setPOPreview] = useState<POPreview[]>([]);
+
+  // Adapt live PR shape to local ApprovedPR shape used by this UI
+  const approvedPRs = useMemo<ApprovedPR[]>(
+    () =>
+      purchaseRequests
+        .filter((pr) => pr.status === 'Approved')
+        .map((pr) => ({
+          id: pr.prNumber || pr.id,
+          prType: pr.type,
+          entity: pr.entity,
+          requestor: pr.requestor,
+          department: pr.department,
+          costCentre: pr.costCentre,
+          needByDate: pr.needByDate,
+          totalAmount: pr.totalAmount,
+          itemCount: pr.itemCount,
+          vendor: pr.vendor,
+          shipTo: pr.deliveryLocation,
+          createdDate: pr.createdDate,
+        })),
+    [purchaseRequests]
+  );
 
   const formatCurrency = (amount: number) => `₹${(amount / 100000).toFixed(2)} L`;
 
@@ -68,7 +82,7 @@ export function PRtoPOConversion() {
     }
   };
 
-  const filteredPRs = mockApprovedPRs.filter(pr => pr.entity === selectedEntity);
+  const filteredPRs = approvedPRs.filter(pr => pr.entity === selectedEntity);
 
   const togglePRSelection = (prId: string) => {
     setSelectedPRs(prev =>
@@ -82,7 +96,7 @@ export function PRtoPOConversion() {
       return;
     }
 
-    const selectedPRData = mockApprovedPRs.filter(pr => selectedPRs.includes(pr.id));
+    const selectedPRData = approvedPRs.filter(pr => selectedPRs.includes(pr.id));
     const entities = [...new Set(selectedPRData.map(pr => pr.entity))];
     
     if (entities.length > 1) {
@@ -94,7 +108,7 @@ export function PRtoPOConversion() {
   };
 
   const generatePOPreview = () => {
-    const selectedPRData = mockApprovedPRs.filter(pr => selectedPRs.includes(pr.id));
+    const selectedPRData = approvedPRs.filter(pr => selectedPRs.includes(pr.id));
     let grouped: Record<string, ApprovedPR[]> = {};
 
     switch (groupingMode) {
@@ -267,7 +281,7 @@ export function PRtoPOConversion() {
                     </p>
                     <p className="text-xs" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
                       Total Value: {formatCurrency(
-                        mockApprovedPRs
+                        approvedPRs
                           .filter(pr => selectedPRs.includes(pr.id))
                           .reduce((sum, pr) => sum + pr.totalAmount, 0)
                       )}
@@ -442,7 +456,7 @@ export function PRtoPOConversion() {
                   </p>
                   <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
                     From {selectedPRs.length} selected PRs • Total Value: {formatCurrency(
-                      mockApprovedPRs
+                      approvedPRs
                         .filter(pr => selectedPRs.includes(pr.id))
                         .reduce((sum, pr) => sum + pr.totalAmount, 0)
                     )}

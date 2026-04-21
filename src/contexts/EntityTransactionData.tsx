@@ -17,6 +17,7 @@ export interface POTransaction {
   id: string;
   poNumber: string;
   poDate: string;
+  vendorId?: string;
   vendorCode: string;
   vendorName: string;
   entityId: string;
@@ -25,6 +26,8 @@ export interface POTransaction {
   currency: string;
   status: 'Draft' | 'Approved' | 'Partially Received' | 'Fully Received' | 'Closed';
   deliveryDate: string;
+  costCentre?: string;
+  department?: string;
   createdBy: string;
   approvedBy?: string;
   approvedDate?: string;

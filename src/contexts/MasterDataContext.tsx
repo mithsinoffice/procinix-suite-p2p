@@ -11,11 +11,12 @@ import {
   MULTI_ENTITY_VENDORS,
   MULTI_ENTITY_BANKS,
   MULTI_ENTITY_COST_CENTRES,
-  MULTI_ENTITY_TAX_CODES
+  MULTI_ENTITY_TAX_CODES,
+  MULTI_ENTITY_DEPARTMENTS,
 } from './MultiEntityMasterData';
 import { DEMO_VENDOR_DATASET } from './DemoVendorDataset';
-import { ensureRelationalMasterRecords, saveRelationalMasterRecords } from '../lib/supabase/masterTables';
-import { ensureDomainDocument, saveDomainDocument } from '../lib/supabase/documentStore';
+import { ensureRelationalMasterRecords, saveRelationalMasterRecords } from '../lib/mysql/masterTables';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 import { isMysqlApiEnabled, mysqlApiRequest } from '../lib/mysql/client';
 import { EntityScopeMapping, isRecordMappedToEntity } from '../lib/masters/entityMapping';
 
@@ -48,8 +49,10 @@ import { EntityScopeMapping, isRecordMappedToEntity } from '../lib/masters/entit
 export interface VendorMaster {
   id: string;
   code: string;
+  clientErpVendorCode?: string;
   name: string;
   legalName: string;
+  approvalStatus?: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected' | 'Changes Requested';
   pan: string;
   gstin: string;
   email: string;
@@ -336,6 +339,28 @@ export interface DebitNoteReasonMaster {
   entityMappings?: EntityScopeMapping[];
 }
 
+export interface TDSSectionMasterRecord {
+  id: string;
+  sectionCode: string;
+  sectionName: string;
+  description?: string;
+  rateIndividual: number;
+  rateCompany: number;
+  rateNoTan?: number;
+  thresholdAmount?: number;
+  applicableTo?: string;
+  status: 'Active' | 'Inactive';
+  approvalStatus?: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  entityMappings?: EntityScopeMapping[];
+}
+
+export interface VendorGroupMaster {
+  code: string;
+  name: string;
+  relationshipType?: 'Third party' | 'Related party' | 'Associate' | 'JV';
+  entities?: Array<{ id: string; name: string }>;
+}
+
 // ============================================================================
 // MULTI-CURRENCY SUPPORT - ADDITIVE ONLY (NO TRANSACTION IMPACT)
 // ============================================================================
@@ -518,9 +543,45 @@ const BANK_MASTER_DATA: BankMaster[] = [
 
 const UOM_MASTER_DATA: UOMMaster[] = SUBKO_UOM;
 
-const DEPARTMENT_MASTER_DATA: DepartmentMaster[] = SUBKO_DEPARTMENTS;
+const DEPARTMENT_MASTER_DATA: DepartmentMaster[] = [...SUBKO_DEPARTMENTS, ...MULTI_ENTITY_DEPARTMENTS];
 
 const DEBIT_NOTE_REASON_MASTER_DATA: DebitNoteReasonMaster[] = SUBKO_DEBIT_NOTE_REASONS;
+const VENDOR_GROUP_MASTER_DATA: VendorGroupMaster[] = [
+  { code: 'VG001', name: 'Tata Group', relationshipType: 'Associate' },
+  { code: 'VG002', name: 'Reliance Group', relationshipType: 'Related party' },
+  { code: 'VG003', name: 'Aditya Birla Group', relationshipType: 'Associate' },
+  { code: 'VG004', name: 'Mahindra Group', relationshipType: 'Third party' },
+  { code: 'VG015', name: 'Independent Vendors', relationshipType: 'Third party' },
+];
+
+const TDS_SECTION_MASTER_DATA: TDSSectionMasterRecord[] = [
+  {
+    id: 'TDS-194C',
+    sectionCode: '194C',
+    sectionName: 'Payment to Contractors',
+    description: 'TDS on payments to contractors and sub-contractors',
+    rateIndividual: 1,
+    rateCompany: 2,
+    rateNoTan: 20,
+    thresholdAmount: 30000,
+    applicableTo: 'Contractors',
+    status: 'Active',
+    approvalStatus: 'Approved',
+  },
+  {
+    id: 'TDS-194J',
+    sectionCode: '194J',
+    sectionName: 'Professional/Technical Services',
+    description: 'TDS on professional and technical service fees',
+    rateIndividual: 10,
+    rateCompany: 10,
+    rateNoTan: 20,
+    thresholdAmount: 30000,
+    applicableTo: 'Professionals',
+    status: 'Active',
+    approvalStatus: 'Approved',
+  },
+];
 
 // ============================================================================
 // CURRENCY MASTER DATA (MULTI-COUNTRY SUPPORT)
@@ -761,6 +822,14 @@ interface MasterDataContextType {
   debitNoteReasons: DebitNoteReasonMaster[];
   getDebitNoteReasonById: (id: string) => DebitNoteReasonMaster | undefined;
   getActiveDebitNoteReasons: () => DebitNoteReasonMaster[];
+
+  // Vendor Groups
+  vendorGroups: VendorGroupMaster[];
+
+  // TDS Sections
+  tdsSections: TDSSectionMasterRecord[];
+  getTDSSectionByCode: (sectionCode: string) => TDSSectionMasterRecord | undefined;
+  getActiveTDSSections: () => TDSSectionMasterRecord[];
   
   // Currencies
   currencies: CurrencyMaster[];
@@ -793,6 +862,8 @@ interface MasterDataDocument {
   uoms: UOMMaster[];
   departments: DepartmentMaster[];
   debitNoteReasons: DebitNoteReasonMaster[];
+  vendorGroups: VendorGroupMaster[];
+  tdsSections: TDSSectionMasterRecord[];
   currencies: CurrencyMaster[];
   exchangeRates: ExchangeRateMaster[];
 }
@@ -829,6 +900,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     uoms: UOM_MASTER_DATA,
     departments: DEPARTMENT_MASTER_DATA,
     debitNoteReasons: DEBIT_NOTE_REASON_MASTER_DATA,
+    vendorGroups: VENDOR_GROUP_MASTER_DATA,
+    tdsSections: TDS_SECTION_MASTER_DATA,
     currencies: CURRENCY_MASTER_DATA,
     exchangeRates: EXCHANGE_RATE_MASTER_DATA
   };
@@ -844,6 +917,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
   const [uoms, setUoms] = useState<UOMMaster[]>(defaultDocument.uoms);
   const [departments, setDepartments] = useState<DepartmentMaster[]>(defaultDocument.departments);
   const [debitNoteReasons, setDebitNoteReasons] = useState<DebitNoteReasonMaster[]>(defaultDocument.debitNoteReasons);
+  const [vendorGroups, setVendorGroups] = useState<VendorGroupMaster[]>(defaultDocument.vendorGroups);
+  const [tdsSections, setTdsSections] = useState<TDSSectionMasterRecord[]>(defaultDocument.tdsSections);
   const [currencies, setCurrencies] = useState<CurrencyMaster[]>(defaultDocument.currencies);
   const [exchangeRates, setExchangeRates] = useState<ExchangeRateMaster[]>(defaultDocument.exchangeRates);
   const [isHydrating, setIsHydrating] = useState(true);
@@ -864,6 +939,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           uomsData,
           departmentsData,
           debitNoteReasonsData,
+          tdsSectionsData,
           currenciesData,
           exchangeRatesData,
           document,
@@ -879,6 +955,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           ensureRelationalMasterRecords('uom_master', defaultDocument.uoms),
           ensureRelationalMasterRecords('department_master', defaultDocument.departments),
           ensureRelationalMasterRecords('debit_note_reason_master', defaultDocument.debitNoteReasons),
+          ensureRelationalMasterRecords('tds_section_master', defaultDocument.tdsSections),
           ensureRelationalMasterRecords('currency_master', defaultDocument.currencies),
           ensureRelationalMasterRecords('exchange_rate_master', defaultDocument.exchangeRates),
           ensureDomainDocument('master_data', defaultDocument),
@@ -905,8 +982,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
                 uom: item.uom ?? '',
                 hsnCode: item.hsnCode ?? '',
                 gstRate: Number(item.gstRate ?? 0),
-                itemType: 'Goods',
-                status: item.itemStatus === 'Inactive' ? 'Inactive' : 'Active',
+                itemType: 'Goods' as const,
+                status: (item.itemStatus === 'Inactive' ? 'Inactive' : 'Active') as ItemMaster['status'],
                 createdBy: 'system',
                 createdDate: item.createdAt?.split('T')[0] ?? '',
               }))
@@ -921,6 +998,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
         setUoms(uomsData ?? defaultDocument.uoms);
         setDepartments(departmentsData ?? defaultDocument.departments);
         setDebitNoteReasons(debitNoteReasonsData ?? defaultDocument.debitNoteReasons);
+        setVendorGroups(document.vendorGroups ?? defaultDocument.vendorGroups);
+        setTdsSections(tdsSectionsData ?? defaultDocument.tdsSections);
         setCurrencies(currenciesData ?? defaultDocument.currencies);
         setExchangeRates(exchangeRatesData ?? defaultDocument.exchangeRates);
         setIsHydrating(false);
@@ -943,6 +1022,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       setUoms(document.uoms ?? defaultDocument.uoms);
       setDepartments(document.departments ?? defaultDocument.departments);
       setDebitNoteReasons(document.debitNoteReasons ?? defaultDocument.debitNoteReasons);
+      setVendorGroups(document.vendorGroups ?? defaultDocument.vendorGroups);
+      setTdsSections(document.tdsSections ?? defaultDocument.tdsSections);
       setCurrencies(document.currencies ?? defaultDocument.currencies);
       setExchangeRates(document.exchangeRates ?? defaultDocument.exchangeRates);
       setIsHydrating(false);
@@ -964,6 +1045,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       saveRelationalMasterRecords('vendor_master', vendors);
       saveRelationalMasterRecords('account_code_master', accountCodes);
       saveRelationalMasterRecords('bank_master', banks);
+      saveRelationalMasterRecords('tds_section_master', tdsSections);
       saveDomainDocument('master_data', {
         vendors,
         items,
@@ -976,6 +1058,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
         uoms,
         departments,
         debitNoteReasons,
+        vendorGroups,
+        tdsSections,
         currencies,
         exchangeRates
       });
@@ -994,6 +1078,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       uoms,
       departments,
       debitNoteReasons,
+      vendorGroups,
+      tdsSections,
       currencies,
       exchangeRates
     });
@@ -1003,6 +1089,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     costCentres,
     currencies,
     debitNoteReasons,
+    vendorGroups,
     departments,
     entities,
     exchangeRates,
@@ -1010,6 +1097,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     items,
     profitCentres,
     taxCodes,
+    tdsSections,
     uoms,
     vendors
   ]);
@@ -1017,7 +1105,13 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
   // Vendor helpers
   const getVendorById = (id: string) => vendors.find(v => v.id === id);
   const getVendorByCode = (code: string) => vendors.find(v => v.code === code);
-  const getActiveVendors = () => vendors.filter(v => v.status === 'Active' && isRecordMappedToEntity(v, currentCompany?.id));
+  const getActiveVendors = () =>
+    vendors.filter(
+      (v) =>
+        v.status === 'Active' &&
+        (v.approvalStatus ?? 'Approved') === 'Approved' &&
+        isRecordMappedToEntity(v, currentCompany?.id)
+    );
   const getVendorsByEntity = (entityId: string) => vendors.filter(v => v.status === 'Active' && isRecordMappedToEntity(v, entityId));
 
   // Item helpers
@@ -1048,7 +1142,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
   const getActiveTaxCodes = () => taxCodes.filter(t => t.isActive && isRecordMappedToEntity(t, currentCompany?.id));
   const getGSTCodes = () => taxCodes.filter(t => t.taxType === 'GST' && t.isActive && isRecordMappedToEntity(t, currentCompany?.id));
   const getTDSCodes = () => taxCodes.filter(t => t.taxType === 'TDS' && t.isActive && isRecordMappedToEntity(t, currentCompany?.id));
-  const getVATCodes = () => taxCodes.filter(t => t.taxType === 'VAT' && t.isActive && isRecordMappedToEntity(t, currentCompany?.id));
+  const getVATCodes = () => [];
 
   // Bank helpers
   const getBankById = (id: string) => banks.find(b => b.id === id);
@@ -1067,6 +1161,17 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
   // Debit Note Reason helpers
   const getDebitNoteReasonById = (id: string) => debitNoteReasons.find(d => d.id === id);
   const getActiveDebitNoteReasons = () => debitNoteReasons.filter(d => d.status === 'Active' && isRecordMappedToEntity(d, currentCompany?.id));
+
+  // TDS Section helpers
+  const getTDSSectionByCode = (sectionCode: string) =>
+    tdsSections.find((section) => section.sectionCode === sectionCode);
+  const getActiveTDSSections = () =>
+    tdsSections.filter(
+      (section) =>
+        section.status === 'Active' &&
+        (section.approvalStatus ?? 'Approved') === 'Approved' &&
+        isRecordMappedToEntity(section, currentCompany?.id)
+    );
 
   // Currency helpers
   const getCurrencyById = (id: string) => currencies.find(c => c.id === id);
@@ -1178,6 +1283,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     debitNoteReasons,
     getDebitNoteReasonById,
     getActiveDebitNoteReasons,
+    vendorGroups,
+    tdsSections,
+    getTDSSectionByCode,
+    getActiveTDSSections,
     currencies,
     getCurrencyById,
     getCurrencyByCode,

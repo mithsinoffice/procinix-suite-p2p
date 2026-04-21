@@ -49,7 +49,7 @@ export function VendorInvitationReviewDetail() {
       setMsg(`Vendor master created with code ${r.code}.`);
       setTimeout(() => navigate('/vendor-management/master'), 1500);
     } else {
-      setMsg(r.error);
+      setMsg('error' in r ? r.error : 'Unable to create vendor master.');
     }
   };
 

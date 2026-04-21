@@ -214,7 +214,7 @@ export function InviteVendors() {
     }
     const emailCheck = normalizeAndValidateInvitationEmail(email);
     if (!emailCheck.ok) {
-      setError(emailCheck.error);
+      setError('error' in emailCheck ? emailCheck.error : 'Enter a valid email address.');
       return;
     }
     const normalizedEmail = emailCheck.email;
@@ -265,7 +265,7 @@ export function InviteVendors() {
         setEmailDelivery({ sentByApi: false });
       }
     } else {
-      setEmailDelivery({ sentByApi: false, error: sendResult.error });
+      setEmailDelivery({ sentByApi: false, error: 'error' in sendResult ? sendResult.error : 'Automatic send failed.' });
     }
 
     console.info('[Vendor invite] Target email:', inv.basic.email, 'URL:', url, sendResult);

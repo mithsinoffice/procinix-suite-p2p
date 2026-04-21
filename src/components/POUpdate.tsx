@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Calendar, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Milestone {

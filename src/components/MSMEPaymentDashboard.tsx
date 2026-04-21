@@ -646,7 +646,7 @@ export function MSMEPaymentDashboard() {
                   </td>
                   <td style={{ padding: '16px 20px', textAlign: 'center' }}>
                     <button
-                      onClick={() => navigate(`/invoices/detail/${invoice.id}`)}
+                      onClick={() => navigate('/invoices')}
                       style={{
                         padding: '6px 12px',
                         backgroundColor: 'var(--color-teal)',

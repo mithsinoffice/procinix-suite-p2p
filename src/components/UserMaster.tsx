@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Plus, Search, Edit, Trash2, Mail, Shield, Check, AlertCircle, Clock, Building2, Lock } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Mail, Shield, Check, AlertCircle, Clock, Building2, Lock, Eye } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
+import { ApprovalModal } from './ApprovalModal';
+import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserMasterRecord, UserEntityAccessRow } from '../types/userMaster';
 import {
@@ -59,6 +63,12 @@ interface EntityOption {
   isActive?: boolean;
   status?: string;
   approvalStatus?: string;
+}
+
+interface Change {
+  field: string;
+  oldValue: string;
+  newValue: string;
 }
 
 const USER_TYPE_BASE: { value: string; label: string }[] = [{ value: 'Employee', label: 'Employee' }];
@@ -226,6 +236,12 @@ export function UserMaster() {
   const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
   const employeeComboRef = useRef<HTMLDivElement>(null);
 
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [currentReviewRecord, setCurrentReviewRecord] = useState<UserMasterRecord | null>(null);
+  const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
   const normalizedUsers = useMemo(() => users.map((u) => normalizeUserMasterRecord(u)), [users]);
 
   const approvedEmployees = useMemo(
@@ -340,9 +356,8 @@ export function UserMaster() {
   };
 
   const filteredUsers = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    if (!q) return normalizedUsers;
     return normalizedUsers.filter((user) => {
+      const q = searchTerm.trim().toLowerCase();
       const fields = [
         user.name,
         user.email,
@@ -351,9 +366,12 @@ export function UserMaster() {
         user.username,
         user.userType,
       ].map((s) => (s ?? '').toLowerCase());
-      return fields.some((f) => f.includes(q));
+      const matchesSearch = !q || fields.some((f) => f.includes(q));
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(user.status ?? 'Active');
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(user.approvalStatus ?? 'Approved');
+      return matchesSearch && matchesStatus && matchesApproval;
     });
-  }, [normalizedUsers, searchTerm]);
+  }, [normalizedUsers, searchTerm, statusFilter, approvalFilter]);
 
   const openFormCreate = () => {
     setSelectedUser(null);
@@ -439,7 +457,6 @@ export function UserMaster() {
   };
 
   const validateForm = (): string | null => {
-    if (!formData.userCode.trim()) return 'User Code is required.';
     if (!formData.employeeId.trim()) return 'Employee Name is required — search and select an employee.';
     if (!formData.name.trim()) return 'Full Name is required.';
     if (!formData.email.trim()) return 'Login Email is required.';
@@ -489,6 +506,12 @@ export function UserMaster() {
     return null;
   };
 
+  const generateUserCode = (): string => {
+    const ts = Date.now().toString(36).toUpperCase().slice(-4);
+    const rand = Math.random().toString(36).toUpperCase().slice(2, 4);
+    return `UC-${ts}${rand}`;
+  };
+
   const buildPayload = (): UserMasterRecord => {
     const id = selectedUser?.id ?? Date.now().toString();
     const password =
@@ -497,7 +520,7 @@ export function UserMaster() {
 
     return {
       id,
-      userCode: formData.userCode.trim(),
+      userCode: formData.userCode.trim() || generateUserCode(),
       employeeId: formData.employeeId.trim(),
       name: formData.name.trim(),
       email: formData.email.trim(),
@@ -548,6 +571,82 @@ export function UserMaster() {
     window.setTimeout(() => {
       refreshSession();
     }, 300);
+  };
+
+  const handleReviewUser = (user: UserMasterRecord) => {
+    const n = normalizeUserMasterRecord(user);
+    const activeAccess = n.userEntityAccess.filter(
+      (r) => r.entityId.trim() && r.roleId.trim() && r.status !== 'Inactive',
+    ).length;
+    const changes: Change[] = [
+      { field: 'User Code', oldValue: '(new)', newValue: n.userCode || '-' },
+      { field: 'Full Name', oldValue: '(new)', newValue: n.name || '-' },
+      { field: 'Login Email', oldValue: '(new)', newValue: n.email || '-' },
+      { field: 'Username', oldValue: '(new)', newValue: n.username || '-' },
+      { field: 'Linked Employee', oldValue: '(new)', newValue: n.employeeId || '-' },
+      { field: 'User Type', oldValue: '(new)', newValue: n.userType || '-' },
+      { field: 'Login Method', oldValue: '(new)', newValue: n.loginMethod || '-' },
+      { field: 'Active Entity Roles', oldValue: '(new)', newValue: activeAccess ? `${activeAccess}` : '0' },
+    ];
+    setCurrentReviewRecord(n);
+    setDetectedChanges(changes);
+    setShowApprovalModal(true);
+  };
+
+  const handleApprove = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction<UserMasterRecord>(
+        'user_master',
+        users,
+        currentReviewRecord.id,
+        'approve',
+      );
+      setUsers(nextRecords);
+      window.setTimeout(() => {
+        refreshSession();
+      }, 300);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleReject = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction<UserMasterRecord>(
+        'user_master',
+        users,
+        currentReviewRecord.id,
+        'reject',
+      );
+      setUsers(nextRecords);
+      window.setTimeout(() => {
+        refreshSession();
+      }, 300);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleRequestInfo = async () => {
+    if (currentReviewRecord) {
+      const comments = window.prompt('Enter comments for the request:', '');
+      if (comments === null) {
+        return;
+      }
+      const nextRecords = await applyMasterApprovalAction<UserMasterRecord>(
+        'user_master',
+        users,
+        currentReviewRecord.id,
+        'request_info',
+        comments,
+      );
+      setUsers(nextRecords);
+      window.setTimeout(() => {
+        refreshSession();
+      }, 300);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -602,13 +701,13 @@ export function UserMaster() {
   const formContent = (
     <>
       <FormSection title="User Details" columns={2}>
-        <PxFormField label="User Code" required filled={!!formData.userCode.trim()} hint="Unique user identifier">
+        <PxFormField label="User Code" filled={!!formData.userCode.trim()} hint="Auto-generated on save">
           <input
             type="text"
-            value={formData.userCode}
-            onChange={(e) => setFormData({ ...formData, userCode: e.target.value })}
-            placeholder="Unique user code"
+            value={formData.userCode || '(Auto-generated)'}
+            readOnly
             className="px-input"
+            style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', cursor: 'default' }}
           />
         </PxFormField>
         <PxFormField label="Employee Name" required filled={!!formData.employeeMasterRecordId} hint="Search and select an employee">
@@ -983,7 +1082,7 @@ export function UserMaster() {
 
   if (viewMode === 'form') {
     return (
-      <FormShell
+      <FormShell masterName="User Master"
         title="User Master"
         subtitle={
           selectedUser
@@ -1007,14 +1106,8 @@ export function UserMaster() {
   }
 
   return (
-    <div style={{ padding: '24px', backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between" style={{ marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>User Master</h1>
-          <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>
-            Manage system users and their access
-          </p>
-        </div>
+    <MasterPageShell masterName="User Master" description="Manage system users and access">
+      <div className="flex items-center justify-end" style={{ marginBottom: '24px' }}>
         <button
           type="button"
           onClick={openFormCreate}
@@ -1040,36 +1133,39 @@ export function UserMaster() {
         </button>
       </div>
 
-      <div
-        className="rounded-lg"
-        style={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid var(--color-silver)',
-          padding: '16px',
-          marginBottom: '16px',
+      <MasterListToolbar
+        masterName="User Master"
+        masterKey="user_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
         }}
-      >
-        <div className="flex items-center gap-2" style={{ position: 'relative' }}>
-          <Search
-            style={{ position: 'absolute', left: '12px', width: '18px', height: '18px', color: 'var(--color-mercury-grey)' }}
-          />
-          <input
-            type="text"
-            placeholder="Search by user code, name, email, linked employee…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '10px 10px 10px 40px',
-              border: '1px solid var(--color-silver)',
-              borderRadius: '8px',
-              fontSize: '14px',
-              color: 'var(--color-ink)',
-              outline: 'none',
-            }}
-          />
-        </div>
-      </div>
+        records={filteredUsers}
+        columns={[
+          { key: 'userCode', label: 'User Code' },
+          { key: 'employeeId', label: 'Employee ID' },
+          { key: 'name', label: 'Name' },
+          { key: 'email', label: 'Email' },
+          { key: 'username', label: 'Username' },
+          { key: 'userType', label: 'User Type' },
+          { key: 'loginMethod', label: 'Login Method' },
+          { key: 'locked', label: 'Locked' },
+          { key: 'passwordResetRequired', label: 'Password Reset Required' },
+          { key: 'accessExpiryDate', label: 'Access Expiry Date' },
+          { key: 'defaultEntityId', label: 'Default Entity ID' },
+          { key: 'remarks', label: 'Remarks' },
+          { key: 'createdDate', label: 'Created Date' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
 
       <div
         className="rounded-lg"
@@ -1166,6 +1262,31 @@ export function UserMaster() {
                   <td style={{ padding: '16px' }}>{getStatusBadge(user.status)}</td>
                   <td style={{ padding: '16px' }}>
                     <div className="flex items-center gap-2">
+                      {(user.approvalStatus === 'Pending' || user.status === 'Pending Approval') && (
+                        <button
+                          type="button"
+                          onClick={() => handleReviewUser(user)}
+                          className="p-2 rounded-lg transition-all"
+                          style={{
+                            backgroundColor: 'var(--color-teal-tint)',
+                            border: '1px solid var(--color-teal)',
+                            cursor: 'pointer',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--color-teal)';
+                            const icon = e.currentTarget.querySelector('svg');
+                            if (icon) icon.style.color = '#FFFFFF';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--color-teal-tint)';
+                            const icon = e.currentTarget.querySelector('svg');
+                            if (icon) icon.style.color = 'var(--color-teal)';
+                          }}
+                          title="Review User"
+                        >
+                          <Eye style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => openFormEdit(user)}
@@ -1209,7 +1330,18 @@ export function UserMaster() {
           </table>
         </div>
       </div>
-    </div>
+
+      <ApprovalModal
+        isOpen={showApprovalModal}
+        onClose={() => setShowApprovalModal(false)}
+        recordType="User Master"
+        recordId={currentReviewRecord?.userCode || currentReviewRecord?.id || ''}
+        changes={detectedChanges}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onRequestInfo={handleRequestInfo}
+      />
+    </MasterPageShell>
   );
 }
 

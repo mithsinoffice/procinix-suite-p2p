@@ -53,27 +53,16 @@ function buildImapConfig() {
   };
 }
 
-// ── Check OCR API keys ──────────────────────────────────
-export function checkOcrKeys() {
-  const keys = [];
-  const anthropic = process.env.ANTHROPIC_API_KEY;
-  const openai = process.env.OPENAI_API_KEY;
+// ── Check OCR API key (Gemini only) ─────────────────────
+export function checkGeminiKey() {
   const google = process.env.GOOGLE_AI_API_KEY;
-
-  if (anthropic && anthropic !== 'your-key-here' && anthropic !== 'your-anthropic-api-key') keys.push('Claude');
-  if (openai && openai !== 'your-openai-api-key') keys.push('ChatGPT');
-  if (google && google !== 'your-google-ai-api-key') keys.push('Gemini');
-
-  if (keys.length === 0) {
-    console.error('[OCR] ⚠ No OCR API keys set — OCR will fail. Add ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_AI_API_KEY to .env.mysql.local');
+  if (!google || google === 'your-google-ai-api-key' || google === 'your-key-here') {
+    console.error('[OCR] ⚠ GOOGLE_AI_API_KEY not set — OCR will fail. Add it to .env.mysql.local');
     return false;
   }
-  console.log(`[OCR] Available providers: ${keys.join(' → ')}`);
+  console.log('[OCR] Gemini available');
   return true;
 }
-
-// Backward compat alias
-export const checkAnthropicKey = checkOcrKeys;
 
 // ── Fetch emails ────────────────────────────────────────
 async function fetchEmails() {
@@ -224,12 +213,10 @@ async function fetchEmails() {
       lock.release();
     }
 
-    // Store client ref so we can mark SEEN after processing
-    if (emails.length > 0) {
-      emails._imapClient = client;
-    } else {
-      await client.logout();
-    }
+    // Always close the main IMAP client once attachments are downloaded.
+    // Processing (OCR, validation, workflow) runs WITHOUT IMAP connected —
+    // prevents Gmail from killing an idle session during long OCR cycles.
+    try { await client.logout(); } catch { /* ignore */ }
   } catch (err) {
     console.error('[EmailPoller] IMAP error:', err.message, err.responseText || '', err.code || '');
     try { await client.logout(); } catch { /* ignore */ }
@@ -302,31 +289,46 @@ async function saveIngestionLog(email) {
   return id;
 }
 
-// ── Mark email as SEEN (called after successful processing) ──
-export async function markEmailSeen(imapClient, uid) {
-  try {
-    const inbox = process.env.AP_EMAIL_INBOX || 'INBOX';
-    const lock = await imapClient.getMailboxLock(inbox);
+// ── Mark email as SEEN (opens a short-lived IMAP connection) ──
+// Called AFTER processing completes, so we never hold IMAP open during OCR.
+// One retry on transient socket/reset errors.
+export async function markEmailSeen(uid) {
+  const inbox = process.env.AP_EMAIL_INBOX || 'INBOX';
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const client = new ImapFlow(buildImapConfig());
+    client.on('error', () => { /* swallow — handled below */ });
     try {
-      await imapClient.messageFlagsAdd({ uid }, ['\\Seen'], { uid: true });
-      console.log(`[EmailPoller] Marked UID ${uid} as SEEN`);
-    } finally {
-      lock.release();
+      await client.connect();
+      const lock = await client.getMailboxLock(inbox);
+      try {
+        await client.messageFlagsAdd({ uid }, ['\\Seen'], { uid: true });
+        console.log(`[EmailPoller] Marked UID ${uid} as SEEN`);
+      } finally {
+        lock.release();
+      }
+      await client.logout();
+      return;
+    } catch (err) {
+      try { await client.logout(); } catch { /* ignore */ }
+      if (attempt === 2) {
+        console.error(`[EmailPoller] Failed to mark UID ${uid} as SEEN after retry:`, err.message);
+      } else {
+        console.warn(`[EmailPoller] markEmailSeen attempt 1 failed for UID ${uid}: ${err.message} — retrying`);
+      }
     }
-  } catch (err) {
-    console.error(`[EmailPoller] Failed to mark UID ${uid} as SEEN:`, err.message);
   }
 }
 
 // ── Public API ──────────────────────────────────────────
 let pollerInterval = null;
+let currentProcessCallback = null;
 
 export async function pollOnce() {
   console.log('[EmailPoller] ═══════════════════════════════════════');
   console.log('[EmailPoller] Poll started at', new Date().toISOString());
 
   // Check API key before polling
-  checkAnthropicKey();
+  checkGeminiKey();
 
   const emails = await fetchEmails();
   const results = { processed: 0, failed: 0, skipped: 0 };
@@ -349,11 +351,12 @@ export async function pollOnce() {
 
   const toProcess = emails.filter((e) => e._logId);
   console.log(`[EmailPoller] Poll complete: ${results.processed} to process, ${results.skipped} duplicates, ${results.failed} failed`);
-  return { emails: toProcess, imapClient: emails._imapClient || null, results };
+  return { emails: toProcess, results };
 }
 
 export function startEmailPoller(processCallback) {
-  const intervalMinutes = Number(process.env.AP_POLL_INTERVAL_MINUTES || 5);
+  currentProcessCallback = processCallback || currentProcessCallback;
+  const intervalMinutes = Number(process.env.AP_POLL_INTERVAL_MINUTES || 10);
 
   if (!process.env.AP_EMAIL_HOST) {
     console.log('[EmailPoller] AP_EMAIL_HOST not configured — email polling disabled');
@@ -367,21 +370,30 @@ export function startEmailPoller(processCallback) {
   console.log(`  AP_EMAIL_USER:  ${process.env.AP_EMAIL_USER}`);
   console.log(`  AP_EMAIL_INBOX: ${process.env.AP_EMAIL_INBOX || 'INBOX'}`);
   console.log(`  AP_POLL_INTERVAL_MINUTES: ${intervalMinutes}`);
-  console.log(`  ANTHROPIC_API_KEY: ${checkAnthropicKey() ? 'SET' : 'MISSING'}`);
+  console.log(`  GOOGLE_AI_API_KEY: ${checkGeminiKey() ? 'SET' : 'MISSING'}`);
   console.log(`[EmailPoller] Starting — polling every ${intervalMinutes} minutes`);
 
+  // Guard against overlapping poll cycles — if a poll is still running when
+  // the next interval ticks, skip this tick rather than stacking connections.
+  let isPolling = false;
+
   const run = async () => {
+    if (isPolling) {
+      console.log('[EmailPoller] Previous poll still running — skipping this tick');
+      return;
+    }
+    isPolling = true;
     try {
-      const { emails, imapClient } = await pollOnce();
+      const { emails } = await pollOnce();
 
       for (const email of emails) {
         try {
           console.log(`[EmailPoller] Processing: "${email.subject}" (${email.attachments.length} attachment(s))`);
           await processCallback(email);
 
-          // Mark as SEEN only after successful processing
-          if (imapClient && email.uid) {
-            await markEmailSeen(imapClient, email.uid);
+          // IMAP is already closed; open a fresh short-lived session to mark SEEN.
+          if (email.uid) {
+            await markEmailSeen(email.uid);
           }
         } catch (err) {
           console.error(`[EmailPoller] ✗ Failed to process "${email.subject}":`, err.message);
@@ -397,19 +409,24 @@ export function startEmailPoller(processCallback) {
           } catch { /* ignore */ }
         }
       }
-
-      // Close IMAP after all emails processed
-      if (imapClient) {
-        try { await imapClient.logout(); } catch { /* ignore */ }
-      }
     } catch (err) {
       console.error('[EmailPoller] Poll cycle error:', err.message);
       console.error(err.stack);
+    } finally {
+      isPolling = false;
     }
   };
 
   run();
   pollerInterval = setInterval(run, intervalMinutes * 60 * 1000);
+}
+
+export function restartEmailPoller() {
+  stopEmailPoller();
+  if (currentProcessCallback) {
+    console.log('[EmailPoller] Restarting with updated settings…');
+    startEmailPoller(currentProcessCallback);
+  }
 }
 
 export function stopEmailPoller() {

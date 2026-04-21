@@ -5,21 +5,41 @@ import {
   DollarSign, Calendar, Target, Sparkles
 } from 'lucide-react';
 
-interface AIInsight {
+export interface AIInsight {
   id: string;
   severity: 'blocker' | 'warning' | 'info';
   category: string;
   title: string;
-  description: string;
-  reason: string;
+  description?: string;
+  explanation?: string;
+  reason?: string;
   confidence: number;
   evidence: string[];
-  recommendedActions: string[];
+  recommendedActions: Array<string | AIAction>;
   canBypass?: boolean;
+  relatedData?: unknown;
+}
+
+export interface AIAction {
+  id?: string;
+  label: string;
+  description?: string;
+  action?: string;
+  type?: 'primary' | 'secondary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'danger';
+  status?: 'idle' | 'running' | 'pending' | 'completed' | 'dismissed';
 }
 
 interface AIInsightsPanelProps {
   insights: AIInsight[];
+  aiActions?: AIAction[];
+  overallConfidence?: 'high' | 'medium' | 'low';
+  onActionClick?: (...args: any[]) => void;
+  onRunAIAction?: (...args: any[]) => void;
+  onIgnoreInsight?: (...args: any[]) => void;
+  onExplainInsight?: (...args: any[]) => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
   onBypass?: (insightId: string, justification: string) => void;
   mode?: 'view' | 'approval';
 }
@@ -179,7 +199,9 @@ export function AIInsightsPanel({ insights, onBypass, mode = 'view' }: AIInsight
                   {insight.recommendedActions.map((action, idx) => (
                     <li key={idx} className="flex items-start gap-2">
                       <CheckCircle className="w-3 h-3 mt-0.5" style={{ color: 'var(--color-teal)' }} />
-                      <span className="text-xs" style={{ color: 'var(--color-ink)' }}>{action}</span>
+                      <span className="text-xs" style={{ color: 'var(--color-ink)' }}>
+                        {typeof action === 'string' ? action : action.label}
+                      </span>
                     </li>
                   ))}
                 </ul>

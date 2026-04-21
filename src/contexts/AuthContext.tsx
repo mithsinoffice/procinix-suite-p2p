@@ -2,7 +2,13 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { getActiveEntities, resolveEntity, type CanonicalEntity } from './EntityRegistry';
 import { isMysqlApiEnabled, mysqlApiRequest } from '../lib/mysql/client';
 
-export type UserRole = 'Admin' | 'PO Creator' | 'PO Approver' | 'GRN Manager' | 'Location Manager';
+export type UserRole =
+  | 'Super Admin'
+  | 'Admin'
+  | 'PO Creator'
+  | 'PO Approver'
+  | 'GRN Manager'
+  | 'Location Manager';
 
 export interface Entity {
   id: string;
@@ -23,15 +29,29 @@ export interface User {
   avatar?: string;
   availableEntities: Entity[];
   currentEntity: Entity;
+  /** Platform tenant (MySQL `tenants` / `user_master.tenant_id`). */
+  tenantId?: string;
+  tenantName?: string;
+  tenantCode?: string;
+  /** Platform entities from `entities` + `user_entity_access`. */
+  platformEntities?: { id: string; name: string; code: string }[];
+  currentPlatformEntityId?: string;
+  /** When true, user must confirm entity on full-screen gate after login. */
+  mustSelectPlatformEntity?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (
+    email: string,
+    password: string,
+    options?: { tenantCode?: string },
+  ) => Promise<User | null>;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
   isAuthenticated: boolean;
   switchEntity: (entityId: string) => void;
+  confirmPlatformEntity: (entityId: string) => void;
   refreshSession: () => Promise<void>;
 }
 
@@ -220,9 +240,18 @@ const mockUsers: Record<string, User & { password: string }> = {
   }
 };
 
-const allowedRoles: UserRole[] = ['Admin', 'PO Creator', 'PO Approver', 'GRN Manager', 'Location Manager'];
+const allowedRoles: UserRole[] = [
+  'Super Admin',
+  'Admin',
+  'PO Creator',
+  'PO Approver',
+  'GRN Manager',
+  'Location Manager',
+];
 
 const roleAliases: Record<string, UserRole> = {
+  'super admin': 'Super Admin',
+  super_admin: 'Super Admin',
   admin: 'Admin',
   administrator: 'Admin',
   'system administrator': 'Admin',
@@ -528,6 +557,45 @@ async function resolveAuthUserFromMasters(identity: { email?: string; employeeId
   return mapMasterUserToAuthUser(userRecord, matchedRoles, employeeRecord);
 }
 
+interface PlatformContextResponse {
+  ok: boolean;
+  tenantId?: string;
+  tenantName?: string;
+  tenantCode?: string;
+  entities?: Array<{ id: string; name: string; code?: string | null; isDefault?: boolean }>;
+  defaultPlatformEntityId?: string | null;
+  error?: string;
+}
+
+function mergePlatformIntoUser(user: User, ctx: PlatformContextResponse): User {
+  if (!ctx.ok || !ctx.tenantId) {
+    return user;
+  }
+  const entities = ctx.entities ?? [];
+  const platformEntities = entities.map((e) => ({
+    id: e.id,
+    name: e.name,
+    code: (e.code || e.id) as string,
+  }));
+  const mustSelect = entities.length > 1;
+  const defaultRow =
+    entities.find((e) => e.isDefault) || entities.find((e) => e.id === ctx.defaultPlatformEntityId) || entities[0];
+  const fromUserDefault =
+    ctx.defaultPlatformEntityId && entities.some((e) => e.id === ctx.defaultPlatformEntityId)
+      ? ctx.defaultPlatformEntityId
+      : defaultRow?.id;
+  const currentPlatformEntityId = mustSelect ? undefined : fromUserDefault;
+  return {
+    ...user,
+    tenantId: ctx.tenantId,
+    tenantName: ctx.tenantName,
+    tenantCode: ctx.tenantCode,
+    platformEntities,
+    currentPlatformEntityId,
+    mustSelectPlatformEntity: mustSelect,
+  };
+}
+
 async function loginFromMasters(email: string, password: string): Promise<User | null> {
   const resolvedUser = await resolveAuthUserFromMasters({ email });
   if (!resolvedUser) {
@@ -548,8 +616,7 @@ async function loginFromMasters(email: string, password: string): Promise<User |
 }
 
 // Role-based permissions mapping
-const rolePermissions: Record<UserRole, string[]> = {
-  'Admin': [
+const adminPermissionList = [
     'view_dashboard',
     'create_po',
     'view_po',
@@ -570,8 +637,12 @@ const rolePermissions: Record<UserRole, string[]> = {
     'view_masters',
     'edit_masters',
     'approve_masters',
-    'view_settings'
-  ],
+    'view_settings',
+];
+
+const rolePermissions: Record<UserRole, string[]> = {
+  'Super Admin': [...adminPermissionList, 'manage_tenants', 'manage_platform_entities'],
+  'Admin': adminPermissionList,
   'PO Creator': [
     'view_dashboard',
     'create_po',
@@ -615,35 +686,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return storedUser ? JSON.parse(storedUser) : null;
   });
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+  const login = async (
+    email: string,
+    password: string,
+    options?: { tenantCode?: string },
+  ): Promise<User | null> => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
 
     if (isMysqlApiEnabled()) {
       try {
         const masterUser = await loginFromMasters(email, password);
-        if (masterUser) {
-          setUser(masterUser);
-          localStorage.setItem('user', JSON.stringify(masterUser));
-          return true;
+        if (!masterUser) {
+          return null;
         }
-        return false;
+        let merged: User = masterUser;
+        try {
+          const ctx = await mysqlApiRequest<PlatformContextResponse>('/auth/platform-context', {
+            method: 'POST',
+            body: JSON.stringify({
+              email,
+              password,
+              tenantCode: options?.tenantCode?.trim() || undefined,
+            }),
+          });
+          if (ctx.ok) {
+            merged = mergePlatformIntoUser(masterUser, ctx);
+          }
+        } catch (err) {
+          console.warn('platform-context failed', err);
+        }
+        setUser(merged);
+        localStorage.setItem('user', JSON.stringify(merged));
+        return merged;
       } catch (error) {
         console.warn('Master-backed login failed while MySQL mode is enabled', error);
-        return false;
+        return null;
       }
     }
 
     const mockUser = mockUsers[email];
-    
+
     if (mockUser && mockUser.password === password) {
       const { password: _, ...userWithoutPassword } = mockUser;
       setUser(userWithoutPassword);
       localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-      return true;
+      return userWithoutPassword;
     }
-    
-    return false;
+
+    return null;
+  };
+
+  const confirmPlatformEntity = (entityId: string) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next: User = {
+        ...prev,
+        currentPlatformEntityId: entityId,
+        mustSelectPlatformEntity: false,
+      };
+      localStorage.setItem('user', JSON.stringify(next));
+      return next;
+    });
   };
 
   const logout = () => {
@@ -721,15 +824,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        login, 
-        logout, 
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
         hasPermission,
         isAuthenticated: !!user,
         switchEntity,
-        refreshSession
+        confirmPlatformEntity,
+        refreshSession,
       }}
     >
       {children}

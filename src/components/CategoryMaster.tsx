@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, X, Edit, Eye, Trash2 } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
@@ -17,6 +19,7 @@ interface Category {
   description: string;
   status: string;
   approvalStatus: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  entityMappings?: EntityScopeMapping[];
   originalData?: Category;
 }
 
@@ -72,6 +75,19 @@ export function CategoryMaster() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<Category | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
+  const filteredCategories = useMemo(() => {
+    return categories.filter((cat) => {
+      const haystack = [cat.categoryCode, cat.categoryName, cat.parentCategory, cat.description].join(' ').toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(cat.status);
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(cat.approvalStatus);
+      return matchesSearch && matchesStatus && matchesApproval;
+    });
+  }, [categories, searchTerm, statusFilter, approvalFilter]);
 
   const handleSubmit = (approvalStatus: Category['approvalStatus'] = 'Pending Approval') => {
     if (isEditMode && editingId) {
@@ -235,7 +251,7 @@ export function CategoryMaster() {
 
   if (showForm) {
     return (
-      <FormShell
+      <FormShell masterName="Category Master"
         title={editingId ? 'Edit Category' : 'Create Category'}
         subtitle="Manage categories with approval workflow"
         modeLabel={editingId ? 'Edit Master Record' : 'Create Master Record'}
@@ -280,22 +296,9 @@ export function CategoryMaster() {
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)' }}>
+    <MasterPageShell masterName="Category Master" description="Manage product categories">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/masters')}
-            className="p-2 rounded-lg transition-colors"
-            style={{ color: 'var(--color-mercury-grey)' }}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Category Master</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage categories with approval workflow</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
             resetForm();
@@ -321,6 +324,31 @@ export function CategoryMaster() {
         onApprove={handleApprove}
         onReject={handleReject}
         onRequestInfo={handleRequestInfo}
+      />
+
+      <MasterListToolbar
+        masterName="Category Master"
+        masterKey="category_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredCategories}
+        columns={[
+          { key: 'categoryCode', label: 'Category Code' },
+          { key: 'categoryName', label: 'Category Name' },
+          { key: 'parentCategory', label: 'Parent Category' },
+          { key: 'description', label: 'Description' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
       />
 
       {/* Categories List */}
@@ -353,7 +381,7 @@ export function CategoryMaster() {
               </tr>
             </thead>
             <tbody>
-              {categories.map((category, index) => (
+              {filteredCategories.map((category, index) => (
                 <tr
                   key={category.id}
                   style={{
@@ -431,6 +459,6 @@ export function CategoryMaster() {
           </table>
         </div>
       </div>
-    </div>
+    </MasterPageShell>
   );
 }

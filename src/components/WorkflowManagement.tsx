@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowUpRight, CheckCircle2, Clock3, GitBranch, Plus, Search, Eye, PencilLine } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { isMysqlApiEnabled, mysqlApiRequest } from '../lib/mysql/client';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
 
 interface WorkflowStep {
@@ -118,26 +119,60 @@ function metaChipStyle(tone: 'neutral' | 'info' | 'success') {
 
 export function WorkflowManagement() {
   const navigate = useNavigate();
-  const [workflows, setWorkflows] = useState<WorkflowListItem[]>(mockWorkflows);
+  const [isHydrated, setHydrated] = useState(false);
+  const [workflows, setWorkflows] = useState<WorkflowListItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!isMysqlApiEnabled()) {
-      return;
-    }
-
-    mysqlApiRequest<{ success: boolean; data: WorkflowListItem[] }>('/workflows/configurations')
-      .then((response) => {
-        if (Array.isArray(response.data) && response.data.length > 0) {
-          setWorkflows(response.data);
-        }
+    let cancelled = false;
+    ensureDomainDocument<{ listings?: WorkflowListItem[]; configurations?: unknown[] }>(
+      'workflows_config',
+      { listings: mockWorkflows }
+    )
+      .then((doc) => {
+        if (cancelled) return;
+        setWorkflows(doc.listings ?? mockWorkflows);
+        setHydrated(true);
       })
       .catch((error) => {
-        console.warn('Failed to load workflow listing', error);
+        console.warn('Failed to hydrate workflows_config document', error);
+        if (cancelled) return;
+        setWorkflows(mockWorkflows);
+        setHydrated(true);
       });
+
+    if (isMysqlApiEnabled()) {
+      mysqlApiRequest<{ success: boolean; data: WorkflowListItem[] }>('/workflows/configurations')
+        .then((response) => {
+          if (cancelled) return;
+          if (Array.isArray(response.data) && response.data.length > 0) {
+            setWorkflows(response.data);
+          }
+        })
+        .catch((error) => {
+          console.warn('Failed to load workflow listing', error);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    void ensureDomainDocument<{ listings?: WorkflowListItem[]; configurations?: unknown[] }>(
+      'workflows_config',
+      { listings: mockWorkflows }
+    ).then((existing) => {
+      void saveDomainDocument('workflows_config', {
+        ...existing,
+        listings: workflows,
+      });
+    });
+  }, [isHydrated, workflows]);
 
   const filteredWorkflows = workflows.filter((workflow) => {
     const haystack = [

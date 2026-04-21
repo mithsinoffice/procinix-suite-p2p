@@ -1,7 +1,9 @@
 import { Settings as SettingsIcon, User, Bell, Shield, Globe, Palette, Database, Mail } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export function Settings() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
 
   const tabs = [
@@ -34,7 +36,13 @@ export function Settings() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  if (tab.id === 'integrations') {
+                    navigate('/settings/integrations');
+                    return;
+                  }
+                  setActiveTab(tab.id);
+                }}
                 style={{
                   width: '100%',
                   display: 'flex',

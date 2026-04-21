@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  ArrowLeft, CheckCircle, Package, AlertCircle, ChevronRight, Building2, 
+import {
+  ArrowLeft, CheckCircle, Package, AlertCircle, ChevronRight, Building2,
   Users, MapPin, Calendar, TrendingUp, FileText, ShoppingCart, Check, X,
   Eye, Info, Percent, DollarSign, Layers
 } from 'lucide-react';
+import { useProcurementData } from '../../contexts/ProcurementDataContext';
 
 /**
  * ENHANCED PR-TO-PO CONVERSION WITH CONSUMPTION TRACKING
@@ -98,112 +99,11 @@ interface POLineItem {
 
 type GroupingMode = 'vendor' | 'shipTo' | 'costCentre' | 'needByDate';
 
-// Mock data with consumption tracking
-const mockApprovedPRs: ApprovedPR[] = [
-  {
-    id: 'PR-2024-001',
-    prType: 'Catalogue',
-    entity: 'India HQ',
-    requestor: 'Rajesh Kumar',
-    department: 'IT',
-    costCentre: 'CC-IT-001',
-    needByDate: '2024-12-20',
-    totalAmount: 325000,
-    amountConsumed: 0,
-    amountRemaining: 325000,
-    itemCount: 3,
-    consumptionStatus: 'Open',
-    consumptionPercentage: 0,
-    vendor: 'Dell India',
-    shipTo: 'Bangalore Office',
-    createdDate: '2024-12-10',
-    approvedDate: '2024-12-11',
-    lineItems: [
-      { id: 'LI-001-1', itemCode: 'DELL-LAP-001', itemName: 'Dell Latitude 5430', quantity: 5, quantityConsumed: 0, quantityRemaining: 5, unitPrice: 55000, totalAmount: 275000, deliveryDate: '2024-12-20', costCentre: 'CC-IT-001' },
-      { id: 'LI-001-2', itemCode: 'DELL-MON-001', itemName: 'Dell 24" Monitor', quantity: 5, quantityConsumed: 0, quantityRemaining: 5, unitPrice: 10000, totalAmount: 50000, deliveryDate: '2024-12-20', costCentre: 'CC-IT-001' }
-    ],
-    prHistory: []
-  },
-  {
-    id: 'PR-2024-002',
-    prType: 'Regular',
-    entity: 'India HQ',
-    requestor: 'Priya Sharma',
-    department: 'Operations',
-    costCentre: 'CC-OPS-002',
-    needByDate: '2024-12-25',
-    totalAmount: 1250000,
-    amountConsumed: 500000,
-    amountRemaining: 750000,
-    itemCount: 8,
-    consumptionStatus: 'Partially Consumed',
-    consumptionPercentage: 40,
-    vendor: 'Steel Corp India',
-    shipTo: 'Mumbai Plant',
-    createdDate: '2024-12-12',
-    approvedDate: '2024-12-13',
-    lineItems: [
-      { id: 'LI-002-1', itemCode: 'STEEL-ROD-12', itemName: 'Steel Rod 12mm', quantity: 1000, quantityConsumed: 400, quantityRemaining: 600, unitPrice: 850, totalAmount: 850000, deliveryDate: '2024-12-25', costCentre: 'CC-OPS-002' },
-      { id: 'LI-002-2', itemCode: 'STEEL-ROD-16', itemName: 'Steel Rod 16mm', quantity: 500, quantityConsumed: 0, quantityRemaining: 500, unitPrice: 800, totalAmount: 400000, deliveryDate: '2024-12-25', costCentre: 'CC-OPS-002' }
-    ],
-    prHistory: [
-      { id: 'HIST-001', poNumber: 'PO-2024-0145', poDate: '2024-12-14', amountConsumed: 500000, itemsConsumed: 1, status: 'Created' }
-    ]
-  },
-  {
-    id: 'PR-2024-006',
-    prType: 'Asset/CAPEX',
-    entity: 'India HQ',
-    requestor: 'Ramesh Gupta',
-    department: 'Operations',
-    costCentre: 'CC-OPS-001',
-    needByDate: '2025-01-15',
-    totalAmount: 5500000,
-    amountConsumed: 0,
-    amountRemaining: 5500000,
-    itemCount: 1,
-    consumptionStatus: 'Open',
-    consumptionPercentage: 0,
-    vendor: 'Siemens India',
-    shipTo: 'Mumbai Plant',
-    createdDate: '2024-12-08',
-    approvedDate: '2024-12-10',
-    lineItems: [
-      { id: 'LI-006-1', itemCode: 'SIE-IND-EQ-001', itemName: 'Industrial CNC Machine', quantity: 1, quantityConsumed: 0, quantityRemaining: 1, unitPrice: 5500000, totalAmount: 5500000, deliveryDate: '2025-01-15', costCentre: 'CC-OPS-001' }
-    ],
-    prHistory: []
-  },
-  {
-    id: 'PR-2024-014',
-    prType: 'Catalogue',
-    entity: 'India HQ',
-    requestor: 'Lakshmi Iyer',
-    department: 'IT',
-    costCentre: 'CC-IT-002',
-    needByDate: '2024-12-25',
-    totalAmount: 280000,
-    amountConsumed: 0,
-    amountRemaining: 280000,
-    itemCount: 4,
-    consumptionStatus: 'Open',
-    consumptionPercentage: 0,
-    vendor: 'Dell India',
-    shipTo: 'Bangalore Office',
-    createdDate: '2024-12-13',
-    approvedDate: '2024-12-14',
-    lineItems: [
-      { id: 'LI-014-1', itemCode: 'DELL-LAP-001', itemName: 'Dell Latitude 5430', quantity: 3, quantityConsumed: 0, quantityRemaining: 3, unitPrice: 55000, totalAmount: 165000, deliveryDate: '2024-12-25', costCentre: 'CC-IT-002' },
-      { id: 'LI-014-2', itemCode: 'DELL-MON-001', itemName: 'Dell 24" Monitor', quantity: 3, quantityConsumed: 0, quantityRemaining: 3, unitPrice: 10000, totalAmount: 30000, deliveryDate: '2024-12-25', costCentre: 'CC-IT-002' },
-      { id: 'LI-014-3', itemCode: 'DELL-KB-001', itemName: 'Dell Wireless Keyboard', quantity: 3, quantityConsumed: 0, quantityRemaining: 3, unitPrice: 2500, totalAmount: 7500, deliveryDate: '2024-12-25', costCentre: 'CC-IT-002' }
-    ],
-    prHistory: []
-  }
-];
-
 export function PRtoPOConversionEnhanced() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preSelectedPRIds = searchParams.get('prIds')?.split(',') || [];
+  const { purchaseRequests } = useProcurementData();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedPRs, setSelectedPRs] = useState<string[]>(preSelectedPRIds);
@@ -211,6 +111,56 @@ export function PRtoPOConversionEnhanced() {
   const [groupingMode, setGroupingMode] = useState<GroupingMode>('vendor');
   const [poDrafts, setPODrafts] = useState<PODraft[]>([]);
   const [showConsumptionDetails, setShowConsumptionDetails] = useState<string | null>(null);
+
+  // Adapt live PR shape to local ApprovedPR shape used by this UI.
+  // TODO: wire consumption from GRN context — default to 0 / Open for now.
+  const approvedPRs = useMemo<ApprovedPR[]>(
+    () =>
+      purchaseRequests
+        .filter((pr) => pr.status === 'Approved')
+        .map((pr) => {
+          const liveLineItems = (pr.lineItems ?? []) as Array<Record<string, unknown>>;
+          const mappedLineItems: PRLineItem[] = liveLineItems.map((li, idx) => {
+            const quantity = Number(li.quantity ?? li.qty ?? 0) || 0;
+            const unitPrice = Number(li.unitPrice ?? li.rate ?? 0) || 0;
+            return {
+              id: String(li.id ?? `${pr.id}-LI-${idx + 1}`),
+              itemCode: String(li.itemCode ?? li.code ?? ''),
+              itemName: String(li.itemName ?? li.name ?? li.description ?? ''),
+              quantity,
+              quantityConsumed: 0,
+              quantityRemaining: quantity,
+              unitPrice,
+              totalAmount: Number(li.totalAmount ?? li.amount ?? quantity * unitPrice) || 0,
+              deliveryDate: String(li.deliveryDate ?? pr.needByDate ?? ''),
+              costCentre: String(li.costCentre ?? pr.costCentre ?? ''),
+            };
+          });
+
+          return {
+            id: pr.prNumber || pr.id,
+            prType: pr.type,
+            entity: pr.entity,
+            requestor: pr.requestor,
+            department: pr.department,
+            costCentre: pr.costCentre,
+            needByDate: pr.needByDate,
+            totalAmount: pr.totalAmount,
+            amountConsumed: 0,
+            amountRemaining: pr.totalAmount,
+            itemCount: pr.itemCount,
+            consumptionStatus: 'Open' as PRConsumptionStatus,
+            consumptionPercentage: 0,
+            vendor: pr.vendor,
+            shipTo: pr.deliveryLocation,
+            createdDate: pr.createdDate,
+            approvedDate: pr.submittedDate ?? pr.createdDate,
+            lineItems: mappedLineItems,
+            prHistory: [],
+          };
+        }),
+    [purchaseRequests]
+  );
 
   const formatCurrency = (amount: number) => `₹${(amount / 100000).toFixed(2)} L`;
 
@@ -236,7 +186,7 @@ export function PRtoPOConversionEnhanced() {
     }
   };
 
-  const filteredPRs = mockApprovedPRs.filter(pr => 
+  const filteredPRs = approvedPRs.filter(pr => 
     pr.entity === selectedEntity && 
     (pr.consumptionStatus === 'Open' || pr.consumptionStatus === 'Partially Consumed')
   );
@@ -253,7 +203,7 @@ export function PRtoPOConversionEnhanced() {
       return;
     }
 
-    const selectedPRData = mockApprovedPRs.filter(pr => selectedPRs.includes(pr.id));
+    const selectedPRData = approvedPRs.filter(pr => selectedPRs.includes(pr.id));
     const entities = [...new Set(selectedPRData.map(pr => pr.entity))];
     
     if (entities.length > 1) {
@@ -265,7 +215,7 @@ export function PRtoPOConversionEnhanced() {
   };
 
   const generatePODrafts = () => {
-    const selectedPRData = mockApprovedPRs.filter(pr => selectedPRs.includes(pr.id));
+    const selectedPRData = approvedPRs.filter(pr => selectedPRs.includes(pr.id));
     let grouped: Record<string, ApprovedPR[]> = {};
 
     // Group PRs based on selected mode
@@ -400,7 +350,7 @@ export function PRtoPOConversionEnhanced() {
           <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Value (Selected)</p>
           <p className="text-xl" style={{ color: 'var(--color-ink)' }}>
             {formatCurrency(
-              mockApprovedPRs
+              approvedPRs
                 .filter(pr => selectedPRs.includes(pr.id))
                 .reduce((sum, pr) => sum + pr.amountRemaining, 0)
             )}

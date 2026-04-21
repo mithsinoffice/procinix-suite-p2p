@@ -1,5 +1,7 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, Type, FileText, Edit, Calendar, Eye } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { ApprovalModal } from './ApprovalModal';
@@ -16,6 +18,7 @@ interface PaymentTerm {
   creditDays: string;
   status: string;
   approvalStatus?: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected' | 'Changes Requested';
+  entityMappings?: EntityScopeMapping[];
   originalData?: PaymentTerm;
 }
 
@@ -45,6 +48,19 @@ export function VendorPaymentTermsMaster() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<PaymentTerm | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
+  const filteredTerms = useMemo(() => {
+    return paymentTerms.filter((t) => {
+      const haystack = [t.code, t.description, t.creditDays].join(' ').toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(t.status);
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(t.approvalStatus ?? 'Approved');
+      return matchesSearch && matchesStatus && matchesApproval;
+    });
+  }, [paymentTerms, searchTerm, statusFilter, approvalFilter]);
 
   const handleSubmit = (approvalStatus: PaymentTerm['approvalStatus'] = 'Pending Approval') => {
     if (isEditMode && editingId) {
@@ -184,7 +200,7 @@ export function VendorPaymentTermsMaster() {
 
   if (showForm) {
     return (
-      <FormShell
+      <FormShell masterName="Vendor Payment Terms Master"
         title={isEditMode ? 'Edit Payment Term' : 'Create Payment Term'}
         subtitle="Manage vendor payment terms and credit periods"
         modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
@@ -224,17 +240,8 @@ export function VendorPaymentTermsMaster() {
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Vendor Payment Terms Master</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage vendor payment terms and credit periods</p>
-          </div>
-        </div>
+    <MasterPageShell masterName="Vendor Payment Terms Master" description="Manage vendor payment terms">
+      <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
             resetForm();
@@ -250,6 +257,30 @@ export function VendorPaymentTermsMaster() {
         </button>
       </div>
 
+      <MasterListToolbar
+        masterName="Vendor Payment Terms"
+        masterKey="vendor_payment_terms_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected', 'Changes Requested'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredTerms}
+        columns={[
+          { key: 'code', label: 'Term Code' },
+          { key: 'description', label: 'Description' },
+          { key: 'creditDays', label: 'Credit Days' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
+
       <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -264,7 +295,7 @@ export function VendorPaymentTermsMaster() {
               </tr>
             </thead>
             <tbody>
-              {paymentTerms.map((term, index) => (
+              {filteredTerms.map((term, index) => (
                 <tr key={term.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
                   <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{term.code}</td>
                   <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{term.description}</td>
@@ -311,6 +342,6 @@ export function VendorPaymentTermsMaster() {
         onReject={handleReject}
         onRequestInfo={handleRequestInfo}
       />
-    </div>
+    </MasterPageShell>
   );
 }

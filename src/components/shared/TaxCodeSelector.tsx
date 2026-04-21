@@ -1,5 +1,6 @@
 import { Receipt, AlertCircle } from 'lucide-react';
 import { useMasterData } from '../../contexts/MasterDataContext';
+import { isRecordMappedToEntity } from '../../lib/masters/entityMapping';
 
 /**
  * TAX CODE SELECTOR - SHARED COMPONENT
@@ -17,6 +18,7 @@ interface TaxCodeSelectorProps {
   disabled?: boolean;
   error?: string;
   taxType?: 'GST' | 'TDS' | 'TCS';
+  entityId?: string;
 }
 
 export function TaxCodeSelector({
@@ -27,15 +29,18 @@ export function TaxCodeSelector({
   required = false,
   disabled = false,
   error,
-  taxType
+  taxType,
+  entityId
 }: TaxCodeSelectorProps) {
   const { taxCodes, getActiveTaxCodes, getGSTCodes, getTDSCodes, getTaxCodeById } = useMasterData();
   
-  let availableTaxCodes = getActiveTaxCodes();
+  let availableTaxCodes = entityId
+    ? taxCodes.filter((tax) => tax.isActive && isRecordMappedToEntity(tax, entityId))
+    : getActiveTaxCodes();
   if (taxType === 'GST') {
-    availableTaxCodes = getGSTCodes();
+    availableTaxCodes = availableTaxCodes.filter((tax) => tax.taxType === 'GST');
   } else if (taxType === 'TDS') {
-    availableTaxCodes = getTDSCodes();
+    availableTaxCodes = availableTaxCodes.filter((tax) => tax.taxType === 'TDS');
   }
   
   const selectedTaxCode = value ? getTaxCodeById(value) : undefined;

@@ -8,6 +8,7 @@ import {
   Sparkles, ThumbsUp, ThumbsDown, Edit2, RefreshCw, Save, Send, Clock
 } from 'lucide-react';
 import { useAPData } from '../contexts/APDataContext';
+import { useMasterData } from '../contexts/MasterDataContext';
 import { SimpleAIInsightsPanel, SimpleAIInsight, SimpleAIAction } from './SimpleAIInsightsPanel';
 
 // Types for OCR extracted data
@@ -87,7 +88,9 @@ type WizardStep = 'upload' | 'ocr-review' | 'validation' | 'invoice-form';
 
 export function InvoiceUploadOCR() {
   const navigate = useNavigate();
-  const { vendors, getPOsByVendor, getGRNsByPO, getVendorByCode, getPOByNumber } = useAPData();
+  const { getPOsByVendor, getGRNsByPO, getPOByNumber } = useAPData();
+  const { getActiveVendors } = useMasterData();
+  const activeVendors = getActiveVendors();
   
   // Wizard state
   const [currentStep, setCurrentStep] = useState<WizardStep>('upload');
@@ -120,6 +123,11 @@ export function InvoiceUploadOCR() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  const primaryVendor = activeVendors[0];
+  const primaryVendorPOs = primaryVendor?.code ? getPOsByVendor(primaryVendor.code) : [];
+  const primaryPO = primaryVendorPOs[0];
+  const primaryGRN = primaryPO ? getGRNsByPO(primaryPO.poNumber)[0] : undefined;
 
   // File upload handlers
   const handleFileSelect = (file: File) => {
@@ -185,15 +193,20 @@ export function InvoiceUploadOCR() {
 
   // Generate mock OCR data
   const generateMockOCRData = (): OCRData => {
+    const resolvedVendorName = primaryVendor?.name || 'Tech Solutions Pvt Ltd';
+    const resolvedVendorGSTIN = primaryVendor?.gstin || '29AABCT1234F1Z5';
+    const resolvedPONumber = primaryPO?.poNumber || 'PO-2025-00045';
+    const resolvedGRNNumber = primaryGRN?.grnNumber || 'GRN-2025-00089';
+
     return {
-      vendorName: { value: 'Tech Solutions Pvt Ltd', confidence: 'High', isEdited: false },
-      vendorGSTIN: { value: '29AABCT1234F1Z5', confidence: 'High', isEdited: false },
+      vendorName: { value: resolvedVendorName, confidence: 'High', isEdited: false },
+      vendorGSTIN: { value: resolvedVendorGSTIN, confidence: 'High', isEdited: false },
       invoiceNumber: { value: 'INV-2025-00123', confidence: 'High', isEdited: false },
       invoiceDate: { value: '2025-01-10', confidence: 'High', isEdited: false },
       invoiceAmount: { value: '125000.00', confidence: 'High', isEdited: false },
       currency: { value: 'INR', confidence: 'High', isEdited: false },
-      poNumber: { value: 'PO-2025-00045', confidence: 'Medium', isEdited: false },
-      grnNumber: { value: 'GRN-2025-00089', confidence: 'Medium', isEdited: false },
+      poNumber: { value: resolvedPONumber, confidence: 'Medium', isEdited: false },
+      grnNumber: { value: resolvedGRNNumber, confidence: 'Medium', isEdited: false },
       paymentTerms: { value: 'Net 30 Days', confidence: 'Medium', isEdited: false },
       dueDate: { value: '2025-02-09', confidence: 'High', isEdited: false },
       bankDetails: { value: 'ICICI Bank, A/c: 123456789', confidence: 'Low', isEdited: false },
@@ -311,60 +324,128 @@ export function InvoiceUploadOCR() {
   // Smart validation & auto-matching
   const performSmartMatching = () => {
     setCurrentStep('validation');
-    
-    // Mock vendor matching
-    const vendorMatchResults: VendorMatch[] = [
-      {
-        vendorCode: 'V001',
-        vendorName: 'Tech Solutions Pvt Ltd',
-        matchConfidence: 95,
-        reason: 'Exact GSTIN match'
-      },
-      {
-        vendorCode: 'V012',
-        vendorName: 'Tech Solutions India',
-        matchConfidence: 75,
-        reason: 'Partial name match'
-      }
-    ];
-    setVendorMatches(vendorMatchResults);
-    setSelectedVendorMatch('V001');
 
-    // Mock PO matching
-    if (ocrData?.poNumber.value) {
-      const poMatchResults: POMatch[] = [
-        {
-          poNumber: 'PO-2025-00045',
-          matchConfidence: 98,
-          reason: 'Exact PO number match from OCR',
-          openAmount: 125000,
-          poDate: '2024-12-15'
-        },
-        {
-          poNumber: 'PO-2025-00042',
+    const normalizedVendorName = ocrData?.vendorName.value.trim().toLowerCase() || '';
+    const normalizedVendorGSTIN = ocrData?.vendorGSTIN.value.trim().toLowerCase() || '';
+    const vendorMatchResults: VendorMatch[] = activeVendors
+      .map((vendor) => {
+        const vendorName = vendor.name || vendor.legalName || '';
+        const vendorGSTIN = vendor.gstin || '';
+        const gstMatch = normalizedVendorGSTIN && vendorGSTIN.toLowerCase() === normalizedVendorGSTIN;
+        const exactNameMatch = normalizedVendorName && vendorName.toLowerCase() === normalizedVendorName;
+        const partialNameMatch = normalizedVendorName && vendorName.toLowerCase().includes(normalizedVendorName);
+
+        if (!gstMatch && !exactNameMatch && !partialNameMatch) {
+          return null;
+        }
+
+        return {
+          vendorCode: vendor.code,
+          vendorName,
+          matchConfidence: gstMatch ? 95 : exactNameMatch ? 88 : 72,
+          reason: gstMatch ? 'Exact GSTIN match' : exactNameMatch ? 'Exact vendor name match' : 'Partial vendor name match',
+        };
+      })
+      .filter((match): match is VendorMatch => Boolean(match))
+      .sort((left, right) => right.matchConfidence - left.matchConfidence);
+
+    const fallbackVendorMatch = primaryVendor
+      ? [{
+          vendorCode: primaryVendor.code,
+          vendorName: primaryVendor.name,
           matchConfidence: 70,
-          reason: 'Same vendor, similar amount',
-          openAmount: 120000,
-          poDate: '2024-12-10'
-        }
-      ];
-      setPOMatches(poMatchResults);
-      setSelectedPOMatch('PO-2025-00045');
-    }
+          reason: 'Matched using primary approved vendor master record',
+        }]
+      : [];
 
-    // Mock GRN matching
-    if (ocrData?.grnNumber.value) {
-      const grnMatchResults: GRNMatch[] = [
-        {
-          grnNumber: 'GRN-2025-00089',
-          matchConfidence: 95,
-          reason: 'Exact GRN number match from OCR',
-          grnDate: '2025-01-05',
-          receivedQty: 10
+    const finalVendorMatches = vendorMatchResults.length > 0 ? vendorMatchResults : fallbackVendorMatch;
+    const resolvedVendorMatch = finalVendorMatches[0];
+    setVendorMatches(finalVendorMatches);
+    setSelectedVendorMatch(resolvedVendorMatch?.vendorCode || '');
+
+    const selectedVendorCode = resolvedVendorMatch?.vendorCode || primaryVendor?.code || '';
+    const matchedVendorPOs = selectedVendorCode ? getPOsByVendor(selectedVendorCode) : [];
+
+    if (ocrData?.poNumber.value) {
+      const normalizedPONumber = ocrData.poNumber.value.trim().toLowerCase();
+      const poMatchResults: POMatch[] = matchedVendorPOs
+        .map((po) => {
+          const exactMatch = po.poNumber.toLowerCase() === normalizedPONumber;
+          const partialMatch = po.poNumber.toLowerCase().includes(normalizedPONumber);
+
+          if (!exactMatch && !partialMatch) {
+            return null;
+          }
+
+          return {
+            poNumber: po.poNumber,
+            matchConfidence: exactMatch ? 98 : 75,
+            reason: exactMatch ? 'Exact PO number match from OCR' : 'Partial PO number match from OCR',
+            openAmount: Number(po.amount || 0),
+            poDate: po.date,
+          };
+        })
+        .filter((match): match is POMatch => Boolean(match));
+
+      if (poMatchResults.length === 0 && primaryPO) {
+        poMatchResults.push({
+          poNumber: primaryPO.poNumber,
+          matchConfidence: 70,
+          reason: 'Matched using the latest PO for the selected vendor',
+          openAmount: Number(primaryPO.amount || 0),
+          poDate: primaryPO.date,
+        });
+      }
+
+      const resolvedPOMatch = poMatchResults[0];
+      setPOMatches(poMatchResults);
+      setSelectedPOMatch(resolvedPOMatch?.poNumber || '');
+
+      const matchedPO = resolvedPOMatch ? getPOByNumber(resolvedPOMatch.poNumber) : primaryPO;
+      const matchedGRNs = matchedPO ? getGRNsByPO(matchedPO.poNumber) : [];
+
+      if (ocrData?.grnNumber.value) {
+        const normalizedGRNNumber = ocrData.grnNumber.value.trim().toLowerCase();
+        const grnMatchResults: GRNMatch[] = matchedGRNs
+          .map((grn) => {
+            const exactMatch = grn.grnNumber.toLowerCase() === normalizedGRNNumber;
+            const partialMatch = grn.grnNumber.toLowerCase().includes(normalizedGRNNumber);
+
+            if (!exactMatch && !partialMatch) {
+              return null;
+            }
+
+            return {
+              grnNumber: grn.grnNumber,
+              matchConfidence: exactMatch ? 95 : 76,
+              reason: exactMatch ? 'Exact GRN number match from OCR' : 'Partial GRN number match from OCR',
+              grnDate: grn.receiptDate,
+              receivedQty: Number(grn.qtyReceived || 0),
+            };
+          })
+          .filter((match): match is GRNMatch => Boolean(match));
+
+        if (grnMatchResults.length === 0 && primaryGRN) {
+          grnMatchResults.push({
+            grnNumber: primaryGRN.grnNumber,
+            matchConfidence: 70,
+            reason: 'Matched using the latest GRN for the selected PO',
+            grnDate: primaryGRN.receiptDate,
+            receivedQty: Number(primaryGRN.qtyReceived || 0),
+          });
         }
-      ];
-      setGRNMatches(grnMatchResults);
-      setSelectedGRNMatch('GRN-2025-00089');
+
+        setGRNMatches(grnMatchResults);
+        setSelectedGRNMatch(grnMatchResults[0]?.grnNumber || '');
+      } else {
+        setGRNMatches([]);
+        setSelectedGRNMatch('');
+      }
+    } else {
+      setPOMatches([]);
+      setSelectedPOMatch('');
+      setGRNMatches([]);
+      setSelectedGRNMatch('');
     }
 
     // Generate validation issues

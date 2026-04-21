@@ -24,7 +24,11 @@ export const MASTER_STORAGE = {
   vendor_master: { database: 'vendor_master', table: 'vendor_master', auditTable: 'vendor_master_audit', legacyTable: 'erp_master_vendors' },
   account_code_master: { database: 'account_code_master', table: 'account_code_master', auditTable: 'account_code_master_audit', legacyTable: 'erp_master_account_codes' },
   bank_master: { database: 'bank_master', table: 'bank_master', auditTable: 'bank_master_audit', legacyTable: 'erp_master_banks' },
+  payment_method_master: { database: 'payment_method_master', table: 'payment_method_master', auditTable: 'payment_method_master_audit', legacyTable: 'erp_master_payment_methods' },
+  tds_section_master: { database: 'tds_section_master', table: 'tds_section_master', auditTable: 'tds_section_master_audit', legacyTable: 'erp_master_tds_sections' },
+  location_master: { database: 'location_master', table: 'location_master', auditTable: 'location_master_audit', legacyTable: 'erp_master_locations' },
   item_master: { database: 'item_master', table: 'item_master', auditTable: 'item_master_audit', legacyTable: 'item_master' },
+  gl_code_master: { database: 'gl_code_master', table: 'gl_code_master', auditTable: 'gl_code_master_audit', legacyTable: 'erp_master_gl_codes' },
 };
 
 export function getMasterStorage(masterKey) {

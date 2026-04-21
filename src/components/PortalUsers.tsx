@@ -236,7 +236,7 @@ export function PortalUsers() {
           loginUrl,
         });
         if (!sendResult.ok) {
-          setFormError(sendResult.error);
+          setFormError('error' in sendResult ? sendResult.error : 'Welcome email request failed.');
           return;
         }
         if (!sendResult.viaApi) {

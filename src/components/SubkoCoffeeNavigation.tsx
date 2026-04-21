@@ -15,8 +15,12 @@ import {
   Settings,
   GitBranch,
   Sparkles,
+  Upload,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { isSuperAdminUser } from '../utils/superAdmin';
+import procinixLogo from '../assets/Procinix Logo PNG V1.png';
 
 /**
  * SUBKO COFFEE — flat nav with Vendor Management sub-menus
@@ -98,12 +102,15 @@ const navigationItems: NavItem[] = [
     ],
   },
   { label: 'Masters', route: '/masters', icon: Settings },
+  { label: 'Bulk Upload', route: '/masters/bulk-upload', icon: Upload },
+  { label: 'Agent Configurator', route: '/agent-configurator', icon: Sparkles },
   { label: 'Workflow Engine', route: '/workflow-engine', icon: GitBranch },
 ];
 
 export function SubkoCoffeeNavigation() {
   const location = useLocation();
   const { user } = useAuth();
+  const showSuperAdminNav = isSuperAdminUser(user);
 
   const getUserInitials = (name?: string) => {
     if (!name) {
@@ -133,19 +140,47 @@ export function SubkoCoffeeNavigation() {
       className="flex flex-col h-full"
       style={{
         width: '240px',
-        backgroundColor: '#2A3A42',
-        borderRight: '1px solid #3a4a52',
+        backgroundColor: '#1E2E38',
+        borderRight: '1px solid #2A3E48',
       }}
     >
-      <div className="px-6 py-6" style={{ borderBottom: '1px solid #3a4a52' }}>
-        <h1
-          className="text-lg"
-          style={{ color: '#FFFFFF', fontWeight: '700', letterSpacing: '-0.02em' }}
+      <div
+        style={{
+          padding: '20px 16px 16px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.07)',
+            border: '1px solid rgba(255, 255, 255, 0.10)',
+            borderRadius: '12px',
+            padding: '14px 16px 12px',
+          }}
         >
-          Subko Coffee
-        </h1>
-        <p className="text-xs mt-1" style={{ color: 'var(--color-slate)' }}>
-          Procurement Suite
+          <img
+            src={procinixLogo}
+            alt="Procinix"
+            style={{
+              width: '100%',
+              height: 'auto',
+              display: 'block',
+            }}
+          />
+        </div>
+        <p
+          style={{
+            fontSize: '11px',
+            color: 'rgba(255, 255, 255, 0.45)',
+            fontWeight: 500,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase' as const,
+            textAlign: 'center',
+            marginTop: '10px',
+            marginBottom: 0,
+          }}
+        >
+          P2P Automation ERP
         </p>
       </div>
 
@@ -182,7 +217,7 @@ export function SubkoCoffeeNavigation() {
                         }}
                         onMouseEnter={(e) => {
                           if (!isActive) {
-                            e.currentTarget.style.backgroundColor = '#364850';
+                            e.currentTarget.style.backgroundColor = '#2A3E48';
                             e.currentTarget.style.color = '#FFFFFF';
                           }
                         }}
@@ -216,7 +251,7 @@ export function SubkoCoffeeNavigation() {
                 style={linkStyle(isActive)}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    e.currentTarget.style.backgroundColor = '#364850';
+                    e.currentTarget.style.backgroundColor = '#2A3E48';
                     e.currentTarget.style.color = '#FFFFFF';
                   }
                 }}
@@ -232,40 +267,33 @@ export function SubkoCoffeeNavigation() {
               </Link>
             );
           })}
+          {showSuperAdminNav ? (
+            <Link
+              to="/super-admin"
+              className={linkClass(isPathActive(location.pathname, '/super-admin', ['/super-admin']))}
+              style={linkStyle(isPathActive(location.pathname, '/super-admin', ['/super-admin']))}
+              onMouseEnter={(e) => {
+                const isActive = isPathActive(location.pathname, '/super-admin', ['/super-admin']);
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = '#2A3E48';
+                  e.currentTarget.style.color = '#FFFFFF';
+                }
+              }}
+              onMouseLeave={(e) => {
+                const isActive = isPathActive(location.pathname, '/super-admin', ['/super-admin']);
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#C7D0D8';
+                }
+              }}
+            >
+              <Shield className="w-5 h-5" style={{ strokeWidth: 2 }} />
+              <span>Super admin</span>
+            </Link>
+          ) : null}
         </nav>
       </div>
 
-      <div
-        className="px-4 py-4"
-        style={{
-          borderTop: '1px solid #3a4a52',
-          backgroundColor: '#253138',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-            style={{
-              backgroundColor: 'var(--color-teal)',
-              color: '#FFFFFF',
-              fontWeight: '600',
-            }}
-          >
-            {getUserInitials(user?.name)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p
-              className="text-sm truncate"
-              style={{ color: '#FFFFFF', fontWeight: '500' }}
-            >
-              {user?.name || 'Guest User'}
-            </p>
-            <p className="text-xs truncate" style={{ color: 'var(--color-slate)' }}>
-              {user?.role || 'Guest'}
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

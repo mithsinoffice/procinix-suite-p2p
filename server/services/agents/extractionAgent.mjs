@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { query, withTransaction, connExecute } from '../../mysql.mjs';
-import { extractInvoiceData } from '../invoiceIngestion/claudeOCR.mjs';
+import { extractInvoiceData } from '../invoiceIngestion/geminiOCR.mjs';
 
 const AGENT_NAME = 'ExtractionAgent';
 const AGENT_VERSION = '1.0.0';

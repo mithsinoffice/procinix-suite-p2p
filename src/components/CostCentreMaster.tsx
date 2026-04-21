@@ -1,5 +1,7 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, Building2, User, FileText, Edit, Eye } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useState, useMemo, useCallback } from 'react';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
@@ -18,6 +20,7 @@ interface CostCentre {
   budgetLimit: number;
   status: string;
   approvalStatus: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  entityMappings?: EntityScopeMapping[];
   originalData?: CostCentre;
 }
 
@@ -53,6 +56,19 @@ export function CostCentreMaster() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<CostCentre | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
+  const filteredCostCentres = useMemo(() => {
+    return costCentres.filter((cc) => {
+      const haystack = [cc.costCentreCode, cc.costCentreName, cc.department, cc.manager].join(' ').toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(cc.status);
+      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(cc.approvalStatus);
+      return matchesSearch && matchesStatus && matchesApproval;
+    });
+  }, [costCentres, searchTerm, statusFilter, approvalFilter]);
 
   // Mock departments for dropdown
   const departments = [
@@ -207,7 +223,7 @@ export function CostCentreMaster() {
 
   if (showForm) {
     return (
-      <FormShell
+      <FormShell masterName="Cost Centre Master"
         title={isEditMode ? 'Edit Cost Centre' : 'Create Cost Centre'}
         subtitle="Manage cost centres linked to departments"
         modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
@@ -258,21 +274,8 @@ export function CostCentreMaster() {
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate('/masters')} 
-            className="p-2 rounded-lg transition-colors hover:bg-white" 
-            style={{ color: 'var(--color-mercury-grey)' }}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>Cost Centre Master</h1>
-            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Manage cost centres linked to departments</p>
-          </div>
-        </div>
+    <MasterPageShell masterName="Cost Centre Master" description="Manage cost centres for allocation">
+      <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
             resetForm();
@@ -287,6 +290,32 @@ export function CostCentreMaster() {
           Add Cost Centre
         </button>
       </div>
+
+      <MasterListToolbar
+        masterName="Cost Centre Master"
+        masterKey="cost_centre_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredCostCentres}
+        columns={[
+          { key: 'costCentreCode', label: 'Code' },
+          { key: 'costCentreName', label: 'Cost Centre Name' },
+          { key: 'department', label: 'Department' },
+          { key: 'manager', label: 'Manager' },
+          { key: 'budgetLimit', label: 'Budget Limit' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
 
       {/* Table */}
       <div className="bg-white rounded-xl overflow-hidden" style={{ border: '2px solid var(--color-silver)' }}>
@@ -320,7 +349,7 @@ export function CostCentreMaster() {
             </tr>
           </thead>
           <tbody>
-            {costCentres.map((costCentre) => (
+            {filteredCostCentres.map((costCentre) => (
               <tr key={costCentre.id} style={{ borderTop: '1px solid var(--color-silver)' }}>
                 <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                   <div className="flex items-center gap-2">
@@ -523,7 +552,7 @@ export function CostCentreMaster() {
                   Cancel
                 </button>
                 <button
-                  onClick={handleSubmit}
+                  onClick={() => handleSubmit()}
                   className="px-6 py-2 rounded-lg text-white transition-colors"
                   style={{ backgroundColor: 'var(--color-teal)' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
@@ -549,11 +578,11 @@ export function CostCentreMaster() {
           recordType="Cost Centre"
           recordName={currentReviewRecord.costCentreName}
           changes={detectedChanges}
-          onApprove={(comments) => handleApprovalAction('approve', comments)}
-          onReject={(comments) => handleApprovalAction('reject', comments)}
-          onMoreInfo={(comments) => handleApprovalAction('moreinfo', comments)}
+          onApprove={(comments) => { void handleApprovalAction('approve', comments); }}
+          onReject={(comments) => { void handleApprovalAction('reject', comments); }}
+          onMoreInfo={(comments) => { void handleApprovalAction('moreinfo', comments); }}
         />
       )}
-    </div>
+    </MasterPageShell>
   );
 }

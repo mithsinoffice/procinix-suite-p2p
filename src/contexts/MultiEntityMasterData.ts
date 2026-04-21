@@ -9,11 +9,12 @@
  * SAFETY: All data is ADDITIVE. Existing masters remain unchanged.
  */
 
-import { 
-  VendorMaster, 
-  BankMaster, 
+import type {
+  VendorMaster,
+  BankMaster,
   CostCentreMaster,
-  TaxCodeMaster 
+  TaxCodeMaster,
+  DepartmentMaster,
 } from './MasterDataContext';
 
 // ============================================================================
@@ -39,6 +40,7 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     msmeNumber: 'MSME-KA-001234',
     msmeCategory: 'Small',
     status: 'Active',
+    approvalStatus: 'Approved',
     paymentTerms: 'Net 30',
     creditDays: 30,
     entityId: 'ENT-SUBKO-IN',
@@ -89,6 +91,7 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     vendorType: 'Domestic',
     msmeRegistered: false,
     status: 'Active',
+    approvalStatus: 'Changes Requested',
     paymentTerms: 'Net 45',
     creditDays: 45,
     entityId: 'ENT-SUBKO-IN',
@@ -121,9 +124,7 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
       isPrimary: true
     }],
     createdBy: 'Admin',
-    createdDate: '2024-02-01',
-    approvedBy: 'Procurement Head',
-    approvedDate: '2024-02-03'
+    createdDate: '2024-02-01'
   },
   {
     id: 'VEN-SUBKO-IN-003',
@@ -708,4 +709,31 @@ export const MULTI_ENTITY_TAX_CODES: TaxCodeMaster[] = [
     isActive: true,
     applicableFrom: '2018-01-01'
   }
+];
+
+// ============================================================================
+// ENTITY-SCOPED DEPARTMENTS (Dubai / multi-entity)
+// ============================================================================
+
+export const MULTI_ENTITY_DEPARTMENTS: DepartmentMaster[] = [
+  {
+    id: 'DEPT-UAE-001',
+    code: 'DEPT-UAE-LOG',
+    name: 'Logistics — Dubai',
+    description: 'Import, freight and warehouse — UAE entity',
+    headOfDepartment: 'UAE Operations Lead',
+    isActive: true,
+    entityId: 'ENT-SUBKO-UAE',
+    entityName: 'Subko Coffee – Dubai',
+  },
+  {
+    id: 'DEPT-UAE-002',
+    code: 'DEPT-UAE-OPS',
+    name: 'Cafe Operations — Dubai',
+    description: 'Retail and cafe operations — UAE',
+    headOfDepartment: 'Regional Manager',
+    isActive: true,
+    entityId: 'ENT-SUBKO-UAE',
+    entityName: 'Subko Coffee – Dubai',
+  },
 ];

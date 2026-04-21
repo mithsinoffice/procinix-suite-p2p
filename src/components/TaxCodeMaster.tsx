@@ -1,5 +1,7 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, FileText, Percent, Edit, Eye, Search, ArrowUpRight } from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useMemo, useState, useCallback } from 'react';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
@@ -13,11 +15,12 @@ import type { EntityScopeMapping } from '../lib/masters/entityMapping';
 interface TaxCode {
   id: string;
   taxCode: string;
-  description: string;
-  taxRate: string;
-  status: string;
+  description?: string;
+  taxRate?: string | number;
+  status?: string;
   approvalStatus: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
   originalData?: TaxCode;
+  entityMappings?: EntityScopeMapping[];
 }
 
 interface Change {
@@ -56,9 +59,9 @@ export function TaxCodeMaster() {
 
   const filteredTaxCodes = useMemo(() => {
     return taxCodes.filter((tax) => {
-      const haystack = [tax.taxCode, tax.description, tax.taxRate].join(' ').toLowerCase();
+      const haystack = [tax.taxCode, tax.description ?? '', tax.taxRate ?? ''].join(' ').toLowerCase();
       const matchesSearch = haystack.includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(tax.status);
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(tax.status ?? '');
       const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(tax.approvalStatus);
       return matchesSearch && matchesStatus && matchesApproval;
     });
@@ -113,9 +116,9 @@ export function TaxCodeMaster() {
     setIsEditMode(true);
     setEditingId(tax.id);
     setTaxCode(tax.taxCode);
-    setDescription(tax.description);
-    setTaxRate(tax.taxRate);
-    setStatus(tax.status);
+    setDescription(tax.description ?? '');
+    setTaxRate(String(tax.taxRate ?? ''));
+    setStatus(tax.status ?? 'Active');
     setEntityMappings(tax.entityMappings || []);
     setShowForm(true);
   };
@@ -141,13 +144,13 @@ export function TaxCodeMaster() {
         changes.push({ field: 'Tax Code', oldValue: original.taxCode, newValue: tax.taxCode });
       }
       if (original.description !== tax.description) {
-        changes.push({ field: 'Description', oldValue: original.description, newValue: tax.description });
+        changes.push({ field: 'Description', oldValue: original.description ?? '', newValue: tax.description ?? '' });
       }
       if (original.taxRate !== tax.taxRate) {
-        changes.push({ field: 'Tax Rate', oldValue: original.taxRate, newValue: tax.taxRate });
+        changes.push({ field: 'Tax Rate', oldValue: String(original.taxRate ?? ''), newValue: String(tax.taxRate ?? '') });
       }
       if (original.status !== tax.status) {
-        changes.push({ field: 'Status', oldValue: original.status, newValue: tax.status });
+        changes.push({ field: 'Status', oldValue: original.status ?? '', newValue: tax.status ?? '' });
       }
     }
     
@@ -221,7 +224,7 @@ export function TaxCodeMaster() {
 
   if (showForm) {
     return (
-      <FormShell
+      <FormShell masterName="Tax Code Master"
         title={isEditMode ? 'Edit Tax Code' : 'Create Tax Code'}
         subtitle="Manage tax codes with approval workflow"
         modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
@@ -239,13 +242,13 @@ export function TaxCodeMaster() {
         saveStatus={saveStatus}
       >
         <FormSection title="Tax Code Details" columns={2}>
-          <PxFormField label="Tax Code" required filled={!!taxCode.trim()} hint="HSN / SAC code">
+          <PxFormField label="Tax Code" required filled={String(taxCode).trim().length > 0} hint="HSN / SAC code">
             <input type="text" value={taxCode} onChange={(e) => setTaxCode(e.target.value)} placeholder="e.g., 6301" className="px-input" />
           </PxFormField>
-          <PxFormField label="Tax Rate" required filled={!!taxRate.trim()} hint="Composite GST rate">
+          <PxFormField label="Tax Rate" required filled={String(taxRate).trim().length > 0} hint="Composite GST rate">
             <input type="text" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} placeholder="e.g., 18%" className="px-input" />
           </PxFormField>
-          <PxFormField label="Description" filled={!!description.trim()}>
+          <PxFormField label="Description" filled={String(description).trim().length > 0}>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Enter tax code description" rows={4} className="px-input" />
           </PxFormField>
           <PxFormField label="Status" required filled={!!status}>
@@ -261,17 +264,8 @@ export function TaxCodeMaster() {
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Tax Code Master</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage tax codes with approval workflow</p>
-          </div>
-        </div>
+    <MasterPageShell masterName="Tax Code Master" description="Manage tax codes and rates">
+      <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
             resetForm();
@@ -334,7 +328,7 @@ export function TaxCodeMaster() {
               <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}>
                 Cancel
               </button>
-              <button onClick={handleSubmit} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
+              <button onClick={() => handleSubmit()} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
                 {isEditMode ? 'Update' : 'Save'}
               </button>
             </div>
@@ -353,57 +347,33 @@ export function TaxCodeMaster() {
         onRequestInfo={handleRequestInfo}
       />
 
+      <MasterListToolbar
+        masterName="Tax Code Master"
+        masterKey="tax_code_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
+          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredTaxCodes}
+        columns={[
+          { key: 'taxCode', label: 'Tax Code' },
+          { key: 'description', label: 'Description' },
+          { key: 'taxRate', label: 'Tax Rate' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
+
       <div className="rounded-[24px] overflow-hidden bg-white" style={{ border: '1px solid var(--color-fog)', boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)' }}>
         <div className="overflow-x-auto">
           <div style={{ minWidth: '1120px' }}>
-            <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.1fr 2.5fr 1fr 1fr 1.3fr 0.9fr', borderBottom: '1px solid #E8F0F4' }}>
-              <div className="space-y-2">
-                <div className="relative w-full">
-                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
-                  <input
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search tax codes..."
-                    className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm"
-                    style={{ backgroundColor: '#F8FBFD', border: '1px solid var(--color-fog)', color: 'var(--color-ink)' }}
-                  />
-                </div>
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchTerm('');
-                      setStatusFilter([]);
-                      setApprovalFilter([]);
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
-                    style={{ backgroundColor: '#FFF5F5', border: '1px solid #FED7D7', color: '#C53030', fontWeight: 600 }}
-                  >
-                    Clear Filters
-                  </button>
-                )}
-              </div>
-              <div />
-              <div />
-              <div className="flex items-start">
-                <PremiumFilterMenu
-                  label="Status"
-                  options={['Active', 'Inactive']}
-                  selected={statusFilter}
-                  onToggle={(value) => setStatusFilter((current) => toggleMultiSelect(current, value))}
-                />
-              </div>
-              <div className="flex items-start">
-                <PremiumFilterMenu
-                  label="Approval"
-                  options={['Draft', 'Pending Approval', 'Approved', 'Rejected']}
-                  selected={approvalFilter}
-                  onToggle={(value) => setApprovalFilter((current) => toggleMultiSelect(current, value))}
-                />
-              </div>
-              <div />
-            </div>
-
             <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.1fr 2.5fr 1fr 1fr 1.3fr 0.9fr', background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)', borderBottom: '1px solid #E4EDF2' }}>
               {['Tax Code', 'Description', 'Tax Rate', 'Status', 'Approval Status', 'Action'].map((column) => (
                 <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
@@ -424,11 +394,11 @@ export function TaxCodeMaster() {
                   }}
                 >
                   <div style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{tax.taxCode}</div>
-                  <div style={{ color: 'var(--color-mercury-grey)' }}>{tax.description}</div>
-                  <div style={{ color: 'var(--color-ink)' }}>{tax.taxRate}</div>
+                  <div style={{ color: 'var(--color-mercury-grey)' }}>{tax.description ?? 'Not provided'}</div>
+                  <div style={{ color: 'var(--color-ink)' }}>{tax.taxRate ?? 'Not set'}</div>
                   <div>
-                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: tax.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA', color: tax.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)', fontWeight: 700 }}>
-                      {tax.status}
+                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: (tax.status ?? 'Inactive') === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA', color: (tax.status ?? 'Inactive') === 'Active' ? 'var(--color-teal)' : 'var(--color-error)', fontWeight: 700 }}>
+                      {tax.status ?? 'Inactive'}
                     </span>
                   </div>
                   <div>
@@ -456,6 +426,6 @@ export function TaxCodeMaster() {
           </div>
         </div>
       </div>
-    </div>
+    </MasterPageShell>
   );
 }

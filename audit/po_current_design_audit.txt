@@ -1,0 +1,46 @@
+================ PROcinix PO Current Design Audit ================
+Generated on: Thu Apr 16 12:48:13 IST 2026
+Project root: /Users/mithileshtiwari/Library/Mobile Documents/com~apple~CloudDocs/Procinix/React Projects/Procinix Suite - P2P - Subko Coffee
+
+================ 1. ROUTES / NAV / PAGE REGISTRATION ================
+
+================ 2. FILES WITH PO IN NAME ================
+src/components/CreatePurchaseOrder.tsx
+src/components/POInvoiceExceptionModal.tsx
+src/components/POInvoiceLineItemEnhanced.tsx
+src/components/POInvoicePolicyConfig.tsx
+src/components/POInvoiceValidationDemo.tsx
+src/components/POPreview.tsx
+src/components/POUpdate.tsx
+src/components/PortalUsers.tsx
+src/components/PurchaseOrder.tsx
+src/components/PurchaseOrders.tsx
+src/components/PurchaseOrders/AmendmentHistory.tsx
+src/components/PurchaseOrders/AmendmentTypeSelector.tsx
+src/components/PurchaseOrders/ExpiringPOsWidget.tsx
+src/components/PurchaseOrders/ExpiryBadge.tsx
+src/components/PurchaseOrders/ExtendPOModal.tsx
+src/components/PurchaseOrders/ForceClosureModal.tsx
+src/components/PurchaseOrders/PriceAmendmentForm.tsx
+src/components/PurchaseOrders/QuantityAmendmentForm.tsx
+src/components/PurchaseOrders/index.ts
+src/components/procurement/POCreationHub.tsx
+src/components/ui/popover.tsx
+src/contexts/PortalUsersContext.tsx
+src/lib/portalWelcomeEmail.ts
+src/pages/desks/procurement/ProcurementPurchaseOrders.tsx
+src/pages/modules/PurchaseOrderModule.tsx
+src/types/portalUser.ts
+src/utils/poInvoicePolicy.ts
+
+================ 3. PAGE COMPONENTS ================
+
+================ 4. FORMS / TABLES / TABS / WORKFLOW / APPROVAL ================
+
+================ 5. API / REPOSITORY / DB / SUPABASE / MOCK DATA ================
+
+================ 6. TOP 40 MOST RELEVANT FILES ================
+
+================ 7. FIRST 200 LINES OF MOST RELEVANT FILES ================
+
+================ END OF AUDIT ================

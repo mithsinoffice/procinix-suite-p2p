@@ -8,6 +8,7 @@ import { processMatch } from './matchAgent.mjs';
 import { processTaxValidation } from './taxComplianceAgent.mjs';
 import { processCoding } from './codingAgent.mjs';
 import { processRouting } from './workflowRoutingAgent.mjs';
+import { runAgent } from './agentRunner.mjs';
 
 /**
  * Governed Multi-Agent Orchestrator
@@ -37,6 +38,67 @@ async function updateInvoiceStatus(invoiceId, status) {
       [status, invoiceId]
     );
   } catch { /* non-critical */ }
+}
+
+async function runAgentBuilderRuntime(invoiceId, extractedData, pipelineResult) {
+  if (process.env.ENABLE_AGENT_BUILDER_RUNTIME !== 'true') {
+    return;
+  }
+
+  const activeAgents = await query(
+    `
+      SELECT id, name, module, status
+      FROM p2p_schema_mt.agents
+      WHERE status = 'Active'
+        AND (
+          module = 'Accounts Payable'
+          OR module = 'AP'
+          OR module = 'Invoices'
+        )
+      ORDER BY updated_at DESC
+    `
+  );
+
+  if (!Array.isArray(activeAgents) || activeAgents.length === 0) {
+    pipelineResult.steps.agentBuilder = {
+      enabled: true,
+      executed: 0,
+      results: [],
+    };
+    return;
+  }
+
+  const results = [];
+  for (const agent of activeAgents) {
+    try {
+      const output = await runAgent(
+        query,
+        agent.id,
+        extractedData,
+        { mode: 'ingestion-runtime', invoiceId }
+      );
+      results.push({
+        agentId: agent.id,
+        agentName: agent.name,
+        passed: output.passed,
+        confidence: output.confidence,
+        touchless: output.touchless,
+        logId: output.logId,
+      });
+    } catch (err) {
+      results.push({
+        agentId: agent.id,
+        agentName: agent.name,
+        error: err.message,
+      });
+    }
+  }
+
+  pipelineResult.steps.agentBuilder = {
+    enabled: true,
+    executed: activeAgents.length,
+    results,
+  };
 }
 
 export async function processInvoiceWithAgents(email) {
@@ -173,6 +235,10 @@ export async function processInvoiceWithAgents(email) {
       };
       await logExplainability(invoiceId, 'vendor_match', vendorMatch.explanation, vendorMatch);
       await updateInvoiceStatus(invoiceId, vendorMatch.isNewVendor ? 'vendor_unresolved' : 'vendor_matched');
+
+      // ── Optional STEP: AgentBuilder runtime agents ──────
+      // This is gated to keep existing ingestion behavior stable by default.
+      await runAgentBuilderRuntime(invoiceId, ed, pipelineResult);
 
       // ── STEP 4: Duplicate & Fraud Agent ─────────────────
       const dupCheck = await processDuplicateCheck(invoiceId, ed, intake.contentHash);

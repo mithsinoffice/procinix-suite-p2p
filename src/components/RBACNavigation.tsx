@@ -268,7 +268,7 @@ export function RBACNavigation() {
                 {module.label}
               </span>
               {isViewOnly && (
-                <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} title="View Only" />
+                <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} aria-label="View Only" />
               )}
               {module.badge && (
                 <span 
@@ -324,7 +324,7 @@ export function RBACNavigation() {
               {module.label}
             </span>
             {isViewOnly && (
-              <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} title="View Only" />
+              <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} aria-label="View Only" />
             )}
             {module.badge && (
               <span 
@@ -675,7 +675,7 @@ export function RBACNavigation() {
                     {section.label}
                   </span>
                   {isViewOnly && (
-                    <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} title="View Only" />
+                    <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} aria-label="View Only" />
                   )}
                   {section.badge && section.badge > 0 && (
                     <span 

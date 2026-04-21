@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAPData } from '../contexts/APDataContext';
+import { useMasterData } from '../contexts/MasterDataContext';
 import { 
   ArrowLeft, Save, Send, X, Upload, Plus, Trash2, 
   FileText, AlertCircle, CheckCircle, DollarSign, Calendar,
@@ -38,6 +40,10 @@ interface Exception {
 
 export function AIInvoiceCapture() {
   const navigate = useNavigate();
+  const { addInvoice } = useAPData();
+  const { getActiveVendors, getVendorByCode } = useMasterData();
+  const activeVendors = getActiveVendors();
+  const primaryVendor = activeVendors[0];
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionComplete, setExtractionComplete] = useState(false);
@@ -51,13 +57,13 @@ export function AIInvoiceCapture() {
 
   // Extracted fields with confidence scores
   const [extractedData, setExtractedData] = useState({
-    vendorName: { value: 'Textile Solutions Pvt Ltd', confidence: 0.98, isEdited: false } as ExtractedField,
-    vendorCode: { value: 'VEN-001', confidence: 0.95, isEdited: false } as ExtractedField,
+    vendorName: { value: primaryVendor?.name || '', confidence: 0.98, isEdited: false } as ExtractedField,
+    vendorCode: { value: primaryVendor?.code || '', confidence: 0.95, isEdited: false } as ExtractedField,
     invoiceNumber: { value: 'INV-2024-1234', confidence: 0.99, isEdited: false } as ExtractedField,
     invoiceDate: { value: '2024-12-13', confidence: 0.97, isEdited: false } as ExtractedField,
     invoiceAmount: { value: '125000', confidence: 0.96, isEdited: false } as ExtractedField,
     currency: { value: 'INR', confidence: 0.99, isEdited: false } as ExtractedField,
-    gstNumber: { value: '27AAAAA0000A1Z5', confidence: 0.94, isEdited: false } as ExtractedField,
+    gstNumber: { value: primaryVendor?.gstin || '', confidence: 0.94, isEdited: false } as ExtractedField,
     poNumber: { value: 'PO-2024-001', confidence: 0.92, isEdited: false } as ExtractedField,
     paymentTerms: { value: 'Net 30', confidence: 0.88, isEdited: false } as ExtractedField,
     dueDate: { value: '2025-01-12', confidence: 0.90, isEdited: false } as ExtractedField,
@@ -105,20 +111,6 @@ export function AIInvoiceCapture() {
     }
   ]);
 
-  // Mock data
-  const vendors = [
-    { code: 'VEN-001', name: 'Textile Solutions Pvt Ltd', gst: '27AAAAA0000A1Z5' },
-    { code: 'VEN-002', name: 'Fashion Fabrics India', gst: '27BBBBB0000B1Z5' },
-    { code: 'VEN-003', name: 'Global Accessories Ltd', gst: '27CCCCC0000C1Z5' }
-  ];
-
-  const purchaseOrders = [
-    { code: 'PO-2024-001', vendor: 'VEN-001', amount: 125000 },
-    { code: 'PO-2024-002', vendor: 'VEN-002', amount: 89500 },
-    { code: 'PO-2024-003', vendor: 'VEN-003', amount: 45600 }
-  ];
-
-  const grnNumbers = ['GRN-2024-056', 'GRN-2024-057', 'GRN-2024-058', 'GRN-2024-059'];
   const costCenters = ['CC-MFG-001', 'CC-MFG-002', 'CC-ADMIN-001', 'CC-SALES-001'];
   const glCodes = ['5100 - Raw Materials', '5200 - Packaging', '6100 - Utilities', '6200 - Services'];
   const departments = ['Manufacturing', 'Administration', 'Sales', 'Warehouse'];
@@ -246,8 +238,35 @@ export function AIInvoiceCapture() {
     setExceptions(exceptions.filter((_, i) => i !== index));
   };
 
+  const persistInvoice = (status: 'Draft' | 'Pending Approval') => {
+    if (!extractedData.vendorCode.value || !extractedData.invoiceNumber.value || !extractedData.invoiceDate.value) {
+      alert('Vendor, invoice number, and invoice date are required.');
+      return false;
+    }
+
+    const resolvedVendor = getVendorByCode(String(extractedData.vendorCode.value));
+
+    addInvoice({
+      id: `AI-INV-${Date.now()}`,
+      invoiceNumber: String(extractedData.invoiceNumber.value),
+      invoiceDate: String(extractedData.invoiceDate.value),
+      vendorName: resolvedVendor?.name || String(extractedData.vendorName.value),
+      vendorCode: resolvedVendor?.code || String(extractedData.vendorCode.value),
+      invoiceType: extractedData.poNumber.value ? 'PO' : 'Non-PO',
+      poNumber: extractedData.poNumber.value ? String(extractedData.poNumber.value) : undefined,
+      totalAmount: calculateTotal(),
+      currency: resolvedVendor?.currency || String(extractedData.currency.value || 'INR'),
+      status,
+      dueDate: extractedData.dueDate.value ? String(extractedData.dueDate.value) : undefined,
+      approver: 'AP Team',
+      paymentStatus: 'Unpaid',
+      matchStatus: extractedData.poNumber.value ? (matchType === '3-way' ? '3-Way Matched' : 'Partially Matched') : 'Unmatched',
+    });
+    return true;
+  };
+
   const handleSaveDraft = () => {
-    alert('Invoice saved as draft with AI-extracted data');
+    persistInvoice('Draft');
   };
 
   const handleSubmit = () => {
@@ -258,8 +277,9 @@ export function AIInvoiceCapture() {
         return;
       }
     }
-    alert('Invoice submitted for approval');
-    navigate('/invoices');
+    if (persistInvoice('Pending Approval')) {
+      navigate('/invoices');
+    }
   };
 
   const handleCancel = () => {
