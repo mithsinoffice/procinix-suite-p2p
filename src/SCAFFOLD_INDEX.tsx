@@ -92,21 +92,9 @@ export { DebitNotesModule } from './pages/modules/DebitNotesModule';
 export { PaymentsModule } from './pages/modules/PaymentsModule';
 
 // ───────────────────────────────────────────────────────────────────────────
-// 05_MASTERS
+// 05_MASTERS — removed. Live master screens are in `src/components/*Master.tsx`
+// and wired to MySQL via `useIncrementalMasterRecords`.
 // ───────────────────────────────────────────────────────────────────────────
-
-export { MasterLayoutShell } from './pages/masters/MasterLayoutShell';
-
-export { EntityMasterScaffold } from './pages/masters/EntityMaster';
-export { CurrencyMasterScaffold } from './pages/masters/CurrencyMaster';
-export { ExchangeRateMasterScaffold } from './pages/masters/ExchangeRateMaster';
-export { VendorMasterScaffold } from './pages/masters/VendorMaster';
-export { ItemMasterScaffold } from './pages/masters/ItemMaster';
-export { GLCOAMasterScaffold } from './pages/masters/GLCOAMaster';
-export { CostCenterMasterScaffold } from './pages/masters/CostCenterMaster';
-export { ProfitCenterMasterScaffold } from './pages/masters/ProfitCenterMaster';
-export { BankMasterScaffold } from './pages/masters/BankMaster';
-export { PaymentTermsMasterScaffold } from './pages/masters/PaymentTermsMaster';
 
 // ───────────────────────────────────────────────────────────────────────────
 // 06_REPORTS
@@ -170,19 +158,6 @@ FOLDER STRUCTURE:
 │   │   ├── DebitNotesModule.tsx
 │   │   └── PaymentsModule.tsx
 │   │
-│   ├── masters/
-│   │   ├── MasterLayoutShell.tsx
-│   │   ├── EntityMaster.tsx
-│   │   ├── CurrencyMaster.tsx
-│   │   ├── ExchangeRateMaster.tsx
-│   │   ├── VendorMaster.tsx
-│   │   ├── ItemMaster.tsx
-│   │   ├── GLCOAMaster.tsx
-│   │   ├── CostCenterMaster.tsx
-│   │   ├── ProfitCenterMaster.tsx
-│   │   ├── BankMaster.tsx
-│   │   └── PaymentTermsMaster.tsx
-│   │
 │   └── reports/
 │       ├── EntityReports.tsx
 │       ├── ConsolidatedReports.tsx
@@ -194,7 +169,7 @@ DESIGN PRINCIPLES:
 ─────────────────
 ✓ Clean separation of concerns (Desks → Modules → Components)
 ✓ Consistent naming conventions across all files
-✓ Reusable layout shells (DeskLayoutShell, MasterLayoutShell)
+✓ Reusable layout shells (DeskLayoutShell)
 ✓ Placeholder components ready for logic injection
 ✓ No data bindings - pure UI structure
 ✓ No workflows - ready for controlled implementation
