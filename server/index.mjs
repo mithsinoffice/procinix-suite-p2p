@@ -46,6 +46,7 @@ import { matchToPO } from './services/invoiceIngestion/poMatcher.mjs';
 import { createInvoiceFromExtraction } from './services/invoiceIngestion/invoiceCreator.mjs';
 import { handleExceptions } from './services/invoiceIngestion/exceptionHandler.mjs';
 import { triggerWorkflow } from './services/invoiceIngestion/workflowTrigger.mjs';
+import { mapLegacyToLifecycle, mapProcessingStatusToLifecycle, LIFECYCLE_STATES } from './services/invoices/lifecycleMapping.mjs';
 import { processInvoiceWithAgents } from './services/agents/orchestrator.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import { verifyPAN, verifyPANComprehensive, verifyGSTIN, verifyBankAccount, verifyMSME } from './services/kyc/panVerification.mjs';
@@ -2136,10 +2137,12 @@ const server = http.createServer(async (req, res) => {
           invoiceId,
         ]
       );
+      const isSubmitting = invoicePatch.status === 'pending_approval'
+        || invoicePatch.lifecycle_state === LIFECYCLE_STATES.UNDER_VERIFICATION;
       await appendInvoiceAuditLog({
         invoiceId,
         userId: req.userId || req.headers['x-user-id'] || null,
-        action: invoicePatch.status === 'pending_approval' ? 'submitted' : 'edited',
+        action: isSubmitting ? 'submitted' : 'edited',
         before: existing,
         after: invoicePatch,
       });
@@ -2201,7 +2204,16 @@ const server = http.createServer(async (req, res) => {
       const conditions = [];
       const params = [];
       if (source) { conditions.push('source = ?'); params.push(source); }
-      if (status) { conditions.push('status = ?'); params.push(status); }
+      if (status) {
+        const mappedLifecycle = mapLegacyToLifecycle(status);
+        if (mappedLifecycle) {
+          conditions.push('(status = ? OR lifecycle_state = ?)');
+          params.push(status, mappedLifecycle);
+        } else {
+          conditions.push('status = ?');
+          params.push(status);
+        }
+      }
       if (vendorId) { conditions.push('vendor_id = ?'); params.push(vendorId); }
       if (invoiceNo) { conditions.push('invoice_number = ?'); params.push(invoiceNo); }
       if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
@@ -2350,7 +2362,7 @@ const server = http.createServer(async (req, res) => {
         const [green] = await query("SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'green'");
         const [amber] = await query("SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'amber'");
         const [red] = await query("SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'red' OR lane IS NULL");
-        const [pending] = await query("SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE status = 'pending_approval'");
+        const [pending] = await query("SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE status = 'pending_approval' OR lifecycle_state = ?", [LIFECYCLE_STATES.UNDER_VERIFICATION]);
         const [avgScore] = await query('SELECT AVG(readiness_score) as avg FROM p2p_schema_mt.invoices');
         const total = invoices.total || 0;
         const greenCount = green.cnt || 0;
@@ -2787,7 +2799,16 @@ const server = http.createServer(async (req, res) => {
       let sql = 'SELECT id, invoice_number, invoice_date, due_date, vendor_name, vendor_gstin, currency, subtotal, tax_amount, total_amount, po_number, po_id, status, source, lane, posting_readiness_score, processing_status, auto_post_flag, human_touched_flag, attachment_path, created_at FROM invoices WHERE source = ?';
       const params = ['email_ingestion'];
       if (lane) { sql += ' AND lane = ?'; params.push(lane); }
-      if (status) { sql += ' AND processing_status = ?'; params.push(status); }
+      if (status) {
+        const mappedLifecycle = mapProcessingStatusToLifecycle(status);
+        if (mappedLifecycle) {
+          sql += ' AND (processing_status = ? OR lifecycle_state = ?)';
+          params.push(status, mappedLifecycle);
+        } else {
+          sql += ' AND processing_status = ?';
+          params.push(status);
+        }
+      }
       sql += ' ORDER BY created_at DESC LIMIT 100';
       const rows = await query(sql, params);
       return sendJson(res, 200, { success: true, data: rows });

@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { query } from '../../mysql.mjs';
+import { LIFECYCLE_STATES } from '../invoices/lifecycleMapping.mjs';
 
 function buildTransporter() {
   const host = process.env.SMTP_HOST;
@@ -28,7 +29,7 @@ export async function triggerWorkflow(invoiceId, validationResult, matchResult) 
   const notificationEmail = process.env.AP_NOTIFICATION_EMAIL;
   const transporter = buildTransporter();
 
-  if (invoice.status === 'pending_approval') {
+  if (invoice.status === 'pending_approval' || invoice.lifecycle_state === LIFECYCLE_STATES.UNDER_VERIFICATION) {
     // Trigger approval workflow — insert a workflow task
     await query(
       `INSERT INTO approval_workflows (id, workflow_name, min_amount, max_amount, approver, status, created_at, updated_at)

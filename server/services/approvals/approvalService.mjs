@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { getGenericMasterKeys, getQualifiedTableName } from '../../masterStorage.mjs';
+import { LIFECYCLE_STATES } from '../invoices/lifecycleMapping.mjs';
 
 const DEFAULT_SLA_HOURS = 48;
 const DEFAULT_ESCALATION_HOURS = 36;
@@ -75,7 +76,8 @@ async function syncPendingApprovals(db, approverId = '1') {
       COALESCE(i.created_at, NOW()),
       'normal'
     FROM invoices i
-    WHERE LOWER(COALESCE(i.status, '')) IN ('pending_approval', 'pending approval', 'pending', 'submitted', 'in review')
+    WHERE (LOWER(COALESCE(i.status, '')) IN ('pending_approval', 'pending approval', 'pending', 'submitted', 'in review')
+           OR i.lifecycle_state = ?)
       AND NOT EXISTS (
         SELECT 1
         FROM approvals a
@@ -83,7 +85,7 @@ async function syncPendingApprovals(db, approverId = '1') {
           AND a.module IN ('ap_invoice', 'non_po_invoice')
           AND a.status = 'pending'
       )`,
-    [approverId, approverId]
+    [LIFECYCLE_STATES.UNDER_VERIFICATION, approverId, approverId]
   );
 
   // 2) Upsert pending POs.
@@ -214,8 +216,12 @@ async function syncPendingApprovals(db, approverId = '1') {
        AND a.module IN ('ap_invoice', 'non_po_invoice')
        AND (
          i.id IS NULL
-         OR LOWER(COALESCE(i.status, '')) NOT IN ('pending_approval', 'pending approval', 'pending', 'submitted', 'in review')
-       )`
+         OR (
+           LOWER(COALESCE(i.status, '')) NOT IN ('pending_approval', 'pending approval', 'pending', 'submitted', 'in review')
+           AND (i.lifecycle_state IS NULL OR i.lifecycle_state != ?)
+         )
+       )`,
+    [LIFECYCLE_STATES.UNDER_VERIFICATION]
   );
 
   await db.execute(
