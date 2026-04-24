@@ -3054,6 +3054,14 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: { ...vendor, spocs, pan_compliance: pan || null, gst_registrations: gst, bank_accounts: banks, entity_mappings: entityMappings } });
     }
 
+    // Helper: convert ISO datetime to MySQL DATETIME format
+    const toMysqlDatetime = (v) => {
+      if (!v) return null;
+      const d = new Date(v);
+      if (isNaN(d.getTime())) return null;
+      return d.toISOString().slice(0, 19).replace('T', ' ');
+    };
+
     if (req.method === 'POST' && pathname === '/api/vendors') {
       const body = await readJsonBody(req);
       const vendorId = randomUUID();
@@ -3069,15 +3077,15 @@ const server = http.createServer(async (req, res) => {
       if (body.pan_compliance) {
         const p = body.pan_compliance;
         const panSrc = p.pan_verification_source || 'manual';
-        const panAt = panSrc !== 'not_verified' ? (p.pan_verified_at || new Date().toISOString()) : null;
+        const panAt = panSrc !== 'not_verified' ? toMysqlDatetime(p.pan_verified_at || new Date()) : null;
         await query(
           `INSERT INTO p2p_schema_mt.vendor_pan_compliance (id, vendor_id, pan, entity_type, pan_status, cin_number, msme_number, msme_category, section_206ab, gst_return_filed, tds_sections, rcm_applicable, lower_tds_section, lower_tds_cert_number, lower_tds_cert_valid_from, lower_tds_cert_valid_to, lower_tds_cert_rate, pan_verification_source, pan_verified_at, pan_verification_reference, msme_verification_source, msme_verified_at, msme_verification_reference, cin_verification_source, cin_verified_at, cin_verification_reference, section_206ab_verification_source, section_206ab_verified_at, section_206ab_verification_reference) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [randomUUID(), vendorId, p.pan||null, p.entity_type||null, p.pan_status||'not_verified', p.cin_number||null, p.msme_number||null, p.msme_category||null, p.section_206ab||'not_applicable', p.gst_return_filed||'regular_filer', JSON.stringify(p.tds_sections||[]), p.rcm_applicable||'no_forward_charge', p.lower_tds_section||'not_applicable', p.lower_tds_cert_number||null, p.lower_tds_cert_valid_from||null, p.lower_tds_cert_valid_to||null, p.lower_tds_cert_rate!=null?Number(p.lower_tds_cert_rate):null, panSrc, panAt, p.pan_verification_reference||null, p.msme_verification_source||'not_verified', p.msme_verified_at||null, p.msme_verification_reference||null, p.cin_verification_source||'not_verified', p.cin_verified_at||null, p.cin_verification_reference||null, p.section_206ab_verification_source||'not_verified', p.section_206ab_verified_at||null, p.section_206ab_verification_reference||null]
+          [randomUUID(), vendorId, p.pan||null, p.entity_type||null, p.pan_status||'not_verified', p.cin_number||null, p.msme_number||null, p.msme_category||null, p.section_206ab||'not_applicable', p.gst_return_filed||'regular_filer', JSON.stringify(p.tds_sections||[]), p.rcm_applicable||'no_forward_charge', p.lower_tds_section||'not_applicable', p.lower_tds_cert_number||null, p.lower_tds_cert_valid_from||null, p.lower_tds_cert_valid_to||null, p.lower_tds_cert_rate!=null?Number(p.lower_tds_cert_rate):null, panSrc, panAt, p.pan_verification_reference||null, p.msme_verification_source||'not_verified', toMysqlDatetime(p.msme_verified_at), p.msme_verification_reference||null, p.cin_verification_source||'not_verified', toMysqlDatetime(p.cin_verified_at), p.cin_verification_reference||null, p.section_206ab_verification_source||'not_verified', toMysqlDatetime(p.section_206ab_verified_at), p.section_206ab_verification_reference||null]
         );
       }
       for (const g of (body.gst_registrations || [])) {
         const gSrc = g.verification_source || 'not_verified';
-        const gAt = (gSrc !== 'not_verified') ? (g.verified_at || new Date().toISOString()) : null;
+        const gAt = (gSrc !== 'not_verified') ? toMysqlDatetime(g.verified_at || new Date()) : null;
         await query(
           'INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
           [randomUUID(), vendorId, g.gstin, g.gst_type, g.state||null, g.gst_state_code||null, g.city||null, g.pin_code||null, g.address||null, g.spoc_id||null, g.status||'active', gSrc, gAt, g.verification_reference||null, g.verification_raw_response ? JSON.stringify(g.verification_raw_response) : null]
@@ -3085,7 +3093,7 @@ const server = http.createServer(async (req, res) => {
       }
       for (const b of (body.bank_accounts || [])) {
         const bSrc = b.verification_source || 'not_verified';
-        const bAt = (bSrc !== 'not_verified') ? (b.verified_at || new Date().toISOString()) : null;
+        const bAt = (bSrc !== 'not_verified') ? toMysqlDatetime(b.verified_at || new Date()) : null;
         await query(
           'INSERT INTO p2p_schema_mt.vendor_bank_accounts (id, vendor_id, account_number, ifsc_code, branch_name, bank_name, account_type, currency, is_primary, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
           [randomUUID(), vendorId, b.account_number, b.ifsc_code, b.branch_name||null, b.bank_name||null, b.account_type||'current', b.currency||'INR', b.is_primary||false, b.status||'active', bSrc, bAt, b.verification_reference||null, b.verification_raw_response ? JSON.stringify(b.verification_raw_response) : null]
@@ -3120,17 +3128,17 @@ const server = http.createServer(async (req, res) => {
         await query('DELETE FROM p2p_schema_mt.vendor_pan_compliance WHERE vendor_id=?', [vendorId]);
         const p = body.pan_compliance;
         const panSrc = p.pan_verification_source || 'manual';
-        const panAt = panSrc !== 'not_verified' ? (p.pan_verified_at || new Date().toISOString()) : null;
+        const panAt = panSrc !== 'not_verified' ? toMysqlDatetime(p.pan_verified_at || new Date()) : null;
         await query(
           `INSERT INTO p2p_schema_mt.vendor_pan_compliance (id, vendor_id, pan, entity_type, pan_status, cin_number, msme_number, msme_category, section_206ab, gst_return_filed, tds_sections, rcm_applicable, lower_tds_section, lower_tds_cert_number, lower_tds_cert_valid_from, lower_tds_cert_valid_to, lower_tds_cert_rate, pan_verification_source, pan_verified_at, pan_verification_reference, msme_verification_source, msme_verified_at, msme_verification_reference, cin_verification_source, cin_verified_at, cin_verification_reference, section_206ab_verification_source, section_206ab_verified_at, section_206ab_verification_reference) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [randomUUID(), vendorId, p.pan||null, p.entity_type||null, p.pan_status||'not_verified', p.cin_number||null, p.msme_number||null, p.msme_category||null, p.section_206ab||'not_applicable', p.gst_return_filed||'regular_filer', JSON.stringify(p.tds_sections||[]), p.rcm_applicable||'no_forward_charge', p.lower_tds_section||'not_applicable', p.lower_tds_cert_number||null, p.lower_tds_cert_valid_from||null, p.lower_tds_cert_valid_to||null, p.lower_tds_cert_rate!=null?Number(p.lower_tds_cert_rate):null, panSrc, panAt, p.pan_verification_reference||null, p.msme_verification_source||'not_verified', p.msme_verified_at||null, p.msme_verification_reference||null, p.cin_verification_source||'not_verified', p.cin_verified_at||null, p.cin_verification_reference||null, p.section_206ab_verification_source||'not_verified', p.section_206ab_verified_at||null, p.section_206ab_verification_reference||null]
+          [randomUUID(), vendorId, p.pan||null, p.entity_type||null, p.pan_status||'not_verified', p.cin_number||null, p.msme_number||null, p.msme_category||null, p.section_206ab||'not_applicable', p.gst_return_filed||'regular_filer', JSON.stringify(p.tds_sections||[]), p.rcm_applicable||'no_forward_charge', p.lower_tds_section||'not_applicable', p.lower_tds_cert_number||null, p.lower_tds_cert_valid_from||null, p.lower_tds_cert_valid_to||null, p.lower_tds_cert_rate!=null?Number(p.lower_tds_cert_rate):null, panSrc, panAt, p.pan_verification_reference||null, p.msme_verification_source||'not_verified', toMysqlDatetime(p.msme_verified_at), p.msme_verification_reference||null, p.cin_verification_source||'not_verified', toMysqlDatetime(p.cin_verified_at), p.cin_verification_reference||null, p.section_206ab_verification_source||'not_verified', toMysqlDatetime(p.section_206ab_verified_at), p.section_206ab_verification_reference||null]
         );
       }
       if (body.gst_registrations) {
         await query('DELETE FROM p2p_schema_mt.vendor_gst_registrations WHERE vendor_id=?', [vendorId]);
         for (const g of body.gst_registrations) {
           const gSrc = g.verification_source || 'not_verified';
-          const gAt = (gSrc !== 'not_verified') ? (g.verified_at || new Date().toISOString()) : null;
+          const gAt = (gSrc !== 'not_verified') ? toMysqlDatetime(g.verified_at || new Date()) : null;
           await query(
             'INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
             [randomUUID(), vendorId, g.gstin, g.gst_type, g.state||null, g.gst_state_code||null, g.city||null, g.pin_code||null, g.address||null, g.spoc_id||null, g.status||'active', gSrc, gAt, g.verification_reference||null, g.verification_raw_response ? JSON.stringify(g.verification_raw_response) : null]
@@ -3141,7 +3149,7 @@ const server = http.createServer(async (req, res) => {
         await query('DELETE FROM p2p_schema_mt.vendor_bank_accounts WHERE vendor_id=?', [vendorId]);
         for (const b of body.bank_accounts) {
           const bSrc = b.verification_source || 'not_verified';
-          const bAt = (bSrc !== 'not_verified') ? (b.verified_at || new Date().toISOString()) : null;
+          const bAt = (bSrc !== 'not_verified') ? toMysqlDatetime(b.verified_at || new Date()) : null;
           await query(
             'INSERT INTO p2p_schema_mt.vendor_bank_accounts (id, vendor_id, account_number, ifsc_code, branch_name, bank_name, account_type, currency, is_primary, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
             [randomUUID(), vendorId, b.account_number, b.ifsc_code, b.branch_name||null, b.bank_name||null, b.account_type||'current', b.currency||'INR', b.is_primary||false, b.status||'active', bSrc, bAt, b.verification_reference||null, b.verification_raw_response ? JSON.stringify(b.verification_raw_response) : null]
