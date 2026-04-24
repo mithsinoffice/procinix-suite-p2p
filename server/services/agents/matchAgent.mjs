@@ -96,6 +96,52 @@ export const DEFAULT_FETCHERS = Object.freeze({
   }),
 });
 
+// ── match_result ENUM derivation ─────────────────────
+// Maps internal match analysis to the 7-value ENUM on invoices.match_result.
+// match_result is a pure outcome enum, orthogonal to matchType (which describes
+// HOW the match was attempted). See ws1a-implementation-plan.md §2.3.
+
+export function deriveMatchResult(matchType, po, extractedData, variances) {
+  // Recurring pattern (no PO matched) → Partially Matched
+  if (matchType === 'recurring') {
+    return 'Partially Matched';
+  }
+
+  // No PO reference on invoice → Not Applicable
+  if (!extractedData.po_number && matchType !== '2way_po' && matchType !== 'service_po') {
+    return 'Not Applicable';
+  }
+
+  // No match found → Unmatched
+  if (matchType === 'none') {
+    return 'Unmatched';
+  }
+
+  // PO matched — analyze variances
+  if (po && extractedData.total_amount != null && po.total_amount != null) {
+    const invoiceAmt = Number(extractedData.total_amount);
+    const poAmt = Number(po.total_amount);
+    const variancePct = poAmt !== 0 ? Math.abs((invoiceAmt - poAmt) / poAmt) : 0;
+
+    // Strict tolerance (5%) → Fully Matched
+    if (variancePct <= 0.05) {
+      return 'Fully Matched';
+    }
+
+    // Between strict (5%) and fuzzy (10%) → Tolerance Breach
+    if (variancePct <= 0.10) {
+      return 'Tolerance Breach';
+    }
+
+    // Beyond fuzzy tolerance → Rate Variance (header-level; Qty Mismatch
+    // requires line-level comparison which lands in WS-1b)
+    return 'Rate Variance';
+  }
+
+  // PO matched but amounts missing for variance calc → Partially Matched
+  return 'Partially Matched';
+}
+
 function computeVariances(extractedData, po) {
   const variances = {};
 
@@ -212,7 +258,19 @@ export async function processMatch(invoiceId, extractedData, entityId, fetchers 
 
     const explanation = explanationParts.join('. ');
 
-    // Persist match result
+    // Derive match_result ENUM and build match_details snapshot
+    const matchResult = deriveMatchResult(matchType, po, extractedData, variances);
+    const matchScore = parseFloat((matchConfidence * 100).toFixed(2));
+    const snapshot = await fetchers.getSnapshotValues(poId, []);
+    const matchDetails = JSON.stringify({
+      matchType,
+      variances,
+      po: snapshot.po,
+      grns: snapshot.grns,
+      snapshotAt: snapshot.snapshotAt,
+    });
+
+    // Persist match result (both ap_invoice_match_results and invoices in same transaction)
     const matchResultId = randomUUID();
 
     await withTransaction(async (conn) => {
@@ -225,6 +283,14 @@ export async function processMatch(invoiceId, extractedData, entityId, fetchers 
           matchResultId, invoiceId, matchType, poId || null, matchedPoNumber || null,
           matchConfidence, variances?.amount_variance_pct || 0, JSON.stringify(variances || {}), explanation,
         ]
+      );
+
+      // Q6: persist match snapshot to invoices table
+      await connExecute(conn,
+        `UPDATE invoices
+         SET match_result = ?, match_score = ?, match_details = CAST(? AS JSON), match_computed_at = NOW()
+         WHERE id = ?`,
+        [matchResult, matchScore, matchDetails, invoiceId]
       );
     });
 
@@ -251,7 +317,7 @@ export async function processMatch(invoiceId, extractedData, entityId, fetchers 
 
     console.log(`[${AGENT_NAME}] invoice ${invoiceId}: ${decision} — ${matchType}, confidence ${matchConfidence}`);
 
-    return { matchResultId, matchType, poId, poNumber: matchedPoNumber, matchConfidence, variances, explanation };
+    return { matchResultId, matchType, matchResult, poId, poNumber: matchedPoNumber, matchConfidence, matchScore, variances, explanation };
   } catch (err) {
     const processingTimeMs = Date.now() - startTime;
     console.error(`[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`, err.message);
