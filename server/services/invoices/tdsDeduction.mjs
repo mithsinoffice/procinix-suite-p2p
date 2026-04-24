@@ -77,11 +77,22 @@ export async function computeTdsForLine({ tenantId, vendorId, entityId, invoiceD
 
   // ── 194Q buyer turnover gate ───────────────────────
   if (resolvedSection === '194Q') {
-    const turnoverRows = await db.query(
-      'SELECT prior_fy_turnover FROM tenants WHERE id = ?',
-      [tenantId]
-    );
-    const turnover = turnoverRows?.[0]?.prior_fy_turnover;
+    let turnover = null;
+    try {
+      const turnoverRows = await db.query(
+        'SELECT prior_fy_turnover FROM tenants WHERE id = ?',
+        [tenantId]
+      );
+      turnover = turnoverRows?.[0]?.prior_fy_turnover;
+    } catch (err) {
+      // Defensive: if prior_fy_turnover column doesn't exist yet (ER_BAD_FIELD_ERROR),
+      // treat as turnover unset — 194Q does not apply. Don't crash the engine.
+      if (err.code === 'ER_BAD_FIELD_ERROR') {
+        warn('[TDS Engine] tenants.prior_fy_turnover column not found — 194Q gate defaults to not-applicable. Run migration 2f.');
+      } else {
+        throw err;
+      }
+    }
     if (turnover == null || Number(turnover) <= TEN_CRORE) {
       return { ...noTds, tdsSection: '194Q' };
     }
