@@ -3052,28 +3052,46 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/vendors') {
       const body = await readJsonBody(req);
       const vendorId = randomUUID();
-      await query('INSERT INTO p2p_schema_mt.vendors (id, vendor_code, vendor_legal_name, vendor_trade_name, vendor_group_name, vendor_group_code, vendor_type, address_line, city, state, pin_code, country, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
-        [vendorId, body.vendor_code || `V-${Date.now().toString(36).toUpperCase()}`, body.vendor_legal_name, body.vendor_trade_name||null, body.vendor_group_name||null, body.vendor_group_code||null, body.vendor_type||'goods_supplier', body.address_line||null, body.city||null, body.state||null, body.pin_code||null, body.country||'India', body.status||'draft']);
+      // Drift fix 1: persist client_erp_vendor_code
+      await query(
+        'INSERT INTO p2p_schema_mt.vendors (id, vendor_code, client_erp_vendor_code, vendor_legal_name, vendor_trade_name, vendor_group_name, vendor_group_code, vendor_type, address_line, city, state, pin_code, country, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [vendorId, body.vendor_code || `V-${Date.now().toString(36).toUpperCase()}`, body.client_erp_vendor_code||null, body.vendor_legal_name, body.vendor_trade_name||null, body.vendor_group_name||null, body.vendor_group_code||null, body.vendor_type||'goods_supplier', body.address_line||null, body.city||null, body.state||null, body.pin_code||null, body.country||'India', body.status||'draft']
+      );
       for (const s of (body.spocs || [])) {
         await query('INSERT INTO p2p_schema_mt.vendor_spocs (id, vendor_id, spoc_name, designation, email, phone, is_primary, location_label, city, state, pin_code) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
           [randomUUID(), vendorId, s.spoc_name, s.designation||null, s.email, s.phone||null, s.is_primary||false, s.location_label||null, s.city||null, s.state||null, s.pin_code||null]);
       }
       if (body.pan_compliance) {
         const p = body.pan_compliance;
-        await query('INSERT INTO p2p_schema_mt.vendor_pan_compliance (id, vendor_id, pan, entity_type, pan_status, cin_number, msme_number, msme_category, section_206ab, gst_return_filed, tds_sections, rcm_applicable, lower_tds_section, lower_tds_cert_number) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-          [randomUUID(), vendorId, p.pan||null, p.entity_type||null, p.pan_status||'not_verified', p.cin_number||null, p.msme_number||null, p.msme_category||null, p.section_206ab||'not_applicable', p.gst_return_filed||'regular_filer', JSON.stringify(p.tds_sections||[]), p.rcm_applicable||'no_forward_charge', p.lower_tds_section||'not_applicable', p.lower_tds_cert_number||null]);
+        const panSrc = p.pan_verification_source || 'manual';
+        const panAt = panSrc !== 'not_verified' ? (p.pan_verified_at || new Date().toISOString()) : null;
+        await query(
+          `INSERT INTO p2p_schema_mt.vendor_pan_compliance (id, vendor_id, pan, entity_type, pan_status, cin_number, msme_number, msme_category, section_206ab, gst_return_filed, tds_sections, rcm_applicable, lower_tds_section, lower_tds_cert_number, lower_tds_cert_valid_from, lower_tds_cert_valid_to, lower_tds_cert_rate, pan_verification_source, pan_verified_at, pan_verification_reference, msme_verification_source, msme_verified_at, msme_verification_reference, cin_verification_source, cin_verified_at, cin_verification_reference, section_206ab_verification_source, section_206ab_verified_at, section_206ab_verification_reference) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [randomUUID(), vendorId, p.pan||null, p.entity_type||null, p.pan_status||'not_verified', p.cin_number||null, p.msme_number||null, p.msme_category||null, p.section_206ab||'not_applicable', p.gst_return_filed||'regular_filer', JSON.stringify(p.tds_sections||[]), p.rcm_applicable||'no_forward_charge', p.lower_tds_section||'not_applicable', p.lower_tds_cert_number||null, p.lower_tds_cert_valid_from||null, p.lower_tds_cert_valid_to||null, p.lower_tds_cert_rate!=null?Number(p.lower_tds_cert_rate):null, panSrc, panAt, p.pan_verification_reference||null, p.msme_verification_source||'not_verified', p.msme_verified_at||null, p.msme_verification_reference||null, p.cin_verification_source||'not_verified', p.cin_verified_at||null, p.cin_verification_reference||null, p.section_206ab_verification_source||'not_verified', p.section_206ab_verified_at||null, p.section_206ab_verification_reference||null]
+        );
       }
       for (const g of (body.gst_registrations || [])) {
-        await query('INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-          [randomUUID(), vendorId, g.gstin, g.gst_type, g.state||null, g.gst_state_code||null, g.city||null, g.pin_code||null, g.address||null, g.spoc_id||null, g.status||'active']);
+        const gSrc = g.verification_source || 'not_verified';
+        const gAt = (gSrc !== 'not_verified') ? (g.verified_at || new Date().toISOString()) : null;
+        await query(
+          'INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
+          [randomUUID(), vendorId, g.gstin, g.gst_type, g.state||null, g.gst_state_code||null, g.city||null, g.pin_code||null, g.address||null, g.spoc_id||null, g.status||'active', gSrc, gAt, g.verification_reference||null, g.verification_raw_response ? JSON.stringify(g.verification_raw_response) : null]
+        );
       }
       for (const b of (body.bank_accounts || [])) {
-        await query('INSERT INTO p2p_schema_mt.vendor_bank_accounts (id, vendor_id, account_number, ifsc_code, branch_name, bank_name, account_type, currency, is_primary, status) VALUES (?,?,?,?,?,?,?,?,?,?)',
-          [randomUUID(), vendorId, b.account_number, b.ifsc_code, b.branch_name||null, b.bank_name||null, b.account_type||'current', b.currency||'INR', b.is_primary||false, b.status||'active']);
+        const bSrc = b.verification_source || 'not_verified';
+        const bAt = (bSrc !== 'not_verified') ? (b.verified_at || new Date().toISOString()) : null;
+        await query(
+          'INSERT INTO p2p_schema_mt.vendor_bank_accounts (id, vendor_id, account_number, ifsc_code, branch_name, bank_name, account_type, currency, is_primary, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
+          [randomUUID(), vendorId, b.account_number, b.ifsc_code, b.branch_name||null, b.bank_name||null, b.account_type||'current', b.currency||'INR', b.is_primary||false, b.status||'active', bSrc, bAt, b.verification_reference||null, b.verification_raw_response ? JSON.stringify(b.verification_raw_response) : null]
+        );
       }
+      // Drift fix 5: CREATE path includes block_for_po/payment + drift fixes 2-3: credit_days/limit + default_tds_section_override
       for (const e of (body.entity_mappings || [])) {
-        await query('INSERT INTO p2p_schema_mt.vendor_entity_mappings (id, vendor_id, entity_id, gl_code_expense, gl_code_expense_desc, gl_code_cogs, gl_code_cogs_desc, payment_terms, cost_centre_id, profit_centre_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-          [randomUUID(), vendorId, e.entity_id, e.gl_code_expense||null, e.gl_code_expense_desc||null, e.gl_code_cogs||null, e.gl_code_cogs_desc||null, e.payment_terms||null, e.cost_centre_id||null, e.profit_centre_id||null]);
+        await query(
+          'INSERT INTO p2p_schema_mt.vendor_entity_mappings (id, vendor_id, entity_id, gl_code_expense, gl_code_expense_desc, gl_code_cogs, gl_code_cogs_desc, payment_terms, credit_days, credit_limit, cost_centre_id, profit_centre_id, block_for_po, block_for_po_reason, block_for_payment, block_for_payment_reason, default_tds_section_override) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+          [randomUUID(), vendorId, e.entity_id, e.gl_code_expense||null, e.gl_code_expense_desc||null, e.gl_code_cogs||null, e.gl_code_cogs_desc||null, e.payment_terms||null, e.credit_days!=null?Number(e.credit_days):null, e.credit_limit!=null?Number(e.credit_limit):null, e.cost_centre_id||null, e.profit_centre_id||null, e.block_for_po||false, e.block_for_po_reason||null, e.block_for_payment||false, e.block_for_payment_reason||null, e.default_tds_section_override||null]
+        );
       }
       return sendJson(res, 200, { success: true, data: { id: vendorId } });
     }
@@ -3081,13 +3099,60 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'PUT' && pathname.match(/^\/api\/vendors\/[^/]+$/)) {
       const vendorId = pathname.split('/')[3];
       const body = await readJsonBody(req);
-      await query('UPDATE p2p_schema_mt.vendors SET vendor_legal_name=?, vendor_trade_name=?, vendor_group_name=?, vendor_group_code=?, vendor_type=?, address_line=?, city=?, state=?, pin_code=?, country=?, status=? WHERE id=?',
-        [body.vendor_legal_name, body.vendor_trade_name||null, body.vendor_group_name||null, body.vendor_group_code||null, body.vendor_type, body.address_line||null, body.city||null, body.state||null, body.pin_code||null, body.country||'India', body.status||'draft', vendorId]);
-      if (body.spocs) { await query('DELETE FROM p2p_schema_mt.vendor_spocs WHERE vendor_id=?', [vendorId]); for (const s of body.spocs) { await query('INSERT INTO p2p_schema_mt.vendor_spocs (id, vendor_id, spoc_name, designation, email, phone, is_primary, location_label, city, state, pin_code) VALUES (?,?,?,?,?,?,?,?,?,?,?)', [randomUUID(), vendorId, s.spoc_name, s.designation||null, s.email, s.phone||null, s.is_primary||false, s.location_label||null, s.city||null, s.state||null, s.pin_code||null]); } }
-      if (body.pan_compliance) { await query('DELETE FROM p2p_schema_mt.vendor_pan_compliance WHERE vendor_id=?', [vendorId]); const p = body.pan_compliance; await query('INSERT INTO p2p_schema_mt.vendor_pan_compliance (id, vendor_id, pan, entity_type, pan_status, cin_number, msme_number, msme_category, section_206ab, gst_return_filed, tds_sections, rcm_applicable, lower_tds_section, lower_tds_cert_number) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [randomUUID(), vendorId, p.pan||null, p.entity_type||null, p.pan_status||'not_verified', p.cin_number||null, p.msme_number||null, p.msme_category||null, p.section_206ab||'not_applicable', p.gst_return_filed||'regular_filer', JSON.stringify(p.tds_sections||[]), p.rcm_applicable||'no_forward_charge', p.lower_tds_section||'not_applicable', p.lower_tds_cert_number||null]); }
-      if (body.gst_registrations) { await query('DELETE FROM p2p_schema_mt.vendor_gst_registrations WHERE vendor_id=?', [vendorId]); for (const g of body.gst_registrations) { await query('INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)', [randomUUID(), vendorId, g.gstin, g.gst_type, g.state||null, g.gst_state_code||null, g.city||null, g.pin_code||null, g.address||null, g.spoc_id||null, g.status||'active']); } }
-      if (body.bank_accounts) { await query('DELETE FROM p2p_schema_mt.vendor_bank_accounts WHERE vendor_id=?', [vendorId]); for (const b of body.bank_accounts) { await query('INSERT INTO p2p_schema_mt.vendor_bank_accounts (id, vendor_id, account_number, ifsc_code, branch_name, bank_name, account_type, currency, is_primary, status) VALUES (?,?,?,?,?,?,?,?,?,?)', [randomUUID(), vendorId, b.account_number, b.ifsc_code, b.branch_name||null, b.bank_name||null, b.account_type||'current', b.currency||'INR', b.is_primary||false, b.status||'active']); } }
-      if (body.entity_mappings) { await query('DELETE FROM p2p_schema_mt.vendor_entity_mappings WHERE vendor_id=?', [vendorId]); for (const e of body.entity_mappings) { await query('INSERT INTO p2p_schema_mt.vendor_entity_mappings (id, vendor_id, entity_id, gl_code_expense, gl_code_expense_desc, gl_code_cogs, gl_code_cogs_desc, payment_terms, cost_centre_id, profit_centre_id, block_for_po, block_for_po_reason, block_for_payment, block_for_payment_reason) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [randomUUID(), vendorId, e.entity_id, e.gl_code_expense||null, e.gl_code_expense_desc||null, e.gl_code_cogs||null, e.gl_code_cogs_desc||null, e.payment_terms||null, e.cost_centre_id||null, e.profit_centre_id||null, e.block_for_po||false, e.block_for_po_reason||null, e.block_for_payment||false, e.block_for_payment_reason||null]); } }
+      // Drift fix 1: persist client_erp_vendor_code
+      await query(
+        'UPDATE p2p_schema_mt.vendors SET vendor_legal_name=?, vendor_trade_name=?, vendor_group_name=?, vendor_group_code=?, vendor_type=?, address_line=?, city=?, state=?, pin_code=?, country=?, status=?, client_erp_vendor_code=? WHERE id=?',
+        [body.vendor_legal_name, body.vendor_trade_name||null, body.vendor_group_name||null, body.vendor_group_code||null, body.vendor_type, body.address_line||null, body.city||null, body.state||null, body.pin_code||null, body.country||'India', body.status||'draft', body.client_erp_vendor_code||null, vendorId]
+      );
+      if (body.spocs) {
+        await query('DELETE FROM p2p_schema_mt.vendor_spocs WHERE vendor_id=?', [vendorId]);
+        for (const s of body.spocs) {
+          await query('INSERT INTO p2p_schema_mt.vendor_spocs (id, vendor_id, spoc_name, designation, email, phone, is_primary, location_label, city, state, pin_code) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+            [randomUUID(), vendorId, s.spoc_name, s.designation||null, s.email, s.phone||null, s.is_primary||false, s.location_label||null, s.city||null, s.state||null, s.pin_code||null]);
+        }
+      }
+      if (body.pan_compliance) {
+        await query('DELETE FROM p2p_schema_mt.vendor_pan_compliance WHERE vendor_id=?', [vendorId]);
+        const p = body.pan_compliance;
+        const panSrc = p.pan_verification_source || 'manual';
+        const panAt = panSrc !== 'not_verified' ? (p.pan_verified_at || new Date().toISOString()) : null;
+        await query(
+          `INSERT INTO p2p_schema_mt.vendor_pan_compliance (id, vendor_id, pan, entity_type, pan_status, cin_number, msme_number, msme_category, section_206ab, gst_return_filed, tds_sections, rcm_applicable, lower_tds_section, lower_tds_cert_number, lower_tds_cert_valid_from, lower_tds_cert_valid_to, lower_tds_cert_rate, pan_verification_source, pan_verified_at, pan_verification_reference, msme_verification_source, msme_verified_at, msme_verification_reference, cin_verification_source, cin_verified_at, cin_verification_reference, section_206ab_verification_source, section_206ab_verified_at, section_206ab_verification_reference) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [randomUUID(), vendorId, p.pan||null, p.entity_type||null, p.pan_status||'not_verified', p.cin_number||null, p.msme_number||null, p.msme_category||null, p.section_206ab||'not_applicable', p.gst_return_filed||'regular_filer', JSON.stringify(p.tds_sections||[]), p.rcm_applicable||'no_forward_charge', p.lower_tds_section||'not_applicable', p.lower_tds_cert_number||null, p.lower_tds_cert_valid_from||null, p.lower_tds_cert_valid_to||null, p.lower_tds_cert_rate!=null?Number(p.lower_tds_cert_rate):null, panSrc, panAt, p.pan_verification_reference||null, p.msme_verification_source||'not_verified', p.msme_verified_at||null, p.msme_verification_reference||null, p.cin_verification_source||'not_verified', p.cin_verified_at||null, p.cin_verification_reference||null, p.section_206ab_verification_source||'not_verified', p.section_206ab_verified_at||null, p.section_206ab_verification_reference||null]
+        );
+      }
+      if (body.gst_registrations) {
+        await query('DELETE FROM p2p_schema_mt.vendor_gst_registrations WHERE vendor_id=?', [vendorId]);
+        for (const g of body.gst_registrations) {
+          const gSrc = g.verification_source || 'not_verified';
+          const gAt = (gSrc !== 'not_verified') ? (g.verified_at || new Date().toISOString()) : null;
+          await query(
+            'INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
+            [randomUUID(), vendorId, g.gstin, g.gst_type, g.state||null, g.gst_state_code||null, g.city||null, g.pin_code||null, g.address||null, g.spoc_id||null, g.status||'active', gSrc, gAt, g.verification_reference||null, g.verification_raw_response ? JSON.stringify(g.verification_raw_response) : null]
+          );
+        }
+      }
+      if (body.bank_accounts) {
+        await query('DELETE FROM p2p_schema_mt.vendor_bank_accounts WHERE vendor_id=?', [vendorId]);
+        for (const b of body.bank_accounts) {
+          const bSrc = b.verification_source || 'not_verified';
+          const bAt = (bSrc !== 'not_verified') ? (b.verified_at || new Date().toISOString()) : null;
+          await query(
+            'INSERT INTO p2p_schema_mt.vendor_bank_accounts (id, vendor_id, account_number, ifsc_code, branch_name, bank_name, account_type, currency, is_primary, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
+            [randomUUID(), vendorId, b.account_number, b.ifsc_code, b.branch_name||null, b.bank_name||null, b.account_type||'current', b.currency||'INR', b.is_primary||false, b.status||'active', bSrc, bAt, b.verification_reference||null, b.verification_raw_response ? JSON.stringify(b.verification_raw_response) : null]
+          );
+        }
+      }
+      if (body.entity_mappings) {
+        await query('DELETE FROM p2p_schema_mt.vendor_entity_mappings WHERE vendor_id=?', [vendorId]);
+        // Drift fixes 2-3: credit_days/limit + drift fix 5: block_for_* on both paths + default_tds_section_override
+        for (const e of body.entity_mappings) {
+          await query(
+            'INSERT INTO p2p_schema_mt.vendor_entity_mappings (id, vendor_id, entity_id, gl_code_expense, gl_code_expense_desc, gl_code_cogs, gl_code_cogs_desc, payment_terms, credit_days, credit_limit, cost_centre_id, profit_centre_id, block_for_po, block_for_po_reason, block_for_payment, block_for_payment_reason, default_tds_section_override) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            [randomUUID(), vendorId, e.entity_id, e.gl_code_expense||null, e.gl_code_expense_desc||null, e.gl_code_cogs||null, e.gl_code_cogs_desc||null, e.payment_terms||null, e.credit_days!=null?Number(e.credit_days):null, e.credit_limit!=null?Number(e.credit_limit):null, e.cost_centre_id||null, e.profit_centre_id||null, e.block_for_po||false, e.block_for_po_reason||null, e.block_for_payment||false, e.block_for_payment_reason||null, e.default_tds_section_override||null]
+          );
+        }
+      }
       return sendJson(res, 200, { success: true });
     }
 
