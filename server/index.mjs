@@ -2082,6 +2082,11 @@ const server = http.createServer(async (req, res) => {
           ? invoicePatch.bank_details
           : (typeof existing.bank_details === 'string' ? JSON.parse(existing.bank_details) : (existing.bank_details || null));
 
+      const patchStatus = invoicePatch.status ?? 'draft';
+      const resolvedLifecycle = invoicePatch.lifecycle_state
+        || mapLegacyToLifecycle(patchStatus, invoicePatch.processing_status)
+        || null;
+
       await query(
         `
           UPDATE invoices
@@ -2106,7 +2111,7 @@ const server = http.createServer(async (req, res) => {
             payment_terms = ?,
             bank_details = CAST(? AS JSON),
             notes = ?,
-            status = ?,
+            status = ?${resolvedLifecycle ? ', lifecycle_state = ?' : ''},
             metadata = CAST(? AS JSON),
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
@@ -2132,7 +2137,8 @@ const server = http.createServer(async (req, res) => {
           invoicePatch.payment_terms ?? null,
           JSON.stringify(nextBankDetails),
           invoicePatch.notes ?? null,
-          invoicePatch.status ?? 'draft',
+          patchStatus,
+          ...(resolvedLifecycle ? [resolvedLifecycle] : []),
           JSON.stringify(nextMetadata),
           invoiceId,
         ]
