@@ -48,6 +48,7 @@ import { handleExceptions } from './services/invoiceIngestion/exceptionHandler.m
 import { triggerWorkflow } from './services/invoiceIngestion/workflowTrigger.mjs';
 import { mapLegacyToLifecycle, mapProcessingStatusToLifecycle, LIFECYCLE_STATES } from './services/invoices/lifecycleMapping.mjs';
 import { assertValidTransition } from './services/invoices/lifecycleTransitions.mjs';
+import { processMatch } from './services/agents/matchAgent.mjs';
 import { processInvoiceWithAgents } from './services/agents/orchestrator.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import { verifyPAN, verifyPANComprehensive, verifyGSTIN, verifyBankAccount, verifyMSME } from './services/kyc/panVerification.mjs';
@@ -2023,6 +2024,225 @@ const server = http.createServer(async (req, res) => {
         [invoiceId]
       );
       return sendJson(res, 200, { success: true, data: logs });
+    }
+
+    // ── Lifecycle transition endpoints ────────────────────
+    // Each: read current state → guard → UPDATE in transaction → audit log → return
+
+    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/verify')) {
+      const invoiceId = pathname.split('/')[3];
+      const [invoice] = await query('SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?', [invoiceId]);
+      if (!invoice) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+
+      try { assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.UNDER_VERIFICATION); }
+      catch (e) { return sendJson(res, 422, { success: false, error: e.message }); }
+
+      const body = await readJsonBody(req).catch(() => ({}));
+      const actor = body.actor || req.headers['x-user-id'] || '1';
+
+      await withTransaction(async (conn) => {
+        await connExecute(conn,
+          "UPDATE invoices SET lifecycle_state = ?, status = 'pending_approval', updated_at = NOW() WHERE id = ?",
+          [LIFECYCLE_STATES.UNDER_VERIFICATION, invoiceId]
+        );
+        await connExecute(conn,
+          'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+          [randomUUID(), invoice.tenant_id, invoiceId, 'verify', invoice.lifecycle_state, LIFECYCLE_STATES.UNDER_VERIFICATION, actor, 'user']
+        );
+      });
+
+      const [updated] = await query('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+      return sendJson(res, 200, { success: true, data: updated });
+    }
+
+    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/exception')) {
+      const invoiceId = pathname.split('/')[3];
+      const [invoice] = await query('SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?', [invoiceId]);
+      if (!invoice) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+
+      try { assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.EXCEPTION_HOLD); }
+      catch (e) { return sendJson(res, 422, { success: false, error: e.message }); }
+
+      const body = await readJsonBody(req).catch(() => ({}));
+      if (!body.reason) return sendJson(res, 400, { success: false, error: 'reason is required' });
+      const actor = body.actor || req.headers['x-user-id'] || '1';
+
+      await withTransaction(async (conn) => {
+        await connExecute(conn,
+          "UPDATE invoices SET lifecycle_state = ?, status = 'draft', processing_status = 'exception', updated_at = NOW() WHERE id = ?",
+          [LIFECYCLE_STATES.EXCEPTION_HOLD, invoiceId]
+        );
+        await connExecute(conn,
+          'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, reason_code, reason_note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+          [randomUUID(), invoice.tenant_id, invoiceId, 'exception_raised', invoice.lifecycle_state, LIFECYCLE_STATES.EXCEPTION_HOLD, actor, 'user', body.reasonCode || null, body.reason]
+        );
+      });
+
+      const [updated] = await query('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+      return sendJson(res, 200, { success: true, data: updated });
+    }
+
+    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/resume')) {
+      const invoiceId = pathname.split('/')[3];
+      const [invoice] = await query('SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?', [invoiceId]);
+      if (!invoice) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+
+      try { assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.UNDER_VERIFICATION); }
+      catch (e) { return sendJson(res, 422, { success: false, error: e.message }); }
+
+      const body = await readJsonBody(req).catch(() => ({}));
+      const actor = body.actor || req.headers['x-user-id'] || '1';
+
+      await withTransaction(async (conn) => {
+        await connExecute(conn,
+          "UPDATE invoices SET lifecycle_state = ?, status = 'pending_approval', processing_status = NULL, updated_at = NOW() WHERE id = ?",
+          [LIFECYCLE_STATES.UNDER_VERIFICATION, invoiceId]
+        );
+        await connExecute(conn,
+          'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, reason_note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+          [randomUUID(), invoice.tenant_id, invoiceId, 'exception_resolved', invoice.lifecycle_state, LIFECYCLE_STATES.UNDER_VERIFICATION, actor, 'user', body.notes || null]
+        );
+      });
+
+      const [updated] = await query('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+      return sendJson(res, 200, { success: true, data: updated });
+    }
+
+    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/reject')) {
+      const invoiceId = pathname.split('/')[3];
+      const [invoice] = await query('SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?', [invoiceId]);
+      if (!invoice) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+
+      try { assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.REJECTED); }
+      catch (e) { return sendJson(res, 422, { success: false, error: e.message }); }
+
+      const body = await readJsonBody(req).catch(() => ({}));
+      if (!body.reasonCode) return sendJson(res, 400, { success: false, error: 'reasonCode is required' });
+      const actor = body.actor || req.headers['x-user-id'] || '1';
+
+      // Validate reasonCode against tenant's rejection reasons
+      const [validReason] = await query(
+        'SELECT reason_code FROM invoice_rejection_reasons WHERE tenant_id = ? AND reason_code = ? AND is_active = 1',
+        [invoice.tenant_id, body.reasonCode]
+      );
+      if (!validReason) return sendJson(res, 400, { success: false, error: `Invalid rejection reason code: ${body.reasonCode}` });
+
+      await withTransaction(async (conn) => {
+        await connExecute(conn,
+          "UPDATE invoices SET lifecycle_state = ?, status = 'Rejected', processing_status = 'rejected', rejection_reason_code = ?, rejection_reason_note = ?, updated_at = NOW() WHERE id = ?",
+          [LIFECYCLE_STATES.REJECTED, body.reasonCode, body.reasonNote || null, invoiceId]
+        );
+        await connExecute(conn,
+          'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, reason_code, reason_note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+          [randomUUID(), invoice.tenant_id, invoiceId, 'reject', invoice.lifecycle_state, LIFECYCLE_STATES.REJECTED, actor, 'user', body.reasonCode, body.reasonNote || null]
+        );
+      });
+
+      const [updated] = await query('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+      return sendJson(res, 200, { success: true, data: updated });
+    }
+
+    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/resubmit')) {
+      const invoiceId = pathname.split('/')[3];
+      const [parent] = await query('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+      if (!parent) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+
+      if (parent.lifecycle_state !== LIFECYCLE_STATES.REJECTED) {
+        return sendJson(res, 422, { success: false, error: `Cannot resubmit: invoice is in state '${parent.lifecycle_state}', must be 'Rejected'` });
+      }
+
+      const body = await readJsonBody(req).catch(() => ({}));
+      const actor = body.actor || req.headers['x-user-id'] || '1';
+
+      const newId = randomUUID();
+      const newLifecycle = parent.metadata ? LIFECYCLE_STATES.OCR_EXTRACTED : LIFECYCLE_STATES.INGESTED;
+      const newCount = (Number(parent.resubmission_count) || 0) + 1;
+
+      await withTransaction(async (conn) => {
+        // Clone invoice row (OCR data, vendor, PO, entity, attachment)
+        // Does NOT clone: approval history, audit log, match result, duplicate check, voucher, rejection, TDS
+        await connExecute(conn,
+          `INSERT INTO invoices (id, invoice_number, invoice_date, due_date,
+            vendor_name, vendor_gstin, vendor_pan, vendor_email,
+            bill_to_entity, bill_to_gstin,
+            currency, subtotal, tax_amount, total_amount,
+            po_number, po_id, payment_terms, notes, metadata,
+            attachment_path, source, document_id,
+            status, processing_status, lifecycle_state,
+            vendor_id, vendor_id_match_confidence,
+            tenant_id, entity_id,
+            source_invoice_id, resubmission_count,
+            financial_year,
+            created_at, updated_at)
+          VALUES (?, ?, ?, ?,
+            ?, ?, ?, ?,
+            ?, ?,
+            ?, ?, ?, ?,
+            ?, ?, ?, ?, CAST(? AS JSON),
+            ?, ?, ?,
+            'draft', NULL, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?,
+            ?,
+            NOW(), NOW())`,
+          [newId, parent.invoice_number, parent.invoice_date, parent.due_date,
+            parent.vendor_name, parent.vendor_gstin, parent.vendor_pan, parent.vendor_email,
+            parent.bill_to_entity, parent.bill_to_gstin,
+            parent.currency, parent.subtotal, parent.tax_amount, parent.total_amount,
+            parent.po_number, parent.po_id, parent.payment_terms, parent.notes,
+            typeof parent.metadata === 'string' ? parent.metadata : JSON.stringify(parent.metadata || null),
+            parent.attachment_path, parent.source, parent.document_id,
+            newLifecycle,
+            parent.vendor_id, parent.vendor_id_match_confidence,
+            parent.tenant_id, parent.entity_id,
+            invoiceId, newCount,
+            parent.financial_year]
+        );
+
+        // Clone line items
+        const parentLines = await connExecute(conn,
+          'SELECT * FROM invoice_line_items WHERE invoice_id = ?',
+          [invoiceId]
+        );
+        for (const line of (parentLines[0] || parentLines || [])) {
+          await connExecute(conn,
+            `INSERT INTO invoice_line_items (id, invoice_id, line_number, description, hsn_sac, quantity, unit_price, amount, gst_rate, taxable_amount, cgst_amount, sgst_amount, igst_amount, utgst_amount, cess_rate, cess_amount, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [randomUUID(), newId, line.line_number, line.description, line.hsn_sac, line.quantity, line.unit_price, line.amount, line.gst_rate, line.taxable_amount, line.cgst_amount || null, line.sgst_amount || null, line.igst_amount || null, line.utgst_amount || null, line.cess_rate || null, line.cess_amount || null]
+          );
+        }
+
+        // Audit log on parent (resubmitted)
+        await connExecute(conn,
+          'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, reason_note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+          [randomUUID(), parent.tenant_id, invoiceId, 'resubmitted', LIFECYCLE_STATES.REJECTED, LIFECYCLE_STATES.REJECTED, actor, 'user', `Resubmitted as ${newId}`]
+        );
+
+        // Audit log on new invoice (created via resubmission)
+        await connExecute(conn,
+          'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, reason_note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+          [randomUUID(), parent.tenant_id, newId, 'resubmission_created', null, newLifecycle, actor, 'user', `Resubmitted from ${invoiceId} (submission #${newCount})`]
+        );
+      });
+
+      const [newInvoice] = await query('SELECT * FROM invoices WHERE id = ?', [newId]);
+      return sendJson(res, 200, { success: true, data: newInvoice });
+    }
+
+    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/match')) {
+      const invoiceId = pathname.split('/')[3];
+      const [invoice] = await query('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
+      if (!invoice) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+
+      const result = await processMatch(invoiceId, {
+        po_number: invoice.po_number,
+        vendor_name: invoice.vendor_name,
+        total_amount: invoice.total_amount,
+        invoice_date: invoice.invoice_date,
+      }, invoice.entity_id);
+
+      return sendJson(res, 200, { success: true, data: { matchResult: result.matchResult, matchScore: result.matchScore, matchDetails: result.variances, explanation: result.explanation } });
     }
 
     if (req.method === 'GET' && pathname.startsWith('/api/invoices/') && !pathname.includes('ingestion')) {
