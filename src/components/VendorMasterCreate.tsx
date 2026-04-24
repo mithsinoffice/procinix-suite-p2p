@@ -851,13 +851,8 @@ export function VendorMasterCreate() {
         flat
         style={{ borderTop: 'none', paddingTop: 24 }}
       >
-        <PxFormField label="Vendor Code" hint="System-generated and locked">
-          <input
-            type="text"
-            value={vendor.vendor_code || 'Will be auto-generated on save'}
-            readOnly
-            style={{ ...inputStyle, backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', cursor: 'not-allowed' }}
-          />
+        <PxFormField label="Vendor Code" hint="Leave empty to auto-generate on save">
+          {renderInput('vendor_code', 'e.g. V-MHST-0042 (auto-generated if empty)', vendor.vendor_code, updateVendor)}
         </PxFormField>
         <PxFormField label="Client ERP Vendor Code" hint="Update after ERP integration">
           {renderInput('client_erp_vendor_code', 'ERP vendor code from client system', vendor.client_erp_vendor_code, updateVendor)}

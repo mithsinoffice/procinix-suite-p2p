@@ -2,11 +2,14 @@ import { Plus, Trash2, Edit, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MasterListToolbar } from './ui/MasterListToolbar';
 import { MasterPageShell } from './ui/MasterPageShell';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
+import { mysqlApiBaseUrl } from '../lib/mysql/client';
 import type { EntityScopeMapping } from '../lib/masters/entityMapping';
+
+const VENDOR_API = (mysqlApiBaseUrl?.replace(/\/api$/, '') || '') + '/api/vendors';
 
 /* ───────────────────────── Types ───────────────────────── */
 
@@ -136,7 +139,33 @@ function isLikelyMockVendor(vendor: Vendor): boolean {
 
 export function VendorMaster() {
   const navigate = useNavigate();
-  const [vendors, setVendors] = useIncrementalMasterRecords<any>('vendor_master', []);
+  const [masterVendors, setMasterVendors] = useIncrementalMasterRecords<any>('vendor_master', []);
+  const [apiVendors, setApiVendors] = useState<any[]>([]);
+
+  // Fetch vendors from live API; fall back to master records cache
+  const fetchApiVendors = useCallback(async () => {
+    try {
+      const res = await fetch(VENDOR_API);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setApiVendors(data.data);
+      }
+    } catch {
+      // API unavailable — apiVendors stays empty, master cache used as fallback
+    }
+  }, []);
+
+  useEffect(() => { fetchApiVendors(); }, [fetchApiVendors]);
+
+  // Merge: API vendors are primary source, master records fill any gaps (by id)
+  const vendors = useMemo(() => {
+    if (apiVendors.length === 0) return masterVendors;
+    const apiIds = new Set(apiVendors.map((v: any) => v.id));
+    const masterOnly = masterVendors.filter((v: any) => !apiIds.has(v.id));
+    return [...apiVendors, ...masterOnly];
+  }, [apiVendors, masterVendors]);
+
+  const setVendors = setMasterVendors;
 
   /* ── list state ── */
   const [showApprovalModal, setShowApprovalModal] = useState(false);
