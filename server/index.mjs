@@ -2430,31 +2430,123 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: { ...updated, line_items: updatedLines } });
     }
 
+    // ── Enhanced invoice listing ─────────────────────────
+    // GET /api/invoices — WS-1a columns + payment progress + filters + pagination
+    //
+    // Smoke test:
+    //   curl 'http://localhost:3000/api/invoices?lifecycle_state=Under+Verification,Exception+Hold&page=1&limit=10&sort_by=last_action&sort_dir=desc'
+    //   Expected shape per row: { id, invoice_number, ..., lifecycle_state, financial_year,
+    //     resubmission_count, is_resubmission, vendor_id, last_action, last_action_at,
+    //     match_result, match_score, match_computed_at, duplicate_decision,
+    //     supplier_gstin, place_of_supply, payment_total, payment_count,
+    //     payment_outstanding, payment_progress_pct }
     if (req.method === 'GET' && pathname === '/api/invoices') {
       const source = url.searchParams.get('source');
       const status = url.searchParams.get('status');
       const vendorId = url.searchParams.get('vendorId');
       const invoiceNo = url.searchParams.get('invoiceNo');
-      let sql = 'SELECT id, invoice_number, invoice_date, due_date, vendor_name, vendor_gstin, currency, subtotal, tax_amount, total_amount, po_number, po_id, status, source, ingestion_log_id, attachment_path, lane, created_at FROM invoices';
+      const lifecycleParam = url.searchParams.get('lifecycle_state');
+      const financialYear = url.searchParams.get('financial_year');
+      const isResubmission = url.searchParams.get('is_resubmission');
+      const duplicateDecision = url.searchParams.get('duplicate_decision');
+      const hasException = url.searchParams.get('has_exception');
+
+      // Pagination
+      const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 100, 1), 500);
+      const page = Math.max(Number(url.searchParams.get('page')) || 1, 1);
+      const offset = (page - 1) * limit;
+
+      // Sorting
+      const VALID_SORT_COLS = { last_action: 'i.last_action_at', created_at: 'i.created_at', invoice_date: 'i.invoice_date', total_amount: 'i.total_amount' };
+      const sortBy = VALID_SORT_COLS[url.searchParams.get('sort_by')] || null;
+      const sortDir = url.searchParams.get('sort_dir')?.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+      const orderClause = sortBy
+        ? `ORDER BY ${sortBy} ${sortDir}`
+        : 'ORDER BY COALESCE(i.last_action_at, i.created_at) DESC';
+
+      let sql = `SELECT i.id, i.invoice_number, i.invoice_date, i.due_date,
+          i.vendor_name, i.vendor_gstin, i.currency, i.subtotal, i.tax_amount, i.total_amount,
+          i.po_number, i.po_id, i.status, i.source, i.ingestion_log_id, i.attachment_path, i.lane,
+          i.lifecycle_state, i.financial_year,
+          i.resubmission_count, i.source_invoice_id,
+          i.vendor_id,
+          i.last_action, i.last_action_at,
+          i.match_result, i.match_score, i.match_computed_at,
+          i.duplicate_decision,
+          i.supplier_gstin, i.place_of_supply,
+          i.created_at,
+          COALESCE(pay.payment_total, 0) AS payment_total,
+          COALESCE(pay.payment_count, 0) AS payment_count
+        FROM invoices i
+        LEFT JOIN (
+          SELECT invoice_id,
+                 SUM(amount) AS payment_total,
+                 COUNT(id) AS payment_count
+          FROM payments WHERE status = 'confirmed' GROUP BY invoice_id
+        ) pay ON pay.invoice_id = i.id`;
+
       const conditions = [];
       const params = [];
-      if (source) { conditions.push('source = ?'); params.push(source); }
+
+      if (source) { conditions.push('i.source = ?'); params.push(source); }
+
+      // Legacy status filter with dual-read (backward compatible)
       if (status) {
         const mappedLifecycle = mapLegacyToLifecycle(status);
         if (mappedLifecycle) {
-          conditions.push('(status = ? OR lifecycle_state = ?)');
+          conditions.push('(i.status = ? OR i.lifecycle_state = ?)');
           params.push(status, mappedLifecycle);
         } else {
-          conditions.push('status = ?');
+          conditions.push('i.status = ?');
           params.push(status);
         }
       }
-      if (vendorId) { conditions.push('vendor_id = ?'); params.push(vendorId); }
-      if (invoiceNo) { conditions.push('invoice_number = ?'); params.push(invoiceNo); }
+
+      if (vendorId) { conditions.push('i.vendor_id = ?'); params.push(vendorId); }
+      if (invoiceNo) { conditions.push('i.invoice_number = ?'); params.push(invoiceNo); }
+
+      // New WS-1a filters
+      if (lifecycleParam) {
+        const states = lifecycleParam.split(',').map((s) => s.trim()).filter(Boolean);
+        if (states.length > 0) {
+          conditions.push(`i.lifecycle_state IN (${states.map(() => '?').join(',')})`);
+          params.push(...states);
+        }
+      }
+
+      if (financialYear) { conditions.push('i.financial_year = ?'); params.push(financialYear); }
+
+      if (isResubmission === 'true') { conditions.push('i.resubmission_count > 0'); }
+      else if (isResubmission === 'false') { conditions.push('i.resubmission_count = 0'); }
+
+      if (duplicateDecision) {
+        const decisions = duplicateDecision.split(',').map((s) => s.trim()).filter(Boolean);
+        if (decisions.length > 0) {
+          conditions.push(`i.duplicate_decision IN (${decisions.map(() => '?').join(',')})`);
+          params.push(...decisions);
+        }
+      }
+
+      if (hasException === 'true') { conditions.push("i.lifecycle_state = 'Exception Hold'"); }
+      else if (hasException === 'false') { conditions.push("i.lifecycle_state != 'Exception Hold'"); }
+
       if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
-      sql += ' ORDER BY created_at DESC LIMIT 100';
+      sql += ` ${orderClause} LIMIT ? OFFSET ?`;
+      params.push(limit, offset);
+
       const rows = await query(sql, params);
-      return sendJson(res, 200, { success: true, data: rows });
+
+      // Enrich with computed fields
+      const data = rows.map((row) => ({
+        ...row,
+        is_resubmission: (Number(row.resubmission_count) || 0) > 0,
+        payment_outstanding: (Number(row.total_amount) || 0) - (Number(row.payment_total) || 0),
+        payment_progress_pct: row.total_amount > 0
+          ? parseFloat(((Number(row.payment_total) || 0) / Number(row.total_amount) * 100).toFixed(2))
+          : 0,
+      }));
+
+      return sendJson(res, 200, { success: true, data, page, limit });
     }
 
     if (req.method === 'GET' && pathname === '/api/ap/vendor-learning/resolve') {
