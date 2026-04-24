@@ -229,6 +229,7 @@ export async function processRouting(invoiceId, agentResults) {
       );
 
       // 2. Update invoices table
+      // NOTE: transition guard bypassed — automated pipeline flow, not user-facing
       const mappedLifecycle = mapProcessingStatusToLifecycle(processingStatus);
       await connExecute(conn,
         `UPDATE invoices

@@ -47,6 +47,7 @@ import { createInvoiceFromExtraction } from './services/invoiceIngestion/invoice
 import { handleExceptions } from './services/invoiceIngestion/exceptionHandler.mjs';
 import { triggerWorkflow } from './services/invoiceIngestion/workflowTrigger.mjs';
 import { mapLegacyToLifecycle, mapProcessingStatusToLifecycle, LIFECYCLE_STATES } from './services/invoices/lifecycleMapping.mjs';
+import { assertValidTransition } from './services/invoices/lifecycleTransitions.mjs';
 import { processInvoiceWithAgents } from './services/agents/orchestrator.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import { verifyPAN, verifyPANComprehensive, verifyGSTIN, verifyBankAccount, verifyMSME } from './services/kyc/panVerification.mjs';
@@ -2087,6 +2088,14 @@ const server = http.createServer(async (req, res) => {
         || mapLegacyToLifecycle(patchStatus, invoicePatch.processing_status)
         || null;
 
+      if (invoicePatch.lifecycle_state && resolvedLifecycle) {
+        try {
+          assertValidTransition(existing.lifecycle_state ?? null, resolvedLifecycle);
+        } catch (e) {
+          return sendJson(res, 422, { success: false, error: e.message });
+        }
+      }
+
       await query(
         `
           UPDATE invoices
@@ -2514,6 +2523,7 @@ const server = http.createServer(async (req, res) => {
         const lane = score >= 80 ? 'green' : score >= 50 ? 'amber' : 'red';
 
         // Update invoice
+        // NOTE: transition guard bypassed — automated pipeline flow, not user-facing
         const newStatus = lane === 'green' ? 'pending_approval' : 'draft';
         const newLifecycle = mapLegacyToLifecycle(newStatus);
         await query('UPDATE p2p_schema_mt.invoices SET readiness_score = ?, lane = ?, status = ?' + (newLifecycle ? ', lifecycle_state = ?' : '') + ' WHERE id = ?',
@@ -2837,6 +2847,12 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/approve')) {
       const invoiceId = pathname.split('/')[4];
+      const [currentInv] = await query('SELECT lifecycle_state FROM invoices WHERE id = ?', [invoiceId]);
+      try {
+        assertValidTransition(currentInv?.lifecycle_state ?? null, LIFECYCLE_STATES.PROCESSED);
+      } catch (e) {
+        return sendJson(res, 422, { success: false, error: e.message });
+      }
       await query('UPDATE invoices SET status = ?, processing_status = ?, lifecycle_state = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?', ['Approved', 'posted', LIFECYCLE_STATES.PROCESSED, invoiceId]);
       await query(
         'INSERT INTO ap_invoice_reviewer_actions (id, invoice_id, action_type, actor, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
@@ -2847,6 +2863,12 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/reject')) {
       const invoiceId = pathname.split('/')[4];
+      const [currentInv] = await query('SELECT lifecycle_state FROM invoices WHERE id = ?', [invoiceId]);
+      try {
+        assertValidTransition(currentInv?.lifecycle_state ?? null, LIFECYCLE_STATES.REJECTED);
+      } catch (e) {
+        return sendJson(res, 422, { success: false, error: e.message });
+      }
       await query('UPDATE invoices SET status = ?, processing_status = ?, lifecycle_state = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?', ['Rejected', 'rejected', LIFECYCLE_STATES.REJECTED, invoiceId]);
       await query(
         'INSERT INTO ap_invoice_reviewer_actions (id, invoice_id, action_type, actor, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',

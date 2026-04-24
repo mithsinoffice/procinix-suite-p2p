@@ -32,6 +32,7 @@ async function logExplainability(invoiceId, stage, explanation, data) {
   } catch { /* non-critical */ }
 }
 
+// NOTE: transition guard bypassed — automated pipeline flow, not user-facing
 async function updateInvoiceStatus(invoiceId, status) {
   try {
     const mappedLifecycle = mapProcessingStatusToLifecycle(status);
@@ -154,6 +155,7 @@ export async function processInvoiceWithAgents(email) {
 
       // ── STEP 2: Extraction Agent ────────────────────────
       // Create a placeholder invoice record first
+      // NOTE: transition guard bypassed — automated pipeline flow, not user-facing
       const invoiceId = randomUUID();
       pipelineResult.invoiceId = invoiceId;
 
@@ -194,6 +196,7 @@ export async function processInvoiceWithAgents(email) {
       }
 
       // Update invoice with extracted data
+      // NOTE: transition guard bypassed — automated pipeline flow, not user-facing
       await query(
         `UPDATE invoices SET
           invoice_number = ?, invoice_date = ?, due_date = ?,
