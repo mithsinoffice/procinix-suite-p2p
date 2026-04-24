@@ -4,7 +4,7 @@ import { query, withTransaction, connExecute } from '../../mysql.mjs';
 const AGENT_NAME = 'MatchAgent';
 const AGENT_VERSION = '1.0.0';
 
-// ── Match helpers ─────────────────────────────────────
+// ── Match helpers (module-private, wrapped by DEFAULT_FETCHERS) ──
 
 async function matchByPOExact(poNumber, entityId) {
   if (!poNumber) return null;
@@ -71,6 +71,31 @@ async function checkRecurringPattern(vendorName, totalAmount) {
   return rows.length >= 3 ? rows : null;
 }
 
+// ── DEFAULT_FETCHERS ─────────────────────────────────
+// Wraps the existing module-private helpers. WS-1b swaps getGRNsForPO
+// to a relational table read; other fetchers swappable for testing.
+
+export const DEFAULT_FETCHERS = Object.freeze({
+  getPOExact: (poNumber, entityId) => matchByPOExact(poNumber, entityId),
+  getPOFuzzy: (vendorName, amount, date, entityId) => matchByFuzzyPO(vendorName, amount, date, entityId),
+  getRecurringInvoices: (vendorName, amount) => checkRecurringPattern(vendorName, amount),
+  getGRNsForPO: (_poId) => Promise.resolve([]),  // WS-1a stub; WS-1b swaps in relational read
+  getTolerances: (_tenantId, _vendorId) => Promise.resolve({
+    twoWayAmountPct: 0.05,
+    fuzzyAmountLow: 0.95,
+    fuzzyAmountHigh: 1.05,
+    fuzzyDateDays: 90,
+    recurringAmountLow: 0.90,
+    recurringAmountHigh: 1.10,
+    recurringWindowMonths: 6,
+  }),
+  getSnapshotValues: (_poId, _grnIds) => Promise.resolve({
+    po: null,
+    grns: [],
+    snapshotAt: new Date().toISOString(),
+  }),
+});
+
 function computeVariances(extractedData, po) {
   const variances = {};
 
@@ -88,7 +113,7 @@ function computeVariances(extractedData, po) {
 
 // ── Main entry ────────────────────────────────────────
 
-export async function processMatch(invoiceId, extractedData, entityId) {
+export async function processMatch(invoiceId, extractedData, entityId, fetchers = DEFAULT_FETCHERS) {
   const startTime = Date.now();
 
   try {
@@ -105,7 +130,7 @@ export async function processMatch(invoiceId, extractedData, entityId) {
     const explanationParts = [];
 
     // 1. 2-way PO exact match
-    po = await matchByPOExact(poNumber, entityId);
+    po = await fetchers.getPOExact(poNumber, entityId);
     if (po) {
       matchType = '2way_po';
       poId = po.id;
@@ -133,13 +158,16 @@ export async function processMatch(invoiceId, extractedData, entityId) {
         explanationParts.push(`2-way PO match: PO ${po.po_number} found but vendor and amount differ`);
       }
 
-      // 2. 3-way PO+GRN check (not yet implemented)
-      explanationParts.push('3-way GRN verification not yet implemented — GRN records not checked');
+      // 2. 3-way PO+GRN check
+      const grns = await fetchers.getGRNsForPO(poId);
+      if (grns.length === 0) {
+        explanationParts.push('3-way GRN verification not yet implemented — GRN records not checked');
+      }
     }
 
     // 3. Fuzzy PO match
     if (!po) {
-      po = await matchByFuzzyPO(vendorName, totalAmount, invoiceDate, entityId);
+      po = await fetchers.getPOFuzzy(vendorName, totalAmount, invoiceDate, entityId);
       if (po) {
         matchType = 'service_po';
         poId = po.id;
@@ -155,7 +183,7 @@ export async function processMatch(invoiceId, extractedData, entityId) {
 
     // 4. Recurring pattern
     if (!po) {
-      const recurringInvoices = await checkRecurringPattern(vendorName, totalAmount);
+      const recurringInvoices = await fetchers.getRecurringInvoices(vendorName, totalAmount);
       if (recurringInvoices) {
         matchType = 'recurring';
         matchConfidence = 0.60;
