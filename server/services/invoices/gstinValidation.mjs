@@ -124,3 +124,103 @@ export function extractStateCodeFromGstin(gstin) {
   const stateCode = normalized.substring(0, 2);
   return VALID_STATE_CODES.has(stateCode) ? stateCode : null;
 }
+
+// ── Level 3: match validation at invoice save ────────
+// Per ws1a-implementation-plan.md §2.9 Level 3.
+//
+// Checks supplier GSTIN against vendor master and recipient GSTIN
+// against entity registrations. Called at invoice save time.
+
+/**
+ * Level 3 GSTIN match validation.
+ *
+ * @param {object} opts
+ * @param {string} opts.supplierGstin - Supplier GSTIN from the invoice
+ * @param {string} opts.vendorId - Vendor ID to check against
+ * @param {string} [opts.recipientGstin] - Recipient GSTIN from the invoice
+ * @param {string} [opts.entityId] - Entity ID for recipient check
+ * @param {object} opts.db - Database query interface { query(sql, params) }
+ * @returns {Promise<{ok: boolean, checks: Array<{severity: 'block'|'warn', code: string, detail: string}>}>}
+ */
+export async function validateGstinMatch({ supplierGstin, vendorId, recipientGstin, entityId, db }) {
+  const checks = [];
+
+  // --- Supplier GSTIN checks ---
+  if (supplierGstin) {
+    const formatResult = validateGstinFormat(supplierGstin);
+    if (!formatResult.valid) {
+      checks.push({ severity: 'block', code: 'invalid_gstin_format', detail: `Supplier GSTIN: ${formatResult.error}` });
+      return { ok: false, checks };
+    }
+
+    const normalized = supplierGstin.trim().toUpperCase();
+    const supplierPan = extractPanFromGstin(normalized);
+    const supplierState = extractStateCodeFromGstin(normalized);
+
+    if (vendorId) {
+      // Check 1: Supplier GSTIN must match one of vendor's active registrations
+      const registrations = await db.query(
+        "SELECT gstin, gst_state_code FROM vendor_gst_registrations WHERE vendor_id = ? AND status = 'active'",
+        [vendorId]
+      );
+      const registeredGstins = registrations.map((r) => (r.gstin || '').trim().toUpperCase());
+      if (!registeredGstins.includes(normalized)) {
+        checks.push({
+          severity: 'block',
+          code: 'supplier_gstin_not_registered',
+          detail: `Supplier GSTIN ${normalized} not found in vendor's active GST registrations`,
+        });
+      }
+
+      // Check 2: State code in GSTIN vs vendor's primary state (from first registration's gst_state_code)
+      if (supplierState && registrations.length > 0) {
+        const primaryStateCode = registrations[0].gst_state_code;
+        if (primaryStateCode && primaryStateCode !== supplierState) {
+          checks.push({
+            severity: 'warn',
+            code: 'supplier_state_mismatch',
+            detail: `Supplier GSTIN state ${supplierState} differs from vendor primary state ${primaryStateCode}`,
+          });
+        }
+      }
+
+      // Check 3: PAN embedded in GSTIN vs vendor's PAN on vendor_pan_compliance
+      if (supplierPan) {
+        const panRows = await db.query(
+          'SELECT pan FROM vendor_pan_compliance WHERE vendor_id = ?',
+          [vendorId]
+        );
+        if (panRows.length > 0 && panRows[0].pan) {
+          const vendorPan = panRows[0].pan.trim().toUpperCase();
+          if (vendorPan !== supplierPan) {
+            checks.push({
+              severity: 'block',
+              code: 'supplier_pan_mismatch_fraud_signal',
+              detail: `PAN in supplier GSTIN (${supplierPan}) does not match vendor PAN (${vendorPan})`,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // --- Recipient GSTIN checks ---
+  if (recipientGstin && entityId) {
+    const formatResult = validateGstinFormat(recipientGstin);
+    if (!formatResult.valid) {
+      checks.push({ severity: 'block', code: 'invalid_gstin_format', detail: `Recipient GSTIN: ${formatResult.error}` });
+      return { ok: checks.every((c) => c.severity !== 'block') ? true : false, checks };
+    }
+
+    // TODO WS-1a-client: entity GSTIN source
+    // The entities table does not have GSTIN columns yet. When entity
+    // GST registrations are added (either as a related table or JSON column),
+    // wire in the recipient match checks here following the same pattern:
+    // 1. Recipient GSTIN must match entity's registered GSTINs → block
+    // 2. State code mismatch → warn
+    // 3. PAN mismatch → block
+  }
+
+  const hasBlock = checks.some((c) => c.severity === 'block');
+  return { ok: !hasBlock, checks };
+}

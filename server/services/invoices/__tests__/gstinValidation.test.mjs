@@ -3,6 +3,7 @@ import {
   validateGstinFormat,
   extractPanFromGstin,
   extractStateCodeFromGstin,
+  validateGstinMatch,
 } from '../gstinValidation.mjs';
 
 // ---------------------------------------------------------------------------
@@ -238,5 +239,198 @@ describe('extractStateCodeFromGstin', () => {
 
   it('normalizes lowercase', () => {
     expect(extractStateCodeFromGstin(VALID_GSTIN_TN.toLowerCase())).toBe('33');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateGstinMatch — Level 3 match validation
+// ---------------------------------------------------------------------------
+
+function makeDb(overrides = {}) {
+  const defaults = {
+    registrations: [],
+    panRows: [],
+  };
+  const data = { ...defaults, ...overrides };
+
+  return {
+    query: async (sql, _params) => {
+      if (sql.includes('vendor_gst_registrations')) return data.registrations;
+      if (sql.includes('vendor_pan_compliance')) return data.panRows;
+      return [];
+    },
+  };
+}
+
+// Reuse VALID_GSTIN_MH which has PAN=AABCU9603R and state=27
+const SUPPLIER_PAN = 'AABCU9603R';
+
+describe('validateGstinMatch — supplier GSTIN checks', () => {
+  it('returns ok when supplier GSTIN matches a registered GSTIN', async () => {
+    const db = makeDb({
+      registrations: [{ gstin: VALID_GSTIN_MH, gst_state_code: '27' }],
+      panRows: [{ pan: SUPPLIER_PAN }],
+    });
+
+    const result = await validateGstinMatch({
+      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.checks).toHaveLength(0);
+  });
+
+  it('blocks when supplier GSTIN not in vendor registrations', async () => {
+    const db = makeDb({
+      registrations: [{ gstin: VALID_GSTIN_KA, gst_state_code: '29' }],
+      panRows: [{ pan: SUPPLIER_PAN }],
+    });
+
+    const result = await validateGstinMatch({
+      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+    });
+
+    expect(result.ok).toBe(false);
+    const block = result.checks.find((c) => c.code === 'supplier_gstin_not_registered');
+    expect(block).toBeDefined();
+    expect(block.severity).toBe('block');
+  });
+
+  it('warns on state code mismatch between GSTIN and vendor primary state', async () => {
+    const db = makeDb({
+      registrations: [{ gstin: VALID_GSTIN_MH, gst_state_code: '29' }], // MH GSTIN but KA state code
+      panRows: [{ pan: SUPPLIER_PAN }],
+    });
+
+    const result = await validateGstinMatch({
+      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+    });
+
+    const warn = result.checks.find((c) => c.code === 'supplier_state_mismatch');
+    expect(warn).toBeDefined();
+    expect(warn.severity).toBe('warn');
+    expect(warn.detail).toContain('27');
+    expect(warn.detail).toContain('29');
+  });
+
+  it('blocks on PAN mismatch (fraud signal)', async () => {
+    const db = makeDb({
+      registrations: [{ gstin: VALID_GSTIN_MH, gst_state_code: '27' }],
+      panRows: [{ pan: 'ZZZZZ9999Z' }], // different PAN
+    });
+
+    const result = await validateGstinMatch({
+      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+    });
+
+    expect(result.ok).toBe(false);
+    const block = result.checks.find((c) => c.code === 'supplier_pan_mismatch_fraud_signal');
+    expect(block).toBeDefined();
+    expect(block.severity).toBe('block');
+    expect(block.detail).toContain(SUPPLIER_PAN);
+    expect(block.detail).toContain('ZZZZZ9999Z');
+  });
+
+  it('state mismatch is warn-only, does not block', async () => {
+    // GSTIN registered but state differs — warn but ok remains true (no blocks)
+    const db = makeDb({
+      registrations: [{ gstin: VALID_GSTIN_MH, gst_state_code: '29' }],
+      panRows: [{ pan: SUPPLIER_PAN }],
+    });
+
+    const result = await validateGstinMatch({
+      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+    });
+
+    expect(result.ok).toBe(true); // warn doesn't block
+    expect(result.checks).toHaveLength(1);
+    expect(result.checks[0].severity).toBe('warn');
+  });
+});
+
+describe('validateGstinMatch — format-invalid early return', () => {
+  it('returns block immediately for invalid format supplier GSTIN', async () => {
+    const db = makeDb();
+    const result = await validateGstinMatch({
+      supplierGstin: 'INVALID', vendorId: 'v1', db,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.checks).toHaveLength(1);
+    expect(result.checks[0].code).toBe('invalid_gstin_format');
+    expect(result.checks[0].severity).toBe('block');
+  });
+
+  it('returns block for invalid format recipient GSTIN', async () => {
+    const db = makeDb({
+      registrations: [{ gstin: VALID_GSTIN_MH, gst_state_code: '27' }],
+      panRows: [{ pan: SUPPLIER_PAN }],
+    });
+    const result = await validateGstinMatch({
+      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1',
+      recipientGstin: 'BAD', entityId: 'e1', db,
+    });
+
+    const recipientBlock = result.checks.find((c) => c.detail?.startsWith('Recipient'));
+    expect(recipientBlock).toBeDefined();
+    expect(recipientBlock.code).toBe('invalid_gstin_format');
+  });
+});
+
+describe('validateGstinMatch — no vendorId / no supplierGstin', () => {
+  it('returns ok with empty checks when supplierGstin is null', async () => {
+    const db = makeDb();
+    const result = await validateGstinMatch({
+      supplierGstin: null, vendorId: 'v1', db,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.checks).toHaveLength(0);
+  });
+
+  it('skips vendor checks when vendorId is null', async () => {
+    const db = makeDb();
+    const result = await validateGstinMatch({
+      supplierGstin: VALID_GSTIN_MH, vendorId: null, db,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.checks).toHaveLength(0);
+  });
+});
+
+describe('validateGstinMatch — recipient GSTIN stub', () => {
+  it('does not block on valid recipient GSTIN (entity check stubbed)', async () => {
+    const db = makeDb({
+      registrations: [{ gstin: VALID_GSTIN_MH, gst_state_code: '27' }],
+      panRows: [{ pan: SUPPLIER_PAN }],
+    });
+
+    const result = await validateGstinMatch({
+      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1',
+      recipientGstin: VALID_GSTIN_KA, entityId: 'e1', db,
+    });
+
+    // Recipient check is stubbed — no additional blocks from entity matching
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe('validateGstinMatch — multiple checks accumulate', () => {
+  it('returns both GSTIN-not-registered block AND PAN mismatch block', async () => {
+    const db = makeDb({
+      registrations: [{ gstin: VALID_GSTIN_KA, gst_state_code: '29' }],
+      panRows: [{ pan: 'ZZZZZ9999Z' }],
+    });
+
+    const result = await validateGstinMatch({
+      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.checks.filter((c) => c.severity === 'block')).toHaveLength(2);
+    const codes = result.checks.map((c) => c.code);
+    expect(codes).toContain('supplier_gstin_not_registered');
+    expect(codes).toContain('supplier_pan_mismatch_fraud_signal');
   });
 });
