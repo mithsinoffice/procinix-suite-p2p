@@ -1,6 +1,6 @@
 // Single source of truth for legacy status → lifecycle_state translation.
 // Must produce identical output to the 2d SQL backfill CASE
-// (sql/mysql/migrations/_ws1a_drafts/2d_seeds_and_backfills.sql, Section 2.1).
+// (sql/mysql/migrations/20260424_ws1a_2d_seeds_and_backfills.sql, Section 2.1).
 
 export const LIFECYCLE_STATES = Object.freeze({
   INGESTED:           'Ingested',
