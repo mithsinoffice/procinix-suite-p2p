@@ -71,6 +71,19 @@ const LOWER_TDS_OPTIONS = [
   { value: 'section_206aa', label: 'Section 206AA (No PAN)' },
 ];
 
+const TDS_SECTIONS_OPTIONS = [
+  { value: '194C_IND', label: '194C (Individuals/HUF)' },
+  { value: '194C_OTH', label: '194C (Others)' },
+  { value: '194J_PRO', label: '194J (Professional)' },
+  { value: '194J_TECH', label: '194J (Technical)' },
+  { value: '194I_A', label: '194I(a) (Plant & Machinery Rent)' },
+  { value: '194I_B', label: '194I(b) (Land/Building Rent)' },
+  { value: '194H', label: '194H (Commission)' },
+  { value: '194Q', label: '194Q (Purchase of Goods)' },
+  { value: '194A', label: '194A (Interest)' },
+  { value: '194R', label: '194R (Perquisites)' },
+];
+
 const GST_TYPES = [
   { value: 'regular', label: 'Regular' },
   { value: 'composition', label: 'Composition' },
@@ -275,6 +288,18 @@ const defaultPan = {
   rcm_applicable: 'no_forward_charge',
   lower_tds_section: 'not_applicable',
   lower_tds_cert_number: '',
+  lower_tds_cert_valid_from: '',
+  lower_tds_cert_valid_to: '',
+  lower_tds_cert_rate: '',
+  // KYC source-tracking (read from server, displayed as chips)
+  pan_verification_source: '' as string,
+  pan_verified_at: '' as string,
+  msme_verification_source: '' as string,
+  msme_verified_at: '' as string,
+  cin_verification_source: '' as string,
+  cin_verified_at: '' as string,
+  section_206ab_verification_source: '' as string,
+  section_206ab_verified_at: '' as string,
 };
 
 const emptySpoc = () => ({
@@ -538,6 +563,17 @@ export function VendorMasterCreate() {
             rcm_applicable: d.pan_compliance.rcm_applicable || 'no_forward_charge',
             lower_tds_section: d.pan_compliance.lower_tds_section || 'not_applicable',
             lower_tds_cert_number: d.pan_compliance.lower_tds_cert_number || '',
+            lower_tds_cert_valid_from: d.pan_compliance.lower_tds_cert_valid_from || '',
+            lower_tds_cert_valid_to: d.pan_compliance.lower_tds_cert_valid_to || '',
+            lower_tds_cert_rate: d.pan_compliance.lower_tds_cert_rate ?? '',
+            pan_verification_source: d.pan_compliance.pan_verification_source || '',
+            pan_verified_at: d.pan_compliance.pan_verified_at || '',
+            msme_verification_source: d.pan_compliance.msme_verification_source || '',
+            msme_verified_at: d.pan_compliance.msme_verified_at || '',
+            cin_verification_source: d.pan_compliance.cin_verification_source || '',
+            cin_verified_at: d.pan_compliance.cin_verified_at || '',
+            section_206ab_verification_source: d.pan_compliance.section_206ab_verification_source || '',
+            section_206ab_verified_at: d.pan_compliance.section_206ab_verified_at || '',
           });
         }
         setGstRegistrations(d.gst_registrations || []);
@@ -690,6 +726,53 @@ export function VendorMasterCreate() {
   );
 
   /* ---- render helpers ---- */
+  const renderKycSourceChip = (source: string, verifiedAt: string, fieldValue: string) => {
+    if (!fieldValue) return null;
+    const chipConfig: Record<string, { label: string; bg: string; color: string }> = {
+      manual: { label: 'Manual', bg: '#F3F4F6', color: '#6B7280' },
+      api_surepass: { label: 'Verified (Surepass)', bg: '#D1FAE5', color: '#065F46' },
+      api_ongrid: { label: 'Verified (Ongrid)', bg: '#D1FAE5', color: '#065F46' },
+      pending_verification: { label: 'Pending', bg: '#DBEAFE', color: '#1E40AF' },
+      not_verified: { label: 'Not verified', bg: '#FEF3C7', color: '#92400E' },
+    };
+    const cfg = chipConfig[source] || chipConfig.not_verified;
+    return (
+      <span
+        title={verifiedAt ? `Verified at: ${verifiedAt}` : 'Not yet verified'}
+        style={{ display: 'inline-block', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 10, backgroundColor: cfg.bg, color: cfg.color, marginLeft: 6, cursor: 'default', verticalAlign: 'middle' }}
+      >
+        {cfg.label}
+      </span>
+    );
+  };
+
+  const renderMultiSelect = (field: string, selected: string[], options: { value: string; label: string }[], onChange: (f: string, v: string[]) => void) => (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 8px', border: '1.5px solid var(--color-silver)', borderRadius: 8, minHeight: 38, backgroundColor: '#fff' }}>
+      {options.map((o) => {
+        const isSelected = selected.includes(o.value);
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => {
+              const next = isSelected ? selected.filter((s) => s !== o.value) : [...selected, o.value];
+              onChange(field, next);
+            }}
+            style={{
+              fontSize: 11, fontWeight: 500, padding: '3px 10px', borderRadius: 14, cursor: 'pointer',
+              border: isSelected ? '1.5px solid #007D87' : '1px solid #D1D5DB',
+              backgroundColor: isSelected ? '#E6FBF5' : '#F9FAFB',
+              color: isSelected ? '#007D60' : '#6B7280',
+              transition: 'all 0.15s',
+            }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   const renderInput = (field: string, placeholder: string, value: string, onChange: (f: string, v: string) => void) => (
     <input
       type="text"
@@ -872,6 +955,7 @@ export function VendorMasterCreate() {
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <div style={{ flex: 1 }}>
                   {renderInput('pan', 'AAAAA9999A', panCompliance.pan, updatePan)}
+                  {renderKycSourceChip(panCompliance.pan_verification_source, panCompliance.pan_verified_at, panCompliance.pan)}
                 </div>
                 <button
                   onClick={async () => {
@@ -922,6 +1006,7 @@ export function VendorMasterCreate() {
             </PxFormField>
             <PxFormField label="CIN Number">
               {renderInput('cin_number', 'Company CIN', panCompliance.cin_number, updatePan)}
+              {renderKycSourceChip(panCompliance.cin_verification_source, panCompliance.cin_verified_at, panCompliance.cin_number)}
             </PxFormField>
             <PxFormField label="MSME / Udyam Number" hint={msmeResult ? `Verified via ${msmeResult.source} — ${msmeResult.enterprise_name}` : (msmeError || undefined)}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -944,6 +1029,7 @@ export function VendorMasterCreate() {
                   {msmeResult ? '\u2713 Verified' : msmeLoading ? 'Verifying...' : 'Verify Udyam \u2192'}
                 </button>
               </div>
+              {renderKycSourceChip(panCompliance.msme_verification_source, panCompliance.msme_verified_at, panCompliance.msme_number)}
             </PxFormField>
             <PxFormField label="MSME Category">
               {renderSelect('msme_category', panCompliance.msme_category, MSME_CATEGORIES, updatePan)}
@@ -1060,7 +1146,10 @@ export function VendorMasterCreate() {
           <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 12 }}>TDS & Compliance</h3>
           <div className="grid grid-cols-3 gap-6">
             <PxFormField label="Section 206AB">
-              {renderSelect('section_206ab', panCompliance.section_206ab, SECTION_206AB, updatePan)}
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {renderSelect('section_206ab', panCompliance.section_206ab, SECTION_206AB, updatePan)}
+                {renderKycSourceChip(panCompliance.section_206ab_verification_source, panCompliance.section_206ab_verified_at, panCompliance.section_206ab)}
+              </div>
             </PxFormField>
             <PxFormField label="GST Return Filing">
               {renderSelect('gst_return_filed', panCompliance.gst_return_filed, GST_RETURN_FILED, updatePan)}
@@ -1068,6 +1157,15 @@ export function VendorMasterCreate() {
             <PxFormField label="RCM Applicable">
               {renderSelect('rcm_applicable', panCompliance.rcm_applicable, RCM_OPTIONS, updatePan)}
             </PxFormField>
+          </div>
+
+          <div style={{ marginTop: 16 }}>
+            <PxFormField label="Default TDS Sections">
+              {renderMultiSelect('tds_sections', panCompliance.tds_sections, TDS_SECTIONS_OPTIONS, updatePan)}
+            </PxFormField>
+          </div>
+
+          <div className="grid grid-cols-3 gap-6" style={{ marginTop: 16 }}>
             <PxFormField label="Lower TDS">
               {renderSelect('lower_tds_section', panCompliance.lower_tds_section, LOWER_TDS_OPTIONS, updatePan)}
             </PxFormField>
@@ -1075,6 +1173,39 @@ export function VendorMasterCreate() {
               {renderInput('lower_tds_cert_number', 'Certificate number', panCompliance.lower_tds_cert_number, updatePan)}
             </PxFormField>
           </div>
+          {/* Lower TDS Certificate validity — shown when cert number is present */}
+          {panCompliance.lower_tds_cert_number && (
+            <div className="grid grid-cols-3 gap-6" style={{ marginTop: 12 }}>
+              <PxFormField label="Cert Valid From" hint={!panCompliance.lower_tds_cert_valid_from && panCompliance.lower_tds_cert_number ? 'Required when cert number is set' : undefined}>
+                <input
+                  type="date"
+                  value={panCompliance.lower_tds_cert_valid_from}
+                  onChange={(e) => updatePan('lower_tds_cert_valid_from', e.target.value)}
+                  style={inputStyle}
+                />
+              </PxFormField>
+              <PxFormField label="Cert Valid To" hint={!panCompliance.lower_tds_cert_valid_to && panCompliance.lower_tds_cert_number ? 'Required when cert number is set' : undefined}>
+                <input
+                  type="date"
+                  value={panCompliance.lower_tds_cert_valid_to}
+                  onChange={(e) => updatePan('lower_tds_cert_valid_to', e.target.value)}
+                  style={inputStyle}
+                />
+              </PxFormField>
+              <PxFormField label="Cert Rate (%)" hint={!panCompliance.lower_tds_cert_rate && panCompliance.lower_tds_cert_number ? 'Required when cert number is set' : undefined}>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={panCompliance.lower_tds_cert_rate}
+                  placeholder="e.g. 2.00"
+                  onChange={(e) => updatePan('lower_tds_cert_rate', e.target.value)}
+                  style={inputStyle}
+                />
+              </PxFormField>
+            </div>
+          )}
         </div>
 
         {/* GST sub-section */}
