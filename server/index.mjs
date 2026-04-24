@@ -2531,8 +2531,7 @@ const server = http.createServer(async (req, res) => {
       else if (hasException === 'false') { conditions.push("i.lifecycle_state != 'Exception Hold'"); }
 
       if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
-      sql += ` ${orderClause} LIMIT ? OFFSET ?`;
-      params.push(limit, offset);
+      sql += ` ${orderClause} LIMIT ${Number(limit)} OFFSET ${Number(offset)}`;
 
       const rows = await query(sql, params);
 
