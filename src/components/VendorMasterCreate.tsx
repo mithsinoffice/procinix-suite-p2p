@@ -245,15 +245,8 @@ const BANK_COLUMNS: SimpleColumn[] = [
   { key: 'currency', label: 'Currency', type: 'select', options: CURRENCIES, width: '100px' },
 ];
 
-const ENTITY_MAPPING_COLUMNS: SimpleColumn[] = [
-  { key: 'entity_id', label: 'Entity Name', type: 'text', required: true, placeholder: 'Entity ID' },
-  { key: 'gl_code_expense', label: 'GL Code', type: 'text', placeholder: 'e.g. 2108-VENDO' },
-  { key: 'payment_terms', label: 'Payment Terms', type: 'select', options: PAYMENT_TERMS_OPTIONS },
-  { key: 'credit_days', label: 'Credit Days', type: 'number', placeholder: 'e.g. 30', width: '120px' },
-  { key: 'credit_limit', label: 'Credit Limit', type: 'number', placeholder: 'e.g. 5000000' },
-  { key: 'block_for_po', label: 'Block PO', type: 'checkbox', align: 'center', width: '90px' },
-  { key: 'block_for_payment', label: 'Block Pay', type: 'checkbox', align: 'center', width: '90px' },
-];
+// Entity mapping columns defined dynamically inside the component (entityMappingColumns memo)
+// to populate entity_id options from /api/entities.
 
 /* ------------------------------------------------------------------ */
 /*  Defaults                                                           */
@@ -355,6 +348,7 @@ export function VendorMasterCreate() {
   const [panCompliance, setPanCompliance] = useState({ ...defaultPan });
   const [gstRegistrations, setGstRegistrations] = useState<any[]>([]);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [entityOptions, setEntityOptions] = useState<{value: string; label: string}[]>([]);
   const [entityMappings, setEntityMappings] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
@@ -583,6 +577,32 @@ export function VendorMasterCreate() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [vendorId]);
+
+  /* ---- fetch entities for entity-mapping dropdown ---- */
+  useEffect(() => {
+    fetch(`${API}/api/entities`)
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success && Array.isArray(res.data)) {
+          setEntityOptions(res.data.map((e: any) => ({
+            value: e.id,
+            label: `${e.name}${e.code ? ` (${e.code})` : ''}`,
+          })));
+        }
+      })
+      .catch(() => { /* entities API unavailable — dropdown stays empty */ });
+  }, []);
+
+  // Build entity mapping columns with dynamic entity options
+  const entityMappingColumns = useMemo<SimpleColumn[]>(() => [
+    { key: 'entity_id', label: 'Entity', type: 'select', required: true, options: entityOptions },
+    { key: 'gl_code_expense', label: 'GL Code', type: 'text', placeholder: 'e.g. 2108-VENDO' },
+    { key: 'payment_terms', label: 'Payment Terms', type: 'select', options: PAYMENT_TERMS_OPTIONS },
+    { key: 'credit_days', label: 'Credit Days', type: 'number', placeholder: 'e.g. 30', width: '120px' },
+    { key: 'credit_limit', label: 'Credit Limit', type: 'number', placeholder: 'e.g. 5000000' },
+    { key: 'block_for_po', label: 'Block PO', type: 'checkbox', align: 'center', width: '90px' },
+    { key: 'block_for_payment', label: 'Block Pay', type: 'checkbox', align: 'center', width: '90px' },
+  ], [entityOptions]);
 
   /* ---- field update helpers ---- */
   const updateVendor = useCallback((field: string, value: any) => {
@@ -1328,7 +1348,7 @@ export function VendorMasterCreate() {
         flat
       >
         <SimpleInlineTable
-          columns={ENTITY_MAPPING_COLUMNS}
+          columns={entityMappingColumns}
           rows={entityMappings}
           onRowChange={handleEntityMappingChange}
           onRemoveRow={(idx) => setEntityMappings((prev) => prev.filter((_, i) => i !== idx))}

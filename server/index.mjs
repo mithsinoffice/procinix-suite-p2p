@@ -927,6 +927,12 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // Simple entities listing for regular users (no admin gate)
+    if (req.method === 'GET' && pathname === '/api/entities') {
+      const rows = await query('SELECT id, name, code, tenant_id, is_default FROM entities ORDER BY is_default DESC, name ASC');
+      return sendJson(res, 200, { success: true, data: rows });
+    }
+
     const adminEntitiesMatch = pathname.match(/^\/api\/admin\/tenants\/([^/]+)\/entities$/);
     if (adminEntitiesMatch && req.method === 'GET') {
       try {
