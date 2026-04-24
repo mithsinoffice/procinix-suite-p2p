@@ -2508,8 +2508,10 @@ const server = http.createServer(async (req, res) => {
         const lane = score >= 80 ? 'green' : score >= 50 ? 'amber' : 'red';
 
         // Update invoice
-        await query('UPDATE p2p_schema_mt.invoices SET readiness_score = ?, lane = ?, status = ? WHERE id = ?',
-          [score / 100, lane, lane === 'green' ? 'pending_approval' : 'draft', invoiceId]);
+        const newStatus = lane === 'green' ? 'pending_approval' : 'draft';
+        const newLifecycle = mapLegacyToLifecycle(newStatus);
+        await query('UPDATE p2p_schema_mt.invoices SET readiness_score = ?, lane = ?, status = ?' + (newLifecycle ? ', lifecycle_state = ?' : '') + ' WHERE id = ?',
+          newLifecycle ? [score / 100, lane, newStatus, newLifecycle, invoiceId] : [score / 100, lane, newStatus, invoiceId]);
 
         return sendJson(res, 200, { success: true, score, lane, checks });
       } catch (err) {
@@ -2829,7 +2831,7 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/approve')) {
       const invoiceId = pathname.split('/')[4];
-      await query('UPDATE invoices SET status = ?, processing_status = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?', ['Approved', 'posted', invoiceId]);
+      await query('UPDATE invoices SET status = ?, processing_status = ?, lifecycle_state = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?', ['Approved', 'posted', LIFECYCLE_STATES.PROCESSED, invoiceId]);
       await query(
         'INSERT INTO ap_invoice_reviewer_actions (id, invoice_id, action_type, actor, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
         [randomUUID(), invoiceId, 'approve', 'API User']
@@ -2839,7 +2841,7 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/reject')) {
       const invoiceId = pathname.split('/')[4];
-      await query('UPDATE invoices SET status = ?, processing_status = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?', ['Rejected', 'rejected', invoiceId]);
+      await query('UPDATE invoices SET status = ?, processing_status = ?, lifecycle_state = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?', ['Rejected', 'rejected', LIFECYCLE_STATES.REJECTED, invoiceId]);
       await query(
         'INSERT INTO ap_invoice_reviewer_actions (id, invoice_id, action_type, actor, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
         [randomUUID(), invoiceId, 'reject', 'API User']

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { query } from '../../mysql.mjs';
+import { mapProcessingStatusToLifecycle, mapLegacyToLifecycle, LIFECYCLE_STATES } from '../invoices/lifecycleMapping.mjs';
 import { processIntake } from './intakeAgent.mjs';
 import { processExtraction } from './extractionAgent.mjs';
 import { processVendorMatch } from './vendorIdentityAgent.mjs';
@@ -33,10 +34,18 @@ async function logExplainability(invoiceId, stage, explanation, data) {
 
 async function updateInvoiceStatus(invoiceId, status) {
   try {
-    await query(
-      'UPDATE invoices SET processing_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [status, invoiceId]
-    );
+    const mappedLifecycle = mapProcessingStatusToLifecycle(status);
+    if (mappedLifecycle) {
+      await query(
+        'UPDATE invoices SET processing_status = ?, lifecycle_state = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [status, mappedLifecycle, invoiceId]
+      );
+    } else {
+      await query(
+        'UPDATE invoices SET processing_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [status, invoiceId]
+      );
+    }
   } catch { /* non-critical */ }
 }
 
@@ -149,9 +158,9 @@ export async function processInvoiceWithAgents(email) {
       pipelineResult.invoiceId = invoiceId;
 
       await query(
-        `INSERT INTO invoices (id, status, source, processing_status, document_id, batch_id, created_at, updated_at)
-         VALUES (?, 'draft', 'email_ingestion', 'extracting', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-        [invoiceId, intake.documentId, intake.batchId]
+        `INSERT INTO invoices (id, status, source, processing_status, lifecycle_state, document_id, batch_id, created_at, updated_at)
+         VALUES (?, 'draft', 'email_ingestion', 'extracting', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [invoiceId, LIFECYCLE_STATES.INGESTED, intake.documentId, intake.batchId]
       );
 
       const extraction = await processExtraction(invoiceId, intake.documentId, attachment.buffer, attachment.mimeType);
@@ -194,7 +203,7 @@ export async function processInvoiceWithAgents(email) {
           po_number = ?, payment_terms = ?, notes = ?,
           metadata = CAST(? AS JSON),
           extraction_model_version = ?,
-          processing_status = 'extracted',
+          processing_status = 'extracted', lifecycle_state = ?,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?`,
         [
@@ -205,6 +214,7 @@ export async function processInvoiceWithAgents(email) {
           ed.po_number, ed.payment_terms ? String(ed.payment_terms).substring(0, 65000) : null, ed.notes,
           JSON.stringify({ extractedData: ed, extraction: { headerScore: extraction.headerScore, linesScore: extraction.linesScore } }),
           extraction.provider,
+          LIFECYCLE_STATES.OCR_EXTRACTED,
           invoiceId,
         ]
       );

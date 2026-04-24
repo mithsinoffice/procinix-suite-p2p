@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { query, withTransaction, connExecute } from '../../mysql.mjs';
+import { mapProcessingStatusToLifecycle } from '../invoices/lifecycleMapping.mjs';
 
 const AGENT_NAME = 'WorkflowRoutingAgent';
 const AGENT_VERSION = '1.0.0';
@@ -228,11 +229,14 @@ export async function processRouting(invoiceId, agentResults) {
       );
 
       // 2. Update invoices table
+      const mappedLifecycle = mapProcessingStatusToLifecycle(processingStatus);
       await connExecute(conn,
         `UPDATE invoices
-         SET lane = ?, posting_readiness_score = ?, processing_status = ?, updated_at = NOW()
+         SET lane = ?, posting_readiness_score = ?, processing_status = ?${mappedLifecycle ? ', lifecycle_state = ?' : ''}, updated_at = NOW()
          WHERE id = ?`,
-        [lane.toLowerCase(), postingReadiness, processingStatus, invoiceId]
+        mappedLifecycle
+          ? [lane.toLowerCase(), postingReadiness, processingStatus, mappedLifecycle, invoiceId]
+          : [lane.toLowerCase(), postingReadiness, processingStatus, invoiceId]
       );
 
       // 3. Lane-specific actions
