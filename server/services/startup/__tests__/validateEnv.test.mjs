@@ -7,6 +7,7 @@ const ALL_PRESENT = {
   NODE_ENV: 'production',
   GOOGLE_AI_API_KEY: 'gemini-key-abc',
   ANTHROPIC_API_KEY: 'sk-ant-abc',
+  API_SECRET_KEY: 'test-secret-key',
 };
 
 const WITH_IMAP = {
@@ -90,6 +91,32 @@ describe('validateEnv', () => {
     const { errors, warnings } = validateEnv(WITH_IMAP);
     expect(errors).toHaveLength(0);
     expect(warnings).toHaveLength(0);
+  });
+
+  it('errors when NODE_ENV=production and API_SECRET_KEY is absent', () => {
+    const { API_SECRET_KEY: _omit, ...withoutKey } = ALL_PRESENT;
+    const env = { ...withoutKey, NODE_ENV: 'production' };
+    const { errors } = validateEnv(env);
+    expect(errors.some(e => e.includes('API_SECRET_KEY'))).toBe(true);
+  });
+
+  it('errors when NODE_ENV=production and API_SECRET_KEY is whitespace-only', () => {
+    const env = { ...ALL_PRESENT, NODE_ENV: 'production', API_SECRET_KEY: '   ' };
+    const { errors } = validateEnv(env);
+    expect(errors.some(e => e.includes('API_SECRET_KEY'))).toBe(true);
+  });
+
+  it('does NOT error when NODE_ENV=production and API_SECRET_KEY is set', () => {
+    const env = { ...ALL_PRESENT, NODE_ENV: 'production', API_SECRET_KEY: 'secret-key-abc' };
+    const { errors } = validateEnv(env);
+    expect(errors.some(e => e.includes('API_SECRET_KEY'))).toBe(false);
+  });
+
+  it('does NOT error when NODE_ENV=development and API_SECRET_KEY is absent', () => {
+    const { API_SECRET_KEY: _omit, ...withoutKey } = ALL_PRESENT;
+    const env = { ...withoutKey, NODE_ENV: 'development' };
+    const { errors } = validateEnv(env);
+    expect(errors.some(e => e.includes('API_SECRET_KEY'))).toBe(false);
   });
 });
 

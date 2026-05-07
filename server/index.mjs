@@ -217,7 +217,7 @@ function getAllowedOrigin(req) {
   if (ALLOWED_ORIGINS.has(origin)) {
     return origin;
   }
-  // Avoid CORS whack-a-mole on local Vite ports (3003, 5173, …). Production still uses ALLOWED_ORIGINS only.
+  // Avoid CORS whack-a-mole on local Vite ports (3000, 3001, …). Production still uses ALLOWED_ORIGINS only.
   if (!IS_PRODUCTION_API && LOCAL_DEV_ORIGIN_RE.test(origin)) {
     return origin;
   }

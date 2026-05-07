@@ -11,6 +11,9 @@ const OCR_VARS = ['GOOGLE_AI_API_KEY', 'N8N_WEBHOOK_URL'];
 // Vars that must be present for the agent pipeline to function
 const AGENT_VARS = ['ANTHROPIC_API_KEY'];
 
+// API auth: required in production only (explicitly allowed off in dev)
+const PROD_AUTH_VARS = ['API_SECRET_KEY'];
+
 // SMTP is only validated when IMAP polling is fully configured
 const IMAP_REQUIRED = ['AP_EMAIL_HOST', 'AP_EMAIL_USER', 'AP_EMAIL_PASSWORD'];
 
@@ -33,6 +36,13 @@ export function validateEnv(env = process.env) {
   if (!env.ANTHROPIC_API_KEY?.trim()) {
     errors.push(
       `Missing ANTHROPIC_API_KEY — the Claude agent pipeline (vendor match, tax, routing) will fail`
+    );
+  }
+
+  // API auth secret: required in production; intentionally optional in dev
+  if ((env.NODE_ENV || '').toLowerCase() === 'production' && !env.API_SECRET_KEY?.trim()) {
+    errors.push(
+      `Missing API_SECRET_KEY — all API endpoints are unprotected in production`
     );
   }
 

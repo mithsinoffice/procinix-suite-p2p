@@ -7,8 +7,8 @@
 - **Frontend API client invariant:** paths passed to `mysqlApiRequest()` start with `/<route>` NOT `/api/<route>`. `VITE_API_BASE_URL` already ends with `/api`
 - **Multi-tenant:** every AP endpoint requires `X-Tenant-Id` header. `tenantId` comes from `AuthContext` after login
 - **Dev ports:** Vite on `:3000` (per `vite.config.ts`). API server on `:8787`. Any doc that says 5173 is wrong
-- **`npm install` requires internet** — `xlsx` loaded from `cdn.sheetjs.com` (tracked issue, B6)
-- **Tests:** `npm test` (vitest run, no watch). 13 test files, 297 tests
+- **`xlsx`** pinned to npm registry `^0.18.5` (CDN URL removed in Tier-0 B6 pass)
+- **Tests:** `npm test` (vitest run, no watch). 14 test files, 318 tests
 - **Login today is INSECURE:** `AuthContext.tsx` fetches all users + plaintext passwords to the browser and compares client-side. To be replaced with `POST /api/auth/login` + bcrypt
 
 ## Commands
@@ -194,3 +194,4 @@ After login, DevTools console: `[AuthContext] post-merge user: { tenantId: 'tena
 - 2026-05-07 — macOS quarantine fix: `xattr -dr com.apple.quarantine node_modules/` clears Gatekeeper blocks on native .node binaries after npm install
 - 2026-05-07 — INV-5 done: agent pipeline crash-safe, retry queue, alerts, manual retry endpoint. Tests: 297 passing.
 - 2026-05-07 — INV-6 done: startup env validation; prod refuses to boot on missing API keys. Tests: 314 passing.
+- 2026-05-07 — Tier-0 quick wins: B6 (xlsx pinned to npm ^0.18.5), F2 (react-router/dom pinned to 7.13.0, clsx + tailwind-merge unpinned from *), F6 (54 stale src/*.md files → docs/legacy/), W6 (port 5173 ref removed from CORS comment → 3000), B3 (prod API_SECRET_KEY guard added to validateEnv + 4 new tests). Tests: 318 passing.
