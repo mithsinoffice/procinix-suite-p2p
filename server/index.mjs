@@ -50,6 +50,7 @@ import { mapLegacyToLifecycle, mapProcessingStatusToLifecycle, LIFECYCLE_STATES 
 import { assertValidTransition } from './services/invoices/lifecycleTransitions.mjs';
 import { processMatch } from './services/agents/matchAgent.mjs';
 import { processInvoiceWithAgents, startAgentRetryScheduler, stopAgentRetryScheduler, resetAndRequeueInvoice } from './services/agents/orchestrator.mjs';
+import { checkAndExitIfInvalid } from './services/startup/validateEnv.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import { verifyPAN, verifyPANComprehensive, verifyGSTIN, verifyBankAccount, verifyMSME } from './services/kyc/panVerification.mjs';
 import { getForceClosurePreview, forceclosePO } from './services/po/forceClosure.mjs';
@@ -4018,6 +4019,7 @@ server.listen(port, host, async () => {
   // Load runtime settings from DB and overlay onto process.env BEFORE any service
   // reads env (OCR check, email poller, etc.).
   await loadSettingsToEnv();
+  checkAndExitIfInvalid();
 
   // When IMAP credentials or interval change, stop+restart the poller.
   onSettingsChange('AP_EMAIL_', () => { restartEmailPoller(); });

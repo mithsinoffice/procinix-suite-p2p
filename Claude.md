@@ -193,3 +193,4 @@ After login, DevTools console: `[AuthContext] post-merge user: { tenantId: 'tena
 - 2026-05-07 — INV-5: crash-safe agent pipeline with per-step try/catch, bounded retry, SMTP alert, manual retry endpoint, structured metrics. Files: `server/services/agents/orchestrator.mjs`, `server/services/agents/__tests__/orchestratorRetry.test.mjs`, `sql/mysql/migrations/20260507_agent_retry_queue.sql`, `server/index.mjs` (import + route + startup), `.env.example` (ALERTS_EMAIL)
 - 2026-05-07 — macOS quarantine fix: `xattr -dr com.apple.quarantine node_modules/` clears Gatekeeper blocks on native .node binaries after npm install
 - 2026-05-07 — INV-5 done: agent pipeline crash-safe, retry queue, alerts, manual retry endpoint. Tests: 297 passing.
+- 2026-05-07 — INV-6 done: startup env validation; prod refuses to boot on missing API keys. Tests: 314 passing.
