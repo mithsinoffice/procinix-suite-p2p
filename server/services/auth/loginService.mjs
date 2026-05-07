@@ -43,11 +43,15 @@ function parsePayload(row) {
 }
 
 function buildSafeUser(row, payload) {
+  const roleFromAssignments =
+    payload.userRoles?.[0]?.roleName ??
+    payload.user_roles?.[0]?.roleName ??
+    null;
   return {
     id: String(row.id),
     email: String(payload.email ?? '').trim(),
     name: String(payload.name ?? payload.employeeName ?? '').trim(),
-    role: payload.role ?? payload.roleName ?? null,
+    role: payload.role ?? payload.roleName ?? roleFromAssignments ?? null,
     tenantId: row.tenant_id ? String(row.tenant_id) : null,
     defaultEntityId: row.default_entity_id ? String(row.default_entity_id) : null,
   };
@@ -171,4 +175,69 @@ export async function lookupSession(rawToken) {
     tenantId:  String(row.tenant_id),
     email:     String(row.user_email),
   };
+}
+
+/**
+ * Revoke a session by its row id (sessionId from lookupSession).
+ */
+export async function revokeSession(sessionId) {
+  if (!sessionId) return;
+  await query(
+    "UPDATE `p2p_schema_mt`.`sessions` SET revoked_at = NOW() WHERE id = ?",
+    [sessionId],
+  );
+}
+
+/**
+ * Fetch tenant + entity context for a user. Returns null if tenantId is absent.
+ */
+export async function fetchContext(userId, tenantId) {
+  if (!tenantId) return null;
+
+  const [tenantRow] = await query(
+    'SELECT id, name, code FROM tenants WHERE id = ? LIMIT 1',
+    [tenantId],
+  );
+  if (!tenantRow) return null;
+
+  const entRows = await query(
+    `SELECT e.id, e.name, e.code, e.is_default AS isDefault
+     FROM user_entity_access uea
+     INNER JOIN entities e ON e.id = uea.entity_id
+     WHERE BINARY uea.user_id = ? AND BINARY uea.tenant_id = ?
+     ORDER BY e.is_default DESC, e.name ASC`,
+    [userId, tenantId],
+  );
+
+  return {
+    tenantName: tenantRow.name ?? null,
+    tenantCode: tenantRow.code ?? null,
+    entities: (entRows || []).map((r) => ({
+      id: String(r.id),
+      name: r.name,
+      code: r.code ?? null,
+      isDefault: Boolean(r.isDefault),
+    })),
+  };
+}
+
+/**
+ * Look up a user by id. Returns buildSafeUser result or null if not found / inactive.
+ */
+export async function getUserById(userId) {
+  if (!userId) return null;
+
+  const rows = await query(
+    `SELECT id, payload, tenant_id, default_entity_id, status
+     FROM \`user_master\`.\`user_master\`
+     WHERE id = ? AND status = 'Active'
+     LIMIT 1`,
+    [userId],
+  );
+
+  const row = rows[0] ?? null;
+  if (!row) return null;
+
+  const payload = parsePayload(row);
+  return buildSafeUser(row, payload);
 }

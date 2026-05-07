@@ -19,6 +19,9 @@ import {
   authenticateUser,
   createSession,
   lookupSession,
+  revokeSession,
+  getUserById,
+  fetchContext,
 } from '../loginService.mjs';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -176,5 +179,97 @@ describe('createSession + lookupSession', () => {
   it('lookupSession returns null for empty/null token', async () => {
     expect(await lookupSession('')).toBeNull();
     expect(await lookupSession(null)).toBeNull();
+  });
+});
+
+// ── revokeSession ─────────────────────────────────────────────────────────────
+
+describe('revokeSession', () => {
+  it('issues UPDATE with the provided sessionId', async () => {
+    vi.mocked(query).mockResolvedValueOnce([{}]);
+    await revokeSession('sess-abc');
+    const [sql, params] = vi.mocked(query).mock.calls[0];
+    expect(sql).toMatch(/UPDATE.*sessions.*revoked_at/i);
+    expect(params[0]).toBe('sess-abc');
+  });
+
+  it('does nothing when sessionId is falsy', async () => {
+    await revokeSession(null);
+    await revokeSession('');
+    expect(query).not.toHaveBeenCalled();
+  });
+});
+
+// ── getUserById ───────────────────────────────────────────────────────────────
+
+describe('getUserById', () => {
+  it('returns safe user object when found', async () => {
+    const row = {
+      id: 'u-42',
+      status: 'Active',
+      tenant_id: 'tenant-001',
+      default_entity_id: null,
+      payload: JSON.stringify({ email: 'bob@example.com', name: 'Bob', passwordHash: '$2b$12$x' }),
+    };
+    vi.mocked(query).mockResolvedValueOnce([row]);
+
+    const result = await getUserById('u-42');
+    expect(result).not.toBeNull();
+    expect(result.id).toBe('u-42');
+    expect(result.email).toBe('bob@example.com');
+    expect(result.passwordHash).toBeUndefined();
+    expect(result.password).toBeUndefined();
+  });
+
+  it('returns null when user not found', async () => {
+    vi.mocked(query).mockResolvedValueOnce([]);
+    expect(await getUserById('missing')).toBeNull();
+  });
+
+  it('returns null for falsy userId', async () => {
+    expect(await getUserById(null)).toBeNull();
+    expect(await getUserById('')).toBeNull();
+    expect(query).not.toHaveBeenCalled();
+  });
+});
+
+// ── fetchContext ──────────────────────────────────────────────────────────────
+
+describe('fetchContext', () => {
+  it('returns null when tenantId is falsy', async () => {
+    expect(await fetchContext('u-1', null)).toBeNull();
+    expect(await fetchContext('u-1', '')).toBeNull();
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('returns null when tenant row not found', async () => {
+    vi.mocked(query).mockResolvedValueOnce([]); // no tenant row
+    expect(await fetchContext('u-1', 'missing-tenant')).toBeNull();
+  });
+
+  it('returns tenantName, tenantCode and mapped entities', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce([{ id: 't-1', name: 'Acme Corp', code: 'ACME' }]) // tenant
+      .mockResolvedValueOnce([                                                    // entities
+        { id: 'e-1', name: 'Main Office', code: 'MAIN', isDefault: 1 },
+        { id: 'e-2', name: 'Warehouse',   code: 'WH',   isDefault: 0 },
+      ]);
+
+    const ctx = await fetchContext('u-1', 't-1');
+    expect(ctx).not.toBeNull();
+    expect(ctx.tenantName).toBe('Acme Corp');
+    expect(ctx.tenantCode).toBe('ACME');
+    expect(ctx.entities).toHaveLength(2);
+    expect(ctx.entities[0]).toMatchObject({ id: 'e-1', name: 'Main Office', isDefault: true });
+    expect(ctx.entities[1]).toMatchObject({ id: 'e-2', name: 'Warehouse', isDefault: false });
+  });
+
+  it('returns empty entities array when user has no entity access', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce([{ id: 't-1', name: 'Acme', code: 'ACME' }])
+      .mockResolvedValueOnce([]); // no entities
+
+    const ctx = await fetchContext('u-1', 't-1');
+    expect(ctx.entities).toEqual([]);
   });
 });

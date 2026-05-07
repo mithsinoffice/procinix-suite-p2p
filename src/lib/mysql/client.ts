@@ -4,13 +4,17 @@ export function isMysqlApiEnabled() {
   return Boolean(mysqlApiBaseUrl);
 }
 
+// Matches SESSION_TOKEN_KEY / SESSION_USER_KEY in AuthContext.tsx
+const SESSION_TOKEN_KEY = 'procinix.session.token';
+const SESSION_USER_KEY  = 'procinix.session.user';
+
 /** Bearer + JSON content-type (optional acting user added per-request for /api/admin/*). */
 export function buildMysqlApiHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
   const token =
-    (typeof localStorage !== 'undefined' && localStorage.getItem('token')) ||
+    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SESSION_TOKEN_KEY)) ||
     import.meta.env.VITE_API_SECRET_KEY ||
     '';
   if (token) {
@@ -20,11 +24,11 @@ export function buildMysqlApiHeaders(): Record<string, string> {
 }
 
 function actingUserEmailForAdminPath(path: string): string | undefined {
-  if (!path.startsWith('/admin/') || typeof localStorage === 'undefined') {
+  if (!path.startsWith('/admin/') || typeof sessionStorage === 'undefined') {
     return undefined;
   }
   try {
-    const raw = localStorage.getItem('user');
+    const raw = sessionStorage.getItem(SESSION_USER_KEY);
     if (!raw) return undefined;
     const u = JSON.parse(raw) as { email?: string };
     return u.email?.trim() || undefined;

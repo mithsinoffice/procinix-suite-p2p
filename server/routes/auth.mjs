@@ -1,9 +1,16 @@
 /**
- * Auth routes — POST /api/auth/login
+ * Auth routes — POST /api/auth/login | GET /api/auth/me | POST /api/auth/logout
  * Convention: this module is imported by server/index.mjs and called after the auth gate.
- * The route is in PUBLIC_PATHS so it bypasses the auth middleware.
+ * /api/auth/login is in PUBLIC_PATHS (bypasses auth middleware).
+ * /api/auth/me and /api/auth/logout go through the auth gate (req.user set by isAuthenticated).
  */
-import { authenticateUser, createSession } from '../services/auth/loginService.mjs';
+import {
+  authenticateUser,
+  createSession,
+  fetchContext,
+  getUserById,
+  revokeSession,
+} from '../services/auth/loginService.mjs';
 
 async function readJsonBody(req) {
   const chunks = [];
@@ -20,30 +27,72 @@ async function readJsonBody(req) {
  * @param {(res, status, body) => void}          sendJson  - from server/index.mjs
  */
 export async function handleAuthRoute(req, res, pathname, sendJson) {
-  if (req.method !== 'POST' || pathname !== '/api/auth/login') return false;
+  // ── POST /api/auth/login ────────────────────────────────────────────────────
+  if (req.method === 'POST' && pathname === '/api/auth/login') {
+    let body;
+    try {
+      body = await readJsonBody(req);
+    } catch {
+      sendJson(res, 400, { error: 'invalid_json' });
+      return true;
+    }
 
-  let body;
-  try {
-    body = await readJsonBody(req);
-  } catch {
-    sendJson(res, 400, { error: 'invalid_json' });
+    const { email, password } = body ?? {};
+    if (!email || !password) {
+      sendJson(res, 400, { error: 'email and password are required' });
+      return true;
+    }
+
+    const result = await authenticateUser({ email: String(email), password: String(password) });
+
+    if (!result.ok) {
+      sendJson(res, 401, { error: 'invalid_credentials' });
+      return true;
+    }
+
+    const token = await createSession(result.user);
+
+    const ctx = await fetchContext(result.user.id, result.user.tenantId).catch(() => null);
+    const enrichedUser = ctx
+      ? { ...result.user, tenantName: ctx.tenantName, tenantCode: ctx.tenantCode, entities: ctx.entities }
+      : result.user;
+
+    sendJson(res, 200, { token, user: enrichedUser });
     return true;
   }
 
-  const { email, password } = body ?? {};
-  if (!email || !password) {
-    sendJson(res, 400, { error: 'email and password are required' });
+  // ── GET /api/auth/me ────────────────────────────────────────────────────────
+  if (req.method === 'GET' && pathname === '/api/auth/me') {
+    const userId = req.user?.userId;
+    if (!userId) {
+      sendJson(res, 401, { error: 'unauthenticated' });
+      return true;
+    }
+
+    const userRow = await getUserById(userId);
+    if (!userRow) {
+      sendJson(res, 401, { error: 'user_not_found' });
+      return true;
+    }
+
+    const ctx = await fetchContext(userId, req.user.tenantId).catch(() => null);
+    const enrichedUser = ctx
+      ? { ...userRow, tenantName: ctx.tenantName, tenantCode: ctx.tenantCode, entities: ctx.entities }
+      : userRow;
+
+    sendJson(res, 200, { user: enrichedUser });
     return true;
   }
 
-  const result = await authenticateUser({ email: String(email), password: String(password) });
-
-  if (!result.ok) {
-    sendJson(res, 401, { error: 'invalid_credentials' });
+  // ── POST /api/auth/logout ───────────────────────────────────────────────────
+  if (req.method === 'POST' && pathname === '/api/auth/logout') {
+    const sessionId = req.user?.sessionId;
+    if (sessionId) {
+      await revokeSession(sessionId).catch(() => {});
+    }
+    sendJson(res, 200, { ok: true });
     return true;
   }
 
-  const token = await createSession(result.user);
-  sendJson(res, 200, { token, user: result.user });
-  return true;
+  return false;
 }

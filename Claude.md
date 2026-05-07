@@ -8,8 +8,8 @@
 - **Multi-tenant:** every AP endpoint requires `X-Tenant-Id` header. `tenantId` comes from `AuthContext` after login
 - **Dev ports:** Vite on `:3000` (per `vite.config.ts`). API server on `:8787`. Any doc that says 5173 is wrong
 - **`xlsx`** pinned to npm registry `^0.18.5` (CDN URL removed in Tier-0 B6 pass)
-- **Tests:** `npm test` (vitest run, no watch). 17 test files, 343 tests
-- **Login today is INSECURE:** `AuthContext.tsx` fetches all users + plaintext passwords to the browser and compares client-side. To be replaced with `POST /api/auth/login` + bcrypt
+- **Tests:** `npm test` (vitest run, no watch). 17 test files, 359 tests
+- **Auth:** session-token based. Login calls `POST /api/auth/login`, token stored in `sessionStorage['procinix.session.token']`. Reload rehydrates via `GET /api/auth/me`.
 
 ## Commands
 ```bash
@@ -33,9 +33,9 @@ npm run migrate:tenant-schema  # Apply multi-tenancy migration
 | `src/lib/mysql/client.ts` | `mysqlApiRequest(path)` — the frontend API client |
 | `src/lib/mysql/documentStore.ts` | `ensureDomainDocument('domain', fallback)` — JSON blob store |
 | `src/lib/paymentsApi.ts` | Payments dashboard + batch API helpers |
-| `server/routes/auth.mjs` | First domain route module — `POST /api/auth/login` |
-| `server/services/auth/loginService.mjs` | `authenticateUser`, `createSession`, `lookupSession` |
-| `src/contexts/AuthContext.tsx` | Login, tenantId, `useAuth()` hook |
+| `server/routes/auth.mjs` | Auth routes — `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` |
+| `server/services/auth/loginService.mjs` | `authenticateUser`, `createSession`, `lookupSession`, `fetchContext`, `getUserById`, `revokeSession` |
+| `src/contexts/AuthContext.tsx` | Session-token login, `/auth/me` rehydration, `useAuth()` hook |
 | `src/contexts/APDataContext.tsx` | Invoice list fetched from `/api/invoices` |
 | `src/App.tsx` | React Router route tree |
 | `sql/mysql/init.sql` | Base schema (item_master + erp_master_* tables) |
@@ -111,7 +111,7 @@ No integration tests, no E2E tests, no component tests.
 ### Tier 1 (auth overhaul, in this order)
 - ~~**B2:** bcrypt-hash existing passwords in `user_master` (migration)~~ ✅ Done 2026-05-07
 - ~~**B1:** build `POST /api/auth/login` server-side~~ ✅ Done 2026-05-07
-- **F1:** replace client-side password compare with `/api/auth/login` call
+- ~~**F1:** replace client-side password compare with `/api/auth/login` call~~ ✅ Done 2026-05-07
 
 ### Tier 2 (ingestion robustness)
 - ~~**INV-5:** crash-safe agent pipeline (try/catch, retries, alerts)~~ ✅ Done 2026-05-07
@@ -198,3 +198,4 @@ After login, DevTools console: `[AuthContext] post-merge user: { tenantId: 'tena
 - 2026-05-07 — INV-6 done: startup env validation; prod refuses to boot on missing API keys. Tests: 314 passing.
 - 2026-05-07 — Tier-0 quick wins: B6 (xlsx pinned to npm ^0.18.5), F2 (react-router/dom pinned to 7.13.0, clsx + tailwind-merge unpinned from *), F6 (54 stale src/*.md files → docs/legacy/), W6 (port 5173 ref removed from CORS comment → 3000), B3 (prod API_SECRET_KEY guard added to validateEnv + 4 new tests). Tests: 318 passing.
 - 2026-05-07 — B2+B1 done: 5 users migrated to bcrypt; POST /api/auth/login + sessions table live; first route module at server/routes/auth.mjs (B4 starts organically). Old client-side login still works in parallel until F1.
+- 2026-05-07 — F1 done: client-side password compare removed; AuthContext uses POST /api/auth/login + session token in sessionStorage; GET /api/auth/me for rehydration; POST /api/auth/logout revokes session; fetchContext/getUserById/revokeSession added to loginService; isAuthenticated always attempts session lookup even when API_SECRET_KEY unset. Files: server/services/auth/loginService.mjs, server/routes/auth.mjs, server/__tests__/loginRoute.test.mjs, server/services/auth/__tests__/loginService.test.mjs, src/lib/mysql/client.ts, src/contexts/AuthContext.tsx, server/index.mjs. Tests: 359 passing.

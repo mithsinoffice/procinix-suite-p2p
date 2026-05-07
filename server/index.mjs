@@ -239,13 +239,18 @@ async function isAuthenticated(req, pathname) {
     // still require auth — only internal callers should send invites
   }
 
+  const authHeader = req.headers['authorization'] ?? '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
   if (!API_KEY) {
-    // If no API_SECRET_KEY is configured, auth is disabled (dev mode).
+    // Auth disabled (dev mode) — but still populate req.user from session if token present.
+    if (token) {
+      const session = await lookupSession(token).catch(() => null);
+      if (session) req.user = session;
+    }
     return true;
   }
 
-  const authHeader = req.headers['authorization'] ?? '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (!token) {
     return false;
   }
