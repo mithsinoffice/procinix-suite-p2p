@@ -85,12 +85,16 @@ describe('loadDuplicateConfig', () => {
 
   it('throws when no config row (Q5 rule)', async () => {
     const db = { query: async () => [] };
-    await expect(loadDuplicateConfig('t1', db)).rejects.toThrow('invoice_duplicate_config row missing');
+    await expect(loadDuplicateConfig('t1', db)).rejects.toThrow(
+      'invoice_duplicate_config row missing'
+    );
   });
 
   it('throws when query returns null', async () => {
     const db = { query: async () => null };
-    await expect(loadDuplicateConfig('t1', db)).rejects.toThrow('invoice_duplicate_config row missing');
+    await expect(loadDuplicateConfig('t1', db)).rejects.toThrow(
+      'invoice_duplicate_config row missing'
+    );
   });
 });
 
@@ -101,7 +105,7 @@ describe('loadDuplicateConfig', () => {
 const DEFAULT_CONFIG = {
   fuzzy_match_threshold: 70,
   fuzzy_prefix_length: 6,
-  amount_tolerance_pct: 1.00,
+  amount_tolerance_pct: 1.0,
   date_window_days: 7,
   period_overlap_identical_points: 40,
   period_overlap_contained_points: 30,
@@ -141,11 +145,18 @@ const BASE_INVOICE = {
 describe('detectDuplicates — Tier 1 hard block', () => {
   it('detects Tier 1 when all fields match', async () => {
     const db = makeDb({
-      candidates: [{
-        id: 'inv-existing', vendor_id: 'v1', vendor_name: 'Acme Corp',
-        invoice_number: 'INV-001', financial_year: '2025-26',
-        invoice_date: '2026-01-15', total_amount: 10000, entity_id: 'e1',
-      }],
+      candidates: [
+        {
+          id: 'inv-existing',
+          vendor_id: 'v1',
+          vendor_name: 'Acme Corp',
+          invoice_number: 'INV-001',
+          financial_year: '2025-26',
+          invoice_date: '2026-01-15',
+          total_amount: 10000,
+          entity_id: 'e1',
+        },
+      ],
     });
 
     const result = await detectDuplicates({ invoice: BASE_INVOICE, tenantId: 't1', db });
@@ -162,11 +173,18 @@ describe('detectDuplicates — Tier 1 hard block', () => {
 describe('detectDuplicates — Tier 2 probable', () => {
   it('detects Tier 2 when FY + entity match but amount differs', async () => {
     const db = makeDb({
-      candidates: [{
-        id: 'inv-existing', vendor_id: 'v1', vendor_name: 'Acme Corp',
-        invoice_number: 'INV-001', financial_year: '2025-26',
-        invoice_date: '2026-01-15', total_amount: 15000, entity_id: 'e1', // different amount
-      }],
+      candidates: [
+        {
+          id: 'inv-existing',
+          vendor_id: 'v1',
+          vendor_name: 'Acme Corp',
+          invoice_number: 'INV-001',
+          financial_year: '2025-26',
+          invoice_date: '2026-01-15',
+          total_amount: 15000,
+          entity_id: 'e1', // different amount
+        },
+      ],
     });
 
     const result = await detectDuplicates({ invoice: BASE_INVOICE, tenantId: 't1', db });
@@ -176,11 +194,18 @@ describe('detectDuplicates — Tier 2 probable', () => {
 
   it('detects Tier 2 when FY + entity match but date differs', async () => {
     const db = makeDb({
-      candidates: [{
-        id: 'inv-existing', vendor_id: 'v1', vendor_name: 'Acme Corp',
-        invoice_number: 'INV-001', financial_year: '2025-26',
-        invoice_date: '2026-02-01', total_amount: 10000, entity_id: 'e1', // different date
-      }],
+      candidates: [
+        {
+          id: 'inv-existing',
+          vendor_id: 'v1',
+          vendor_name: 'Acme Corp',
+          invoice_number: 'INV-001',
+          financial_year: '2025-26',
+          invoice_date: '2026-02-01',
+          total_amount: 10000,
+          entity_id: 'e1', // different date
+        },
+      ],
     });
 
     const result = await detectDuplicates({ invoice: BASE_INVOICE, tenantId: 't1', db });
@@ -195,11 +220,18 @@ describe('detectDuplicates — Tier 2 probable', () => {
 describe('detectDuplicates — Tier 2b cross-FY', () => {
   it('detects Tier 2b when same entity but different FY', async () => {
     const db = makeDb({
-      candidates: [{
-        id: 'inv-existing', vendor_id: 'v1', vendor_name: 'Acme Corp',
-        invoice_number: 'INV-001', financial_year: '2024-25', // different FY
-        invoice_date: '2025-12-15', total_amount: 10000, entity_id: 'e1',
-      }],
+      candidates: [
+        {
+          id: 'inv-existing',
+          vendor_id: 'v1',
+          vendor_name: 'Acme Corp',
+          invoice_number: 'INV-001',
+          financial_year: '2024-25', // different FY
+          invoice_date: '2025-12-15',
+          total_amount: 10000,
+          entity_id: 'e1',
+        },
+      ],
     });
 
     const result = await detectDuplicates({ invoice: BASE_INVOICE, tenantId: 't1', db });
@@ -215,11 +247,18 @@ describe('detectDuplicates — Tier 2b cross-FY', () => {
 describe('detectDuplicates — Tier 3 cross-entity', () => {
   it('detects Tier 3 when same tenant but different entity', async () => {
     const db = makeDb({
-      candidates: [{
-        id: 'inv-existing', vendor_id: 'v1', vendor_name: 'Acme Corp',
-        invoice_number: 'INV-001', financial_year: '2025-26',
-        invoice_date: '2026-01-15', total_amount: 10000, entity_id: 'e2', // different entity
-      }],
+      candidates: [
+        {
+          id: 'inv-existing',
+          vendor_id: 'v1',
+          vendor_name: 'Acme Corp',
+          invoice_number: 'INV-001',
+          financial_year: '2025-26',
+          invoice_date: '2026-01-15',
+          total_amount: 10000,
+          entity_id: 'e2', // different entity
+        },
+      ],
     });
 
     const result = await detectDuplicates({ invoice: BASE_INVOICE, tenantId: 't1', db });
@@ -236,13 +275,18 @@ describe('detectDuplicates — Tier 4 fuzzy', () => {
   it('detects Tier 4 when fuzzy score exceeds threshold', async () => {
     const db = makeDb({
       candidates: [], // no exact invoice_number matches
-      fuzzyCandidates: [{
-        id: 'inv-fuzzy', vendor_id: 'v1', vendor_name: 'Acme Corp',
-        invoice_number: 'INV-002', // same prefix "INV-00"
-        invoice_date: '2026-01-16', // within 7-day window
-        total_amount: 10050, // within 1% tolerance
-        service_period_from: '2026-01-01', service_period_to: '2026-01-31', // identical period
-      }],
+      fuzzyCandidates: [
+        {
+          id: 'inv-fuzzy',
+          vendor_id: 'v1',
+          vendor_name: 'Acme Corp',
+          invoice_number: 'INV-002', // same prefix "INV-00"
+          invoice_date: '2026-01-16', // within 7-day window
+          total_amount: 10050, // within 1% tolerance
+          service_period_from: '2026-01-01',
+          service_period_to: '2026-01-31', // identical period
+        },
+      ],
     });
 
     const result = await detectDuplicates({ invoice: BASE_INVOICE, tenantId: 't1', db });
@@ -257,13 +301,18 @@ describe('detectDuplicates — Tier 4 fuzzy', () => {
   it('returns clear when fuzzy score below threshold', async () => {
     const db = makeDb({
       candidates: [],
-      fuzzyCandidates: [{
-        id: 'inv-fuzzy', vendor_id: 'v1', vendor_name: 'Acme Corp',
-        invoice_number: 'INV-002',
-        invoice_date: '2026-06-01', // outside 7-day window
-        total_amount: 50000, // outside 1% tolerance
-        service_period_from: null, service_period_to: null,
-      }],
+      fuzzyCandidates: [
+        {
+          id: 'inv-fuzzy',
+          vendor_id: 'v1',
+          vendor_name: 'Acme Corp',
+          invoice_number: 'INV-002',
+          invoice_date: '2026-06-01', // outside 7-day window
+          total_amount: 50000, // outside 1% tolerance
+          service_period_from: null,
+          service_period_to: null,
+        },
+      ],
     });
 
     const result = await detectDuplicates({ invoice: BASE_INVOICE, tenantId: 't1', db });
@@ -304,11 +353,18 @@ describe('detectDuplicates — vendor_name fallback (no vendor_id)', () => {
   it('matches via normalized vendor_name when vendor_id is null', async () => {
     const noVendorIdInvoice = { ...BASE_INVOICE, vendor_id: null };
     const db = makeDb({
-      candidates: [{
-        id: 'inv-existing', vendor_id: null, vendor_name: 'ACME Corp', // normalizes to "acme" (same as "Acme Corp")
-        invoice_number: 'INV-001', financial_year: '2025-26',
-        invoice_date: '2026-01-15', total_amount: 10000, entity_id: 'e1',
-      }],
+      candidates: [
+        {
+          id: 'inv-existing',
+          vendor_id: null,
+          vendor_name: 'ACME Corp', // normalizes to "acme" (same as "Acme Corp")
+          invoice_number: 'INV-001',
+          financial_year: '2025-26',
+          invoice_date: '2026-01-15',
+          total_amount: 10000,
+          entity_id: 'e1',
+        },
+      ],
     });
 
     const result = await detectDuplicates({ invoice: noVendorIdInvoice, tenantId: 't1', db });
@@ -320,11 +376,18 @@ describe('detectDuplicates — vendor_name fallback (no vendor_id)', () => {
   it('does not match when normalized vendor names differ', async () => {
     const noVendorIdInvoice = { ...BASE_INVOICE, vendor_id: null };
     const db = makeDb({
-      candidates: [{
-        id: 'inv-existing', vendor_id: null, vendor_name: 'Different Company',
-        invoice_number: 'INV-001', financial_year: '2025-26',
-        invoice_date: '2026-01-15', total_amount: 10000, entity_id: 'e1',
-      }],
+      candidates: [
+        {
+          id: 'inv-existing',
+          vendor_id: null,
+          vendor_name: 'Different Company',
+          invoice_number: 'INV-001',
+          financial_year: '2025-26',
+          invoice_date: '2026-01-15',
+          total_amount: 10000,
+          entity_id: 'e1',
+        },
+      ],
     });
 
     const result = await detectDuplicates({ invoice: noVendorIdInvoice, tenantId: 't1', db });
@@ -362,13 +425,27 @@ describe('detectDuplicates — tier priority', () => {
     const db = makeDb({
       candidates: [
         // Tier 3 match (different entity)
-        { id: 'inv-t3', vendor_id: 'v1', vendor_name: 'Acme Corp',
-          invoice_number: 'INV-001', financial_year: '2025-26',
-          invoice_date: '2026-01-15', total_amount: 10000, entity_id: 'e2' },
+        {
+          id: 'inv-t3',
+          vendor_id: 'v1',
+          vendor_name: 'Acme Corp',
+          invoice_number: 'INV-001',
+          financial_year: '2025-26',
+          invoice_date: '2026-01-15',
+          total_amount: 10000,
+          entity_id: 'e2',
+        },
         // Tier 1 match (all fields)
-        { id: 'inv-t1', vendor_id: 'v1', vendor_name: 'Acme Corp',
-          invoice_number: 'INV-001', financial_year: '2025-26',
-          invoice_date: '2026-01-15', total_amount: 10000, entity_id: 'e1' },
+        {
+          id: 'inv-t1',
+          vendor_id: 'v1',
+          vendor_name: 'Acme Corp',
+          invoice_number: 'INV-001',
+          financial_year: '2025-26',
+          invoice_date: '2026-01-15',
+          total_amount: 10000,
+          entity_id: 'e1',
+        },
       ],
     });
 

@@ -1,10 +1,6 @@
 import { useMemo } from 'react';
 import { apportionBOECharges, BOEApportionMethod } from '../../utils/apportionBOECharges';
-import {
-  BOEChargeValues,
-  BOEHeaderValues,
-  BOELineValues,
-} from '../../schemas/invoiceSchema';
+import { BOEChargeValues, BOEHeaderValues, BOELineValues } from '../../schemas/invoiceSchema';
 
 interface BOESectionProps {
   invoiceType?: string;
@@ -55,10 +51,35 @@ export function BOESection({
         Bill of Entry
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <input placeholder="BOE no" value={header.boeNo || ''} onChange={(e) => onHeaderChange({ ...header, boeNo: e.target.value })} className="px-3 py-2 rounded border" style={{ borderColor: 'var(--color-silver)' }} />
-        <input placeholder="Port of entry" value={header.portOfEntry || ''} onChange={(e) => onHeaderChange({ ...header, portOfEntry: e.target.value })} className="px-3 py-2 rounded border" style={{ borderColor: 'var(--color-silver)' }} />
-        <input placeholder="CHA name" value={header.chaName || ''} onChange={(e) => onHeaderChange({ ...header, chaName: e.target.value })} className="px-3 py-2 rounded border" style={{ borderColor: 'var(--color-silver)' }} />
-        <input placeholder="Exchange rate" type="number" value={header.exchangeRate || exchangeRate || 1} onChange={(e) => onHeaderChange({ ...header, exchangeRate: Number(e.target.value) || 1 })} className="px-3 py-2 rounded border" style={{ borderColor: 'var(--color-silver)' }} />
+        <input
+          placeholder="BOE no"
+          value={header.boeNo || ''}
+          onChange={(e) => onHeaderChange({ ...header, boeNo: e.target.value })}
+          className="px-3 py-2 rounded border"
+          style={{ borderColor: 'var(--color-silver)' }}
+        />
+        <input
+          placeholder="Port of entry"
+          value={header.portOfEntry || ''}
+          onChange={(e) => onHeaderChange({ ...header, portOfEntry: e.target.value })}
+          className="px-3 py-2 rounded border"
+          style={{ borderColor: 'var(--color-silver)' }}
+        />
+        <input
+          placeholder="CHA name"
+          value={header.chaName || ''}
+          onChange={(e) => onHeaderChange({ ...header, chaName: e.target.value })}
+          className="px-3 py-2 rounded border"
+          style={{ borderColor: 'var(--color-silver)' }}
+        />
+        <input
+          placeholder="Exchange rate"
+          type="number"
+          value={header.exchangeRate || exchangeRate || 1}
+          onChange={(e) => onHeaderChange({ ...header, exchangeRate: Number(e.target.value) || 1 })}
+          className="px-3 py-2 rounded border"
+          style={{ borderColor: 'var(--color-silver)' }}
+        />
       </div>
 
       <div className="flex gap-2">
@@ -67,7 +88,10 @@ export function BOESection({
             type="button"
             key={method}
             className="px-2 py-1 rounded border text-xs"
-            style={{ borderColor: 'var(--color-silver)', backgroundColor: apportionmentMethod === method ? 'var(--color-cloud)' : '#fff' }}
+            style={{
+              borderColor: 'var(--color-silver)',
+              backgroundColor: apportionmentMethod === method ? 'var(--color-cloud)' : '#fff',
+            }}
             onClick={() => onMethodChange(method)}
           >
             {method}
@@ -96,8 +120,12 @@ export function BOESection({
                 <td className="px-2 py-2 text-right">{line.bcdAmount.toLocaleString('en-IN')}</td>
                 <td className="px-2 py-2 text-right">{line.swsAmount.toLocaleString('en-IN')}</td>
                 <td className="px-2 py-2 text-right">{line.igstAmount.toLocaleString('en-IN')}</td>
-                <td className="px-2 py-2 text-right">{(landed[index]?.allocatedCharge || 0).toLocaleString('en-IN')}</td>
-                <td className="px-2 py-2 text-right">{(landed[index]?.landedCost || 0).toLocaleString('en-IN')}</td>
+                <td className="px-2 py-2 text-right">
+                  {(landed[index]?.allocatedCharge || 0).toLocaleString('en-IN')}
+                </td>
+                <td className="px-2 py-2 text-right">
+                  {(landed[index]?.landedCost || 0).toLocaleString('en-IN')}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -106,4 +134,3 @@ export function BOESection({
     </div>
   );
 }
-

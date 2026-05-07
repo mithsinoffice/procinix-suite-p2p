@@ -4,7 +4,13 @@ import { LIFECYCLE_STATES } from '../invoices/lifecycleMapping.mjs';
 
 const DEFAULT_SLA_HOURS = 48;
 const DEFAULT_ESCALATION_HOURS = 36;
-const PENDING_MASTER_STATUSES = ['pending approval', 'pending_approval', 'pending', 'draft', 'changes requested'];
+const PENDING_MASTER_STATUSES = [
+  'pending approval',
+  'pending_approval',
+  'pending',
+  'draft',
+  'changes requested',
+];
 let ensuredReferenceIdColumn = false;
 const SYNC_DEBOUNCE_MS = 60000;
 let pendingSyncPromise = null;
@@ -403,7 +409,8 @@ export function getMSMEDeadlineInfo(invoice, vendor) {
     is_critical: daysRemaining <= 7,
     is_warning: daysRemaining <= 15,
     msme_category: vendor.msme_category,
-    legal_note: 'MSMED Act 2006 — payment beyond 45 days attracts compound interest at 3× bank rate',
+    legal_note:
+      'MSMED Act 2006 — payment beyond 45 days attracts compound interest at 3× bank rate',
   };
 }
 
@@ -575,16 +582,23 @@ export async function getApprovalKPIs(approverId, year, db) {
   const pending = pendingRows[0] ?? {};
   const avgMinutes = Number(stats.avg_minutes ?? 0);
   const teamAvgMinutes = Number(teamRows?.[0]?.team_avg ?? 0);
-  const fasterPercent = teamAvgMinutes > 0 ? Math.round(((teamAvgMinutes - avgMinutes) / teamAvgMinutes) * 100) : 0;
+  const fasterPercent =
+    teamAvgMinutes > 0 ? Math.round(((teamAvgMinutes - avgMinutes) / teamAvgMinutes) * 100) : 0;
 
   return {
     total_approvals_ytd: Number(stats.total_approvals ?? 0),
-    on_time_rate: Number(stats.total_approvals ?? 0) > 0 ? Math.round((Number(stats.on_time ?? 0) / Number(stats.total_approvals)) * 100) : 0,
+    on_time_rate:
+      Number(stats.total_approvals ?? 0) > 0
+        ? Math.round((Number(stats.on_time ?? 0) / Number(stats.total_approvals)) * 100)
+        : 0,
     on_time_count: Number(stats.on_time ?? 0),
     avg_hours_per_approval: Math.round((avgMinutes / 60) * 10) / 10,
     faster_than_team_percent: fasterPercent,
     total_rejections: Number(stats.rejected ?? 0),
-    rejection_rate: Number(stats.total_approvals ?? 0) > 0 ? Math.round((Number(stats.rejected ?? 0) / Number(stats.total_approvals)) * 100) : 0,
+    rejection_rate:
+      Number(stats.total_approvals ?? 0) > 0
+        ? Math.round((Number(stats.rejected ?? 0) / Number(stats.total_approvals)) * 100)
+        : 0,
     total_value_approved: Number(valueRows?.[0]?.total_value ?? 0),
     avg_approvals_per_month:
       Number(stats.active_months ?? 0) > 0
@@ -625,15 +639,17 @@ export async function getModuleCounts(approverId, db) {
 }
 
 async function triggerNextWorkflowStep(approval, action, conn) {
-  await conn.execute(
-    `INSERT INTO agent_run_logs (id, agent_name, status, input_json, output_json, run_at)
+  await conn
+    .execute(
+      `INSERT INTO agent_run_logs (id, agent_name, status, input_json, output_json, run_at)
      VALUES (?, 'approval_workflow', 'completed', CAST(? AS JSON), CAST(? AS JSON), NOW())`,
-    [
-      randomUUID(),
-      JSON.stringify({ approval_id: approval.id, action }),
-      JSON.stringify({ success: true }),
-    ]
-  ).catch(() => undefined);
+      [
+        randomUUID(),
+        JSON.stringify({ approval_id: approval.id, action }),
+        JSON.stringify({ success: true }),
+      ]
+    )
+    .catch(() => undefined);
 }
 
 async function sendApprovalNotification(approval, action) {
@@ -762,6 +778,10 @@ export async function getApprovalDetail(approvalId, approverId, db) {
 }
 
 export async function getMSMEAlerts(approverId, db) {
-  const queue = await getApprovalQueue(approverId, { module: 'ap_invoice', limit: 500, page: 1 }, db);
+  const queue = await getApprovalQueue(
+    approverId,
+    { module: 'ap_invoice', limit: 500, page: 1 },
+    db
+  );
   return queue.filter((item) => item.msme_info?.is_critical || item.msme_info?.is_warning);
 }

@@ -59,7 +59,10 @@ export async function executeDuplicate(value, table, field, excludeId, queryFn) 
     const rows = await queryFn(sql, params);
     const count = rows[0]?.cnt ?? 0;
     if (count > 0) {
-      return { passed: false, error: `Duplicate value "${value}" found in ${safeTable}.${safeField}` };
+      return {
+        passed: false,
+        error: `Duplicate value "${value}" found in ${safeTable}.${safeField}`,
+      };
     }
     return { passed: true };
   } catch (err) {
@@ -76,13 +79,15 @@ export async function executeCrossReference(value, refTable, refField, queryFn) 
   const safeField = sanitizeIdentifier(refField);
 
   try {
-    const rows = await queryFn(
-      `SELECT COUNT(*) AS cnt FROM ${safeTable} WHERE ${safeField} = ?`,
-      [value]
-    );
+    const rows = await queryFn(`SELECT COUNT(*) AS cnt FROM ${safeTable} WHERE ${safeField} = ?`, [
+      value,
+    ]);
     const count = rows[0]?.cnt ?? 0;
     if (count === 0) {
-      return { passed: false, error: `No matching record for "${value}" in ${safeTable}.${safeField}` };
+      return {
+        passed: false,
+        error: `No matching record for "${value}" in ${safeTable}.${safeField}`,
+      };
     }
     return { passed: true };
   } catch (err) {
@@ -103,14 +108,16 @@ export function executeMathValidation(fields, formula, tolerance = 0) {
       expr = expr.replace(new RegExp(`\\b${keys[i]}\\b`, 'g'), `__v[${i}]`);
     }
 
-    // eslint-disable-next-line no-new-func
     const fn = new Function('__v', `'use strict'; return (${expr});`);
     const result = fn(values);
 
     // A math validation passes if the expression evaluates to 0 (or within tolerance)
     const diff = Math.abs(Number(result));
     if (diff > tolerance) {
-      return { passed: false, error: `Math validation failed: result=${result}, tolerance=${tolerance}` };
+      return {
+        passed: false,
+        error: `Math validation failed: result=${result}, tolerance=${tolerance}`,
+      };
     }
     return { passed: true };
   } catch (err) {
@@ -139,7 +146,6 @@ export function executeThreshold(value, min, max) {
 // ─── Custom (sandboxed Function eval) ────────────────────────────
 export function executeCustom(value, code) {
   try {
-    // eslint-disable-next-line no-new-func
     const fn = new Function('value', `'use strict'; ${code}`);
     const result = fn(value);
     if (typeof result === 'object' && result !== null && 'passed' in result) {

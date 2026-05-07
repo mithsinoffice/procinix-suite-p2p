@@ -18,14 +18,17 @@ import { fileURLToPath } from 'node:url';
 import mysql from 'mysql2/promise';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MIGRATION_SQL = join(__dirname, '../../sql/mysql/migrations/20260424_ws1a_2d_seeds_and_backfills.sql');
+const MIGRATION_SQL = join(
+  __dirname,
+  '../../sql/mysql/migrations/20260424_ws1a_2d_seeds_and_backfills.sql'
+);
 
 const SEED_TABLES = [
   { table: 'invoice_rejection_reasons', expected: 14 },
-  { table: 'invoice_duplicate_config',  expected: 2 },
-  { table: 'gst_validation_config',     expected: 2 },
-  { table: 'kyc_provider_config',       expected: 2 },
-  { table: 'kyc_check_config',          expected: 14 },
+  { table: 'invoice_duplicate_config', expected: 2 },
+  { table: 'gst_validation_config', expected: 2 },
+  { table: 'kyc_provider_config', expected: 2 },
+  { table: 'kyc_check_config', expected: 14 },
 ];
 
 function buildSslConfig() {
@@ -61,11 +64,23 @@ async function runPreFlight(conn) {
   console.log('\n--- Pre-flight: current state before mutation ---\n');
 
   // Invoice column coverage
-  const totalInvoices     = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices');
-  const nullLifecycle     = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices WHERE lifecycle_state IS NULL');
-  const nullFinancialYear = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices WHERE financial_year IS NULL');
-  const nullVendorId      = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices WHERE vendor_id IS NULL');
-  const nullLastAction    = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices WHERE last_action IS NULL');
+  const totalInvoices = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices');
+  const nullLifecycle = await getCount(
+    conn,
+    'SELECT COUNT(*) AS n FROM invoices WHERE lifecycle_state IS NULL'
+  );
+  const nullFinancialYear = await getCount(
+    conn,
+    'SELECT COUNT(*) AS n FROM invoices WHERE financial_year IS NULL'
+  );
+  const nullVendorId = await getCount(
+    conn,
+    'SELECT COUNT(*) AS n FROM invoices WHERE vendor_id IS NULL'
+  );
+  const nullLastAction = await getCount(
+    conn,
+    'SELECT COUNT(*) AS n FROM invoices WHERE last_action IS NULL'
+  );
 
   console.log('Invoice columns:');
   console.log(`  Total invoices:             ${totalInvoices}`);
@@ -86,7 +101,8 @@ async function runPreFlight(conn) {
   console.log(`\nPayments table: ${paymentsCount} rows`);
 
   // Paid invoices eligible for synthesis
-  const paidEligible = await getCount(conn,
+  const paidEligible = await getCount(
+    conn,
     "SELECT COUNT(*) AS n FROM invoices WHERE LOWER(status) = 'paid' AND total_amount IS NOT NULL"
   );
   console.log(`Paid invoices eligible for synthesis: ${paidEligible}`);
@@ -96,7 +112,8 @@ async function runPreFlight(conn) {
   console.log(`invoice_audit_log: ${auditLogCount} rows`);
 
   // Three-branch interpretation
-  const seedsPresent = await getCount(conn, `SELECT COUNT(*) AS n FROM invoice_rejection_reasons`) > 0;
+  const seedsPresent =
+    (await getCount(conn, `SELECT COUNT(*) AS n FROM invoice_rejection_reasons`)) > 0;
   const invoicesPopulated = nullLifecycle === 0 && nullFinancialYear === 0 && nullLastAction === 0;
 
   console.log('\n--- Pre-flight interpretation ---');
@@ -104,11 +121,15 @@ async function runPreFlight(conn) {
     console.log('State: PURE NO-OP — all seeds present, all invoice columns already populated.');
     console.log('Re-running 2d is safe (idempotent) but will not change data.');
   } else if (!seedsPresent && nullLifecycle === totalInvoices && totalInvoices > 0) {
-    console.log('State: FRESH RUN — no seeds, all nullable columns null. Full 2d execution expected.');
+    console.log(
+      'State: FRESH RUN — no seeds, all nullable columns null. Full 2d execution expected.'
+    );
   } else if (totalInvoices === 0) {
     console.log('State: EMPTY DB — zero invoices. Seeds will populate; backfills will be no-ops.');
   } else {
-    console.log('State: PARTIAL — some data present, some missing. 2d will fill gaps (idempotent).');
+    console.log(
+      'State: PARTIAL — some data present, some missing. 2d will fill gaps (idempotent).'
+    );
   }
 }
 
@@ -117,26 +138,44 @@ async function runPostVerification(conn) {
   let failures = 0;
 
   // Invoice column coverage
-  const totalInvoices      = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices');
-  const populatedLifecycle = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices WHERE lifecycle_state IS NOT NULL');
-  const nullLifecycle      = totalInvoices - populatedLifecycle;
-  const populatedFY        = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices WHERE financial_year IS NOT NULL');
-  const populatedVendorId  = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices WHERE vendor_id IS NOT NULL');
-  const populatedLastAction = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices WHERE last_action IS NOT NULL');
+  const totalInvoices = await getCount(conn, 'SELECT COUNT(*) AS n FROM invoices');
+  const populatedLifecycle = await getCount(
+    conn,
+    'SELECT COUNT(*) AS n FROM invoices WHERE lifecycle_state IS NOT NULL'
+  );
+  const nullLifecycle = totalInvoices - populatedLifecycle;
+  const populatedFY = await getCount(
+    conn,
+    'SELECT COUNT(*) AS n FROM invoices WHERE financial_year IS NOT NULL'
+  );
+  const populatedVendorId = await getCount(
+    conn,
+    'SELECT COUNT(*) AS n FROM invoices WHERE vendor_id IS NOT NULL'
+  );
+  const populatedLastAction = await getCount(
+    conn,
+    'SELECT COUNT(*) AS n FROM invoices WHERE last_action IS NOT NULL'
+  );
 
   console.log('Invoice backfill coverage:');
   console.log(`  lifecycle_state populated:   ${populatedLifecycle}/${totalInvoices}`);
   console.log(`  financial_year populated:    ${populatedFY}/${totalInvoices}`);
-  console.log(`  vendor_id populated:         ${populatedVendorId}/${totalInvoices} (unresolved are logged above)`);
+  console.log(
+    `  vendor_id populated:         ${populatedVendorId}/${totalInvoices} (unresolved are logged above)`
+  );
   console.log(`  last_action populated:       ${populatedLastAction}/${totalInvoices}`);
 
   if (nullLifecycle > 0) {
-    console.log(`\n  WARNING: ${nullLifecycle} invoice(s) still have NULL lifecycle_state (check lifecycle_unmapped output above)`);
+    console.log(
+      `\n  WARNING: ${nullLifecycle} invoice(s) still have NULL lifecycle_state (check lifecycle_unmapped output above)`
+    );
     const [unmapped] = await conn.execute(
       'SELECT id, status, processing_status FROM invoices WHERE lifecycle_state IS NULL'
     );
     for (const row of unmapped) {
-      console.log(`    id=${row.id}  status=${row.status}  processing_status=${row.processing_status}`);
+      console.log(
+        `    id=${row.id}  status=${row.status}  processing_status=${row.processing_status}`
+      );
     }
     failures++;
   }
@@ -155,13 +194,17 @@ async function runPostVerification(conn) {
   console.log(`\nPayments: ${paymentsCount} rows`);
 
   // Audit log
-  const auditBackfill = await getCount(conn,
+  const auditBackfill = await getCount(
+    conn,
     "SELECT COUNT(*) AS n FROM invoice_audit_log WHERE action = 'lifecycle_state_backfilled'"
   );
-  const auditQ3 = await getCount(conn,
+  const auditQ3 = await getCount(
+    conn,
     "SELECT COUNT(*) AS n FROM invoice_audit_log WHERE action = 'migrated_to_exception_hold'"
   );
-  console.log(`invoice_audit_log: ${auditBackfill} lifecycle_state_backfilled + ${auditQ3} migrated_to_exception_hold`);
+  console.log(
+    `invoice_audit_log: ${auditBackfill} lifecycle_state_backfilled + ${auditQ3} migrated_to_exception_hold`
+  );
 
   return failures;
 }
@@ -202,13 +245,20 @@ async function main() {
     // yields a rows array, each INSERT/UPDATE yields a ResultSetHeader.
     // For a batch with N statements, queryResults has N elements.
     // Single-statement edge case: queryResults is the result itself.
-    const allResults = Array.isArray(queryResults) && queryResults.length > 0 && Array.isArray(queryResults[0])
-      ? queryResults
-      : [queryResults];
+    const allResults =
+      Array.isArray(queryResults) && queryResults.length > 0 && Array.isArray(queryResults[0])
+        ? queryResults
+        : [queryResults];
 
     let tagOutputCount = 0;
     for (const rs of allResults) {
-      if (Array.isArray(rs) && rs.length > 0 && rs[0] && typeof rs[0] === 'object' && 'tag' in rs[0]) {
+      if (
+        Array.isArray(rs) &&
+        rs.length > 0 &&
+        rs[0] &&
+        typeof rs[0] === 'object' &&
+        'tag' in rs[0]
+      ) {
         tagOutputCount++;
         const tag = rs[0].tag;
         console.log(`\n  [${tag}] ${rs.length} row(s):`);

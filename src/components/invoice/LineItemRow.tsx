@@ -30,7 +30,13 @@ function Chip({ label, bg, color }: { label: string; bg: string; color: string }
   );
 }
 
-export function LineItemRow({ line, vendorMaster, invoiceFlags, onChange, onDelete }: LineItemRowProps) {
+export function LineItemRow({
+  line,
+  vendorMaster,
+  invoiceFlags,
+  onChange,
+  onDelete,
+}: LineItemRowProps) {
   const gstResult = useMemo(
     () =>
       determineGST({
@@ -126,13 +132,30 @@ export function LineItemRow({ line, vendorMaster, invoiceFlags, onChange, onDele
         />
       </td>
       <td className="px-2 py-2">
-        <input value={line.costCentre || ''} onChange={(e) => onChange({ ...line, costCentre: e.target.value })} className="w-full px-2 py-1 rounded border" style={{ borderColor: 'var(--color-silver)' }} />
+        <input
+          value={line.costCentre || ''}
+          onChange={(e) => onChange({ ...line, costCentre: e.target.value })}
+          className="w-full px-2 py-1 rounded border"
+          style={{ borderColor: 'var(--color-silver)' }}
+        />
       </td>
       <td className="px-2 py-2">
-        <input type="number" value={line.qty} onChange={(e) => handleNumeric('qty', e.target.value)} className="w-full px-2 py-1 rounded border text-right" style={{ borderColor: 'var(--color-silver)' }} />
+        <input
+          type="number"
+          value={line.qty}
+          onChange={(e) => handleNumeric('qty', e.target.value)}
+          className="w-full px-2 py-1 rounded border text-right"
+          style={{ borderColor: 'var(--color-silver)' }}
+        />
       </td>
       <td className="px-2 py-2">
-        <input type="number" value={line.rate} onChange={(e) => handleNumeric('rate', e.target.value)} className="w-full px-2 py-1 rounded border text-right" style={{ borderColor: 'var(--color-silver)' }} />
+        <input
+          type="number"
+          value={line.rate}
+          onChange={(e) => handleNumeric('rate', e.target.value)}
+          className="w-full px-2 py-1 rounded border text-right"
+          style={{ borderColor: 'var(--color-silver)' }}
+        />
       </td>
       <td className="px-2 py-2 text-right">{line.taxableAmount.toLocaleString('en-IN')}</td>
       <td className="px-2 py-2 text-right">{(line.gstRate || 0).toFixed(2)}%</td>
@@ -144,8 +167,16 @@ export function LineItemRow({ line, vendorMaster, invoiceFlags, onChange, onDele
           <Chip label={line.tdsSection || 'None'} bg="#DBEAFE" color="#1E3A8A" />
           <Chip
             label={tdsResult.override}
-            bg={tdsResult.override === '206AA' || tdsResult.override === '206AB' ? '#FEE2E2' : '#F3F4F6'}
-            color={tdsResult.override === '206AA' || tdsResult.override === '206AB' ? '#B91C1C' : '#4B5563'}
+            bg={
+              tdsResult.override === '206AA' || tdsResult.override === '206AB'
+                ? '#FEE2E2'
+                : '#F3F4F6'
+            }
+            color={
+              tdsResult.override === '206AA' || tdsResult.override === '206AB'
+                ? '#B91C1C'
+                : '#4B5563'
+            }
           />
           <Chip
             label={tdsResult.rate > 0 ? `${tdsResult.rate}% applied` : 'Skipped'}
@@ -156,13 +187,25 @@ export function LineItemRow({ line, vendorMaster, invoiceFlags, onChange, onDele
       </td>
       <td className="px-2 py-2 text-right">{tdsResult.rate.toFixed(2)}%</td>
       <td className="px-2 py-2 text-right">{tdsResult.netTDS.toLocaleString('en-IN')}</td>
-      <td className="px-2 py-2 text-right">{(line.taxableAmount + gstResult.igst + gstResult.cgst + gstResult.sgst - tdsResult.netTDS).toLocaleString('en-IN')}</td>
+      <td className="px-2 py-2 text-right">
+        {(
+          line.taxableAmount +
+          gstResult.igst +
+          gstResult.cgst +
+          gstResult.sgst -
+          tdsResult.netTDS
+        ).toLocaleString('en-IN')}
+      </td>
       <td className="px-2 py-2 text-center">
-        <button type="button" onClick={onDelete} className="p-1 rounded hover:bg-red-50" style={{ color: 'var(--color-error)' }}>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="p-1 rounded hover:bg-red-50"
+          style={{ color: 'var(--color-error)' }}
+        >
           <Trash2 size={14} />
         </button>
       </td>
     </tr>
   );
 }
-

@@ -25,7 +25,7 @@ const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
   content:
-    "Hi! I'm the Procinix AI Assistant.\n\nI can help you:\n\u2022 Create masters, PRs, POs, invoices\n\u2022 Navigate to any page\n\u2022 Answer questions about P2P workflows\n\u2022 Execute complex multi-step operations\n\nTry saying \"Create a department called Marketing\" or \"Navigate to vendor master\"",
+    'Hi! I\'m the Procinix AI Assistant.\n\nI can help you:\n\u2022 Create masters, PRs, POs, invoices\n\u2022 Navigate to any page\n\u2022 Answer questions about P2P workflows\n\u2022 Execute complex multi-step operations\n\nTry saying "Create a department called Marketing" or "Navigate to vendor master"',
   timestamp: new Date(),
 };
 
@@ -64,7 +64,12 @@ export function ChatBot() {
 
   // ---------- Helpers ----------
   const addMessage = useCallback(
-    (role: ChatMessage['role'], content: string, actions?: ChatAction[], status?: ChatMessage['status']) => {
+    (
+      role: ChatMessage['role'],
+      content: string,
+      actions?: ChatAction[],
+      status?: ChatMessage['status']
+    ) => {
       const msg: ChatMessage = {
         id: Date.now().toString() + Math.random().toString(36).slice(2),
         role,
@@ -79,7 +84,7 @@ export function ChatBot() {
       }
       return msg;
     },
-    [isOpen],
+    [isOpen]
   );
 
   // ---------- Send ----------
@@ -118,7 +123,7 @@ export function ChatBot() {
         setIsLoading(false);
       }
     },
-    [input, isLoading, messages, addMessage],
+    [input, isLoading, messages, addMessage]
   );
 
   // ---------- Action execution ----------
@@ -136,9 +141,9 @@ export function ChatBot() {
           try {
             const masterKey = action.payload.masterKey as string;
             const data = action.payload.data as Record<string, any>;
-            const existing = await mysqlApiRequest<{ data: any[] }>(`/api/masters/${masterKey}`);
+            const existing = await mysqlApiRequest<{ data: any[] }>(`/masters/${masterKey}`);
             const records = [...(existing.data || []), { ...data, id: Date.now().toString() }];
-            await mysqlApiRequest(`/api/masters/${masterKey}`, {
+            await mysqlApiRequest(`/masters/${masterKey}`, {
               method: 'PUT',
               body: JSON.stringify({ records }),
             });
@@ -158,7 +163,7 @@ export function ChatBot() {
           break;
       }
     },
-    [navigate, addMessage, handleSend],
+    [navigate, addMessage, handleSend]
   );
 
   // ---------- Voice ----------
@@ -341,11 +346,21 @@ export function ChatBot() {
         <div style={styles.panel}>
           {/* Header */}
           <div style={styles.header}>
-            <img src={procinixLogo} alt="Procinix" style={{ height: 22, width: 'auto', filter: 'brightness(0) invert(1)' }} />
+            <img
+              src={procinixLogo}
+              alt="Procinix"
+              style={{ height: 22, width: 'auto', filter: 'brightness(0) invert(1)' }}
+            />
             <span style={{ flex: 1, fontWeight: 600, fontSize: 15 }}>AI Assistant</span>
             <button
               onClick={() => setIsOpen(false)}
-              style={{ background: 'none', border: 'none', color: '#FFF', cursor: 'pointer', padding: 4 }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#FFF',
+                cursor: 'pointer',
+                padding: 4,
+              }}
               title="Minimize"
             >
               <Minus size={18} />
@@ -355,7 +370,13 @@ export function ChatBot() {
                 setIsOpen(false);
                 setMessages([WELCOME_MESSAGE]);
               }}
-              style={{ background: 'none', border: 'none', color: '#FFF', cursor: 'pointer', padding: 4 }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#FFF',
+                cursor: 'pointer',
+                padding: 4,
+              }}
               title="Close & reset"
             >
               <X size={18} />
@@ -378,9 +399,20 @@ export function ChatBot() {
                   {msg.content}
                 </div>
                 {msg.actions && msg.actions.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: 4, alignSelf: 'flex-start' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      marginTop: 4,
+                      alignSelf: 'flex-start',
+                    }}
+                  >
                     {msg.actions.map((action, idx) => (
-                      <button key={idx} style={styles.actionBtn} onClick={() => executeAction(action)}>
+                      <button
+                        key={idx}
+                        style={styles.actionBtn}
+                        onClick={() => executeAction(action)}
+                      >
                         <ArrowRight size={12} />
                         {action.label}
                       </button>
@@ -427,7 +459,10 @@ export function ChatBot() {
               disabled={isLoading}
             />
             <button
-              style={styles.iconBtn(isListening ? '#EF4444' : '#F3F4F6', isListening ? '#FFF' : '#6B7280')}
+              style={styles.iconBtn(
+                isListening ? '#EF4444' : '#F3F4F6',
+                isListening ? '#FFF' : '#6B7280'
+              )}
               onClick={startListening}
               title={isListening ? 'Listening...' : 'Voice input'}
             >
@@ -453,7 +488,11 @@ export function ChatBot() {
         onMouseLeave={() => setHovered(false)}
         title="Procinix AI Assistant"
       >
-        <img src={procinixLogo} alt="P" style={{ height: 28, width: 'auto', filter: 'brightness(0) invert(1)' }} />
+        <img
+          src={procinixLogo}
+          alt="P"
+          style={{ height: 28, width: 'auto', filter: 'brightness(0) invert(1)' }}
+        />
         {unreadCount > 0 && !isOpen && <span style={styles.badge}>{unreadCount}</span>}
       </button>
     </>

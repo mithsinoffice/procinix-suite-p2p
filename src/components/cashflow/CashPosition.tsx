@@ -12,15 +12,15 @@ import {
   Calendar,
   ArrowRight,
   Sparkles,
-  Info
+  Info,
 } from 'lucide-react';
 
 /**
  * CASH POSITION (DIRECT CASH FLOW)
- * 
+ *
  * Purpose: Show actual, real-world liquidity from bank accounts
  * Data Source: Bank feeds, Posted payments, Scheduled AP runs, Expected AR collections
- * 
+ *
  * This page shows DIRECT cash flow - what's actually in the bank right now
  * vs. INDIRECT cash flow (accounting-driven projections)
  */
@@ -69,7 +69,7 @@ const mockBankAccounts: BankAccount[] = [
     intradayMovement: -2340000,
     next7DayNet: -8500000,
     lastUpdated: '2024-12-14 10:45 AM',
-    status: 'Active'
+    status: 'Active',
   },
   {
     id: 'BA002',
@@ -85,7 +85,7 @@ const mockBankAccounts: BankAccount[] = [
     intradayMovement: 1200000,
     next7DayNet: 3400000,
     lastUpdated: '2024-12-14 10:42 AM',
-    status: 'Active'
+    status: 'Active',
   },
   {
     id: 'BA003',
@@ -101,7 +101,7 @@ const mockBankAccounts: BankAccount[] = [
     intradayMovement: -20000,
     next7DayNet: 80000,
     lastUpdated: '2024-12-14 10:30 AM',
-    status: 'Active'
+    status: 'Active',
   },
   {
     id: 'BA004',
@@ -117,8 +117,8 @@ const mockBankAccounts: BankAccount[] = [
     intradayMovement: 0,
     next7DayNet: -3000000,
     lastUpdated: '2024-12-14 10:45 AM',
-    status: 'Active'
-  }
+    status: 'Active',
+  },
 ];
 
 const mockCashMovements: CashMovement[] = [
@@ -132,7 +132,7 @@ const mockCashMovements: CashMovement[] = [
     date: '2024-12-14',
     status: 'Expected',
     confidence: 85,
-    source: 'AR'
+    source: 'AR',
   },
   {
     id: 'CM002',
@@ -143,7 +143,7 @@ const mockCashMovements: CashMovement[] = [
     date: '2024-12-14',
     status: 'Scheduled',
     confidence: 100,
-    source: 'AP'
+    source: 'AP',
   },
   // Tomorrow
   {
@@ -155,7 +155,7 @@ const mockCashMovements: CashMovement[] = [
     date: '2024-12-15',
     status: 'Expected',
     confidence: 92,
-    source: 'AR'
+    source: 'AR',
   },
   {
     id: 'CM004',
@@ -166,7 +166,7 @@ const mockCashMovements: CashMovement[] = [
     date: '2024-12-15',
     status: 'Scheduled',
     confidence: 100,
-    source: 'Payroll'
+    source: 'Payroll',
   },
   // Next 7 days
   {
@@ -178,7 +178,7 @@ const mockCashMovements: CashMovement[] = [
     date: '2024-12-20',
     status: 'Scheduled',
     confidence: 100,
-    source: 'Tax'
+    source: 'Tax',
   },
   {
     id: 'CM006',
@@ -189,8 +189,8 @@ const mockCashMovements: CashMovement[] = [
     date: '2024-12-16 to 2024-12-21',
     status: 'Expected',
     confidence: 78,
-    source: 'AR'
-  }
+    source: 'AR',
+  },
 ];
 
 export function CashPosition() {
@@ -206,8 +206,12 @@ export function CashPosition() {
   const intradayNet = mockBankAccounts.reduce((sum, acc) => sum + acc.intradayMovement, 0);
   const next7DayNet = mockBankAccounts.reduce((sum, acc) => sum + acc.next7DayNet, 0);
 
-  const bufferStatus = totalAvailableCash > totalMinimumBuffer * 1.5 ? 'Healthy' : 
-                       totalAvailableCash > totalMinimumBuffer ? 'Warning' : 'Critical';
+  const bufferStatus =
+    totalAvailableCash > totalMinimumBuffer * 1.5
+      ? 'Healthy'
+      : totalAvailableCash > totalMinimumBuffer
+        ? 'Warning'
+        : 'Critical';
 
   const formatCurrency = (amount: number, currency: string = 'INR') => {
     if (currency === 'INR') {
@@ -220,31 +224,45 @@ export function CashPosition() {
   };
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 90) return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)', border: '#81C784' };
-    if (confidence >= 75) return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)', border: '#FFB74D' };
+    if (confidence >= 90)
+      return {
+        bg: 'var(--color-success-light)',
+        color: 'var(--color-success-dark)',
+        border: '#81C784',
+      };
+    if (confidence >= 75)
+      return {
+        bg: 'var(--color-warning-light)',
+        color: 'var(--color-warning-dark)',
+        border: '#FFB74D',
+      };
     return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)', border: '#FCA5A5' };
   };
 
   return (
     <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* PAGE HEADER */}
-      <div 
-        className="bg-white px-8 py-6"
-        style={{ borderBottom: '1px solid var(--color-silver)' }}
-      >
+      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl" style={{ color: 'var(--color-ink)', margin: 0 }}>
                 Cash Position (Direct)
               </h1>
-              <span 
+              <span
                 className="px-3 py-1 rounded-full text-sm"
-                style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)', border: '1px solid var(--color-teal)' }}
+                style={{
+                  backgroundColor: 'var(--color-teal-tint)',
+                  color: 'var(--color-teal)',
+                  border: '1px solid var(--color-teal)',
+                }}
               >
                 DIRECT CASH FLOW
               </span>
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <div
+                className="flex items-center gap-1.5 px-2 py-1 rounded"
+                style={{ backgroundColor: 'var(--color-cloud)' }}
+              >
                 <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--color-teal)' }} />
                 <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                   AI-Powered
@@ -252,7 +270,8 @@ export function CashPosition() {
               </div>
             </div>
             <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
-              Real-world liquidity from bank accounts • Last updated: {mockBankAccounts[0].lastUpdated}
+              Real-world liquidity from bank accounts • Last updated:{' '}
+              {mockBankAccounts[0].lastUpdated}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -261,7 +280,7 @@ export function CashPosition() {
               style={{
                 backgroundColor: '#FFFFFF',
                 border: '1px solid var(--color-silver)',
-                color: 'var(--color-ink)'
+                color: 'var(--color-ink)',
               }}
             >
               <Calendar className="w-4 h-4 inline mr-2" />
@@ -279,7 +298,9 @@ export function CashPosition() {
 
         {/* Entity Filter */}
         <div className="flex items-center gap-2">
-          <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Entity:</span>
+          <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            Entity:
+          </span>
           {['All', 'PROCINIX India', 'PROCINIX Singapore'].map((entity) => {
             const isActive = selectedEntity === entity;
             return (
@@ -290,7 +311,9 @@ export function CashPosition() {
                 style={{
                   backgroundColor: isActive ? 'var(--color-teal-tint)' : 'transparent',
                   color: isActive ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
-                  border: isActive ? '1px solid var(--color-teal)' : '1px solid var(--color-silver)'
+                  border: isActive
+                    ? '1px solid var(--color-teal)'
+                    : '1px solid var(--color-silver)',
                 }}
               >
                 {entity}
@@ -304,19 +327,33 @@ export function CashPosition() {
       <div className="p-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Total Bank Cash */}
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <div
+            className="bg-white p-6 rounded-lg"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
             <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal-tint)' }}>
+              <div
+                className="w-12 h-12 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'var(--color-teal-tint)' }}
+              >
                 <Banknote className="w-6 h-6" style={{ color: 'var(--color-teal)' }} />
               </div>
-              <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-success-light)', color: 'var(--color-success-dark)' }}>
+              <span
+                className="text-xs px-2 py-1 rounded"
+                style={{
+                  backgroundColor: 'var(--color-success-light)',
+                  color: 'var(--color-success-dark)',
+                }}
+              >
                 DIRECT
               </span>
             </div>
             <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
               {formatCurrency(totalBankCash)}
             </p>
-            <p className="text-sm mb-3" style={{ color: 'var(--color-mercury-grey)' }}>Total Bank Cash</p>
+            <p className="text-sm mb-3" style={{ color: 'var(--color-mercury-grey)' }}>
+              Total Bank Cash
+            </p>
             <div className="flex items-center gap-2 text-sm">
               {intradayNet >= 0 ? (
                 <TrendingUp className="w-4 h-4" style={{ color: '#059669' }} />
@@ -330,47 +367,99 @@ export function CashPosition() {
           </div>
 
           {/* Available Cash */}
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <div
+            className="bg-white p-6 rounded-lg"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
             <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-success-light)' }}>
+              <div
+                className="w-12 h-12 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'var(--color-success-light)' }}
+              >
                 <TrendingUp className="w-6 h-6" style={{ color: 'var(--color-success-dark)' }} />
               </div>
-              <span className="text-xs px-2 py-1 rounded" style={{ 
-                backgroundColor: bufferStatus === 'Healthy' ? 'var(--color-success-light)' : bufferStatus === 'Warning' ? 'var(--color-warning-light)' : 'var(--color-error-light)',
-                color: bufferStatus === 'Healthy' ? 'var(--color-success-dark)' : bufferStatus === 'Warning' ? 'var(--color-warning-dark)' : 'var(--color-error-dark)'
-              }}>
+              <span
+                className="text-xs px-2 py-1 rounded"
+                style={{
+                  backgroundColor:
+                    bufferStatus === 'Healthy'
+                      ? 'var(--color-success-light)'
+                      : bufferStatus === 'Warning'
+                        ? 'var(--color-warning-light)'
+                        : 'var(--color-error-light)',
+                  color:
+                    bufferStatus === 'Healthy'
+                      ? 'var(--color-success-dark)'
+                      : bufferStatus === 'Warning'
+                        ? 'var(--color-warning-dark)'
+                        : 'var(--color-error-dark)',
+                }}
+              >
                 {bufferStatus.toUpperCase()}
               </span>
             </div>
             <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
               {formatCurrency(totalAvailableCash)}
             </p>
-            <p className="text-sm mb-3" style={{ color: 'var(--color-mercury-grey)' }}>Available Cash</p>
-            <div className="flex items-center gap-1 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            <p className="text-sm mb-3" style={{ color: 'var(--color-mercury-grey)' }}>
+              Available Cash
+            </p>
+            <div
+              className="flex items-center gap-1 text-sm"
+              style={{ color: 'var(--color-mercury-grey)' }}
+            >
               <Shield className="w-3.5 h-3.5" />
               <span>Buffer: {formatCurrency(totalMinimumBuffer)}</span>
             </div>
           </div>
 
           {/* Next 7-Day Net Position */}
-          <div className="bg-white p-6 rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
+          <div
+            className="bg-white p-6 rounded-lg"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
             <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ 
-                backgroundColor: next7DayNet >= 0 ? 'var(--color-success-light)' : 'var(--color-error-light)'
-              }}>
-                <Calendar className="w-6 h-6" style={{ 
-                  color: next7DayNet >= 0 ? 'var(--color-success-dark)' : 'var(--color-error-dark)'
-                }} />
+              <div
+                className="w-12 h-12 rounded-lg flex items-center justify-center"
+                style={{
+                  backgroundColor:
+                    next7DayNet >= 0 ? 'var(--color-success-light)' : 'var(--color-error-light)',
+                }}
+              >
+                <Calendar
+                  className="w-6 h-6"
+                  style={{
+                    color:
+                      next7DayNet >= 0 ? 'var(--color-success-dark)' : 'var(--color-error-dark)',
+                  }}
+                />
               </div>
-              <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' }}>
+              <span
+                className="text-xs px-2 py-1 rounded"
+                style={{
+                  backgroundColor: 'var(--color-warning-light)',
+                  color: 'var(--color-warning-dark)',
+                }}
+              >
                 AI FORECAST
               </span>
             </div>
-            <p className="text-3xl mb-1" style={{ color: next7DayNet >= 0 ? 'var(--color-success-dark)' : 'var(--color-error-dark)' }}>
-              {next7DayNet >= 0 ? '+' : ''}{formatCurrency(next7DayNet)}
+            <p
+              className="text-3xl mb-1"
+              style={{
+                color: next7DayNet >= 0 ? 'var(--color-success-dark)' : 'var(--color-error-dark)',
+              }}
+            >
+              {next7DayNet >= 0 ? '+' : ''}
+              {formatCurrency(next7DayNet)}
             </p>
-            <p className="text-sm mb-3" style={{ color: 'var(--color-mercury-grey)' }}>Next 7-Day Net</p>
-            <div className="flex items-center gap-1 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            <p className="text-sm mb-3" style={{ color: 'var(--color-mercury-grey)' }}>
+              Next 7-Day Net
+            </p>
+            <div
+              className="flex items-center gap-1 text-sm"
+              style={{ color: 'var(--color-mercury-grey)' }}
+            >
               <Info className="w-3.5 h-3.5" />
               <span>From scheduled + expected</span>
             </div>
@@ -379,16 +468,22 @@ export function CashPosition() {
 
         {/* Restricted Cash Alert */}
         {totalRestrictedCash > 0 && (
-          <div 
+          <div
             className="flex items-center gap-3 p-4 rounded-lg mb-8"
             style={{ backgroundColor: 'var(--color-warning-light)', border: '1px solid #FFB74D' }}
           >
             <AlertCircle className="w-5 h-5" style={{ color: 'var(--color-warning-dark)' }} />
             <div className="flex-1">
-              <p className="text-sm" style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}>
+              <p
+                className="text-sm"
+                style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}
+              >
                 Restricted Cash: {formatCurrency(totalRestrictedCash)}
               </p>
-              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>
+              <p
+                className="text-sm"
+                style={{ color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}
+              >
                 This amount is held for regulatory requirements and cannot be used for operations
               </p>
             </div>
@@ -403,7 +498,10 @@ export function CashPosition() {
             style={{
               backgroundColor: view === 'accounts' ? 'var(--color-teal-tint)' : 'transparent',
               color: view === 'accounts' ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
-              border: view === 'accounts' ? '1px solid var(--color-teal)' : '1px solid var(--color-silver)'
+              border:
+                view === 'accounts'
+                  ? '1px solid var(--color-teal)'
+                  : '1px solid var(--color-silver)',
             }}
           >
             <Building2 className="w-4 h-4 inline mr-2" />
@@ -415,7 +513,10 @@ export function CashPosition() {
             style={{
               backgroundColor: view === 'movements' ? 'var(--color-teal-tint)' : 'transparent',
               color: view === 'movements' ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
-              border: view === 'movements' ? '1px solid var(--color-teal)' : '1px solid var(--color-silver)'
+              border:
+                view === 'movements'
+                  ? '1px solid var(--color-teal)'
+                  : '1px solid var(--color-silver)',
             }}
           >
             <TrendingUp className="w-4 h-4 inline mr-2" />
@@ -428,7 +529,10 @@ export function CashPosition() {
           <div className="space-y-4">
             {mockBankAccounts.map((account) => {
               const isExpanded = expandedAccount === account.id;
-              const balanceColor = account.balance >= account.minimumBalance ? 'var(--color-ink)' : 'var(--color-error-dark)';
+              const balanceColor =
+                account.balance >= account.minimumBalance
+                  ? 'var(--color-ink)'
+                  : 'var(--color-error-dark)';
 
               return (
                 <div
@@ -441,25 +545,37 @@ export function CashPosition() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
-                          <div 
+                          <div
                             className="w-10 h-10 rounded-lg flex items-center justify-center"
                             style={{ backgroundColor: 'var(--color-cloud)' }}
                           >
                             <Building2 className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                           </div>
                           <div>
-                            <h3 className="text-base" style={{ color: 'var(--color-ink)', margin: 0 }}>
+                            <h3
+                              className="text-base"
+                              style={{ color: 'var(--color-ink)', margin: 0 }}
+                            >
                               {account.bank} • {account.accountNumber}
                             </h3>
-                            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
+                            <p
+                              className="text-sm"
+                              style={{ color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}
+                            >
                               {account.entity} • {account.accountType}
                             </p>
                           </div>
-                          <span 
+                          <span
                             className="px-2 py-1 rounded text-xs"
-                            style={{ 
-                              backgroundColor: account.status === 'Active' ? 'var(--color-success-light)' : 'var(--color-error-light)',
-                              color: account.status === 'Active' ? 'var(--color-success-dark)' : 'var(--color-error-dark)'
+                            style={{
+                              backgroundColor:
+                                account.status === 'Active'
+                                  ? 'var(--color-success-light)'
+                                  : 'var(--color-error-light)',
+                              color:
+                                account.status === 'Active'
+                                  ? 'var(--color-success-dark)'
+                                  : 'var(--color-error-dark)',
                             }}
                           >
                             {account.status}
@@ -468,24 +584,48 @@ export function CashPosition() {
 
                         <div className="grid grid-cols-4 gap-6">
                           <div>
-                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Balance</p>
-                            <p className="text-lg" style={{ color: balanceColor, fontWeight: '600' }}>
+                            <p
+                              className="text-xs mb-1"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              Balance
+                            </p>
+                            <p
+                              className="text-lg"
+                              style={{ color: balanceColor, fontWeight: '600' }}
+                            >
                               {formatCurrency(account.balance, account.currency)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Available</p>
-                            <p className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                            <p
+                              className="text-xs mb-1"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              Available
+                            </p>
+                            <p
+                              className="text-lg"
+                              style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                            >
                               {formatCurrency(account.availableBalance, account.currency)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Intraday Movement</p>
-                            <p 
-                              className="text-lg" 
-                              style={{ 
-                                color: account.intradayMovement >= 0 ? '#059669' : 'var(--color-error-dark)',
-                                fontWeight: '600'
+                            <p
+                              className="text-xs mb-1"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              Intraday Movement
+                            </p>
+                            <p
+                              className="text-lg"
+                              style={{
+                                color:
+                                  account.intradayMovement >= 0
+                                    ? '#059669'
+                                    : 'var(--color-error-dark)',
+                                fontWeight: '600',
                               }}
                             >
                               {account.intradayMovement >= 0 ? '+' : ''}
@@ -493,12 +633,18 @@ export function CashPosition() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Next 7-Day Net</p>
-                            <p 
-                              className="text-lg" 
-                              style={{ 
-                                color: account.next7DayNet >= 0 ? '#059669' : 'var(--color-error-dark)',
-                                fontWeight: '600'
+                            <p
+                              className="text-xs mb-1"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              Next 7-Day Net
+                            </p>
+                            <p
+                              className="text-lg"
+                              style={{
+                                color:
+                                  account.next7DayNet >= 0 ? '#059669' : 'var(--color-error-dark)',
+                                fontWeight: '600',
                               }}
                             >
                               {account.next7DayNet >= 0 ? '+' : ''}
@@ -511,34 +657,56 @@ export function CashPosition() {
                       <button
                         onClick={() => setExpandedAccount(isExpanded ? null : account.id)}
                         className="p-2 rounded-lg transition-colors ml-4"
-                        style={{ color: 'var(--color-mercury-grey)', backgroundColor: 'var(--color-cloud)' }}
+                        style={{
+                          color: 'var(--color-mercury-grey)',
+                          backgroundColor: 'var(--color-cloud)',
+                        }}
                       >
-                        {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        {isExpanded ? (
+                          <ChevronUp className="w-5 h-5" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5" />
+                        )}
                       </button>
                     </div>
                   </div>
 
                   {/* Expanded Details */}
                   {isExpanded && (
-                    <div 
+                    <div
                       className="px-6 pb-6 pt-4"
                       style={{ borderTop: '1px solid var(--color-silver)' }}
                     >
                       <div className="grid grid-cols-3 gap-6">
                         <div>
-                          <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Restricted Cash</p>
+                          <p
+                            className="text-xs mb-2"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
+                            Restricted Cash
+                          </p>
                           <p className="text-base" style={{ color: 'var(--color-ink)' }}>
                             {formatCurrency(account.restrictedCash, account.currency)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Minimum Balance Req.</p>
+                          <p
+                            className="text-xs mb-2"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
+                            Minimum Balance Req.
+                          </p>
                           <p className="text-base" style={{ color: 'var(--color-ink)' }}>
                             {formatCurrency(account.minimumBalance, account.currency)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Last Updated</p>
+                          <p
+                            className="text-xs mb-2"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
+                            Last Updated
+                          </p>
                           <p className="text-base" style={{ color: 'var(--color-ink)' }}>
                             {account.lastUpdated}
                           </p>
@@ -570,58 +738,83 @@ export function CashPosition() {
                   <div key={movement.id} className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4 flex-1">
-                        <div 
+                        <div
                           className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                          style={{ 
-                            backgroundColor: movement.type === 'Inflow' ? 'var(--color-success-light)' : 'var(--color-error-light)'
+                          style={{
+                            backgroundColor:
+                              movement.type === 'Inflow'
+                                ? 'var(--color-success-light)'
+                                : 'var(--color-error-light)',
                           }}
                         >
                           {movement.type === 'Inflow' ? (
-                            <TrendingUp className="w-5 h-5" style={{ color: 'var(--color-success-dark)' }} />
+                            <TrendingUp
+                              className="w-5 h-5"
+                              style={{ color: 'var(--color-success-dark)' }}
+                            />
                           ) : (
-                            <TrendingDown className="w-5 h-5" style={{ color: 'var(--color-error-dark)' }} />
+                            <TrendingDown
+                              className="w-5 h-5"
+                              style={{ color: 'var(--color-error-dark)' }}
+                            />
                           )}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <h4 className="text-sm" style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}>
+                            <h4
+                              className="text-sm"
+                              style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}
+                            >
                               {movement.category}
                             </h4>
-                            <span 
+                            <span
                               className="px-2 py-0.5 rounded text-xs"
-                              style={{ 
-                                backgroundColor: movement.status === 'Scheduled' ? 'var(--color-teal-tint)' : 'var(--color-warning-light)',
-                                color: movement.status === 'Scheduled' ? 'var(--color-teal)' : 'var(--color-warning-dark)'
+                              style={{
+                                backgroundColor:
+                                  movement.status === 'Scheduled'
+                                    ? 'var(--color-teal-tint)'
+                                    : 'var(--color-warning-light)',
+                                color:
+                                  movement.status === 'Scheduled'
+                                    ? 'var(--color-teal)'
+                                    : 'var(--color-warning-dark)',
                               }}
                             >
                               {movement.status}
                             </span>
-                            <span 
-                              className="px-2 py-0.5 rounded text-xs"
-                              style={confidenceStyle}
-                            >
+                            <span className="px-2 py-0.5 rounded text-xs" style={confidenceStyle}>
                               {movement.confidence}% confidence
                             </span>
                           </div>
-                          <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
+                          <p
+                            className="text-sm mb-2"
+                            style={{ color: 'var(--color-mercury-grey)', margin: 0 }}
+                          >
                             {movement.description}
                           </p>
-                          <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                          <div
+                            className="flex items-center gap-4 text-xs"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
                             <span>📅 {movement.date}</span>
                             <span>📌 Source: {movement.source}</span>
                           </div>
                         </div>
                       </div>
                       <div className="text-right ml-4">
-                        <p 
+                        <p
                           className="text-lg"
-                          style={{ 
-                            color: movement.type === 'Inflow' ? 'var(--color-success-dark)' : 'var(--color-error-dark)',
+                          style={{
+                            color:
+                              movement.type === 'Inflow'
+                                ? 'var(--color-success-dark)'
+                                : 'var(--color-error-dark)',
                             fontWeight: '600',
-                            margin: 0
+                            margin: 0,
                           }}
                         >
-                          {movement.type === 'Inflow' ? '+' : '-'}{formatCurrency(movement.amount)}
+                          {movement.type === 'Inflow' ? '+' : '-'}
+                          {formatCurrency(movement.amount)}
                         </p>
                       </div>
                     </div>
@@ -633,20 +826,38 @@ export function CashPosition() {
         )}
 
         {/* AI INSIGHTS */}
-        <div 
+        <div
           className="mt-8 p-6 rounded-lg"
-          style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}
+          style={{
+            backgroundColor: 'var(--color-teal-tint)',
+            border: '1px solid var(--color-teal)',
+          }}
         >
           <div className="flex items-start gap-3">
             <Sparkles className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-teal)' }} />
             <div>
-              <h4 className="text-sm mb-2" style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}>
+              <h4
+                className="text-sm mb-2"
+                style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}
+              >
                 AI Insights & Recommendations
               </h4>
-              <ul className="text-sm space-y-1 m-0 pl-4" style={{ color: 'var(--color-mercury-grey)' }}>
-                <li>⚠️ Cash position will drop below buffer on Dec 20th due to GST payment. Consider deferring non-critical vendor payments.</li>
-                <li>✅ Expected inflow of ₹9.2 Cr from 5 customers (78% confidence). Monitor receivables aging dashboard.</li>
-                <li>💡 Overdraft facility has ₹10 Cr available. Consider using it to maintain healthy buffer during peak outflow week.</li>
+              <ul
+                className="text-sm space-y-1 m-0 pl-4"
+                style={{ color: 'var(--color-mercury-grey)' }}
+              >
+                <li>
+                  ⚠️ Cash position will drop below buffer on Dec 20th due to GST payment. Consider
+                  deferring non-critical vendor payments.
+                </li>
+                <li>
+                  ✅ Expected inflow of ₹9.2 Cr from 5 customers (78% confidence). Monitor
+                  receivables aging dashboard.
+                </li>
+                <li>
+                  💡 Overdraft facility has ₹10 Cr available. Consider using it to maintain healthy
+                  buffer during peak outflow week.
+                </li>
               </ul>
             </div>
           </div>

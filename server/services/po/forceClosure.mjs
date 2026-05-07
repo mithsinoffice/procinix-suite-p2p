@@ -23,9 +23,7 @@ export async function getForceClosurePreview(queryFn, poId) {
     previousClosures: logs,
     approvedAmendments: amendments[0]?.cnt || 0,
     totalAmendmentValueChange: amendments[0]?.totalChange || 0,
-    warnings: logs.length > 0
-      ? ['This PO has already been force-closed previously.']
-      : [],
+    warnings: logs.length > 0 ? ['This PO has already been force-closed previously.'] : [],
     impactSummary: {
       budgetRelease: 'Remaining PO value will be released back to budget',
       accrualReversal: 'Open accruals will be reversed upon closure',
@@ -38,18 +36,18 @@ export async function getForceClosurePreview(queryFn, poId) {
  * Force-close a PO.
  * Records the event in po_expiry_log and returns confirmation.
  */
-export async function forceclosePO(queryFn, poId, userId, { reason, remarks, notifyVendor, accrualReversal }) {
+export async function forceclosePO(
+  queryFn,
+  poId,
+  userId,
+  { reason, remarks, notifyVendor, accrualReversal }
+) {
   const eventId = randomUUID();
 
   await queryFn(
     `INSERT INTO p2p_schema_mt.po_expiry_log (id, po_id, event_type, event_detail, triggered_by)
      VALUES (?, ?, 'manually_closed', ?, ?)`,
-    [
-      eventId,
-      poId,
-      JSON.stringify({ reason, remarks, notifyVendor, accrualReversal }),
-      userId,
-    ]
+    [eventId, poId, JSON.stringify({ reason, remarks, notifyVendor, accrualReversal }), userId]
   );
 
   return {

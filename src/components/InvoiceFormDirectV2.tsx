@@ -1,11 +1,33 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  ArrowLeft, Save, Send, FileText, Building2, DollarSign, Package, Calculator,
-  MessageSquare, TrendingUp, ChevronLeft, ChevronRight, Upload, CheckCircle,
-  X, Eye, Plus, Trash2, AlertTriangle, Info, Clock, Shield, Loader2, AlertCircle
+  ArrowLeft,
+  Save,
+  Send,
+  FileText,
+  Building2,
+  DollarSign,
+  Package,
+  Calculator,
+  MessageSquare,
+  TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+  Upload,
+  CheckCircle,
+  X,
+  Eye,
+  Plus,
+  Trash2,
+  AlertTriangle,
+  Info,
+  Clock,
+  Shield,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { useMasterData } from '../contexts/MasterDataContext';
+import { mysqlApiRequest } from '../lib/mysql/client';
 
 /* ═══════════════════════════════════════════════════════════
    TYPES
@@ -573,7 +595,10 @@ const S = {
    ═══════════════════════════════════════════════════════════ */
 
 function formatCurrency(n: number): string {
-  return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  return new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
 }
 
 function OcrBadge() {
@@ -595,7 +620,12 @@ function ConfBadge({ level }: { level: 'High' | 'Medium' | 'Low' }) {
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div style={S.toggleTrack(value)} onClick={() => onChange(!value)} role="switch" aria-checked={value}>
+    <div
+      style={S.toggleTrack(value)}
+      onClick={() => onChange(!value)}
+      role="switch"
+      aria-checked={value}
+    >
       <div style={S.toggleThumb(value)} />
     </div>
   );
@@ -606,14 +636,40 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
    ═══════════════════════════════════════════════════════════ */
 
 const GST_STATE_CODES: Record<string, string> = {
-  '01': 'Jammu & Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh',
-  '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi', '08': 'Rajasthan', '09': 'Uttar Pradesh',
-  '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh', '13': 'Nagaland', '14': 'Manipur',
-  '15': 'Mizoram', '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal',
-  '20': 'Jharkhand', '21': 'Odisha', '22': 'Chhattisgarh', '23': 'Madhya Pradesh', '24': 'Gujarat',
-  '26': 'Dadra & Nagar Haveli', '27': 'Maharashtra', '29': 'Karnataka', '30': 'Goa',
-  '32': 'Kerala', '33': 'Tamil Nadu', '34': 'Puducherry', '35': 'Andaman & Nicobar',
-  '36': 'Telangana', '37': 'Andhra Pradesh',
+  '01': 'Jammu & Kashmir',
+  '02': 'Himachal Pradesh',
+  '03': 'Punjab',
+  '04': 'Chandigarh',
+  '05': 'Uttarakhand',
+  '06': 'Haryana',
+  '07': 'Delhi',
+  '08': 'Rajasthan',
+  '09': 'Uttar Pradesh',
+  '10': 'Bihar',
+  '11': 'Sikkim',
+  '12': 'Arunachal Pradesh',
+  '13': 'Nagaland',
+  '14': 'Manipur',
+  '15': 'Mizoram',
+  '16': 'Tripura',
+  '17': 'Meghalaya',
+  '18': 'Assam',
+  '19': 'West Bengal',
+  '20': 'Jharkhand',
+  '21': 'Odisha',
+  '22': 'Chhattisgarh',
+  '23': 'Madhya Pradesh',
+  '24': 'Gujarat',
+  '26': 'Dadra & Nagar Haveli',
+  '27': 'Maharashtra',
+  '29': 'Karnataka',
+  '30': 'Goa',
+  '32': 'Kerala',
+  '33': 'Tamil Nadu',
+  '34': 'Puducherry',
+  '35': 'Andaman & Nicobar',
+  '36': 'Telangana',
+  '37': 'Andhra Pradesh',
 };
 
 function getStateFromGstin(gstin: string): string {
@@ -632,10 +688,18 @@ export function InvoiceFormDirectV2() {
     currentCompany,
   } = useMasterData();
 
-  const activeVendors = useMemo(() => allVendors.filter((v: any) => v.status === 'Active' || v.isActive), [allVendors]);
-  const activeEntities = useMemo(() => allEntities.filter((e: any) => e.isActive !== false), [allEntities]);
-  const activeDepartments = useMemo(() => allDepartments.filter((d: any) => d.isActive !== false && (d.status !== 'Inactive')), [allDepartments]);
-
+  const activeVendors = useMemo(
+    () => allVendors.filter((v: any) => v.status === 'Active' || v.isActive),
+    [allVendors]
+  );
+  const activeEntities = useMemo(
+    () => allEntities.filter((e: any) => e.isActive !== false),
+    [allEntities]
+  );
+  const activeDepartments = useMemo(
+    () => allDepartments.filter((d: any) => d.isActive !== false && d.status !== 'Inactive'),
+    [allDepartments]
+  );
 
   /* ---- AI invoice hydration state ---- */
   const [aiInvoiceData, setAiInvoiceData] = useState<any>(null);
@@ -676,7 +740,9 @@ export function InvoiceFormDirectV2() {
   const [vendorPan, setVendorPan] = useState('');
   const [billingLocation, setBillingLocation] = useState(() => currentCompany?.name || '');
   const [billToGstin, setBillToGstin] = useState(() => (currentCompany as any)?.gstin || '');
-  const [invoiceCurrency, setInvoiceCurrency] = useState(() => (currentCompany as any)?.currency || 'INR');
+  const [invoiceCurrency, setInvoiceCurrency] = useState(
+    () => (currentCompany as any)?.currency || 'INR'
+  );
   const [department, setDepartment] = useState('');
   const [subDepartment, setSubDepartment] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -695,7 +761,10 @@ export function InvoiceFormDirectV2() {
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
 
   /* ---- Entity-derived filtering (must be after all useState) ---- */
-  const selectedEntityObj = useMemo(() => activeEntities.find((e: any) => (e.name || e.legalName) === entityName), [activeEntities, entityName]);
+  const selectedEntityObj = useMemo(
+    () => activeEntities.find((e: any) => (e.name || e.legalName) === entityName),
+    [activeEntities, entityName]
+  );
   const selectedEntityId = selectedEntityObj?.id;
   const selectedEntityCurrency = (selectedEntityObj as any)?.currency;
 
@@ -732,10 +801,10 @@ export function InvoiceFormDirectV2() {
 
     const fetchAIInvoice = async () => {
       try {
-        const res = await fetch(`http://127.0.0.1:8787/api/invoices/${state.dbId}`);
-        if (!res.ok) return;
-        const json = await res.json();
-        if (!json.success) return;
+        const json = await mysqlApiRequest<{ success: boolean; data: any }>(
+          `/invoices/${state.dbId}`
+        );
+        if (!json?.success) return;
         const inv = json.data;
         const meta = inv.metadata?.extractedData || {};
         setAiInvoiceData(inv);
@@ -752,8 +821,16 @@ export function InvoiceFormDirectV2() {
         setInvoiceNumber(inv.invoice_number || '');
         setInvoiceDate(inv.invoice_date ? String(inv.invoice_date).split('T')[0] : '');
         setDueDate(inv.due_date ? String(inv.due_date).split('T')[0] : '');
-        setGrossAmount(inv.total_amount ? `${inv.currency || '₹'} ${Number(inv.total_amount).toLocaleString('en-IN')}` : '');
-        setBaseAmount(inv.subtotal ? `${inv.currency || '₹'} ${Number(inv.subtotal).toLocaleString('en-IN')}` : '');
+        setGrossAmount(
+          inv.total_amount
+            ? `${inv.currency || '₹'} ${Number(inv.total_amount).toLocaleString('en-IN')}`
+            : ''
+        );
+        setBaseAmount(
+          inv.subtotal
+            ? `${inv.currency || '₹'} ${Number(inv.subtotal).toLocaleString('en-IN')}`
+            : ''
+        );
         setPaymentTerms(inv.payment_terms || meta.payment_terms || '');
         setNarration(inv.notes || meta.notes || '');
 
@@ -765,41 +842,43 @@ export function InvoiceFormDirectV2() {
 
         // Line items
         if (Array.isArray(inv.line_items) && inv.line_items.length > 0) {
-          setLineItems(inv.line_items.map((li: any, i: number) => {
-            const amt = Number(li.amount) || 0;
-            const gstPct = li.gst_rate != null ? Number(li.gst_rate) * 100 : 0;
-            const gstAmt = amt * (gstPct / 100);
-            const halfGst = gstAmt / 2;
-            return {
-              id: String(i + 1),
-              itemName: li.description || 'Extracted Item',
-              itemCode: li.hsn_sac || '',
-              description: li.description || '',
-              ocrItem: li.description || '',
-              ocrConfidence: 'High' as const,
-              glCode: '',
-              qty: Number(li.quantity) || 1,
-              rate: Number(li.unit_price) || 0,
-              amount: amt,
-              gstPct,
-              cgst: halfGst,
-              sgst: halfGst,
-              igst: 0,
-              cess: 0,
-              totalGst: gstAmt,
-              grossAmount: amt + gstAmt,
-              tdsSection: '',
-              tdsPct: 0,
-              tdsAmount: 0,
-              lowerTds: false,
-              sec206: false,
-              netPayable: amt + gstAmt,
-              costCenter: '',
-              profitCenter: '',
-              shipTo: '',
-              projectCode: '',
-            };
-          }));
+          setLineItems(
+            inv.line_items.map((li: any, i: number) => {
+              const amt = Number(li.amount) || 0;
+              const gstPct = li.gst_rate != null ? Number(li.gst_rate) * 100 : 0;
+              const gstAmt = amt * (gstPct / 100);
+              const halfGst = gstAmt / 2;
+              return {
+                id: String(i + 1),
+                itemName: li.description || 'Extracted Item',
+                itemCode: li.hsn_sac || '',
+                description: li.description || '',
+                ocrItem: li.description || '',
+                ocrConfidence: 'High' as const,
+                glCode: '',
+                qty: Number(li.quantity) || 1,
+                rate: Number(li.unit_price) || 0,
+                amount: amt,
+                gstPct,
+                cgst: halfGst,
+                sgst: halfGst,
+                igst: 0,
+                cess: 0,
+                totalGst: gstAmt,
+                grossAmount: amt + gstAmt,
+                tdsSection: '',
+                tdsPct: 0,
+                tdsAmount: 0,
+                lowerTds: false,
+                sec206: false,
+                netPayable: amt + gstAmt,
+                costCenter: '',
+                profitCenter: '',
+                shipTo: '',
+                projectCode: '',
+              };
+            })
+          );
         }
 
         // File info + PDF preview
@@ -848,22 +927,27 @@ export function InvoiceFormDirectV2() {
   }, [drawerOpen]);
 
   /* ---- drag-drop handlers ---- */
-  const onDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }, []);
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
   const onDragLeave = useCallback(() => setIsDragging(false), []);
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) setUploadedFile({ name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB` });
+    if (file)
+      setUploadedFile({ name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB` });
   }, []);
   const onFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setUploadedFile({ name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB` });
+    if (file)
+      setUploadedFile({ name: file.name, size: `${(file.size / (1024 * 1024)).toFixed(1)} MB` });
   }, []);
 
   /* ---- add / remove line item ---- */
   const addLineItem = useCallback(() => {
-    setLineItems(prev => [
+    setLineItems((prev) => [
       ...prev,
       {
         id: String(Date.now()),
@@ -898,7 +982,7 @@ export function InvoiceFormDirectV2() {
   }, []);
 
   const removeLineItem = useCallback((id: string) => {
-    setLineItems(prev => prev.filter(l => l.id !== id));
+    setLineItems((prev) => prev.filter((l) => l.id !== id));
   }, []);
 
   /* ═══════════════════════════════════════════════════════════
@@ -941,7 +1025,9 @@ export function InvoiceFormDirectV2() {
               <div style={S.leftPanelHeader}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <FileText size={18} color="var(--color-teal-dark)" />
-                  <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)' }}>Invoice Document</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)' }}>
+                    Invoice Document
+                  </span>
                 </div>
                 <button
                   onClick={() => setLeftCollapsed(true)}
@@ -969,8 +1055,19 @@ export function InvoiceFormDirectV2() {
                       style={{ display: 'none' }}
                       onChange={onFileSelect}
                     />
-                    <Upload size={32} color="var(--color-mercury-grey)" style={{ marginBottom: 8 }} />
-                    <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-ink)', margin: '8px 0 4px' }}>
+                    <Upload
+                      size={32}
+                      color="var(--color-mercury-grey)"
+                      style={{ marginBottom: 8 }}
+                    />
+                    <p
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 500,
+                        color: 'var(--color-ink)',
+                        margin: '8px 0 4px',
+                      }}
+                    >
                       Drag & drop invoice file
                     </p>
                     <p style={S.textSmall}>PDF, JPG, PNG up to 10 MB</p>
@@ -981,14 +1078,28 @@ export function InvoiceFormDirectV2() {
                     <div style={S.fileCard}>
                       <FileText size={20} color="var(--color-success-dark)" />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 500,
+                            color: 'var(--color-ink)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {uploadedFile.name}
                         </div>
                         <div style={S.textSmall}>{uploadedFile.size}</div>
                       </div>
                       <button
                         onClick={() => setUploadedFile(null)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 4,
+                        }}
                         aria-label="Remove file"
                       >
                         <X size={16} color="var(--color-mercury-grey)" />
@@ -1000,26 +1111,47 @@ export function InvoiceFormDirectV2() {
                       <button
                         onClick={() => setPreviewExpanded(!previewExpanded)}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: 6, background: 'none',
-                          border: 'none', cursor: 'pointer', padding: 0, fontSize: 13,
-                          fontWeight: 500, color: 'var(--color-teal-dark)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: 'var(--color-teal-dark)',
                         }}
                       >
                         <Eye size={14} />
                         {previewExpanded ? 'Hide Preview' : 'Show Preview'}
-                        {previewExpanded ? <ChevronLeft size={14} style={{ transform: 'rotate(-90deg)' }} /> : <ChevronRight size={14} style={{ transform: 'rotate(90deg)' }} />}
+                        {previewExpanded ? (
+                          <ChevronLeft size={14} style={{ transform: 'rotate(-90deg)' }} />
+                        ) : (
+                          <ChevronRight size={14} style={{ transform: 'rotate(90deg)' }} />
+                        )}
                       </button>
                       {previewExpanded && (
                         <div
                           style={{
-                            marginTop: 10, height: 360, background: 'var(--color-cloud)',
-                            border: '1px solid var(--color-silver)', borderRadius: 8,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: 'var(--color-mercury-grey)', fontSize: 14,
+                            marginTop: 10,
+                            height: 360,
+                            background: 'var(--color-cloud)',
+                            border: '1px solid var(--color-silver)',
+                            borderRadius: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'var(--color-mercury-grey)',
+                            fontSize: 14,
                           }}
                         >
                           <div style={{ textAlign: 'center' }}>
-                            <FileText size={32} color="var(--color-silver)" style={{ marginBottom: 8 }} />
+                            <FileText
+                              size={32}
+                              color="var(--color-silver)"
+                              style={{ marginBottom: 8 }}
+                            />
                             <div>PDF Preview</div>
                           </div>
                         </div>
@@ -1030,39 +1162,58 @@ export function InvoiceFormDirectV2() {
 
                 {/* ---- Capture Mode ---- */}
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 10 }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: 'var(--color-ink)',
+                      marginBottom: 10,
+                    }}
+                  >
                     Capture Mode
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {/* OCR */}
                     <label
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '10px 14px',
                         border: `1px solid ${captureMode === 'ocr' ? 'var(--color-teal)' : 'var(--color-silver)'}`,
-                        borderRadius: 8, cursor: 'pointer',
+                        borderRadius: 8,
+                        cursor: 'pointer',
                         background: captureMode === 'ocr' ? 'var(--color-teal-tint)' : '#fff',
                       }}
                       onClick={() => setCaptureMode('ocr')}
                     >
                       <div style={S.radio(captureMode === 'ocr')} />
                       <div>
-                        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-ink)' }}>OCR</div>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-ink)' }}>
+                          OCR
+                        </div>
                         <div style={S.textSmall}>Recommended — auto-extract fields</div>
                       </div>
                     </label>
                     {/* Manual */}
                     <label
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '10px 14px',
                         border: `1px solid ${captureMode === 'manual' ? 'var(--color-teal)' : 'var(--color-silver)'}`,
-                        borderRadius: 8, cursor: 'pointer',
+                        borderRadius: 8,
+                        cursor: 'pointer',
                         background: captureMode === 'manual' ? 'var(--color-teal-tint)' : '#fff',
                       }}
                       onClick={() => setCaptureMode('manual')}
                     >
                       <div style={S.radio(captureMode === 'manual')} />
                       <div>
-                        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-ink)' }}>Manual Entry</div>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-ink)' }}>
+                          Manual Entry
+                        </div>
                         <div style={S.textSmall}>Enter all fields manually</div>
                       </div>
                     </label>
@@ -1074,10 +1225,18 @@ export function InvoiceFormDirectV2() {
                   <div style={S.ocrStatusCard}>
                     <CheckCircle size={20} color="var(--color-success-dark)" />
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-success-dark)' }}>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: 'var(--color-success-dark)',
+                        }}
+                      >
                         OCR Completed
                       </div>
-                      <div style={S.textSmall}>Fields auto-filled &bull; {lineItems.length} items extracted</div>
+                      <div style={S.textSmall}>
+                        Fields auto-filled &bull; {lineItems.length} items extracted
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1100,24 +1259,30 @@ export function InvoiceFormDirectV2() {
           )}
 
           <div style={S.rightPanelContent}>
-
             {/* ═══════════ SECTION 1: Vendor & Organizational Details ═══════════ */}
             <div style={S.sectionCard}>
               <div style={S.sectionHeader}>
-                <div style={S.sectionIcon}><Building2 size={18} /></div>
+                <div style={S.sectionIcon}>
+                  <Building2 size={18} />
+                </div>
                 <h2 style={S.sectionTitle}>Vendor &amp; Organizational Details</h2>
               </div>
               <div style={S.grid2}>
                 {/* 1. Bill-to Entity (FIRST — drives vendor filtering) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Bill-to Entity</span><span style={S.required}>*</span> {entityName && <OcrBadge />}</div>
+                  <div style={S.fieldLabel}>
+                    <span>Bill-to Entity</span>
+                    <span style={S.required}>*</span> {entityName && <OcrBadge />}
+                  </div>
                   <select
                     className="px-select"
                     value={entityName}
                     onChange={(e) => {
                       const name = e.target.value;
                       setEntityName(name);
-                      const ent = activeEntities.find((ee: any) => (ee.name || ee.legalName) === name);
+                      const ent = activeEntities.find(
+                        (ee: any) => (ee.name || ee.legalName) === name
+                      );
                       if (ent) {
                         setBillToGstin((ent as any).gstin || '');
                         setBillingLocation((ent as any).name || (ent as any).legalName || '');
@@ -1136,21 +1301,30 @@ export function InvoiceFormDirectV2() {
                   >
                     <option value="">Select entity...</option>
                     {activeEntities.map((e: any) => (
-                      <option key={e.id} value={e.name || e.legalName}>{e.name || e.legalName}{e.country ? ` — ${e.country}` : ''}</option>
+                      <option key={e.id} value={e.name || e.legalName}>
+                        {e.name || e.legalName}
+                        {e.country ? ` — ${e.country}` : ''}
+                      </option>
                     ))}
-                    {entityName && !activeEntities.some((e: any) => (e.name || e.legalName) === entityName) && (
-                      <option value={entityName}>{entityName} (OCR extracted)</option>
-                    )}
+                    {entityName &&
+                      !activeEntities.some((e: any) => (e.name || e.legalName) === entityName) && (
+                        <option value={entityName}>{entityName} (OCR extracted)</option>
+                      )}
                   </select>
                 </div>
                 {/* 2. Bill-to GSTIN (auto from entity) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Bill-to GSTIN</span> {billToGstin && <AutoBadge />}</div>
+                  <div style={S.fieldLabel}>
+                    <span>Bill-to GSTIN</span> {billToGstin && <AutoBadge />}
+                  </div>
                   <input className="px-input-readonly" readOnly value={billToGstin || '—'} />
                 </div>
                 {/* 3. Vendor (filtered by selected entity) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Vendor</span><span style={S.required}>*</span> {vendorName && <OcrBadge />}</div>
+                  <div style={S.fieldLabel}>
+                    <span>Vendor</span>
+                    <span style={S.required}>*</span> {vendorName && <OcrBadge />}
+                  </div>
                   <select
                     className="px-select"
                     value={vendorName}
@@ -1169,51 +1343,77 @@ export function InvoiceFormDirectV2() {
                   >
                     <option value="">Select vendor...</option>
                     {filteredVendors.map((v: any) => (
-                      <option key={v.id} value={v.name || v.legalName}>{v.name || v.legalName}{v.code ? ` (${v.code})` : ''}</option>
+                      <option key={v.id} value={v.name || v.legalName}>
+                        {v.name || v.legalName}
+                        {v.code ? ` (${v.code})` : ''}
+                      </option>
                     ))}
-                    {vendorName && !activeVendors.some((v: any) => (v.name || v.legalName) === vendorName) && (
-                      <option value={vendorName}>{vendorName} (OCR extracted)</option>
-                    )}
+                    {vendorName &&
+                      !activeVendors.some((v: any) => (v.name || v.legalName) === vendorName) && (
+                        <option value={vendorName}>{vendorName} (OCR extracted)</option>
+                      )}
                   </select>
                 </div>
                 {/* 4. Vendor Group (auto) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Vendor Group</span> <AutoBadge /></div>
+                  <div style={S.fieldLabel}>
+                    <span>Vendor Group</span> <AutoBadge />
+                  </div>
                   <input className="px-input-readonly" readOnly value={vendorGroup || '—'} />
                 </div>
                 {/* 5. Vendor GSTIN (auto from vendor) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Vendor GSTIN</span> {vendorGstin && <AutoBadge />}</div>
+                  <div style={S.fieldLabel}>
+                    <span>Vendor GSTIN</span> {vendorGstin && <AutoBadge />}
+                  </div>
                   <input className="px-input-readonly" readOnly value={vendorGstin || '—'} />
                 </div>
                 {/* 6. Vendor PAN (auto from vendor) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Vendor PAN</span> {vendorPan && <AutoBadge />}</div>
+                  <div style={S.fieldLabel}>
+                    <span>Vendor PAN</span> {vendorPan && <AutoBadge />}
+                  </div>
                   <input className="px-input-readonly" readOnly value={vendorPan || '—'} />
                 </div>
                 {/* Vendor State (auto from GSTIN) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Vendor State</span> <AutoBadge /></div>
-                  <input className="px-input-readonly" readOnly value={vendorState || (vendorGstin ? getStateFromGstin(vendorGstin) : '—')} />
+                  <div style={S.fieldLabel}>
+                    <span>Vendor State</span> <AutoBadge />
+                  </div>
+                  <input
+                    className="px-input-readonly"
+                    readOnly
+                    value={vendorState || (vendorGstin ? getStateFromGstin(vendorGstin) : '—')}
+                  />
                 </div>
                 {/* Billing Location (auto from entity) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Billing Location</span><span style={S.required}>*</span></div>
-                  <input className="px-input" value={billingLocation} onChange={(e) => setBillingLocation(e.target.value)} placeholder="Enter billing location..." />
+                  <div style={S.fieldLabel}>
+                    <span>Billing Location</span>
+                    <span style={S.required}>*</span>
+                  </div>
+                  <input
+                    className="px-input"
+                    value={billingLocation}
+                    onChange={(e) => setBillingLocation(e.target.value)}
+                    placeholder="Enter billing location..."
+                  />
                 </div>
                 {/* e-Invoice Toggle + Verify */}
                 <div>
-                  <div style={S.fieldLabel}><span>e-Invoice</span></div>
+                  <div style={S.fieldLabel}>
+                    <span>e-Invoice</span>
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <Toggle value={eInvoice} onChange={setEInvoice} />
-                    <button
-                      className="btn-secondary"
-                      style={{ fontSize: 12, padding: '4px 12px' }}
-                    >
+                    <button className="btn-secondary" style={{ fontSize: 12, padding: '4px 12px' }}>
                       Verify e-Invoice / GST Returns
                     </button>
                     {verificationStatus === 'verified' && (
-                      <span className="badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span
+                        className="badge-success"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      >
                         <CheckCircle size={12} /> Verified
                       </span>
                     )}
@@ -1221,31 +1421,58 @@ export function InvoiceFormDirectV2() {
                 </div>
                 {/* Currency (auto-set from entity, filtered by entity mapping) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Currency</span> <AutoBadge /></div>
-                  <select className="px-select" value={invoiceCurrency} onChange={(e) => setInvoiceCurrency(e.target.value)}>
+                  <div style={S.fieldLabel}>
+                    <span>Currency</span> <AutoBadge />
+                  </div>
+                  <select
+                    className="px-select"
+                    value={invoiceCurrency}
+                    onChange={(e) => setInvoiceCurrency(e.target.value)}
+                  >
                     <option value="">Select currency...</option>
                     {filteredCurrencies.map((c: any) => (
-                      <option key={c.id} value={c.code}>{c.code}{c.name ? ` — ${c.name}` : ''}{c.code === selectedEntityCurrency ? ' (Entity default)' : ''}</option>
+                      <option key={c.id} value={c.code}>
+                        {c.code}
+                        {c.name ? ` — ${c.name}` : ''}
+                        {c.code === selectedEntityCurrency ? ' (Entity default)' : ''}
+                      </option>
                     ))}
-                    {invoiceCurrency && !filteredCurrencies.some((c: any) => c.code === invoiceCurrency) && (
-                      <option value={invoiceCurrency}>{invoiceCurrency}</option>
-                    )}
+                    {invoiceCurrency &&
+                      !filteredCurrencies.some((c: any) => c.code === invoiceCurrency) && (
+                        <option value={invoiceCurrency}>{invoiceCurrency}</option>
+                      )}
                   </select>
                 </div>
                 {/* Department (from Department Master) */}
                 <div>
-                  <div style={S.fieldLabel}><span>Department</span><span style={S.required}>*</span></div>
-                  <select className="px-select" value={department} onChange={(e) => setDepartment(e.target.value)}>
+                  <div style={S.fieldLabel}>
+                    <span>Department</span>
+                    <span style={S.required}>*</span>
+                  </div>
+                  <select
+                    className="px-select"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                  >
                     <option value="">Select department...</option>
                     {filteredDepartments.map((d: any) => (
-                      <option key={d.id} value={d.deptName || d.name}>{d.deptName || d.name}{d.deptCode || d.code ? ` (${d.deptCode || d.code})` : ''}</option>
+                      <option key={d.id} value={d.deptName || d.name}>
+                        {d.deptName || d.name}
+                        {d.deptCode || d.code ? ` (${d.deptCode || d.code})` : ''}
+                      </option>
                     ))}
                   </select>
                 </div>
                 {/* Sub-Department */}
                 <div>
-                  <div style={S.fieldLabel}><span>Sub-Department</span></div>
-                  <select className="px-select" value={subDepartment} onChange={(e) => setSubDepartment(e.target.value)}>
+                  <div style={S.fieldLabel}>
+                    <span>Sub-Department</span>
+                  </div>
+                  <select
+                    className="px-select"
+                    value={subDepartment}
+                    onChange={(e) => setSubDepartment(e.target.value)}
+                  >
                     <option value="">Select sub-department...</option>
                     <option value="General">General</option>
                   </select>
@@ -1256,39 +1483,87 @@ export function InvoiceFormDirectV2() {
             {/* ═══════════ SECTION 2: Invoice Details ═══════════ */}
             <div style={S.sectionCard}>
               <div style={S.sectionHeader}>
-                <div style={S.sectionIcon}><DollarSign size={18} /></div>
+                <div style={S.sectionIcon}>
+                  <DollarSign size={18} />
+                </div>
                 <h2 style={S.sectionTitle}>Invoice Details</h2>
               </div>
               <div style={S.grid2}>
                 {/* Invoice Number */}
                 <div>
-                  <div style={S.fieldLabel}><span>Invoice Number</span><span style={S.required}>*</span> {invoiceNumber && <OcrBadge />}</div>
-                  <input className="px-input" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} placeholder="e.g. INV-2026-0042" />
+                  <div style={S.fieldLabel}>
+                    <span>Invoice Number</span>
+                    <span style={S.required}>*</span> {invoiceNumber && <OcrBadge />}
+                  </div>
+                  <input
+                    className="px-input"
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                    placeholder="e.g. INV-2026-0042"
+                  />
                 </div>
                 {/* Payment Due Date */}
                 <div>
-                  <div style={S.fieldLabel}><span>Payment Due Date</span><span style={S.required}>*</span></div>
-                  <input className="px-input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                  <div style={S.fieldLabel}>
+                    <span>Payment Due Date</span>
+                    <span style={S.required}>*</span>
+                  </div>
+                  <input
+                    className="px-input"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                  />
                 </div>
                 {/* Invoice Date */}
                 <div>
-                  <div style={S.fieldLabel}><span>Invoice Date</span><span style={S.required}>*</span> {invoiceDate && <OcrBadge />}</div>
-                  <input className="px-input" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+                  <div style={S.fieldLabel}>
+                    <span>Invoice Date</span>
+                    <span style={S.required}>*</span> {invoiceDate && <OcrBadge />}
+                  </div>
+                  <input
+                    className="px-input"
+                    type="date"
+                    value={invoiceDate}
+                    onChange={(e) => setInvoiceDate(e.target.value)}
+                  />
                 </div>
                 {/* Gross Amount */}
                 <div>
-                  <div style={S.fieldLabel}><span>Gross Amount (Incl. Taxes)</span><span style={S.required}>*</span> {grossAmount && <OcrBadge />}</div>
-                  <input className="px-input" value={grossAmount || formatCurrency(totalGross)} onChange={(e) => setGrossAmount(e.target.value)} style={{ fontWeight: 600 }} />
+                  <div style={S.fieldLabel}>
+                    <span>Gross Amount (Incl. Taxes)</span>
+                    <span style={S.required}>*</span> {grossAmount && <OcrBadge />}
+                  </div>
+                  <input
+                    className="px-input"
+                    value={grossAmount || formatCurrency(totalGross)}
+                    onChange={(e) => setGrossAmount(e.target.value)}
+                    style={{ fontWeight: 600 }}
+                  />
                 </div>
                 {/* Payment Terms */}
                 <div>
-                  <div style={S.fieldLabel}><span>Payment Terms</span> {paymentTerms && <OcrBadge />}</div>
-                  <input className="px-input" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} placeholder="e.g. Net 30" />
+                  <div style={S.fieldLabel}>
+                    <span>Payment Terms</span> {paymentTerms && <OcrBadge />}
+                  </div>
+                  <input
+                    className="px-input"
+                    value={paymentTerms}
+                    onChange={(e) => setPaymentTerms(e.target.value)}
+                    placeholder="e.g. Net 30"
+                  />
                 </div>
                 {/* Base Amount */}
                 <div>
-                  <div style={S.fieldLabel}><span>Base Amount (Excl. Taxes)</span><span style={S.required}>*</span> {baseAmount && <OcrBadge />}</div>
-                  <input className="px-input" value={baseAmount || formatCurrency(totalBase)} onChange={(e) => setBaseAmount(e.target.value)} />
+                  <div style={S.fieldLabel}>
+                    <span>Base Amount (Excl. Taxes)</span>
+                    <span style={S.required}>*</span> {baseAmount && <OcrBadge />}
+                  </div>
+                  <input
+                    className="px-input"
+                    value={baseAmount || formatCurrency(totalBase)}
+                    onChange={(e) => setBaseAmount(e.target.value)}
+                  />
                 </div>
               </div>
             </div>
@@ -1296,7 +1571,9 @@ export function InvoiceFormDirectV2() {
             {/* ═══════════ SECTION 3: Item / Expense Details ═══════════ */}
             <div style={S.sectionCard}>
               <div style={S.sectionHeader}>
-                <div style={S.sectionIcon}><Package size={18} /></div>
+                <div style={S.sectionIcon}>
+                  <Package size={18} />
+                </div>
                 <h2 style={S.sectionTitle}>Item / Expense Details</h2>
               </div>
               <div style={S.tableWrap}>
@@ -1311,20 +1588,47 @@ export function InvoiceFormDirectV2() {
                       <th style={S.th}>GL Code</th>
                       <th style={{ ...S.th, textAlign: 'right' }}>Qty</th>
                       <th style={{ ...S.th, textAlign: 'right' }}>Rate</th>
-                      <th style={{ ...S.th, textAlign: 'right', background: 'var(--color-teal-tint)' }}>Amount</th>
+                      <th
+                        style={{
+                          ...S.th,
+                          textAlign: 'right',
+                          background: 'var(--color-teal-tint)',
+                        }}
+                      >
+                        Amount
+                      </th>
                       <th style={{ ...S.th, textAlign: 'right' }}>GST%</th>
                       <th style={{ ...S.th, textAlign: 'right' }}>CGST</th>
                       <th style={{ ...S.th, textAlign: 'right' }}>SGST</th>
                       <th style={{ ...S.th, textAlign: 'right' }}>IGST</th>
                       <th style={{ ...S.th, textAlign: 'right' }}>CESS</th>
-                      <th style={{ ...S.th, textAlign: 'right', background: 'var(--color-success-light)' }}>Total GST</th>
-                      <th style={{ ...S.th, textAlign: 'right', background: 'var(--color-cloud)' }}>Gross Amt</th>
+                      <th
+                        style={{
+                          ...S.th,
+                          textAlign: 'right',
+                          background: 'var(--color-success-light)',
+                        }}
+                      >
+                        Total GST
+                      </th>
+                      <th style={{ ...S.th, textAlign: 'right', background: 'var(--color-cloud)' }}>
+                        Gross Amt
+                      </th>
                       <th style={S.th}>TDS Section</th>
                       <th style={{ ...S.th, textAlign: 'right' }}>TDS%</th>
                       <th style={{ ...S.th, textAlign: 'right' }}>TDS Amt</th>
                       <th style={S.th}>Lower TDS</th>
                       <th style={S.th}>Sec 206</th>
-                      <th style={{ ...S.th, textAlign: 'right', background: 'var(--color-warning-light)', fontWeight: 700 }}>Net Payable</th>
+                      <th
+                        style={{
+                          ...S.th,
+                          textAlign: 'right',
+                          background: 'var(--color-warning-light)',
+                          fontWeight: 700,
+                        }}
+                      >
+                        Net Payable
+                      </th>
                       <th style={S.th}>Cost Center</th>
                       <th style={S.th}>Profit Center</th>
                       <th style={S.th}>Ship To</th>
@@ -1337,46 +1641,134 @@ export function InvoiceFormDirectV2() {
                       <tr key={item.id}>
                         <td style={{ ...S.td, ...S.tdSticky }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160, display: 'inline-block' }}>{item.itemName}</span>
+                            <span
+                              style={{
+                                fontWeight: 500,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: 160,
+                                display: 'inline-block',
+                              }}
+                            >
+                              {item.itemName}
+                            </span>
                             <OcrBadge />
                           </div>
                         </td>
-                        <td style={S.td}><span style={S.monospace}>{item.itemCode}</span></td>
-                        <td style={{ ...S.td, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.itemDescription}</td>
-                        <td style={{ ...S.td, fontStyle: 'italic', color: 'var(--color-mercury-grey)' }}>{item.ocrItem}</td>
-                        <td style={S.td}><ConfBadge level={item.ocrConfidence} /></td>
-                        <td style={S.td}><span style={S.monospace}>{item.glCode}</span></td>
+                        <td style={S.td}>
+                          <span style={S.monospace}>{item.itemCode}</span>
+                        </td>
+                        <td
+                          style={{
+                            ...S.td,
+                            maxWidth: 180,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {item.itemDescription}
+                        </td>
+                        <td
+                          style={{
+                            ...S.td,
+                            fontStyle: 'italic',
+                            color: 'var(--color-mercury-grey)',
+                          }}
+                        >
+                          {item.ocrItem}
+                        </td>
+                        <td style={S.td}>
+                          <ConfBadge level={item.ocrConfidence} />
+                        </td>
+                        <td style={S.td}>
+                          <span style={S.monospace}>{item.glCode}</span>
+                        </td>
                         <td style={{ ...S.td, textAlign: 'right' }}>{item.qty.toLocaleString()}</td>
                         <td style={{ ...S.td, textAlign: 'right' }}>{formatCurrency(item.rate)}</td>
-                        <td style={{ ...S.td, textAlign: 'right', background: 'var(--color-teal-tint)', fontWeight: 500 }}>{formatCurrency(item.amount)}</td>
+                        <td
+                          style={{
+                            ...S.td,
+                            textAlign: 'right',
+                            background: 'var(--color-teal-tint)',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {formatCurrency(item.amount)}
+                        </td>
                         <td style={{ ...S.td, textAlign: 'right' }}>{item.gstPercent}%</td>
                         <td style={{ ...S.td, textAlign: 'right' }}>{formatCurrency(item.cgst)}</td>
                         <td style={{ ...S.td, textAlign: 'right' }}>{formatCurrency(item.sgst)}</td>
                         <td style={{ ...S.td, textAlign: 'right' }}>{formatCurrency(item.igst)}</td>
                         <td style={{ ...S.td, textAlign: 'right' }}>{formatCurrency(item.cess)}</td>
-                        <td style={{ ...S.td, textAlign: 'right', background: 'var(--color-success-light)', fontWeight: 500 }}>{formatCurrency(item.totalGst)}</td>
-                        <td style={{ ...S.td, textAlign: 'right', background: 'var(--color-cloud)', fontWeight: 500 }}>{formatCurrency(item.grossAmount)}</td>
+                        <td
+                          style={{
+                            ...S.td,
+                            textAlign: 'right',
+                            background: 'var(--color-success-light)',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {formatCurrency(item.totalGst)}
+                        </td>
+                        <td
+                          style={{
+                            ...S.td,
+                            textAlign: 'right',
+                            background: 'var(--color-cloud)',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {formatCurrency(item.grossAmount)}
+                        </td>
                         <td style={S.td}>{item.tdsSection}</td>
                         <td style={{ ...S.td, textAlign: 'right' }}>{item.tdsPercent}%</td>
-                        <td style={{ ...S.td, textAlign: 'right' }}>{formatCurrency(item.tdsAmount)}</td>
+                        <td style={{ ...S.td, textAlign: 'right' }}>
+                          {formatCurrency(item.tdsAmount)}
+                        </td>
                         <td style={{ ...S.td, textAlign: 'center' }}>
                           <input
                             type="checkbox"
                             checked={item.lowerTds}
                             onChange={() => {
-                              setLineItems(prev => prev.map(l => l.id === item.id ? { ...l, lowerTds: !l.lowerTds } : l));
+                              setLineItems((prev) =>
+                                prev.map((l) =>
+                                  l.id === item.id ? { ...l, lowerTds: !l.lowerTds } : l
+                                )
+                              );
                             }}
                             style={{ width: 16, height: 16, accentColor: 'var(--color-teal)' }}
                           />
                         </td>
                         <td style={S.td}>{item.sec206}</td>
-                        <td style={{ ...S.td, textAlign: 'right', background: 'var(--color-warning-light)', fontWeight: 700 }}>{formatCurrency(item.netPayable)}</td>
-                        <td style={S.td}><span style={S.monospace}>{item.costCenter}</span></td>
-                        <td style={S.td}><span style={S.monospace}>{item.profitCenter}</span></td>
+                        <td
+                          style={{
+                            ...S.td,
+                            textAlign: 'right',
+                            background: 'var(--color-warning-light)',
+                            fontWeight: 700,
+                          }}
+                        >
+                          {formatCurrency(item.netPayable)}
+                        </td>
+                        <td style={S.td}>
+                          <span style={S.monospace}>{item.costCenter}</span>
+                        </td>
+                        <td style={S.td}>
+                          <span style={S.monospace}>{item.profitCenter}</span>
+                        </td>
                         <td style={S.td}>{item.shipTo}</td>
-                        <td style={S.td}><span style={S.monospace}>{item.projectCode}</span></td>
+                        <td style={S.td}>
+                          <span style={S.monospace}>{item.projectCode}</span>
+                        </td>
                         <td style={{ ...S.td, textAlign: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              justifyContent: 'center',
+                            }}
+                          >
                             <button
                               className="btn-secondary"
                               style={{ padding: '4px 10px', fontSize: 12 }}
@@ -1386,7 +1778,10 @@ export function InvoiceFormDirectV2() {
                             <button
                               onClick={() => removeLineItem(item.id)}
                               style={{
-                                background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: 4,
                                 color: 'var(--color-error)',
                               }}
                               aria-label="Delete row"
@@ -1413,28 +1808,42 @@ export function InvoiceFormDirectV2() {
             {/* ═══════════ SECTION 4: GST & TDS Retention ═══════════ */}
             <div style={S.sectionCard}>
               <div style={S.sectionHeader}>
-                <div style={S.sectionIcon}><Calculator size={18} /></div>
+                <div style={S.sectionIcon}>
+                  <Calculator size={18} />
+                </div>
                 <h2 style={S.sectionTitle}>GST &amp; TDS Retention</h2>
               </div>
               <div style={S.grid2}>
                 {/* Retention Name */}
                 <div>
-                  <div style={S.fieldLabel}><span>Retention Name</span> <SuggestedBadge /></div>
+                  <div style={S.fieldLabel}>
+                    <span>Retention Name</span> <SuggestedBadge />
+                  </div>
                   <input className="px-input" defaultValue="Quality Hold — Green Beans" />
                 </div>
                 {/* Retention Amount */}
                 <div>
-                  <div style={S.fieldLabel}><span>Retention Amount</span> <SuggestedBadge /></div>
+                  <div style={S.fieldLabel}>
+                    <span>Retention Amount</span> <SuggestedBadge />
+                  </div>
                   <input className="px-input" defaultValue="6,300.00" />
                 </div>
                 {/* Retention Reason */}
                 <div style={S.fullWidth}>
-                  <div style={S.fieldLabel}><span>Retention Reason</span> <SuggestedBadge /></div>
-                  <input className="px-input" defaultValue="10% retention pending quality inspection clearance (per contract CL-2026-019)" style={{ width: '100%' }} />
+                  <div style={S.fieldLabel}>
+                    <span>Retention Reason</span> <SuggestedBadge />
+                  </div>
+                  <input
+                    className="px-input"
+                    defaultValue="10% retention pending quality inspection clearance (per contract CL-2026-019)"
+                    style={{ width: '100%' }}
+                  />
                 </div>
                 {/* Expected Payment Date */}
                 <div>
-                  <div style={S.fieldLabel}><span>Expected Payment Date</span> <SuggestedBadge /></div>
+                  <div style={S.fieldLabel}>
+                    <span>Expected Payment Date</span> <SuggestedBadge />
+                  </div>
                   <input className="px-input" type="date" defaultValue="2026-06-10" />
                 </div>
               </div>
@@ -1443,30 +1852,53 @@ export function InvoiceFormDirectV2() {
             {/* ═══════════ SECTION 5: Narration & Period ═══════════ */}
             <div style={S.sectionCard}>
               <div style={S.sectionHeader}>
-                <div style={S.sectionIcon}><MessageSquare size={18} /></div>
+                <div style={S.sectionIcon}>
+                  <MessageSquare size={18} />
+                </div>
                 <h2 style={S.sectionTitle}>Narration &amp; Period</h2>
               </div>
               <div style={S.grid2}>
                 {/* Expense Period From */}
                 <div>
-                  <div style={S.fieldLabel}><span>Expense Period From</span></div>
-                  <input className="px-input" type="date" value={expenseFrom} onChange={(e) => setExpenseFrom(e.target.value)} />
+                  <div style={S.fieldLabel}>
+                    <span>Expense Period From</span>
+                  </div>
+                  <input
+                    className="px-input"
+                    type="date"
+                    value={expenseFrom}
+                    onChange={(e) => setExpenseFrom(e.target.value)}
+                  />
                 </div>
                 {/* Expense Period To */}
                 <div>
-                  <div style={S.fieldLabel}><span>Expense Period To</span></div>
-                  <input className="px-input" type="date" value={expenseTo} onChange={(e) => setExpenseTo(e.target.value)} />
+                  <div style={S.fieldLabel}>
+                    <span>Expense Period To</span>
+                  </div>
+                  <input
+                    className="px-input"
+                    type="date"
+                    value={expenseTo}
+                    onChange={(e) => setExpenseTo(e.target.value)}
+                  />
                 </div>
                 {/* Narration */}
                 <div style={S.fullWidth}>
-                  <div style={S.fieldLabel}><span>Narration</span> {narration && <OcrBadge />}</div>
+                  <div style={S.fieldLabel}>
+                    <span>Narration</span> {narration && <OcrBadge />}
+                  </div>
                   <textarea
                     className="px-input"
                     rows={6}
                     value={narration}
                     onChange={(e) => setNarration(e.target.value)}
                     placeholder="Add notes or description..."
-                    style={{ height: 'auto', padding: '10px 12px', resize: 'vertical', lineHeight: 1.5 }}
+                    style={{
+                      height: 'auto',
+                      padding: '10px 12px',
+                      resize: 'vertical',
+                      lineHeight: 1.5,
+                    }}
                   />
                 </div>
               </div>
@@ -1475,17 +1907,33 @@ export function InvoiceFormDirectV2() {
             {/* ═══════════ SECTION 6: Accounting Entry Preview ═══════════ */}
             <div style={S.sectionCard}>
               <div style={S.sectionHeader}>
-                <div style={S.sectionIcon}><TrendingUp size={18} /></div>
+                <div style={S.sectionIcon}>
+                  <TrendingUp size={18} />
+                </div>
                 <h2 style={S.sectionTitle}>Accounting Entry Preview</h2>
               </div>
               <div style={S.accountingGrid}>
                 {/* Debit Side */}
-                <div style={{ border: '1px solid var(--color-silver)', borderRadius: 8, overflow: 'hidden' }}>
-                  <div style={{
-                    padding: '10px 16px', background: 'var(--color-teal-tint)', color: 'var(--color-teal-dark)',
-                    fontSize: 13, fontWeight: 600, display: 'flex', justifyContent: 'space-between',
-                  }}>
-                    <span>Debit</span><span>Amount</span>
+                <div
+                  style={{
+                    border: '1px solid var(--color-silver)',
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '10px 16px',
+                      background: 'var(--color-teal-tint)',
+                      color: 'var(--color-teal-dark)',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>Debit</span>
+                    <span>Amount</span>
                   </div>
                   {debitEntries.map((e, i) => (
                     <div key={i} style={S.accountingRow}>
@@ -1500,12 +1948,26 @@ export function InvoiceFormDirectV2() {
                 </div>
 
                 {/* Credit Side */}
-                <div style={{ border: '1px solid var(--color-silver)', borderRadius: 8, overflow: 'hidden' }}>
-                  <div style={{
-                    padding: '10px 16px', background: 'var(--color-error-light)', color: 'var(--color-error-dark)',
-                    fontSize: 13, fontWeight: 600, display: 'flex', justifyContent: 'space-between',
-                  }}>
-                    <span>Credit</span><span>Amount</span>
+                <div
+                  style={{
+                    border: '1px solid var(--color-silver)',
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '10px 16px',
+                      background: 'var(--color-error-light)',
+                      color: 'var(--color-error-dark)',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>Credit</span>
+                    <span>Amount</span>
                   </div>
                   {creditEntries.map((e, i) => (
                     <div key={i} style={S.accountingRow}>
@@ -1521,22 +1983,37 @@ export function InvoiceFormDirectV2() {
               </div>
 
               {/* Footer */}
-              <div style={{
-                marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '12px 16px', background: 'var(--color-cloud)', borderRadius: 8,
-              }}>
+              <div
+                style={{
+                  marginTop: 16,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  background: 'var(--color-cloud)',
+                  borderRadius: 8,
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Info size={14} color="var(--color-mercury-grey)" />
-                  <span style={S.textMuted}>Posting Mode: Accrual basis &bull; Auto-reversed on payment</span>
+                  <span style={S.textMuted}>
+                    Posting Mode: Accrual basis &bull; Auto-reversed on payment
+                  </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)' }}>
                     Net Payable:
                   </span>
-                  <span style={{
-                    fontSize: 15, fontWeight: 700, color: 'var(--color-teal-dark)',
-                    padding: '2px 12px', background: 'var(--color-teal-tint)', borderRadius: 6,
-                  }}>
+                  <span
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: 'var(--color-teal-dark)',
+                      padding: '2px 12px',
+                      background: 'var(--color-teal-tint)',
+                      borderRadius: 6,
+                    }}
+                  >
                     {formatCurrency(totalNet)}
                   </span>
                 </div>
@@ -1546,13 +2023,19 @@ export function InvoiceFormDirectV2() {
             {/* ═══════════ SECTION 7: Workflow Preview ═══════════ */}
             <div style={S.sectionCard}>
               <div style={S.sectionHeader}>
-                <div style={S.sectionIcon}><Shield size={18} /></div>
+                <div style={S.sectionIcon}>
+                  <Shield size={18} />
+                </div>
                 <h2 style={S.sectionTitle}>Workflow Preview</h2>
               </div>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 0',
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 0',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className="badge-teal">{APPROVAL_LEVELS.length} Approvers</span>
@@ -1565,26 +2048,29 @@ export function InvoiceFormDirectV2() {
                 <button
                   onClick={() => setDrawerOpen(true)}
                   style={{
-                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                    fontSize: 14, fontWeight: 500, color: 'var(--color-teal-dark)',
-                    display: 'flex', alignItems: 'center', gap: 4,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: 'var(--color-teal-dark)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
                   }}
                 >
                   View Details <ChevronRight size={16} />
                 </button>
               </div>
             </div>
-
           </div>
         </main>
       </div>
 
       {/* ═══════════ WORKFLOW DRAWER ═══════════ */}
       {/* Backdrop */}
-      <div
-        style={S.backdrop(drawerOpen)}
-        onClick={() => setDrawerOpen(false)}
-      />
+      <div style={S.backdrop(drawerOpen)} onClick={() => setDrawerOpen(false)} />
       {/* Drawer */}
       <div style={S.drawer(drawerOpen)}>
         {/* Drawer Header */}
@@ -1605,7 +2091,14 @@ export function InvoiceFormDirectV2() {
         <div style={S.drawerBody}>
           {/* Approval Levels */}
           <div style={S.mb24}>
-            <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 14px' }}>
+            <h4
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--color-ink)',
+                margin: '0 0 14px',
+              }}
+            >
               Approval Levels
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1620,14 +2113,30 @@ export function InvoiceFormDirectV2() {
                     borderLeft: `4px solid ${lvl.borderColor}`,
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: lvl.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: lvl.color,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                      }}
+                    >
                       Level {lvl.level} — {lvl.title}
                     </span>
-                    <span style={{
-                      fontSize: 11, padding: '1px 8px', borderRadius: 9999,
-                      background: lvl.borderColor, color: '#fff', fontWeight: 600,
-                    }}>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        padding: '1px 8px',
+                        borderRadius: 9999,
+                        background: lvl.borderColor,
+                        color: '#fff',
+                        fontWeight: 600,
+                      }}
+                    >
                       Pending
                     </span>
                   </div>
@@ -1642,20 +2151,35 @@ export function InvoiceFormDirectV2() {
 
           {/* SLA & Escalations */}
           <div style={S.mb24}>
-            <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 14px' }}>
+            <h4
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--color-ink)',
+                margin: '0 0 14px',
+              }}
+            >
               SLA &amp; Escalations
             </h4>
-            <div style={{
-              padding: 16, background: 'var(--color-cloud)', borderRadius: 8,
-              border: '1px solid var(--color-silver)',
-            }}>
+            <div
+              style={{
+                padding: 16,
+                background: 'var(--color-cloud)',
+                borderRadius: 8,
+                border: '1px solid var(--color-silver)',
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                 <span style={S.textMuted}>Total SLA</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)' }}>48 hours</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)' }}>
+                  48 hours
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                 <span style={S.textMuted}>Per-level SLA</span>
-                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-ink)' }}>16 hours each</span>
+                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-ink)' }}>
+                  16 hours each
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={S.textMuted}>Escalation</span>
@@ -1668,21 +2192,41 @@ export function InvoiceFormDirectV2() {
 
           {/* Routing Rules */}
           <div style={S.mb24}>
-            <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 14px' }}>
+            <h4
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--color-ink)',
+                margin: '0 0 14px',
+              }}
+            >
               Routing Rules
             </h4>
-            <div style={{
-              padding: 16, background: 'var(--color-cloud)', borderRadius: 8,
-              border: '1px solid var(--color-silver)',
-            }}>
+            <div
+              style={{
+                padding: 16,
+                background: 'var(--color-cloud)',
+                borderRadius: 8,
+                border: '1px solid var(--color-silver)',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-                <AlertTriangle size={14} color="var(--color-warning-dark)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <AlertTriangle
+                  size={14}
+                  color="var(--color-warning-dark)"
+                  style={{ flexShrink: 0, marginTop: 2 }}
+                />
                 <span style={{ fontSize: 13, color: 'var(--color-ink)' }}>
-                  Invoice amount exceeds department threshold. CFO approval (Level 3) added automatically.
+                  Invoice amount exceeds department threshold. CFO approval (Level 3) added
+                  automatically.
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <Info size={14} color="var(--color-teal-dark)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <Info
+                  size={14}
+                  color="var(--color-teal-dark)"
+                  style={{ flexShrink: 0, marginTop: 2 }}
+                />
                 <span style={{ fontSize: 13, color: 'var(--color-ink)' }}>
                   Non-PO invoices above INR 50,000 require Finance Controller sign-off.
                 </span>
@@ -1692,27 +2236,52 @@ export function InvoiceFormDirectV2() {
 
           {/* Audit Trail Preview */}
           <div style={S.mb24}>
-            <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 14px' }}>
+            <h4
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--color-ink)',
+                margin: '0 0 14px',
+              }}
+            >
               Audit Trail Preview
             </h4>
-            <div style={{
-              padding: 16, background: 'var(--color-cloud)', borderRadius: 8,
-              border: '1px solid var(--color-silver)',
-            }}>
+            <div
+              style={{
+                padding: 16,
+                background: 'var(--color-cloud)',
+                borderRadius: 8,
+                border: '1px solid var(--color-silver)',
+              }}
+            >
               {[
                 { time: 'Just now', action: 'Invoice created via OCR capture', user: 'You' },
-                { time: 'Auto', action: 'OCR extracted 2 line items (High/Med confidence)', user: 'System' },
+                {
+                  time: 'Auto',
+                  action: 'OCR extracted 2 line items (High/Med confidence)',
+                  user: 'System',
+                },
                 { time: 'Auto', action: 'GST validation passed — GSTIN verified', user: 'System' },
                 { time: 'Pending', action: 'Awaiting Level 1 approval', user: 'Rahul Mehta' },
               ].map((entry, i) => (
-                <div key={i} style={{
-                  display: 'flex', gap: 12, padding: '8px 0',
-                  borderBottom: i < 3 ? '1px solid var(--color-silver)' : 'none',
-                }}>
-                  <span style={{
-                    fontSize: 11, fontWeight: 600, color: 'var(--color-mercury-grey)',
-                    minWidth: 60, flexShrink: 0,
-                  }}>
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    gap: 12,
+                    padding: '8px 0',
+                    borderBottom: i < 3 ? '1px solid var(--color-silver)' : 'none',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: 'var(--color-mercury-grey)',
+                      minWidth: 60,
+                      flexShrink: 0,
+                    }}
+                  >
                     {entry.time}
                   </span>
                   <div>
@@ -1726,20 +2295,43 @@ export function InvoiceFormDirectV2() {
 
           {/* Policy Information */}
           <div>
-            <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 14px' }}>
+            <h4
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'var(--color-ink)',
+                margin: '0 0 14px',
+              }}
+            >
               Policy Information
             </h4>
-            <div style={{
-              padding: 16, background: 'var(--color-teal-tint)', borderRadius: 8,
-              border: '1px solid var(--color-teal)',
-            }}>
+            <div
+              style={{
+                padding: 16,
+                background: 'var(--color-teal-tint)',
+                borderRadius: 8,
+                border: '1px solid var(--color-teal)',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-                <Shield size={14} color="var(--color-teal-dark)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <Shield
+                  size={14}
+                  color="var(--color-teal-dark)"
+                  style={{ flexShrink: 0, marginTop: 2 }}
+                />
                 <span style={{ fontSize: 13, color: 'var(--color-ink)', fontWeight: 500 }}>
                   Non-PO Procurement Policy v3.2
                 </span>
               </div>
-              <ul style={{ margin: 0, paddingLeft: 38, fontSize: 13, color: 'var(--color-ink)', lineHeight: 1.8 }}>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingLeft: 38,
+                  fontSize: 13,
+                  color: 'var(--color-ink)',
+                  lineHeight: 1.8,
+                }}
+              >
                 <li>Maximum single invoice value: INR 5,00,000</li>
                 <li>Mandatory e-Invoice verification for GST-registered vendors</li>
                 <li>TDS deduction required for services above INR 30,000</li>

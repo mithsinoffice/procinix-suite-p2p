@@ -37,8 +37,14 @@ export async function handleExceptions(invoiceId, extractedData, validationResul
   }
 
   // AMOUNT_MISMATCH
-  if (validationResult.warnings.some((w) => w.includes('line items sum') || w.includes('total_amount'))) {
-    const detail = validationResult.warnings.filter((w) => w.includes('sum') || w.includes('total')).join('; ');
+  if (
+    validationResult.warnings.some(
+      (w) => w.includes('line items sum') || w.includes('total_amount')
+    )
+  ) {
+    const detail = validationResult.warnings
+      .filter((w) => w.includes('sum') || w.includes('total'))
+      .join('; ');
     await insertException(invoiceId, 'AMOUNT_MISMATCH', detail, 'high');
     exceptions.push({ type: 'AMOUNT_MISMATCH', detail, severity: 'high' });
   }

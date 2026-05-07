@@ -156,7 +156,8 @@ const masterRegister: MasterRegisterRow[] = [
   {
     id: 'vendor-group-master',
     title: 'Vendor Group Master',
-    description: 'Define vendor groups and relationship types for vendor mapping and compliance views.',
+    description:
+      'Define vendor groups and relationship types for vendor mapping and compliance views.',
     route: '/masters/vendor-group-master',
     domain: 'Commercial',
     scope: 'Multi Entity',
@@ -441,7 +442,8 @@ const masterRegister: MasterRegisterRow[] = [
   {
     id: 'gl-code-master',
     title: 'GL Code Master',
-    description: 'General ledger codes for entity-level accounting, expense booking and tax mapping.',
+    description:
+      'General ledger codes for entity-level accounting, expense booking and tax mapping.',
     route: '/masters/gl-code-master',
     domain: 'Finance',
     scope: 'Entity Scoped',
@@ -550,7 +552,9 @@ function FilterMenu({
         >
           <div className="flex flex-wrap gap-2 mb-3">
             {selected.length === 0 ? (
-              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>No filters selected</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                No filters selected
+              </span>
             ) : (
               selected.map((value) => (
                 <span
@@ -582,7 +586,11 @@ function FilterMenu({
                   {isSelected && (
                     <span
                       className="px-2 py-0.5 rounded-full text-[11px]"
-                      style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF', fontWeight: 700 }}
+                      style={{
+                        backgroundColor: 'var(--color-teal)',
+                        color: '#FFFFFF',
+                        fontWeight: 700,
+                      }}
                     >
                       On
                     </span>
@@ -608,9 +616,7 @@ function FilterMenu({
 }
 
 function toggleMultiSelect(current: string[], value: string) {
-  return current.includes(value)
-    ? current.filter((entry) => entry !== value)
-    : [...current, value];
+  return current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value];
 }
 
 export function Masters() {
@@ -642,7 +648,9 @@ export function Masters() {
   }, [domainFilter, entityFilter, scopeFilter, search, statusFilter]);
 
   const totalLive = filteredMasters.filter((master) => master.status === 'Live').length;
-  const totalWorkflow = filteredMasters.filter((master) => master.status === 'Workflow Enabled').length;
+  const totalWorkflow = filteredMasters.filter(
+    (master) => master.status === 'Workflow Enabled'
+  ).length;
   const hasActiveFilters =
     search.trim().length > 0 ||
     domainFilter.length > 0 ||
@@ -659,7 +667,14 @@ export function Masters() {
   };
 
   return (
-    <div className="p-8" style={{ background: 'linear-gradient(180deg, #EEF6FB 0%, var(--color-cloud) 42%, var(--color-cloud) 100%)', minHeight: '100vh' }}>
+    <div
+      className="p-8"
+      style={{
+        background:
+          'linear-gradient(180deg, #EEF6FB 0%, var(--color-cloud) 42%, var(--color-cloud) 100%)',
+        minHeight: '100vh',
+      }}
+    >
       <div className="mb-6 flex items-start justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-3">
@@ -673,20 +688,32 @@ export function Masters() {
               <Database className="w-6 h-6" style={{ color: '#008A96' }} />
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-3 py-1 rounded-full text-xs" style={{ backgroundColor: '#E7FBFD', color: '#00808C', fontWeight: 700 }}>
+              <span
+                className="px-3 py-1 rounded-full text-xs"
+                style={{ backgroundColor: '#E7FBFD', color: '#00808C', fontWeight: 700 }}
+              >
                 Master Register
               </span>
-              <span className="px-3 py-1 rounded-full text-xs" style={{ backgroundColor: '#E8FFF2', color: '#0F9D69', fontWeight: 700 }}>
+              <span
+                className="px-3 py-1 rounded-full text-xs"
+                style={{ backgroundColor: '#E8FFF2', color: '#0F9D69', fontWeight: 700 }}
+              >
                 {filteredMasters.length} Active Views
               </span>
-              <span className="px-3 py-1 rounded-full text-xs" style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', fontWeight: 700 }}>
+              <span
+                className="px-3 py-1 rounded-full text-xs"
+                style={{ backgroundColor: '#EEF2FF', color: '#4F46E5', fontWeight: 700 }}
+              >
                 Entity: {currentCompany?.name || 'All Entities'}
               </span>
             </div>
           </div>
-          <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>Masters</h1>
+          <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
+            Masters
+          </h1>
           <p style={{ color: 'var(--color-mercury-grey)', maxWidth: '840px' }}>
-            Review master domains, entity applicability, governance status, and open the right maintenance screen from one premium operational register.
+            Review master domains, entity applicability, governance status, and open the right
+            maintenance screen from one premium operational register.
           </p>
         </div>
 
@@ -700,12 +727,20 @@ export function Masters() {
         >
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Workflow Enabled</p>
-              <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{totalWorkflow}</p>
+              <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+                Workflow Enabled
+              </p>
+              <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
+                {totalWorkflow}
+              </p>
             </div>
             <div>
-              <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Live Only</p>
-              <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{totalLive}</p>
+              <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+                Live Only
+              </p>
+              <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
+                {totalLive}
+              </p>
             </div>
           </div>
         </div>
@@ -731,7 +766,10 @@ export function Masters() {
             >
               <div className="space-y-2">
                 <div className="relative w-full">
-                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
+                  <Search
+                    className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  />
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -766,7 +804,9 @@ export function Masters() {
                   label="Domain"
                   options={[...new Set(masterRegister.map((master) => master.domain))]}
                   selected={domainFilter}
-                  onToggle={(value) => setDomainFilter((current) => toggleMultiSelect(current, value))}
+                  onToggle={(value) =>
+                    setDomainFilter((current) => toggleMultiSelect(current, value))
+                  }
                 />
               </div>
               <div className="flex items-start">
@@ -774,7 +814,9 @@ export function Masters() {
                   label="Scope"
                   options={[...new Set(masterRegister.map((master) => master.scope))]}
                   selected={scopeFilter}
-                  onToggle={(value) => setScopeFilter((current) => toggleMultiSelect(current, value))}
+                  onToggle={(value) =>
+                    setScopeFilter((current) => toggleMultiSelect(current, value))
+                  }
                 />
               </div>
               <div className="flex items-start">
@@ -782,7 +824,9 @@ export function Masters() {
                   label="Entity"
                   options={[...new Set(masterRegister.map((master) => master.entity))]}
                   selected={entityFilter}
-                  onToggle={(value) => setEntityFilter((current) => toggleMultiSelect(current, value))}
+                  onToggle={(value) =>
+                    setEntityFilter((current) => toggleMultiSelect(current, value))
+                  }
                 />
               </div>
               <div />
@@ -791,7 +835,9 @@ export function Masters() {
                   label="Status"
                   options={[...new Set(masterRegister.map((master) => master.status))]}
                   selected={statusFilter}
-                  onToggle={(value) => setStatusFilter((current) => toggleMultiSelect(current, value))}
+                  onToggle={(value) =>
+                    setStatusFilter((current) => toggleMultiSelect(current, value))
+                  }
                 />
               </div>
               <div />
@@ -805,176 +851,205 @@ export function Masters() {
                 borderBottom: '1px solid #E4EDF2',
               }}
             >
-              {['Master', 'Domain', 'Scope', 'Entity', 'Access', 'Status', 'Action'].map((column) => (
-                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
-                  {column}
-                </div>
-              ))}
+              {['Master', 'Domain', 'Scope', 'Entity', 'Access', 'Status', 'Action'].map(
+                (column) => (
+                  <div
+                    key={column}
+                    className="text-xs uppercase tracking-[0.18em]"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}
+                  >
+                    {column}
+                  </div>
+                )
+              )}
             </div>
 
             <div>
               {filteredMasters.map((master, index) => {
-            const Icon = master.icon;
-            return (
-              <button
-                key={master.id}
-                type="button"
-                onClick={() => navigate(master.route)}
-                className="w-full grid gap-4 px-6 py-4 text-left transition-all"
-                style={{
-                  gridTemplateColumns: '3.1fr 1.2fr 1.2fr 1.2fr 1fr 1fr 0.9fr',
-                  borderBottom: index === filteredMasters.length - 1 ? 'none' : '1px solid #EDF3F7',
-                  backgroundColor: '#FFFFFF',
-                }}
-                onMouseEnter={(event) => {
-                  event.currentTarget.style.backgroundColor = '#F8FCFE';
-                }}
-                onMouseLeave={(event) => {
-                  event.currentTarget.style.backgroundColor = '#FFFFFF';
-                }}
-              >
-                <div className="min-w-0">
-                  <div className="flex items-start gap-4">
-                    <div
-                      className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: master.iconBg,
-                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
-                      }}
-                    >
-                      <Icon className="w-5 h-5" style={{ color: master.iconTint }} />
-                    </div>
+                const Icon = master.icon;
+                return (
+                  <button
+                    key={master.id}
+                    type="button"
+                    onClick={() => navigate(master.route)}
+                    className="w-full grid gap-4 px-6 py-4 text-left transition-all"
+                    style={{
+                      gridTemplateColumns: '3.1fr 1.2fr 1.2fr 1.2fr 1fr 1fr 0.9fr',
+                      borderBottom:
+                        index === filteredMasters.length - 1 ? 'none' : '1px solid #EDF3F7',
+                      backgroundColor: '#FFFFFF',
+                    }}
+                    onMouseEnter={(event) => {
+                      event.currentTarget.style.backgroundColor = '#F8FCFE';
+                    }}
+                    onMouseLeave={(event) => {
+                      event.currentTarget.style.backgroundColor = '#FFFFFF';
+                    }}
+                  >
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{master.title}</span>
-                        <span className="px-2.5 py-1 rounded-full text-[11px]" style={{ backgroundColor: '#EEF7FF', color: '#2563EB', fontWeight: 700 }}>
-                          {master.badge}
-                        </span>
+                      <div className="flex items-start gap-4">
+                        <div
+                          className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                          style={{
+                            background: master.iconBg,
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
+                          }}
+                        >
+                          <Icon className="w-5 h-5" style={{ color: master.iconTint }} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
+                              {master.title}
+                            </span>
+                            <span
+                              className="px-2.5 py-1 rounded-full text-[11px]"
+                              style={{
+                                backgroundColor: '#EEF7FF',
+                                color: '#2563EB',
+                                fontWeight: 700,
+                              }}
+                            >
+                              {master.badge}
+                            </span>
+                          </div>
+                          <p
+                            className="text-sm"
+                            style={{ color: 'var(--color-mercury-grey)', lineHeight: '1.5' }}
+                          >
+                            {master.description}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', lineHeight: '1.5' }}>
-                        {master.description}
-                      </p>
                     </div>
-                  </div>
-                </div>
 
-                <div className="flex items-center">
-                  <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: '#F5F8FB', color: '#334155', fontWeight: 700 }}>
-                    {master.domain}
-                  </span>
-                </div>
+                    <div className="flex items-center">
+                      <span
+                        className="px-3 py-1.5 rounded-full text-xs"
+                        style={{ backgroundColor: '#F5F8FB', color: '#334155', fontWeight: 700 }}
+                      >
+                        {master.domain}
+                      </span>
+                    </div>
 
-                <div className="flex items-center">
-                  <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: '#F8F4FF', color: '#6D28D9', fontWeight: 700 }}>
-                    {master.scope}
-                  </span>
-                </div>
+                    <div className="flex items-center">
+                      <span
+                        className="px-3 py-1.5 rounded-full text-xs"
+                        style={{ backgroundColor: '#F8F4FF', color: '#6D28D9', fontWeight: 700 }}
+                      >
+                        {master.scope}
+                      </span>
+                    </div>
 
-                <div className="flex items-center">
-                  <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: '#EFFCF7', color: '#0F766E', fontWeight: 700 }}>
-                    {master.entity}
-                  </span>
-                </div>
+                    <div className="flex items-center">
+                      <span
+                        className="px-3 py-1.5 rounded-full text-xs"
+                        style={{ backgroundColor: '#EFFCF7', color: '#0F766E', fontWeight: 700 }}
+                      >
+                        {master.entity}
+                      </span>
+                    </div>
 
-                <div className="flex items-center">
-                  <span
-                    className="px-3 py-1.5 rounded-full text-xs"
-                    style={{
-                      backgroundColor:
-                        master.access === 'Admin'
-                          ? '#FFF1E6'
-                          : master.access === 'Controlled'
-                            ? '#FEF3C7'
-                            : '#EEF2FF',
-                      color:
-                        master.access === 'Admin'
-                          ? '#9A3412'
-                          : master.access === 'Controlled'
-                            ? '#B45309'
-                            : '#4338CA',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {master.access}
-                  </span>
-                </div>
+                    <div className="flex items-center">
+                      <span
+                        className="px-3 py-1.5 rounded-full text-xs"
+                        style={{
+                          backgroundColor:
+                            master.access === 'Admin'
+                              ? '#FFF1E6'
+                              : master.access === 'Controlled'
+                                ? '#FEF3C7'
+                                : '#EEF2FF',
+                          color:
+                            master.access === 'Admin'
+                              ? '#9A3412'
+                              : master.access === 'Controlled'
+                                ? '#B45309'
+                                : '#4338CA',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {master.access}
+                      </span>
+                    </div>
 
-                <div className="flex items-center">
-                  <span
-                    className="px-3 py-1.5 rounded-full text-xs"
-                    style={{
-                      backgroundColor: master.status === 'Workflow Enabled' ? '#E7FBFD' : '#F0FDF4',
-                      color: master.status === 'Workflow Enabled' ? '#00808C' : '#15803D',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {master.status}
-                  </span>
-                </div>
+                    <div className="flex items-center">
+                      <span
+                        className="px-3 py-1.5 rounded-full text-xs"
+                        style={{
+                          backgroundColor:
+                            master.status === 'Workflow Enabled' ? '#E7FBFD' : '#F0FDF4',
+                          color: master.status === 'Workflow Enabled' ? '#00808C' : '#15803D',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {master.status}
+                      </span>
+                    </div>
 
-                <div className="flex items-center justify-end">
-                  <div
-                    className="flex items-center gap-1.5 p-1 rounded-xl"
-                    style={{
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      boxShadow: 'none',
-                    }}
-                  >
-                    <button
-                      type="button"
-                      title={`View ${master.title}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(master.route);
-                      }}
-                      className="w-9 h-9 rounded-lg flex items-center justify-center transition-all"
-                      style={{
-                        backgroundColor: '#EAFBFE',
-                        color: '#00A1AF',
-                        border: '1px solid #CDEFF4',
-                      }}
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      title={`Edit ${master.title}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(master.route);
-                      }}
-                      className="w-9 h-9 rounded-lg flex items-center justify-center transition-all"
-                      style={{
-                        backgroundColor: '#F1F0FF',
-                        color: '#6B5BFF',
-                        border: '1px solid #E1DEFF',
-                      }}
-                    >
-                      <PencilLine className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      title={`Open ${master.title}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(master.route);
-                      }}
-                      className="w-9 h-9 rounded-lg flex items-center justify-center transition-all"
-                      style={{
-                        background: 'linear-gradient(135deg, #DFF4FF 0%, #CCE9FF 100%)',
-                        color: '#2563EB',
-                        border: '1px solid #BFDBFE',
-                        boxShadow: '0 6px 14px rgba(37, 99, 235, 0.10)',
-                      }}
-                    >
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+                    <div className="flex items-center justify-end">
+                      <div
+                        className="flex items-center gap-1.5 p-1 rounded-xl"
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          boxShadow: 'none',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          title={`View ${master.title}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate(master.route);
+                          }}
+                          className="w-9 h-9 rounded-lg flex items-center justify-center transition-all"
+                          style={{
+                            backgroundColor: '#EAFBFE',
+                            color: '#00A1AF',
+                            border: '1px solid #CDEFF4',
+                          }}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          title={`Edit ${master.title}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate(master.route);
+                          }}
+                          className="w-9 h-9 rounded-lg flex items-center justify-center transition-all"
+                          style={{
+                            backgroundColor: '#F1F0FF',
+                            color: '#6B5BFF',
+                            border: '1px solid #E1DEFF',
+                          }}
+                        >
+                          <PencilLine className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          title={`Open ${master.title}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate(master.route);
+                          }}
+                          className="w-9 h-9 rounded-lg flex items-center justify-center transition-all"
+                          style={{
+                            background: 'linear-gradient(135deg, #DFF4FF 0%, #CCE9FF 100%)',
+                            color: '#2563EB',
+                            border: '1px solid #BFDBFE',
+                            boxShadow: '0 6px 14px rgba(37, 99, 235, 0.10)',
+                          }}
+                        >
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
 
               {filteredMasters.length === 0 && (
                 <div className="px-8 py-16 text-center">
@@ -984,8 +1059,15 @@ export function Masters() {
                   >
                     <Search className="w-6 h-6" style={{ color: 'var(--color-teal)' }} />
                   </div>
-                  <p className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>No masters match the current filters</p>
-                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Clear one or more filters to bring the full register back.</p>
+                  <p
+                    className="text-base mb-1"
+                    style={{ color: 'var(--color-ink)', fontWeight: 700 }}
+                  >
+                    No masters match the current filters
+                  </p>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Clear one or more filters to bring the full register back.
+                  </p>
                 </div>
               )}
             </div>

@@ -1,7 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { mysqlApiRequest } from '../../lib/mysql/client';
-import { Plus, TrendingUp, Zap, Settings, Search, ChevronDown, TrendingDown, Bot, Clock } from 'lucide-react';
+import {
+  Plus,
+  TrendingUp,
+  Zap,
+  Settings,
+  Search,
+  ChevronDown,
+  TrendingDown,
+  Bot,
+  Clock,
+} from 'lucide-react';
 
 /**
  * AGENT CONFIGURATOR - Enhanced Main Dashboard
@@ -30,13 +40,19 @@ export function AgentConfiguratorList() {
   const [moduleFilter, setModuleFilter] = useState('All modules');
   const [typeFilter, setTypeFilter] = useState('All types');
   const [statusFilter, setStatusFilter] = useState('All status');
-  
+
   const [agents, setAgents] = useState<Agent[]>([]);
 
   const colorMap: Record<string, string> = {
-    'Accounts Payable': '#00A9B7', 'Procurement': '#10B981', 'Masters': '#F59E0B',
-    'Payments': '#EAB308', 'Vendor Management': '#8B5CF6', 'GRN': '#06B6D4',
-    'Advances': '#EC4899', 'Debit Notes': '#EF4444', 'Budget': '#6366F1',
+    'Accounts Payable': '#00A9B7',
+    Procurement: '#10B981',
+    Masters: '#F59E0B',
+    Payments: '#EAB308',
+    'Vendor Management': '#8B5CF6',
+    GRN: '#06B6D4',
+    Advances: '#EC4899',
+    'Debit Notes': '#EF4444',
+    Budget: '#6366F1',
   };
 
   const loadAgents = useCallback(async () => {
@@ -44,7 +60,12 @@ export function AgentConfiguratorList() {
       const res = await mysqlApiRequest<{ success: boolean; data: any[] }>('/agents');
       const dbAgents: Agent[] = (res.data || []).map((a: any) => ({
         id: a.id,
-        initials: (a.name || '').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2),
+        initials: (a.name || '')
+          .split(' ')
+          .map((w: string) => w[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2),
         avatarColor: colorMap[a.module] || '#00A9B7',
         name: a.name || 'Untitled',
         form: a.form_name || a.module || '',
@@ -63,14 +84,17 @@ export function AgentConfiguratorList() {
     }
   }, []);
 
-  useEffect(() => { loadAgents(); }, [loadAgents]);
+  useEffect(() => {
+    loadAgents();
+  }, [loadAgents]);
 
-  const activeAgents = agents.filter(a => a.active).length;
-  const avgAccuracy = agents.length > 0 ? agents.reduce((sum, a) => sum + a.accuracy, 0) / agents.length : 0;
+  const activeAgents = agents.filter((a) => a.active).length;
+  const avgAccuracy =
+    agents.length > 0 ? agents.reduce((sum, a) => sum + a.accuracy, 0) / agents.length : 0;
   const actionsToday = agents.reduce((sum, a) => sum + a.actionsToday, 0);
 
   const toggleAgent = async (id: string) => {
-    const agent = agents.find(a => a.id === id);
+    const agent = agents.find((a) => a.id === id);
     if (!agent) return;
     try {
       if (agent.active) {
@@ -103,8 +127,8 @@ export function AgentConfiguratorList() {
           onClick={() => navigate('/agent-configurator/new')}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
           style={{ backgroundColor: '#007D87' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#006570'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#007D87'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#006570')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#007D87')}
         >
           <Plus className="w-5 h-5" />
           <span style={{ fontSize: '13px', fontWeight: '600' }}>New agent</span>
@@ -137,7 +161,14 @@ export function AgentConfiguratorList() {
                   <Zap className="w-5 h-5" style={{ color: '#00A9B7' }} />
                 </div>
                 <div>
-                  <div style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div
+                    style={{
+                      color: '#6E7A82',
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}
+                  >
                     Active agents
                   </div>
                 </div>
@@ -145,9 +176,7 @@ export function AgentConfiguratorList() {
               <div className="text-4xl mb-1" style={{ color: '#00A9B7', fontWeight: '700' }}>
                 {activeAgents}
               </div>
-              <div style={{ color: '#6E7A82', fontSize: '13px' }}>
-                Running in production
-              </div>
+              <div style={{ color: '#6E7A82', fontSize: '13px' }}>Running in production</div>
             </div>
 
             <div
@@ -172,7 +201,14 @@ export function AgentConfiguratorList() {
                   <TrendingUp className="w-5 h-5" style={{ color: '#10B981' }} />
                 </div>
                 <div>
-                  <div style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div
+                    style={{
+                      color: '#6E7A82',
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}
+                  >
                     Avg accuracy
                   </div>
                 </div>
@@ -180,9 +216,7 @@ export function AgentConfiguratorList() {
               <div className="text-4xl mb-1" style={{ color: '#10B981', fontWeight: '700' }}>
                 {avgAccuracy.toFixed(1)}%
               </div>
-              <div style={{ color: '#6E7A82', fontSize: '13px' }}>
-                Across all agents
-              </div>
+              <div style={{ color: '#6E7A82', fontSize: '13px' }}>Across all agents</div>
             </div>
 
             <div
@@ -207,7 +241,14 @@ export function AgentConfiguratorList() {
                   <Settings className="w-5 h-5" style={{ color: '#00A9B7' }} />
                 </div>
                 <div>
-                  <div style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div
+                    style={{
+                      color: '#6E7A82',
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}
+                  >
                     Actions today
                   </div>
                 </div>
@@ -215,16 +256,20 @@ export function AgentConfiguratorList() {
               <div className="text-4xl mb-1" style={{ color: '#0A0F14', fontWeight: '700' }}>
                 {actionsToday}
               </div>
-              <div style={{ color: '#6E7A82', fontSize: '13px' }}>
-                Automated decisions
-              </div>
+              <div style={{ color: '#6E7A82', fontSize: '13px' }}>Automated decisions</div>
             </div>
           </div>
 
           {/* Search + Filter Row */}
-          <div className="bg-white rounded-lg p-4 mb-6 flex items-center gap-4" style={{ border: '1px solid #E1E6EA' }}>
+          <div
+            className="bg-white rounded-lg p-4 mb-6 flex items-center gap-4"
+            style={{ border: '1px solid #E1E6EA' }}
+          >
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#9AA6AF' }} />
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
+                style={{ color: '#9AA6AF' }}
+              />
               <input
                 type="text"
                 placeholder="Search agents..."
@@ -270,7 +315,10 @@ export function AgentConfiguratorList() {
           </div>
 
           {/* Agent List */}
-          <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid #E1E6EA' }}>
+          <div
+            className="bg-white rounded-lg overflow-hidden"
+            style={{ border: '1px solid #E1E6EA' }}
+          >
             <div className="px-6 py-4" style={{ borderBottom: '1px solid #E1E6EA' }}>
               <h2 className="text-lg" style={{ color: '#0A0F14', fontWeight: '600' }}>
                 All agents
@@ -292,22 +340,36 @@ export function AgentConfiguratorList() {
                   {/* Avatar */}
                   <div
                     className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: agent.avatarColor, color: '#FFFFFF', fontWeight: '700', fontSize: '16px' }}
+                    style={{
+                      backgroundColor: agent.avatarColor,
+                      color: '#FFFFFF',
+                      fontWeight: '700',
+                      fontSize: '16px',
+                    }}
                   >
                     {agent.initials}
                   </div>
 
                   {/* Agent Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="mb-1" style={{ color: '#0A0F14', fontWeight: '600', fontSize: '15px' }}>
+                    <div
+                      className="mb-1"
+                      style={{ color: '#0A0F14', fontWeight: '600', fontSize: '15px' }}
+                    >
                       {agent.name}
                     </div>
                     <div className="mb-1" style={{ color: '#6E7A82', fontSize: '13px' }}>
-                      {agent.form} · {agent.module} · {agent.fieldRules} field rules · {agent.actions} actions
+                      {agent.form} · {agent.module} · {agent.fieldRules} field rules ·{' '}
+                      {agent.actions} actions
                     </div>
-                    <div className="flex items-center gap-2" style={{ color: '#9AA6AF', fontSize: '12px' }}>
+                    <div
+                      className="flex items-center gap-2"
+                      style={{ color: '#9AA6AF', fontSize: '12px' }}
+                    >
                       <Clock className="w-3 h-3" />
-                      <span>Last run: {agent.lastRun} · {agent.actionsToday} actions today</span>
+                      <span>
+                        Last run: {agent.lastRun} · {agent.actionsToday} actions today
+                      </span>
                     </div>
                   </div>
 
@@ -319,7 +381,7 @@ export function AgentConfiguratorList() {
                         backgroundColor: '#D1FAE5',
                         color: '#065F46',
                         fontSize: '13px',
-                        fontWeight: '600'
+                        fontWeight: '600',
                       }}
                     >
                       <span>{agent.accuracy}% accuracy</span>
@@ -341,7 +403,7 @@ export function AgentConfiguratorList() {
                       color: '#00A9B7',
                       backgroundColor: '#FFFFFF',
                       fontSize: '13px',
-                      fontWeight: '600'
+                      fontWeight: '600',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#D6F7F9';
@@ -355,20 +417,23 @@ export function AgentConfiguratorList() {
 
                   {/* Active Toggle with Label */}
                   <div className="flex items-center gap-3">
-                    <span className="text-xs" style={{ color: '#6E7A82', fontWeight: '600', minWidth: '50px' }}>
+                    <span
+                      className="text-xs"
+                      style={{ color: '#6E7A82', fontWeight: '600', minWidth: '50px' }}
+                    >
                       {agent.active ? 'Active' : 'Inactive'}
                     </span>
                     <button
                       onClick={() => toggleAgent(agent.id)}
                       className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
                       style={{
-                        backgroundColor: agent.active ? '#00A9B7' : '#E1E6EA'
+                        backgroundColor: agent.active ? '#00A9B7' : '#E1E6EA',
                       }}
                     >
                       <span
                         className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
                         style={{
-                          transform: agent.active ? 'translateX(24px)' : 'translateX(4px)'
+                          transform: agent.active ? 'translateX(24px)' : 'translateX(4px)',
                         }}
                       />
                     </button>
@@ -380,7 +445,10 @@ export function AgentConfiguratorList() {
         </>
       ) : (
         /* Empty State */
-        <div className="bg-white rounded-lg p-20 text-center" style={{ border: '1px solid #E1E6EA' }}>
+        <div
+          className="bg-white rounded-lg p-20 text-center"
+          style={{ border: '1px solid #E1E6EA' }}
+        >
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
             style={{ backgroundColor: '#D6F7F9' }}

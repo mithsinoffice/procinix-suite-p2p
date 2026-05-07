@@ -1,4 +1,17 @@
-import { ArrowLeft, Plus, Trash2, X, Hash, MapPin, Globe, FileText, Edit, Eye, Search, ArrowUpRight } from 'lucide-react';
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  X,
+  Hash,
+  MapPin,
+  Globe,
+  FileText,
+  Edit,
+  Eye,
+  Search,
+  ArrowUpRight,
+} from 'lucide-react';
 import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
 import { MasterPageShell } from './ui/MasterPageShell';
@@ -7,7 +20,13 @@ import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
-import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import {
+  FormShell,
+  FormSection,
+  PxFormField,
+  CheckCard,
+  type SaveStatus,
+} from './ui/form-primitives';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { EntityMappingSelector } from './shared/EntityMappingSelector';
@@ -33,25 +52,68 @@ interface Change {
 export function StateMaster() {
   const navigate = useNavigate();
   const { entities } = useMasterData();
-  const uniqueCountries = [...new Set(entities.map((e: any) => e.country).filter(Boolean)), 'India', 'UAE', 'USA', 'UK', 'Singapore'].filter((v, i, a) => a.indexOf(v) === i).sort();
+  const uniqueCountries = [
+    ...new Set(entities.map((e: any) => e.country).filter(Boolean)),
+    'India',
+    'UAE',
+    'USA',
+    'UK',
+    'Singapore',
+  ]
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .sort();
   const [states, setStates] = useIncrementalMasterRecords<State>('state_master', [
-    { id: '1', stateCode: 'MH', stateName: 'Maharashtra', country: 'India', status: 'Active', approvalStatus: 'Approved' },
-    { id: '2', stateCode: 'DL', stateName: 'Delhi', country: 'India', status: 'Active', approvalStatus: 'Approved' },
-    { id: '3', stateCode: 'KA', stateName: 'Karnataka', country: 'India', status: 'Active', approvalStatus: 'Pending Approval' },
-    { id: '4', stateCode: 'TN', stateName: 'Tamil Nadu', country: 'India', status: 'Active', approvalStatus: 'Approved' },
-    { id: '5', stateCode: 'GJ', stateName: 'Gujarat', country: 'India', status: 'Active', approvalStatus: 'Draft' }
+    {
+      id: '1',
+      stateCode: 'MH',
+      stateName: 'Maharashtra',
+      country: 'India',
+      status: 'Active',
+      approvalStatus: 'Approved',
+    },
+    {
+      id: '2',
+      stateCode: 'DL',
+      stateName: 'Delhi',
+      country: 'India',
+      status: 'Active',
+      approvalStatus: 'Approved',
+    },
+    {
+      id: '3',
+      stateCode: 'KA',
+      stateName: 'Karnataka',
+      country: 'India',
+      status: 'Active',
+      approvalStatus: 'Pending Approval',
+    },
+    {
+      id: '4',
+      stateCode: 'TN',
+      stateName: 'Tamil Nadu',
+      country: 'India',
+      status: 'Active',
+      approvalStatus: 'Approved',
+    },
+    {
+      id: '5',
+      stateCode: 'GJ',
+      stateName: 'Gujarat',
+      country: 'India',
+      status: 'Active',
+      approvalStatus: 'Draft',
+    },
   ]);
 
   const [showForm, setShowForm] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
+
   const [stateCode, setStateCode] = useState('');
   const [stateName, setStateName] = useState('');
   const [country, setCountry] = useState('');
   const [status, setStatus] = useState('Active');
   const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
-
 
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<State | null>(null);
@@ -67,7 +129,8 @@ export function StateMaster() {
       const matchesSearch = haystack.includes(searchTerm.toLowerCase());
       const matchesCountry = countryFilter.length === 0 || countryFilter.includes(state.country);
       const matchesStatus = statusFilter.length === 0 || statusFilter.includes(state.status);
-      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(state.approvalStatus);
+      const matchesApproval =
+        approvalFilter.length === 0 || approvalFilter.includes(state.approvalStatus);
       return matchesSearch && matchesCountry && matchesStatus && matchesApproval;
     });
   }, [states, searchTerm, countryFilter, statusFilter, approvalFilter]);
@@ -80,8 +143,8 @@ export function StateMaster() {
 
   const handleSubmit = (approvalStatus: State['approvalStatus'] = 'Pending Approval') => {
     if (isEditMode && editingId) {
-      const originalRecord = states.find(s => s.id === editingId);
-      
+      const originalRecord = states.find((s) => s.id === editingId);
+
       const updatedState: State = {
         id: editingId,
         stateCode,
@@ -92,8 +155,8 @@ export function StateMaster() {
         originalData: originalRecord,
         entityMappings,
       };
-      
-      setStates(states.map(s => s.id === editingId ? updatedState : s));
+
+      setStates(states.map((s) => (s.id === editingId ? updatedState : s)));
     } else {
       const newState: State = {
         id: Date.now().toString(),
@@ -106,7 +169,7 @@ export function StateMaster() {
       };
       setStates([...states, newState]);
     }
-    
+
     setShowForm(false);
     resetForm();
   };
@@ -133,27 +196,37 @@ export function StateMaster() {
   };
 
   const handleDelete = (id: string) => {
-    const state = states.find(s => s.id === id);
-    
+    const state = states.find((s) => s.id === id);
+
     if (state?.approvalStatus === 'Approved') {
-      alert('Cannot delete approved/live records. You can only modify them through the approval workflow.');
+      alert(
+        'Cannot delete approved/live records. You can only modify them through the approval workflow.'
+      );
       return;
     }
-    
-    setStates(states.filter(s => s.id !== id));
+
+    setStates(states.filter((s) => s.id !== id));
   };
 
   const handleReview = (state: State) => {
     const changes: Change[] = [];
-    
+
     if (state.originalData) {
       const original = state.originalData;
-      
+
       if (original.stateCode !== state.stateCode) {
-        changes.push({ field: 'State Code', oldValue: original.stateCode, newValue: state.stateCode });
+        changes.push({
+          field: 'State Code',
+          oldValue: original.stateCode,
+          newValue: state.stateCode,
+        });
       }
       if (original.stateName !== state.stateName) {
-        changes.push({ field: 'State Name', oldValue: original.stateName, newValue: state.stateName });
+        changes.push({
+          field: 'State Name',
+          oldValue: original.stateName,
+          newValue: state.stateName,
+        });
       }
       if (original.country !== state.country) {
         changes.push({ field: 'Country', oldValue: original.country, newValue: state.country });
@@ -162,7 +235,7 @@ export function StateMaster() {
         changes.push({ field: 'Status', oldValue: original.status, newValue: state.status });
       }
     }
-    
+
     setCurrentReviewRecord(state);
     setDetectedChanges(changes);
     setShowApprovalModal(true);
@@ -170,7 +243,12 @@ export function StateMaster() {
 
   const handleApprove = async () => {
     if (currentReviewRecord) {
-      const nextRecords = await applyMasterApprovalAction('state_master', states, currentReviewRecord.id, 'approve');
+      const nextRecords = await applyMasterApprovalAction(
+        'state_master',
+        states,
+        currentReviewRecord.id,
+        'approve'
+      );
       setStates(nextRecords);
     }
     setShowApprovalModal(false);
@@ -179,7 +257,12 @@ export function StateMaster() {
 
   const handleReject = async () => {
     if (currentReviewRecord) {
-      const nextRecords = await applyMasterApprovalAction('state_master', states, currentReviewRecord.id, 'reject');
+      const nextRecords = await applyMasterApprovalAction(
+        'state_master',
+        states,
+        currentReviewRecord.id,
+        'reject'
+      );
       setStates(nextRecords);
     }
     setShowApprovalModal(false);
@@ -192,7 +275,13 @@ export function StateMaster() {
       if (comments === null) {
         return;
       }
-      const nextRecords = await applyMasterApprovalAction('state_master', states, currentReviewRecord.id, 'request_info', comments);
+      const nextRecords = await applyMasterApprovalAction(
+        'state_master',
+        states,
+        currentReviewRecord.id,
+        'request_info',
+        comments
+      );
       setStates(nextRecords);
     }
     setShowApprovalModal(false);
@@ -233,7 +322,8 @@ export function StateMaster() {
 
   if (showForm) {
     return (
-      <FormShell masterName="State Master"
+      <FormShell
+        masterName="State Master"
         title="State Master"
         subtitle="Manage states with approval workflow"
         modeLabel={isEditMode ? 'Edit State' : 'Create State'}
@@ -248,22 +338,58 @@ export function StateMaster() {
         saveStatus={saveStatus}
       >
         <FormSection title="State Details" columns={2}>
-          <PxFormField label="State Code" required filled={!!stateCode.trim()} hint="Two-letter state code">
-            <input type="text" value={stateCode} onChange={(e) => setStateCode(e.target.value)} placeholder="e.g., UP" className="px-input" />
+          <PxFormField
+            label="State Code"
+            required
+            filled={!!stateCode.trim()}
+            hint="Two-letter state code"
+          >
+            <input
+              type="text"
+              value={stateCode}
+              onChange={(e) => setStateCode(e.target.value)}
+              placeholder="e.g., UP"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="State Name" required filled={!!stateName.trim()}>
-            <input type="text" value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="e.g., Uttar Pradesh" className="px-input" />
+            <input
+              type="text"
+              value={stateName}
+              onChange={(e) => setStateName(e.target.value)}
+              placeholder="e.g., Uttar Pradesh"
+              className="px-input"
+            />
           </PxFormField>
-          <PxFormField label="Country" filled={!!country.trim()} hint="Parent country for this state">
-            <select value={country} onChange={(e) => setCountry(e.target.value)} className="px-select"><option value="">Select country...</option>{uniqueCountries.map((c: string) => <option key={c} value={c}>{c}</option>)}</select>
+          <PxFormField
+            label="Country"
+            filled={!!country.trim()}
+            hint="Parent country for this state"
+          >
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="px-select"
+            >
+              <option value="">Select country...</option>
+              {uniqueCountries.map((c: string) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </PxFormField>
           <PxFormField label="Status" required filled={!!status.trim()}>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="px-select"
+            >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
-                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
+          <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );
@@ -279,8 +405,8 @@ export function StateMaster() {
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
           style={{ backgroundColor: 'var(--color-teal)' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
         >
           <Plus className="w-5 h-5" />
           Add State
@@ -290,42 +416,107 @@ export function StateMaster() {
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
+            <div
+              className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0"
+              style={{ borderColor: 'var(--color-silver)' }}
+            >
               <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
                 {isEditMode ? 'Edit State' : 'Add New State'}
               </h2>
-              <button onClick={() => setShowForm(false)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
+              <button
+                onClick={() => setShowForm(false)}
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: 'var(--color-mercury-grey)' }}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>State Code <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label
+                    className="block text-sm mb-2"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    State Code <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
-                    <input type="text" value={stateCode} onChange={(e) => setStateCode(e.target.value)} placeholder="e.g., UP" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
+                    <Hash
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
+                      style={{ color: 'var(--color-mercury-grey)' }}
+                    />
+                    <input
+                      type="text"
+                      value={stateCode}
+                      onChange={(e) => setStateCode(e.target.value)}
+                      placeholder="e.g., UP"
+                      className="w-full pl-10 pr-3 py-2 rounded-lg"
+                      style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
+                    />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>State Name <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label
+                    className="block text-sm mb-2"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    State Name <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
-                    <input type="text" value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="e.g., Uttar Pradesh" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
+                    <MapPin
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
+                      style={{ color: 'var(--color-mercury-grey)' }}
+                    />
+                    <input
+                      type="text"
+                      value={stateName}
+                      onChange={(e) => setStateName(e.target.value)}
+                      placeholder="e.g., Uttar Pradesh"
+                      className="w-full pl-10 pr-3 py-2 rounded-lg"
+                      style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
+                    />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Country</label>
+                  <label
+                    className="block text-sm mb-2"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Country
+                  </label>
                   <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
-                    <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g., India" className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }} />
+                    <Globe
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
+                      style={{ color: 'var(--color-mercury-grey)' }}
+                    />
+                    <input
+                      type="text"
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      placeholder="e.g., India"
+                      className="w-full pl-10 pr-3 py-2 rounded-lg"
+                      style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
+                    />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Status <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label
+                    className="block text-sm mb-2"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Status <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
-                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full pl-10 pr-3 py-2 rounded-lg" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
+                    <FileText
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
+                      style={{ color: 'var(--color-mercury-grey)' }}
+                    />
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2 rounded-lg"
+                      style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
+                    >
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                     </select>
@@ -333,11 +524,30 @@ export function StateMaster() {
                 </div>
               </div>
             </div>
-            <div className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
-              <button onClick={() => setShowForm(false)} className="px-6 py-2 rounded-lg transition-colors" style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}>
+            <div
+              className="border-t px-6 py-4 flex justify-end gap-3 flex-shrink-0"
+              style={{ borderColor: 'var(--color-silver)' }}
+            >
+              <button
+                onClick={() => setShowForm(false)}
+                className="px-6 py-2 rounded-lg transition-colors"
+                style={{
+                  border: '1px solid var(--color-silver)',
+                  color: 'var(--color-mercury-grey)',
+                  backgroundColor: 'white',
+                }}
+              >
                 Cancel
               </button>
-              <button onClick={() => handleSubmit()} className="px-6 py-2 rounded-lg text-white transition-colors" style={{ backgroundColor: 'var(--color-teal)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}>
+              <button
+                onClick={() => handleSubmit()}
+                className="px-6 py-2 rounded-lg text-white transition-colors"
+                style={{ backgroundColor: 'var(--color-teal)' }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
+                }
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
+              >
                 {isEditMode ? 'Update' : 'Save'}
               </button>
             </div>
@@ -362,9 +572,24 @@ export function StateMaster() {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         filters={[
-          { key: 'country', label: 'Country', options: [...new Set(states.map((s) => s.country).filter(Boolean))], selected: countryFilter },
-          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
-          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+          {
+            key: 'country',
+            label: 'Country',
+            options: [...new Set(states.map((s) => s.country).filter(Boolean))],
+            selected: countryFilter,
+          },
+          {
+            key: 'status',
+            label: 'Status',
+            options: ['Active', 'Inactive'],
+            selected: statusFilter,
+          },
+          {
+            key: 'approval',
+            label: 'Approval',
+            options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'],
+            selected: approvalFilter,
+          },
         ]}
         onFilterChange={(key, values) => {
           if (key === 'country') setCountryFilter(values);
@@ -382,15 +607,34 @@ export function StateMaster() {
         ]}
       />
 
-      <div className="rounded-[24px] overflow-hidden bg-white" style={{ border: '1px solid var(--color-fog)', boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)' }}>
+      <div
+        className="rounded-[24px] overflow-hidden bg-white"
+        style={{
+          border: '1px solid var(--color-fog)',
+          boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)',
+        }}
+      >
         <div className="overflow-x-auto">
           <div style={{ minWidth: '1080px' }}>
-            <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.2fr 1.6fr 1.2fr 1fr 1.3fr 0.9fr', background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)', borderBottom: '1px solid #E4EDF2' }}>
-              {['State Code', 'State Name', 'Country', 'Status', 'Approval Status', 'Action'].map((column) => (
-                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
-                  {column}
-                </div>
-              ))}
+            <div
+              className="grid gap-4 px-6 py-4"
+              style={{
+                gridTemplateColumns: '1.2fr 1.6fr 1.2fr 1fr 1.3fr 0.9fr',
+                background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)',
+                borderBottom: '1px solid #E4EDF2',
+              }}
+            >
+              {['State Code', 'State Name', 'Country', 'Status', 'Approval Status', 'Action'].map(
+                (column) => (
+                  <div
+                    key={column}
+                    className="text-xs uppercase tracking-[0.18em]"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}
+                  >
+                    {column}
+                  </div>
+                )
+              )}
             </div>
 
             <div>
@@ -400,37 +644,79 @@ export function StateMaster() {
                   className="grid gap-4 px-6 py-4 items-center"
                   style={{
                     gridTemplateColumns: '1.2fr 1.6fr 1.2fr 1fr 1.3fr 0.9fr',
-                    borderBottom: index === filteredStates.length - 1 ? 'none' : '1px solid #EDF3F7',
+                    borderBottom:
+                      index === filteredStates.length - 1 ? 'none' : '1px solid #EDF3F7',
                     backgroundColor: '#FFFFFF',
                   }}
                 >
-                  <div style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{state.stateCode}</div>
+                  <div style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
+                    {state.stateCode}
+                  </div>
                   <div style={{ color: 'var(--color-ink)' }}>{state.stateName}</div>
                   <div style={{ color: 'var(--color-mercury-grey)' }}>{state.country}</div>
                   <div>
-                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: state.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA', color: state.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)', fontWeight: 700 }}>
+                    <span
+                      className="px-3 py-1.5 rounded-full text-xs"
+                      style={{
+                        backgroundColor:
+                          state.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA',
+                        color:
+                          state.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)',
+                        fontWeight: 700,
+                      }}
+                    >
                       {state.status}
                     </span>
                   </div>
                   <div>
-                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ ...getStatusBadgeStyle(state.approvalStatus), fontWeight: 700 }}>
+                    <span
+                      className="px-3 py-1.5 rounded-full text-xs"
+                      style={{ ...getStatusBadgeStyle(state.approvalStatus), fontWeight: 700 }}
+                    >
                       {state.approvalStatus}
                     </span>
                   </div>
                   <div className="flex items-center justify-end gap-2">
                     {state.approvalStatus === 'Pending Approval' && (
-                      <PremiumActionButton label="Review state" icon={<Eye className="w-4 h-4" />} tone="teal" onClick={() => handleReview(state)} />
+                      <PremiumActionButton
+                        label="Review state"
+                        icon={<Eye className="w-4 h-4" />}
+                        tone="teal"
+                        onClick={() => handleReview(state)}
+                      />
                     )}
-                    <PremiumActionButton label="Edit state" icon={<Edit className="w-4 h-4" />} tone="violet" onClick={() => handleEdit(state)} />
-                    <PremiumActionButton label="Open state" icon={<ArrowUpRight className="w-4 h-4" />} tone="blue" onClick={() => handleEdit(state)} />
-                    <PremiumActionButton label="Delete state" icon={<Trash2 className="w-4 h-4" />} tone="amber" onClick={() => handleDelete(state.id)} />
+                    <PremiumActionButton
+                      label="Edit state"
+                      icon={<Edit className="w-4 h-4" />}
+                      tone="violet"
+                      onClick={() => handleEdit(state)}
+                    />
+                    <PremiumActionButton
+                      label="Open state"
+                      icon={<ArrowUpRight className="w-4 h-4" />}
+                      tone="blue"
+                      onClick={() => handleEdit(state)}
+                    />
+                    <PremiumActionButton
+                      label="Delete state"
+                      icon={<Trash2 className="w-4 h-4" />}
+                      tone="amber"
+                      onClick={() => handleDelete(state.id)}
+                    />
                   </div>
                 </div>
               ))}
               {filteredStates.length === 0 && (
                 <div className="px-8 py-16 text-center">
-                  <p className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>No states match the current filters</p>
-                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Clear one or more filters to bring the full register back.</p>
+                  <p
+                    className="text-base mb-1"
+                    style={{ color: 'var(--color-ink)', fontWeight: 700 }}
+                  >
+                    No states match the current filters
+                  </p>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Clear one or more filters to bring the full register back.
+                  </p>
                 </div>
               )}
             </div>

@@ -1,9 +1,23 @@
 import { useState, useEffect, Fragment, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Save, Send, Calendar, Building2, FileText,
-  Hash, AlertCircle, Upload, Eye, EyeOff, Trash2,
-  DollarSign, TrendingUp, Package2, Info, RotateCcw
+  ArrowLeft,
+  Save,
+  Send,
+  Calendar,
+  Building2,
+  FileText,
+  Hash,
+  AlertCircle,
+  Upload,
+  Eye,
+  EyeOff,
+  Trash2,
+  DollarSign,
+  TrendingUp,
+  Package2,
+  Info,
+  RotateCcw,
 } from 'lucide-react';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { useAPData } from '../contexts/APDataContext';
@@ -103,14 +117,12 @@ export function DebitNoteFormV2Enhanced() {
   const { id } = useParams();
   const { debitNoteReasons = [], vendors = [] } = useMasterData();
   const { purchaseOrders, grns, debitNotes, addDebitNote, updateDebitNote } = useAPData();
-  
+
   const isEditMode = !!id;
 
   // Form state
   const [debitNoteNumber] = useState('DN-2024-0023');
-  const [debitNoteDate, setDebitNoteDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const [debitNoteDate, setDebitNoteDate] = useState(new Date().toISOString().split('T')[0]);
   const [debitNoteStatus, setDebitNoteStatus] = useState<DebitNoteStatus>('Draft');
   const [reasonId, setReasonId] = useState('');
   const [reasonType, setReasonType] = useState<DebitNoteReasonType>('quantity-based');
@@ -126,13 +138,15 @@ export function DebitNoteFormV2Enhanced() {
   const [lineItems, setLineItems] = useState<DebitNoteLineItem[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [showAccountingPreview, setShowAccountingPreview] = useState(false);
-  
+
   // Supporting Documents state
   const [supportingDocuments, setSupportingDocuments] = useState<SupportingDocument[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingDocType, setUploadingDocType] = useState('');
   const [uploadingRefDocNo, setUploadingRefDocNo] = useState('');
-  const [uploadingVisibility, setUploadingVisibility] = useState<'Internal Only' | 'Vendor Visible'>('Internal Only');
+  const [uploadingVisibility, setUploadingVisibility] = useState<
+    'Internal Only' | 'Vendor Visible'
+  >('Internal Only');
   const [docValidationError, setDocValidationError] = useState<string>('');
 
   useEffect(() => {
@@ -162,10 +176,16 @@ export function DebitNoteFormV2Enhanced() {
     setCurrency(existing.currency);
   }, [debitNotes, id, isEditMode]);
 
-  const selectedVendorRecord = vendors.find((vendor) => vendor.id === vendorId || vendor.code === vendorId);
+  const selectedVendorRecord = vendors.find(
+    (vendor) => vendor.id === vendorId || vendor.code === vendorId
+  );
   const availablePOs: PurchaseOrder[] = selectedVendorRecord
     ? purchaseOrders
-        .filter((po) => po.vendorCode === selectedVendorRecord.code && grns.some((grn) => grn.poNumber === po.poNumber))
+        .filter(
+          (po) =>
+            po.vendorCode === selectedVendorRecord.code &&
+            grns.some((grn) => grn.poNumber === po.poNumber)
+        )
         .map((po) => ({
           id: po.id,
           poNumber: po.poNumber,
@@ -190,7 +210,9 @@ export function DebitNoteFormV2Enhanced() {
             vendorCode: parentPO?.vendorCode ?? '',
             status: grn.status === 'Complete' ? 'Delivered' : 'Partially Delivered',
             lineItems: grn.lineItems.map((lineItem) => {
-              const poLineItem = parentPO?.lineItems.find((poEntry) => poEntry.id === lineItem.poLineItemId);
+              const poLineItem = parentPO?.lineItems.find(
+                (poEntry) => poEntry.id === lineItem.poLineItemId
+              );
               return {
                 itemId: lineItem.id,
                 itemCode: lineItem.itemCode,
@@ -216,17 +238,17 @@ export function DebitNoteFormV2Enhanced() {
 
   const handleReasonChange = (newReasonId: string) => {
     setReasonId(newReasonId);
-    
+
     // Determine reason type and subtype based on reason name
-    const selectedReason = debitNoteReasons.find(r => r.id === newReasonId);
+    const selectedReason = debitNoteReasons.find((r) => r.id === newReasonId);
     if (selectedReason) {
       const reasonName = selectedReason.name.toLowerCase();
       const isPriceDifference = reasonName.includes('price difference');
       const isShortSupply = reasonName.includes('short supply');
       const isQualityOrDamage = reasonName.includes('quality') || reasonName.includes('damage');
-      
+
       setReasonType(isPriceDifference ? 'price-difference' : 'quantity-based');
-      
+
       // Set subtype
       if (isPriceDifference) {
         setReasonSubtype('price-difference');
@@ -235,25 +257,25 @@ export function DebitNoteFormV2Enhanced() {
       } else {
         setReasonSubtype('quality-damage');
       }
-      
+
       // Update line items based on reason type and subtype
       if (isPriceDifference && lineItems.length > 0) {
-        setLineItems(prevItems =>
-          prevItems.map(item => {
+        setLineItems((prevItems) =>
+          prevItems.map((item) => {
             const debitRateDelta = Math.max(0, item.invoiceRate - item.poRate);
             return {
               ...item,
               debitQty: item.invoiceQty, // Auto-set to invoice qty for price difference
               rateToBeDebited: debitRateDelta, // Initialize with delta rate (Inv Rate - PO Rate)
               debitAmount: debitRateDelta * item.invoiceQty,
-              gstAmount: (debitRateDelta * item.invoiceQty * item.gstPercent) / 100
+              gstAmount: (debitRateDelta * item.invoiceQty * item.gstPercent) / 100,
             };
           })
         );
       } else if (lineItems.length > 0) {
         // Reset for quantity-based (Short Supply or Quality/Damage)
-        setLineItems(prevItems =>
-          prevItems.map(item => {
+        setLineItems((prevItems) =>
+          prevItems.map((item) => {
             // Short Supply: suggested qty = max(0, Inv Qty - GRN Qty)
             // Quality/Damage: suggested qty = 0
             const suggestedQty = isShortSupply ? Math.max(0, item.invoiceQty - item.grnQty) : 0;
@@ -262,7 +284,7 @@ export function DebitNoteFormV2Enhanced() {
               debitQty: suggestedQty,
               rateToBeDebited: item.poRate,
               debitAmount: suggestedQty * item.poRate,
-              gstAmount: (suggestedQty * item.poRate * item.gstPercent) / 100
+              gstAmount: (suggestedQty * item.poRate * item.gstPercent) / 100,
             };
           })
         );
@@ -278,8 +300,8 @@ export function DebitNoteFormV2Enhanced() {
     setGrnNumber('');
     setLineItems([]);
     setErrors([]);
-    
-    const selectedVendor = vendors.find(v => v.id === vId || v.code === vId);
+
+    const selectedVendor = vendors.find((v) => v.id === vId || v.code === vId);
     if (selectedVendor) {
       setVendorName(selectedVendor.name);
       setVendorCode(selectedVendor.code);
@@ -292,8 +314,8 @@ export function DebitNoteFormV2Enhanced() {
     setGrnNumber('');
     setLineItems([]);
     setErrors([]);
-    
-    const po = availablePOs.find(p => p.id === selectedPoId);
+
+    const po = availablePOs.find((p) => p.id === selectedPoId);
     if (po) {
       setPoNumber(po.poNumber);
     }
@@ -302,20 +324,20 @@ export function DebitNoteFormV2Enhanced() {
   const handleGRNChange = (selectedGrnId: string) => {
     setGrnId(selectedGrnId);
     setErrors([]);
-    
-    const grn = availableGRNs.find(g => g.id === selectedGrnId);
+
+    const grn = availableGRNs.find((g) => g.id === selectedGrnId);
     if (grn) {
       setGrnNumber(grn.grnNumber);
-      
+
       // Auto-populate line items from GRN with full visibility and suggested defaults
       const items: DebitNoteLineItem[] = grn.lineItems.map((item, index) => {
         const isPriceDiff = reasonType === 'price-difference';
-        
+
         // Calculate suggested values based on reason type and subtype
         let debitQty = 0;
         let rateToDebit = item.poRate;
         let debitAmount = 0;
-        
+
         if (isPriceDiff) {
           // Price Difference: Debit Qty = Invoice Qty, Debit Rate (Delta) = Inv Rate - PO Rate (suggested)
           debitQty = item.invoiceQty;
@@ -324,7 +346,7 @@ export function DebitNoteFormV2Enhanced() {
         } else {
           // Qty-based reasons
           rateToDebit = item.poRate;
-          
+
           if (reasonSubtype === 'short-supply') {
             // Short Supply: Suggested Debit Qty = max(0, Inv Qty - GRN Qty)
             debitQty = Math.max(0, item.invoiceQty - item.grnQty);
@@ -332,12 +354,12 @@ export function DebitNoteFormV2Enhanced() {
             // Quality/Damage: Suggested Debit Qty = 0 (user must enter)
             debitQty = 0;
           }
-          
+
           debitAmount = debitQty * item.poRate;
         }
-        
+
         const gstAmount = (debitAmount * item.gstPercent) / 100;
-        
+
         return {
           id: `line-${index + 1}`,
           itemId: item.itemId,
@@ -359,7 +381,7 @@ export function DebitNoteFormV2Enhanced() {
           gstPercent: item.gstPercent,
           gstAmount: gstAmount,
           costCenter: item.costCenter,
-          profitCenter: item.profitCenter
+          profitCenter: item.profitCenter,
         };
       });
       setLineItems(items);
@@ -367,8 +389,8 @@ export function DebitNoteFormV2Enhanced() {
   };
 
   const handleDebitQtyChange = (itemId: string, debitQty: number) => {
-    setLineItems(prevItems =>
-      prevItems.map(item => {
+    setLineItems((prevItems) =>
+      prevItems.map((item) => {
         if (item.id === itemId) {
           // For quantity-based: Debit Qty should not exceed min(Invoice Qty, GRN Qty)
           const maxAllowed = Math.min(item.invoiceQty, item.grnQty);
@@ -383,8 +405,8 @@ export function DebitNoteFormV2Enhanced() {
   };
 
   const handleRateToBeDebitedChange = (itemId: string, rate: number) => {
-    setLineItems(prevItems =>
-      prevItems.map(item => {
+    setLineItems((prevItems) =>
+      prevItems.map((item) => {
         if (item.id === itemId) {
           const validRate = Math.max(0, rate);
           // For price difference: rate is the delta, so debitAmount = delta × qty
@@ -398,8 +420,8 @@ export function DebitNoteFormV2Enhanced() {
   };
 
   const resetToSuggested = (itemId: string) => {
-    setLineItems(prevItems =>
-      prevItems.map(item => {
+    setLineItems((prevItems) =>
+      prevItems.map((item) => {
         if (item.id === itemId) {
           if (reasonType === 'price-difference') {
             // Reset Debit Rate (Delta) to suggested value (Inv Rate - PO Rate)
@@ -410,14 +432,14 @@ export function DebitNoteFormV2Enhanced() {
           } else {
             // Reset Debit Qty to suggested value based on subtype
             let suggestedQty = 0;
-            
+
             if (reasonSubtype === 'short-supply') {
               suggestedQty = Math.max(0, item.invoiceQty - item.grnQty);
             } else {
               // Quality/Damage: suggested qty = 0
               suggestedQty = 0;
             }
-            
+
             const debitAmount = suggestedQty * item.rateToBeDebited;
             const gstAmount = (debitAmount * item.gstPercent) / 100;
             return { ...item, debitQty: suggestedQty, debitAmount, gstAmount };
@@ -445,9 +467,17 @@ export function DebitNoteFormV2Enhanced() {
     let lineNo = 1;
 
     // Group by GL Account, Cost Center, Profit Center
-    const grouped: { [key: string]: { debit: number; credit: number; glAccountName: string; costCenter: string; profitCenter: string } } = {};
+    const grouped: {
+      [key: string]: {
+        debit: number;
+        credit: number;
+        glAccountName: string;
+        costCenter: string;
+        profitCenter: string;
+      };
+    } = {};
 
-    lineItems.forEach(item => {
+    lineItems.forEach((item) => {
       if (item.debitAmount > 0) {
         const key = `${item.glAccountCode}_${item.costCenter}_${item.profitCenter}`;
         if (!grouped[key]) {
@@ -456,7 +486,7 @@ export function DebitNoteFormV2Enhanced() {
             credit: 0,
             glAccountName: item.glAccountName,
             costCenter: item.costCenter,
-            profitCenter: item.profitCenter
+            profitCenter: item.profitCenter,
           };
         }
         grouped[key].debit += item.debitAmount + item.gstAmount;
@@ -473,7 +503,7 @@ export function DebitNoteFormV2Enhanced() {
         costCenter,
         profitCenter,
         debit: value.debit,
-        credit: 0
+        credit: 0,
       });
     });
 
@@ -485,7 +515,7 @@ export function DebitNoteFormV2Enhanced() {
       costCenter: '-',
       profitCenter: '-',
       debit: 0,
-      credit: calculateTotal()
+      credit: calculateTotal(),
     });
 
     return lines;
@@ -521,35 +551,43 @@ export function DebitNoteFormV2Enhanced() {
 
     // Price difference validations
     if (reasonType === 'price-difference') {
-      const hasAnyVariance = lineItems.some(item => item.invoiceRate > item.poRate);
-      
+      const hasAnyVariance = lineItems.some((item) => item.invoiceRate > item.poRate);
+
       if (!hasAnyVariance) {
-        validationErrors.push('No price variance found. All invoice rates are equal to or less than PO rates.');
+        validationErrors.push(
+          'No price variance found. All invoice rates are equal to or less than PO rates.'
+        );
       }
-      
+
       lineItems.forEach((item, index) => {
         const maxDelta = Math.max(0, item.invoiceRate - item.poRate);
-        
+
         // Hard block: Debit Rate (Delta) must be >= 0
         if (item.rateToBeDebited < 0) {
           validationErrors.push(`Line ${index + 1}: Debit rate (delta) cannot be negative`);
         }
-        
+
         // Hard block: Debit Rate (Delta) must be <= (Invoice Rate - PO Rate)
         if (item.rateToBeDebited > maxDelta) {
-          validationErrors.push(`Line ${index + 1}: Debit rate (delta) ${item.rateToBeDebited.toFixed(2)} cannot exceed the price variance ${maxDelta.toFixed(2)} (Invoice Rate − PO Rate)`);
+          validationErrors.push(
+            `Line ${index + 1}: Debit rate (delta) ${item.rateToBeDebited.toFixed(2)} cannot exceed the price variance ${maxDelta.toFixed(2)} (Invoice Rate − PO Rate)`
+          );
         }
-        
+
         // Validation: If no variance, debit amount should be 0
         if (item.invoiceRate <= item.poRate && item.debitAmount > 0) {
-          validationErrors.push(`Line ${index + 1}: No price variance found (Invoice rate ${item.invoiceRate} ≤ PO rate ${item.poRate}). Debit amount must be zero.`);
+          validationErrors.push(
+            `Line ${index + 1}: No price variance found (Invoice rate ${item.invoiceRate} ≤ PO rate ${item.poRate}). Debit amount must be zero.`
+          );
         }
       });
-      
+
       // Check if all debit amounts are zero
-      const allDeltasZero = lineItems.every(item => item.rateToBeDebited === 0);
+      const allDeltasZero = lineItems.every((item) => item.rateToBeDebited === 0);
       if (allDeltasZero) {
-        validationErrors.push('Cannot submit: All lines have Debit Rate (Delta) = 0. Please ensure there are price variances to claim.');
+        validationErrors.push(
+          'Cannot submit: All lines have Debit Rate (Delta) = 0. Please ensure there are price variances to claim.'
+        );
       }
     } else {
       // Quantity-based validations (Short Supply / Quality/Damage)
@@ -558,22 +596,28 @@ export function DebitNoteFormV2Enhanced() {
         if (item.debitQty < 0) {
           validationErrors.push(`Line ${index + 1}: Debit qty cannot be negative`);
         }
-        
+
         // Hard block: Debit Qty must be <= Invoice Qty
         if (item.debitQty > item.invoiceQty) {
-          validationErrors.push(`Line ${index + 1}: Debit qty (${item.debitQty}) cannot exceed invoice qty (${item.invoiceQty})`);
+          validationErrors.push(
+            `Line ${index + 1}: Debit qty (${item.debitQty}) cannot exceed invoice qty (${item.invoiceQty})`
+          );
         }
-        
+
         // Hard block: Debit Qty must be <= GRN Qty (where applicable)
         if (item.debitQty > item.grnQty) {
-          validationErrors.push(`Line ${index + 1}: Debit qty (${item.debitQty}) cannot exceed GRN qty (${item.grnQty})`);
+          validationErrors.push(
+            `Line ${index + 1}: Debit qty (${item.debitQty}) cannot exceed GRN qty (${item.grnQty})`
+          );
         }
       });
-      
+
       // Check if all debit quantities are zero
-      const allQtysZero = lineItems.every(item => item.debitQty === 0);
+      const allQtysZero = lineItems.every((item) => item.debitQty === 0);
       if (allQtysZero) {
-        validationErrors.push('Cannot submit: All lines have Debit Qty = 0. At least one line must have a debit quantity.');
+        validationErrors.push(
+          'Cannot submit: All lines have Debit Qty = 0. At least one line must have a debit quantity.'
+        );
       }
     }
 
@@ -586,15 +630,15 @@ export function DebitNoteFormV2Enhanced() {
       return 'At least one supporting document (GRN, Invoice or QC Report) is required';
     }
 
-    const hasRequiredDoc = supportingDocuments.some(
-      doc => ['GRN', 'Invoice Copy', 'QC / Inspection Report'].includes(doc.documentType)
+    const hasRequiredDoc = supportingDocuments.some((doc) =>
+      ['GRN', 'Invoice Copy', 'QC / Inspection Report'].includes(doc.documentType)
     );
-    
+
     if (!hasRequiredDoc) {
       return 'At least one "GRN", "Invoice Copy" or "QC / Inspection Report" document is required';
     }
 
-    const hasPendingReview = supportingDocuments.some(doc => doc.status === 'Pending Review');
+    const hasPendingReview = supportingDocuments.some((doc) => doc.status === 'Pending Review');
     if (hasPendingReview) {
       return 'All supporting documents must be valid before submission';
     }
@@ -608,8 +652,7 @@ export function DebitNoteFormV2Enhanced() {
     }
 
     const reasonName =
-      debitNoteReasons.find((reason) => reason.id === reasonId)?.name ??
-      'Debit Note';
+      debitNoteReasons.find((reason) => reason.id === reasonId)?.name ?? 'Debit Note';
 
     const debitNoteRecord = {
       id: id ?? `DN-${Date.now()}`,
@@ -619,7 +662,7 @@ export function DebitNoteFormV2Enhanced() {
       vendorName,
       vendorCode,
       vendorAPAccount: `2100-${vendorCode || '000'}`,
-      referenceType: grnNumber ? 'GRN' as const : 'Invoice' as const,
+      referenceType: grnNumber ? ('GRN' as const) : ('Invoice' as const),
       referenceNumber: grnNumber || poNumber || 'Unlinked',
       referenceId: grnId || poId || `REF-${Date.now()}`,
       reasonId,
@@ -664,8 +707,7 @@ export function DebitNoteFormV2Enhanced() {
     }
 
     const reasonName =
-      debitNoteReasons.find((reason) => reason.id === reasonId)?.name ??
-      'Debit Note';
+      debitNoteReasons.find((reason) => reason.id === reasonId)?.name ?? 'Debit Note';
 
     const debitNoteRecord = {
       id: id ?? `DN-${Date.now()}`,
@@ -675,7 +717,7 @@ export function DebitNoteFormV2Enhanced() {
       vendorName,
       vendorCode,
       vendorAPAccount: `2100-${vendorCode || '000'}`,
-      referenceType: grnNumber ? 'GRN' as const : 'Invoice' as const,
+      referenceType: grnNumber ? ('GRN' as const) : ('Invoice' as const),
       referenceNumber: grnNumber || poNumber || 'Unlinked',
       referenceId: grnId || poId || `REF-${Date.now()}`,
       reasonId,
@@ -715,14 +757,14 @@ export function DebitNoteFormV2Enhanced() {
   // Supporting Documents Functions
   const getReferenceSuggestions = (): string[] => {
     const suggestions: string[] = [];
-    
+
     if (grnNumber) {
       suggestions.push(grnNumber);
     }
     if (poNumber) {
       suggestions.push(poNumber);
     }
-    
+
     return suggestions;
   };
 
@@ -731,7 +773,13 @@ export function DebitNoteFormV2Enhanced() {
       return 'File size exceeds 20 MB limit';
     }
 
-    const allowedFormats = ['application/pdf', 'image/jpeg', 'image/png', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
+    const allowedFormats = [
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+    ];
     if (doc.file && !allowedFormats.includes(doc.file.type)) {
       return 'Unsupported file format. Please upload PDF, JPG, PNG, or XLSX';
     }
@@ -750,9 +798,9 @@ export function DebitNoteFormV2Enhanced() {
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    
+
     const file = files[0];
-    
+
     if (!uploadingDocType) {
       setDocValidationError('Please select a Document Type before uploading');
       return;
@@ -763,13 +811,13 @@ export function DebitNoteFormV2Enhanced() {
       setDocValidationError('Reference Document No is required for this document type');
       return;
     }
-    
-    const validationError = validateDocumentMetadata({ 
-      file, 
-      documentType: uploadingDocType, 
-      referenceDocNo: uploadingRefDocNo 
+
+    const validationError = validateDocumentMetadata({
+      file,
+      documentType: uploadingDocType,
+      referenceDocNo: uploadingRefDocNo,
     });
-    
+
     if (validationError) {
       setDocValidationError(validationError);
       return;
@@ -784,7 +832,7 @@ export function DebitNoteFormV2Enhanced() {
       uploadedBy: 'Current User',
       uploadedDate: new Date().toISOString(),
       status: 'Pending Review',
-      file: file
+      file: file,
     };
 
     const docError = validateDocumentMetadata(newDoc);
@@ -792,8 +840,8 @@ export function DebitNoteFormV2Enhanced() {
       newDoc.status = 'Valid';
     }
 
-    setSupportingDocuments(prev => [...prev, newDoc]);
-    
+    setSupportingDocuments((prev) => [...prev, newDoc]);
+
     setUploadingDocType('');
     setUploadingRefDocNo('');
     setUploadingVisibility('Internal Only');
@@ -818,24 +866,32 @@ export function DebitNoteFormV2Enhanced() {
 
   const handleDeleteDocument = (docId: string) => {
     if (debitNoteStatus !== 'Draft') return;
-    setSupportingDocuments(prev => prev.filter(doc => doc.id !== docId));
+    setSupportingDocuments((prev) => prev.filter((doc) => doc.id !== docId));
   };
 
   const getStatusBadge = () => {
     const statusConfig = {
-      Draft: { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', border: 'var(--color-silver)' },
+      Draft: {
+        bg: 'var(--color-cloud)',
+        color: 'var(--color-mercury-grey)',
+        border: 'var(--color-silver)',
+      },
       Submitted: { bg: '#FFF4ED', color: '#C4320A', border: '#FECDCA' },
       Approved: { bg: '#D1FAE5', color: '#065F46', border: '#6EE7B7' },
       Issued: { bg: '#DBEAFE', color: '#1E40AF', border: '#93C5FD' },
       Adjusted: { bg: '#FEF3C7', color: '#92400E', border: '#FCD34D' },
-      Closed: { bg: '#E5E7EB', color: '#374151', border: '#D1D5DB' }
+      Closed: { bg: '#E5E7EB', color: '#374151', border: '#D1D5DB' },
     };
 
     const config = statusConfig[debitNoteStatus];
     return (
-      <div 
+      <div
         className="inline-flex items-center px-3 py-1 rounded-lg text-sm"
-        style={{ backgroundColor: config.bg, color: config.color, border: `1px solid ${config.border}` }}
+        style={{
+          backgroundColor: config.bg,
+          color: config.color,
+          border: `1px solid ${config.border}`,
+        }}
       >
         {debitNoteStatus}
       </div>
@@ -878,7 +934,6 @@ export function DebitNoteFormV2Enhanced() {
       submitDisabled={debitNoteStatus !== 'Draft'}
       saveStatus={saveStatus}
     >
-
       {/* Errors */}
       {errors.length > 0 && (
         <div className="bg-white p-4 rounded-lg mb-6" style={{ border: '1px solid #EF4444' }}>
@@ -902,7 +957,10 @@ export function DebitNoteFormV2Enhanced() {
 
       {/* Reason Behavior Info */}
       {reasonId && (
-        <div className="bg-white p-4 rounded-lg mb-6" style={{ border: '1px solid var(--color-teal)' }}>
+        <div
+          className="bg-white p-4 rounded-lg mb-6"
+          style={{ border: '1px solid var(--color-teal)' }}
+        >
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-teal)' }} />
             <div className="flex-1">
@@ -910,7 +968,7 @@ export function DebitNoteFormV2Enhanced() {
                 {isPriceDifference ? 'Price Difference Mode' : 'Quantity-Based Mode'}
               </h3>
               <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                {isPriceDifference 
+                {isPriceDifference
                   ? 'Price variance detected. Debit Rate (Delta) is suggested from Invoice Rate − PO Rate. You may adjust where allowed.'
                   : 'Debit Qty is suggested from quantity mismatch. Review and adjust where allowed.'}
               </p>
@@ -920,7 +978,10 @@ export function DebitNoteFormV2Enhanced() {
       )}
 
       {/* Main Form */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
+      <div
+        className="bg-white rounded-lg p-6 mb-6"
+        style={{ border: '1px solid var(--color-silver)' }}
+      >
         {/* STEP 1: Header (System Controlled) */}
         <FormSection title="System Information" columns={2}>
           <PxFormField label="Debit Note Number" filled={!!debitNoteNumber}>
@@ -954,11 +1015,13 @@ export function DebitNoteFormV2Enhanced() {
               icon={<FileText className="w-4 h-4" />}
             >
               <option value="">Select Reason</option>
-              {debitNoteReasons.filter(r => r.status === 'Active').map(reason => (
-                <option key={reason.id} value={reason.id}>
-                  {reason.name}
-                </option>
-              ))}
+              {debitNoteReasons
+                .filter((r) => r.status === 'Active')
+                .map((reason) => (
+                  <option key={reason.id} value={reason.id}>
+                    {reason.name}
+                  </option>
+                ))}
             </StandardSelect>
           </PxFormField>
 
@@ -970,18 +1033,29 @@ export function DebitNoteFormV2Enhanced() {
               icon={<Building2 className="w-4 h-4" />}
             >
               <option value="">Select Vendor</option>
-              {vendors.filter(v => v.status === 'Active').map(vendor => (
-                <option key={vendor.id} value={vendor.id}>
-                  {vendor.name} ({vendor.code})
-                </option>
-              ))}
+              {vendors
+                .filter((v) => v.status === 'Active')
+                .map((vendor) => (
+                  <option key={vendor.id} value={vendor.id}>
+                    {vendor.name} ({vendor.code})
+                  </option>
+                ))}
             </StandardSelect>
           </PxFormField>
         </FormSection>
 
         {/* STEP 3: Reference Selection (GRN-Driven) */}
         <FormSection title="Reference Selection" columns={2}>
-          <PxFormField label="PO Number" required filled={!!poId} hint={vendorId && availablePOs.length === 0 ? 'No POs with GRN available for this vendor' : undefined}>
+          <PxFormField
+            label="PO Number"
+            required
+            filled={!!poId}
+            hint={
+              vendorId && availablePOs.length === 0
+                ? 'No POs with GRN available for this vendor'
+                : undefined
+            }
+          >
             <StandardSelect
               value={poId}
               onChange={(e) => handlePOChange(e.target.value)}
@@ -989,7 +1063,7 @@ export function DebitNoteFormV2Enhanced() {
               icon={<Package2 className="w-4 h-4" />}
             >
               <option value="">Select PO with GRN</option>
-              {availablePOs.map(po => (
+              {availablePOs.map((po) => (
                 <option key={po.id} value={po.id}>
                   {po.poNumber}
                 </option>
@@ -997,7 +1071,12 @@ export function DebitNoteFormV2Enhanced() {
             </StandardSelect>
           </PxFormField>
 
-          <PxFormField label="GRN Number" required filled={!!grnId} hint={poId && availableGRNs.length === 0 ? 'No GRNs available for this PO' : undefined}>
+          <PxFormField
+            label="GRN Number"
+            required
+            filled={!!grnId}
+            hint={poId && availableGRNs.length === 0 ? 'No GRNs available for this PO' : undefined}
+          >
             <StandardSelect
               value={grnId}
               onChange={(e) => handleGRNChange(e.target.value)}
@@ -1005,7 +1084,7 @@ export function DebitNoteFormV2Enhanced() {
               icon={<FileText className="w-4 h-4" />}
             >
               <option value="">Select GRN</option>
-              {availableGRNs.map(grn => (
+              {availableGRNs.map((grn) => (
                 <option key={grn.id} value={grn.id}>
                   {grn.grnNumber} - {grn.status}
                 </option>
@@ -1020,84 +1099,151 @@ export function DebitNoteFormV2Enhanced() {
             <h2 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>
               Line Items - Full PR→PO→GRN→Invoice Visibility
             </h2>
-            
+
             {/* System Suggestion Banner */}
             {lineItems.length > 0 && (
-              <div className="mb-4 p-3 rounded" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+              <div
+                className="mb-4 p-3 rounded"
+                style={{
+                  backgroundColor: 'var(--color-cloud)',
+                  border: '1px solid var(--color-silver)',
+                }}
+              >
                 <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                  💡 Suggested values have been pre-filled based on PO, GRN and Invoice. You can adjust where allowed.
+                  💡 Suggested values have been pre-filled based on PO, GRN and Invoice. You can
+                  adjust where allowed.
                 </p>
               </div>
             )}
-            
+
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                   <tr>
                     {/* Identification */}
-                    <th className="px-3 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '200px' }}>
+                    <th
+                      className="px-3 py-3 text-left text-xs"
+                      style={{ color: 'var(--color-mercury-grey)', minWidth: '200px' }}
+                    >
                       Item Name
                     </th>
-                    <th className="px-3 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '120px' }}>
+                    <th
+                      className="px-3 py-3 text-left text-xs"
+                      style={{ color: 'var(--color-mercury-grey)', minWidth: '120px' }}
+                    >
                       Category
                     </th>
-                    <th className="px-3 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
+                    <th
+                      className="px-3 py-3 text-left text-xs"
+                      style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}
+                    >
                       GL Account
                     </th>
                     {/* Quantity Comparison - Show PR Qty and PO Qty only for qty-based */}
                     {!isPriceDifference && (
                       <>
-                        <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}>
+                        <th
+                          className="px-3 py-3 text-right text-xs"
+                          style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}
+                        >
                           PR Qty
                         </th>
-                        <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}>
+                        <th
+                          className="px-3 py-3 text-right text-xs"
+                          style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}
+                        >
                           PO Qty
                         </th>
                       </>
                     )}
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}>
+                    <th
+                      className="px-3 py-3 text-right text-xs"
+                      style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}
+                    >
                       GRN Qty
                     </th>
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}>
+                    <th
+                      className="px-3 py-3 text-right text-xs"
+                      style={{ color: 'var(--color-mercury-grey)', minWidth: '80px' }}
+                    >
                       Inv Qty
                     </th>
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
+                    <th
+                      className="px-3 py-3 text-right text-xs"
+                      style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}
+                    >
                       Debit Qty {isPriceDifference ? '(Auto)' : '*'}
                     </th>
                     {/* Rate Comparison - Show PO/Inv/Delta only for Price Difference */}
                     {isPriceDifference ? (
                       <>
-                        <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
+                        <th
+                          className="px-3 py-3 text-right text-xs"
+                          style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}
+                        >
                           PO Rate
                         </th>
-                        <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
+                        <th
+                          className="px-3 py-3 text-right text-xs"
+                          style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}
+                        >
                           Inv Rate
                         </th>
-                        <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '140px' }}>
+                        <th
+                          className="px-3 py-3 text-right text-xs"
+                          style={{ color: 'var(--color-mercury-grey)', minWidth: '140px' }}
+                        >
                           <div>Debit Rate (Delta) *</div>
-                          <div style={{ fontWeight: 'normal', fontSize: '10px', marginTop: '2px', color: '#9CA3AF' }}>Invoice Rate − PO Rate</div>
+                          <div
+                            style={{
+                              fontWeight: 'normal',
+                              fontSize: '10px',
+                              marginTop: '2px',
+                              color: '#9CA3AF',
+                            }}
+                          >
+                            Invoice Rate − PO Rate
+                          </div>
                         </th>
                       </>
                     ) : (
-                      <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
+                      <th
+                        className="px-3 py-3 text-right text-xs"
+                        style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}
+                      >
                         PO Rate
                       </th>
                     )}
                     {/* Financial Calculation */}
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
+                    <th
+                      className="px-3 py-3 text-right text-xs"
+                      style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}
+                    >
                       Debit Amt
                     </th>
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '70px' }}>
+                    <th
+                      className="px-3 py-3 text-right text-xs"
+                      style={{ color: 'var(--color-mercury-grey)', minWidth: '70px' }}
+                    >
                       GST %
                     </th>
-                    <th className="px-3 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '90px' }}>
+                    <th
+                      className="px-3 py-3 text-right text-xs"
+                      style={{ color: 'var(--color-mercury-grey)', minWidth: '90px' }}
+                    >
                       GST Amt
                     </th>
                     {/* Allocation */}
-                    <th className="px-3 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
+                    <th
+                      className="px-3 py-3 text-left text-xs"
+                      style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}
+                    >
                       Cost Center
                     </th>
-                    <th className="px-3 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}>
+                    <th
+                      className="px-3 py-3 text-left text-xs"
+                      style={{ color: 'var(--color-mercury-grey)', minWidth: '100px' }}
+                    >
                       Profit Center
                     </th>
                   </tr>
@@ -1105,174 +1251,230 @@ export function DebitNoteFormV2Enhanced() {
                 <tbody>
                   {lineItems.map((item) => (
                     <Fragment key={item.id}>
-                    <tr style={{ borderTop: '1px solid var(--color-silver)' }}>
-                      {/* Identification */}
-                      <td className="px-3 py-3">
-                        <div>
-                          <div className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.itemName}</div>
-                          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{item.itemCode}</div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3">
-                        <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{item.itemCategory}</span>
-                      </td>
-                      <td className="px-3 py-3">
-                        <div>
-                          <div className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.glAccountCode}</div>
-                          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{item.glAccountName}</div>
-                        </div>
-                      </td>
-                      {/* Quantity Comparison - Show PR Qty and PO Qty only for qty-based */}
-                      {!isPriceDifference && (
-                        <>
-                          <td className="px-3 py-3 text-right">
-                            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                              {item.prQty} {item.uom}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-right">
-                            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                              {item.poQty} {item.uom}
-                            </span>
-                          </td>
-                        </>
-                      )}
-                      <td className="px-3 py-3 text-right">
-                        <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                          {item.grnQty} {item.uom}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                          {item.invoiceQty} {item.uom}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        {isPriceDifference ? (
-                          <span className="text-sm px-2 py-1.5 rounded" style={{ color: 'var(--color-mercury-grey)', backgroundColor: 'var(--color-cloud)' }}>
-                            {item.debitQty} {item.uom}
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-1 justify-end">
-                            <input
-                              type="number"
-                              min="0"
-                              max={Math.min(item.invoiceQty, item.grnQty)}
-                              step="0.01"
-                              value={item.debitQty || ''}
-                              onChange={(e) => handleDebitQtyChange(item.id, parseFloat(e.target.value) || 0)}
-                              disabled={debitNoteStatus !== 'Draft'}
-                              className="w-20 px-2 py-1.5 text-right rounded text-sm"
-                              style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                              placeholder="0"
-                            />
-                            {(() => {
-                              const suggestedQty = reasonSubtype === 'short-supply' 
-                                ? Math.max(0, item.invoiceQty - item.grnQty) 
-                                : 0;
-                              return item.debitQty !== suggestedQty && debitNoteStatus === 'Draft' && (
-                                <button
-                                  type="button"
-                                  onClick={() => resetToSuggested(item.id)}
-                                  className="p-1 rounded hover:bg-white transition-colors"
-                                  style={{ color: 'var(--color-teal)' }}
-                                  title="Reset to Suggested"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5" />
-                                </button>
-                              );
-                            })()}
+                      <tr style={{ borderTop: '1px solid var(--color-silver)' }}>
+                        {/* Identification */}
+                        <td className="px-3 py-3">
+                          <div>
+                            <div className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                              {item.itemName}
+                            </div>
+                            <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                              {item.itemCode}
+                            </div>
                           </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                            {item.itemCategory}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div>
+                            <div className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                              {item.glAccountCode}
+                            </div>
+                            <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                              {item.glAccountName}
+                            </div>
+                          </div>
+                        </td>
+                        {/* Quantity Comparison - Show PR Qty and PO Qty only for qty-based */}
+                        {!isPriceDifference && (
+                          <>
+                            <td className="px-3 py-3 text-right">
+                              <span
+                                className="text-sm"
+                                style={{ color: 'var(--color-mercury-grey)' }}
+                              >
+                                {item.prQty} {item.uom}
+                              </span>
+                            </td>
+                            <td className="px-3 py-3 text-right">
+                              <span
+                                className="text-sm"
+                                style={{ color: 'var(--color-mercury-grey)' }}
+                              >
+                                {item.poQty} {item.uom}
+                              </span>
+                            </td>
+                          </>
                         )}
-                      </td>
-                      {/* Rate Comparison - Show PO/Inv/Delta only for Price Difference */}
-                      {isPriceDifference ? (
-                        <>
+                        <td className="px-3 py-3 text-right">
+                          <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                            {item.grnQty} {item.uom}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                            {item.invoiceQty} {item.uom}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          {isPriceDifference ? (
+                            <span
+                              className="text-sm px-2 py-1.5 rounded"
+                              style={{
+                                color: 'var(--color-mercury-grey)',
+                                backgroundColor: 'var(--color-cloud)',
+                              }}
+                            >
+                              {item.debitQty} {item.uom}
+                            </span>
+                          ) : (
+                            <div className="flex items-center gap-1 justify-end">
+                              <input
+                                type="number"
+                                min="0"
+                                max={Math.min(item.invoiceQty, item.grnQty)}
+                                step="0.01"
+                                value={item.debitQty || ''}
+                                onChange={(e) =>
+                                  handleDebitQtyChange(item.id, parseFloat(e.target.value) || 0)
+                                }
+                                disabled={debitNoteStatus !== 'Draft'}
+                                className="w-20 px-2 py-1.5 text-right rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
+                                placeholder="0"
+                              />
+                              {(() => {
+                                const suggestedQty =
+                                  reasonSubtype === 'short-supply'
+                                    ? Math.max(0, item.invoiceQty - item.grnQty)
+                                    : 0;
+                                return (
+                                  item.debitQty !== suggestedQty &&
+                                  debitNoteStatus === 'Draft' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => resetToSuggested(item.id)}
+                                      className="p-1 rounded hover:bg-white transition-colors"
+                                      style={{ color: 'var(--color-teal)' }}
+                                      title="Reset to Suggested"
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                    </button>
+                                  )
+                                );
+                              })()}
+                            </div>
+                          )}
+                        </td>
+                        {/* Rate Comparison - Show PO/Inv/Delta only for Price Difference */}
+                        {isPriceDifference ? (
+                          <>
+                            <td className="px-3 py-3 text-right">
+                              <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                                {currency} {item.poRate.toLocaleString('en-IN')}
+                              </span>
+                            </td>
+                            <td className="px-3 py-3 text-right">
+                              <span className="text-sm" style={{ color: '#C4320A' }}>
+                                {currency} {item.invoiceRate.toLocaleString('en-IN')}
+                              </span>
+                            </td>
+                            <td className="px-3 py-3 text-right">
+                              <div className="relative flex items-center gap-1 justify-end">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={Math.max(0, item.invoiceRate - item.poRate)}
+                                  step="0.01"
+                                  value={item.rateToBeDebited || ''}
+                                  onChange={(e) =>
+                                    handleRateToBeDebitedChange(
+                                      item.id,
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                  disabled={debitNoteStatus !== 'Draft'}
+                                  className="w-24 px-2 py-1.5 text-right rounded text-sm"
+                                  style={{
+                                    border: '1px solid var(--color-silver)',
+                                    color: 'var(--color-ink)',
+                                    backgroundColor: 'white',
+                                  }}
+                                  placeholder="0"
+                                />
+                                {item.rateToBeDebited !==
+                                  Math.max(0, item.invoiceRate - item.poRate) &&
+                                  debitNoteStatus === 'Draft' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => resetToSuggested(item.id)}
+                                      className="p-1 rounded hover:bg-white transition-colors"
+                                      style={{ color: 'var(--color-teal)' }}
+                                      title="Reset to Suggested Delta"
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                              </div>
+                            </td>
+                          </>
+                        ) : (
                           <td className="px-3 py-3 text-right">
                             <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
                               {currency} {item.poRate.toLocaleString('en-IN')}
                             </span>
                           </td>
-                          <td className="px-3 py-3 text-right">
-                            <span className="text-sm" style={{ color: '#C4320A' }}>
-                              {currency} {item.invoiceRate.toLocaleString('en-IN')}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-right">
-                            <div className="relative flex items-center gap-1 justify-end">
-                              <input
-                                type="number"
-                                min="0"
-                                max={Math.max(0, item.invoiceRate - item.poRate)}
-                                step="0.01"
-                                value={item.rateToBeDebited || ''}
-                                onChange={(e) => handleRateToBeDebitedChange(item.id, parseFloat(e.target.value) || 0)}
-                                disabled={debitNoteStatus !== 'Draft'}
-                                className="w-24 px-2 py-1.5 text-right rounded text-sm"
-                                style={{ 
-                                  border: '1px solid var(--color-silver)', 
-                                  color: 'var(--color-ink)',
-                                  backgroundColor: 'white'
-                                }}
-                                placeholder="0"
-                              />
-                              {item.rateToBeDebited !== Math.max(0, item.invoiceRate - item.poRate) && debitNoteStatus === 'Draft' && (
-                                <button
-                                  type="button"
-                                  onClick={() => resetToSuggested(item.id)}
-                                  className="p-1 rounded hover:bg-white transition-colors"
-                                  style={{ color: 'var(--color-teal)' }}
-                                  title="Reset to Suggested Delta"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </>
-                      ) : (
+                        )}
+                        {/* Financial Calculation */}
                         <td className="px-3 py-3 text-right">
                           <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                            {currency} {item.poRate.toLocaleString('en-IN')}
+                            {currency}{' '}
+                            {item.debitAmount.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                           </span>
                         </td>
-                      )}
-                      {/* Financial Calculation */}
-                      <td className="px-3 py-3 text-right">
-                        <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                          {currency} {item.debitAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                          {item.gstPercent}%
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                          {currency} {item.gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </td>
-                      {/* Allocation */}
-                      <td className="px-3 py-3">
-                        <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{item.costCenter}</span>
-                      </td>
-                      <td className="px-3 py-3">
-                        <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{item.profitCenter}</span>
-                      </td>
-                    </tr>
-                    {isPriceDifference && item.invoiceRate <= item.poRate && (
-                      <tr style={{ borderTop: '1px solid var(--color-silver)' }}>
-                        <td colSpan={13} className="px-3 py-2" style={{ backgroundColor: '#FEF3C7' }}>
-                          <div className="flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4" style={{ color: '#F59E0B' }} />
-                            <span className="text-xs" style={{ color: '#92400E' }}>
-                              No price variance found for this line (Invoice rate ₹{item.invoiceRate.toLocaleString('en-IN')} ≤ PO rate ₹{item.poRate.toLocaleString('en-IN')}). Debit amount is zero.
-                            </span>
-                          </div>
+                        <td className="px-3 py-3 text-right">
+                          <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                            {item.gstPercent}%
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-right">
+                          <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                            {currency}{' '}
+                            {item.gstAmount.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
+                        </td>
+                        {/* Allocation */}
+                        <td className="px-3 py-3">
+                          <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                            {item.costCenter}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                            {item.profitCenter}
+                          </span>
                         </td>
                       </tr>
-                    )}
+                      {isPriceDifference && item.invoiceRate <= item.poRate && (
+                        <tr style={{ borderTop: '1px solid var(--color-silver)' }}>
+                          <td
+                            colSpan={13}
+                            className="px-3 py-2"
+                            style={{ backgroundColor: '#FEF3C7' }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4" style={{ color: '#F59E0B' }} />
+                              <span className="text-xs" style={{ color: '#92400E' }}>
+                                No price variance found for this line (Invoice rate ₹
+                                {item.invoiceRate.toLocaleString('en-IN')} ≤ PO rate ₹
+                                {item.poRate.toLocaleString('en-IN')}). Debit amount is zero.
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     </Fragment>
                   ))}
                 </tbody>
@@ -1282,7 +1484,7 @@ export function DebitNoteFormV2Enhanced() {
             {/* Calculation Explanation */}
             <div className="mt-4 p-3 rounded" style={{ backgroundColor: 'var(--color-cloud)' }}>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                {isPriceDifference 
+                {isPriceDifference
                   ? '💡 Calculation: Debit Amount = Debit Rate (Delta) × Debit Qty, where Debit Rate (Delta) = Invoice Rate − PO Rate.'
                   : '💡 Calculation: Debit Amount = Debit Qty × PO Rate.'}
               </p>
@@ -1296,21 +1498,40 @@ export function DebitNoteFormV2Enhanced() {
             <div className="flex justify-end">
               <div className="w-96 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Subtotal</span>
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Subtotal
+                  </span>
                   <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                    {currency} {calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currency}{' '}
+                    {calculateSubtotal().toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Total GST</span>
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Total GST
+                  </span>
                   <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                    {currency} {calculateTotalGST().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currency}{' '}
+                    {calculateTotalGST().toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </span>
                 </div>
-                <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
+                <div
+                  className="flex justify-between items-center pt-3"
+                  style={{ borderTop: '1px solid var(--color-silver)' }}
+                >
                   <span style={{ color: 'var(--color-ink)' }}>Debit Note Total</span>
                   <span className="text-xl" style={{ color: 'var(--color-ink)' }}>
-                    {currency} {calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currency}{' '}
+                    {calculateTotal().toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </span>
                 </div>
               </div>
@@ -1320,15 +1541,23 @@ export function DebitNoteFormV2Enhanced() {
       </div>
 
       {/* STEP 6: Supporting Documents */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
-        <h2 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>Supporting Documents</h2>
+      <div
+        className="bg-white rounded-lg p-6 mb-6"
+        style={{ border: '1px solid var(--color-silver)' }}
+      >
+        <h2 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>
+          Supporting Documents
+        </h2>
 
         {/* Upload Area */}
         {debitNoteStatus === 'Draft' && (
           <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
             <div className="grid grid-cols-4 gap-4 mb-3">
               <div>
-                <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)' }}>
+                <label
+                  className="block text-xs mb-1.5"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
                   Document Type *
                 </label>
                 <select
@@ -1350,8 +1579,13 @@ export function DebitNoteFormV2Enhanced() {
               </div>
 
               <div>
-                <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)' }}>
-                  Reference No {['GRN', 'Invoice Copy', 'QC / Inspection Report'].includes(uploadingDocType) && '*'}
+                <label
+                  className="block text-xs mb-1.5"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Reference No{' '}
+                  {['GRN', 'Invoice Copy', 'QC / Inspection Report'].includes(uploadingDocType) &&
+                    '*'}
                 </label>
                 <select
                   value={uploadingRefDocNo}
@@ -1364,18 +1598,25 @@ export function DebitNoteFormV2Enhanced() {
                 >
                   <option value="">Select</option>
                   {getReferenceSuggestions().map((ref, idx) => (
-                    <option key={idx} value={ref}>{ref}</option>
+                    <option key={idx} value={ref}>
+                      {ref}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)' }}>
+                <label
+                  className="block text-xs mb-1.5"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
                   Visibility *
                 </label>
                 <select
                   value={uploadingVisibility}
-                  onChange={(e) => setUploadingVisibility(e.target.value as 'Internal Only' | 'Vendor Visible')}
+                  onChange={(e) =>
+                    setUploadingVisibility(e.target.value as 'Internal Only' | 'Vendor Visible')
+                  }
                   className="w-full px-2 py-2 rounded text-sm"
                   style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
                 >
@@ -1385,14 +1626,21 @@ export function DebitNoteFormV2Enhanced() {
               </div>
 
               <div>
-                <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)' }}>
+                <label
+                  className="block text-xs mb-1.5"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
                   File *
                 </label>
                 <label
                   className="flex items-center justify-center gap-2 px-3 py-2 rounded cursor-pointer transition-colors text-sm text-white"
                   style={{ backgroundColor: 'var(--color-teal)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = 'var(--color-teal)')
+                  }
                 >
                   <Upload className="w-4 h-4" />
                   Upload
@@ -1419,8 +1667,13 @@ export function DebitNoteFormV2Enhanced() {
 
             {docValidationError && (
               <div className="mt-2 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} />
-                <p className="text-xs" style={{ color: '#EF4444' }}>{docValidationError}</p>
+                <AlertCircle
+                  className="w-4 h-4 flex-shrink-0 mt-0.5"
+                  style={{ color: '#EF4444' }}
+                />
+                <p className="text-xs" style={{ color: '#EF4444' }}>
+                  {docValidationError}
+                </p>
               </div>
             )}
           </div>
@@ -1432,15 +1685,55 @@ export function DebitNoteFormV2Enhanced() {
             <table className="w-full">
               <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Document Type</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>File Name</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Reference</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Visibility</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Uploaded By</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Uploaded On</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Document Type
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    File Name
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Reference
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Visibility
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Uploaded By
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Uploaded On
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Status
+                  </th>
                   {debitNoteStatus === 'Draft' && (
-                    <th className="px-3 py-2 text-center text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
+                    <th
+                      className="px-3 py-2 text-center text-xs"
+                      style={{ color: 'var(--color-mercury-grey)' }}
+                    >
+                      Actions
+                    </th>
                   )}
                 </tr>
               </thead>
@@ -1448,42 +1741,55 @@ export function DebitNoteFormV2Enhanced() {
                 {supportingDocuments.map((doc) => (
                   <tr key={doc.id} style={{ borderTop: '1px solid var(--color-silver)' }}>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{doc.documentType}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                        {doc.documentType}
+                      </span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{doc.fileName}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                        {doc.fileName}
+                      </span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{doc.referenceDocNo || '-'}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                        {doc.referenceDocNo || '-'}
+                      </span>
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1">
                         {doc.visibility === 'Vendor Visible' ? (
                           <Eye className="w-3 h-3" style={{ color: 'var(--color-teal)' }} />
                         ) : (
-                          <EyeOff className="w-3 h-3" style={{ color: 'var(--color-mercury-grey)' }} />
+                          <EyeOff
+                            className="w-3 h-3"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          />
                         )}
-                        <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{doc.visibility}</span>
+                        <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                          {doc.visibility}
+                        </span>
                       </div>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{doc.uploadedBy}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                        {doc.uploadedBy}
+                      </span>
                     </td>
                     <td className="px-3 py-2">
                       <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                        {new Date(doc.uploadedDate).toLocaleDateString('en-GB', { 
-                          day: '2-digit', 
-                          month: 'short', 
-                          year: 'numeric'
+                        {new Date(doc.uploadedDate).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
                         })}
                       </span>
                     </td>
                     <td className="px-3 py-2">
-                      <span 
+                      <span
                         className="text-xs px-2 py-0.5 rounded"
-                        style={{ 
+                        style={{
                           backgroundColor: doc.status === 'Valid' ? '#D1FAE5' : '#FEF3C7',
-                          color: doc.status === 'Valid' ? '#065F46' : '#92400E'
+                          color: doc.status === 'Valid' ? '#065F46' : '#92400E',
                         }}
                       >
                         {doc.status}
@@ -1518,12 +1824,22 @@ export function DebitNoteFormV2Enhanced() {
 
       {/* STEP 8: Accounting Preview (Post-Approval) */}
       {(debitNoteStatus === 'Approved' || showAccountingPreview) && calculateTotal() > 0 && (
-        <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6 mb-6"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>Accounting Preview - Journal Entry</h2>
-            <div className="flex items-center gap-2 px-3 py-1 rounded" style={{ backgroundColor: 'var(--color-cloud)' }}>
+            <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>
+              Accounting Preview - Journal Entry
+            </h2>
+            <div
+              className="flex items-center gap-2 px-3 py-1 rounded"
+              style={{ backgroundColor: 'var(--color-cloud)' }}
+            >
               <DollarSign className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
-              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Read-only preview</span>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                Read-only preview
+              </span>
             </div>
           </div>
 
@@ -1531,57 +1847,129 @@ export function DebitNoteFormV2Enhanced() {
             <table className="w-full">
               <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Line</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>GL Account</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Account Name</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Cost Center</th>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Profit Center</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Debit</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Credit</th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Line
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    GL Account
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Account Name
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Cost Center
+                  </th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Profit Center
+                  </th>
+                  <th
+                    className="px-3 py-2 text-right text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Debit
+                  </th>
+                  <th
+                    className="px-3 py-2 text-right text-xs"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Credit
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {generateJournalLines().map((line) => (
                   <tr key={line.lineNo} style={{ borderTop: '1px solid var(--color-silver)' }}>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{line.lineNo}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                        {line.lineNo}
+                      </span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{line.glAccount}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                        {line.glAccount}
+                      </span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{line.glAccountName}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                        {line.glAccountName}
+                      </span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{line.costCenter}</span>
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                        {line.costCenter}
+                      </span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{line.profitCenter}</span>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <span className="text-sm" style={{ color: line.debit > 0 ? 'var(--color-ink)' : 'var(--color-mercury-grey)' }}>
-                        {line.debit > 0 ? `${currency} ${line.debit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                        {line.profitCenter}
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <span className="text-sm" style={{ color: line.credit > 0 ? 'var(--color-ink)' : 'var(--color-mercury-grey)' }}>
-                        {line.credit > 0 ? `${currency} ${line.credit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                      <span
+                        className="text-sm"
+                        style={{
+                          color: line.debit > 0 ? 'var(--color-ink)' : 'var(--color-mercury-grey)',
+                        }}
+                      >
+                        {line.debit > 0
+                          ? `${currency} ${line.debit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : '-'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <span
+                        className="text-sm"
+                        style={{
+                          color: line.credit > 0 ? 'var(--color-ink)' : 'var(--color-mercury-grey)',
+                        }}
+                      >
+                        {line.credit > 0
+                          ? `${currency} ${line.credit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : '-'}
                       </span>
                     </td>
                   </tr>
                 ))}
-                <tr style={{ borderTop: '2px solid var(--color-silver)', backgroundColor: 'var(--color-cloud)' }}>
+                <tr
+                  style={{
+                    borderTop: '2px solid var(--color-silver)',
+                    backgroundColor: 'var(--color-cloud)',
+                  }}
+                >
                   <td colSpan={5} className="px-3 py-2 text-right">
                     <span style={{ color: 'var(--color-ink)' }}>Total</span>
                   </td>
                   <td className="px-3 py-2 text-right">
                     <span style={{ color: 'var(--color-ink)' }}>
-                      {currency} {calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {currency}{' '}
+                      {calculateTotal().toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-right">
                     <span style={{ color: 'var(--color-ink)' }}>
-                      {currency} {calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {currency}{' '}
+                      {calculateTotal().toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </td>
                 </tr>
@@ -1597,7 +1985,11 @@ export function DebitNoteFormV2Enhanced() {
           <button
             onClick={() => setShowAccountingPreview(!showAccountingPreview)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-colors text-sm"
-            style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}
+            style={{
+              border: '1px solid var(--color-silver)',
+              color: 'var(--color-mercury-grey)',
+              backgroundColor: 'white',
+            }}
           >
             <TrendingUp className="w-4 h-4" />
             {showAccountingPreview ? 'Hide' : 'Preview'} Journal Entry

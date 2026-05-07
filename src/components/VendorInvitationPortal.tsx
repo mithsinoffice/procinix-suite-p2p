@@ -73,7 +73,10 @@ export function VendorInvitationPortal() {
 
   if (!token || !inv) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: surface }}>
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{ backgroundColor: surface }}
+      >
         <p style={{ color: textMuted }}>This invitation link is invalid or has expired.</p>
       </div>
     );
@@ -81,7 +84,10 @@ export function VendorInvitationPortal() {
 
   if (inv.status === 'approved') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: surface }}>
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-6"
+        style={{ backgroundColor: surface }}
+      >
         <ShieldCheck className="w-14 h-14 mb-4" style={{ color: accent }} />
         <h1 className="text-xl font-semibold" style={{ color: textMain }}>
           Registration complete
@@ -96,7 +102,10 @@ export function VendorInvitationPortal() {
 
   if (inv.status === 'rejected') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: surface }}>
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-6"
+        style={{ backgroundColor: surface }}
+      >
         <h1 className="text-xl font-semibold" style={{ color: '#B91C1C' }}>
           Invitation closed
         </h1>
@@ -113,14 +122,17 @@ export function VendorInvitationPortal() {
     inv.status === 'pending_approval'
   ) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: surface }}>
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-6"
+        style={{ backgroundColor: surface }}
+      >
         <Building2 className="w-12 h-12 mb-4" style={{ color: accent }} />
         <h1 className="text-xl font-semibold" style={{ color: textMain }}>
           Response submitted
         </h1>
         <p className="text-sm mt-2 text-center max-w-md" style={{ color: textMuted }}>
-          Thank you. Your details are with the procurement team for review and internal approval. You will be
-          notified by email.
+          Thank you. Your details are with the procurement team for review and internal approval.
+          You will be notified by email.
         </p>
       </div>
     );
@@ -163,7 +175,12 @@ export function VendorInvitationPortal() {
       setError('Complete the registered address.');
       return;
     }
-    if (!bankAccountName.trim() || !bankAccountNumber.trim() || !bankIfsc.trim() || !bankName.trim()) {
+    if (
+      !bankAccountName.trim() ||
+      !bankAccountNumber.trim() ||
+      !bankIfsc.trim() ||
+      !bankName.trim()
+    ) {
       setError('Complete bank details.');
       return;
     }
@@ -206,7 +223,10 @@ export function VendorInvitationPortal() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: surface }}>
-      <header style={{ borderBottom: `1px solid ${border}`, backgroundColor: '#fff' }} className="px-6 py-4">
+      <header
+        style={{ borderBottom: `1px solid ${border}`, backgroundColor: '#fff' }}
+        className="px-6 py-4"
+      >
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <Building2 className="w-8 h-8" style={{ color: accent }} />
           <div>
@@ -229,8 +249,9 @@ export function VendorInvitationPortal() {
             border: `1px solid ${border}`,
           }}
         >
-          Complete the sections below to submit your vendor profile. This is the same onboarding information your buyer
-          reviews in <strong>Vendor Review</strong> and maps to the <strong>Vendor Master</strong> record when approved.
+          Complete the sections below to submit your vendor profile. This is the same onboarding
+          information your buyer reviews in <strong>Vendor Review</strong> and maps to the{' '}
+          <strong>Vendor Master</strong> record when approved.
         </p>
         <section
           className="rounded-lg p-5"
@@ -498,12 +519,16 @@ export function VendorInvitationPortal() {
             className="rounded-lg p-5 space-y-4"
             style={{ border: `1px solid ${border}`, backgroundColor: '#fff' }}
           >
-            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: textMain }}>
+            <h2
+              className="text-sm font-semibold flex items-center gap-2"
+              style={{ color: textMain }}
+            >
               <FileUp className="w-4 h-4" />
               KYC documents
             </h2>
             <p className="text-xs" style={{ color: textMuted }}>
-              Upload PDF or images. Files are stored securely in production; here only file names are recorded.
+              Upload PDF or images. Files are stored securely in production; here only file names
+              are recorded.
             </p>
             <div>
               <label className={labelCls} style={{ color: textMain }}>
@@ -525,7 +550,9 @@ export function VendorInvitationPortal() {
                 {documents.map((d) => (
                   <li key={d.id} className="flex justify-between gap-2">
                     <span>{d.fileName}</span>
-                    <span style={{ color: textMuted }}>{new Date(d.uploadedAt).toLocaleString()}</span>
+                    <span style={{ color: textMuted }}>
+                      {new Date(d.uploadedAt).toLocaleString()}
+                    </span>
                   </li>
                 ))}
               </ul>

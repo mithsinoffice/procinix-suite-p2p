@@ -10,7 +10,9 @@ export interface EntityScopedRecord {
 }
 
 export function normalizeEntityMappings(record: EntityScopedRecord): EntityScopeMapping[] {
-  const mappings = Array.isArray(record.entityMappings) ? record.entityMappings.filter(Boolean) : [];
+  const mappings = Array.isArray(record.entityMappings)
+    ? record.entityMappings.filter(Boolean)
+    : [];
   if (mappings.length > 0) {
     return mappings;
   }

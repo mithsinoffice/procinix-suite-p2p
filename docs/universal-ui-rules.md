@@ -64,7 +64,7 @@
 
 ## 8. Changelog (edit when you change rules)
 
-| Date       | Change |
-|------------|--------|
-| 2026-04-10 | Initial universal UI rules + Cursor `alwaysApply` rule. |
+| Date       | Change                                                                                        |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| 2026-04-10 | Initial universal UI rules + Cursor `alwaysApply` rule.                                       |
 | 2026-04-10 | Added `src/components/ui/formTokens.ts`; User Master and Country Master import shared tokens. |

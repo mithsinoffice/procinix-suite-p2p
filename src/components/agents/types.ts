@@ -4,7 +4,13 @@
 
 export type AgentType = 'Validation' | 'Automation' | 'Enrichment' | 'Approval' | 'Ingestion';
 export type AgentApplicationOn = 'Form' | 'Master';
-export type TriggerEvent = 'On email received' | 'On form submission' | 'On record creation' | 'On status change' | 'Scheduled' | 'Manual';
+export type TriggerEvent =
+  | 'On email received'
+  | 'On form submission'
+  | 'On record creation'
+  | 'On status change'
+  | 'Scheduled'
+  | 'Manual';
 export type FallbackAction = 'Create exception' | 'Notify admin' | 'Reject' | 'Retry' | 'Skip';
 export type AgentStatus = 'Active' | 'Inactive' | 'Draft' | 'Testing';
 export type RuleSeverity = 'Error' | 'Warning' | 'Info';
@@ -32,7 +38,12 @@ export type ActionType =
   | 'Escalate'
   | 'Retry';
 
-export type ActionCondition = 'Always' | 'If valid' | 'If confidence > N%' | 'If amount > N' | 'Custom';
+export type ActionCondition =
+  | 'Always'
+  | 'If valid'
+  | 'If confidence > N%'
+  | 'If amount > N'
+  | 'Custom';
 
 export interface Agent {
   id: string;
@@ -135,7 +146,10 @@ export interface AISuggestion {
 /** Wizard step state */
 export interface AgentBuilderState {
   step: 1 | 2 | 3 | 4;
-  identity: Omit<Agent, 'id' | 'accuracyScore' | 'status' | 'createdBy' | 'createdAt' | 'updatedAt'>;
+  identity: Omit<
+    Agent,
+    'id' | 'accuracyScore' | 'status' | 'createdBy' | 'createdAt' | 'updatedAt'
+  >;
   fieldRules: Omit<AgentFieldRule, 'id' | 'agentId' | 'createdAt'>[];
   actions: Omit<AgentAction, 'id' | 'agentId' | 'createdAt'>[];
   testResult?: TestResult;
@@ -156,20 +170,34 @@ export const MODULE_OPTIONS = [
 ] as const;
 
 export const FORM_OPTIONS: Record<string, string[]> = {
-  'Procurement': ['Purchase Requisition', 'Purchase Order'],
+  Procurement: ['Purchase Requisition', 'Purchase Order'],
   'Accounts Payable': ['PO Invoice', 'Non-PO Invoice', 'Direct Invoice'],
   'Vendor Management': ['Vendor Onboarding', 'Vendor Review'],
-  'Payments': ['Payment Proposal', 'Payment Batch'],
-  'Advances': ['Advance Request', 'Advance Utilization'],
+  Payments: ['Payment Proposal', 'Payment Batch'],
+  Advances: ['Advance Request', 'Advance Utilization'],
   'Debit Notes': ['Debit Note'],
-  'GRN': ['Goods Receipt Note'],
-  'Masters': [
-    'Entity Master', 'Department Master', 'Employee Master', 'User Master',
-    'Roles Master', 'Vendor Master', 'Category Master', 'Item Master',
-    'Product Master', 'SKU Master', 'Tax Code Master', 'Cost Centre Master',
-    'Profit Centre Master', 'Country Master', 'State Master', 'Currency Master',
-    'Exchange Rate Master', 'UOM Master', 'Contract Master',
+  GRN: ['Goods Receipt Note'],
+  Masters: [
+    'Entity Master',
+    'Department Master',
+    'Employee Master',
+    'User Master',
+    'Roles Master',
+    'Vendor Master',
+    'Category Master',
+    'Item Master',
+    'Product Master',
+    'SKU Master',
+    'Tax Code Master',
+    'Cost Centre Master',
+    'Profit Centre Master',
+    'Country Master',
+    'State Master',
+    'Currency Master',
+    'Exchange Rate Master',
+    'UOM Master',
+    'Contract Master',
   ],
-  'Budget': ['Budget Planning', 'Budget Transfer'],
+  Budget: ['Budget Planning', 'Budget Transfer'],
   'Cash Flow': ['Cash Position', 'Forecast'],
 };

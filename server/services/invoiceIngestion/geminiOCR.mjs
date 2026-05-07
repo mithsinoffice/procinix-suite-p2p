@@ -120,10 +120,21 @@ Rules:
 - For line_items, extract every line item visible
 - Parse both handwritten and printed invoices`;
 
-const USER_PROMPT = 'Extract all invoice data from this document. Return ONLY the JSON object, nothing else.';
+const USER_PROMPT =
+  'Extract all invoice data from this document. Return ONLY the JSON object, nothing else.';
 const SCORE_FIELDS = [
-  'invoice_number', 'invoice_date', 'due_date', 'vendor_name', 'vendor_gstin', 'vendor_pan',
-  'bill_to_entity', 'bill_to_gstin', 'currency', 'total_amount', 'tax_amount', 'payment_terms',
+  'invoice_number',
+  'invoice_date',
+  'due_date',
+  'vendor_name',
+  'vendor_gstin',
+  'vendor_pan',
+  'bill_to_entity',
+  'bill_to_gstin',
+  'currency',
+  'total_amount',
+  'tax_amount',
+  'payment_terms',
 ];
 
 function parseJsonResponse(text) {
@@ -133,9 +144,10 @@ function parseJsonResponse(text) {
   }
   const data = JSON.parse(jsonStr);
   data.line_items = Array.isArray(data.line_items) ? data.line_items : [];
-  data.confidence_score = typeof data.confidence_score === 'number'
-    ? Math.max(0, Math.min(1, data.confidence_score))
-    : 0.5;
+  data.confidence_score =
+    typeof data.confidence_score === 'number'
+      ? Math.max(0, Math.min(1, data.confidence_score))
+      : 0.5;
   return data;
 }
 
@@ -149,41 +161,43 @@ const STATE_CODE_MAP = {
   '07': 'Delhi',
   '08': 'Rajasthan',
   '09': 'Uttar Pradesh',
-  '10': 'Bihar',
-  '11': 'Sikkim',
-  '12': 'Arunachal Pradesh',
-  '13': 'Nagaland',
-  '14': 'Manipur',
-  '15': 'Mizoram',
-  '16': 'Tripura',
-  '17': 'Meghalaya',
-  '18': 'Assam',
-  '19': 'West Bengal',
-  '20': 'Jharkhand',
-  '21': 'Odisha',
-  '22': 'Chhattisgarh',
-  '23': 'Madhya Pradesh',
-  '24': 'Gujarat',
-  '26': 'Dadra & Nagar Haveli',
-  '27': 'Maharashtra',
-  '28': 'Andhra Pradesh',
-  '29': 'Karnataka',
-  '30': 'Goa',
-  '31': 'Lakshadweep',
-  '32': 'Kerala',
-  '33': 'Tamil Nadu',
-  '34': 'Puducherry',
-  '35': 'Andaman & Nicobar',
-  '36': 'Telangana',
-  '37': 'Andhra Pradesh (New)',
-  '38': 'Ladakh',
-  '97': 'Other Territory',
-  '99': 'Centre Jurisdiction',
+  10: 'Bihar',
+  11: 'Sikkim',
+  12: 'Arunachal Pradesh',
+  13: 'Nagaland',
+  14: 'Manipur',
+  15: 'Mizoram',
+  16: 'Tripura',
+  17: 'Meghalaya',
+  18: 'Assam',
+  19: 'West Bengal',
+  20: 'Jharkhand',
+  21: 'Odisha',
+  22: 'Chhattisgarh',
+  23: 'Madhya Pradesh',
+  24: 'Gujarat',
+  26: 'Dadra & Nagar Haveli',
+  27: 'Maharashtra',
+  28: 'Andhra Pradesh',
+  29: 'Karnataka',
+  30: 'Goa',
+  31: 'Lakshadweep',
+  32: 'Kerala',
+  33: 'Tamil Nadu',
+  34: 'Puducherry',
+  35: 'Andaman & Nicobar',
+  36: 'Telangana',
+  37: 'Andhra Pradesh (New)',
+  38: 'Ladakh',
+  97: 'Other Territory',
+  99: 'Centre Jurisdiction',
 };
 
 function validateAndCleanGSTIN(raw) {
   if (!raw) return { valid: false, cleaned: null };
-  let cleaned = raw.toString().toUpperCase()
+  let cleaned = raw
+    .toString()
+    .toUpperCase()
     .replace(/\s+/g, '')
     .replace(/[^A-Z0-9]/g, '');
   const match = cleaned.match(/[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]/);
@@ -244,11 +258,7 @@ function levenshtein(a, b) {
   for (let i = 1; i <= m; i += 1) {
     for (let j = 1; j <= n; j += 1) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost
-      );
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
     }
   }
   return dp[m][n];
@@ -315,7 +325,9 @@ function getApiKey() {
 }
 
 function normalizeText(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase();
 }
 
 async function applyLearningPatterns(extracted) {
@@ -337,11 +349,17 @@ async function applyLearningPatterns(extracted) {
         patched.vendor_name = output;
         patched._learningApplied = true;
       }
-      if (row.pattern_type === 'entity_mapping' && normalizeText(patched.bill_to_entity) === inputPattern) {
+      if (
+        row.pattern_type === 'entity_mapping' &&
+        normalizeText(patched.bill_to_entity) === inputPattern
+      ) {
         patched.bill_to_entity = output;
         patched._learningApplied = true;
       }
-      if (row.pattern_type === 'department_mapping' && normalizeText(patched.department) === inputPattern) {
+      if (
+        row.pattern_type === 'department_mapping' &&
+        normalizeText(patched.department) === inputPattern
+      ) {
         patched.department = output;
         patched._learningApplied = true;
       }
@@ -366,13 +384,22 @@ function evaluateField(fieldName, value, confidence) {
     if (!valid) {
       validationPassed = false;
       validationMessage = 'GSTIN differs from vendor master';
-      candidates.push({ value: gstin.replace(/25/g, 'Z5'), score: 0.95, source: 'vendor_master', note: 'OCR confusion: 1Z5 read as 125' });
+      candidates.push({
+        value: gstin.replace(/25/g, 'Z5'),
+        score: 0.95,
+        source: 'vendor_master',
+        note: 'OCR confusion: 1Z5 read as 125',
+      });
     }
   }
   if (fieldName === 'invoice_date' && !hasValue) {
     validationPassed = false;
     validationMessage = 'Multiple dates found — select correct one';
-    candidates.push({ value: new Date().toISOString().slice(0, 10), score: 0.75, context: "near 'Invoice Date' label" });
+    candidates.push({
+      value: new Date().toISOString().slice(0, 10),
+      score: 0.75,
+      context: "near 'Invoice Date' label",
+    });
   }
 
   let status = 'matched';
@@ -394,7 +421,8 @@ function evaluateField(fieldName, value, confidence) {
 }
 
 function buildFieldScores(extracted) {
-  const baseConfidence = typeof extracted.confidence_score === 'number' ? extracted.confidence_score : 0.5;
+  const baseConfidence =
+    typeof extracted.confidence_score === 'number' ? extracted.confidence_score : 0.5;
   const fields = {};
   let fieldsMatched = 0;
   let fieldsConflicted = 0;
@@ -405,10 +433,18 @@ function buildFieldScores(extracted) {
   for (const key of SCORE_FIELDS) {
     const score = evaluateField(key, extracted[key], baseConfidence);
     fields[key] = score;
-    if (score.match_status === 'matched') { fieldsMatched += 1; weighted += 1; }
-    else if (score.match_status === 'conflict') { fieldsConflicted += 1; weighted += 0.5; }
-    else if (score.match_status === 'low_confidence') { fieldsLowConfidence += 1; weighted += 0.25; }
-    else { fieldsNotFound += 1; }
+    if (score.match_status === 'matched') {
+      fieldsMatched += 1;
+      weighted += 1;
+    } else if (score.match_status === 'conflict') {
+      fieldsConflicted += 1;
+      weighted += 0.5;
+    } else if (score.match_status === 'low_confidence') {
+      fieldsLowConfidence += 1;
+      weighted += 0.25;
+    } else {
+      fieldsNotFound += 1;
+    }
   }
 
   const total = SCORE_FIELDS.length || 1;
@@ -419,12 +455,28 @@ function buildFieldScores(extracted) {
     fields_low_confidence: fieldsLowConfidence,
     fields_not_found: fieldsNotFound,
     ocr_overall_confidence: weighted / total,
-    ocr_conflicts: Object.fromEntries(Object.entries(fields).filter(([, v]) => v.match_status !== 'matched')),
+    ocr_conflicts: Object.fromEntries(
+      Object.entries(fields).filter(([, v]) => v.match_status !== 'matched')
+    ),
     touchless_eligible: fieldsConflicted === 0 && fieldsLowConfidence === 0,
   };
 }
 
 export async function extractInvoiceData(attachmentBuffer, mimeType, options = {}) {
+  // N8N is the primary provider when configured; Gemini is the fallback.
+  if (process.env.N8N_WEBHOOK_URL) {
+    try {
+      const { extractInvoiceDataN8N } = await import('./n8nOCR.mjs');
+      return await extractInvoiceDataN8N(
+        attachmentBuffer,
+        options?.filename || 'invoice.pdf',
+        mimeType
+      );
+    } catch (err) {
+      console.warn('[OCR] N8N failed, falling back to Gemini:', err?.message || err);
+    }
+  }
+
   const modelName = process.env.GEMINI_MODEL || DEFAULT_MODEL;
   const apiKey = getApiKey();
 
@@ -466,9 +518,19 @@ export async function extractInvoiceData(attachmentBuffer, mimeType, options = {
 }
 
 export function getAvailableProviders() {
-  try { getApiKey(); return ['Gemini']; } catch { return []; }
+  try {
+    getApiKey();
+    return ['Gemini'];
+  } catch {
+    return [];
+  }
 }
 
 export function isOcrConfigured() {
-  try { getApiKey(); return true; } catch { return false; }
+  try {
+    getApiKey();
+    return true;
+  } catch {
+    return false;
+  }
 }

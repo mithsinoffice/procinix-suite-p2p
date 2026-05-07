@@ -16,7 +16,7 @@ export function getSuperAdminEmailSet() {
     raw
       .split(',')
       .map((s) => s.trim().toLowerCase())
-      .filter(Boolean),
+      .filter(Boolean)
   );
 }
 
@@ -57,7 +57,7 @@ export async function buildPlatformContext(body) {
   }
 
   const rows = await query(
-    'SELECT id, payload, tenant_id, default_entity_id FROM `user_master`.`user_master`',
+    'SELECT id, payload, tenant_id, default_entity_id FROM `user_master`.`user_master`'
   );
 
   let matched = null;
@@ -89,17 +89,16 @@ export async function buildPlatformContext(body) {
   if (tenantCode) {
     const [t] = await query(
       "SELECT id FROM tenants WHERE UPPER(TRIM(code)) = ? AND status = 'ACTIVE' LIMIT 1",
-      [tenantCode],
+      [tenantCode]
     );
     if (!t || String(t.id) !== matched.tenant_id) {
       return { ok: false, error: 'tenant_code_mismatch' };
     }
   }
 
-  const [tenant] = await query(
-    'SELECT id, name, code, status FROM tenants WHERE id = ? LIMIT 1',
-    [matched.tenant_id],
-  );
+  const [tenant] = await query('SELECT id, name, code, status FROM tenants WHERE id = ? LIMIT 1', [
+    matched.tenant_id,
+  ]);
   if (!tenant) {
     return { ok: false, error: 'tenant_not_found' };
   }
@@ -112,7 +111,7 @@ export async function buildPlatformContext(body) {
     WHERE BINARY uea.user_id = ? AND BINARY uea.tenant_id = ?
     ORDER BY e.is_default DESC, e.name ASC
     `,
-    [matched.id, matched.tenant_id],
+    [matched.id, matched.tenant_id]
   );
 
   const entities = (entRows || []).map((r) => ({
@@ -136,9 +135,7 @@ export async function buildPlatformContext(body) {
 }
 
 export async function listTenants() {
-  return query(
-    'SELECT id, name, code, status, created_at FROM tenants ORDER BY created_at DESC',
-  );
+  return query('SELECT id, name, code, status, created_at FROM tenants ORDER BY created_at DESC');
 }
 
 export async function createTenant({ name, code }) {
@@ -157,7 +154,7 @@ export async function createTenant({ name, code }) {
     INSERT INTO tenants (id, name, code, status)
     VALUES (?, ?, ?, 'ACTIVE')
     `,
-    [id, cleanName, cleanCode],
+    [id, cleanName, cleanCode]
   );
   return { id, name: cleanName, code: cleanCode, status: 'ACTIVE' };
 }
@@ -170,7 +167,7 @@ export async function listEntitiesForTenant(tenantId) {
     WHERE tenant_id = ?
     ORDER BY is_default DESC, name ASC
     `,
-    [tenantId],
+    [tenantId]
   );
 }
 
@@ -206,7 +203,7 @@ export async function createEntityForTenant(tenantId, body) {
     INSERT INTO entities (id, tenant_id, name, code, currency, country, is_default)
     VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
-    [id, tenantId, name, code || null, currency, country, isDefault],
+    [id, tenantId, name, code || null, currency, country, isDefault]
   );
 
   return { id, tenantId, name, code: code || null, currency, country, isDefault };

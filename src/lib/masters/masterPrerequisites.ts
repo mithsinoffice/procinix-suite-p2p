@@ -25,7 +25,9 @@ interface GenericMasterRecord {
 }
 
 function normalizeLookup(value: unknown): string {
-  return String(value ?? '').trim().toLowerCase();
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 /**
@@ -35,7 +37,7 @@ function normalizeLookup(value: unknown): string {
  */
 export async function resolvePrerequisites(
   schema: MasterSchema,
-  rows: ValidatedRow[],
+  rows: ValidatedRow[]
 ): Promise<PrerequisiteReport> {
   // 1) Prerequisite master status
   const prerequisiteStatuses: PrerequisiteStatus[] = [];
@@ -44,13 +46,13 @@ export async function resolvePrerequisites(
     try {
       const records = await ensureRelationalMasterRecords<GenericMasterRecord>(
         prereqKey as MasterKey,
-        [],
+        []
       );
       if (records.length === 0) {
         approvedCount = 0;
       } else {
         const hasApprovalField = records.some(
-          (r) => r && typeof r === 'object' && 'approvalStatus' in r,
+          (r) => r && typeof r === 'object' && 'approvalStatus' in r
         );
         if (hasApprovalField) {
           approvedCount = records.filter((r) => r?.approvalStatus === 'Approved').length;
@@ -85,10 +87,7 @@ export async function resolvePrerequisites(
       const fk = field.foreignKey!;
       if (targetLookups.has(fk.refMaster)) continue;
       try {
-        const records = await ensureRelationalMasterRecords<GenericMasterRecord>(
-          fk.refMaster,
-          [],
-        );
+        const records = await ensureRelationalMasterRecords<GenericMasterRecord>(fk.refMaster, []);
         const values = new Set<string>();
         for (const rec of records) {
           if (!rec || typeof rec !== 'object') continue;

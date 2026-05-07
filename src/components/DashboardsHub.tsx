@@ -18,22 +18,22 @@ export function DashboardsHub() {
       name: 'Procurement Desk',
       description: 'Strategic procurement metrics and supplier performance',
       icon: ShoppingCart,
-      color: '#007D87'
+      color: '#007D87',
     },
     {
       id: 'ap' as const,
       name: 'AP Desk Dashboard',
       description: 'Operational metrics for Accounts Payable team',
       icon: Users,
-      color: 'var(--color-teal)'
+      color: 'var(--color-teal)',
     },
     {
       id: 'cfo' as const,
       name: 'CFO Desk Dashboard',
       description: 'Strategic financial metrics and executive insights',
       icon: TrendingUp,
-      color: 'var(--color-teal-dark)'
-    }
+      color: 'var(--color-teal-dark)',
+    },
   ];
 
   return (
@@ -65,7 +65,7 @@ export function DashboardsHub() {
                     backgroundColor: isSelected ? desk.color : '#FFFFFF',
                     border: `1px solid ${isSelected ? desk.color : 'var(--color-silver)'}`,
                     color: isSelected ? '#FFFFFF' : 'var(--color-ink)',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
                   }}
                 >
                   <Icon className="w-5 h-5" />
@@ -73,11 +73,13 @@ export function DashboardsHub() {
                     <div className="text-sm" style={{ fontWeight: '600' }}>
                       {desk.name}
                     </div>
-                    <div 
-                      className="text-xs mt-0.5" 
-                      style={{ 
-                        color: isSelected ? 'rgba(255, 255, 255, 0.85)' : 'var(--color-mercury-grey)',
-                        fontWeight: '400'
+                    <div
+                      className="text-xs mt-0.5"
+                      style={{
+                        color: isSelected
+                          ? 'rgba(255, 255, 255, 0.85)'
+                          : 'var(--color-mercury-grey)',
+                        fontWeight: '400',
                       }}
                     >
                       {desk.description}

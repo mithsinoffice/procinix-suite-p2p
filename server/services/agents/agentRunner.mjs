@@ -24,10 +24,7 @@ import {
 
 // ─── Load Agent ──────────────────────────────────────────────────
 export async function loadAgent(queryFn, agentId) {
-  const agents = await queryFn(
-    'SELECT * FROM p2p_schema_mt.agents WHERE id = ?',
-    [agentId]
-  );
+  const agents = await queryFn('SELECT * FROM p2p_schema_mt.agents WHERE id = ?', [agentId]);
   if (!agents.length) {
     throw Object.assign(new Error('Agent not found'), { statusCode: 404 });
   }
@@ -49,9 +46,8 @@ export async function loadAgent(queryFn, agentId) {
 // ─── Execute a single rule ───────────────────────────────────────
 async function executeRule(rule, data, queryFn) {
   const value = data[rule.field_name];
-  const config = typeof rule.rule_config === 'string'
-    ? JSON.parse(rule.rule_config)
-    : (rule.rule_config || {});
+  const config =
+    typeof rule.rule_config === 'string' ? JSON.parse(rule.rule_config) : rule.rule_config || {};
 
   switch (rule.rule_type) {
     case 'Required':
@@ -70,12 +66,7 @@ async function executeRule(rule, data, queryFn) {
       );
 
     case 'Cross-reference':
-      return executeCrossReference(
-        value,
-        config.refTable || '',
-        config.refField || '',
-        queryFn
-      );
+      return executeCrossReference(value, config.refTable || '', config.refField || '', queryFn);
 
     case 'Math validation':
       return executeMathValidation(
@@ -105,9 +96,10 @@ function pickFields(data, fieldNames) {
 
 // ─── Execute a single action ────────────────────────────────────
 async function executeAction(action, context, queryFn) {
-  const config = typeof action.action_config === 'string'
-    ? JSON.parse(action.action_config)
-    : (action.action_config || {});
+  const config =
+    typeof action.action_config === 'string'
+      ? JSON.parse(action.action_config)
+      : action.action_config || {};
 
   switch (action.action_type) {
     case 'Create record':
@@ -117,7 +109,12 @@ async function executeAction(action, context, queryFn) {
       return executeLinkEntity(queryFn, context.recordId, config.entityId, config.linkTable || '');
 
     case 'Trigger approval':
-      return executeTriggerApproval(queryFn, context.recordId, config.routingLogic || {}, context.agentId);
+      return executeTriggerApproval(
+        queryFn,
+        context.recordId,
+        config.routingLogic || {},
+        context.agentId
+      );
 
     case 'Send notification':
       return executeSendNotification(config.recipients || [], config.template || '', context.data);
@@ -245,10 +242,10 @@ export async function testAgent(queryFn, agentId, testData) {
   });
 
   // Update agent accuracy score
-  await queryFn(
-    'UPDATE p2p_schema_mt.agents SET accuracy_score = ? WHERE id = ?',
-    [overallAccuracy, agentId]
-  );
+  await queryFn('UPDATE p2p_schema_mt.agents SET accuracy_score = ? WHERE id = ?', [
+    overallAccuracy,
+    agentId,
+  ]);
 
   return { overallAccuracy, touchlessRate, totalRecords: testData.length, ruleAccuracy, results };
 }

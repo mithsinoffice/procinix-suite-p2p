@@ -1,10 +1,22 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAPData } from '../contexts/APDataContext';
-import { 
-  FileText, Filter, Search, Download, Eye, Edit2, Copy, 
-  XCircle, AlertTriangle, CheckCircle, Clock, DollarSign,
-  TrendingUp, Calendar, Building2
+import {
+  FileText,
+  Filter,
+  Search,
+  Download,
+  Eye,
+  Edit2,
+  Copy,
+  XCircle,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  TrendingUp,
+  Calendar,
+  Building2,
 } from 'lucide-react';
 
 interface Invoice {
@@ -16,7 +28,15 @@ interface Invoice {
   poNumber?: string; // Now optional for Non-PO invoices
   invoiceDate: string;
   invoiceAmount: number;
-  status: 'Draft' | 'Submitted' | 'In Review' | 'Approved' | 'Rejected' | 'On Hold' | 'Ready for Payment' | 'Paid';
+  status:
+    | 'Draft'
+    | 'Submitted'
+    | 'In Review'
+    | 'Approved'
+    | 'Rejected'
+    | 'On Hold'
+    | 'Ready for Payment'
+    | 'Paid';
   aiRisk: 'Low' | 'Medium' | 'High';
   paymentStatus: 'Pending' | 'Scheduled' | 'Paid';
   createdBy: string;
@@ -58,7 +78,12 @@ export function MyInvoices() {
                 : invoice.status === 'Partially Paid'
                   ? 'Ready for Payment'
                   : invoice.status,
-          aiRisk: invoice.matchStatus === 'Unmatched' ? 'High' : invoice.matchStatus === 'Partially Matched' ? 'Medium' : 'Low',
+          aiRisk:
+            invoice.matchStatus === 'Unmatched'
+              ? 'High'
+              : invoice.matchStatus === 'Partially Matched'
+                ? 'Medium'
+                : 'Low',
           paymentStatus:
             invoice.paymentStatus === 'Unpaid'
               ? 'Pending'
@@ -67,7 +92,10 @@ export function MyInvoices() {
                 : 'Paid',
           createdBy: invoice.approver || 'Current User',
           createdDate: invoice.invoiceDate,
-          currentApprover: invoice.status === 'Pending Approval' || invoice.status === 'Under Review' ? (invoice.approver || 'AP Team') : undefined,
+          currentApprover:
+            invoice.status === 'Pending Approval' || invoice.status === 'Under Review'
+              ? invoice.approver || 'AP Team'
+              : undefined,
           daysInStatus,
         };
       }),
@@ -76,37 +104,37 @@ export function MyInvoices() {
 
   const getStatusStyle = (status: Invoice['status']) => {
     const styles = {
-      'Draft': { bg: '#F3F4F6', color: '#6B7280', icon: Edit2 },
-      'Submitted': { bg: '#DBEAFE', color: '#1E40AF', icon: Clock },
+      Draft: { bg: '#F3F4F6', color: '#6B7280', icon: Edit2 },
+      Submitted: { bg: '#DBEAFE', color: '#1E40AF', icon: Clock },
       'In Review': { bg: '#FEF3C7', color: '#D97706', icon: Clock },
-      'Approved': { bg: '#D1FAE5', color: '#047857', icon: CheckCircle },
-      'Rejected': { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)', icon: XCircle },
+      Approved: { bg: '#D1FAE5', color: '#047857', icon: CheckCircle },
+      Rejected: { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)', icon: XCircle },
       'On Hold': { bg: '#FED7AA', color: '#EA580C', icon: AlertTriangle },
       'Ready for Payment': { bg: '#E0E7FF', color: '#4F46E5', icon: DollarSign },
-      'Paid': { bg: '#D1FAE5', color: '#059669', icon: CheckCircle }
+      Paid: { bg: '#D1FAE5', color: '#059669', icon: CheckCircle },
     };
     return styles[status];
   };
 
   const getRiskStyle = (risk: Invoice['aiRisk']) => {
     const styles = {
-      'Low': { bg: '#D1FAE5', color: '#047857' },
-      'Medium': { bg: '#FEF3C7', color: '#D97706' },
-      'High': { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' }
+      Low: { bg: '#D1FAE5', color: '#047857' },
+      Medium: { bg: '#FEF3C7', color: '#D97706' },
+      High: { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' },
     };
     return styles[risk];
   };
 
-  const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = 
+  const filteredInvoices = invoices.filter((inv) => {
+    const matchesSearch =
       inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.poNumber?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === 'All' || inv.status === statusFilter;
     const matchesRisk = riskFilter === 'All' || inv.aiRisk === riskFilter;
     const matchesInvoiceType = invoiceTypeFilter === 'All' || inv.invoiceType === invoiceTypeFilter;
-    
+
     return matchesSearch && matchesStatus && matchesRisk && matchesInvoiceType;
   });
 
@@ -130,64 +158,86 @@ export function MyInvoices() {
 
   // Stats
   const stats = [
-    { 
-      label: 'Total Invoices', 
-      value: invoices.length, 
-      icon: FileText, 
+    {
+      label: 'Total Invoices',
+      value: invoices.length,
+      icon: FileText,
       color: 'var(--color-teal)',
-      bg: 'var(--color-teal)10'
+      bg: 'var(--color-teal)10',
     },
-    { 
-      label: 'Pending Approval', 
-      value: invoices.filter(i => i.status === 'In Review' || i.status === 'Submitted').length, 
-      icon: Clock, 
+    {
+      label: 'Pending Approval',
+      value: invoices.filter((i) => i.status === 'In Review' || i.status === 'Submitted').length,
+      icon: Clock,
       color: '#D97706',
-      bg: '#FEF3C7'
+      bg: '#FEF3C7',
     },
-    { 
-      label: 'Approved', 
-      value: invoices.filter(i => i.status === 'Approved' || i.status === 'Ready for Payment').length, 
-      icon: CheckCircle, 
+    {
+      label: 'Approved',
+      value: invoices.filter((i) => i.status === 'Approved' || i.status === 'Ready for Payment')
+        .length,
+      icon: CheckCircle,
       color: '#047857',
-      bg: '#D1FAE5'
+      bg: '#D1FAE5',
     },
-    { 
-      label: 'On Hold', 
-      value: invoices.filter(i => i.status === 'On Hold').length, 
-      icon: AlertTriangle, 
+    {
+      label: 'On Hold',
+      value: invoices.filter((i) => i.status === 'On Hold').length,
+      icon: AlertTriangle,
       color: '#EA580C',
-      bg: '#FED7AA'
-    }
+      bg: '#FED7AA',
+    },
   ];
 
   return (
     <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="p-8">
       <div className="mb-6">
-        <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>My Invoices</h1>
-        <p style={{ color: 'var(--color-mercury-grey)' }}>Track and manage invoices you've created</p>
+        <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
+          My Invoices
+        </h1>
+        <p style={{ color: 'var(--color-mercury-grey)' }}>
+          Track and manage invoices you've created
+        </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {stats.map((stat, idx) => (
-          <div key={idx} className="bg-white rounded-xl p-4 border-2" style={{ borderColor: 'var(--color-silver)' }}>
+          <div
+            key={idx}
+            className="bg-white rounded-xl p-4 border-2"
+            style={{ borderColor: 'var(--color-silver)' }}
+          >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{stat.label}</span>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: stat.bg }}>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                {stat.label}
+              </span>
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: stat.bg }}
+              >
                 <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
               </div>
             </div>
-            <p className="text-2xl" style={{ color: 'var(--color-ink)' }}>{stat.value}</p>
+            <p className="text-2xl" style={{ color: 'var(--color-ink)' }}>
+              {stat.value}
+            </p>
           </div>
         ))}
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white rounded-xl border-2 mb-4" style={{ borderColor: 'var(--color-silver)' }}>
+      <div
+        className="bg-white rounded-xl border-2 mb-4"
+        style={{ borderColor: 'var(--color-silver)' }}
+      >
         <div className="p-4">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                style={{ color: 'var(--color-mercury-grey)' }}
+              />
               <input
                 type="text"
                 placeholder="Search by invoice number, vendor, or PO..."
@@ -200,10 +250,10 @@ export function MyInvoices() {
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors"
-              style={{ 
+              style={{
                 borderColor: showFilters ? 'var(--color-teal)' : 'var(--color-silver)',
                 backgroundColor: showFilters ? 'var(--color-teal)10' : 'white',
-                color: showFilters ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
+                color: showFilters ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
               }}
             >
               <Filter className="w-5 h-5" />
@@ -213,8 +263,10 @@ export function MyInvoices() {
               onClick={() => navigate('/invoices/create')}
               className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
               style={{ backgroundColor: 'var(--color-teal)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
+              }
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
             >
               <FileText className="w-5 h-5" />
               Create Invoice
@@ -222,9 +274,17 @@ export function MyInvoices() {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t-2" style={{ borderColor: 'var(--color-silver)' }}>
+            <div
+              className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t-2"
+              style={{ borderColor: 'var(--color-silver)' }}
+            >
               <div>
-                <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Status</label>
+                <label
+                  className="block text-sm mb-1"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Status
+                </label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -243,7 +303,12 @@ export function MyInvoices() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>AI Risk Level</label>
+                <label
+                  className="block text-sm mb-1"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  AI Risk Level
+                </label>
                 <select
                   value={riskFilter}
                   onChange={(e) => setRiskFilter(e.target.value)}
@@ -257,7 +322,12 @@ export function MyInvoices() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Type</label>
+                <label
+                  className="block text-sm mb-1"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Invoice Type
+                </label>
                 <select
                   value={invoiceTypeFilter}
                   onChange={(e) => setInvoiceTypeFilter(e.target.value)}
@@ -275,20 +345,68 @@ export function MyInvoices() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border-2 overflow-hidden" style={{ borderColor: 'var(--color-silver)' }}>
+      <div
+        className="bg-white rounded-xl border-2 overflow-hidden"
+        style={{ borderColor: 'var(--color-silver)' }}
+      >
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Number</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>PO Number</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Date</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Amount</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>AI Risk</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Payment</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Invoice Number
+                </th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Vendor
+                </th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  PO Number
+                </th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Invoice Date
+                </th>
+                <th
+                  className="text-right px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Amount
+                </th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Status
+                </th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  AI Risk
+                </th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Payment
+                </th>
+                <th
+                  className="text-right px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -298,8 +416,8 @@ export function MyInvoices() {
                 const StatusIcon = statusStyle.icon;
 
                 return (
-                  <tr 
-                    key={invoice.id} 
+                  <tr
+                    key={invoice.id}
                     className="border-t-2 hover:bg-[var(--color-cloud)] cursor-pointer transition-colors"
                     style={{ borderColor: 'var(--color-silver)' }}
                     onClick={() => handleViewInvoice(invoice.id)}
@@ -313,17 +431,23 @@ export function MyInvoices() {
                     <td className="px-6 py-4">
                       <div>
                         <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorName}</p>
-                        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.vendorCode}</p>
+                        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                          {invoice.vendorCode}
+                        </p>
                       </div>
                     </td>
-                    <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{invoice.poNumber}</td>
-                    <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{invoice.invoiceDate}</td>
+                    <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
+                      {invoice.poNumber}
+                    </td>
+                    <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
+                      {invoice.invoiceDate}
+                    </td>
                     <td className="px-6 py-4 text-right" style={{ color: 'var(--color-ink)' }}>
                       ₹{invoice.invoiceAmount.toLocaleString('en-IN')}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <span 
+                        <span
                           className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm"
                           style={{ backgroundColor: statusStyle.bg, color: statusStyle.color }}
                         >
@@ -331,23 +455,34 @@ export function MyInvoices() {
                           {invoice.status}
                         </span>
                         {invoice.daysInStatus > 5 && invoice.status !== 'Paid' && (
-                          <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--color-error-light)', color: 'var(--color-error-dark)' }}>
+                          <span
+                            className="text-xs px-2 py-0.5 rounded"
+                            style={{
+                              backgroundColor: 'var(--color-error-light)',
+                              color: 'var(--color-error-dark)',
+                            }}
+                          >
                             {invoice.daysInStatus}d
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span 
+                      <span
                         className="inline-block px-3 py-1 rounded-full text-sm"
                         style={{ backgroundColor: riskStyle.bg, color: riskStyle.color }}
                       >
                         {invoice.aiRisk}
                       </span>
                     </td>
-                    <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.paymentStatus}</td>
+                    <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                      {invoice.paymentStatus}
+                    </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="flex items-center justify-end gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           onClick={() => handleViewInvoice(invoice.id)}
                           className="p-2 rounded-lg hover:bg-[var(--color-silver)] transition-colors"
@@ -369,7 +504,10 @@ export function MyInvoices() {
                           className="p-2 rounded-lg hover:bg-[var(--color-silver)] transition-colors"
                           title="Clone Invoice"
                         >
-                          <Copy className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
+                          <Copy
+                            className="w-4 h-4"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          />
                         </button>
                         {(invoice.status === 'Submitted' || invoice.status === 'In Review') && (
                           <button
@@ -377,7 +515,10 @@ export function MyInvoices() {
                             className="p-2 rounded-lg hover:bg-[var(--color-error-light)] transition-colors"
                             title="Withdraw"
                           >
-                            <XCircle className="w-4 h-4" style={{ color: 'var(--color-error-dark)' }} />
+                            <XCircle
+                              className="w-4 h-4"
+                              style={{ color: 'var(--color-error-dark)' }}
+                            />
                           </button>
                         )}
                       </div>

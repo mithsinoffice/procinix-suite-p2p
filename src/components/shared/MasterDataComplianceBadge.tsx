@@ -2,10 +2,10 @@ import { Shield, CheckCircle, AlertCircle } from 'lucide-react';
 
 /**
  * MASTER DATA COMPLIANCE BADGE
- * 
+ *
  * Visual indicator showing whether a screen is using master-linked components.
  * Used for governance visibility and audit purposes.
- * 
+ *
  * Usage: Add to top-right of screens during transition period
  */
 
@@ -18,7 +18,7 @@ interface MasterDataComplianceBadgeProps {
 export function MasterDataComplianceBadge({
   status,
   linkedMasters = [],
-  showDetails = false
+  showDetails = false,
 }: MasterDataComplianceBadgeProps) {
   const getStatusConfig = () => {
     switch (status) {
@@ -28,7 +28,7 @@ export function MasterDataComplianceBadge({
           border: '#16A34A',
           text: '#166534',
           icon: CheckCircle,
-          label: 'Master Compliant'
+          label: 'Master Compliant',
         };
       case 'partial':
         return {
@@ -36,7 +36,7 @@ export function MasterDataComplianceBadge({
           border: '#D97706',
           text: '#92400E',
           icon: Shield,
-          label: 'Partial Compliance'
+          label: 'Partial Compliance',
         };
       case 'non-compliant':
         return {
@@ -44,7 +44,7 @@ export function MasterDataComplianceBadge({
           border: 'var(--color-error-dark)',
           text: '#991B1B',
           icon: AlertCircle,
-          label: 'Needs Update'
+          label: 'Needs Update',
         };
     }
   };
@@ -59,9 +59,11 @@ export function MasterDataComplianceBadge({
         style={{
           backgroundColor: config.bg,
           border: `1px solid ${config.border}`,
-          color: config.text
+          color: config.text,
         }}
-        title={linkedMasters.length > 0 ? `Linked to: ${linkedMasters.join(', ')}` : 'No master linkage'}
+        title={
+          linkedMasters.length > 0 ? `Linked to: ${linkedMasters.join(', ')}` : 'No master linkage'
+        }
       >
         <Icon className="w-3 h-3" />
         <span>{config.label}</span>
@@ -75,14 +77,14 @@ export function MasterDataComplianceBadge({
       style={{
         backgroundColor: config.bg,
         border: `2px solid ${config.border}`,
-        color: config.text
+        color: config.text,
       }}
     >
       <div className="flex items-center gap-2 mb-2">
         <Icon className="w-4 h-4" />
         <span className="font-semibold">{config.label}</span>
       </div>
-      
+
       {linkedMasters.length > 0 && (
         <div className="mt-2">
           <div className="font-semibold mb-1">Linked Masters:</div>
@@ -93,14 +95,14 @@ export function MasterDataComplianceBadge({
           </ul>
         </div>
       )}
-      
+
       {status === 'non-compliant' && (
         <div className="mt-2 p-2 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.5)' }}>
           <div className="font-semibold">Action Required:</div>
           <div>Update this screen to use shared master selectors</div>
         </div>
       )}
-      
+
       {status === 'partial' && (
         <div className="mt-2 p-2 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.5)' }}>
           <div className="font-semibold">Improvement Needed:</div>
@@ -113,22 +115,22 @@ export function MasterDataComplianceBadge({
 
 /**
  * USAGE EXAMPLES:
- * 
+ *
  * // Compliant screen
- * <MasterDataComplianceBadge 
- *   status="compliant" 
+ * <MasterDataComplianceBadge
+ *   status="compliant"
  *   linkedMasters={['Vendor Master', 'Item Master', 'Tax Master']}
  * />
- * 
+ *
  * // Partial compliance
- * <MasterDataComplianceBadge 
- *   status="partial" 
+ * <MasterDataComplianceBadge
+ *   status="partial"
  *   linkedMasters={['Vendor Master']}
  *   showDetails
  * />
- * 
+ *
  * // Non-compliant (needs update)
- * <MasterDataComplianceBadge 
- *   status="non-compliant" 
+ * <MasterDataComplianceBadge
+ *   status="non-compliant"
  * />
  */

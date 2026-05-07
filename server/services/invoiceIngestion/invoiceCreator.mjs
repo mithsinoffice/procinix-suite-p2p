@@ -106,7 +106,8 @@ export async function createInvoiceFromExtraction(
           ocrScores: {
             fields: extractedData.ocr_field_scores || {},
             conflicts: extractedData.ocr_conflicts || {},
-            overall_confidence: extractedData.ocr_overall_confidence ?? extractedData.confidence_score ?? 0,
+            overall_confidence:
+              extractedData.ocr_overall_confidence ?? extractedData.confidence_score ?? 0,
             fields_matched: extractedData.fields_matched ?? 0,
             fields_conflicted: extractedData.fields_conflicted ?? 0,
             fields_low_confidence: extractedData.fields_low_confidence ?? 0,
@@ -134,7 +135,9 @@ export async function createInvoiceFromExtraction(
     );
     const vendorInfo = vendorRows?.[0];
     if (vendorInfo?.msme_category) {
-      const invoiceDate = sanitizeDateForMysql(extractedData.invoice_date) ? new Date(sanitizeDateForMysql(extractedData.invoice_date)) : new Date();
+      const invoiceDate = sanitizeDateForMysql(extractedData.invoice_date)
+        ? new Date(sanitizeDateForMysql(extractedData.invoice_date))
+        : new Date();
       const deadline = new Date(invoiceDate);
       deadline.setDate(deadline.getDate() + 45);
       await connExecute(
@@ -145,7 +148,12 @@ export async function createInvoiceFromExtraction(
           msme_45day_deadline = ?,
           msme_days_remaining = DATEDIFF(?, CURDATE())
         WHERE id = ?`,
-        [vendorInfo.msme_category, deadline.toISOString().slice(0, 10), deadline.toISOString().slice(0, 10), invoiceId]
+        [
+          vendorInfo.msme_category,
+          deadline.toISOString().slice(0, 10),
+          deadline.toISOString().slice(0, 10),
+          invoiceId,
+        ]
       );
     }
 

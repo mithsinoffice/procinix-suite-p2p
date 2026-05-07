@@ -14,9 +14,9 @@
 const UT_STATE_CODES = new Set(['04', '26', '25', '35', '31', '97']);
 
 const DEFAULT_CONFIG = Object.freeze({
-  rounding_tolerance_rupees: 1.00,
-  minor_variance_rupees: 10.00,
-  minor_variance_pct: 0.50,
+  rounding_tolerance_rupees: 1.0,
+  minor_variance_rupees: 10.0,
+  minor_variance_pct: 0.5,
   auto_correct_minor_variance: true,
 });
 
@@ -47,7 +47,14 @@ function bankersRound(value) {
  * @param {number} [opts.cessRate=0] - Cess rate as percentage
  * @returns {{ cgstAmount: number, sgstAmount: number, utgstAmount: number, igstAmount: number, cessAmount: number, totalGst: number, isRcm: boolean, isInterState: boolean, isUtTerritory: boolean }}
  */
-export function computeGstForLine({ taxableAmount, gstRate, placeOfSupply, receivingEntityState, isRcm = false, cessRate = 0 }) {
+export function computeGstForLine({
+  taxableAmount,
+  gstRate,
+  placeOfSupply,
+  receivingEntityState,
+  isRcm = false,
+  cessRate = 0,
+}) {
   const amount = Number(taxableAmount) || 0;
   const rate = Number(gstRate) || 0;
   const cess = Number(cessRate) || 0;
@@ -61,18 +68,18 @@ export function computeGstForLine({ taxableAmount, gstRate, placeOfSupply, recei
   let igstAmount = 0;
 
   if (isInterState) {
-    igstAmount = bankersRound(amount * rate / 100);
+    igstAmount = bankersRound((amount * rate) / 100);
   } else {
     const halfRate = rate / 2;
-    cgstAmount = bankersRound(amount * halfRate / 100);
+    cgstAmount = bankersRound((amount * halfRate) / 100);
     if (isUtTerritory) {
-      utgstAmount = bankersRound(amount * halfRate / 100);
+      utgstAmount = bankersRound((amount * halfRate) / 100);
     } else {
-      sgstAmount = bankersRound(amount * halfRate / 100);
+      sgstAmount = bankersRound((amount * halfRate) / 100);
     }
   }
 
-  const cessAmount = cess > 0 ? bankersRound(amount * cess / 100) : 0;
+  const cessAmount = cess > 0 ? bankersRound((amount * cess) / 100) : 0;
   const totalGst = bankersRound(cgstAmount + sgstAmount + utgstAmount + igstAmount + cessAmount);
 
   return {
@@ -118,7 +125,8 @@ export function validateGstAgainstOcr(computed, ocrExtracted, config = DEFAULT_C
     const absDiff = Math.abs(computedVal - ocrVal);
 
     if (absDiff > 0) {
-      const pctDiff = ocrVal !== 0 ? (absDiff / Math.abs(ocrVal)) * 100 : (computedVal !== 0 ? 100 : 0);
+      const pctDiff =
+        ocrVal !== 0 ? (absDiff / Math.abs(ocrVal)) * 100 : computedVal !== 0 ? 100 : 0;
       discrepancies[computedKey] = {
         computed: computedVal,
         ocr: ocrVal,
@@ -179,9 +187,15 @@ export async function loadGstValidationConfig(tenantId, db) {
 
   const row = rows[0];
   return {
-    rounding_tolerance_rupees: Number(row.rounding_tolerance_rupees ?? DEFAULT_CONFIG.rounding_tolerance_rupees),
-    minor_variance_rupees: Number(row.minor_variance_rupees ?? DEFAULT_CONFIG.minor_variance_rupees),
+    rounding_tolerance_rupees: Number(
+      row.rounding_tolerance_rupees ?? DEFAULT_CONFIG.rounding_tolerance_rupees
+    ),
+    minor_variance_rupees: Number(
+      row.minor_variance_rupees ?? DEFAULT_CONFIG.minor_variance_rupees
+    ),
     minor_variance_pct: Number(row.minor_variance_pct ?? DEFAULT_CONFIG.minor_variance_pct),
-    auto_correct_minor_variance: Boolean(row.auto_correct_minor_variance ?? DEFAULT_CONFIG.auto_correct_minor_variance),
+    auto_correct_minor_variance: Boolean(
+      row.auto_correct_minor_variance ?? DEFAULT_CONFIG.auto_correct_minor_variance
+    ),
   };
 }

@@ -10,14 +10,14 @@
 
 The original WS-1 was split into focused workstreams that can be reviewed, implemented, and shipped independently.
 
-| Workstream | Scope | Status |
-|---|---|---|
-| **WS-1a** | Invoice-centric backbone: lifecycle + match persistence + duplicate wiring + listing columns + resubmission + voucher payload + minimal payments table + vendor ledger + TDS data model + GSTIN/GST validation + hybrid-KYC schema | This doc. Est. 2.5–3 sprints (expanded from 2–2.5 for Path 1 baseline + KYC hybrid). |
-| **WS-1b** | PO/GRN lifecycle + SRN + bundles. Consumption cascade, line-type, service tolerance, bundle pricing. Also promotes goods_receipts, purchase_orders, vendor_advances, debit_notes from JSON-blob storage to relational tables. | Scheduled after WS-1a. Bundle pricing model decision deferred to WS-1b kickoff. |
-| **WS-2** | Tally adapter. Consumes the expense voucher payload built in WS-1a, pushes to Tally, handles retries. | After WS-1a. |
-| **WS-3** | Payment execution. Batching, allocations, bank file generation, UTR capture, reconciliation, payment voucher on payments table. | After WS-2, parallel with WS-TAX. |
-| **WS-TAX** | Indian tax compliance. GSTR-2B import + reconciliation, TDS payable ledger, TDS payment scheduling, Form 26Q export. Shares TDS challan payment contract with WS-3. | After WS-2, parallel with WS-3. |
-| **WS-KYC** | Real KYC provider integration. Surepass/OnGrid adapters, penny-drop bank verification, director KYC, credential management, async retry jobs. Consumes the hybrid-KYC schema that lands in WS-1a. | After WS-1a. Parallel with WS-TAX / WS-3. Provider choice (Surepass, OnGrid, or both) deferred to WS-KYC kickoff based on commercial terms and customer feedback. Sandbox credentials should be requested at WS-1a close (1–2 week lead time). |
+| Workstream | Scope                                                                                                                                                                                                                              | Status                                                                                                                                                                                                                                         |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **WS-1a**  | Invoice-centric backbone: lifecycle + match persistence + duplicate wiring + listing columns + resubmission + voucher payload + minimal payments table + vendor ledger + TDS data model + GSTIN/GST validation + hybrid-KYC schema | This doc. Est. 2.5–3 sprints (expanded from 2–2.5 for Path 1 baseline + KYC hybrid).                                                                                                                                                           |
+| **WS-1b**  | PO/GRN lifecycle + SRN + bundles. Consumption cascade, line-type, service tolerance, bundle pricing. Also promotes goods_receipts, purchase_orders, vendor_advances, debit_notes from JSON-blob storage to relational tables.      | Scheduled after WS-1a. Bundle pricing model decision deferred to WS-1b kickoff.                                                                                                                                                                |
+| **WS-2**   | Tally adapter. Consumes the expense voucher payload built in WS-1a, pushes to Tally, handles retries.                                                                                                                              | After WS-1a.                                                                                                                                                                                                                                   |
+| **WS-3**   | Payment execution. Batching, allocations, bank file generation, UTR capture, reconciliation, payment voucher on payments table.                                                                                                    | After WS-2, parallel with WS-TAX.                                                                                                                                                                                                              |
+| **WS-TAX** | Indian tax compliance. GSTR-2B import + reconciliation, TDS payable ledger, TDS payment scheduling, Form 26Q export. Shares TDS challan payment contract with WS-3.                                                                | After WS-2, parallel with WS-3.                                                                                                                                                                                                                |
+| **WS-KYC** | Real KYC provider integration. Surepass/OnGrid adapters, penny-drop bank verification, director KYC, credential management, async retry jobs. Consumes the hybrid-KYC schema that lands in WS-1a.                                  | After WS-1a. Parallel with WS-TAX / WS-3. Provider choice (Surepass, OnGrid, or both) deferred to WS-KYC kickoff based on commercial terms and customer feedback. Sandbox credentials should be requested at WS-1a close (1–2 week lead time). |
 
 ---
 
@@ -42,6 +42,7 @@ The original WS-1 was split into focused workstreams that can be reviewed, imple
 - **Dual-write strategy** during the transition window: new code writes both legacy columns (`status`, `processing_status`) and `lifecycle_state`. New code reads `lifecycle_state`. Legacy columns are write-only; retirement PR lands when a grep audit of agent/OCR/dashboard/analytics codepaths is clean (backlog).
 
 **Backfill CASE from legacy status** (defined in migration 2d):
+
 ```
 LOWER(status)='draft' + processing_status IN ('exception','failed')  → 'Exception Hold'
 LOWER(status)='draft'                                                → 'Ingested'
@@ -56,13 +57,13 @@ LOWER(status)='paid'                                                 → 'Proces
 
 **Tiered per-tenant detection** configured via `invoice_duplicate_config`:
 
-| Tier | Match condition | Action |
-|---|---|---|
-| Tier 1 (hard block) | `vendor_id + invoice_number + financial_year + invoice_date + amount + tenant_id + entity_id` all match | Block; exception approval required |
-| Tier 2 | `vendor_id + invoice_number + FY + tenant_id + entity_id` match; date or amount differs | Block; mandatory override reason |
-| Tier 2b (silent accept) | `vendor_id + invoice_number + tenant_id + entity_id` match, different FY | Legitimate per GST; log `cross_fy_invoice_number_reuse` |
-| Tier 3 (soft warn) | `vendor_id + invoice_number + tenant_id` match, different entity_id | Warn; no block |
-| Tier 4 (fuzzy) | composite score from prefix + amount tolerance + date window + period-overlap | Exception approval if over threshold |
+| Tier                    | Match condition                                                                                         | Action                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Tier 1 (hard block)     | `vendor_id + invoice_number + financial_year + invoice_date + amount + tenant_id + entity_id` all match | Block; exception approval required                      |
+| Tier 2                  | `vendor_id + invoice_number + FY + tenant_id + entity_id` match; date or amount differs                 | Block; mandatory override reason                        |
+| Tier 2b (silent accept) | `vendor_id + invoice_number + tenant_id + entity_id` match, different FY                                | Legitimate per GST; log `cross_fy_invoice_number_reuse` |
+| Tier 3 (soft warn)      | `vendor_id + invoice_number + tenant_id` match, different entity_id                                     | Warn; no block                                          |
+| Tier 4 (fuzzy)          | composite score from prefix + amount tolerance + date window + period-overlap                           | Exception approval if over threshold                    |
 
 **Vendor fallback** when `vendor_id` NULL: normalize `vendor_name` (strip whitespace/punctuation, case-fold, remove suffixes `Ltd / Pvt / Pvt Ltd / Inc / Limited / LLP / Corp / Corporation / Co`), then match. Any fallback-match → exception approval regardless of tier.
 
@@ -102,15 +103,18 @@ LOWER(status)='paid'                                                 → 'Proces
 - Invoice listing surfaces payment voucher status via `LEFT JOIN payments`.
 
 **Expense voucher payload** (WS-2 consumes; WS-1a builds):
+
 ```json
 {
   "voucher_type": "Purchase",
   "date": "2026-04-24",
   "reference": "INV-2026-0145",
   "narration": "...",
-  "debit_lines":  [{ "ledger": "Professional Fees",       "amount": 100000, "cost_center": "HO" }],
-  "credit_lines": [{ "ledger": "ABC Consulting - Payable", "amount": 90000 },
-                   { "ledger": "TDS Payable - 194J",       "amount": 10000 }]
+  "debit_lines": [{ "ledger": "Professional Fees", "amount": 100000, "cost_center": "HO" }],
+  "credit_lines": [
+    { "ledger": "ABC Consulting - Payable", "amount": 90000 },
+    { "ledger": "TDS Payable - 194J", "amount": 10000 }
+  ]
 }
 ```
 
@@ -131,6 +135,7 @@ payments: id, tenant_id, entity_id, invoice_id, payment_date, utr, amount, payme
 ### 2.7 Vendor ledger
 
 Composable aggregator pattern. Each source exposes:
+
 ```
 getLedgerEntries(vendorId, entityId, fromDate, toDate)
   → [{ doc_date, doc_type, doc_ref, doc_id, debit, credit, narration, status, source_table }]
@@ -150,7 +155,8 @@ Vendor detail page: Identity + Entity relationships (per-entity GL code, payment
 
 **Per-entity override** via `vendor_entity_mappings.default_tds_section_override`. Engine resolution order: entity override → `vendor_pan_compliance.tds_sections` (vendor default) → `tds_section_config` fallback.
 
-**TDS deduction engine — 8 steps** (at invoice save). *Note: consolidated from Message 2's 9 steps — YTD aggregate update folded into step 8 as a transactional side-effect of storing tds_amount, not a distinct computation.*
+**TDS deduction engine — 8 steps** (at invoice save). _Note: consolidated from Message 2's 9 steps — YTD aggregate update folded into step 8 as a transactional side-effect of storing tds_amount, not a distinct computation._
+
 1. Look up active `tds_section_config` for section as of `invoice_date`
 2. Section resolution: entity override → vendor default → config
 3. Check `vendor_pan_compliance.section_206ab` — if `'specified_person'` or `'non_filer'`, apply 206AB rate (higher of 2× configured rate OR 5%). Stacks with 206AA when PAN missing — apply whichever is higher.
@@ -170,6 +176,7 @@ Vendor detail page: Identity + Entity relationships (per-entity GL code, payment
 ### 2.9 GSTIN validation & GST computation
 
 **Three levels of GSTIN validation**:
+
 - Level 1 — format + checksum. Offline, always on. Reject invalid at form field.
 - Level 2 — GSTN portal verification via the hybrid KYC flow (§2.10). Called when `kyc_check_config.gstin.enabled=TRUE`. Result stored on `vendor_gst_registrations.verification_source / _at / _reference / _raw_response`. Manual-mode tenants skip Level 2; Level 1 and Level 3 still apply.
 - Level 3 — match validation at invoice save:
@@ -183,6 +190,7 @@ Vendor detail page: Identity + Entity relationships (per-entity GL code, payment
 **GST auto-computation** (per line): given `taxable_amount + gst_rate`, compute CGST/SGST/UTGST/IGST/Cess based on place-of-supply vs receiving-entity-state. Same state → CGST+SGST; different → IGST. RCM diverts GST to self-liability.
 
 **OCR GST variance handling** (per `gst_validation_config`):
+
 - ≤ `rounding_tolerance_rupees` (default ₹1) → exact, no flag.
 - ≤ `minor_variance_rupees` (default ₹10) OR ≤ `minor_variance_pct` (default 0.5%) → auto-correct, log to `invoice_line_items.gst_ocr_discrepancy`.
 - > minor variance → material flag, route to exception with reason `gst_variance`.
@@ -192,6 +200,7 @@ Vendor detail page: Identity + Entity relationships (per-entity GL code, payment
 **WS-1a owns**: schema (configs + per-check source columns) + manual-entry mode. **WS-KYC owns**: provider adapters, real-time API flows, penny-drop bank verification, director KYC, credential management, async retry jobs.
 
 **Per-tenant config**:
+
 - `kyc_provider_config` — `kyc_enabled`, `primary_provider ENUM('surepass','ongrid','manual')`, `fallback_provider`, `api_credentials_ref` (secrets vault reference, NOT raw keys), `api_unavailable_behavior ENUM('block','pending_retry')`.
 - `kyc_check_config` — per-tenant × per-check-type (`pan, gstin, msme, cin, section_206ab, bank_account, director_kyc`) with `enabled`, `is_mandatory`, `provider_override`.
 
@@ -221,53 +230,56 @@ New tenants start in **manual-only mode** (kyc_enabled=FALSE, all checks disable
 
 Each commit is reversible and additive. Review-gated.
 
-| # | Commit | Contents | Dependencies |
-|---|---|---|---|
-| 1 | `docs: ws1a blueprint audit + implementation plan + verification responses` | This doc + companion docs under `/docs/` | none |
-| 2 | `feat(server): dual-read patches on legacy status filters (Item B)` | `server/services/invoices/lifecycleMapping.mjs` helper + 5 SQL site patches + 2 JS site patches + tests. Uses option (b) `OR lifecycle_state=…` pattern. Site 4 inverse-filter handled with NULL-defensive `IS NULL OR != 'Under Verification'`. Cross-check test: JS helper maps identically to 2d SQL CASE. | commit 1 |
-| 3 | `feat(db): ws1a migration baseline + alters + new tables + seeds/backfills (excluding TDS seeds)` | Migration chunks 2a-2d from [sql/mysql/migrations/_ws1a_drafts/](../sql/mysql/migrations/_ws1a_drafts/). **Does NOT include 2e** (TDS section_config seeds) — 2e ships as commit 4, gated on consultant review. Validation: dump-roundtrip diff on 2a byte-matches Azure. | commits 1–2 |
-| 4 | `feat(db): ws1a TDS section_config seed (consultant-verified)` | `2e_tds_section_config_seeds.sql`. **Gated on consultant sign-off.** Row verification_status flipped from `pending_consultant_review` → `verified` by consultant UPDATE. | commits 1–3 + consultant review |
-| 5+ | Server engines + dual-write patches + client commits (see client-commits / engine-work backlog below) | — | commits 1–3 |
+| #   | Commit                                                                                                | Contents                                                                                                                                                                                                                                                                                                      | Dependencies                    |
+| --- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| 1   | `docs: ws1a blueprint audit + implementation plan + verification responses`                           | This doc + companion docs under `/docs/`                                                                                                                                                                                                                                                                      | none                            |
+| 2   | `feat(server): dual-read patches on legacy status filters (Item B)`                                   | `server/services/invoices/lifecycleMapping.mjs` helper + 5 SQL site patches + 2 JS site patches + tests. Uses option (b) `OR lifecycle_state=…` pattern. Site 4 inverse-filter handled with NULL-defensive `IS NULL OR != 'Under Verification'`. Cross-check test: JS helper maps identically to 2d SQL CASE. | commit 1                        |
+| 3   | `feat(db): ws1a migration baseline + alters + new tables + seeds/backfills (excluding TDS seeds)`     | Migration chunks 2a-2d from [sql/mysql/migrations/\_ws1a_drafts/](../sql/mysql/migrations/_ws1a_drafts/). **Does NOT include 2e** (TDS section_config seeds) — 2e ships as commit 4, gated on consultant review. Validation: dump-roundtrip diff on 2a byte-matches Azure.                                    | commits 1–2                     |
+| 4   | `feat(db): ws1a TDS section_config seed (consultant-verified)`                                        | `2e_tds_section_config_seeds.sql`. **Gated on consultant sign-off.** Row verification_status flipped from `pending_consultant_review` → `verified` by consultant UPDATE.                                                                                                                                      | commits 1–3 + consultant review |
+| 5+  | Server engines + dual-write patches + client commits (see client-commits / engine-work backlog below) | —                                                                                                                                                                                                                                                                                                             | commits 1–3                     |
 
 **Migration file naming**: WS-1a chunks should use a date-prefix like `20260424_ws1a_*` so they sort after existing `002_agentic_agents.sql` and `20260421_multi_tenant_entity.sql` in the migration runner's lexicographic order.
 
 **Migration runner order verification** (quick pre-commit-3 check): trigger migration runner in dry-run / list-order mode. Confirm order is:
+
 ```
 … → 002_agentic_agents.sql → 20260421_multi_tenant_entity.sql → 20260424_ws1a_2a.sql → 2b → 2c → 2d → …
 ```
+
 If order is wrong (runner sorts arbitrarily), fix naming before first fresh-DB attempt.
 
 ---
 
 ## 4. Schema changes at a glance
 
-Full SQL in [sql/mysql/migrations/_ws1a_drafts/](../sql/mysql/migrations/_ws1a_drafts/). Summary:
+Full SQL in [sql/mysql/migrations/\_ws1a_drafts/](../sql/mysql/migrations/_ws1a_drafts/). Summary:
 
 **2a — Baseline (drift-fill)**: 12 `CREATE TABLE IF NOT EXISTS` statements — `vendors, vendor_spocs, vendor_pan_compliance, vendor_gst_registrations, vendor_bank_accounts, vendor_entity_mappings, invoices, invoice_line_items, invoice_exceptions, purchase_orders, approvals, domain_documents`. Byte-identical to Azure mysqldump (verified). Enables fresh-DB provisioning from migrations.
 
 **2b — ALTER additions** (75 `ADD COLUMN` + 10 `CREATE INDEX`, all idempotent via `information_schema.COLUMNS` existence check):
 
-| Table | Columns added | Purpose |
-|---|---|---|
-| `vendors` | 1 | Drift fix: `client_erp_vendor_code` |
-| `vendor_pan_compliance` | 15 | 3 lower-TDS-cert validity/rate + 12 KYC source-tracking (PAN/MSME/CIN/206AB × 3) |
-| `vendor_gst_registrations` | 4 | KYC per-row source-tracking |
-| `vendor_bank_accounts` | 4 | KYC per-row source-tracking (penny-drop target for WS-KYC) |
-| `vendor_entity_mappings` | 3 | Drift fixes (`credit_days`, `credit_limit`) + `default_tds_section_override` |
-| `invoices` | 33 | Lifecycle (1), FY + service period (3), resubmission (2), rejection (2), vendor link (2), last-action denorm (2), expense voucher (6), 3-way match (4), duplicate detection (5), GST (6) |
-| `invoice_line_items` | 15 | TDS line-level (7) + GST breakdown (8). Reuses existing `hsn_sac` + `gst_rate` — no duplicates. |
+| Table                      | Columns added | Purpose                                                                                                                                                                                  |
+| -------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vendors`                  | 1             | Drift fix: `client_erp_vendor_code`                                                                                                                                                      |
+| `vendor_pan_compliance`    | 15            | 3 lower-TDS-cert validity/rate + 12 KYC source-tracking (PAN/MSME/CIN/206AB × 3)                                                                                                         |
+| `vendor_gst_registrations` | 4             | KYC per-row source-tracking                                                                                                                                                              |
+| `vendor_bank_accounts`     | 4             | KYC per-row source-tracking (penny-drop target for WS-KYC)                                                                                                                               |
+| `vendor_entity_mappings`   | 3             | Drift fixes (`credit_days`, `credit_limit`) + `default_tds_section_override`                                                                                                             |
+| `invoices`                 | 33            | Lifecycle (1), FY + service period (3), resubmission (2), rejection (2), vendor link (2), last-action denorm (2), expense voucher (6), 3-way match (4), duplicate detection (5), GST (6) |
+| `invoice_line_items`       | 15            | TDS line-level (7) + GST breakdown (8). Reuses existing `hsn_sac` + `gst_rate` — no duplicates.                                                                                          |
 
 **2c — New tables** (10 `CREATE TABLE IF NOT EXISTS`):
 
-| Section | Tables |
-|---|---|
-| Transactional | `invoice_audit_log` (16 cols incl. tenant_id, actor_role, actor_source, invoice_state_hash, composite indexes), `payments` |
+| Section           | Tables                                                                                                                                                                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Transactional     | `invoice_audit_log` (16 cols incl. tenant_id, actor_role, actor_source, invoice_state_hash, composite indexes), `payments`                                                                                                                                  |
 | Per-tenant config | `invoice_rejection_reasons`, `invoice_duplicate_config` (Q5 — period-overlap defaults explicit; Q4 fuzzy-weight columns NULL), `tds_section_config` (with verification_status metadata), `gst_validation_config`, `kyc_provider_config`, `kyc_check_config` |
-| Aggregate | `tds_ytd_aggregates`, `vendor_opening_balances` |
+| Aggregate         | `tds_ytd_aggregates`, `vendor_opening_balances`                                                                                                                                                                                                             |
 
 **FK policy**: No foreign keys in 2c — `tenants` and `entities` use `COLLATE=utf8mb4_unicode_ci` from the multi-tenant migration, while baseline business tables use `utf8mb4_0900_ai_ci`. An FK to `tenants(id)` would force collation downgrade on new tables and break JOINs with "Illegal mix of collations". Existing schema carries `tenant_id` without FK enforcement — new tables follow suit. Collation harmonization → WS-1b gap list.
 
 **2d — Seeds + backfills**:
+
 - **Seeds** (per-tenant via `INSERT … SELECT FROM tenants WHERE status='ACTIVE'`): 14 rejection reasons, 2 duplicate configs, 2 GST configs, 2 KYC provider configs, 14 KYC check configs (on 2-tenant Azure dev).
 - **Invoice backfills**: `lifecycle_state` (CASE per §2.1), `financial_year` (India Apr-Mar, `YYYY-YY`), `vendor_id + vendor_id_match_confidence` (strict match via ROW_NUMBER priority: legal name 100, code 100, trade name 90; unresolved logged for ops UI review), `last_action / last_action_at` (`COALESCE(created_at, updated_at, NOW())`).
 - **Paid-invoice payment synthesis**: no-op-safe INSERT pattern (§2.6).
@@ -282,6 +294,7 @@ Full SQL in [sql/mysql/migrations/_ws1a_drafts/](../sql/mysql/migrations/_ws1a_d
 Values: `'verified'`, `'assumed_from_training'`, `'pending_consultant_review'`.
 
 Lifecycle:
+
 1. Seed (commit 4) — rows land as `assumed_from_training` or `pending_consultant_review`. None start as `'verified'`.
 2. Consultant reviews the seed file (tracked as external review packet — Google Doc / PDF annotated).
 3. Consultant signs off per-row. Ops flips via trivial UPDATE: `UPDATE tds_section_config SET verification_status='verified', verified_by=<name>, verified_at=NOW(), verification_note='…' WHERE tenant_id=? AND tds_section=? AND effective_from=?`.
@@ -299,6 +312,7 @@ If consultant later finds a Finance Act amendment mid-FY, add a new row with app
 Deferred items that recurred or surfaced during WS-1a verification:
 
 ### PO / GRN / service infrastructure
+
 1. **SRN is not a thin clone of GRN.** Milestone/period/value-based UI required. Allocation step (Part B of GoodsReceipt.tsx) doesn't apply to services.
 2. **Promote `goods_receipts, vendor_advances, debit_notes, purchase_orders` from JSON blob to relational tables.** `purchase_orders` is partially relational (CREATEd here but many agents still read JSON-blob GRN).
 3. **Match compute fetcher abstraction to swap from JSON reads to table reads** (once the tables above exist). WS-1a ships the fetcher pattern with `getGRNsForPO` returning `[]`; WS-1b fills it in.
@@ -309,6 +323,7 @@ Deferred items that recurred or surfaced during WS-1a verification:
 8. **Bundle PO structure** (sub-items, pricing models — decision on Path 1/2/3 at start of WS-1b).
 
 ### Data-model cleanup
+
 9. **Per-tenant FY configuration for non-India tenants.** WS-1a bakes India Apr-Mar FY into the backfill. When a non-India tenant is in scope, add FY-start config to tenants or entities and parameterize 2d-equivalent backfill logic.
 10. **`invoice_exceptions.invoice_id` is NULLABLE** — data integrity gap; should be NOT NULL with FK.
 11. **Schema-wide collation harmonization** (tenants + entities = `utf8mb4_unicode_ci`; business tables = `utf8mb4_0900_ai_ci`). Decide single schema-wide collation, migrate, then retroactively add tenant_id FKs. Pre-existing issue not introduced by WS-1a.
@@ -317,7 +332,8 @@ Deferred items that recurred or surfaced during WS-1a verification:
 14. **`vendor_entity_mappings` additional columns** — entity-specific bank account, default location (form doesn't capture these yet).
 
 ### Tech-debt / quality
-15. **Handler consistency audit** (separate track, not WS-1b): systematic CREATE-vs-UPDATE symmetry check across entity handlers (`invoices`, `purchase_orders`, `goods_receipts-as-JSON-blob`, `vendor_advances-as-JSON-blob`). Drift 5 (vendor_entity_mappings block_* fields) suggests the pattern may exist elsewhere. Code-quality issue, not data-model issue. Trackable separately.
+
+15. **Handler consistency audit** (separate track, not WS-1b): systematic CREATE-vs-UPDATE symmetry check across entity handlers (`invoices`, `purchase_orders`, `goods_receipts-as-JSON-blob`, `vendor_advances-as-JSON-blob`). Drift 5 (vendor*entity_mappings block*\* fields) suggests the pattern may exist elsewhere. Code-quality issue, not data-model issue. Trackable separately.
 
 ---
 

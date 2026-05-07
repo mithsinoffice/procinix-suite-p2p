@@ -3,13 +3,13 @@
 // (sql/mysql/migrations/20260424_ws1a_2d_seeds_and_backfills.sql, Section 2.1).
 
 export const LIFECYCLE_STATES = Object.freeze({
-  INGESTED:           'Ingested',
-  OCR_EXTRACTED:      'OCR Extracted',
+  INGESTED: 'Ingested',
+  OCR_EXTRACTED: 'OCR Extracted',
   UNDER_VERIFICATION: 'Under Verification',
-  EXCEPTION_HOLD:     'Exception Hold',
-  PROCESSED:          'Processed',
+  EXCEPTION_HOLD: 'Exception Hold',
+  PROCESSED: 'Processed',
   QUEUED_FOR_PAYMENT: 'Queued for Payment',
-  REJECTED:           'Rejected',
+  REJECTED: 'Rejected',
 });
 
 /**
@@ -74,10 +74,15 @@ export function mapProcessingStatusToLifecycle(processingStatus) {
   const normalized = processingStatus.toLowerCase();
 
   switch (normalized) {
-    case 'posted':    return LIFECYCLE_STATES.PROCESSED;
-    case 'rejected':  return LIFECYCLE_STATES.REJECTED;
-    case 'exception': return LIFECYCLE_STATES.EXCEPTION_HOLD;
-    case 'failed':    return LIFECYCLE_STATES.EXCEPTION_HOLD;
-    default:          return null;
+    case 'posted':
+      return LIFECYCLE_STATES.PROCESSED;
+    case 'rejected':
+      return LIFECYCLE_STATES.REJECTED;
+    case 'exception':
+      return LIFECYCLE_STATES.EXCEPTION_HOLD;
+    case 'failed':
+      return LIFECYCLE_STATES.EXCEPTION_HOLD;
+    default:
+      return null;
   }
 }

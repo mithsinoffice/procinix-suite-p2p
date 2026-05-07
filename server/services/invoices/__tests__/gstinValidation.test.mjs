@@ -18,7 +18,7 @@ function computeCheck(first14) {
   let total = 0;
   for (let i = 0; i < 14; i++) {
     const v = CHARS.indexOf(first14[i]);
-    const f = (i % 2 === 0) ? 1 : 2;
+    const f = i % 2 === 0 ? 1 : 2;
     const p = v * f;
     total += Math.floor(p / 36) + (p % 36);
   }
@@ -32,11 +32,11 @@ function buildGstin(stateCode, pan, entityCode) {
 }
 
 // Test fixtures
-const VALID_GSTIN_MH = buildGstin('27', 'AABCU9603R', '1');  // Maharashtra
-const VALID_GSTIN_KA = buildGstin('29', 'AADCB2230M', '1');  // Karnataka
-const VALID_GSTIN_DL = buildGstin('07', 'AAACH7409R', '1');  // Delhi
-const VALID_GSTIN_TN = buildGstin('33', 'AABCT1332L', '1');  // Tamil Nadu
-const VALID_GSTIN_97 = buildGstin('97', 'AABCU9603R', '1');  // Other territory
+const VALID_GSTIN_MH = buildGstin('27', 'AABCU9603R', '1'); // Maharashtra
+const VALID_GSTIN_KA = buildGstin('29', 'AADCB2230M', '1'); // Karnataka
+const VALID_GSTIN_DL = buildGstin('07', 'AAACH7409R', '1'); // Delhi
+const VALID_GSTIN_TN = buildGstin('33', 'AABCT1332L', '1'); // Tamil Nadu
+const VALID_GSTIN_97 = buildGstin('97', 'AABCU9603R', '1'); // Other territory
 
 // ---------------------------------------------------------------------------
 // validateGstinFormat
@@ -273,7 +273,9 @@ describe('validateGstinMatch — supplier GSTIN checks', () => {
     });
 
     const result = await validateGstinMatch({
-      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+      supplierGstin: VALID_GSTIN_MH,
+      vendorId: 'v1',
+      db,
     });
 
     expect(result.ok).toBe(true);
@@ -287,7 +289,9 @@ describe('validateGstinMatch — supplier GSTIN checks', () => {
     });
 
     const result = await validateGstinMatch({
-      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+      supplierGstin: VALID_GSTIN_MH,
+      vendorId: 'v1',
+      db,
     });
 
     expect(result.ok).toBe(false);
@@ -303,7 +307,9 @@ describe('validateGstinMatch — supplier GSTIN checks', () => {
     });
 
     const result = await validateGstinMatch({
-      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+      supplierGstin: VALID_GSTIN_MH,
+      vendorId: 'v1',
+      db,
     });
 
     const warn = result.checks.find((c) => c.code === 'supplier_state_mismatch');
@@ -320,7 +326,9 @@ describe('validateGstinMatch — supplier GSTIN checks', () => {
     });
 
     const result = await validateGstinMatch({
-      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+      supplierGstin: VALID_GSTIN_MH,
+      vendorId: 'v1',
+      db,
     });
 
     expect(result.ok).toBe(false);
@@ -339,7 +347,9 @@ describe('validateGstinMatch — supplier GSTIN checks', () => {
     });
 
     const result = await validateGstinMatch({
-      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+      supplierGstin: VALID_GSTIN_MH,
+      vendorId: 'v1',
+      db,
     });
 
     expect(result.ok).toBe(true); // warn doesn't block
@@ -352,7 +362,9 @@ describe('validateGstinMatch — format-invalid early return', () => {
   it('returns block immediately for invalid format supplier GSTIN', async () => {
     const db = makeDb();
     const result = await validateGstinMatch({
-      supplierGstin: 'INVALID', vendorId: 'v1', db,
+      supplierGstin: 'INVALID',
+      vendorId: 'v1',
+      db,
     });
 
     expect(result.ok).toBe(false);
@@ -367,8 +379,11 @@ describe('validateGstinMatch — format-invalid early return', () => {
       panRows: [{ pan: SUPPLIER_PAN }],
     });
     const result = await validateGstinMatch({
-      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1',
-      recipientGstin: 'BAD', entityId: 'e1', db,
+      supplierGstin: VALID_GSTIN_MH,
+      vendorId: 'v1',
+      recipientGstin: 'BAD',
+      entityId: 'e1',
+      db,
     });
 
     const recipientBlock = result.checks.find((c) => c.detail?.startsWith('Recipient'));
@@ -381,7 +396,9 @@ describe('validateGstinMatch — no vendorId / no supplierGstin', () => {
   it('returns ok with empty checks when supplierGstin is null', async () => {
     const db = makeDb();
     const result = await validateGstinMatch({
-      supplierGstin: null, vendorId: 'v1', db,
+      supplierGstin: null,
+      vendorId: 'v1',
+      db,
     });
 
     expect(result.ok).toBe(true);
@@ -391,7 +408,9 @@ describe('validateGstinMatch — no vendorId / no supplierGstin', () => {
   it('skips vendor checks when vendorId is null', async () => {
     const db = makeDb();
     const result = await validateGstinMatch({
-      supplierGstin: VALID_GSTIN_MH, vendorId: null, db,
+      supplierGstin: VALID_GSTIN_MH,
+      vendorId: null,
+      db,
     });
 
     expect(result.ok).toBe(true);
@@ -407,8 +426,11 @@ describe('validateGstinMatch — recipient GSTIN stub', () => {
     });
 
     const result = await validateGstinMatch({
-      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1',
-      recipientGstin: VALID_GSTIN_KA, entityId: 'e1', db,
+      supplierGstin: VALID_GSTIN_MH,
+      vendorId: 'v1',
+      recipientGstin: VALID_GSTIN_KA,
+      entityId: 'e1',
+      db,
     });
 
     // Recipient check is stubbed — no additional blocks from entity matching
@@ -424,7 +446,9 @@ describe('validateGstinMatch — multiple checks accumulate', () => {
     });
 
     const result = await validateGstinMatch({
-      supplierGstin: VALID_GSTIN_MH, vendorId: 'v1', db,
+      supplierGstin: VALID_GSTIN_MH,
+      vendorId: 'v1',
+      db,
     });
 
     expect(result.ok).toBe(false);

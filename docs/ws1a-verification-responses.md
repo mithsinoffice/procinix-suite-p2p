@@ -12,9 +12,10 @@
 
 The verification phase ran against a fixed proceed order. Each step was a
 discrete research question with a yes/no or small-decision output. No commits
-happened during verification — drafts live under [sql/mysql/migrations/_ws1a_drafts/](../sql/mysql/migrations/_ws1a_drafts/).
+happened during verification — drafts live under [sql/mysql/migrations/\_ws1a_drafts/](../sql/mysql/migrations/_ws1a_drafts/).
 
 Proceed order (final):
+
 1. Vendor-form field enumeration (expanded Item A)
 2. info_schema queries — columns / indexes / FKs across 12+2 target tables
 3. Baseline CREATE TABLE generation (chunk 2a) + validation
@@ -39,11 +40,13 @@ Proceed order (final):
 **Method**: Read [src/components/VendorMasterCreate.tsx](../src/components/VendorMasterCreate.tsx) (1,219 lines); cross-reference save payload keys against server INSERT/UPDATE in [server/index.mjs:2710-2748](../server/index.mjs#L2710-L2748).
 
 **Findings**:
+
 - Vendor cluster is 6 relational tables (not JSON blob as originally assumed).
 - 4 silent drifts identified (see [blueprint audit §2.2](./ws1a-blueprint-audit.md)).
 - 3 TDS engine gaps: lower-TDS cert has no validity dates or rate; `tds_sections` JSON has no form field (always empty `[]`); `section_206ab` is tri-state not boolean.
 
 **Decisions**:
+
 - Drop `vendor_additional_gstins` from Message 2 plan (redundant).
 - TDS engine gap: ALTER `vendor_pan_compliance` to ADD `lower_tds_cert_valid_from / _to / _rate`; add form fields in WS-1a client-commits.
 - `tds_sections` UI gap: Option (a) — add multi-select form field; engine routes to exception if missing.
@@ -53,9 +56,10 @@ Proceed order (final):
 
 **Question**: What does the Azure schema actually look like vs what the repo SQL says?
 
-**Method**: Read-only `SELECT … FROM information_schema.{COLUMNS, STATISTICS, KEY_COLUMN_USAGE}` via tmp script [server/scripts/_runInfoSchemaQuery.mjs](../server/scripts/_runInfoSchemaQuery.mjs). 12 target tables + metadata queries.
+**Method**: Read-only `SELECT … FROM information_schema.{COLUMNS, STATISTICS, KEY_COLUMN_USAGE}` via tmp script [server/scripts/\_runInfoSchemaQuery.mjs](../server/scripts/_runInfoSchemaQuery.mjs). 12 target tables + metadata queries.
 
 **Findings**:
+
 - All 12 targets present on Azure; `invoice_audit_log` and `invoice_lines` do NOT exist.
 - Zero foreign keys anywhere in the schema.
 - 4 silent drifts confirmed at DB-level (columns form sends don't exist on Azure).
@@ -64,6 +68,7 @@ Proceed order (final):
 - `invoices` has 20+ columns not in Message 2's picture: `lane, posting_readiness_score, auto_post_flag, human_touched_flag, extraction_model_version, document_id, batch_id, processing_status, msme_*, sla_*, escalated_*, approval_priority, priority_reason, tenant_id`.
 
 **Decisions**:
+
 - Expand baseline CREATE to all 12 tables (drift-fill).
 - Use `information_schema.COLUMNS` existence check pattern on every ADD COLUMN (idempotent on Azure; fresh-DB compatible).
 - Include `invoice_audit_log` as a new CREATE in chunk 2c, not ALTER.
@@ -86,11 +91,13 @@ No local MySQL server was installed (no brew, no docker). Belt-and-suspenders ex
 **Output**: 75 ADD COLUMN + 10 CREATE INDEX, all idempotent-guarded with `information_schema.COLUMNS` existence check. Summary in [implementation plan §4](./ws1a-implementation-plan.md).
 
 **Spot-check revealed 3 missing columns** from my initial draft (user-initiated review):
+
 - `invoices.vendor_id_match_confidence DECIMAL(5,2)` — separate from `vendor_id`
 - `invoices.match_score DECIMAL(5,2)` — separate from `match_result` + `match_details`
 - `invoices.duplicate_override_at DATETIME` — completes the three-field override trio
 
 **Lifecycle ENUM correction**: initial draft used placeholder values. Authoritative set locked at:
+
 ```
 'Ingested', 'OCR Extracted', 'Under Verification', 'Exception Hold',
 'Processed', 'Queued for Payment', 'Rejected'
@@ -107,6 +114,7 @@ No local MySQL server was installed (no brew, no docker). Belt-and-suspenders ex
 **Decision**: Zero FKs in chunk 2c. Matches existing schema pattern (invoices.tenant_id has no FK). Logged to WS-1b gap list: "Harmonize schema-wide collation + retroactively add tenant_id FKs."
 
 **Amendments during TDS seed prep**:
+
 - Added `invoice_duplicate_config.fuzzy_prefix_length INT NULL` (current agent uses 6, needed schema slot).
 - Added `payments.notes TEXT NULL` (needed for historical-paid synthesis marker and WS-3 reconciliation).
 - Expanded header comment block explaining why `fuzzy_prefix_weight / _amount_weight / _date_weight / amount_tolerance_rupees` are intentionally NULL (Q4 weighted engine hasn't landed yet).
@@ -118,15 +126,18 @@ No local MySQL server was installed (no brew, no docker). Belt-and-suspenders ex
 **Verification riders** (user-requested before committing 2d):
 
 **Rider 1 — default tenant ID**:
+
 ```sql
 SELECT id, name FROM tenants ORDER BY created_at LIMIT 5;
 -- Result:
 --   tenant-default-001 | Default Tenant          | DEFAULT | ACTIVE
 --   4755d4d4-…76fb-…   | Procinix S2P Product    | PTPL    | ACTIVE
 ```
+
 **2 active tenants** on Azure dev, not 1 as initially assumed. **Decision**: seeds use `INSERT … SELECT FROM tenants WHERE status='ACTIVE'` — hits all tenants, idempotent via ON DUPLICATE KEY UPDATE, scales to future tenant additions.
 
 **Rider 2 — `updated_at` integrity**:
+
 ```sql
 -- Result:
 --   null_updated: 0   total: 10
@@ -134,9 +145,11 @@ SELECT id, name FROM tenants ORDER BY created_at LIMIT 5;
 --   latest  updated_at: 2026-04-21 08:05:17  ← IDENTICAL across all rows
 --   earliest created_at: 2026-04-11 14:17:52  ← varies naturally
 ```
+
 `updated_at` is a batch-write artifact (20260421 multi-tenant migration mass-touched the table). **Decision**: `last_action_at = COALESCE(created_at, updated_at, NOW())` — `created_at` is the honest proxy.
 
 **Status distribution (Q1 count + CASE mapping prep)**:
+
 ```sql
 SELECT status, COUNT(*) FROM invoices GROUP BY status;
 -- draft: 8, pending_approval: 1, Rejected: 1
@@ -159,6 +172,7 @@ SELECT COUNT(*) FROM invoices i JOIN invoice_exceptions ie ON ie.invoice_id = i.
 **Question**: Is the `section_206aa` value in `vendor_pan_compliance.lower_tds_section` actually used in the current data?
 
 **Query result**:
+
 ```
 lower_tds_section    count
 not_applicable       2
@@ -168,6 +182,7 @@ not_applicable       2
 All 2 rows have `not_applicable`. Zero data uses `section_206aa` or `section_197`.
 
 **Decision**:
+
 - No migration change needed — zero affected data.
 - Engine handling: on `lower_tds_section='section_206aa'`, log a warning and pass through to `not_applicable`. Real 206AA logic lives in TDS engine step 4 (PAN-missing).
 - WS-1b gap item: remove the semantically-mismatched value or split into `pan_missing_206aa_applies BOOLEAN`.
@@ -188,6 +203,7 @@ UPDATE path (line 2748): 14 cols — includes block_* fields
 **Operational impact**: ops trying to block a risky vendor at onboarding thinks the block took effect; it silently doesn't. To enable the block: save, re-open in edit mode, set the block, re-save.
 
 **Decision**:
+
 - Not a migration change — purely a server-code fix.
 - Added to the "vendor-handler persistence cleanup" commit (WS-1a client-commits backlog): align CREATE path INSERT to match UPDATE path. Same commit fixes drifts 1-3 (`client_erp_vendor_code`, `credit_days`, `credit_limit`).
 - Logged to a new "handler consistency audit" backlog (separate track, not WS-1b) to run the same CREATE-vs-UPDATE symmetry check across invoices, purchase_orders, goods_receipts-as-JSON, vendor_advances-as-JSON.
@@ -209,6 +225,7 @@ UPDATE path (line 2748): 14 cols — includes block_* fields
 **Method**: Systematic grep across server code; classified each hit.
 
 **Results**:
+
 - **7 filter-by-value sites** (5 SQL + 2 JS) needing dual-read patch.
 - **7 write sites** needing dual-write (separate concern; tracked in engine-work backlog).
 - **~15 safe-read sites** (SELECT projects status but doesn't filter) — no patch needed.
@@ -219,9 +236,11 @@ Full classification table in [blueprint audit §3.3](./ws1a-blueprint-audit.md).
 **Patching strategy**: new `server/services/invoices/lifecycleMapping.mjs` helper as single source of truth for legacy → lifecycle_state mapping. Cross-check test asserts the JS helper produces identical output to the 2d SQL backfill CASE.
 
 **Site 4 (inverse IN)** needs NULL-defensive patch:
+
 ```sql
 AND (i.lifecycle_state IS NULL OR i.lifecycle_state != 'Under Verification')
 ```
+
 Matches pre-migration behavior during the transaction window where lifecycle_state may be momentarily NULL.
 
 **Per Message 3 rule**: 7 > 5 → dedicated patch commit (commit 2 in the rollout, between docs and migration).
@@ -235,6 +254,7 @@ Matches pre-migration behavior during the transaction window where lifecycle_sta
 **Output**: 10 sections × 2 FYs = 20 rows (× 2 tenants on Azure dev = 40 rows total).
 
 **Consultant-priority flags**:
+
 - Top priority (blocks commit 4): **194H** (rate ambiguity — Finance Act 2024 reduced 5% → 2% but effective-date uncertain), **194I_A/B thresholds** (may have been raised by Finance Act 2025), **194Q** (user-flagged), **194R** (user-flagged), **all FY 2026-27 rows** (Finance Act 2026 uncertainty).
 - Lower priority: 194C thresholds, 194J thresholds, 194A variants.
 
@@ -246,17 +266,18 @@ Matches pre-migration behavior during the transaction window where lifecycle_sta
 
 None for commit 1. The following gate later commits:
 
-| Commit | Gate |
-|---|---|
-| Commit 4 (`2e` TDS seed) | Consultant sign-off on rates / thresholds / effective dates |
-| Commit 5+ (engine work) | 194Q buyer turnover gate — decide whether to add `tenants.prior_fy_turnover` or `entities.prior_fy_turnover` column at engine-implementation time |
-| Pre-commit-3 | Verify migration runner lexicographic ordering: `002_agentic_agents.sql → 20260421_multi_tenant_entity.sql → 20260424_ws1a_*`. Trigger runner in dry-run / list-order mode. |
+| Commit                   | Gate                                                                                                                                                                        |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Commit 4 (`2e` TDS seed) | Consultant sign-off on rates / thresholds / effective dates                                                                                                                 |
+| Commit 5+ (engine work)  | 194Q buyer turnover gate — decide whether to add `tenants.prior_fy_turnover` or `entities.prior_fy_turnover` column at engine-implementation time                           |
+| Pre-commit-3             | Verify migration runner lexicographic ordering: `002_agentic_agents.sql → 20260421_multi_tenant_entity.sql → 20260424_ws1a_*`. Trigger runner in dry-run / list-order mode. |
 
 ---
 
 ## What was NOT verified and why
 
 Deliberately out of scope for WS-1a verification:
+
 - **Performance**: no load testing on the new indexes, expense voucher payload size, TDS YTD aggregate update patterns. Defer to WS-1a server-commits phase if any query timing becomes a concern.
 - **Concurrency**: no race-condition analysis on dual-write during the transition window. Assumed acceptable given single-writer application layer (no direct DB writes from other services). Revisit if operational evidence shows drift between `status` and `lifecycle_state`.
 - **Azure MySQL version specifics**: assumed MySQL 8.0+ (collation and GENERATED STORED evidence). Not verified against 5.7 or MariaDB.
@@ -266,4 +287,4 @@ Deliberately out of scope for WS-1a verification:
 
 ## Document provenance
 
-Produced over ~30 rounds of review-and-approve during 2026-04-21 to 2026-04-24. Draft SQL files under [sql/mysql/migrations/_ws1a_drafts/](../sql/mysql/migrations/_ws1a_drafts/) are the authoritative migration reference. This file and companion docs (`ws1a-implementation-plan.md`, `ws1a-blueprint-audit.md`) are the human-readable explanation.
+Produced over ~30 rounds of review-and-approve during 2026-04-21 to 2026-04-24. Draft SQL files under [sql/mysql/migrations/\_ws1a_drafts/](../sql/mysql/migrations/_ws1a_drafts/) are the authoritative migration reference. This file and companion docs (`ws1a-implementation-plan.md`, `ws1a-blueprint-audit.md`) are the human-readable explanation.

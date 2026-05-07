@@ -1,11 +1,32 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  TrendingUp, DollarSign, AlertTriangle, CheckCircle, BarChart3,
-  Download, Calendar, Filter, ArrowRight
+  TrendingUp,
+  DollarSign,
+  AlertTriangle,
+  CheckCircle,
+  BarChart3,
+  Download,
+  Calendar,
+  Filter,
+  ArrowRight,
 } from 'lucide-react';
 import { useBudgetData } from '../contexts/BudgetDataContext';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 export function BudgetDashboard() {
   const navigate = useNavigate();
@@ -13,22 +34,24 @@ export function BudgetDashboard() {
 
   const [timeFilter, setTimeFilter] = useState('FY2025');
 
-  const activeBudgets = budgets.filter(b => b.status === 'Approved');
+  const activeBudgets = budgets.filter((b) => b.status === 'Approved');
 
   // Calculate KPIs for ACIL Metro Station Phase 2
   const kpis = {
     totalBudget: activeBudgets.reduce((sum, b) => sum + b.totalAmount, 0),
     committed: activeBudgets.reduce((sum, b) => sum + b.committed, 0),
     actual: activeBudgets.reduce((sum, b) => sum + b.actual, 0),
-    available: activeBudgets.reduce((sum, b) => sum + b.available, 0)
+    available: activeBudgets.reduce((sum, b) => sum + b.available, 0),
   };
 
-  const utilizationPercent = kpis.totalBudget > 0 
-    ? ((kpis.committed + kpis.actual) / kpis.totalBudget * 100).toFixed(1)
-    : '0';
+  const utilizationPercent =
+    kpis.totalBudget > 0
+      ? (((kpis.committed + kpis.actual) / kpis.totalBudget) * 100).toFixed(1)
+      : '0';
 
   // Forecasted Final Cost (EAC - Estimate at Completion)
-  const forecastedFinalCost = kpis.totalBudget + (kpis.actual - (kpis.committed + kpis.actual)) * 0.1; // Simple forecast
+  const forecastedFinalCost =
+    kpis.totalBudget + (kpis.actual - (kpis.committed + kpis.actual)) * 0.1; // Simple forecast
   const costOverrun = forecastedFinalCost - kpis.totalBudget;
 
   // Next 3 months cash impact
@@ -42,7 +65,7 @@ export function BudgetDashboard() {
   const categories = ['Materials', 'Subcontract', 'Services', 'Site Operations'];
   const categoryColors = ['var(--color-teal)', '#3B82F6', '#007D87', '#F59E0B'];
   const categoryData = categories.map((cat, idx) => {
-    const catBudgets = activeBudgets.filter(b => b.dimensions.expenseCategory === cat);
+    const catBudgets = activeBudgets.filter((b) => b.dimensions.expenseCategory === cat);
     const total = catBudgets.reduce((sum, b) => sum + b.totalAmount, 0);
     return {
       name: cat,
@@ -51,13 +74,13 @@ export function BudgetDashboard() {
       Actual: catBudgets.reduce((sum, b) => sum + b.actual, 0) / 10000000,
       Available: catBudgets.reduce((sum, b) => sum + b.available, 0) / 10000000,
       value: ((total / kpis.totalBudget) * 100).toFixed(0),
-      color: categoryColors[idx]
+      color: categoryColors[idx],
     };
   });
 
   // Budget at risk (>75% utilization)
   const atRiskBudgets = activeBudgets
-    .filter(b => b.utilizationPercent >= 75)
+    .filter((b) => b.utilizationPercent >= 75)
     .sort((a, b) => b.utilizationPercent - a.utilizationPercent)
     .slice(0, 5);
 
@@ -71,7 +94,7 @@ export function BudgetDashboard() {
     { month: 'Sep', planned: 162, actual: null, forecast: 151 },
     { month: 'Oct', planned: 191, actual: null, forecast: 180 },
     { month: 'Nov', planned: 220, actual: null, forecast: 209 },
-    { month: 'Dec', planned: 249, actual: null, forecast: 238 }
+    { month: 'Dec', planned: 249, actual: null, forecast: 238 },
   ];
 
   const getRiskColor = (percent: number) => {
@@ -94,10 +117,12 @@ export function BudgetDashboard() {
           <div className="flex items-center justify-between mb-2">
             <div>
               <h1 className="text-[var(--color-ink)]">Project Budget Dashboard</h1>
-              <p className="text-[var(--color-mercury-grey)] text-sm">ACIL - Metro Station Phase 2 | Apr 2025 - Mar 2026 | Delhi NCR</p>
+              <p className="text-[var(--color-mercury-grey)] text-sm">
+                ACIL - Metro Station Phase 2 | Apr 2025 - Mar 2026 | Delhi NCR
+              </p>
             </div>
             <div className="flex gap-3">
-              <select 
+              <select
                 value={timeFilter}
                 onChange={(e) => setTimeFilter(e.target.value)}
                 className="px-4 py-2 border border-[var(--color-silver)] rounded-lg text-sm"
@@ -108,7 +133,7 @@ export function BudgetDashboard() {
                 <option value="Q3">Q3 FY2025</option>
                 <option value="Q4">Q4 FY2025</option>
               </select>
-              <button 
+              <button
                 onClick={() => navigate('/budget-planning-creation')}
                 className="px-4 py-2 bg-[var(--color-teal)] text-white rounded-lg hover:bg-[var(--color-teal-dark)] transition-colors flex items-center gap-2"
               >
@@ -122,8 +147,12 @@ export function BudgetDashboard() {
           </div>
           <div className="flex items-center gap-2 text-xs text-[var(--color-mercury-grey)]">
             <span className="px-2 py-1 bg-[var(--color-cloud)] rounded">WBS: ACIL-METRO-P2</span>
-            <span className="px-2 py-1 bg-[var(--color-cloud)] rounded">Cost Centre: ACIL-METRO-P2</span>
-            <span className="px-2 py-1 bg-[var(--color-cloud)] rounded">SAP Integration: Active</span>
+            <span className="px-2 py-1 bg-[var(--color-cloud)] rounded">
+              Cost Centre: ACIL-METRO-P2
+            </span>
+            <span className="px-2 py-1 bg-[var(--color-cloud)] rounded">
+              SAP Integration: Active
+            </span>
           </div>
         </div>
       </div>
@@ -136,7 +165,9 @@ export function BudgetDashboard() {
               <span className="text-sm text-[var(--color-mercury-grey)]">Total Budget</span>
               <DollarSign className="w-4 h-4 text-[var(--color-mercury-grey)]" />
             </div>
-            <div className="text-2xl text-[var(--color-ink)]">₹{(kpis.totalBudget / 10000000).toFixed(0)} Cr</div>
+            <div className="text-2xl text-[var(--color-ink)]">
+              ₹{(kpis.totalBudget / 10000000).toFixed(0)} Cr
+            </div>
             <div className="text-xs text-[var(--color-mercury-grey)] mt-1">Approved Budget</div>
           </div>
 
@@ -145,8 +176,12 @@ export function BudgetDashboard() {
               <span className="text-sm text-[var(--color-mercury-grey)]">Committed</span>
               <BarChart3 className="w-4 h-4 text-blue-500" />
             </div>
-            <div className="text-2xl text-[var(--color-ink)]">₹{(kpis.committed / 10000000).toFixed(1)} Cr</div>
-            <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{((kpis.committed / kpis.totalBudget) * 100).toFixed(1)}% of budget</div>
+            <div className="text-2xl text-[var(--color-ink)]">
+              ₹{(kpis.committed / 10000000).toFixed(1)} Cr
+            </div>
+            <div className="text-xs text-[var(--color-mercury-grey)] mt-1">
+              {((kpis.committed / kpis.totalBudget) * 100).toFixed(1)}% of budget
+            </div>
           </div>
 
           <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
@@ -154,8 +189,12 @@ export function BudgetDashboard() {
               <span className="text-sm text-[var(--color-mercury-grey)]">Actuals</span>
               <TrendingUp className="w-4 h-4 text-green-500" />
             </div>
-            <div className="text-2xl text-[var(--color-ink)]">₹{(kpis.actual / 10000000).toFixed(1)} Cr</div>
-            <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{((kpis.actual / kpis.totalBudget) * 100).toFixed(1)}% of budget</div>
+            <div className="text-2xl text-[var(--color-ink)]">
+              ₹{(kpis.actual / 10000000).toFixed(1)} Cr
+            </div>
+            <div className="text-xs text-[var(--color-mercury-grey)] mt-1">
+              {((kpis.actual / kpis.totalBudget) * 100).toFixed(1)}% of budget
+            </div>
           </div>
 
           <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
@@ -163,8 +202,12 @@ export function BudgetDashboard() {
               <span className="text-sm text-[var(--color-mercury-grey)]">Available</span>
               <CheckCircle className="w-4 h-4 text-green-500" />
             </div>
-            <div className="text-2xl text-[var(--color-ink)]">₹{(kpis.available / 10000000).toFixed(1)} Cr</div>
-            <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{((kpis.available / kpis.totalBudget) * 100).toFixed(1)}% remaining</div>
+            <div className="text-2xl text-[var(--color-ink)]">
+              ₹{(kpis.available / 10000000).toFixed(1)} Cr
+            </div>
+            <div className="text-xs text-[var(--color-mercury-grey)] mt-1">
+              {((kpis.available / kpis.totalBudget) * 100).toFixed(1)}% remaining
+            </div>
           </div>
 
           <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
@@ -172,7 +215,9 @@ export function BudgetDashboard() {
               <span className="text-sm text-[var(--color-mercury-grey)]">Forecasted EAC</span>
               <AlertTriangle className="w-4 h-4 text-orange-500" />
             </div>
-            <div className="text-2xl text-[var(--color-ink)]">₹{(forecastedFinalCost / 10000000).toFixed(1)} Cr</div>
+            <div className="text-2xl text-[var(--color-ink)]">
+              ₹{(forecastedFinalCost / 10000000).toFixed(1)} Cr
+            </div>
             <div className={`text-xs mt-1 ${costOverrun > 0 ? 'text-red-600' : 'text-green-600'}`}>
               {costOverrun > 0 ? '+' : ''}₹{(costOverrun / 10000000).toFixed(1)} Cr variance
             </div>
@@ -183,7 +228,9 @@ export function BudgetDashboard() {
               <span className="text-sm text-[var(--color-mercury-grey)]">Next 3M Cash</span>
               <Calendar className="w-4 h-4 text-px-teal-dark" />
             </div>
-            <div className="text-2xl text-[var(--color-ink)]">₹{(nextThreeMonthsCash / 10000000).toFixed(0)} Cr</div>
+            <div className="text-2xl text-[var(--color-ink)]">
+              ₹{(nextThreeMonthsCash / 10000000).toFixed(0)} Cr
+            </div>
             <div className="text-xs text-[var(--color-mercury-grey)] mt-1">Jun-Aug 2025</div>
           </div>
         </div>
@@ -195,10 +242,27 @@ export function BudgetDashboard() {
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={categoryData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                <XAxis dataKey="name" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
-                <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} label={{ value: 'Amount (₹Cr)', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' } }} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid var(--color-silver)', borderRadius: '8px' }}
+                <XAxis
+                  dataKey="name"
+                  stroke="var(--color-mercury-grey)"
+                  style={{ fontSize: '12px' }}
+                />
+                <YAxis
+                  stroke="var(--color-mercury-grey)"
+                  style={{ fontSize: '12px' }}
+                  label={{
+                    value: 'Amount (₹Cr)',
+                    angle: -90,
+                    position: 'insideLeft',
+                    style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' },
+                  }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid var(--color-silver)',
+                    borderRadius: '8px',
+                  }}
                   formatter={(value: number) => `₹${value.toFixed(2)}Cr`}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -235,7 +299,10 @@ export function BudgetDashboard() {
               {categoryData.map((cat, idx) => (
                 <div key={idx} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }}></div>
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: cat.color }}
+                    ></div>
                     <span className="text-[var(--color-ink)]">{cat.name}</span>
                   </div>
                   <span className="text-[var(--color-mercury-grey)]">{cat.value}%</span>
@@ -252,16 +319,49 @@ export function BudgetDashboard() {
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={burnRateData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                <XAxis dataKey="month" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
-                <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} domain={[0, 100]} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid var(--color-silver)', borderRadius: '8px' }}
+                <XAxis
+                  dataKey="month"
+                  stroke="var(--color-mercury-grey)"
+                  style={{ fontSize: '12px' }}
+                />
+                <YAxis
+                  stroke="var(--color-mercury-grey)"
+                  style={{ fontSize: '12px' }}
+                  domain={[0, 100]}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid var(--color-silver)',
+                    borderRadius: '8px',
+                  }}
                   formatter={(value: number) => `${value.toFixed(1)}%`}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Line type="monotone" dataKey="planned" stroke="var(--color-teal)" strokeWidth={2} dot={{ fill: 'var(--color-teal)', r: 4 }} name="Planned Burn" />
-                <Line type="monotone" dataKey="actual" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6', r: 4 }} name="Actual Burn" />
-                <Line type="monotone" dataKey="forecast" stroke="#FF9900" strokeWidth={2} dot={{ fill: '#FF9900', r: 4 }} name="Forecast Burn" />
+                <Line
+                  type="monotone"
+                  dataKey="planned"
+                  stroke="var(--color-teal)"
+                  strokeWidth={2}
+                  dot={{ fill: 'var(--color-teal)', r: 4 }}
+                  name="Planned Burn"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="actual"
+                  stroke="#3B82F6"
+                  strokeWidth={2}
+                  dot={{ fill: '#3B82F6', r: 4 }}
+                  name="Actual Burn"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="forecast"
+                  stroke="#FF9900"
+                  strokeWidth={2}
+                  dot={{ fill: '#FF9900', r: 4 }}
+                  name="Forecast Burn"
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -274,23 +374,33 @@ export function BudgetDashboard() {
                 <div key={budget.id} className="p-3 bg-[var(--color-cloud)] rounded-lg">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <p className="text-sm text-[var(--color-ink)] truncate">{budget.budgetName}</p>
-                      <p className="text-xs text-[var(--color-mercury-grey)] mt-0.5">{budget.dimensions.department}</p>
+                      <p className="text-sm text-[var(--color-ink)] truncate">
+                        {budget.budgetName}
+                      </p>
+                      <p className="text-xs text-[var(--color-mercury-grey)] mt-0.5">
+                        {budget.dimensions.department}
+                      </p>
                     </div>
-                    <span className={`text-sm ${
-                      budget.utilizationPercent >= 95 ? 'text-red-600' :
-                      budget.utilizationPercent >= 85 ? 'text-yellow-600' :
-                      'text-green-600'
-                    }`}>
+                    <span
+                      className={`text-sm ${
+                        budget.utilizationPercent >= 95
+                          ? 'text-red-600'
+                          : budget.utilizationPercent >= 85
+                            ? 'text-yellow-600'
+                            : 'text-green-600'
+                      }`}
+                    >
                       {budget.utilizationPercent.toFixed(1)}%
                     </span>
                   </div>
                   <div className="w-full bg-[var(--color-silver)] rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full ${
-                        budget.utilizationPercent >= 95 ? 'bg-red-500' :
-                        budget.utilizationPercent >= 85 ? 'bg-yellow-500' :
-                        'bg-green-500'
+                        budget.utilizationPercent >= 95
+                          ? 'bg-red-500'
+                          : budget.utilizationPercent >= 85
+                            ? 'bg-yellow-500'
+                            : 'bg-green-500'
                       }`}
                       style={{ width: `${Math.min(budget.utilizationPercent, 100)}%` }}
                     ></div>
@@ -317,34 +427,52 @@ export function BudgetDashboard() {
             {atRiskBudgets.map((alert, idx) => (
               <div key={idx} className="px-6 py-4 hover:bg-[var(--color-cloud)]">
                 <div className="flex items-start gap-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    alert.utilizationPercent >= 90 ? 'bg-red-100' :
-                    alert.utilizationPercent >= 75 ? 'bg-yellow-100' :
-                    'bg-green-100'
-                  }`}>
-                    <AlertTriangle className={`w-5 h-5 ${
-                      alert.utilizationPercent >= 90 ? 'text-red-600' :
-                      alert.utilizationPercent >= 75 ? 'text-yellow-600' :
-                      'text-green-600'
-                    }`} />
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      alert.utilizationPercent >= 90
+                        ? 'bg-red-100'
+                        : alert.utilizationPercent >= 75
+                          ? 'bg-yellow-100'
+                          : 'bg-green-100'
+                    }`}
+                  >
+                    <AlertTriangle
+                      className={`w-5 h-5 ${
+                        alert.utilizationPercent >= 90
+                          ? 'text-red-600'
+                          : alert.utilizationPercent >= 75
+                            ? 'text-yellow-600'
+                            : 'text-green-600'
+                      }`}
+                    />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-1">
                       <h3 className="text-[var(--color-ink)]">{alert.budgetName}</h3>
-                      <span className={`px-2 py-0.5 rounded text-xs ${
-                        alert.utilizationPercent >= 90 ? 'bg-red-100 text-red-700' :
-                        alert.utilizationPercent >= 75 ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>
-                        {alert.utilizationPercent >= 90 ? 'HIGH' :
-                        alert.utilizationPercent >= 75 ? 'MEDIUM' :
-                        'LOW'}
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs ${
+                          alert.utilizationPercent >= 90
+                            ? 'bg-red-100 text-red-700'
+                            : alert.utilizationPercent >= 75
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-green-100 text-green-700'
+                        }`}
+                      >
+                        {alert.utilizationPercent >= 90
+                          ? 'HIGH'
+                          : alert.utilizationPercent >= 75
+                            ? 'MEDIUM'
+                            : 'LOW'}
                       </span>
                     </div>
-                    <p className="text-sm text-[var(--color-mercury-grey)] mb-2">Utilization: {alert.utilizationPercent.toFixed(1)}%</p>
+                    <p className="text-sm text-[var(--color-mercury-grey)] mb-2">
+                      Utilization: {alert.utilizationPercent.toFixed(1)}%
+                    </p>
                     <div className="flex items-center gap-4 text-xs text-[var(--color-mercury-grey)]">
                       <span>{alert.id}</span>
-                      <button className="text-[var(--color-teal)] hover:underline">View Details</button>
+                      <button className="text-[var(--color-teal)] hover:underline">
+                        View Details
+                      </button>
                     </div>
                   </div>
                 </div>

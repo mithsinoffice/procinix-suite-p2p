@@ -75,11 +75,7 @@ function buildAmounts(amount: number, rate: number, vendorType: VendorType) {
   return { tdsA, surcharge, cess, netTDS };
 }
 
-function buildZero(
-  sec: TDSSection,
-  override: TDSOverride,
-  reason: string
-): DetermineTDSResult {
+function buildZero(sec: TDSSection, override: TDSOverride, reason: string): DetermineTDSResult {
   return {
     sec,
     rate: 0,
@@ -158,4 +154,3 @@ export function determineTDS(input: DetermineTDSInput): DetermineTDSResult {
     reason: 'Standard TDS section rate applied on taxable value only (excluding GST).',
   };
 }
-

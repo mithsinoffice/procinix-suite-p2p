@@ -18,7 +18,10 @@ import { fileURLToPath } from 'node:url';
 import mysql from 'mysql2/promise';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MIGRATION_SQL = join(__dirname, '../../sql/mysql/migrations/20260424_ws1a_2f_tenants_turnover.sql');
+const MIGRATION_SQL = join(
+  __dirname,
+  '../../sql/mysql/migrations/20260424_ws1a_2f_tenants_turnover.sql'
+);
 
 function buildSslConfig() {
   const sslMode = (process.env.MYSQL_SSL_MODE ?? 'required').toLowerCase();
@@ -76,7 +79,9 @@ async function main() {
     if (exists) {
       console.log('\nSummary: column already exists — SQL batch will be pure no-op.');
     } else {
-      console.log('\nSummary: column missing. Will ADD COLUMN prior_fy_turnover DECIMAL(18,2) NULL.');
+      console.log(
+        '\nSummary: column missing. Will ADD COLUMN prior_fy_turnover DECIMAL(18,2) NULL.'
+      );
     }
 
     if (process.env.MIGRATE_DRY_RUN === '1') {

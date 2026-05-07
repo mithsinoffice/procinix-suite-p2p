@@ -53,7 +53,9 @@ export function AmendmentHistory({ poId }: AmendmentHistoryProps) {
   useEffect(() => {
     mysqlApiRequest<Amendment[]>(`/api/purchase-orders/${poId}/amendments`)
       .then(setAmendments)
-      .catch(() => {/* fail silently */})
+      .catch(() => {
+        /* fail silently */
+      })
       .finally(() => setLoading(false));
   }, [poId]);
 
@@ -73,10 +75,16 @@ export function AmendmentHistory({ poId }: AmendmentHistoryProps) {
 
   if (amendments.length === 0) {
     return (
-      <div style={{
-        padding: 40, textAlign: 'center', color: 'var(--color-slate)',
-        background: 'var(--color-cloud)', borderRadius: 12, border: '1px solid var(--color-silver)',
-      }}>
+      <div
+        style={{
+          padding: 40,
+          textAlign: 'center',
+          color: 'var(--color-slate)',
+          background: 'var(--color-cloud)',
+          borderRadius: 12,
+          border: '1px solid var(--color-silver)',
+        }}
+      >
         No amendments recorded for this PO.
       </div>
     );
@@ -85,10 +93,16 @@ export function AmendmentHistory({ poId }: AmendmentHistoryProps) {
   return (
     <div style={{ position: 'relative', paddingLeft: 28 }}>
       {/* Vertical line */}
-      <div style={{
-        position: 'absolute', left: 11, top: 8, bottom: 8, width: 2,
-        background: 'var(--color-silver)',
-      }} />
+      <div
+        style={{
+          position: 'absolute',
+          left: 11,
+          top: 8,
+          bottom: 8,
+          width: 2,
+          background: 'var(--color-silver)',
+        }}
+      />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {amendments.map((amendment) => {
@@ -98,42 +112,84 @@ export function AmendmentHistory({ poId }: AmendmentHistoryProps) {
           return (
             <div key={amendment.id} style={{ position: 'relative' }}>
               {/* Timeline dot */}
-              <div style={{
-                position: 'absolute', left: -22, top: 16, width: 12, height: 12,
-                borderRadius: '50%', border: '2px solid var(--color-teal)',
-                background: 'var(--background)',
-              }} />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: -22,
+                  top: 16,
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  border: '2px solid var(--color-teal)',
+                  background: 'var(--background)',
+                }}
+              />
 
               {/* Card */}
-              <div style={{
-                padding: 16, borderRadius: 12, background: 'var(--background)',
-                border: '1px solid var(--color-silver)',
-              }}>
+              <div
+                style={{
+                  padding: 16,
+                  borderRadius: 12,
+                  background: 'var(--background)',
+                  border: '1px solid var(--color-silver)',
+                }}
+              >
                 {/* Header row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    flexWrap: 'wrap',
+                    marginBottom: 10,
+                  }}
+                >
                   {/* Amendment # badge */}
-                  <span style={{
-                    display: 'inline-block', padding: '2px 10px', borderRadius: 12,
-                    fontSize: 11, fontWeight: 600, background: '#EDE9FE', color: '#7C3AED',
-                  }}>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '2px 10px',
+                      borderRadius: 12,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      background: '#EDE9FE',
+                      color: '#7C3AED',
+                    }}
+                  >
                     Amendment #{amendment.amendmentNumber}
                   </span>
 
                   {/* Type badge */}
-                  <span style={{
-                    display: 'inline-block', padding: '2px 10px', borderRadius: 12,
-                    fontSize: 11, fontWeight: 600, background: typeStyle.bg, color: typeStyle.fg,
-                    textTransform: 'capitalize',
-                  }}>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '2px 10px',
+                      borderRadius: 12,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      background: typeStyle.bg,
+                      color: typeStyle.fg,
+                      textTransform: 'capitalize',
+                    }}
+                  >
                     {amendment.type}
                   </span>
 
                   {/* Status badge */}
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px',
-                    borderRadius: 12, fontSize: 11, fontWeight: 600,
-                    background: statusStyle.bg, color: statusStyle.fg, textTransform: 'capitalize',
-                  }}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: '2px 10px',
+                      borderRadius: 12,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      background: statusStyle.bg,
+                      color: statusStyle.fg,
+                      textTransform: 'capitalize',
+                    }}
+                  >
                     {STATUS_ICONS[amendment.status]}
                     {amendment.status}
                   </span>
@@ -147,14 +203,25 @@ export function AmendmentHistory({ poId }: AmendmentHistoryProps) {
                 {amendment.changes.length > 0 && (
                   <div style={{ marginBottom: 10 }}>
                     {amendment.changes.map((change, idx) => (
-                      <div key={idx} style={{
-                        display: 'flex', alignItems: 'center', gap: 8, fontSize: 13,
-                        padding: '4px 0', color: 'var(--color-ink)',
-                      }}>
-                        <span style={{ color: 'var(--color-slate)', fontWeight: 500, minWidth: 80 }}>
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          fontSize: 13,
+                          padding: '4px 0',
+                          color: 'var(--color-ink)',
+                        }}
+                      >
+                        <span
+                          style={{ color: 'var(--color-slate)', fontWeight: 500, minWidth: 80 }}
+                        >
                           {change.field}
                         </span>
-                        <span style={{ color: 'var(--color-slate)', textDecoration: 'line-through' }}>
+                        <span
+                          style={{ color: 'var(--color-slate)', textDecoration: 'line-through' }}
+                        >
                           {change.originalValue}
                         </span>
                         <ArrowRight size={12} style={{ color: 'var(--color-slate)' }} />
@@ -165,22 +232,37 @@ export function AmendmentHistory({ poId }: AmendmentHistoryProps) {
                 )}
 
                 {/* Footer row */}
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  paddingTop: 8, borderTop: '1px solid var(--color-silver)',
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingTop: 8,
+                    borderTop: '1px solid var(--color-silver)',
+                  }}
+                >
                   {/* Value impact */}
-                  <span style={{
-                    fontSize: 13, fontWeight: 600,
-                    color: amendment.valueImpact > 0 ? 'var(--color-error)' : amendment.valueImpact < 0 ? 'var(--color-success)' : 'var(--color-slate)',
-                  }}>
-                    Value impact: {amendment.valueImpact > 0 ? '+' : ''}{fmt(amendment.valueImpact)}
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color:
+                        amendment.valueImpact > 0
+                          ? 'var(--color-error)'
+                          : amendment.valueImpact < 0
+                            ? 'var(--color-success)'
+                            : 'var(--color-slate)',
+                    }}
+                  >
+                    Value impact: {amendment.valueImpact > 0 ? '+' : ''}
+                    {fmt(amendment.valueImpact)}
                   </span>
 
                   {/* Approver info */}
                   {amendment.approverName && (
                     <span style={{ fontSize: 12, color: 'var(--color-slate)' }}>
-                      {amendment.status === 'approved' ? 'Approved' : 'Rejected'} by {amendment.approverName}
+                      {amendment.status === 'approved' ? 'Approved' : 'Rejected'} by{' '}
+                      {amendment.approverName}
                       {amendment.approverDate ? ` on ${fmtDate(amendment.approverDate)}` : ''}
                     </span>
                   )}

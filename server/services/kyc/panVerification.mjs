@@ -24,8 +24,8 @@ function resolveConfig() {
   const explicitMock = process.env.ONGRID_MOCK_MODE === 'true';
   const isProd = process.env.NODE_ENV === 'production';
   const baseUrl = isProd
-    ? (process.env.ONGRID_BASE_URL || PRODUCTION_DEFAULT)
-    : (process.env.ONGRID_SANDBOX_URL || process.env.ONGRID_BASE_URL || SANDBOX_DEFAULT);
+    ? process.env.ONGRID_BASE_URL || PRODUCTION_DEFAULT
+    : process.env.ONGRID_SANDBOX_URL || process.env.ONGRID_BASE_URL || SANDBOX_DEFAULT;
   const mockMode = !apiKey || explicitMock;
   return { apiKey, baseUrl, mockMode };
 }
@@ -48,7 +48,8 @@ export function mapEntityType(ongridCategory) {
   if (c.includes('huf')) return 'huf';
   if (c.includes('llp')) return 'llp';
   if (c.includes('partnership') || c.includes('firm')) return 'partnership_firm';
-  if (c.includes('trust') || c.includes('society') || c.includes('aop') || c.includes('boi')) return 'trust_society';
+  if (c.includes('trust') || c.includes('society') || c.includes('aop') || c.includes('boi'))
+    return 'trust_society';
   if (c.includes('government')) return 'government_body';
   if (c.includes('public')) return 'public_limited';
   if (c.includes('private') || c.includes('company')) return 'private_limited';
@@ -65,9 +66,16 @@ function panTypeChar(pan) {
 
 function mapPanCharToEntity(typeChar) {
   const map = {
-    P: 'individual_proprietor', C: 'private_limited', H: 'huf',
-    F: 'partnership_firm', A: 'trust_society', T: 'trust_society',
-    L: 'llp', J: 'individual_proprietor', G: 'government_body', B: 'trust_society',
+    P: 'individual_proprietor',
+    C: 'private_limited',
+    H: 'huf',
+    F: 'partnership_firm',
+    A: 'trust_society',
+    T: 'trust_society',
+    L: 'llp',
+    J: 'individual_proprietor',
+    G: 'government_body',
+    B: 'trust_society',
   };
   return map[typeChar] || 'private_limited';
 }
@@ -79,7 +87,8 @@ function mapOngridHttpError(status, payloadMessage) {
   if (status === 401) return 'Ongrid authentication failed. Check ONGRID_API_KEY.';
   if (status === 402) return 'Ongrid credit balance exhausted. Please recharge.';
   if (status === 404) return 'Record not found at source.';
-  if (status === 422) return payloadMessage || 'Invalid input. The ID format or value is rejected by the source.';
+  if (status === 422)
+    return payloadMessage || 'Invalid input. The ID format or value is rejected by the source.';
   if (status === 429) return 'Ongrid rate limit hit. Please retry in a few seconds.';
   if (status === 500) return 'Ongrid service error. Please retry.';
   if (status === 503) return 'Source registry temporarily unavailable. Please retry.';
@@ -100,17 +109,43 @@ async function postOngrid(path, body) {
   });
   const text = await resp.text();
   let json;
-  try { json = text ? JSON.parse(text) : {}; } catch { json = { raw: text }; }
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    json = { raw: text };
+  }
   return { status: resp.status, ok: resp.ok, body: json };
 }
 
-async function logKyc(queryFn, { pan = null, gstin = null, check_type, provider, success, response, transaction_id = null, mock_mode = false }) {
+async function logKyc(
+  queryFn,
+  {
+    pan = null,
+    gstin = null,
+    check_type,
+    provider,
+    success,
+    response,
+    transaction_id = null,
+    mock_mode = false,
+  }
+) {
   try {
     await queryFn(
       `INSERT INTO vendor_kyc_logs
         (id, pan, gstin, check_type, provider, success, response_json, transaction_id, mock_mode, checked_at)
        VALUES (?,?,?,?,?,?,?,?,?,NOW())`,
-      [randomUUID(), pan, gstin, check_type, provider, success ? 1 : 0, JSON.stringify(response), transaction_id, mock_mode ? 1 : 0]
+      [
+        randomUUID(),
+        pan,
+        gstin,
+        check_type,
+        provider,
+        success ? 1 : 0,
+        JSON.stringify(response),
+        transaction_id,
+        mock_mode ? 1 : 0,
+      ]
     );
   } catch {
     /* swallow audit-log errors — do not fail the verification */
@@ -127,7 +162,9 @@ function mockPan(pan) {
   const isCompany = typeChar === 'C' || typeChar === 'L';
   return {
     pan,
-    name: isCompany ? `Mock Enterprises ${pan.slice(5, 9)} Pvt Ltd` : `Mock User ${pan.slice(0, 5)}`,
+    name: isCompany
+      ? `Mock Enterprises ${pan.slice(5, 9)} Pvt Ltd`
+      : `Mock User ${pan.slice(0, 5)}`,
     entity_type,
     pan_status: 'VALID',
     date_of_incorporation: isCompany ? '2018-06-15' : null,
@@ -206,8 +243,21 @@ export async function verifyPAN(queryFn, pan, opts = {}) {
 
   if (mockMode) {
     const data = mockPan(pan);
-    await logKyc(queryFn, { pan, check_type: 'pan', provider: 'ongrid_mock', success: true, response: data, mock_mode: true });
-    return { success: true, source: 'ongrid_mock', mock_mode: true, transaction_id: `mock_${randomUUID()}`, data };
+    await logKyc(queryFn, {
+      pan,
+      check_type: 'pan',
+      provider: 'ongrid_mock',
+      success: true,
+      response: data,
+      mock_mode: true,
+    });
+    return {
+      success: true,
+      source: 'ongrid_mock',
+      mock_mode: true,
+      transaction_id: `mock_${randomUUID()}`,
+      data,
+    };
   }
 
   try {
@@ -218,8 +268,20 @@ export async function verifyPAN(queryFn, pan, opts = {}) {
     const txnId = res.body?.transaction_id || res.body?.data?.transaction_id || null;
 
     if (!res.ok) {
-      await logKyc(queryFn, { pan, check_type: 'pan', provider: 'ongrid', success: false, response: res.body, transaction_id: txnId });
-      return { success: false, source: 'ongrid', transaction_id: txnId, error: mapOngridHttpError(res.status, res.body?.message) };
+      await logKyc(queryFn, {
+        pan,
+        check_type: 'pan',
+        provider: 'ongrid',
+        success: false,
+        response: res.body,
+        transaction_id: txnId,
+      });
+      return {
+        success: false,
+        source: 'ongrid',
+        transaction_id: txnId,
+        error: mapOngridHttpError(res.status, res.body?.message),
+      };
     }
 
     const d = res.body?.data || res.body || {};
@@ -227,7 +289,9 @@ export async function verifyPAN(queryFn, pan, opts = {}) {
     const data = {
       pan,
       name: pan_data.name || pan_data.full_name || pan_data.name_on_card || '',
-      entity_type: mapEntityType(pan_data.category || pan_data.pan_type) || mapPanCharToEntity(panTypeChar(pan)),
+      entity_type:
+        mapEntityType(pan_data.category || pan_data.pan_type) ||
+        mapPanCharToEntity(panTypeChar(pan)),
       pan_status: pan_data.pan_status || pan_data.status || 'VALID',
       date_of_incorporation: pan_data.date_of_birth || pan_data.date_of_incorporation || null,
       registered_address: pan_data.address || null,
@@ -238,10 +302,23 @@ export async function verifyPAN(queryFn, pan, opts = {}) {
       company_type: pan_data.category || null,
     };
 
-    await logKyc(queryFn, { pan, check_type: 'pan', provider: 'ongrid', success: true, response: res.body, transaction_id: txnId });
+    await logKyc(queryFn, {
+      pan,
+      check_type: 'pan',
+      provider: 'ongrid',
+      success: true,
+      response: res.body,
+      transaction_id: txnId,
+    });
     return { success: true, source: 'ongrid', transaction_id: txnId, data };
   } catch (err) {
-    await logKyc(queryFn, { pan, check_type: 'pan', provider: 'ongrid', success: false, response: { error: err.message } });
+    await logKyc(queryFn, {
+      pan,
+      check_type: 'pan',
+      provider: 'ongrid',
+      success: false,
+      response: { error: err.message },
+    });
     return { success: false, error: `Ongrid PAN service error: ${err.message}` };
   }
 }
@@ -259,8 +336,21 @@ export async function verifyPANComprehensive(queryFn, pan, opts = {}) {
 
   if (mockMode) {
     const data = mockPan(pan);
-    await logKyc(queryFn, { pan, check_type: 'pan_comprehensive', provider: 'ongrid_mock', success: true, response: data, mock_mode: true });
-    return { success: true, source: 'ongrid_mock', mock_mode: true, transaction_id: `mock_${randomUUID()}`, data };
+    await logKyc(queryFn, {
+      pan,
+      check_type: 'pan_comprehensive',
+      provider: 'ongrid_mock',
+      success: true,
+      response: data,
+      mock_mode: true,
+    });
+    return {
+      success: true,
+      source: 'ongrid_mock',
+      mock_mode: true,
+      transaction_id: `mock_${randomUUID()}`,
+      data,
+    };
   }
 
   try {
@@ -271,20 +361,38 @@ export async function verifyPANComprehensive(queryFn, pan, opts = {}) {
     const txnId = res.body?.transaction_id || res.body?.data?.transaction_id || null;
 
     if (!res.ok) {
-      await logKyc(queryFn, { pan, check_type: 'pan_comprehensive', provider: 'ongrid', success: false, response: res.body, transaction_id: txnId });
-      return { success: false, source: 'ongrid', transaction_id: txnId, error: mapOngridHttpError(res.status, res.body?.message) };
+      await logKyc(queryFn, {
+        pan,
+        check_type: 'pan_comprehensive',
+        provider: 'ongrid',
+        success: false,
+        response: res.body,
+        transaction_id: txnId,
+      });
+      return {
+        success: false,
+        source: 'ongrid',
+        transaction_id: txnId,
+        error: mapOngridHttpError(res.status, res.body?.message),
+      };
     }
 
     const d = res.body?.data || res.body || {};
     const pan_data = d.pan_data || d;
-    const gstList = Array.isArray(pan_data.gstin_list) ? pan_data.gstin_list : (Array.isArray(pan_data.linked_gstin) ? pan_data.linked_gstin : []);
+    const gstList = Array.isArray(pan_data.gstin_list)
+      ? pan_data.gstin_list
+      : Array.isArray(pan_data.linked_gstin)
+        ? pan_data.linked_gstin
+        : [];
 
     const addr = pan_data.address || pan_data.registered_address || {};
 
     const data = {
       pan,
       name: pan_data.name || pan_data.full_name || pan_data.company_name || '',
-      entity_type: mapEntityType(pan_data.category || pan_data.pan_type) || mapPanCharToEntity(panTypeChar(pan)),
+      entity_type:
+        mapEntityType(pan_data.category || pan_data.pan_type) ||
+        mapPanCharToEntity(panTypeChar(pan)),
       pan_status: pan_data.pan_status || pan_data.status || 'VALID',
       date_of_incorporation: pan_data.date_of_incorporation || pan_data.date_of_birth || null,
       registered_address: {
@@ -295,8 +403,10 @@ export async function verifyPANComprehensive(queryFn, pan, opts = {}) {
         country: addr.country || 'India',
       },
       cin: pan_data.cin || null,
-      directors: Array.isArray(pan_data.directors) ? pan_data.directors.map(d => d.name || d) : [],
-      gstin_list: gstList.map(g => ({
+      directors: Array.isArray(pan_data.directors)
+        ? pan_data.directors.map((d) => d.name || d)
+        : [],
+      gstin_list: gstList.map((g) => ({
         gstin: g.gstin || g.gstin_number || g,
         state: g.state || '',
         status: g.status || 'Active',
@@ -306,10 +416,23 @@ export async function verifyPANComprehensive(queryFn, pan, opts = {}) {
       company_type: pan_data.company_type || pan_data.category || null,
     };
 
-    await logKyc(queryFn, { pan, check_type: 'pan_comprehensive', provider: 'ongrid', success: true, response: res.body, transaction_id: txnId });
+    await logKyc(queryFn, {
+      pan,
+      check_type: 'pan_comprehensive',
+      provider: 'ongrid',
+      success: true,
+      response: res.body,
+      transaction_id: txnId,
+    });
     return { success: true, source: 'ongrid', transaction_id: txnId, data };
   } catch (err) {
-    await logKyc(queryFn, { pan, check_type: 'pan_comprehensive', provider: 'ongrid', success: false, response: { error: err.message } });
+    await logKyc(queryFn, {
+      pan,
+      check_type: 'pan_comprehensive',
+      provider: 'ongrid',
+      success: false,
+      response: { error: err.message },
+    });
     return { success: false, error: `Ongrid PAN Comprehensive service error: ${err.message}` };
   }
 }
@@ -327,8 +450,21 @@ export async function verifyGSTIN(queryFn, gstin, opts = {}) {
 
   if (mockMode) {
     const data = mockGstin(gstin);
-    await logKyc(queryFn, { gstin, check_type: 'gstin', provider: 'ongrid_mock', success: true, response: data, mock_mode: true });
-    return { success: true, source: 'ongrid_mock', mock_mode: true, transaction_id: `mock_${randomUUID()}`, data };
+    await logKyc(queryFn, {
+      gstin,
+      check_type: 'gstin',
+      provider: 'ongrid_mock',
+      success: true,
+      response: data,
+      mock_mode: true,
+    });
+    return {
+      success: true,
+      source: 'ongrid_mock',
+      mock_mode: true,
+      transaction_id: `mock_${randomUUID()}`,
+      data,
+    };
   }
 
   try {
@@ -339,8 +475,20 @@ export async function verifyGSTIN(queryFn, gstin, opts = {}) {
     const txnId = res.body?.transaction_id || res.body?.data?.transaction_id || null;
 
     if (!res.ok) {
-      await logKyc(queryFn, { gstin, check_type: 'gstin', provider: 'ongrid', success: false, response: res.body, transaction_id: txnId });
-      return { success: false, source: 'ongrid', transaction_id: txnId, error: mapOngridHttpError(res.status, res.body?.message) };
+      await logKyc(queryFn, {
+        gstin,
+        check_type: 'gstin',
+        provider: 'ongrid',
+        success: false,
+        response: res.body,
+        transaction_id: txnId,
+      });
+      return {
+        success: false,
+        source: 'ongrid',
+        transaction_id: txnId,
+        error: mapOngridHttpError(res.status, res.body?.message),
+      };
     }
 
     const d = res.body?.data || res.body || {};
@@ -359,13 +507,28 @@ export async function verifyGSTIN(queryFn, gstin, opts = {}) {
       registration_date: gstin_data.rgdt || gstin_data.registration_date || null,
       last_return_filed: gstin_data.last_return_filed || null,
       return_filing_status: gstin_data.return_filing_status || 'regular_filer',
-      address: [addr.bno, addr.bnm, addr.st, addr.loc, addr.city, addr.pncd].filter(Boolean).join(', '),
+      address: [addr.bno, addr.bnm, addr.st, addr.loc, addr.city, addr.pncd]
+        .filter(Boolean)
+        .join(', '),
     };
 
-    await logKyc(queryFn, { gstin, check_type: 'gstin', provider: 'ongrid', success: true, response: res.body, transaction_id: txnId });
+    await logKyc(queryFn, {
+      gstin,
+      check_type: 'gstin',
+      provider: 'ongrid',
+      success: true,
+      response: res.body,
+      transaction_id: txnId,
+    });
     return { success: true, source: 'ongrid', transaction_id: txnId, data };
   } catch (err) {
-    await logKyc(queryFn, { gstin, check_type: 'gstin', provider: 'ongrid', success: false, response: { error: err.message } });
+    await logKyc(queryFn, {
+      gstin,
+      check_type: 'gstin',
+      provider: 'ongrid',
+      success: false,
+      response: { error: err.message },
+    });
     return { success: false, error: `Ongrid GSTIN service error: ${err.message}` };
   }
 }
@@ -387,8 +550,20 @@ export async function verifyBankAccount(queryFn, accountNumber, ifsc, opts = {})
 
   if (mockMode) {
     const data = mockBank(accountNumber, ifsc);
-    await logKyc(queryFn, { check_type: 'bank', provider: 'ongrid_mock', success: true, response: data, mock_mode: true });
-    return { success: true, source: 'ongrid_mock', mock_mode: true, transaction_id: `mock_${randomUUID()}`, data };
+    await logKyc(queryFn, {
+      check_type: 'bank',
+      provider: 'ongrid_mock',
+      success: true,
+      response: data,
+      mock_mode: true,
+    });
+    return {
+      success: true,
+      source: 'ongrid_mock',
+      mock_mode: true,
+      transaction_id: `mock_${randomUUID()}`,
+      data,
+    };
   }
 
   try {
@@ -400,8 +575,19 @@ export async function verifyBankAccount(queryFn, accountNumber, ifsc, opts = {})
     const txnId = res.body?.transaction_id || res.body?.data?.transaction_id || null;
 
     if (!res.ok) {
-      await logKyc(queryFn, { check_type: 'bank', provider: 'ongrid', success: false, response: res.body, transaction_id: txnId });
-      return { success: false, source: 'ongrid', transaction_id: txnId, error: mapOngridHttpError(res.status, res.body?.message) };
+      await logKyc(queryFn, {
+        check_type: 'bank',
+        provider: 'ongrid',
+        success: false,
+        response: res.body,
+        transaction_id: txnId,
+      });
+      return {
+        success: false,
+        source: 'ongrid',
+        transaction_id: txnId,
+        error: mapOngridHttpError(res.status, res.body?.message),
+      };
     }
 
     const d = res.body?.data || res.body || {};
@@ -415,10 +601,21 @@ export async function verifyBankAccount(queryFn, accountNumber, ifsc, opts = {})
       penny_drop_amount: d.penny_drop_amount || 1,
     };
 
-    await logKyc(queryFn, { check_type: 'bank', provider: 'ongrid', success: true, response: res.body, transaction_id: txnId });
+    await logKyc(queryFn, {
+      check_type: 'bank',
+      provider: 'ongrid',
+      success: true,
+      response: res.body,
+      transaction_id: txnId,
+    });
     return { success: true, source: 'ongrid', transaction_id: txnId, data };
   } catch (err) {
-    await logKyc(queryFn, { check_type: 'bank', provider: 'ongrid', success: false, response: { error: err.message } });
+    await logKyc(queryFn, {
+      check_type: 'bank',
+      provider: 'ongrid',
+      success: false,
+      response: { error: err.message },
+    });
     return { success: false, error: `Ongrid bank service error: ${err.message}` };
   }
 }
@@ -436,8 +633,20 @@ export async function verifyMSME(queryFn, udyamNumber, opts = {}) {
 
   if (mockMode) {
     const data = mockUdyam(udyamNumber);
-    await logKyc(queryFn, { check_type: 'msme', provider: 'ongrid_mock', success: true, response: data, mock_mode: true });
-    return { success: true, source: 'ongrid_mock', mock_mode: true, transaction_id: `mock_${randomUUID()}`, data };
+    await logKyc(queryFn, {
+      check_type: 'msme',
+      provider: 'ongrid_mock',
+      success: true,
+      response: data,
+      mock_mode: true,
+    });
+    return {
+      success: true,
+      source: 'ongrid_mock',
+      mock_mode: true,
+      transaction_id: `mock_${randomUUID()}`,
+      data,
+    };
   }
 
   try {
@@ -448,8 +657,19 @@ export async function verifyMSME(queryFn, udyamNumber, opts = {}) {
     const txnId = res.body?.transaction_id || res.body?.data?.transaction_id || null;
 
     if (!res.ok) {
-      await logKyc(queryFn, { check_type: 'msme', provider: 'ongrid', success: false, response: res.body, transaction_id: txnId });
-      return { success: false, source: 'ongrid', transaction_id: txnId, error: mapOngridHttpError(res.status, res.body?.message) };
+      await logKyc(queryFn, {
+        check_type: 'msme',
+        provider: 'ongrid',
+        success: false,
+        response: res.body,
+        transaction_id: txnId,
+      });
+      return {
+        success: false,
+        source: 'ongrid',
+        transaction_id: txnId,
+        error: mapOngridHttpError(res.status, res.body?.message),
+      };
     }
 
     const d = res.body?.data || res.body || {};
@@ -463,10 +683,21 @@ export async function verifyMSME(queryFn, udyamNumber, opts = {}) {
       status: d.status || 'Active',
     };
 
-    await logKyc(queryFn, { check_type: 'msme', provider: 'ongrid', success: true, response: res.body, transaction_id: txnId });
+    await logKyc(queryFn, {
+      check_type: 'msme',
+      provider: 'ongrid',
+      success: true,
+      response: res.body,
+      transaction_id: txnId,
+    });
     return { success: true, source: 'ongrid', transaction_id: txnId, data };
   } catch (err) {
-    await logKyc(queryFn, { check_type: 'msme', provider: 'ongrid', success: false, response: { error: err.message } });
+    await logKyc(queryFn, {
+      check_type: 'msme',
+      provider: 'ongrid',
+      success: false,
+      response: { error: err.message },
+    });
     return { success: false, error: `Ongrid MSME service error: ${err.message}` };
   }
 }

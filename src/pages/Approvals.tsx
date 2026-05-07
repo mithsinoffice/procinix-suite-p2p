@@ -70,7 +70,8 @@ export default function MyApprovalsPage() {
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedApproval, setSelectedApproval] = useState<ApprovalItem | null>(null);
-  const [selectedMasterRecord, setSelectedMasterRecord] = useState<PendingMasterApprovalResponseItem | null>(null);
+  const [selectedMasterRecord, setSelectedMasterRecord] =
+    useState<PendingMasterApprovalResponseItem | null>(null);
   const [drawerClosing, setDrawerClosing] = useState(false);
   const [panelRejecting, setPanelRejecting] = useState(false);
   const [panelRejectReason, setPanelRejectReason] = useState('');
@@ -81,7 +82,10 @@ export default function MyApprovalsPage() {
     setLoading(true);
     try {
       const userId = user?.id;
-      const queueRes = await fetch(`/api/approvals/queue?module=${activeTab === 'all' ? '' : activeTab}`, { headers: authHeaders(userId) });
+      const queueRes = await fetch(
+        `/api/approvals/queue?module=${activeTab === 'all' ? '' : activeTab}`,
+        { headers: authHeaders(userId) }
+      );
       setQueue(await queueRes.json());
     } catch (error) {
       console.error('Failed to fetch approval queue', error);
@@ -95,7 +99,9 @@ export default function MyApprovalsPage() {
     try {
       const userId = user?.id;
       const [kpisRes, countsRes] = await Promise.all([
-        fetch(`/api/approvals/kpis?year=${new Date().getFullYear()}`, { headers: authHeaders(userId) }),
+        fetch(`/api/approvals/kpis?year=${new Date().getFullYear()}`, {
+          headers: authHeaders(userId),
+        }),
         fetch('/api/approvals/module-counts', { headers: authHeaders(userId) }),
       ]);
       setKpis(await kpisRes.json());
@@ -132,7 +138,10 @@ export default function MyApprovalsPage() {
     if (actionBusyId) return;
     setActionBusyId(id);
     try {
-      const res = await fetch(`/api/approvals/${id}/approve`, { method: 'POST', headers: authHeaders(user?.id) });
+      const res = await fetch(`/api/approvals/${id}/approve`, {
+        method: 'POST',
+        headers: authHeaders(user?.id),
+      });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
         alert(`Approve failed${text ? `: ${text}` : ''}`);
@@ -285,11 +294,17 @@ export default function MyApprovalsPage() {
     });
 
     try {
-      const response = await fetch('/api/master-approvals/pending', { headers: authHeaders(user?.id) });
+      const response = await fetch('/api/master-approvals/pending', {
+        headers: authHeaders(user?.id),
+      });
       if (!response.ok) return;
-      const payload = (await response.json()) as { success?: boolean; data?: PendingMasterApprovalResponseItem[] };
+      const payload = (await response.json()) as {
+        success?: boolean;
+        data?: PendingMasterApprovalResponseItem[];
+      };
       const matched = (payload.data || []).find(
-        (entry) => entry.masterKey === parsed.masterKey && String(entry.recordId) === String(parsed.recordId)
+        (entry) =>
+          entry.masterKey === parsed.masterKey && String(entry.recordId) === String(parsed.recordId)
       );
       if (matched) {
         setSelectedMasterRecord(matched);
@@ -323,15 +338,31 @@ export default function MyApprovalsPage() {
     return map[moduleName] || moduleName;
   };
 
-  const msmeAlerts = useMemo(() => queue.filter((item) => item.msme_info?.is_critical || item.msme_info?.is_warning), [queue]);
+  const msmeAlerts = useMemo(
+    () => queue.filter((item) => item.msme_info?.is_critical || item.msme_info?.is_warning),
+    [queue]
+  );
   const slaBreaches = useMemo(() => queue.filter((item) => item.sla_info?.breached), [queue]);
-  const earliestMSMEDays = msmeAlerts.length > 0 ? Math.min(...msmeAlerts.map((item) => item.msme_info?.days_remaining || 999)) : 0;
+  const earliestMSMEDays =
+    msmeAlerts.length > 0
+      ? Math.min(...msmeAlerts.map((item) => item.msme_info?.days_remaining || 999))
+      : 0;
   const masterRecordEntries = useMemo(() => {
     if (!selectedMasterRecord?.record) return [];
-    const hiddenFields = new Set(['originalData', 'entityMappings', 'approvalStatus', 'createdAt', 'updatedAt']);
+    const hiddenFields = new Set([
+      'originalData',
+      'entityMappings',
+      'approvalStatus',
+      'createdAt',
+      'updatedAt',
+    ]);
     return Object.entries(selectedMasterRecord.record)
       .filter(([key]) => !hiddenFields.has(key))
-      .map(([key, value]) => ({ key, label: formatFieldLabel(key), value: formatFieldValue(value) }));
+      .map(([key, value]) => ({
+        key,
+        label: formatFieldLabel(key),
+        value: formatFieldValue(value),
+      }));
   }, [selectedMasterRecord]);
   const masterRecordByKey = useMemo(() => {
     const out: Record<string, unknown> = {};
@@ -410,13 +441,19 @@ export default function MyApprovalsPage() {
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[30px] font-semibold text-[var(--color-ink)]">My Approvals</h1>
-          <p className="text-sm text-[var(--color-mercury-grey)]">Consolidated from AP Invoices, Purchase Orders, Payments, Vendor Onboarding & Masters</p>
+          <p className="text-sm text-[var(--color-mercury-grey)]">
+            Consolidated from AP Invoices, Purchase Orders, Payments, Vendor Onboarding & Masters
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-[var(--color-teal-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-teal-dark)]">
             YTD {new Date().getFullYear()} · As of {new Date().toLocaleDateString('en-IN')}
           </span>
-          <button type="button" className="rounded-md border border-[var(--color-silver)] bg-white px-3 py-1.5 text-sm" onClick={handleExport}>
+          <button
+            type="button"
+            className="rounded-md border border-[var(--color-silver)] bg-white px-3 py-1.5 text-sm"
+            onClick={handleExport}
+          >
             Export
           </button>
           <button
@@ -441,96 +478,108 @@ export default function MyApprovalsPage() {
 
       {kpis && (
         <>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-mercury-grey)]">My approval performance</p>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-mercury-grey)]">
+            My approval performance
+          </p>
           <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-5">
-          <PerformanceKPICard
-            variant="total"
-            icon="✅"
-            label="Total approved YTD"
-            value={String(kpis.total_approvals_ytd)}
-            trend="+15% vs last year"
-            trendDirection="up"
-          />
-          <PerformanceKPICard
-            variant="on-time"
-            icon="🎯"
-            label="On-time approval rate"
-            value={`${kpis.on_time_rate}%`}
-            trend={`${kpis.on_time_count} of ${kpis.total_approvals_ytd} on time`}
-            trendDirection="up"
-          />
-          <PerformanceKPICard
-            variant="avg-time"
-            icon="⏱"
-            label="Avg time per approval"
-            value={`${kpis.avg_hours_per_approval}h`}
-            trend={`${kpis.faster_than_team_percent}% faster than team`}
-            trendDirection="up"
-          />
-          <PerformanceKPICard
-            variant="rejections"
-            icon="↩"
-            label="Total rejections YTD"
-            value={String(kpis.total_rejections)}
-            trend={`${kpis.rejection_rate}% rejection rate`}
-            trendDirection="down"
-          />
-          <PerformanceKPICard
-            variant="value"
-            icon="₹"
-            label="Total value approved"
-            value={new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(kpis.total_value_approved)}
-            trend="+8% vs last year"
-            trendDirection="up"
-          />
+            <PerformanceKPICard
+              variant="total"
+              icon="✅"
+              label="Total approved YTD"
+              value={String(kpis.total_approvals_ytd)}
+              trend="+15% vs last year"
+              trendDirection="up"
+            />
+            <PerformanceKPICard
+              variant="on-time"
+              icon="🎯"
+              label="On-time approval rate"
+              value={`${kpis.on_time_rate}%`}
+              trend={`${kpis.on_time_count} of ${kpis.total_approvals_ytd} on time`}
+              trendDirection="up"
+            />
+            <PerformanceKPICard
+              variant="avg-time"
+              icon="⏱"
+              label="Avg time per approval"
+              value={`${kpis.avg_hours_per_approval}h`}
+              trend={`${kpis.faster_than_team_percent}% faster than team`}
+              trendDirection="up"
+            />
+            <PerformanceKPICard
+              variant="rejections"
+              icon="↩"
+              label="Total rejections YTD"
+              value={String(kpis.total_rejections)}
+              trend={`${kpis.rejection_rate}% rejection rate`}
+              trendDirection="down"
+            />
+            <PerformanceKPICard
+              variant="value"
+              icon="₹"
+              label="Total value approved"
+              value={new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                maximumFractionDigits: 0,
+              }).format(kpis.total_value_approved)}
+              trend="+8% vs last year"
+              trendDirection="up"
+            />
           </div>
         </>
       )}
 
       {kpis && (
         <>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-mercury-grey)]">Action needed now</p>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-mercury-grey)]">
+            Action needed now
+          </p>
           <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-4">
-          <ActionKPICard
-            variant="pending"
-            count={kpis.total_pending}
-            label="Pending approvals"
-            subtext="Awaiting your decision"
-            badge="Pending"
-            barPercent={kpis.total_pending ? (kpis.aging_count / kpis.total_pending) * 100 : 0}
-            chips={[
-              { label: 'AP invoices', count: moduleCounts?.ap_invoice || 0 },
-              { label: 'Masters', count: moduleCounts?.master_update || 0 },
-            ]}
-          />
-          <ActionKPICard
-            variant="urgent"
-            count={kpis.sla_breached_count}
-            label="Aging > 2 days"
-            subtext="SLA risk"
-            badge="Urgent"
-            barPercent={100}
-            chips={[{ label: 'SLA risk', count: kpis.aging_count }]}
-            onClick={() => setActiveTab('all')}
-          />
-          <ActionKPICard
-            variant="msme"
-            count={kpis.msme_pending_count}
-            label="MSME pending"
-            subtext="45-day legal exposure"
-            badge="MSME"
-            barPercent={kpis.msme_pending_count ? (kpis.msme_deadline_alerts / kpis.msme_pending_count) * 100 : 0}
-            chips={[{ label: 'Alerts', count: kpis.msme_deadline_alerts }]}
-          />
-          <ActionKPICard
-            variant="aging"
-            count={kpis.aging_count}
-            label="Aging approvals"
-            subtext="Crossed escalation threshold"
-            badge="Aging"
-            barPercent={kpis.total_pending ? (kpis.aging_count / kpis.total_pending) * 100 : 0}
-            chips={[{ label: 'Pending', count: kpis.total_pending }]}
-          />
+            <ActionKPICard
+              variant="pending"
+              count={kpis.total_pending}
+              label="Pending approvals"
+              subtext="Awaiting your decision"
+              badge="Pending"
+              barPercent={kpis.total_pending ? (kpis.aging_count / kpis.total_pending) * 100 : 0}
+              chips={[
+                { label: 'AP invoices', count: moduleCounts?.ap_invoice || 0 },
+                { label: 'Masters', count: moduleCounts?.master_update || 0 },
+              ]}
+            />
+            <ActionKPICard
+              variant="urgent"
+              count={kpis.sla_breached_count}
+              label="Aging > 2 days"
+              subtext="SLA risk"
+              badge="Urgent"
+              barPercent={100}
+              chips={[{ label: 'SLA risk', count: kpis.aging_count }]}
+              onClick={() => setActiveTab('all')}
+            />
+            <ActionKPICard
+              variant="msme"
+              count={kpis.msme_pending_count}
+              label="MSME pending"
+              subtext="45-day legal exposure"
+              badge="MSME"
+              barPercent={
+                kpis.msme_pending_count
+                  ? (kpis.msme_deadline_alerts / kpis.msme_pending_count) * 100
+                  : 0
+              }
+              chips={[{ label: 'Alerts', count: kpis.msme_deadline_alerts }]}
+            />
+            <ActionKPICard
+              variant="aging"
+              count={kpis.aging_count}
+              label="Aging approvals"
+              subtext="Crossed escalation threshold"
+              badge="Aging"
+              barPercent={kpis.total_pending ? (kpis.aging_count / kpis.total_pending) * 100 : 0}
+              chips={[{ label: 'Pending', count: kpis.total_pending }]}
+            />
           </div>
         </>
       )}
@@ -546,9 +595,13 @@ export default function MyApprovalsPage() {
 
       <div className="space-y-3">
         {loading ? (
-          <div className="rounded-lg border border-[var(--color-silver)] bg-white p-6 text-sm text-[var(--color-mercury-grey)]">Loading approvals...</div>
+          <div className="rounded-lg border border-[var(--color-silver)] bg-white p-6 text-sm text-[var(--color-mercury-grey)]">
+            Loading approvals...
+          </div>
         ) : queue.length === 0 ? (
-          <div className="rounded-lg border border-[var(--color-silver)] bg-white p-6 text-sm text-[var(--color-mercury-grey)]">No pending approvals</div>
+          <div className="rounded-lg border border-[var(--color-silver)] bg-white p-6 text-sm text-[var(--color-mercury-grey)]">
+            No pending approvals
+          </div>
         ) : (
           queue.map((item) => (
             <ApprovalQueueItem
@@ -565,18 +618,32 @@ export default function MyApprovalsPage() {
       </div>
 
       {selectedApproval && (
-        <div className={`rounded-xl border border-[var(--color-silver)] bg-white transition-opacity ${drawerClosing ? 'opacity-0' : 'opacity-100'}`}>
+        <div
+          className={`rounded-xl border border-[var(--color-silver)] bg-white transition-opacity ${drawerClosing ? 'opacity-0' : 'opacity-100'}`}
+        >
           <div className="border-b border-[var(--color-silver)] bg-white px-6 py-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-lg font-semibold text-[var(--color-ink)]">{detailModuleLabel(selectedApproval.module)} Review</p>
-                <p className="text-sm text-[var(--color-mercury-grey)]">{selectedApproval.invoice_number || selectedApproval.po_number || selectedApproval.reference_id}</p>
+                <p className="text-lg font-semibold text-[var(--color-ink)]">
+                  {detailModuleLabel(selectedApproval.module)} Review
+                </p>
+                <p className="text-sm text-[var(--color-mercury-grey)]">
+                  {selectedApproval.invoice_number ||
+                    selectedApproval.po_number ||
+                    selectedApproval.reference_id}
+                </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`approval-detail-status-badge ${selectedApproval.sla_info?.breached ? 'approval-detail-status-overdue' : 'approval-detail-status-pending'}`}>
+                <span
+                  className={`approval-detail-status-badge ${selectedApproval.sla_info?.breached ? 'approval-detail-status-overdue' : 'approval-detail-status-pending'}`}
+                >
                   {selectedApproval.sla_info?.breached ? 'OVERDUE' : 'Pending'}
                 </span>
-                <button type="button" className="approval-detail-back-btn" onClick={closeDetailDrawer}>
+                <button
+                  type="button"
+                  className="approval-detail-back-btn"
+                  onClick={closeDetailDrawer}
+                >
                   ← Back to list
                 </button>
               </div>
@@ -589,10 +656,35 @@ export default function MyApprovalsPage() {
                 <section className="approval-detail-section">
                   <p className="approval-detail-section-title">INVOICE / DOCUMENT DETAILS</p>
                   <div className="approval-detail-grid">
-                    <p>Invoice number: <span>{selectedApproval.invoice_number || selectedApproval.po_number || selectedApproval.reference_id}</span></p>
-                    <p>Invoice date: <span>{selectedApproval.invoice_date ? new Date(selectedApproval.invoice_date).toLocaleDateString('en-IN') : '—'}</span></p>
-                    <p>Amount: <span>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: selectedApproval.currency || 'INR' }).format(selectedApproval.display_amount || 0)} · {selectedApproval.currency || 'INR'}</span></p>
-                    <p>Vendor: <span>{selectedApproval.vendor_legal_name || '—'}</span></p>
+                    <p>
+                      Invoice number:{' '}
+                      <span>
+                        {selectedApproval.invoice_number ||
+                          selectedApproval.po_number ||
+                          selectedApproval.reference_id}
+                      </span>
+                    </p>
+                    <p>
+                      Invoice date:{' '}
+                      <span>
+                        {selectedApproval.invoice_date
+                          ? new Date(selectedApproval.invoice_date).toLocaleDateString('en-IN')
+                          : '—'}
+                      </span>
+                    </p>
+                    <p>
+                      Amount:{' '}
+                      <span>
+                        {new Intl.NumberFormat('en-IN', {
+                          style: 'currency',
+                          currency: selectedApproval.currency || 'INR',
+                        }).format(selectedApproval.display_amount || 0)}{' '}
+                        · {selectedApproval.currency || 'INR'}
+                      </span>
+                    </p>
+                    <p>
+                      Vendor: <span>{selectedApproval.vendor_legal_name || '—'}</span>
+                    </p>
                   </div>
                 </section>
               )}
@@ -600,12 +692,30 @@ export default function MyApprovalsPage() {
               <section className="approval-detail-section">
                 <p className="approval-detail-section-title">APPROVAL STATUS</p>
                 <div className="approval-detail-grid">
-                  <p>Priority: <span>{selectedApproval.priority}</span></p>
-                  <p>Priority reason: <span>{selectedApproval.priority_reason || '—'}</span></p>
-                  <p>Submitted: <span>{new Date(selectedApproval.created_at).toLocaleDateString('en-IN')}</span></p>
-                  <p>Age: <span>{selectedApproval.age_hours}h old</span></p>
-                  <p>SLA: <span>{selectedApproval.sla_info?.breached ? `Breached at ${selectedApproval.sla_info?.breach_in_hours}h` : 'Within SLA'}</span></p>
-                  <p>Escalated: <span>{selectedApproval.sla_info?.breached ? 'Yes' : 'No'}</span></p>
+                  <p>
+                    Priority: <span>{selectedApproval.priority}</span>
+                  </p>
+                  <p>
+                    Priority reason: <span>{selectedApproval.priority_reason || '—'}</span>
+                  </p>
+                  <p>
+                    Submitted:{' '}
+                    <span>{new Date(selectedApproval.created_at).toLocaleDateString('en-IN')}</span>
+                  </p>
+                  <p>
+                    Age: <span>{selectedApproval.age_hours}h old</span>
+                  </p>
+                  <p>
+                    SLA:{' '}
+                    <span>
+                      {selectedApproval.sla_info?.breached
+                        ? `Breached at ${selectedApproval.sla_info?.breach_in_hours}h`
+                        : 'Within SLA'}
+                    </span>
+                  </p>
+                  <p>
+                    Escalated: <span>{selectedApproval.sla_info?.breached ? 'Yes' : 'No'}</span>
+                  </p>
                 </div>
               </section>
 
@@ -613,9 +723,28 @@ export default function MyApprovalsPage() {
                 <section className="approval-detail-section">
                   <p className="approval-detail-section-title">MSME INFO</p>
                   <div className="approval-detail-grid">
-                    <p>MSME category: <span>{selectedApproval.msme_info?.msme_category || selectedApproval.msme_category || '—'}</span></p>
-                    <p>45-day deadline: <span>{selectedApproval.msme_info?.deadline_date ? new Date(selectedApproval.msme_info.deadline_date).toLocaleDateString('en-IN') : '—'}</span></p>
-                    <p>Days remaining: <span>{selectedApproval.msme_info?.days_remaining ?? '—'}</span></p>
+                    <p>
+                      MSME category:{' '}
+                      <span>
+                        {selectedApproval.msme_info?.msme_category ||
+                          selectedApproval.msme_category ||
+                          '—'}
+                      </span>
+                    </p>
+                    <p>
+                      45-day deadline:{' '}
+                      <span>
+                        {selectedApproval.msme_info?.deadline_date
+                          ? new Date(selectedApproval.msme_info.deadline_date).toLocaleDateString(
+                              'en-IN'
+                            )
+                          : '—'}
+                      </span>
+                    </p>
+                    <p>
+                      Days remaining:{' '}
+                      <span>{selectedApproval.msme_info?.days_remaining ?? '—'}</span>
+                    </p>
                   </div>
                 </section>
               )}
@@ -628,9 +757,14 @@ export default function MyApprovalsPage() {
                       <div className="rounded-lg border border-[var(--color-silver)] bg-white p-3">
                         <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                           {masterRecordEntries.map((entry) => (
-                            <div key={entry.key} className="rounded-md border border-[var(--color-silver)] bg-[#F9FBFD] px-3 py-2 text-xs">
+                            <div
+                              key={entry.key}
+                              className="rounded-md border border-[var(--color-silver)] bg-[#F9FBFD] px-3 py-2 text-xs"
+                            >
                               <p className="text-[var(--color-mercury-grey)]">{entry.label}</p>
-                              <p className="mt-1 break-all font-medium text-[var(--color-ink)]">{entry.value}</p>
+                              <p className="mt-1 break-all font-medium text-[var(--color-ink)]">
+                                {entry.value}
+                              </p>
                             </div>
                           ))}
                         </div>
@@ -640,7 +774,12 @@ export default function MyApprovalsPage() {
                           <button
                             type="button"
                             className="rounded-md border border-[var(--color-silver)] bg-white px-3 py-1.5 text-xs text-[var(--color-ink)]"
-                            onClick={() => window.open(MASTER_ROUTE_MAP[selectedMasterRecord.masterKey], '_blank')}
+                            onClick={() =>
+                              window.open(
+                                MASTER_ROUTE_MAP[selectedMasterRecord.masterKey],
+                                '_blank'
+                              )
+                            }
                           >
                             Open original master screen
                           </button>
@@ -648,24 +787,33 @@ export default function MyApprovalsPage() {
                       )}
                     </>
                   ) : (
-                    <p className="text-sm text-[var(--color-mercury-grey)]">Loading original master record details...</p>
+                    <p className="text-sm text-[var(--color-mercury-grey)]">
+                      Loading original master record details...
+                    </p>
                   )}
                 </section>
               )}
             </div>
 
             <aside className="rounded-lg border border-[#D7E8FF] bg-[#F6FAFF] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[#1E3A8A]">Scrutinizer Insights</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.04em] text-[#1E3A8A]">
+                Scrutinizer Insights
+              </p>
               <div className="mt-3 space-y-2">
                 {scrutinizerInsights.map((insight, index) => (
-                  <div key={`${insight.title}-${index}`} className="rounded-md border border-[#DDE7F5] bg-white px-3 py-2">
-                    <p className={`text-xs font-semibold ${
-                      insight.severity === 'high'
-                        ? 'text-[#B91C1C]'
-                        : insight.severity === 'medium'
-                          ? 'text-[#B45309]'
-                          : 'text-[#166534]'
-                    }`}>
+                  <div
+                    key={`${insight.title}-${index}`}
+                    className="rounded-md border border-[#DDE7F5] bg-white px-3 py-2"
+                  >
+                    <p
+                      className={`text-xs font-semibold ${
+                        insight.severity === 'high'
+                          ? 'text-[#B91C1C]'
+                          : insight.severity === 'medium'
+                            ? 'text-[#B45309]'
+                            : 'text-[#166534]'
+                      }`}
+                    >
                       {insight.severity.toUpperCase()} · {insight.title}
                     </p>
                     <p className="mt-1 text-xs text-[#475569]">{insight.detail}</p>
@@ -678,7 +826,8 @@ export default function MyApprovalsPage() {
                     Master: <span className="font-medium">{selectedMasterRecord.masterKey}</span>
                   </p>
                   <p className="text-xs text-[#475569]">
-                    Record ID: <span className="font-medium break-all">{selectedMasterRecord.recordId}</span>
+                    Record ID:{' '}
+                    <span className="font-medium break-all">{selectedMasterRecord.recordId}</span>
                   </p>
                 </>
               )}
@@ -688,7 +837,11 @@ export default function MyApprovalsPage() {
                     type="button"
                     className="approval-detail-approve-btn"
                     disabled={actionBusyId === selectedApproval.id}
-                    style={actionBusyId === selectedApproval.id ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                    style={
+                      actionBusyId === selectedApproval.id
+                        ? { opacity: 0.6, cursor: 'not-allowed' }
+                        : undefined
+                    }
                     onClick={async () => {
                       await handleApprove(selectedApproval.id);
                     }}
@@ -699,7 +852,11 @@ export default function MyApprovalsPage() {
                     type="button"
                     className="approval-detail-reject-btn"
                     disabled={actionBusyId === selectedApproval.id}
-                    style={actionBusyId === selectedApproval.id ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                    style={
+                      actionBusyId === selectedApproval.id
+                        ? { opacity: 0.6, cursor: 'not-allowed' }
+                        : undefined
+                    }
                     onClick={() => setPanelRejecting((prev) => !prev)}
                   >
                     ✗ Reject

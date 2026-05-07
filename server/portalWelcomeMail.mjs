@@ -32,7 +32,9 @@ export async function sendPortalWelcomeEmailServer(body) {
   const lastName = typeof body?.lastName === 'string' ? body.lastName.trim() : '';
   const loginUrl = typeof body?.loginUrl === 'string' ? body.loginUrl.trim() : '';
   const vendorName =
-    typeof body?.vendorName === 'string' && body.vendorName.trim() ? body.vendorName.trim() : undefined;
+    typeof body?.vendorName === 'string' && body.vendorName.trim()
+      ? body.vendorName.trim()
+      : undefined;
   const role = typeof body?.role === 'string' && body.role.trim() ? body.role.trim() : undefined;
 
   if (!to || !isValidEmailShape(to)) {

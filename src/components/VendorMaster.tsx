@@ -101,13 +101,32 @@ function normalizeVendor(raw: any): Vendor {
 const VENDOR_TYPES = ['Supplier', 'Service Provider', 'Contractor', 'Distributor'];
 
 const FIELD_LABELS: Record<string, string> = {
-  vendorCode: 'Vendor Code', clientErpVendorCode: 'Client ERP Vendor Code', legalName: 'Legal Name', tradeName: 'Trade Name', vendorType: 'Type',
-  gstin: 'GSTIN', pan: 'PAN', msmeNumber: 'MSME Number', msmeCategory: 'MSME Category',
-  contactName: 'Contact Name', contactEmail: 'Email', contactPhone: 'Phone',
-  address: 'Address', city: 'City', state: 'State', pincode: 'Pincode', country: 'Country',
-  bankName: 'Bank Name', bankAccountNumber: 'Account Number', bankIfsc: 'IFSC', bankBranch: 'Branch',
-  paymentTerms: 'Payment Terms', creditLimit: 'Credit Limit',
-  tdsApplicable: 'TDS Applicable', tdsSection: 'TDS Section', tdsRate: 'TDS Rate',
+  vendorCode: 'Vendor Code',
+  clientErpVendorCode: 'Client ERP Vendor Code',
+  legalName: 'Legal Name',
+  tradeName: 'Trade Name',
+  vendorType: 'Type',
+  gstin: 'GSTIN',
+  pan: 'PAN',
+  msmeNumber: 'MSME Number',
+  msmeCategory: 'MSME Category',
+  contactName: 'Contact Name',
+  contactEmail: 'Email',
+  contactPhone: 'Phone',
+  address: 'Address',
+  city: 'City',
+  state: 'State',
+  pincode: 'Pincode',
+  country: 'Country',
+  bankName: 'Bank Name',
+  bankAccountNumber: 'Account Number',
+  bankIfsc: 'IFSC',
+  bankBranch: 'Branch',
+  paymentTerms: 'Payment Terms',
+  creditLimit: 'Credit Limit',
+  tdsApplicable: 'TDS Applicable',
+  tdsSection: 'TDS Section',
+  tdsRate: 'TDS Rate',
   status: 'Status',
 };
 
@@ -132,7 +151,10 @@ function isLikelyMockVendor(vendor: Vendor): boolean {
     'gulf packaging industries',
   ];
 
-  return mockCodePrefix || mockNameMarkers.some((marker) => legalName.includes(marker) || tradeName.includes(marker));
+  return (
+    mockCodePrefix ||
+    mockNameMarkers.some((marker) => legalName.includes(marker) || tradeName.includes(marker))
+  );
 }
 
 /* ──────────────────── Component ───────────────────────── */
@@ -155,7 +177,9 @@ export function VendorMaster() {
     }
   }, []);
 
-  useEffect(() => { fetchApiVendors(); }, [fetchApiVendors]);
+  useEffect(() => {
+    fetchApiVendors();
+  }, [fetchApiVendors]);
 
   // Merge: API vendors are primary source, master records fill any gaps (by id)
   const vendors = useMemo(() => {
@@ -183,13 +207,26 @@ export function VendorMaster() {
     return normalizedVendors
       .filter((v) => !isLikelyMockVendor(v))
       .filter((v) => {
-      const haystack = [v.vendorCode || '', v.clientErpVendorCode || '', v.legalName || '', v.tradeName || '', v.vendorType || '', v.gstin || '', v.city || '', v.status || '', v.approvalStatus || ''].join(' ').toLowerCase();
-      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
-      const matchesType = typeFilter.length === 0 || typeFilter.includes(v.vendorType || '');
-      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(v.status || '');
-      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(v.approvalStatus || '');
-      return matchesSearch && matchesType && matchesStatus && matchesApproval;
-    });
+        const haystack = [
+          v.vendorCode || '',
+          v.clientErpVendorCode || '',
+          v.legalName || '',
+          v.tradeName || '',
+          v.vendorType || '',
+          v.gstin || '',
+          v.city || '',
+          v.status || '',
+          v.approvalStatus || '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+        const matchesType = typeFilter.length === 0 || typeFilter.includes(v.vendorType || '');
+        const matchesStatus = statusFilter.length === 0 || statusFilter.includes(v.status || '');
+        const matchesApproval =
+          approvalFilter.length === 0 || approvalFilter.includes(v.approvalStatus || '');
+        return matchesSearch && matchesType && matchesStatus && matchesApproval;
+      });
   }, [normalizedVendors, searchTerm, typeFilter, statusFilter, approvalFilter]);
 
   /* ── navigation to create/edit screens ── */
@@ -197,9 +234,11 @@ export function VendorMaster() {
   const handleEdit = (vendor: Vendor) => navigate(`/vendors/edit/${vendor.id}`);
 
   const handleDelete = (id: string) => {
-    const v = normalizedVendors.find(d => d.id === id);
+    const v = normalizedVendors.find((d) => d.id === id);
     if (v?.approvalStatus === 'Approved') {
-      alert('Cannot delete approved/live records. You can only modify them through the approval workflow.');
+      alert(
+        'Cannot delete approved/live records. You can only modify them through the approval workflow.'
+      );
       return;
     }
     setVendors(vendors.filter((d: any) => d.id !== id));
@@ -225,52 +264,79 @@ export function VendorMaster() {
 
   const handleApprove = async () => {
     if (currentReviewRecord) {
-      const next = await applyMasterApprovalAction('vendor_master', vendors, currentReviewRecord.id, 'approve');
+      const next = await applyMasterApprovalAction(
+        'vendor_master',
+        vendors,
+        currentReviewRecord.id,
+        'approve'
+      );
       setVendors(next);
     }
-    setShowApprovalModal(false); setCurrentReviewRecord(null);
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
   };
 
   const handleReject = async () => {
     if (currentReviewRecord) {
-      const next = await applyMasterApprovalAction('vendor_master', vendors, currentReviewRecord.id, 'reject');
+      const next = await applyMasterApprovalAction(
+        'vendor_master',
+        vendors,
+        currentReviewRecord.id,
+        'reject'
+      );
       setVendors(next);
     }
-    setShowApprovalModal(false); setCurrentReviewRecord(null);
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
   };
 
   const handleRequestInfo = async () => {
     if (currentReviewRecord) {
       const comments = window.prompt('Enter comments for the request:', '');
       if (comments === null) return;
-      const next = await applyMasterApprovalAction('vendor_master', vendors, currentReviewRecord.id, 'request_info', comments);
+      const next = await applyMasterApprovalAction(
+        'vendor_master',
+        vendors,
+        currentReviewRecord.id,
+        'request_info',
+        comments
+      );
       setVendors(next);
     }
-    setShowApprovalModal(false); setCurrentReviewRecord(null);
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
   };
 
   /* ── badge helper ── */
   const getStatusBadgeStyle = (approvalStatus: string) => {
     switch (approvalStatus) {
-      case 'Approved': return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
-      case 'Pending Approval': return { backgroundColor: '#FFF9E6', color: '#D97706' };
-      case 'Draft': return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
-      case 'Rejected': return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
-      default: return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
+      case 'Approved':
+        return { backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' };
+      case 'Pending Approval':
+        return { backgroundColor: '#FFF9E6', color: '#D97706' };
+      case 'Draft':
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
+      case 'Rejected':
+        return { backgroundColor: '#FFE8EA', color: 'var(--color-error)' };
+      default:
+        return { backgroundColor: '#E5E7EB', color: 'var(--color-mercury-grey)' };
     }
   };
 
   /* ═══════════════════ LIST VIEW ═══════════════════════ */
 
   return (
-    <MasterPageShell masterName="Vendor Master" description="Manage vendor records with approval workflow">
+    <MasterPageShell
+      masterName="Vendor Master"
+      description="Manage vendor records with approval workflow"
+    >
       <div className="flex items-center justify-end mb-8">
         <button
           onClick={handleAdd}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
           style={{ backgroundColor: 'var(--color-teal)' }}
-          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
         >
           <Plus className="w-5 h-5" />
           Add Vendor
@@ -295,8 +361,18 @@ export function VendorMaster() {
         onSearchChange={setSearchTerm}
         filters={[
           { key: 'type', label: 'Type', options: VENDOR_TYPES, selected: typeFilter },
-          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
-          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+          {
+            key: 'status',
+            label: 'Status',
+            options: ['Active', 'Inactive'],
+            selected: statusFilter,
+          },
+          {
+            key: 'approval',
+            label: 'Approval',
+            options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'],
+            selected: approvalFilter,
+          },
         ]}
         onFilterChange={(key, values) => {
           if (key === 'type') setTypeFilter(values);
@@ -342,45 +418,136 @@ export function VendorMaster() {
           <table className="w-full">
             <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Vendor Code</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Legal Name</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Type</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>GSTIN</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>City</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Vendor Code
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Legal Name
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Type
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  GSTIN
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  City
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Status
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Approval
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredVendors.map((vendor, index) => (
-                <tr key={vendor.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{vendor.vendorCode}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{vendor.legalName}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{vendor.vendorType}</td>
-                  <td className="px-6 py-4 font-mono text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{vendor.gstin || '—'}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{vendor.city}</td>
+                <tr
+                  key={vendor.id}
+                  style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}
+                >
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
+                    {vendor.vendorCode}
+                  </td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
+                    {vendor.legalName}
+                  </td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                    {vendor.vendorType}
+                  </td>
+                  <td
+                    className="px-6 py-4 font-mono text-sm"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    {vendor.gstin || '—'}
+                  </td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                    {vendor.city}
+                  </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: vendor.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA', color: vendor.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)' }}>
+                    <span
+                      className="px-3 py-1 rounded-full text-sm"
+                      style={{
+                        backgroundColor:
+                          vendor.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA',
+                        color:
+                          vendor.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)',
+                      }}
+                    >
                       {vendor.status}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={getStatusBadgeStyle(vendor.approvalStatus)}>
+                    <span
+                      className="px-3 py-1 rounded-full text-sm"
+                      style={getStatusBadgeStyle(vendor.approvalStatus)}
+                    >
                       {vendor.approvalStatus}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       {vendor.approvalStatus === 'Pending Approval' && (
-                        <button onClick={() => handleReview(vendor)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-teal)' }} title="Review Changes">
+                        <button
+                          onClick={() => handleReview(vendor)}
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: 'var(--color-teal)' }}
+                          title="Review Changes"
+                        >
                           <Eye className="w-4 h-4" />
                         </button>
                       )}
-                      <button onClick={() => handleEdit(vendor)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }} title="Edit">
+                      <button
+                        onClick={() => handleEdit(vendor)}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: 'var(--color-mercury-grey)' }}
+                        title="Edit"
+                      >
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(vendor.id)} className="p-2 rounded-lg transition-colors" style={{ color: vendor.approvalStatus === 'Approved' ? '#C4C4C4' : 'var(--color-error)', cursor: vendor.approvalStatus === 'Approved' ? 'not-allowed' : 'pointer' }} title={vendor.approvalStatus === 'Approved' ? 'Cannot delete approved records' : 'Delete'} disabled={vendor.approvalStatus === 'Approved'}>
+                      <button
+                        onClick={() => handleDelete(vendor.id)}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{
+                          color:
+                            vendor.approvalStatus === 'Approved' ? '#C4C4C4' : 'var(--color-error)',
+                          cursor: vendor.approvalStatus === 'Approved' ? 'not-allowed' : 'pointer',
+                        }}
+                        title={
+                          vendor.approvalStatus === 'Approved'
+                            ? 'Cannot delete approved records'
+                            : 'Delete'
+                        }
+                        disabled={vendor.approvalStatus === 'Approved'}
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

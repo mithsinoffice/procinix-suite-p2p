@@ -60,9 +60,7 @@ export function determineGST(input: DetermineGSTInput): DetermineGSTResult {
   }
 
   const isRcm =
-    invoiceFlags.rcm ||
-    vendorMaster.gstReg === 'urd' ||
-    itemMaster.rcmCategory === true;
+    invoiceFlags.rcm || vendorMaster.gstReg === 'urd' || itemMaster.rcmCategory === true;
 
   const interOrImport = invoiceFlags.interState || invoiceFlags.import;
   const igst = interOrImport ? (taxable * rate) / 100 : 0;
@@ -76,7 +74,10 @@ export function determineGST(input: DetermineGSTInput): DetermineGSTResult {
     sgst,
     isRcm,
     itcEligible,
-    gstRule: interOrImport ? (invoiceFlags.import ? 'import_igst' : 'inter_state_igst') : 'intra_state_cgst_sgst',
+    gstRule: interOrImport
+      ? invoiceFlags.import
+        ? 'import_igst'
+        : 'inter_state_igst'
+      : 'intra_state_cgst_sgst',
   };
 }
-

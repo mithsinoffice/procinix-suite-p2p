@@ -20,7 +20,10 @@ export function SuperAdminLayout() {
 
   if (!isAuthenticated || !user || !isSuperAdminUser(user)) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+      <div
+        className="min-h-screen flex items-center justify-center text-sm"
+        style={{ color: 'var(--color-mercury-grey)' }}
+      >
         Checking access…
       </div>
     );
@@ -47,7 +50,10 @@ export function SuperAdminLayout() {
           </h1>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-sm truncate max-w-[200px]" style={{ color: 'var(--color-mercury-grey)' }}>
+          <span
+            className="text-sm truncate max-w-[200px]"
+            style={{ color: 'var(--color-mercury-grey)' }}
+          >
             {user.email}
           </span>
           <button

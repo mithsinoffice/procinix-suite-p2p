@@ -93,4 +93,3 @@ export function VendorMasterChips({ vendor }: VendorMasterChipsProps) {
     </div>
   );
 }
-

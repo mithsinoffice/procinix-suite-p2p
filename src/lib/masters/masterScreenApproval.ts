@@ -24,7 +24,7 @@ export async function applyMasterApprovalAction<T>(
   fallbackRecords: T[],
   recordId: string,
   action: 'approve' | 'reject' | 'request_info',
-  comments = '',
+  comments = ''
 ) {
   await updateMasterApprovalStatus(masterKey, recordId, action, {
     actor: getCurrentApprovalActor(),

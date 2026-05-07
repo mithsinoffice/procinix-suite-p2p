@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import nodemailer from 'nodemailer';
 import { query } from '../../mysql.mjs';
-import { mapProcessingStatusToLifecycle, mapLegacyToLifecycle, LIFECYCLE_STATES } from '../invoices/lifecycleMapping.mjs';
+import {
+  mapProcessingStatusToLifecycle,
+  mapLegacyToLifecycle,
+  LIFECYCLE_STATES,
+} from '../invoices/lifecycleMapping.mjs';
 import { processIntake } from './intakeAgent.mjs';
 import { processExtraction } from './extractionAgent.mjs';
 import { processVendorMatch } from './vendorIdentityAgent.mjs';
@@ -45,15 +49,17 @@ async function ensureRetryTable() {
 // ── Structured metrics ───────────────────────────────────────────────────────
 
 export function emitMetric(invoiceId, agent, durationMs, status, attempt = 1) {
-  console.log(JSON.stringify({
-    event: 'agent_run',
-    invoice_id: invoiceId,
-    agent,
-    duration_ms: durationMs,
-    status,
-    attempt,
-    ts: new Date().toISOString(),
-  }));
+  console.log(
+    JSON.stringify({
+      event: 'agent_run',
+      invoice_id: invoiceId,
+      agent,
+      duration_ms: durationMs,
+      status,
+      attempt,
+      ts: new Date().toISOString(),
+    })
+  );
 }
 
 // ── Exception + retry helpers ────────────────────────────────────────────────
@@ -63,14 +69,20 @@ async function recordAgentException(invoiceId, agentName, err, attempt = 1) {
     await query(
       `INSERT INTO invoice_exceptions (id, invoice_id, exception_type, exception_detail, severity, created_at)
        VALUES (?, ?, 'AGENT_FAILURE', ?, 'high', CURRENT_TIMESTAMP)`,
-      [randomUUID(), invoiceId, JSON.stringify({
-        agent: agentName,
-        message: err.message,
-        stack: err.stack?.substring(0, 2000),
-        attempt,
-      })]
+      [
+        randomUUID(),
+        invoiceId,
+        JSON.stringify({
+          agent: agentName,
+          message: err.message,
+          stack: err.stack?.substring(0, 2000),
+          attempt,
+        }),
+      ]
     );
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 async function scheduleRetry(invoiceId, agentName, attempt, lastErr) {
@@ -117,7 +129,9 @@ async function sendAgentFailureAlert(invoiceId, agentName, lastErr) {
   const to = process.env.ALERTS_EMAIL?.trim() || process.env.MAIL_FROM?.trim();
   const smtpHost = process.env.SMTP_HOST?.trim();
   if (!to || !smtpHost) {
-    console.warn(`[Orchestrator] Invoice ${invoiceId} — retries exhausted; no SMTP configured for alert`);
+    console.warn(
+      `[Orchestrator] Invoice ${invoiceId} — retries exhausted; no SMTP configured for alert`
+    );
     return;
   }
   try {
@@ -126,7 +140,9 @@ async function sendAgentFailureAlert(invoiceId, agentName, lastErr) {
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
     const transporter = nodemailer.createTransport({
-      host: smtpHost, port, secure,
+      host: smtpHost,
+      port,
+      secure,
       auth: user && pass ? { user, pass } : undefined,
     });
     await transporter.sendMail({
@@ -146,12 +162,41 @@ async function sendAgentFailureAlert(invoiceId, agentName, lastErr) {
 // ── Safe fallbacks used when an individual agent step fails ──────────────────
 // These allow downstream steps to continue; the invoice is still retried later.
 
-const FALLBACK_VENDOR_MATCH = { matchedVendorName: null, matchConfidence: 0, method: 'agent_failed', isNewVendor: true, explanation: 'Agent failed' };
-const FALLBACK_DUP_CHECK    = { riskScore: 0, isDuplicate: false, checks: [], explanation: 'Agent failed' };
-const FALLBACK_MATCH        = { matchType: 'none', poNumber: null, matchConfidence: 0, poId: null, explanation: 'Agent failed' };
-const FALLBACK_TAX          = { score: 100, arithmeticValid: true, gstTypeValid: true, issues: [], explanation: 'Agent failed' };
-const FALLBACK_CODING       = { overallCertainty: 0, suggestions: [], explanation: 'Agent failed' };
-const FALLBACK_ROUTING      = { lane: 'manual', postingReadiness: 'not_ready', laneReason: 'Agent failed', explanation: 'Agent failed', confidenceScores: {} };
+const FALLBACK_VENDOR_MATCH = {
+  matchedVendorName: null,
+  matchConfidence: 0,
+  method: 'agent_failed',
+  isNewVendor: true,
+  explanation: 'Agent failed',
+};
+const FALLBACK_DUP_CHECK = {
+  riskScore: 0,
+  isDuplicate: false,
+  checks: [],
+  explanation: 'Agent failed',
+};
+const FALLBACK_MATCH = {
+  matchType: 'none',
+  poNumber: null,
+  matchConfidence: 0,
+  poId: null,
+  explanation: 'Agent failed',
+};
+const FALLBACK_TAX = {
+  score: 100,
+  arithmeticValid: true,
+  gstTypeValid: true,
+  issues: [],
+  explanation: 'Agent failed',
+};
+const FALLBACK_CODING = { overallCertainty: 0, suggestions: [], explanation: 'Agent failed' };
+const FALLBACK_ROUTING = {
+  lane: 'manual',
+  postingReadiness: 'not_ready',
+  laneReason: 'Agent failed',
+  explanation: 'Agent failed',
+  confidenceScores: {},
+};
 
 // Returns a step-runner bound to this invoice run's failedAgents array.
 function makeStepRunner(invoiceId, failedAgents, attempt = 1) {
@@ -179,7 +224,9 @@ async function logExplainability(invoiceId, stage, explanation, data) {
        VALUES (?, ?, ?, ?, CAST(? AS JSON), CURRENT_TIMESTAMP)`,
       [randomUUID(), invoiceId, stage, explanation, JSON.stringify(data || {})]
     );
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 // NOTE: transition guard bypassed — automated pipeline flow, not user-facing
@@ -197,7 +244,9 @@ async function updateInvoiceStatus(invoiceId, status) {
         [status, invoiceId]
       );
     }
-  } catch { /* non-critical */ }
+  } catch {
+    /* non-critical */
+  }
 }
 
 async function runAgentBuilderRuntime(invoiceId, extractedData, pipelineResult) {
@@ -231,12 +280,10 @@ async function runAgentBuilderRuntime(invoiceId, extractedData, pipelineResult) 
   const results = [];
   for (const agent of activeAgents) {
     try {
-      const output = await runAgent(
-        query,
-        agent.id,
-        extractedData,
-        { mode: 'ingestion-runtime', invoiceId }
-      );
+      const output = await runAgent(query, agent.id, extractedData, {
+        mode: 'ingestion-runtime',
+        invoiceId,
+      });
       results.push({
         agentId: agent.id,
         agentName: agent.name,
@@ -317,7 +364,12 @@ export async function processInvoiceWithAgents(email) {
         [invoiceId, LIFECYCLE_STATES.INGESTED, intake.documentId, intake.batchId]
       );
 
-      const extraction = await processExtraction(invoiceId, intake.documentId, attachment.buffer, attachment.mimeType);
+      const extraction = await processExtraction(
+        invoiceId,
+        intake.documentId,
+        attachment.buffer,
+        attachment.mimeType
+      );
       pipelineResult.steps.extraction = {
         success: true,
         headerScore: extraction.headerScore,
@@ -335,7 +387,9 @@ export async function processInvoiceWithAgents(email) {
           [ed.invoice_number, ed.vendor_name, invoiceId]
         );
         if (existingInv.length > 0) {
-          console.log(`[Orchestrator] ⚠ DUPLICATE BLOCKED: ${ed.invoice_number} from ${ed.vendor_name} already exists (${existingInv[0].id})`);
+          console.log(
+            `[Orchestrator] ⚠ DUPLICATE BLOCKED: ${ed.invoice_number} from ${ed.vendor_name} already exists (${existingInv[0].id})`
+          );
           await query('DELETE FROM invoices WHERE id = ?', [invoiceId]);
           pipelineResult.steps.extraction.duplicateBlocked = true;
           pipelineResult.steps.extraction.existingInvoiceId = existingInv[0].id;
@@ -361,12 +415,26 @@ export async function processInvoiceWithAgents(email) {
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?`,
         [
-          ed.invoice_number, ed.invoice_date, ed.due_date,
-          ed.vendor_name, ed.vendor_gstin, ed.vendor_pan, ed.vendor_email,
-          ed.bill_to_entity, ed.bill_to_gstin,
-          ed.currency || 'INR', ed.subtotal || 0, ed.tax_amount || 0, ed.total_amount || 0,
-          ed.po_number, ed.payment_terms ? String(ed.payment_terms).substring(0, 65000) : null, ed.notes,
-          JSON.stringify({ extractedData: ed, extraction: { headerScore: extraction.headerScore, linesScore: extraction.linesScore } }),
+          ed.invoice_number,
+          ed.invoice_date,
+          ed.due_date,
+          ed.vendor_name,
+          ed.vendor_gstin,
+          ed.vendor_pan,
+          ed.vendor_email,
+          ed.bill_to_entity,
+          ed.bill_to_gstin,
+          ed.currency || 'INR',
+          ed.subtotal || 0,
+          ed.tax_amount || 0,
+          ed.total_amount || 0,
+          ed.po_number,
+          ed.payment_terms ? String(ed.payment_terms).substring(0, 65000) : null,
+          ed.notes,
+          JSON.stringify({
+            extractedData: ed,
+            extraction: { headerScore: extraction.headerScore, linesScore: extraction.linesScore },
+          }),
           extraction.provider,
           LIFECYCLE_STATES.OCR_EXTRACTED,
           invoiceId,
@@ -379,12 +447,25 @@ export async function processInvoiceWithAgents(email) {
           await query(
             `INSERT INTO invoice_line_items (id, invoice_id, line_number, description, quantity, unit_price, amount, hsn_sac, gst_rate, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-            [randomUUID(), invoiceId, i + 1, li.description || '', li.quantity || 0, li.unit_price || 0, li.amount || 0, li.hsn_sac || null, li.gst_rate || null]
+            [
+              randomUUID(),
+              invoiceId,
+              i + 1,
+              li.description || '',
+              li.quantity || 0,
+              li.unit_price || 0,
+              li.amount || 0,
+              li.hsn_sac || null,
+              li.gst_rate || null,
+            ]
           );
         }
       }
 
-      await logExplainability(invoiceId, 'extraction', extraction.explanation, { provider: extraction.provider, confidence: extraction.overallConfidence });
+      await logExplainability(invoiceId, 'extraction', extraction.explanation, {
+        provider: extraction.provider,
+        confidence: extraction.overallConfidence,
+      });
       await updateInvoiceStatus(invoiceId, 'extracted');
 
       // ── STEPS 3-8: individually wrapped with fallbacks ─────────────────────
@@ -392,23 +473,30 @@ export async function processInvoiceWithAgents(email) {
       const step = makeStepRunner(invoiceId, failedAgents);
 
       // ── STEP 3: Vendor Identity Agent ──
-      const vendorMatch = await step('vendorIdentityAgent', FALLBACK_VENDOR_MATCH, () => processVendorMatch(invoiceId, ed));
+      const vendorMatch = await step('vendorIdentityAgent', FALLBACK_VENDOR_MATCH, () =>
+        processVendorMatch(invoiceId, ed)
+      );
       pipelineResult.steps.vendorMatch = {
-        success: !failedAgents.some(a => a.name === 'vendorIdentityAgent'),
+        success: !failedAgents.some((a) => a.name === 'vendorIdentityAgent'),
         matchedVendorName: vendorMatch.matchedVendorName,
         confidence: vendorMatch.matchConfidence,
         method: vendorMatch.method,
         isNewVendor: vendorMatch.isNewVendor,
       };
       await logExplainability(invoiceId, 'vendor_match', vendorMatch.explanation, vendorMatch);
-      await updateInvoiceStatus(invoiceId, vendorMatch.isNewVendor ? 'vendor_unresolved' : 'vendor_matched');
+      await updateInvoiceStatus(
+        invoiceId,
+        vendorMatch.isNewVendor ? 'vendor_unresolved' : 'vendor_matched'
+      );
 
       await runAgentBuilderRuntime(invoiceId, ed, pipelineResult);
 
       // ── STEP 4: Duplicate & Fraud Agent ──
-      const dupCheck = await step('duplicateFraudAgent', FALLBACK_DUP_CHECK, () => processDuplicateCheck(invoiceId, ed, intake.contentHash));
+      const dupCheck = await step('duplicateFraudAgent', FALLBACK_DUP_CHECK, () =>
+        processDuplicateCheck(invoiceId, ed, intake.contentHash)
+      );
       pipelineResult.steps.duplicateCheck = {
-        success: !failedAgents.some(a => a.name === 'duplicateFraudAgent'),
+        success: !failedAgents.some((a) => a.name === 'duplicateFraudAgent'),
         riskScore: dupCheck.riskScore,
         isDuplicate: dupCheck.isDuplicate,
         checksRun: dupCheck.checks?.length || 0,
@@ -419,23 +507,34 @@ export async function processInvoiceWithAgents(email) {
       }
 
       // ── STEP 5: Match Agent ──
-      const matchResult = await step('matchAgent', FALLBACK_MATCH, () => processMatch(invoiceId, ed, null));
+      const matchResult = await step('matchAgent', FALLBACK_MATCH, () =>
+        processMatch(invoiceId, ed, null)
+      );
       pipelineResult.steps.match = {
-        success: !failedAgents.some(a => a.name === 'matchAgent'),
+        success: !failedAgents.some((a) => a.name === 'matchAgent'),
         matchType: matchResult.matchType,
         poNumber: matchResult.poNumber,
         confidence: matchResult.matchConfidence,
       };
       await logExplainability(invoiceId, 'po_match', matchResult.explanation, matchResult);
-      await updateInvoiceStatus(invoiceId, matchResult.matchType !== 'none' ? 'matched' : 'validation_in_progress');
+      await updateInvoiceStatus(
+        invoiceId,
+        matchResult.matchType !== 'none' ? 'matched' : 'validation_in_progress'
+      );
       if (matchResult.poId) {
-        await query('UPDATE invoices SET po_id = ?, po_number = ? WHERE id = ?', [matchResult.poId, matchResult.poNumber, invoiceId]);
+        await query('UPDATE invoices SET po_id = ?, po_number = ? WHERE id = ?', [
+          matchResult.poId,
+          matchResult.poNumber,
+          invoiceId,
+        ]);
       }
 
       // ── STEP 6: Tax & Compliance Agent ──
-      const taxResult = await step('taxComplianceAgent', FALLBACK_TAX, () => processTaxValidation(invoiceId, ed));
+      const taxResult = await step('taxComplianceAgent', FALLBACK_TAX, () =>
+        processTaxValidation(invoiceId, ed)
+      );
       pipelineResult.steps.taxValidation = {
-        success: !failedAgents.some(a => a.name === 'taxComplianceAgent'),
+        success: !failedAgents.some((a) => a.name === 'taxComplianceAgent'),
         score: taxResult.score,
         arithmeticValid: taxResult.arithmeticValid,
         gstTypeValid: taxResult.gstTypeValid,
@@ -447,33 +546,43 @@ export async function processInvoiceWithAgents(email) {
       }
 
       // ── STEP 7: Coding Agent ──
-      const coding = await step('codingAgent', FALLBACK_CODING, () => processCoding(invoiceId, ed, vendorMatch, matchResult));
+      const coding = await step('codingAgent', FALLBACK_CODING, () =>
+        processCoding(invoiceId, ed, vendorMatch, matchResult)
+      );
       pipelineResult.steps.coding = {
-        success: !failedAgents.some(a => a.name === 'codingAgent'),
+        success: !failedAgents.some((a) => a.name === 'codingAgent'),
         overallCertainty: coding.overallCertainty,
         suggestionCount: coding.suggestions?.length || 0,
       };
       await logExplainability(invoiceId, 'accounting_coding', coding.explanation, coding);
 
       // ── STEP 8: Workflow Routing Agent ──
-      const routing = await step('workflowRoutingAgent', FALLBACK_ROUTING, () => processRouting(invoiceId, {
-        extraction,
-        vendorMatch,
-        duplicateCheck: dupCheck,
-        matchResult,
-        taxValidation: taxResult,
-        codingSuggestions: coding,
-      }));
+      const routing = await step('workflowRoutingAgent', FALLBACK_ROUTING, () =>
+        processRouting(invoiceId, {
+          extraction,
+          vendorMatch,
+          duplicateCheck: dupCheck,
+          matchResult,
+          taxValidation: taxResult,
+          codingSuggestions: coding,
+        })
+      );
       pipelineResult.steps.routing = {
-        success: !failedAgents.some(a => a.name === 'workflowRoutingAgent'),
+        success: !failedAgents.some((a) => a.name === 'workflowRoutingAgent'),
         lane: routing.lane,
         postingReadiness: routing.postingReadiness,
         laneReason: routing.laneReason,
       };
       pipelineResult.lane = routing.lane;
-      await logExplainability(invoiceId, 'workflow_routing',
+      await logExplainability(
+        invoiceId,
+        'workflow_routing',
         `Invoice routed to ${routing.lane.toUpperCase()} lane. ${routing.explanation}`,
-        { lane: routing.lane, scores: routing.confidenceScores, readiness: routing.postingReadiness }
+        {
+          lane: routing.lane,
+          scores: routing.confidenceScores,
+          readiness: routing.postingReadiness,
+        }
       );
 
       if (email._logId) {
@@ -485,19 +594,26 @@ export async function processInvoiceWithAgents(email) {
           [invoiceId, email._logId]
         );
       }
-      await query('UPDATE ap_invoice_documents SET invoice_id = ?, status = ? WHERE id = ?', [invoiceId, 'extracted', intake.documentId]);
+      await query('UPDATE ap_invoice_documents SET invoice_id = ?, status = ? WHERE id = ?', [
+        invoiceId,
+        'extracted',
+        intake.documentId,
+      ]);
 
       pipelineResult.success = true;
       const elapsed = Date.now() - startTime;
-      console.log(`[Orchestrator] ✓ ${attachment.filename} → invoice ${invoiceId} → ${routing.lane.toUpperCase()} lane (${elapsed}ms)`);
+      console.log(
+        `[Orchestrator] ✓ ${attachment.filename} → invoice ${invoiceId} → ${routing.lane.toUpperCase()} lane (${elapsed}ms)`
+      );
 
       // Schedule retry if any step failed (pipeline completed but not perfectly)
       if (failedAgents.length > 0) {
         const first = failedAgents[0];
-        console.warn(`[Orchestrator] ↻ Invoice ${invoiceId} — ${failedAgents.length} agent(s) failed; scheduling retry`);
+        console.warn(
+          `[Orchestrator] ↻ Invoice ${invoiceId} — ${failedAgents.length} agent(s) failed; scheduling retry`
+        );
         await scheduleRetry(invoiceId, first.name, 1, first.error);
       }
-
     } catch (err) {
       pipelineResult.error = err.message;
       console.error(`[Orchestrator] ✗ ${attachment.filename}: ${err.message}`);
@@ -509,7 +625,9 @@ export async function processInvoiceWithAgents(email) {
             'UPDATE invoice_ingestion_log SET status = ?, error_message = ? WHERE id = ?',
             ['failed', err.message, email._logId]
           );
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
 
       if (pipelineResult.invoiceId) {
@@ -531,18 +649,16 @@ export async function reprocessAgentPipeline(invoiceId) {
   await ensureRetryTable();
 
   // Read invoice + extracted data from DB
-  const rows = await query(
-    `SELECT id, metadata, document_id FROM invoices WHERE id = ? LIMIT 1`,
-    [invoiceId]
-  );
+  const rows = await query(`SELECT id, metadata, document_id FROM invoices WHERE id = ? LIMIT 1`, [
+    invoiceId,
+  ]);
   if (!rows.length) {
     console.warn(`[Orchestrator] reprocessAgentPipeline: invoice ${invoiceId} not found`);
     return null;
   }
   const invoice = rows[0];
-  const metadata = typeof invoice.metadata === 'string'
-    ? JSON.parse(invoice.metadata)
-    : (invoice.metadata ?? {});
+  const metadata =
+    typeof invoice.metadata === 'string' ? JSON.parse(invoice.metadata) : (invoice.metadata ?? {});
   const extractedData = metadata.extractedData ?? {};
 
   // Current attempt count from retry queue
@@ -555,38 +671,62 @@ export async function reprocessAgentPipeline(invoiceId) {
   const failedAgents = [];
   const step = makeStepRunner(invoiceId, failedAgents, currentAttempt);
 
-  const vendorMatch = await step('vendorIdentityAgent', FALLBACK_VENDOR_MATCH, () => processVendorMatch(invoiceId, extractedData));
-  await updateInvoiceStatus(invoiceId, vendorMatch.isNewVendor ? 'vendor_unresolved' : 'vendor_matched');
+  const vendorMatch = await step('vendorIdentityAgent', FALLBACK_VENDOR_MATCH, () =>
+    processVendorMatch(invoiceId, extractedData)
+  );
+  await updateInvoiceStatus(
+    invoiceId,
+    vendorMatch.isNewVendor ? 'vendor_unresolved' : 'vendor_matched'
+  );
 
-  const dupCheck = await step('duplicateFraudAgent', FALLBACK_DUP_CHECK, () => processDuplicateCheck(invoiceId, extractedData, null));
+  const dupCheck = await step('duplicateFraudAgent', FALLBACK_DUP_CHECK, () =>
+    processDuplicateCheck(invoiceId, extractedData, null)
+  );
   if (dupCheck.isDuplicate) await updateInvoiceStatus(invoiceId, 'duplicate_suspected');
 
-  const matchResult = await step('matchAgent', FALLBACK_MATCH, () => processMatch(invoiceId, extractedData, null));
-  await updateInvoiceStatus(invoiceId, matchResult.matchType !== 'none' ? 'matched' : 'validation_in_progress');
+  const matchResult = await step('matchAgent', FALLBACK_MATCH, () =>
+    processMatch(invoiceId, extractedData, null)
+  );
+  await updateInvoiceStatus(
+    invoiceId,
+    matchResult.matchType !== 'none' ? 'matched' : 'validation_in_progress'
+  );
   if (matchResult.poId) {
-    await query('UPDATE invoices SET po_id = ?, po_number = ? WHERE id = ?', [matchResult.poId, matchResult.poNumber, invoiceId]);
+    await query('UPDATE invoices SET po_id = ?, po_number = ? WHERE id = ?', [
+      matchResult.poId,
+      matchResult.poNumber,
+      invoiceId,
+    ]);
   }
 
-  const taxResult = await step('taxComplianceAgent', FALLBACK_TAX, () => processTaxValidation(invoiceId, extractedData));
+  const taxResult = await step('taxComplianceAgent', FALLBACK_TAX, () =>
+    processTaxValidation(invoiceId, extractedData)
+  );
   if (taxResult.score < 100) await updateInvoiceStatus(invoiceId, 'tax_failed');
 
-  const coding = await step('codingAgent', FALLBACK_CODING, () => processCoding(invoiceId, extractedData, vendorMatch, matchResult));
+  const coding = await step('codingAgent', FALLBACK_CODING, () =>
+    processCoding(invoiceId, extractedData, vendorMatch, matchResult)
+  );
 
-  const routing = await step('workflowRoutingAgent', FALLBACK_ROUTING, () => processRouting(invoiceId, {
-    extraction: metadata.extraction ?? {},
-    vendorMatch,
-    duplicateCheck: dupCheck,
-    matchResult,
-    taxValidation: taxResult,
-    codingSuggestions: coding,
-  }));
+  const routing = await step('workflowRoutingAgent', FALLBACK_ROUTING, () =>
+    processRouting(invoiceId, {
+      extraction: metadata.extraction ?? {},
+      vendorMatch,
+      duplicateCheck: dupCheck,
+      matchResult,
+      taxValidation: taxResult,
+      codingSuggestions: coding,
+    })
+  );
 
   if (failedAgents.length === 0) {
     await query(
       `UPDATE agent_retry_queue SET status = 'resolved', updated_at = CURRENT_TIMESTAMP WHERE invoice_id = ?`,
       [invoiceId]
     );
-    console.log(`[Orchestrator] ✓ Retry succeeded for invoice ${invoiceId} (attempt ${currentAttempt})`);
+    console.log(
+      `[Orchestrator] ✓ Retry succeeded for invoice ${invoiceId} (attempt ${currentAttempt})`
+    );
     return { success: true, lane: routing.lane };
   }
 
@@ -594,14 +734,18 @@ export async function reprocessAgentPipeline(invoiceId) {
   const nextAttempt = currentAttempt + 1;
   const first = failedAgents[0];
   if (nextAttempt > MAX_AGENT_RETRIES) {
-    console.error(`[Orchestrator] ✗ Invoice ${invoiceId} exhausted all ${MAX_AGENT_RETRIES} retries`);
+    console.error(
+      `[Orchestrator] ✗ Invoice ${invoiceId} exhausted all ${MAX_AGENT_RETRIES} retries`
+    );
     await markExhausted(invoiceId, first.name, first.error);
   } else {
-    console.warn(`[Orchestrator] ↻ Invoice ${invoiceId} — retry ${nextAttempt}/${MAX_AGENT_RETRIES}`);
+    console.warn(
+      `[Orchestrator] ↻ Invoice ${invoiceId} — retry ${nextAttempt}/${MAX_AGENT_RETRIES}`
+    );
     await scheduleRetry(invoiceId, first.name, nextAttempt, first.error);
   }
 
-  return { success: false, failedAgents: failedAgents.map(a => a.name) };
+  return { success: false, failedAgents: failedAgents.map((a) => a.name) };
 }
 
 // ── Retry scheduler ──────────────────────────────────────────────────────────
@@ -625,7 +769,9 @@ let _retryTimer = null;
 export function startAgentRetryScheduler(intervalMs = 30_000) {
   if (_retryTimer) return;
   _retryTimer = setInterval(async () => {
-    try { await processRetryQueue(); } catch (err) {
+    try {
+      await processRetryQueue();
+    } catch (err) {
       console.error('[Orchestrator] processRetryQueue error:', err.message);
     }
   }, intervalMs);

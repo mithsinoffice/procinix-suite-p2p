@@ -16,7 +16,8 @@ export function EntityMappingSelector({
   const { entities } = useMasterData();
   const activeEntities = entities.filter((e: any) => e.isActive !== false);
   const selectedIds = new Set(value.map((m) => m.entityId));
-  const allSelected = activeEntities.length > 0 && activeEntities.every((e: any) => selectedIds.has(e.id));
+  const allSelected =
+    activeEntities.length > 0 && activeEntities.every((e: any) => selectedIds.has(e.id));
   const noneSelected = selectedIds.size === 0;
 
   const toggle = (entity: any) => {
@@ -37,14 +38,22 @@ export function EntityMappingSelector({
         {noneSelected ? (
           <span
             className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
-            style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal-dark)', fontWeight: 600 }}
+            style={{
+              backgroundColor: 'var(--color-teal-tint)',
+              color: 'var(--color-teal-dark)',
+              fontWeight: 600,
+            }}
           >
             <Globe className="w-3 h-3" /> Global
           </span>
         ) : (
           <span
             className="text-xs px-2.5 py-1 rounded-full"
-            style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', fontWeight: 600 }}
+            style={{
+              backgroundColor: 'var(--color-cloud)',
+              color: 'var(--color-mercury-grey)',
+              fontWeight: 600,
+            }}
           >
             {selectedIds.size} of {activeEntities.length} entities
           </span>
@@ -52,7 +61,13 @@ export function EntityMappingSelector({
         <button
           type="button"
           className="text-xs"
-          style={{ color: 'var(--color-teal)', cursor: 'pointer', background: 'none', border: 'none', fontWeight: 500 }}
+          style={{
+            color: 'var(--color-teal)',
+            cursor: 'pointer',
+            background: 'none',
+            border: 'none',
+            fontWeight: 500,
+          }}
           onClick={() => {
             if (allSelected) {
               onChange([]);

@@ -6,7 +6,13 @@ import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { ApprovalModal } from './ApprovalModal';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import {
+  FormShell,
+  FormSection,
+  PxFormField,
+  CheckCard,
+  type SaveStatus,
+} from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { EntityMappingSelector } from './shared/EntityMappingSelector';
 import type { EntityScopeMapping } from '../lib/masters/entityMapping';
@@ -30,11 +36,35 @@ interface Change {
 
 export function ItemCategoryMaster() {
   const navigate = useNavigate();
-  const [categories, setCategories] = useIncrementalMasterRecords<ItemCategory>('item_category_master', [
-    { id: '1', code: 'RAW-MAT', name: 'Raw Materials', description: 'Raw materials for production', status: 'Active', approvalStatus: 'Approved' },
-    { id: '2', code: 'PKG', name: 'Packaging', description: 'Packaging materials and supplies', status: 'Active', approvalStatus: 'Approved' },
-    { id: '3', code: 'SVC', name: 'Services', description: 'Professional and consulting services', status: 'Active', approvalStatus: 'Approved' }
-  ]);
+  const [categories, setCategories] = useIncrementalMasterRecords<ItemCategory>(
+    'item_category_master',
+    [
+      {
+        id: '1',
+        code: 'RAW-MAT',
+        name: 'Raw Materials',
+        description: 'Raw materials for production',
+        status: 'Active',
+        approvalStatus: 'Approved',
+      },
+      {
+        id: '2',
+        code: 'PKG',
+        name: 'Packaging',
+        description: 'Packaging materials and supplies',
+        status: 'Active',
+        approvalStatus: 'Approved',
+      },
+      {
+        id: '3',
+        code: 'SVC',
+        name: 'Services',
+        description: 'Professional and consulting services',
+        status: 'Active',
+        approvalStatus: 'Approved',
+      },
+    ]
+  );
 
   const [showForm, setShowForm] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -58,12 +88,15 @@ export function ItemCategoryMaster() {
       const haystack = [c.code, c.name, c.description].join(' ').toLowerCase();
       const matchesSearch = haystack.includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter.length === 0 || statusFilter.includes(c.status);
-      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(c.approvalStatus ?? 'Approved');
+      const matchesApproval =
+        approvalFilter.length === 0 || approvalFilter.includes(c.approvalStatus ?? 'Approved');
       return matchesSearch && matchesStatus && matchesApproval;
     });
   }, [categories, searchTerm, statusFilter, approvalFilter]);
 
-  const handleSubmit = (approvalStatus: NonNullable<ItemCategory['approvalStatus']> = 'Pending Approval') => {
+  const handleSubmit = (
+    approvalStatus: NonNullable<ItemCategory['approvalStatus']> = 'Pending Approval'
+  ) => {
     if (isEditMode && editingId) {
       const originalRecord = categories.find((category) => category.id === editingId);
       const updatedCategory: ItemCategory = {
@@ -77,7 +110,7 @@ export function ItemCategoryMaster() {
         entityMappings,
       };
 
-      setCategories(categories.map(c => c.id === editingId ? updatedCategory : c));
+      setCategories(categories.map((c) => (c.id === editingId ? updatedCategory : c)));
     } else {
       const newCategory: ItemCategory = {
         id: Date.now().toString(),
@@ -123,7 +156,7 @@ export function ItemCategoryMaster() {
       return;
     }
     if (window.confirm('Are you sure you want to delete this category?')) {
-      setCategories(categories.filter(c => c.id !== id));
+      setCategories(categories.filter((c) => c.id !== id));
     }
   };
 
@@ -131,10 +164,18 @@ export function ItemCategoryMaster() {
     const changes: Change[] = [];
     const original = category.originalData;
     if (original) {
-      if (original.code !== category.code) changes.push({ field: 'Category Code', oldValue: original.code, newValue: category.code });
-      if (original.name !== category.name) changes.push({ field: 'Category Name', oldValue: original.name, newValue: category.name });
-      if (original.description !== category.description) changes.push({ field: 'Description', oldValue: original.description, newValue: category.description });
-      if (original.status !== category.status) changes.push({ field: 'Status', oldValue: original.status, newValue: category.status });
+      if (original.code !== category.code)
+        changes.push({ field: 'Category Code', oldValue: original.code, newValue: category.code });
+      if (original.name !== category.name)
+        changes.push({ field: 'Category Name', oldValue: original.name, newValue: category.name });
+      if (original.description !== category.description)
+        changes.push({
+          field: 'Description',
+          oldValue: original.description,
+          newValue: category.description,
+        });
+      if (original.status !== category.status)
+        changes.push({ field: 'Status', oldValue: original.status, newValue: category.status });
     }
     setCurrentReviewRecord(category);
     setDetectedChanges(changes);
@@ -143,7 +184,12 @@ export function ItemCategoryMaster() {
 
   const handleApprove = async () => {
     if (!currentReviewRecord) return;
-    const nextRecords = await applyMasterApprovalAction('item_category_master', categories, currentReviewRecord.id, 'approve');
+    const nextRecords = await applyMasterApprovalAction(
+      'item_category_master',
+      categories,
+      currentReviewRecord.id,
+      'approve'
+    );
     setCategories(nextRecords);
     setShowApprovalModal(false);
     setCurrentReviewRecord(null);
@@ -151,7 +197,12 @@ export function ItemCategoryMaster() {
 
   const handleReject = async () => {
     if (!currentReviewRecord) return;
-    const nextRecords = await applyMasterApprovalAction('item_category_master', categories, currentReviewRecord.id, 'reject');
+    const nextRecords = await applyMasterApprovalAction(
+      'item_category_master',
+      categories,
+      currentReviewRecord.id,
+      'reject'
+    );
     setCategories(nextRecords);
     setShowApprovalModal(false);
     setCurrentReviewRecord(null);
@@ -161,7 +212,13 @@ export function ItemCategoryMaster() {
     if (!currentReviewRecord) return;
     const comments = window.prompt('Enter comments for the request:', '');
     if (comments === null) return;
-    const nextRecords = await applyMasterApprovalAction('item_category_master', categories, currentReviewRecord.id, 'request_info', comments);
+    const nextRecords = await applyMasterApprovalAction(
+      'item_category_master',
+      categories,
+      currentReviewRecord.id,
+      'request_info',
+      comments
+    );
     setCategories(nextRecords);
     setShowApprovalModal(false);
     setCurrentReviewRecord(null);
@@ -201,7 +258,8 @@ export function ItemCategoryMaster() {
 
   if (showForm) {
     return (
-      <FormShell masterName="Item Category Master"
+      <FormShell
+        masterName="Item Category Master"
         title={isEditMode ? 'Edit Item Category' : 'Create Item Category'}
         subtitle="Manage procurement item categories"
         modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
@@ -220,28 +278,53 @@ export function ItemCategoryMaster() {
       >
         <FormSection title="Category Details" columns={2}>
           <PxFormField label="Category Code" required filled={!!code.trim()}>
-            <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g., RAW-MAT" className="px-input" />
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="e.g., RAW-MAT"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Category Name" required filled={!!name.trim()}>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Raw Materials" className="px-input" />
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Raw Materials"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Description" filled={!!description.trim()}>
-            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of the category" className="px-input" />
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief description of the category"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Status" required filled={!!status}>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="px-select"
+            >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
-                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
+          <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );
   }
 
   return (
-    <MasterPageShell masterName="Item Category Master" description="Manage item classification categories">
+    <MasterPageShell
+      masterName="Item Category Master"
+      description="Manage item classification categories"
+    >
       <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
@@ -250,8 +333,8 @@ export function ItemCategoryMaster() {
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
           style={{ backgroundColor: 'var(--color-teal)' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
         >
           <Plus className="w-5 h-5" />
           Add Category
@@ -264,8 +347,18 @@ export function ItemCategoryMaster() {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         filters={[
-          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
-          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected', 'Changes Requested'], selected: approvalFilter },
+          {
+            key: 'status',
+            label: 'Status',
+            options: ['Active', 'Inactive'],
+            selected: statusFilter,
+          },
+          {
+            key: 'approval',
+            label: 'Approval',
+            options: ['Draft', 'Pending Approval', 'Approved', 'Rejected', 'Changes Requested'],
+            selected: approvalFilter,
+          },
         ]}
         onFilterChange={(key, values) => {
           if (key === 'status') setStatusFilter(values);
@@ -287,41 +380,110 @@ export function ItemCategoryMaster() {
           <table className="w-full">
             <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Category Code</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Category Name</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Description</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Category Code
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Category Name
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Description
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Status
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Approval
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredCategories.map((category, index) => (
-                <tr key={category.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{category.code}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{category.name}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{category.description}</td>
+                <tr
+                  key={category.id}
+                  style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}
+                >
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
+                    {category.code}
+                  </td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
+                    {category.name}
+                  </td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                    {category.description}
+                  </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: category.status === 'Active' ? 'var(--color-teal-tint)' : '#E5E7EB', color: category.status === 'Active' ? 'var(--color-teal)' : 'var(--color-mercury-grey)' }}>
+                    <span
+                      className="px-3 py-1 rounded-full text-sm"
+                      style={{
+                        backgroundColor:
+                          category.status === 'Active' ? 'var(--color-teal-tint)' : '#E5E7EB',
+                        color:
+                          category.status === 'Active'
+                            ? 'var(--color-teal)'
+                            : 'var(--color-mercury-grey)',
+                      }}
+                    >
                       {category.status}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={getApprovalBadgeStyle(category.approvalStatus)}>
+                    <span
+                      className="px-3 py-1 rounded-full text-sm"
+                      style={getApprovalBadgeStyle(category.approvalStatus)}
+                    >
                       {category.approvalStatus ?? 'Approved'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => handleEdit(category)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }} title="Edit">
+                      <button
+                        onClick={() => handleEdit(category)}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: 'var(--color-mercury-grey)' }}
+                        title="Edit"
+                      >
                         <Edit className="w-4 h-4" />
                       </button>
-                      {(category.approvalStatus === 'Pending Approval' || category.approvalStatus === 'Changes Requested' || category.approvalStatus === 'Draft') && (
-                        <button onClick={() => handleReview(category)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-teal)' }} title="Review Changes">
+                      {(category.approvalStatus === 'Pending Approval' ||
+                        category.approvalStatus === 'Changes Requested' ||
+                        category.approvalStatus === 'Draft') && (
+                        <button
+                          onClick={() => handleReview(category)}
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: 'var(--color-teal)' }}
+                          title="Review Changes"
+                        >
                           <Eye className="w-4 h-4" />
                         </button>
                       )}
-                      <button onClick={() => handleDelete(category.id)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-error)' }} title="Delete">
+                      <button
+                        onClick={() => handleDelete(category.id)}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: 'var(--color-error)' }}
+                        title="Delete"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

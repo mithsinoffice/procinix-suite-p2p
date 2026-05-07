@@ -49,8 +49,13 @@ export function AmendmentTypeSelector({ selected, onSelect }: AmendmentTypeSelec
             key={type}
             onClick={() => onSelect(type)}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: 8, padding: '20px 16px', borderRadius: 12, cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 8,
+              padding: '20px 16px',
+              borderRadius: 12,
+              cursor: 'pointer',
               background: isSelected ? 'var(--color-teal-tint)' : 'var(--background)',
               border: `2px solid ${isSelected ? 'var(--color-teal)' : 'var(--color-silver)'}`,
               transition: 'all 0.15s ease',
@@ -60,10 +65,13 @@ export function AmendmentTypeSelector({ selected, onSelect }: AmendmentTypeSelec
             <div style={{ color: isSelected ? 'var(--color-teal)' : 'var(--color-slate)' }}>
               {icon}
             </div>
-            <div style={{
-              fontSize: 14, fontWeight: 600,
-              color: isSelected ? 'var(--color-teal-dark)' : 'var(--color-ink)',
-            }}>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: isSelected ? 'var(--color-teal-dark)' : 'var(--color-ink)',
+              }}
+            >
               {label}
             </div>
             <div style={{ fontSize: 12, color: 'var(--color-slate)', lineHeight: 1.4 }}>

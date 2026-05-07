@@ -5,7 +5,12 @@ import { randomUUID } from 'crypto';
  * Handles pricing, quantity, delivery date, and full amendments.
  * Auto-approves delivery-only changes; routes others through approval workflow.
  */
-export async function createAmendment(queryFn, poId, userId, { amendmentType, reason, lineChanges, supportingDoc, vendorAcknowledged }) {
+export async function createAmendment(
+  queryFn,
+  poId,
+  userId,
+  { amendmentType, reason, lineChanges, supportingDoc, vendorAcknowledged }
+) {
   // Get next amendment number for this PO
   const countResult = await queryFn(
     'SELECT COUNT(*) as cnt FROM p2p_schema_mt.po_amendments WHERE po_id = ?',
@@ -16,7 +21,7 @@ export async function createAmendment(queryFn, poId, userId, { amendmentType, re
   // Calculate value changes from line items
   let originalValue = 0;
   let amendedValue = 0;
-  for (const change of (lineChanges || [])) {
+  for (const change of lineChanges || []) {
     originalValue += Number(change.originalValue) || 0;
     amendedValue += Number(change.newValue) || 0;
   }
@@ -37,22 +42,32 @@ export async function createAmendment(queryFn, poId, userId, { amendmentType, re
       value_change, value_change_pct, changes_json, status, submitted_by, submitted_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())`,
     [
-      amendmentId, poId, amendmentNumber, amendmentType, reason,
-      supportingDoc || null, vendorAcknowledged || false,
-      originalValue, amendedValue, valueChange,
+      amendmentId,
+      poId,
+      amendmentNumber,
+      amendmentType,
+      reason,
+      supportingDoc || null,
+      vendorAcknowledged || false,
+      originalValue,
+      amendedValue,
+      valueChange,
       Math.round(valueChangePct * 100) / 100,
-      JSON.stringify(lineChanges || []), status, userId,
+      JSON.stringify(lineChanges || []),
+      status,
+      userId,
     ]
   );
 
   // Insert individual line-level changes
-  for (const change of (lineChanges || [])) {
+  for (const change of lineChanges || []) {
     await queryFn(
       `INSERT INTO p2p_schema_mt.po_amendment_line_changes
        (id, amendment_id, po_line_item_id, field_changed, original_value, new_value, change_reason)
        VALUES (?,?,?,?,?,?,?)`,
       [
-        randomUUID(), amendmentId,
+        randomUUID(),
+        amendmentId,
         change.lineItemId || '',
         change.fieldChanged || '',
         String(change.originalValue),
@@ -129,7 +144,7 @@ export async function getAmendmentHistory(queryFn, poId) {
 export async function getAmendmentPreview(queryFn, poId, lineChanges) {
   let originalValue = 0;
   let amendedValue = 0;
-  for (const change of (lineChanges || [])) {
+  for (const change of lineChanges || []) {
     originalValue += Number(change.originalValue) || 0;
     amendedValue += Number(change.newValue) || 0;
   }

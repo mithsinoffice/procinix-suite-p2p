@@ -76,9 +76,11 @@ function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
 
-function getConfidenceTone(
-  outcome: IdentificationOutcome
-): { label: string; tone: 'teal' | 'amber' | 'red'; confidence: number } {
+function getConfidenceTone(outcome: IdentificationOutcome): {
+  label: string;
+  tone: 'teal' | 'amber' | 'red';
+  confidence: number;
+} {
   if (outcome.unresolved || !outcome.best) {
     return { label: 'Unresolved', tone: 'red', confidence: 0 };
   }
@@ -158,7 +160,9 @@ export function MasterBulkUpload() {
   useEffect(() => {
     void (async () => {
       try {
-        const doc = await ensureDomainDocument<{ drafts: UploadDraft[] }>('upload_drafts', { drafts: [] });
+        const doc = await ensureDomainDocument<{ drafts: UploadDraft[] }>('upload_drafts', {
+          drafts: [],
+        });
         setSavedDrafts(doc.drafts ?? []);
       } catch {
         // ignore
@@ -197,7 +201,7 @@ export function MasterBulkUpload() {
   }, []);
 
   const aggregate = useMemo(() => {
-    let filesCount = queue.length;
+    const filesCount = queue.length;
     let sheetsDetected = 0;
     let readyToUpload = 0;
     for (const item of queue) {
@@ -275,9 +279,7 @@ export function MasterBulkUpload() {
           q.map((it) => (it.id === id ? { ...it, parsed, sheets: processedSheets } : it))
         );
       } catch (err) {
-        setQueue((q) =>
-          q.map((it) => (it.id === id ? { ...it, fatalError: String(err) } : it))
-        );
+        setQueue((q) => q.map((it) => (it.id === id ? { ...it, fatalError: String(err) } : it)));
       }
     }
   }, []);
@@ -332,19 +334,22 @@ export function MasterBulkUpload() {
     setExpandedItem((cur) => (cur === itemId ? null : itemId));
   }, []);
 
-  const handleSkipSheet = useCallback((itemId: string, sheetIndex: number) => {
-    setQueue((q) => {
-      const next = q.map((it) => {
-        if (it.id !== itemId) return it;
-        const sheets = it.sheets.map((s, i) =>
-          i === sheetIndex ? { ...s, skipped: !s.skipped } : s
-        );
-        return { ...it, sheets };
+  const handleSkipSheet = useCallback(
+    (itemId: string, sheetIndex: number) => {
+      setQueue((q) => {
+        const next = q.map((it) => {
+          if (it.id !== itemId) return it;
+          const sheets = it.sheets.map((s, i) =>
+            i === sheetIndex ? { ...s, skipped: !s.skipped } : s
+          );
+          return { ...it, sheets };
+        });
+        scheduleDraftSave(next);
+        return next;
       });
-      scheduleDraftSave(next);
-      return next;
-    });
-  }, [scheduleDraftSave]);
+    },
+    [scheduleDraftSave]
+  );
 
   const handleMappingChange = useCallback(
     (itemId: string, sheetIndex: number, fieldKey: string, newRawHeader: string | null) => {
@@ -441,7 +446,9 @@ export function MasterBulkUpload() {
           // Auto-delete draft for this file
           setSavedDrafts((prev) => {
             const next = prev.filter(
-              (d) => d.fileName.toLowerCase() !== item.file.name.toLowerCase() || d.fileSize !== item.file.size
+              (d) =>
+                d.fileName.toLowerCase() !== item.file.name.toLowerCase() ||
+                d.fileSize !== item.file.size
             );
             void saveDomainDocument('upload_drafts', { drafts: next });
             return next;
@@ -534,12 +541,15 @@ export function MasterBulkUpload() {
     }
   }, [queue, showToast]);
 
-  const handleCopyText = useCallback((text: string) => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      void navigator.clipboard.writeText(text);
-      showToast({ type: 'info', message: 'Copied to clipboard.' });
-    }
-  }, [showToast]);
+  const handleCopyText = useCallback(
+    (text: string) => {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        void navigator.clipboard.writeText(text);
+        showToast({ type: 'info', message: 'Copied to clipboard.' });
+      }
+    },
+    [showToast]
+  );
 
   const handleMasterOverride = useCallback(
     async (itemId: string, sheetIndex: number, newMasterKey: string) => {
@@ -746,11 +756,12 @@ export function MasterBulkUpload() {
         setQueue((q) =>
           q.map((it) => (it.id === id ? { ...it, parsed, sheets: processedSheets } : it))
         );
-        showToast({ type: 'info', message: 'Draft restored -- mappings loaded from your previous session.' });
+        showToast({
+          type: 'info',
+          message: 'Draft restored -- mappings loaded from your previous session.',
+        });
       } catch (err) {
-        setQueue((q) =>
-          q.map((it) => (it.id === id ? { ...it, fatalError: String(err) } : it))
-        );
+        setQueue((q) => q.map((it) => (it.id === id ? { ...it, fatalError: String(err) } : it)));
       }
       setPendingResumeDraftId(null);
       e.target.value = '';
@@ -770,10 +781,7 @@ export function MasterBulkUpload() {
             <h1 className="text-2xl font-semibold" style={{ color: 'var(--color-ink)' }}>
               Master Bulk Upload
             </h1>
-            <p
-              className="text-sm mt-1 max-w-3xl"
-              style={{ color: 'var(--color-silver, #6B7280)' }}
-            >
+            <p className="text-sm mt-1 max-w-3xl" style={{ color: 'var(--color-silver, #6B7280)' }}>
               Upload Excel or CSV files and we will auto-identify the master, check prerequisites,
               validate every row, and ship the approved rows to MySQL via the standard master save
               path.
@@ -812,9 +820,7 @@ export function MasterBulkUpload() {
             borderColor: dragActive
               ? 'var(--color-teal, #117B7B)'
               : 'var(--color-mercury-grey, #D9DEE4)',
-            backgroundColor: dragActive
-              ? 'var(--color-teal-tint, #E6F4F3)'
-              : '#FFFFFF',
+            backgroundColor: dragActive ? 'var(--color-teal-tint, #E6F4F3)' : '#FFFFFF',
             padding: '44px 24px',
           }}
         >
@@ -875,16 +881,17 @@ export function MasterBulkUpload() {
                   .filter(Boolean)
                   .join(', ');
                 return (
-                  <div
-                    key={draft.id}
-                    className="px-5 py-3 flex items-center justify-between gap-4"
-                  >
+                  <div key={draft.id} className="px-5 py-3 flex items-center justify-between gap-4">
                     <div className="min-w-0">
-                      <div className="text-sm font-medium truncate" style={{ color: 'var(--color-ink)' }}>
+                      <div
+                        className="text-sm font-medium truncate"
+                        style={{ color: 'var(--color-ink)' }}
+                      >
                         {draft.fileName}
                         {masterNames && (
                           <span style={{ color: 'var(--color-silver, #6B7280)', fontWeight: 400 }}>
-                            {' '}&middot; {masterNames}
+                            {' '}
+                            &middot; {masterNames}
                           </span>
                         )}
                         <span
@@ -894,7 +901,8 @@ export function MasterBulkUpload() {
                             fontSize: 12,
                           }}
                         >
-                          {' '}&middot; {relativeTime(draft.savedAt)}
+                          {' '}
+                          &middot; {relativeTime(draft.savedAt)}
                         </span>
                       </div>
                     </div>
@@ -955,10 +963,7 @@ export function MasterBulkUpload() {
                 <span style={{ color: 'var(--color-silver, #6B7280)' }}>sheet(s) detected</span>
               </div>
               <div>
-                <span
-                  className="font-semibold"
-                  style={{ color: 'var(--color-teal, #117B7B)' }}
-                >
+                <span className="font-semibold" style={{ color: 'var(--color-teal, #117B7B)' }}>
                   {aggregate.readyToUpload}
                 </span>{' '}
                 <span style={{ color: 'var(--color-silver, #6B7280)' }}>ready to upload</span>
@@ -1029,8 +1034,8 @@ export function MasterBulkUpload() {
               toast.type === 'success'
                 ? '#137333'
                 : toast.type === 'error'
-                ? '#A23939'
-                : 'var(--color-teal, #117B7B)',
+                  ? '#A23939'
+                  : 'var(--color-teal, #117B7B)',
             color: '#FFFFFF',
             maxWidth: '360px',
           }}
@@ -1101,18 +1106,15 @@ function QueueItemCard({
             <FileIcon className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <div
-              className="font-semibold text-sm truncate"
-              style={{ color: 'var(--color-ink)' }}
-            >
+            <div className="font-semibold text-sm truncate" style={{ color: 'var(--color-ink)' }}>
               {item.file.name}
             </div>
             <div className="text-xs" style={{ color: 'var(--color-silver, #6B7280)' }}>
               {item.parsed
                 ? `${item.parsed.sheets.length} sheet${item.parsed.sheets.length === 1 ? '' : 's'}`
                 : item.fatalError
-                ? 'Parse failed'
-                : 'Parsing...'}
+                  ? 'Parse failed'
+                  : 'Parsing...'}
             </div>
           </div>
           {draftSavedAt && (
@@ -1187,9 +1189,7 @@ function QueueItemCard({
             onMappingChange={(fieldKey, header) => onMappingChange(idx, fieldKey, header)}
             onMasterOverride={(masterKey) => onMasterOverride(idx, masterKey)}
             prereqOpen={prereqOpen}
-            onTogglePrereq={() =>
-              setExpandedPrereqs((prev) => ({ ...prev, [key]: !prereqOpen }))
-            }
+            onTogglePrereq={() => setExpandedPrereqs((prev) => ({ ...prev, [key]: !prereqOpen }))}
             onCopyText={onCopyText}
           />
         );
@@ -1260,10 +1260,7 @@ function SheetRow({
       <div className="px-5 py-4 flex items-center gap-4 flex-wrap">
         {/* Sheet name */}
         <div className="flex items-center gap-2 min-w-[140px]">
-          <FileSpreadsheet
-            className="w-4 h-4"
-            style={{ color: 'var(--color-silver, #6B7280)' }}
-          />
+          <FileSpreadsheet className="w-4 h-4" style={{ color: 'var(--color-silver, #6B7280)' }} />
           <span className="font-medium text-sm" style={{ color: 'var(--color-ink)' }}>
             {sheet.sheetName}
           </span>
@@ -1320,19 +1317,13 @@ function SheetRow({
           </span>
           <span style={{ color: 'var(--color-silver, #6B7280)' }}>rows valid</span>
           {summary.withErrors > 0 && (
-            <span
-              className="ml-1 inline-flex items-center gap-1"
-              style={{ color: '#A23939' }}
-            >
+            <span className="ml-1 inline-flex items-center gap-1" style={{ color: '#A23939' }}>
               <XCircle className="w-3 h-3" />
               {summary.withErrors} errors
             </span>
           )}
           {summary.withWarnings > 0 && (
-            <span
-              className="ml-1 inline-flex items-center gap-1"
-              style={{ color: '#A15C07' }}
-            >
+            <span className="ml-1 inline-flex items-center gap-1" style={{ color: '#A15C07' }}>
               <AlertCircle className="w-3 h-3" />
               {summary.withWarnings} warnings
             </span>
@@ -1402,10 +1393,7 @@ function SheetRow({
 
       {/* Prereq drawer */}
       {prereqOpen && (
-        <div
-          className="px-5 pb-4 text-xs"
-          style={{ color: 'var(--color-silver, #6B7280)' }}
-        >
+        <div className="px-5 pb-4 text-xs" style={{ color: 'var(--color-silver, #6B7280)' }}>
           <div
             className="rounded-lg p-3 space-y-2"
             style={{
@@ -1441,8 +1429,8 @@ function SheetRow({
                 <ul className="space-y-0.5 mt-1">
                   {sheet.prerequisites.unresolvedForeignKeys.slice(0, 10).map((fk, i) => (
                     <li key={i}>
-                      Row {fk.rowIndex + 1}, <em>{fk.field}</em> = "{fk.lookupValue}" (not found
-                      in {fk.refMaster})
+                      Row {fk.rowIndex + 1}, <em>{fk.field}</em> = "{fk.lookupValue}" (not found in{' '}
+                      {fk.refMaster})
                     </li>
                   ))}
                 </ul>
@@ -1486,10 +1474,7 @@ function getFieldIcon(type: string) {
   return FIELD_TYPE_ICONS[type] ?? ClipboardList;
 }
 
-function getColumnPreview(
-  parsedSheet: ParsedSheet,
-  rawHeader: string | null | undefined,
-): string {
+function getColumnPreview(parsedSheet: ParsedSheet, rawHeader: string | null | undefined): string {
   if (!rawHeader) return '';
   const samples = parsedSheet.rows
     .slice(0, 3)
@@ -1511,15 +1496,19 @@ interface SheetDetailProps {
   onCopyText: (text: string) => void;
 }
 
-function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOverride, onCopyText }: SheetDetailProps) {
+function SheetDetail({
+  sheet,
+  schema,
+  parsedSheet,
+  onMappingChange,
+  onMasterOverride,
+  onCopyText,
+}: SheetDetailProps) {
   const [manualFields, setManualFields] = useState<Set<string>>(new Set());
   const [expandedSuggestions, setExpandedSuggestions] = useState<Set<string>>(new Set());
 
   // All registry master keys for the override dropdown
-  const allMasterKeys = useMemo(
-    () => Object.keys(masterSchemaRegistry) as string[],
-    []
-  );
+  const allMasterKeys = useMemo(() => Object.keys(masterSchemaRegistry) as string[], []);
 
   // AI field suggestions
   const suggestions = useMemo<Map<string, FieldSuggestion[]>>(() => {
@@ -1611,12 +1600,8 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
   const manualMappedCount = orderedFields.filter(
     (f) => !!sheet.mapping[f.key] && manualFields.has(f.key)
   ).length;
-  const unmappedRequired = orderedFields.filter(
-    (f) => f.required && !sheet.mapping[f.key]
-  ).length;
-  const unmappedOptional = orderedFields.filter(
-    (f) => !f.required && !sheet.mapping[f.key]
-  ).length;
+  const unmappedRequired = orderedFields.filter((f) => f.required && !sheet.mapping[f.key]).length;
+  const unmappedOptional = orderedFields.filter((f) => !f.required && !sheet.mapping[f.key]).length;
   const totalFields = orderedFields.length;
 
   const { summary } = sheet.validation;
@@ -1644,7 +1629,6 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
         {/* Master override dropdown */}
         <div
           style={{
@@ -1692,9 +1676,7 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
               );
             })}
           </select>
-          <ArrowRight
-            style={{ width: 14, height: 14, color: 'var(--color-silver, #6B7280)' }}
-          />
+          <ArrowRight style={{ width: 14, height: 14, color: 'var(--color-silver, #6B7280)' }} />
           <span style={{ fontSize: 12, color: 'var(--color-silver, #6B7280)' }}>
             Change to re-identify with a different schema
           </span>
@@ -1900,7 +1882,9 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                     style={{
                       height: 52,
                       backgroundColor: isEvenRow ? '#FFFFFF' : '#FAFBFC',
-                      borderLeft: isUnmappedRequired ? '4px solid #FCA5A5' : '4px solid transparent',
+                      borderLeft: isUnmappedRequired
+                        ? '4px solid #FCA5A5'
+                        : '4px solid transparent',
                       transition: 'background-color 0.15s',
                     }}
                     onMouseEnter={(e) => {
@@ -1919,18 +1903,14 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                           style={{
                             width: 15,
                             height: 15,
-                            color: field.required
-                              ? 'var(--color-ink, #111827)'
-                              : '#64748B',
+                            color: field.required ? 'var(--color-ink, #111827)' : '#64748B',
                             flexShrink: 0,
                           }}
                         />
                         <span
                           style={{
                             fontWeight: field.required ? 600 : 500,
-                            color: field.required
-                              ? 'var(--color-ink, #111827)'
-                              : '#475569',
+                            color: field.required ? 'var(--color-ink, #111827)' : '#475569',
                             fontSize: 13,
                           }}
                         >
@@ -1975,7 +1955,9 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                     {/* Column 3: Mapped Excel Column */}
                     <td style={{ padding: '6px 16px' }}>
                       {(() => {
-                        const fieldSuggestions = !isMapped ? (suggestions.get(field.key) ?? []) : [];
+                        const fieldSuggestions = !isMapped
+                          ? (suggestions.get(field.key) ?? [])
+                          : [];
                         const topSugg = fieldSuggestions[0];
                         const extraCount = fieldSuggestions.length - 1;
                         const isExpanded = expandedSuggestions.has(field.key);
@@ -1985,7 +1967,9 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <select
                                 value={currentHeader}
-                                onChange={(e) => handleLocalMappingChange(field.key, e.target.value)}
+                                onChange={(e) =>
+                                  handleLocalMappingChange(field.key, e.target.value)
+                                }
                                 style={{
                                   flex: 1,
                                   padding: '6px 10px',
@@ -2002,8 +1986,13 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                                   const usedByLabel = headerUsedBy.get(h);
                                   const isUsedByOther = usedByLabel && h !== currentHeader;
                                   return (
-                                    <option key={h} value={h} style={isUsedByOther ? { color: '#94A3B8' } : undefined}>
-                                      {h}{isUsedByOther ? ` \u2713 \u2192 ${usedByLabel}` : ''}
+                                    <option
+                                      key={h}
+                                      value={h}
+                                      style={isUsedByOther ? { color: '#94A3B8' } : undefined}
+                                    >
+                                      {h}
+                                      {isUsedByOther ? ` \u2713 \u2192 ${usedByLabel}` : ''}
                                     </option>
                                   );
                                 })}
@@ -2037,7 +2026,9 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                             {topSugg && (
                               <div style={{ marginTop: 3 }}>
                                 <span
-                                  onClick={() => handleLocalMappingChange(field.key, topSugg.header)}
+                                  onClick={() =>
+                                    handleLocalMappingChange(field.key, topSugg.header)
+                                  }
                                   style={{
                                     fontSize: 11,
                                     color: 'var(--color-teal, #117B7B)',
@@ -2045,16 +2036,21 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                                     cursor: 'pointer',
                                   }}
                                   onMouseEnter={(e) => {
-                                    (e.currentTarget as HTMLSpanElement).style.textDecoration = 'underline';
+                                    (e.currentTarget as HTMLSpanElement).style.textDecoration =
+                                      'underline';
                                   }}
                                   onMouseLeave={(e) => {
-                                    (e.currentTarget as HTMLSpanElement).style.textDecoration = 'none';
+                                    (e.currentTarget as HTMLSpanElement).style.textDecoration =
+                                      'none';
                                   }}
                                 >
                                   Suggested: &ldquo;{topSugg.header}&rdquo;
                                 </span>
-                                <span style={{ fontSize: 11, color: '#64748B', fontStyle: 'italic' }}>
-                                  {' '}&mdash; {topSugg.reason}
+                                <span
+                                  style={{ fontSize: 11, color: '#64748B', fontStyle: 'italic' }}
+                                >
+                                  {' '}
+                                  &mdash; {topSugg.reason}
                                 </span>
                                 {extraCount > 0 && (
                                   <span
@@ -2074,10 +2070,12 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                                       marginLeft: 6,
                                     }}
                                     onMouseEnter={(e) => {
-                                      (e.currentTarget as HTMLSpanElement).style.textDecoration = 'underline';
+                                      (e.currentTarget as HTMLSpanElement).style.textDecoration =
+                                        'underline';
                                     }}
                                     onMouseLeave={(e) => {
-                                      (e.currentTarget as HTMLSpanElement).style.textDecoration = 'none';
+                                      (e.currentTarget as HTMLSpanElement).style.textDecoration =
+                                        'none';
                                     }}
                                   >
                                     +{extraCount} more
@@ -2096,10 +2094,7 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                                 }}
                               >
                                 {fieldSuggestions.slice(1).map((s) => (
-                                  <div
-                                    key={s.header}
-                                    style={{ marginBottom: 3 }}
-                                  >
+                                  <div key={s.header} style={{ marginBottom: 3 }}>
                                     <span
                                       onClick={() => handleLocalMappingChange(field.key, s.header)}
                                       style={{
@@ -2109,16 +2104,25 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                                         cursor: 'pointer',
                                       }}
                                       onMouseEnter={(e) => {
-                                        (e.currentTarget as HTMLSpanElement).style.textDecoration = 'underline';
+                                        (e.currentTarget as HTMLSpanElement).style.textDecoration =
+                                          'underline';
                                       }}
                                       onMouseLeave={(e) => {
-                                        (e.currentTarget as HTMLSpanElement).style.textDecoration = 'none';
+                                        (e.currentTarget as HTMLSpanElement).style.textDecoration =
+                                          'none';
                                       }}
                                     >
                                       &ldquo;{s.header}&rdquo;
                                     </span>
-                                    <span style={{ fontSize: 11, color: '#64748B', fontStyle: 'italic' }}>
-                                      {' '}&mdash; {s.reason}
+                                    <span
+                                      style={{
+                                        fontSize: 11,
+                                        color: '#64748B',
+                                        fontStyle: 'italic',
+                                      }}
+                                    >
+                                      {' '}
+                                      &mdash; {s.reason}
                                     </span>
                                   </div>
                                 ))}
@@ -2334,10 +2338,7 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                       })
                       .join(' | ');
                     const canonicalStr = Object.entries(r.record)
-                      .map(
-                        ([k, v]) =>
-                          `${k}: ${v === null || v === undefined ? '-' : String(v)}`
-                      )
+                      .map(([k, v]) => `${k}: ${v === null || v === undefined ? '-' : String(v)}`)
                       .join(' | ');
                     return (
                       <tr
@@ -2413,10 +2414,7 @@ function SheetDetail({ sheet, schema, parsedSheet, onMappingChange, onMasterOver
                               onClick={() =>
                                 onCopyText(
                                   r.issues
-                                    .map(
-                                      (i) =>
-                                        `Row ${i.rowIndex + 1} ${i.field}: ${i.message}`
-                                    )
+                                    .map((i) => `Row ${i.rowIndex + 1} ${i.field}: ${i.message}`)
                                     .join('\n')
                                 )
                               }

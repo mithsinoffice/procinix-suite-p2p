@@ -7,11 +7,7 @@ const STATUS_MAP: Record<string, string> = {
   'Changes Requested': 'badge-warning',
 };
 
-export function DraftStatusPill({
-  status,
-}: {
-  status: string;
-}) {
+export function DraftStatusPill({ status }: { status: string }) {
   const cls = STATUS_MAP[status] ?? 'badge-neutral';
   return <span className={cls}>{status}</span>;
 }

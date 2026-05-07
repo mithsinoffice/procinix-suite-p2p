@@ -1,10 +1,36 @@
 import { useState } from 'react';
-import { 
-  TrendingUp, TrendingDown, DollarSign, AlertTriangle, 
-  Shield, Clock, Target, Activity, BarChart3, 
-  Download, RefreshCw, Calendar
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  AlertTriangle,
+  Shield,
+  Clock,
+  Target,
+  Activity,
+  BarChart3,
+  Download,
+  RefreshCw,
+  Calendar,
 } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, ComposedChart } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  ComposedChart,
+} from 'recharts';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { useAPData } from '../contexts/APDataContext';
 
@@ -24,7 +50,7 @@ export function CFODeskAdvanced() {
 
   // Calculate Strategic Metrics
   const totalSpendYTD = safeInvoices
-    .filter(inv => inv.status === 'Paid' || inv.status === 'Approved')
+    .filter((inv) => inv.status === 'Paid' || inv.status === 'Approved')
     .reduce((sum, inv) => sum + inv.totalAmount, 0);
 
   const budgetAllocated = 265000000; // 26.5 Cr
@@ -32,7 +58,7 @@ export function CFODeskAdvanced() {
   const budgetVariance = ((totalSpendYTD - budgetAllocated) / budgetAllocated) * 100;
 
   const openCommitments = safeInvoices
-    .filter(inv => inv.status === 'Pending Approval' || inv.status === 'Under Review')
+    .filter((inv) => inv.status === 'Pending Approval' || inv.status === 'Under Review')
     .reduce((sum, inv) => sum + inv.totalAmount, 0);
 
   const avgPaymentCycle = 28.5; // days
@@ -46,7 +72,7 @@ export function CFODeskAdvanced() {
     { month: 'Apr 25', inflow: 48.5, outflow: 45.2, net: 3.3, committed: 41.8 },
     { month: 'May 25', inflow: 55.2, outflow: 41.6, net: 13.6, committed: 37.4 },
     { month: 'Jun 25', inflow: 49.8, outflow: 39.8, net: 10.0, committed: 35.9 },
-    { month: 'Jul 25', inflow: 58.5, outflow: 43.5, net: 15.0, committed: 39.2 }
+    { month: 'Jul 25', inflow: 58.5, outflow: 43.5, net: 15.0, committed: 39.2 },
   ];
 
   // Budget vs Actual by Department
@@ -56,7 +82,7 @@ export function CFODeskAdvanced() {
     { dept: 'Marketing', budget: 38.8, actual: 35.4, committed: 4.2, variance: -8.8 },
     { dept: 'Admin', budget: 28.5, actual: 26.8, committed: 3.5, variance: -6.0 },
     { dept: 'Sales', budget: 42.0, actual: 44.2, committed: 5.8, variance: 5.2 },
-    { dept: 'R&D', budget: 25.0, actual: 22.5, committed: 2.8, variance: -10.0 }
+    { dept: 'R&D', budget: 25.0, actual: 22.5, committed: 2.8, variance: -10.0 },
   ];
 
   // Spend by Category
@@ -65,7 +91,7 @@ export function CFODeskAdvanced() {
     { category: 'Services', value: 65.2, percent: 24.6, color: '#F59E0B' },
     { category: 'IT & Software', value: 38.8, percent: 14.6, color: '#3B82F6' },
     { category: 'Professional Fees', value: 22.5, percent: 8.5, color: '#007D87' },
-    { category: 'Others', value: 13.5, percent: 5.0, color: '#6B7280' }
+    { category: 'Others', value: 13.5, percent: 5.0, color: '#6B7280' },
   ];
 
   // Monthly Spend Trend (Last 12 months)
@@ -81,16 +107,16 @@ export function CFODeskAdvanced() {
     { month: 'Oct 24', spend: 28.2, budget: 26.5, variance: 6.4 },
     { month: 'Nov 24', spend: 27.5, budget: 27.0, variance: 1.9 },
     { month: 'Dec 24', spend: 29.8, budget: 28.0, variance: 6.4 },
-    { month: 'Jan 25', spend: 26.5, budget: 26.0, variance: 1.9 }
+    { month: 'Jan 25', spend: 26.5, budget: 26.0, variance: 1.9 },
   ];
 
   // Top Vendors by Spend
   const topVendorSpend = safeVendors
-    .map(vendor => ({
+    .map((vendor) => ({
       name: vendor.name.length > 30 ? vendor.name.substring(0, 30) + '...' : vendor.name,
       ytdSpend: (Math.random() * 50 + 10).toFixed(1),
       invoiceCount: Math.floor(Math.random() * 50 + 10),
-      avgPaymentDays: Math.floor(Math.random() * 20 + 15)
+      avgPaymentDays: Math.floor(Math.random() * 20 + 15),
     }))
     .sort((a, b) => parseFloat(b.ytdSpend) - parseFloat(a.ytdSpend))
     .slice(0, 8);
@@ -102,7 +128,7 @@ export function CFODeskAdvanced() {
     { month: 'Oct', dpo: 42, dso: 42, daysInvested: 86 },
     { month: 'Nov', dpo: 41, dso: 44, daysInvested: 85 },
     { month: 'Dec', dpo: 43, dso: 42, daysInvested: 87 },
-    { month: 'Jan', dpo: 42, dso: 43, daysInvested: 85 }
+    { month: 'Jan', dpo: 42, dso: 43, daysInvested: 85 },
   ];
 
   // Risk & Compliance Metrics
@@ -110,7 +136,7 @@ export function CFODeskAdvanced() {
     { metric: 'Policy Violations', count: 7, severity: 'medium', trend: -12 },
     { metric: 'Budget Overruns', count: 2, severity: 'high', trend: -33 },
     { metric: 'Late Payments', count: 18, severity: 'medium', trend: -22 },
-    { metric: 'Contract Expirations', count: 5, severity: 'low', trend: 0 }
+    { metric: 'Contract Expirations', count: 5, severity: 'low', trend: 0 },
   ];
 
   // Savings Opportunities
@@ -119,7 +145,7 @@ export function CFODeskAdvanced() {
     { opportunity: 'Vendor Consolidation', potential: 4.5, ease: 'medium' },
     { opportunity: 'Contract Renegotiation', potential: 6.2, ease: 'medium' },
     { opportunity: 'Payment Terms Optimization', potential: 3.5, ease: 'high' },
-    { opportunity: 'Process Automation', potential: 5.8, ease: 'low' }
+    { opportunity: 'Process Automation', potential: 5.8, ease: 'low' },
   ];
 
   const formatCurrency = (value: number) => {
@@ -127,7 +153,7 @@ export function CFODeskAdvanced() {
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(value);
   };
 
@@ -140,12 +166,18 @@ export function CFODeskAdvanced() {
       {/* Executive KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Spend YTD */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#EFF6FF' }}>
               <DollarSign className="w-5 h-5" style={{ color: '#3B82F6' }} />
             </div>
-            <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#EFF6FF', color: '#1E40AF' }}>
+            <span
+              className="text-xs px-2 py-1 rounded"
+              style={{ backgroundColor: '#EFF6FF', color: '#1E40AF' }}
+            >
               YTD
             </span>
           </div>
@@ -159,15 +191,25 @@ export function CFODeskAdvanced() {
             <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
               Budget: {formatCrores(budgetAllocated / 10000000)}
             </div>
-            <div className="text-xs flex items-center gap-1" style={{ color: budgetVariance < 0 ? '#10B981' : '#EF4444' }}>
-              {budgetVariance < 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
+            <div
+              className="text-xs flex items-center gap-1"
+              style={{ color: budgetVariance < 0 ? '#10B981' : '#EF4444' }}
+            >
+              {budgetVariance < 0 ? (
+                <TrendingDown className="w-3 h-3" />
+              ) : (
+                <TrendingUp className="w-3 h-3" />
+              )}
               <span>{Math.abs(budgetVariance).toFixed(1)}%</span>
             </div>
           </div>
         </div>
 
         {/* Budget Utilization */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#F3E8FF' }}>
               <Target className="w-5 h-5" style={{ color: '#9333EA' }} />
@@ -180,23 +222,34 @@ export function CFODeskAdvanced() {
             Budget Utilization
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-            <div 
+            <div
               className="h-2 rounded-full transition-all duration-300"
-              style={{ 
+              style={{
                 width: `${Math.min(budgetUtilization, 100)}%`,
-                backgroundColor: budgetUtilization > 95 ? '#EF4444' : budgetUtilization > 80 ? '#F59E0B' : '#10B981'
+                backgroundColor:
+                  budgetUtilization > 95
+                    ? '#EF4444'
+                    : budgetUtilization > 80
+                      ? '#F59E0B'
+                      : '#10B981',
               }}
             />
           </div>
         </div>
 
         {/* Open Commitments */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
               <Activity className="w-5 h-5" style={{ color: '#F59E0B' }} />
             </div>
-            <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+            <span
+              className="text-xs px-2 py-1 rounded"
+              style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}
+            >
               Uncommitted
             </span>
           </div>
@@ -212,12 +265,18 @@ export function CFODeskAdvanced() {
         </div>
 
         {/* Compliance Score */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
               <Shield className="w-5 h-5" style={{ color: '#10B981' }} />
             </div>
-            <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#D1FAE5', color: '#065F46' }}>
+            <span
+              className="text-xs px-2 py-1 rounded"
+              style={{ backgroundColor: '#D1FAE5', color: '#065F46' }}
+            >
               Healthy
             </span>
           </div>
@@ -236,60 +295,93 @@ export function CFODeskAdvanced() {
 
       {/* Working Capital & Operational Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#DBEAFE' }}>
               <Clock className="w-5 h-5" style={{ color: '#3B82F6' }} />
             </div>
             <div>
-              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Avg Payment Cycle</div>
-              <div className="text-xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>{avgPaymentCycle} days</div>
+              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                Avg Payment Cycle
+              </div>
+              <div className="text-xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
+                {avgPaymentCycle} days
+              </div>
             </div>
           </div>
-          <div className="text-xs" style={{ color: '#10B981' }}>↓ 3.2 days vs last quarter</div>
+          <div className="text-xs" style={{ color: '#10B981' }}>
+            ↓ 3.2 days vs last quarter
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
               <BarChart3 className="w-5 h-5" style={{ color: '#F59E0B' }} />
             </div>
             <div>
-              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Working Capital Days</div>
-              <div className="text-xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>{workingCapitalDays} days</div>
+              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                Working Capital Days
+              </div>
+              <div className="text-xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
+                {workingCapitalDays} days
+              </div>
             </div>
           </div>
-          <div className="text-xs" style={{ color: '#10B981' }}>↓ 5 days improvement</div>
+          <div className="text-xs" style={{ color: '#10B981' }}>
+            ↓ 5 days improvement
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
               <TrendingUp className="w-5 h-5" style={{ color: '#10B981' }} />
             </div>
             <div>
-              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Savings Potential</div>
-              <div className="text-xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>₹22.8Cr</div>
+              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                Savings Potential
+              </div>
+              <div className="text-xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
+                ₹22.8Cr
+              </div>
             </div>
           </div>
-          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>8.6% of total spend</div>
+          <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+            8.6% of total spend
+          </div>
         </div>
       </div>
 
       {/* Charts Row 1 - Strategic Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cash Flow Forecast */}
-        <div className="bg-white rounded-lg p-6 lg:col-span-2" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6 lg:col-span-2"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Cash Flow Forecast (6 Months)
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                 Projected inflows, outflows, and net position
               </p>
             </div>
-            <button 
+            <button
               className="text-xs px-3 py-1.5 rounded-lg flex items-center gap-2"
               style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF' }}
             >
@@ -301,23 +393,38 @@ export function CFODeskAdvanced() {
             <ResponsiveContainer width="100%" height={320} debounce={1}>
               <ComposedChart data={cashFlowForecast}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                <XAxis dataKey="month" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
+                <XAxis
+                  dataKey="month"
+                  style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }}
+                />
                 <YAxis style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Bar dataKey="inflow" fill="#10B981" name="Inflow (Cr)" />
                 <Bar dataKey="outflow" fill="#EF4444" name="Outflow (Cr)" />
-                <Line type="monotone" dataKey="net" stroke="#3B82F6" strokeWidth={2} name="Net Position (Cr)" />
+                <Line
+                  type="monotone"
+                  dataKey="net"
+                  stroke="#3B82F6"
+                  strokeWidth={2}
+                  name="Net Position (Cr)"
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Spend by Category */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Spend by Category
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -353,7 +460,9 @@ export function CFODeskAdvanced() {
                   <div className="w-3 h-3 rounded" style={{ backgroundColor: cat.color }} />
                   <span style={{ color: 'var(--color-mercury-grey)' }}>{cat.category}</span>
                 </div>
-                <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{formatCrores(cat.value)}</span>
+                <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                  {formatCrores(cat.value)}
+                </span>
               </div>
             ))}
           </div>
@@ -363,10 +472,16 @@ export function CFODeskAdvanced() {
       {/* Charts Row 2 - Budget & Spend Analysis */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Budget vs Actual by Department */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Budget vs Actual by Department
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -378,8 +493,15 @@ export function CFODeskAdvanced() {
             <ResponsiveContainer width="100%" height={320} minHeight={320}>
               <BarChart data={departmentBudget} layout="horizontal">
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                <XAxis type="category" dataKey="dept" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
-                <YAxis type="number" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
+                <XAxis
+                  type="category"
+                  dataKey="dept"
+                  style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }}
+                />
+                <YAxis
+                  type="number"
+                  style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }}
+                />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Bar dataKey="budget" fill="var(--color-silver)" name="Budget (Cr)" />
@@ -391,10 +513,16 @@ export function CFODeskAdvanced() {
         </div>
 
         {/* Monthly Spend Trend */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Monthly Spend Trend (Last 12 Months)
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -406,12 +534,29 @@ export function CFODeskAdvanced() {
             <ResponsiveContainer width="100%" height={320} minHeight={320}>
               <AreaChart data={monthlySpend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                <XAxis dataKey="month" style={{ fontSize: '10px', fill: 'var(--color-mercury-grey)' }} />
+                <XAxis
+                  dataKey="month"
+                  style={{ fontSize: '10px', fill: 'var(--color-mercury-grey)' }}
+                />
                 <YAxis style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Area type="monotone" dataKey="budget" stroke="#9CA3AF" fill="#E5E7EB" fillOpacity={0.6} name="Budget (Cr)" />
-                <Area type="monotone" dataKey="spend" stroke="var(--color-teal)" fill="var(--color-teal)" fillOpacity={0.4} name="Actual Spend (Cr)" />
+                <Area
+                  type="monotone"
+                  dataKey="budget"
+                  stroke="#9CA3AF"
+                  fill="#E5E7EB"
+                  fillOpacity={0.6}
+                  name="Budget (Cr)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="spend"
+                  stroke="var(--color-teal)"
+                  fill="var(--color-teal)"
+                  fillOpacity={0.4}
+                  name="Actual Spend (Cr)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -421,10 +566,16 @@ export function CFODeskAdvanced() {
       {/* Bottom Row - Tables & Analysis */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Vendors by Spend */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Top Vendors by Spend
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -436,21 +587,56 @@ export function CFODeskAdvanced() {
             <table className="w-full">
               <thead style={{ backgroundColor: 'var(--color-cloud)', position: 'sticky', top: 0 }}>
                 <tr style={{ borderBottom: '1px solid var(--color-silver)' }}>
-                  <th className="px-3 py-2 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Vendor</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>YTD Spend</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Invoices</th>
-                  <th className="px-3 py-2 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Avg Days</th>
+                  <th
+                    className="px-3 py-2 text-left text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
+                    Vendor
+                  </th>
+                  <th
+                    className="px-3 py-2 text-right text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
+                    YTD Spend
+                  </th>
+                  <th
+                    className="px-3 py-2 text-right text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
+                    Invoices
+                  </th>
+                  <th
+                    className="px-3 py-2 text-right text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
+                    Avg Days
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {topVendorSpend.map((vendor, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--color-cloud)' }}>
-                    <td className="px-3 py-3 text-xs" style={{ color: 'var(--color-ink)' }}>{vendor.name}</td>
-                    <td className="px-3 py-3 text-xs text-right" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                    <td className="px-3 py-3 text-xs" style={{ color: 'var(--color-ink)' }}>
+                      {vendor.name}
+                    </td>
+                    <td
+                      className="px-3 py-3 text-xs text-right"
+                      style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                    >
                       ₹{vendor.ytdSpend}Cr
                     </td>
-                    <td className="px-3 py-3 text-xs text-right" style={{ color: 'var(--color-mercury-grey)' }}>{vendor.invoiceCount}</td>
-                    <td className="px-3 py-3 text-xs text-right" style={{ color: 'var(--color-mercury-grey)' }}>{vendor.avgPaymentDays}d</td>
+                    <td
+                      className="px-3 py-3 text-xs text-right"
+                      style={{ color: 'var(--color-mercury-grey)' }}
+                    >
+                      {vendor.invoiceCount}
+                    </td>
+                    <td
+                      className="px-3 py-3 text-xs text-right"
+                      style={{ color: 'var(--color-mercury-grey)' }}
+                    >
+                      {vendor.avgPaymentDays}d
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -459,10 +645,16 @@ export function CFODeskAdvanced() {
         </div>
 
         {/* Savings Opportunities */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Identified Savings Opportunities
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -475,22 +667,25 @@ export function CFODeskAdvanced() {
               const easeColors = {
                 high: { bg: '#D1FAE5', text: '#065F46', border: '#10B981' },
                 medium: { bg: '#FEF3C7', text: '#92400E', border: '#F59E0B' },
-                low: { bg: 'var(--color-error-light)', text: '#991B1B', border: '#EF4444' }
+                low: { bg: 'var(--color-error-light)', text: '#991B1B', border: '#EF4444' },
               };
               const colors = easeColors[opp.ease as keyof typeof easeColors];
 
               return (
-                <div 
+                <div
                   key={idx}
                   className="flex items-center justify-between p-3 rounded-lg"
                   style={{ border: `1px solid var(--color-silver)`, backgroundColor: '#FAFBFC' }}
                 >
                   <div className="flex-1">
-                    <div className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
+                    <div
+                      className="text-sm mb-1"
+                      style={{ color: 'var(--color-ink)', fontWeight: '500' }}
+                    >
                       {opp.opportunity}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span 
+                      <span
                         className="text-xs px-2 py-0.5 rounded"
                         style={{ backgroundColor: colors.bg, color: colors.text }}
                       >
@@ -531,30 +726,37 @@ export function CFODeskAdvanced() {
               critical: { bg: 'var(--color-error-light)', icon: '#EF4444', border: '#EF4444' },
               high: { bg: '#FED7AA', icon: '#F97316', border: '#F97316' },
               medium: { bg: '#FEF3C7', icon: '#F59E0B', border: '#F59E0B' },
-              low: { bg: '#D1FAE5', icon: '#10B981', border: '#10B981' }
+              low: { bg: '#D1FAE5', icon: '#10B981', border: '#10B981' },
             };
             const colors = severityColors[risk.severity as keyof typeof severityColors];
 
             return (
-              <div 
+              <div
                 key={idx}
                 className="p-4 rounded-lg"
                 style={{ border: `1px solid ${colors.border}`, backgroundColor: colors.bg }}
               >
                 <div className="flex items-center justify-between mb-3">
                   <AlertTriangle className="w-5 h-5" style={{ color: colors.icon }} />
-                  <div 
-                    className="text-xl"
-                    style={{ color: colors.icon, fontWeight: '700' }}
-                  >
+                  <div className="text-xl" style={{ color: colors.icon, fontWeight: '700' }}>
                     {risk.count}
                   </div>
                 </div>
-                <div className="text-sm mb-2" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
+                <div
+                  className="text-sm mb-2"
+                  style={{ color: 'var(--color-ink)', fontWeight: '500' }}
+                >
                   {risk.metric}
                 </div>
-                <div className="flex items-center gap-1 text-xs" style={{ color: risk.trend <= 0 ? '#10B981' : '#EF4444' }}>
-                  {risk.trend <= 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
+                <div
+                  className="flex items-center gap-1 text-xs"
+                  style={{ color: risk.trend <= 0 ? '#10B981' : '#EF4444' }}
+                >
+                  {risk.trend <= 0 ? (
+                    <TrendingDown className="w-3 h-3" />
+                  ) : (
+                    <TrendingUp className="w-3 h-3" />
+                  )}
                   <span>{Math.abs(risk.trend)}% vs last month</span>
                 </div>
               </div>

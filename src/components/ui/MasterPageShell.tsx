@@ -12,7 +12,15 @@ export function MasterPageShell({ masterName, description, children }: MasterPag
     <div style={{ padding: '24px', backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Breadcrumbs */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
-        <Link to="/masters" style={{ fontSize: 13, color: 'var(--color-teal)', textDecoration: 'none', fontWeight: 500 }}>
+        <Link
+          to="/masters"
+          style={{
+            fontSize: 13,
+            color: 'var(--color-teal)',
+            textDecoration: 'none',
+            fontWeight: 500,
+          }}
+        >
           Masters
         </Link>
         <ChevronRight size={14} style={{ color: 'var(--color-mercury-grey)' }} />

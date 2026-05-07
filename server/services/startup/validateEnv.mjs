@@ -26,7 +26,7 @@ export function validateEnv(env = process.env) {
   const warnings = [];
 
   // OCR provider: Gemini key OR n8n webhook (either suffices)
-  if (!OCR_VARS.some(k => env[k]?.trim())) {
+  if (!OCR_VARS.some((k) => env[k]?.trim())) {
     errors.push(
       `Missing OCR provider: set GOOGLE_AI_API_KEY (Gemini) or N8N_WEBHOOK_URL (n8n webhook)`
     );
@@ -41,13 +41,11 @@ export function validateEnv(env = process.env) {
 
   // API auth secret: required in production; intentionally optional in dev
   if ((env.NODE_ENV || '').toLowerCase() === 'production' && !env.API_SECRET_KEY?.trim()) {
-    errors.push(
-      `Missing API_SECRET_KEY — all API endpoints are unprotected in production`
-    );
+    errors.push(`Missing API_SECRET_KEY — all API endpoints are unprotected in production`);
   }
 
   // SMTP warning: only relevant when IMAP polling is enabled
-  const imapEnabled = IMAP_REQUIRED.every(k => env[k]?.trim());
+  const imapEnabled = IMAP_REQUIRED.every((k) => env[k]?.trim());
   if (imapEnabled && !env.SMTP_HOST?.trim()) {
     warnings.push(
       `SMTP_HOST not set — email notifications (vendor invitations, agent alerts) will be silently skipped`

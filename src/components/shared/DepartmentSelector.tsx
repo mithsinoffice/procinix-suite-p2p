@@ -48,7 +48,15 @@ export function DepartmentSelector({
     return active.filter((d) => isRecordMappedToEntity(d, entityId));
   }, [departments, entityId]);
 
-  const selectClasses = ['w-full', 'pl-10', 'pr-4', 'py-2', 'rounded-lg', 'appearance-none', selectClassName]
+  const selectClasses = [
+    'w-full',
+    'pl-10',
+    'pr-4',
+    'py-2',
+    'rounded-lg',
+    'appearance-none',
+    selectClassName,
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -104,7 +112,11 @@ export function DepartmentSelector({
         )}
       </div>
 
-      {error && <p className="text-xs" style={{ color: 'var(--color-error-dark)' }}>{error}</p>}
+      {error && (
+        <p className="text-xs" style={{ color: 'var(--color-error-dark)' }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }

@@ -64,37 +64,142 @@ function decrypt(stored) {
 /* ------------------------------------------------------------------ */
 export const SETTING_CATALOG = [
   // AI & OCR
-  { key: 'GOOGLE_AI_API_KEY', group: 'ai', label: 'Google Gemini API Key', secret: true, required: true, description: 'Required for invoice OCR and all AI features.' },
-  { key: 'GEMINI_MODEL', group: 'ai', label: 'Gemini Model', secret: false, default: 'gemini-2.5-pro', description: 'Model to use (e.g. gemini-2.5-pro, gemini-2.5-flash).' },
+  {
+    key: 'GOOGLE_AI_API_KEY',
+    group: 'ai',
+    label: 'Google Gemini API Key',
+    secret: true,
+    required: true,
+    description: 'Required for invoice OCR and all AI features.',
+  },
+  {
+    key: 'GEMINI_MODEL',
+    group: 'ai',
+    label: 'Gemini Model',
+    secret: false,
+    default: 'gemini-2.5-pro',
+    description: 'Model to use (e.g. gemini-2.5-pro, gemini-2.5-flash).',
+  },
 
   // KYC (Ongrid)
-  { key: 'ONGRID_API_KEY', group: 'kyc', label: 'Ongrid API Key', secret: true, description: 'Leave blank to use mock mode.' },
-  { key: 'ONGRID_BASE_URL', group: 'kyc', label: 'Ongrid Base URL', secret: false, default: 'https://api.gridlines.io', description: 'Production endpoint.' },
-  { key: 'ONGRID_SANDBOX_URL', group: 'kyc', label: 'Ongrid Sandbox URL', secret: false, default: 'https://api.gridlines.io', description: 'Dev endpoint (used when NODE_ENV != production).' },
-  { key: 'ONGRID_MOCK_MODE', group: 'kyc', label: 'Force Mock Mode', secret: false, type: 'boolean', description: 'If true, use mock responses even when API key is set.' },
+  {
+    key: 'ONGRID_API_KEY',
+    group: 'kyc',
+    label: 'Ongrid API Key',
+    secret: true,
+    description: 'Leave blank to use mock mode.',
+  },
+  {
+    key: 'ONGRID_BASE_URL',
+    group: 'kyc',
+    label: 'Ongrid Base URL',
+    secret: false,
+    default: 'https://api.gridlines.io',
+    description: 'Production endpoint.',
+  },
+  {
+    key: 'ONGRID_SANDBOX_URL',
+    group: 'kyc',
+    label: 'Ongrid Sandbox URL',
+    secret: false,
+    default: 'https://api.gridlines.io',
+    description: 'Dev endpoint (used when NODE_ENV != production).',
+  },
+  {
+    key: 'ONGRID_MOCK_MODE',
+    group: 'kyc',
+    label: 'Force Mock Mode',
+    secret: false,
+    type: 'boolean',
+    description: 'If true, use mock responses even when API key is set.',
+  },
 
   // Email ingestion (IMAP)
-  { key: 'AP_EMAIL_HOST', group: 'imap', label: 'IMAP Host', secret: false, default: 'imap.gmail.com', description: 'Leave blank to disable inbox polling.' },
-  { key: 'AP_EMAIL_PORT', group: 'imap', label: 'IMAP Port', secret: false, type: 'number', default: '993' },
-  { key: 'AP_EMAIL_USER', group: 'imap', label: 'IMAP Username', secret: false, description: 'Email address AP invoices are sent to.' },
-  { key: 'AP_EMAIL_PASSWORD', group: 'imap', label: 'IMAP App Password', secret: true, description: 'Use an app password for Gmail — not the account password.' },
+  {
+    key: 'AP_EMAIL_HOST',
+    group: 'imap',
+    label: 'IMAP Host',
+    secret: false,
+    default: 'imap.gmail.com',
+    description: 'Leave blank to disable inbox polling.',
+  },
+  {
+    key: 'AP_EMAIL_PORT',
+    group: 'imap',
+    label: 'IMAP Port',
+    secret: false,
+    type: 'number',
+    default: '993',
+  },
+  {
+    key: 'AP_EMAIL_USER',
+    group: 'imap',
+    label: 'IMAP Username',
+    secret: false,
+    description: 'Email address AP invoices are sent to.',
+  },
+  {
+    key: 'AP_EMAIL_PASSWORD',
+    group: 'imap',
+    label: 'IMAP App Password',
+    secret: true,
+    description: 'Use an app password for Gmail — not the account password.',
+  },
   { key: 'AP_EMAIL_INBOX', group: 'imap', label: 'IMAP Folder', secret: false, default: 'INBOX' },
-  { key: 'AP_POLL_INTERVAL_MINUTES', group: 'imap', label: 'Poll Interval (minutes)', secret: false, type: 'number', default: '10' },
+  {
+    key: 'AP_POLL_INTERVAL_MINUTES',
+    group: 'imap',
+    label: 'Poll Interval (minutes)',
+    secret: false,
+    type: 'number',
+    default: '10',
+  },
 
   // Outbound email (SMTP)
-  { key: 'SMTP_HOST', group: 'smtp', label: 'SMTP Host', secret: false, description: 'Leave blank to mock outbound email.' },
-  { key: 'SMTP_PORT', group: 'smtp', label: 'SMTP Port', secret: false, type: 'number', default: '587' },
+  {
+    key: 'SMTP_HOST',
+    group: 'smtp',
+    label: 'SMTP Host',
+    secret: false,
+    description: 'Leave blank to mock outbound email.',
+  },
+  {
+    key: 'SMTP_PORT',
+    group: 'smtp',
+    label: 'SMTP Port',
+    secret: false,
+    type: 'number',
+    default: '587',
+  },
   { key: 'SMTP_SECURE', group: 'smtp', label: 'SMTP Secure (TLS)', secret: false, type: 'boolean' },
   { key: 'SMTP_USER', group: 'smtp', label: 'SMTP Username', secret: false },
   { key: 'SMTP_PASS', group: 'smtp', label: 'SMTP Password', secret: true },
-  { key: 'MAIL_FROM', group: 'smtp', label: 'From Address', secret: false, default: 'info@procinix.ai' },
+  {
+    key: 'MAIL_FROM',
+    group: 'smtp',
+    label: 'From Address',
+    secret: false,
+    default: 'info@procinix.ai',
+  },
 
   // Security
-  { key: 'API_SECRET_KEY', group: 'security', label: 'API Secret Key', secret: true, description: 'Required for API auth. Leave blank only in dev.' },
-  { key: 'CORS_ALLOWED_ORIGINS', group: 'security', label: 'CORS Allowed Origins', secret: false, description: 'Comma-separated list.' },
+  {
+    key: 'API_SECRET_KEY',
+    group: 'security',
+    label: 'API Secret Key',
+    secret: true,
+    description: 'Required for API auth. Leave blank only in dev.',
+  },
+  {
+    key: 'CORS_ALLOWED_ORIGINS',
+    group: 'security',
+    label: 'CORS Allowed Origins',
+    secret: false,
+    description: 'Comma-separated list.',
+  },
 ];
 
-const CATALOG_BY_KEY = Object.fromEntries(SETTING_CATALOG.map(s => [s.key, s]));
+const CATALOG_BY_KEY = Object.fromEntries(SETTING_CATALOG.map((s) => [s.key, s]));
 
 export function getCatalog() {
   return SETTING_CATALOG;
@@ -109,7 +214,9 @@ export function getCatalogEntry(key) {
 /* ------------------------------------------------------------------ */
 
 async function readAllRows() {
-  const rows = await query('SELECT setting_key, setting_value, is_secret, is_encrypted FROM app_settings');
+  const rows = await query(
+    'SELECT setting_key, setting_value, is_secret, is_encrypted FROM app_settings'
+  );
   return rows;
 }
 
@@ -122,7 +229,14 @@ async function upsertRow(key, value, { isSecret, isEncrypted, updatedBy }) {
        is_secret = VALUES(is_secret),
        is_encrypted = VALUES(is_encrypted),
        updated_by = VALUES(updated_by)`,
-    [key, value, isSecret ? 1 : 0, isEncrypted ? 1 : 0, CATALOG_BY_KEY[key]?.description || null, updatedBy || null]
+    [
+      key,
+      value,
+      isSecret ? 1 : 0,
+      isEncrypted ? 1 : 0,
+      CATALOG_BY_KEY[key]?.description || null,
+      updatedBy || null,
+    ]
   );
 }
 
@@ -145,8 +259,12 @@ export async function loadSettingsToEnv() {
     if (raw === null || raw === undefined) continue;
     let value = raw;
     if (row.is_encrypted) {
-      try { value = decrypt(raw); }
-      catch (err) { console.warn(`[Settings] Failed to decrypt ${row.setting_key}: ${err.message}`); continue; }
+      try {
+        value = decrypt(raw);
+      } catch (err) {
+        console.warn(`[Settings] Failed to decrypt ${row.setting_key}: ${err.message}`);
+        continue;
+      }
     }
     process.env[row.setting_key] = value;
     loaded++;
@@ -170,13 +288,21 @@ function maskSecret(raw) {
  */
 export async function listSettings() {
   const rows = await readAllRows();
-  const dbMap = Object.fromEntries(rows.map(r => [r.setting_key, r]));
+  const dbMap = Object.fromEntries(rows.map((r) => [r.setting_key, r]));
 
-  return SETTING_CATALOG.map(cat => {
+  return SETTING_CATALOG.map((cat) => {
     const row = dbMap[cat.key];
     let effective = process.env[cat.key];
     if (row && row.setting_value !== null) {
-      effective = row.is_encrypted ? (() => { try { return decrypt(row.setting_value); } catch { return null; } })() : row.setting_value;
+      effective = row.is_encrypted
+        ? (() => {
+            try {
+              return decrypt(row.setting_value);
+            } catch {
+              return null;
+            }
+          })()
+        : row.setting_value;
     }
     const hasValue = effective !== undefined && effective !== null && effective !== '';
     return {
@@ -188,9 +314,9 @@ export async function listSettings() {
       type: cat.type || 'string',
       description: cat.description || null,
       default: cat.default || null,
-      source: row ? 'database' : (hasValue ? 'environment' : 'unset'),
+      source: row ? 'database' : hasValue ? 'environment' : 'unset',
       hasValue,
-      value: cat.secret ? (hasValue ? maskSecret(effective) : null) : (hasValue ? effective : null),
+      value: cat.secret ? (hasValue ? maskSecret(effective) : null) : hasValue ? effective : null,
       updatedAt: row?.updated_at || null,
     };
   });
@@ -221,7 +347,9 @@ export async function setSetting(key, rawValue, { updatedBy } = {}) {
     toStore = enc.value;
     isEncrypted = enc.encrypted;
     if (!isEncrypted) {
-      console.warn(`[Settings] ⚠ Storing secret "${key}" in PLAINTEXT — set SETTINGS_ENCRYPTION_KEY to enable encryption.`);
+      console.warn(
+        `[Settings] ⚠ Storing secret "${key}" in PLAINTEXT — set SETTINGS_ENCRYPTION_KEY to enable encryption.`
+      );
     }
   }
 
@@ -233,8 +361,11 @@ export async function setSetting(key, rawValue, { updatedBy } = {}) {
   // Fire any reconnect hooks whose prefix matches this key
   for (const hook of reconnectHooks) {
     if (key.startsWith(hook.prefix)) {
-      try { await hook.callback(key); }
-      catch (err) { console.error(`[Settings] Reconnect hook for ${hook.prefix} failed:`, err.message); }
+      try {
+        await hook.callback(key);
+      } catch (err) {
+        console.error(`[Settings] Reconnect hook for ${hook.prefix} failed:`, err.message);
+      }
     }
   }
 }
@@ -246,7 +377,11 @@ export async function deleteSetting(key) {
   delete process.env[key];
   for (const hook of reconnectHooks) {
     if (key.startsWith(hook.prefix)) {
-      try { await hook.callback(key); } catch { /* ignore */ }
+      try {
+        await hook.callback(key);
+      } catch {
+        /* ignore */
+      }
     }
   }
 }

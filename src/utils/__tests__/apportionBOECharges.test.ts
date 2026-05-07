@@ -38,4 +38,3 @@ describe('apportionBOECharges', () => {
     expect(out[1].allocatedCharge).toBe(0);
   });
 });
-

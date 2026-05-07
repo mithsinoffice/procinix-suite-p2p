@@ -95,7 +95,7 @@ async function ensureDatabaseAndTables(pool, masterKey) {
 async function migrateGenericMaster(pool, masterKey) {
   const storage = MASTER_STORAGE[masterKey];
   const [rows] = await pool.query(
-    `SELECT id, record_code, record_name, status, approval_status, payload, created_at, updated_at FROM \`${process.env.MYSQL_DATABASE}\`.\`${storage.legacyTable}\``,
+    `SELECT id, record_code, record_name, status, approval_status, payload, created_at, updated_at FROM \`${process.env.MYSQL_DATABASE}\`.\`${storage.legacyTable}\``
   );
 
   for (const row of rows) {
@@ -121,13 +121,13 @@ async function migrateGenericMaster(pool, masterKey) {
         typeof row.payload === 'string' ? row.payload : JSON.stringify(row.payload),
         row.created_at,
         row.updated_at,
-      ],
+      ]
     );
   }
 
   const [auditRows] = await pool.query(
     `SELECT id, master_record_id, action_type, old_values, new_values, created_at FROM \`${process.env.MYSQL_DATABASE}\`.master_record_versions WHERE master_key = ?`,
-    [masterKey],
+    [masterKey]
   );
 
   for (const row of auditRows) {
@@ -149,7 +149,7 @@ async function migrateGenericMaster(pool, masterKey) {
         typeof row.old_values === 'string' ? row.old_values : JSON.stringify(row.old_values ?? {}),
         typeof row.new_values === 'string' ? row.new_values : JSON.stringify(row.new_values ?? {}),
         row.created_at,
-      ],
+      ]
     );
   }
 
@@ -159,7 +159,7 @@ async function migrateGenericMaster(pool, masterKey) {
 async function migrateItemMaster(pool) {
   const storage = MASTER_STORAGE.item_master;
   const [rows] = await pool.query(
-    `SELECT * FROM \`${process.env.MYSQL_DATABASE}\`.\`${storage.legacyTable}\``,
+    `SELECT * FROM \`${process.env.MYSQL_DATABASE}\`.\`${storage.legacyTable}\``
   );
 
   for (const row of rows) {
@@ -223,7 +223,7 @@ async function migrateItemMaster(pool) {
         row.approval_status,
         row.created_at,
         row.updated_at,
-      ],
+      ]
     );
   }
 

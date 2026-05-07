@@ -24,6 +24,7 @@ tenant_registry (tenant_id, db_host, db_name, db_user, db_password, created_at) 
 ```
 
 **Columns added to existing tables:**
+
 - `user_master.user_master`: `tenant_id`, `default_entity_id`
 - `item_master.item_master`: `tenant_id`
 - `vendors`: `tenant_id`
@@ -38,6 +39,7 @@ across all existing rows.
 ### 1.2 Services (file: `server/services/tenant/tenantAdmin.mjs`)
 
 Already implemented:
+
 - `getSuperAdminEmailSet()` — reads `SUPER_ADMIN_EMAILS` env
 - `assertSuperAdminRequest(req)` — gate via `X-User-Email` header
 - `buildPlatformContext(body)` — login-style lookup by email+password+tenantCode
@@ -64,13 +66,13 @@ Already implemented:
 
 ## 2. Decisions already made — honor them
 
-| Decision | Rationale |
-|---|---|
-| UUIDs (`VARCHAR(36)`) not BIGINTs | Already used everywhere; cross-tenant ID collision safety |
-| Tables in default schema (p2p_schema_mt) | Existing pattern; avoids cross-schema JOINs |
-| Idempotent additive SQL via `information_schema` checks | Pattern already established in migration 20260421 |
-| Frontend auth context models `platformEntities` | Already used by `PlatformEntityGate` |
-| `tenant_registry` reserved but unused | Single-DB-multi-tenant is the correct approach; keep registry as a stub for a possible future DB-per-tenant escape hatch, but do NOT build on it |
+| Decision                                                | Rationale                                                                                                                                        |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| UUIDs (`VARCHAR(36)`) not BIGINTs                       | Already used everywhere; cross-tenant ID collision safety                                                                                        |
+| Tables in default schema (p2p_schema_mt)                | Existing pattern; avoids cross-schema JOINs                                                                                                      |
+| Idempotent additive SQL via `information_schema` checks | Pattern already established in migration 20260421                                                                                                |
+| Frontend auth context models `platformEntities`         | Already used by `PlatformEntityGate`                                                                                                             |
+| `tenant_registry` reserved but unused                   | Single-DB-multi-tenant is the correct approach; keep registry as a stub for a possible future DB-per-tenant escape hatch, but do NOT build on it |
 
 ---
 
@@ -85,7 +87,9 @@ function rowPassword(payload) {
   return payload?.password ?? payload?.loginPassword ?? payload?.tempPassword ?? '';
 }
 // ... later ...
-if (rowPassword(payload) !== password) { return { ok: false, error: 'invalid_credentials' }; }
+if (rowPassword(payload) !== password) {
+  return { ok: false, error: 'invalid_credentials' };
+}
 ```
 
 Passwords are stored in cleartext in the JSON payload. This is critical and must
@@ -117,12 +121,14 @@ Supersedes Section 9 of the main spec. Each phase is incremental on the existing
 codebase.
 
 ### Phase 0 — Cleanup & audit (no code)
+
 - Delete macOS duplicate files (e.g. `src/components/InvoiceFormDirectV2 2.tsx`).
   Scan for any other files matching ` 2.` pattern.
 - Confirm branch `wip-apr21-preserve-current-state` is pushed to origin (done).
 - Agent proposes the full phase plan back to the human for approval.
 
 ### Phase 1 — Security hardening (CRITICAL — do first)
+
 - `ALTER TABLE user_master.user_master ADD COLUMN is_platform_admin TINYINT(1) DEFAULT 0`
 - One-off migration script: backfill `is_platform_admin=1` for every email in
   `SUPER_ADMIN_EMAILS` env at migration time. Log which users were upgraded.
@@ -141,9 +147,11 @@ codebase.
 - Env additions: `JWT_SECRET`, `JWT_TTL_MINUTES` (default 480)
 
 ### Phase 2 — Extend tenant & entity schema
+
 One migration file: `sql/mysql/migrations/20260422_tenant_entity_extensions.sql`
 
 **Tenants — ALTER to add:**
+
 ```sql
 -- Expand status enum (MySQL requires MODIFY, not ALTER COLUMN)
 ALTER TABLE tenants MODIFY COLUMN status
@@ -166,6 +174,7 @@ ADD COLUMN deleted_at TIMESTAMP NULL
 ```
 
 **Entities — ALTER to add:**
+
 ```sql
 ADD COLUMN parent_entity_id VARCHAR(36) NULL
 ADD COLUMN legal_name VARCHAR(300) NULL
@@ -183,6 +192,7 @@ ADD COLUMN deleted_at TIMESTAMP NULL
 Add `UNIQUE KEY uk_tenant_code (tenant_id, code)` on entities.
 
 **Frontend:**
+
 - Extend `SuperAdminConsole.tsx` entity form to collect new fields
 - Zod schemas in `src/schemas/tenant.ts` and `src/schemas/entity.ts`
 - India-aware validation: if `country='IN'`, GSTIN + PAN required
@@ -198,6 +208,7 @@ roles (id, tenant_id NULL for system, code, name, description,
 ```
 
 Migrate `user_entity_access.role VARCHAR` → `role_id VARCHAR(36)` FK to `roles.id`:
+
 1. Add `role_id` column nullable
 2. Backfill from existing `role` string into matching system role
 3. Keep `role` column for one phase (deprecated) — drop in Phase 8
@@ -218,6 +229,7 @@ writes to `vendors`, `purchase_orders`, `invoices`, `user_master`, `entities`,
 ### Phase 4 — Module catalog + subscriptions + entity enablement
 
 New tables:
+
 ```
 modules_catalog (code PK, name, description, permissions_json, depends_on_json, is_active)
 tenant_subscriptions (id, tenant_id, module_code, seat_count, starts_at, ends_at, status)
@@ -231,19 +243,23 @@ Frontend: `ModuleMatrix.tsx` — rows = entities under tenant, cols = subscribed
 modules, checkbox cells, disables children when parent off.
 
 ### Phase 5 — SoD + approval limits
+
 - Extend `user_entity_access` with `approval_limit DECIMAL(18,2) NULL` + `approval_currency CHAR(3) NULL`
 - New `sod_rules` table; seed system rules from spec Section 6
 - Pre-assignment check in `POST /api/iam/users/:uid/assignments` → 409 with `rule_name`
 - Runtime check in PR/PO/invoice approval endpoints (same-user conflicts)
 
 ### Phase 6 — Audit log
+
 - Create `audit_log` table (append-only, no FKs, indexed on `(tenant_id, created_at)`)
 - Add `server/lib/audit.mjs` with single `writeAudit({action, target_type, target_id, before, after, req})` function
 - Call from every write endpoint touching: vendors, payments, `user_entity_access`, entities, tenants, roles, entity_modules
 - Frontend: `/admin/audit` route with `AuditLogTable.tsx` (filter by actor, target, date range)
 
 ### Phase 7 — Tenant security config UI
+
 Populate `security_config_json` from UI:
+
 - SSO provider placeholder fields (provider, metadata URL, entityID) — store only
 - IP allowlist CIDR array
 - MFA required toggle
@@ -252,6 +268,7 @@ Populate `security_config_json` from UI:
 No actual SAML/OIDC integration in this phase — config storage + validation only.
 
 ### Phase 8 — UI polish + cleanup
+
 - Search/filter on tenant list
 - Status badges with color coding
 - Pagination

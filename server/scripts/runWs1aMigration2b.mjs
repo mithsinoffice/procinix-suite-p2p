@@ -214,7 +214,9 @@ function summarizeColumns(results, label) {
   } else {
     console.log('  Tables with missing columns:');
     for (const [table, b] of tablesWithMissing) {
-      console.log(`    ${table}: ${b.present}/${b.total} present; missing: ${b.missing.join(', ')}`);
+      console.log(
+        `    ${table}: ${b.present}/${b.total} present; missing: ${b.missing.join(', ')}`
+      );
     }
   }
   return { present, total };
@@ -260,7 +262,10 @@ async function main() {
     const preColSummary = summarizeColumns(preCols, 'Pre-flight columns');
     const preIdxSummary = summarizeIndexes(preIdx, 'Pre-flight indexes');
 
-    if (preColSummary.present === preColSummary.total && preIdxSummary.present === preIdxSummary.total) {
+    if (
+      preColSummary.present === preColSummary.total &&
+      preIdxSummary.present === preIdxSummary.total
+    ) {
       console.log('\nAll columns and indexes already exist — 2b will be a pure no-op re-run.');
     } else if (preColSummary.present === 0 && preIdxSummary.present === 0) {
       console.log('\nNo 2b columns or indexes present — fresh run.');
@@ -289,7 +294,9 @@ async function main() {
     if (colOk && idxOk) {
       console.log('\nAll 75 columns and 10 indexes present. 2b verified.');
     } else {
-      console.log(`\nVerification FAILED: columns ${postColSummary.present}/${postColSummary.total}, indexes ${postIdxSummary.present}/${postIdxSummary.total}.`);
+      console.log(
+        `\nVerification FAILED: columns ${postColSummary.present}/${postColSummary.total}, indexes ${postIdxSummary.present}/${postIdxSummary.total}.`
+      );
       process.exitCode = 1;
     }
   } catch (err) {

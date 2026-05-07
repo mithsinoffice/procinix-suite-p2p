@@ -25,22 +25,19 @@ describe('mapLegacyToLifecycle', () => {
   describe('cross-check with 2d SQL CASE (Azure dev observed combinations)', () => {
     const cases = [
       // [status, processingStatus, expectedLifecycle]
-      ['draft',            'exception', LIFECYCLE_STATES.EXCEPTION_HOLD],
-      ['draft',            'failed',    LIFECYCLE_STATES.EXCEPTION_HOLD],
-      ['draft',            null,        LIFECYCLE_STATES.INGESTED],
-      ['pending_approval', null,        LIFECYCLE_STATES.UNDER_VERIFICATION],
-      ['Rejected',         'rejected',  LIFECYCLE_STATES.REJECTED],
-      ['approved',         null,        LIFECYCLE_STATES.PROCESSED],
-      ['paid',             null,        LIFECYCLE_STATES.PROCESSED],
-      ['approved',         'posted',    LIFECYCLE_STATES.PROCESSED],
+      ['draft', 'exception', LIFECYCLE_STATES.EXCEPTION_HOLD],
+      ['draft', 'failed', LIFECYCLE_STATES.EXCEPTION_HOLD],
+      ['draft', null, LIFECYCLE_STATES.INGESTED],
+      ['pending_approval', null, LIFECYCLE_STATES.UNDER_VERIFICATION],
+      ['Rejected', 'rejected', LIFECYCLE_STATES.REJECTED],
+      ['approved', null, LIFECYCLE_STATES.PROCESSED],
+      ['paid', null, LIFECYCLE_STATES.PROCESSED],
+      ['approved', 'posted', LIFECYCLE_STATES.PROCESSED],
     ];
 
-    it.each(cases)(
-      'status=%s, processing_status=%s → %s',
-      (status, processingStatus, expected) => {
-        expect(mapLegacyToLifecycle(status, processingStatus)).toBe(expected);
-      }
-    );
+    it.each(cases)('status=%s, processing_status=%s → %s', (status, processingStatus, expected) => {
+      expect(mapLegacyToLifecycle(status, processingStatus)).toBe(expected);
+    });
   });
 
   describe('case insensitivity', () => {
@@ -108,18 +105,15 @@ describe('mapLegacyToLifecycle', () => {
 describe('mapProcessingStatusToLifecycle', () => {
   describe('known mappings', () => {
     const cases = [
-      ['posted',    LIFECYCLE_STATES.PROCESSED],
-      ['rejected',  LIFECYCLE_STATES.REJECTED],
+      ['posted', LIFECYCLE_STATES.PROCESSED],
+      ['rejected', LIFECYCLE_STATES.REJECTED],
       ['exception', LIFECYCLE_STATES.EXCEPTION_HOLD],
-      ['failed',    LIFECYCLE_STATES.EXCEPTION_HOLD],
+      ['failed', LIFECYCLE_STATES.EXCEPTION_HOLD],
     ];
 
-    it.each(cases)(
-      'processing_status=%s → %s',
-      (processingStatus, expected) => {
-        expect(mapProcessingStatusToLifecycle(processingStatus)).toBe(expected);
-      }
-    );
+    it.each(cases)('processing_status=%s → %s', (processingStatus, expected) => {
+      expect(mapProcessingStatusToLifecycle(processingStatus)).toBe(expected);
+    });
   });
 
   describe('case insensitivity', () => {

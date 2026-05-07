@@ -7,8 +7,13 @@ import {
 import { LIFECYCLE_STATES } from '../lifecycleMapping.mjs';
 
 const {
-  INGESTED, OCR_EXTRACTED, UNDER_VERIFICATION, EXCEPTION_HOLD,
-  PROCESSED, QUEUED_FOR_PAYMENT, REJECTED,
+  INGESTED,
+  OCR_EXTRACTED,
+  UNDER_VERIFICATION,
+  EXCEPTION_HOLD,
+  PROCESSED,
+  QUEUED_FOR_PAYMENT,
+  REJECTED,
 } = LIFECYCLE_STATES;
 
 // ---------------------------------------------------------------------------
@@ -36,12 +41,9 @@ describe('isValidTransition — valid DAG edges', () => {
     [PROCESSED, QUEUED_FOR_PAYMENT],
   ];
 
-  it.each(validEdges)(
-    '%s → %s is valid',
-    (from, to) => {
-      expect(isValidTransition(from, to)).toBe(true);
-    }
-  );
+  it.each(validEdges)('%s → %s is valid', (from, to) => {
+    expect(isValidTransition(from, to)).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -50,27 +52,24 @@ describe('isValidTransition — valid DAG edges', () => {
 
 describe('isValidTransition — invalid transitions', () => {
   const invalidEdges = [
-    [REJECTED, PROCESSED,          'terminal → non-terminal'],
-    [REJECTED, INGESTED,           'terminal → start'],
+    [REJECTED, PROCESSED, 'terminal → non-terminal'],
+    [REJECTED, INGESTED, 'terminal → start'],
     [REJECTED, UNDER_VERIFICATION, 'terminal → mid-flow'],
-    [PROCESSED, INGESTED,          'backward jump'],
-    [PROCESSED, UNDER_VERIFICATION,'backward jump'],
-    [PROCESSED, REJECTED,          'Processed is not rejectable'],
-    [QUEUED_FOR_PAYMENT, PROCESSED,'terminal backward'],
+    [PROCESSED, INGESTED, 'backward jump'],
+    [PROCESSED, UNDER_VERIFICATION, 'backward jump'],
+    [PROCESSED, REJECTED, 'Processed is not rejectable'],
+    [QUEUED_FOR_PAYMENT, PROCESSED, 'terminal backward'],
     [QUEUED_FOR_PAYMENT, REJECTED, 'payment-terminal → rejected'],
-    [INGESTED, PROCESSED,          'skip multiple states'],
+    [INGESTED, PROCESSED, 'skip multiple states'],
     [INGESTED, QUEUED_FOR_PAYMENT, 'skip to payment'],
-    [OCR_EXTRACTED, PROCESSED,     'skip verification'],
-    [EXCEPTION_HOLD, PROCESSED,    'exception must go through verification'],
-    [EXCEPTION_HOLD, OCR_EXTRACTED,'backward from exception'],
+    [OCR_EXTRACTED, PROCESSED, 'skip verification'],
+    [EXCEPTION_HOLD, PROCESSED, 'exception must go through verification'],
+    [EXCEPTION_HOLD, OCR_EXTRACTED, 'backward from exception'],
   ];
 
-  it.each(invalidEdges)(
-    '%s → %s is invalid (%s)',
-    (from, to) => {
-      expect(isValidTransition(from, to)).toBe(false);
-    }
-  );
+  it.each(invalidEdges)('%s → %s is invalid (%s)', (from, to) => {
+    expect(isValidTransition(from, to)).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -114,12 +113,9 @@ describe('isValidTransition — null fromState (new invoice)', () => {
 describe('isValidTransition — idempotent same-state', () => {
   const allStates = Object.values(LIFECYCLE_STATES);
 
-  it.each(allStates)(
-    '%s → %s (same) is valid',
-    (state) => {
-      expect(isValidTransition(state, state)).toBe(true);
-    }
-  );
+  it.each(allStates)('%s → %s (same) is valid', (state) => {
+    expect(isValidTransition(state, state)).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -174,9 +170,7 @@ describe('assertValidTransition', () => {
   });
 
   it('throws on unknown fromState', () => {
-    expect(() => assertValidTransition('Bogus', INGESTED)).toThrow(
-      /unknown fromState.*Bogus/
-    );
+    expect(() => assertValidTransition('Bogus', INGESTED)).toThrow(/unknown fromState.*Bogus/);
   });
 
   it('error message includes allowed targets', () => {

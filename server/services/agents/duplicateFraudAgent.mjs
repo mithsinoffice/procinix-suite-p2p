@@ -122,8 +122,13 @@ export async function processDuplicateCheck(invoiceId, extractedData, contentHas
            (id, invoice_id, check_type, risk_score, duplicate_invoice_id, match_details, explanation, created_at)
          VALUES (?, ?, ?, ?, ?, CAST(? AS JSON), ?, NOW())`,
         [
-          randomUUID(), invoiceId, check.check_type, check.risk_score,
-          Array.isArray(check.duplicate_invoice_id) ? check.duplicate_invoice_id[0] : (check.duplicate_invoice_id || null),
+          randomUUID(),
+          invoiceId,
+          check.check_type,
+          check.risk_score,
+          Array.isArray(check.duplicate_invoice_id)
+            ? check.duplicate_invoice_id[0]
+            : check.duplicate_invoice_id || null,
           JSON.stringify(check.details || check.matches || {}),
           check.details || '',
         ]
@@ -133,10 +138,14 @@ export async function processDuplicateCheck(invoiceId, extractedData, contentHas
     // Build explanation
     const explanationParts = [];
     if (checks.length === 0) {
-      explanationParts.push(`No duplicates found for invoice "${invoiceNumber}" from "${vendorName}"`);
+      explanationParts.push(
+        `No duplicates found for invoice "${invoiceNumber}" from "${vendorName}"`
+      );
     } else {
       for (const check of checks) {
-        explanationParts.push(`[${check.check_type.toUpperCase()} risk=${check.risk_score}] ${check.details}`);
+        explanationParts.push(
+          `[${check.check_type.toUpperCase()} risk=${check.risk_score}] ${check.details}`
+        );
       }
     }
     explanationParts.push(`Overall risk score: ${riskScore}/100`);
@@ -152,17 +161,33 @@ export async function processDuplicateCheck(invoiceId, extractedData, contentHas
           input_summary, output_summary, processing_time_ms, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        randomUUID(), invoiceId, AGENT_NAME, AGENT_VERSION,
+        randomUUID(),
+        invoiceId,
+        AGENT_NAME,
+        AGENT_VERSION,
         decision,
         parseFloat(((100 - riskScore) / 100).toFixed(2)), // confidence of NOT being duplicate
         explanation,
-        JSON.stringify({ invoiceNumber, vendorName, totalAmount, invoiceDate, contentHash: contentHash?.slice(0, 16) }),
-        JSON.stringify({ checksRun: checks.length, riskScore, isDuplicate, checkTypes: checks.map((c) => c.check_type) }),
+        JSON.stringify({
+          invoiceNumber,
+          vendorName,
+          totalAmount,
+          invoiceDate,
+          contentHash: contentHash?.slice(0, 16),
+        }),
+        JSON.stringify({
+          checksRun: checks.length,
+          riskScore,
+          isDuplicate,
+          checkTypes: checks.map((c) => c.check_type),
+        }),
         processingTimeMs,
       ]
     );
 
-    console.log(`[${AGENT_NAME}] invoice ${invoiceId}: ${decision} — risk ${riskScore}, ${checks.length} check(s) flagged`);
+    console.log(
+      `[${AGENT_NAME}] invoice ${invoiceId}: ${decision} — risk ${riskScore}, ${checks.length} check(s) flagged`
+    );
 
     return {
       checks: checks.map(({ matches, ...rest }) => rest), // strip raw rows from return
@@ -172,7 +197,10 @@ export async function processDuplicateCheck(invoiceId, extractedData, contentHas
     };
   } catch (err) {
     const processingTimeMs = Date.now() - startTime;
-    console.error(`[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`, err.message);
+    console.error(
+      `[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`,
+      err.message
+    );
 
     try {
       await query(
@@ -181,13 +209,18 @@ export async function processDuplicateCheck(invoiceId, extractedData, contentHas
             input_summary, output_summary, processing_time_ms, created_at)
          VALUES (?, ?, ?, ?, 'error', 0, ?, ?, NULL, ?, NOW())`,
         [
-          randomUUID(), invoiceId, AGENT_NAME, AGENT_VERSION,
+          randomUUID(),
+          invoiceId,
+          AGENT_NAME,
+          AGENT_VERSION,
           `Duplicate check failed: ${err.message}`,
           JSON.stringify({ invoiceNumber: extractedData?.invoice_number }),
           processingTimeMs,
         ]
       );
-    } catch (_) { /* swallow logging failure */ }
+    } catch (_) {
+      /* swallow logging failure */
+    }
 
     throw err;
   }

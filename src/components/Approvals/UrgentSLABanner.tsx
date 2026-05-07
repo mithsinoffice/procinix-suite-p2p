@@ -13,7 +13,9 @@ export function UrgentSLABanner({ breachedCount, onReview }: Props) {
           <p className="text-sm font-semibold text-[var(--color-error-dark)]">
             ⚡ SLA Breach Warning <span className="sla-overdue-badge badge-pulse">OVERDUE</span>
           </p>
-          <p className="text-xs text-[var(--color-error-dark)]">{breachedCount} approvals crossed SLA and are eligible for escalation</p>
+          <p className="text-xs text-[var(--color-error-dark)]">
+            {breachedCount} approvals crossed SLA and are eligible for escalation
+          </p>
         </div>
         <button type="button" className="sla-review-btn" onClick={onReview}>
           Review now →

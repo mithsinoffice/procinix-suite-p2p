@@ -8,28 +8,28 @@ export function applyFilters<T>(data: T[], filterConfig: FilterConfig | null): T
     return data;
   }
 
-  return data.filter(item => {
+  return data.filter((item) => {
     // Evaluate each group
-    const groupResults = filterConfig.groups.map(group => {
+    const groupResults = filterConfig.groups.map((group) => {
       // Evaluate each condition in the group
-      const conditionResults = group.conditions.map(condition => {
+      const conditionResults = group.conditions.map((condition) => {
         const fieldValue = getNestedValue(item, condition.field);
         return evaluateCondition(fieldValue, condition.operator, condition.value, condition.value2);
       });
 
       // Combine conditions based on group logic
       if (group.logic === 'AND') {
-        return conditionResults.every(result => result);
+        return conditionResults.every((result) => result);
       } else {
-        return conditionResults.some(result => result);
+        return conditionResults.some((result) => result);
       }
     });
 
     // Combine groups based on groupLogic
     if (filterConfig.groupLogic === 'AND') {
-      return groupResults.every(result => result);
+      return groupResults.every((result) => result);
     } else {
-      return groupResults.some(result => result);
+      return groupResults.some((result) => result);
     }
   });
 }

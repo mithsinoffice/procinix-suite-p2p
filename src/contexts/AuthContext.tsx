@@ -3,7 +3,7 @@ import { getActiveEntities, type CanonicalEntity } from './EntityRegistry';
 import { isMysqlApiEnabled, mysqlApiRequest } from '../lib/mysql/client';
 
 const SESSION_TOKEN_KEY = 'procinix.session.token';
-const SESSION_USER_KEY  = 'procinix.session.user';
+const SESSION_USER_KEY = 'procinix.session.user';
 
 /** Shape returned by POST /api/auth/login and GET /api/auth/me. */
 interface ApiUser {
@@ -61,7 +61,7 @@ interface AuthContextType {
   login: (
     email: string,
     password: string,
-    options?: { tenantCode?: string },
+    options?: { tenantCode?: string }
   ) => Promise<User | null>;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
@@ -83,7 +83,7 @@ function toAuthEntity(canonical: CanonicalEntity): Entity {
     id: canonical.id,
     name: canonical.name,
     code: canonical.code,
-    logo: canonical.logo
+    logo: canonical.logo,
   };
 }
 
@@ -101,7 +101,7 @@ const mockUsers: Record<string, User & { password: string }> = {
     department: 'IT',
     avatar: '',
     availableEntities: mockEntities,
-    currentEntity: mockEntities[0]
+    currentEntity: mockEntities[0],
   },
   'priya.sharma@procinix.ai': {
     id: '2',
@@ -112,7 +112,7 @@ const mockUsers: Record<string, User & { password: string }> = {
     department: 'Procurement',
     avatar: '',
     availableEntities: mockEntities,
-    currentEntity: mockEntities[0]
+    currentEntity: mockEntities[0],
   },
   'amit.patel@procinix.ai': {
     id: '3',
@@ -123,7 +123,7 @@ const mockUsers: Record<string, User & { password: string }> = {
     department: 'Finance',
     avatar: '',
     availableEntities: mockEntities,
-    currentEntity: mockEntities[0]
+    currentEntity: mockEntities[0],
   },
   'sunita.reddy@procinix.ai': {
     id: '4',
@@ -134,7 +134,7 @@ const mockUsers: Record<string, User & { password: string }> = {
     department: 'Warehouse',
     avatar: '',
     availableEntities: mockEntities,
-    currentEntity: mockEntities[0]
+    currentEntity: mockEntities[0],
   },
   'vikram.shah@procinix.ai': {
     id: '5',
@@ -146,7 +146,7 @@ const mockUsers: Record<string, User & { password: string }> = {
     department: 'Operations',
     avatar: '',
     availableEntities: mockEntities,
-    currentEntity: mockEntities[0]
+    currentEntity: mockEntities[0],
   },
   'anjali.iyer@procinix.ai': {
     id: '6',
@@ -158,7 +158,7 @@ const mockUsers: Record<string, User & { password: string }> = {
     department: 'Operations',
     avatar: '',
     availableEntities: mockEntities,
-    currentEntity: mockEntities[0]
+    currentEntity: mockEntities[0],
   },
   'rahul.desai@procinix.ai': {
     id: '7',
@@ -170,7 +170,7 @@ const mockUsers: Record<string, User & { password: string }> = {
     department: 'Operations',
     avatar: '',
     availableEntities: mockEntities,
-    currentEntity: mockEntities[0]
+    currentEntity: mockEntities[0],
   },
   'karthik.menon@procinix.ai': {
     id: '8',
@@ -182,8 +182,8 @@ const mockUsers: Record<string, User & { password: string }> = {
     department: 'Procurement & Finance',
     avatar: '',
     availableEntities: mockEntities,
-    currentEntity: mockEntities[0]
-  }
+    currentEntity: mockEntities[0],
+  },
 };
 
 const allowedRoles: UserRole[] = [
@@ -228,7 +228,10 @@ function parseRoles(value?: string[] | string, fallback?: string): UserRole[] {
   const rawValues = Array.isArray(value)
     ? value
     : typeof value === 'string'
-      ? value.split(',').map((part) => part.trim()).filter(Boolean)
+      ? value
+          .split(',')
+          .map((part) => part.trim())
+          .filter(Boolean)
       : fallback
         ? [fallback]
         : [];
@@ -249,8 +252,7 @@ function buildUserFromApi(apiUser: ApiUser): User {
   }));
 
   const mustSelect = platformEntities.length > 1;
-  const defaultPlatformEntity =
-    apiUser.entities?.find((e) => e.isDefault) ?? apiUser.entities?.[0];
+  const defaultPlatformEntity = apiUser.entities?.find((e) => e.isDefault) ?? apiUser.entities?.[0];
   const currentPlatformEntityId = mustSelect ? undefined : defaultPlatformEntity?.id;
 
   const authEntities: Entity[] =
@@ -276,35 +278,34 @@ function buildUserFromApi(apiUser: ApiUser): User {
   };
 }
 
-
 // Role-based permissions mapping
 const adminPermissionList = [
-    'view_dashboard',
-    'create_po',
-    'view_po',
-    'edit_po',
-    'delete_po',
-    'approve_po',
-    'reject_po',
-    'create_grn',
-    'view_grn',
-    'allocate_grn',
-    'accept_allocation',
-    'view_vendors',
-    'create_vendor',
-    'edit_vendor',
-    'delete_vendor',
-    'view_reports',
-    'manage_users',
-    'view_masters',
-    'edit_masters',
-    'approve_masters',
-    'view_settings',
+  'view_dashboard',
+  'create_po',
+  'view_po',
+  'edit_po',
+  'delete_po',
+  'approve_po',
+  'reject_po',
+  'create_grn',
+  'view_grn',
+  'allocate_grn',
+  'accept_allocation',
+  'view_vendors',
+  'create_vendor',
+  'edit_vendor',
+  'delete_vendor',
+  'view_reports',
+  'manage_users',
+  'view_masters',
+  'edit_masters',
+  'approve_masters',
+  'view_settings',
 ];
 
 const rolePermissions: Record<UserRole, string[]> = {
   'Super Admin': [...adminPermissionList, 'manage_tenants', 'manage_platform_entities'],
-  'Admin': adminPermissionList,
+  Admin: adminPermissionList,
   'PO Creator': [
     'view_dashboard',
     'create_po',
@@ -312,7 +313,7 @@ const rolePermissions: Record<UserRole, string[]> = {
     'edit_po',
     'view_vendors',
     'view_masters',
-    'view_reports'
+    'view_reports',
   ],
   'PO Approver': [
     'view_dashboard',
@@ -321,7 +322,7 @@ const rolePermissions: Record<UserRole, string[]> = {
     'reject_po',
     'view_vendors',
     'view_masters',
-    'view_reports'
+    'view_reports',
   ],
   'GRN Manager': [
     'view_dashboard',
@@ -331,14 +332,9 @@ const rolePermissions: Record<UserRole, string[]> = {
     'allocate_grn',
     'view_vendors',
     'view_masters',
-    'view_reports'
+    'view_reports',
   ],
-  'Location Manager': [
-    'view_dashboard',
-    'view_grn',
-    'accept_allocation',
-    'view_reports'
-  ]
+  'Location Manager': ['view_dashboard', 'view_grn', 'accept_allocation', 'view_reports'],
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -354,7 +350,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (
     email: string,
     password: string,
-    _options?: { tenantCode?: string },
+    _options?: { tenantCode?: string }
   ): Promise<User | null> => {
     // Non-MySQL mode: mock users
     if (!isMysqlApiEnabled()) {
@@ -369,10 +365,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const result = await mysqlApiRequest<{ token: string; user: ApiUser }>(
-        '/auth/login',
-        { method: 'POST', body: JSON.stringify({ email, password }) },
-      );
+      const result = await mysqlApiRequest<{ token: string; user: ApiUser }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
       sessionStorage.setItem(SESSION_TOKEN_KEY, result.token);
       const built = buildUserFromApi(result.user);
       sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(built));
@@ -443,7 +439,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return false;
 
     if (user.roles && user.roles.length > 0) {
-      return user.roles.some(role => rolePermissions[role]?.includes(permission));
+      return user.roles.some((role) => rolePermissions[role]?.includes(permission));
     }
 
     return rolePermissions[user.role]?.includes(permission) || false;
@@ -451,7 +447,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const switchEntity = (entityId: string) => {
     if (user) {
-      const newEntity = user.availableEntities.find(e => e.id === entityId);
+      const newEntity = user.availableEntities.find((e) => e.id === entityId);
       if (newEntity) {
         const updatedUser = { ...user, currentEntity: newEntity };
         setUser(updatedUser);

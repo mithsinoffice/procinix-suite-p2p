@@ -60,30 +60,37 @@ export function PaymentAuditTrail() {
       pending: { label: 'Pending', bg: '#FEF3C7', color: '#F59E0B', icon: Clock },
       cancelled: { label: 'Cancelled', bg: '#F3F4F6', color: '#6B7280', icon: AlertCircle },
     };
-    const { label, bg, color, icon: Icon } = config[status as keyof typeof config] || config.pending;
-    
+    const {
+      label,
+      bg,
+      color,
+      icon: Icon,
+    } = config[status as keyof typeof config] || config.pending;
+
     return (
-      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded" style={{ backgroundColor: bg }}>
+      <div
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded"
+        style={{ backgroundColor: bg }}
+      >
         <Icon className="w-3.5 h-3.5" style={{ color }} />
         <span style={{ color, fontWeight: '600', fontSize: '12px' }}>{label}</span>
       </div>
     );
   };
 
-  const filteredTraces = filterStatus === 'all' 
-    ? paymentTraces 
-    : paymentTraces.filter(t => t.status === filterStatus);
+  const filteredTraces =
+    filterStatus === 'all' ? paymentTraces : paymentTraces.filter((t) => t.status === filterStatus);
 
-  const selectedTraceData = paymentTraces.find(t => t.invoiceNo === selectedTrace);
+  const selectedTraceData = paymentTraces.find((t) => t.invoiceNo === selectedTrace);
 
   // Chart data
-  const successRateData = paymentReports.map(report => ({
+  const successRateData = paymentReports.map((report) => ({
     period: report.period.split(' ')[0],
     'Success Rate': ((report.successfulPayments / report.totalPayments) * 100).toFixed(1),
     'Total Payments': report.totalPayments,
   }));
 
-  const discountData = paymentReports.map(report => ({
+  const discountData = paymentReports.map((report) => ({
     period: report.period.split(' ')[0],
     Captured: report.discountsCaptured / 100000,
     Missed: report.discountsMissed / 100000,
@@ -137,7 +144,9 @@ export function PaymentAuditTrail() {
               }}
             >
               <Download className="w-4 h-4" />
-              <span className="text-sm" style={{ fontWeight: '500' }}>Export Report</span>
+              <span className="text-sm" style={{ fontWeight: '500' }}>
+                Export Report
+              </span>
             </button>
           </div>
         </div>
@@ -146,7 +155,10 @@ export function PaymentAuditTrail() {
       <div className="p-8 max-w-[1600px] mx-auto">
         {/* KPI Cards */}
         <div className="grid grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+          <div
+            className="bg-white rounded-lg p-6"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-lg" style={{ backgroundColor: '#E0F2F1' }}>
                 <Activity className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
@@ -155,26 +167,39 @@ export function PaymentAuditTrail() {
                 <div className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                   {currentReport.totalPayments}
                 </div>
-                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Total Payments</div>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                  Total Payments
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+          <div
+            className="bg-white rounded-lg p-6"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
                 <CheckCircle className="w-5 h-5" style={{ color: '#10B981' }} />
               </div>
               <div>
                 <div className="text-2xl" style={{ color: '#10B981', fontWeight: '700' }}>
-                  {((currentReport.successfulPayments / currentReport.totalPayments) * 100).toFixed(1)}%
+                  {((currentReport.successfulPayments / currentReport.totalPayments) * 100).toFixed(
+                    1
+                  )}
+                  %
                 </div>
-                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Success Rate</div>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                  Success Rate
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+          <div
+            className="bg-white rounded-lg p-6"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
                 <Percent className="w-5 h-5" style={{ color: '#10B981' }} />
@@ -183,21 +208,31 @@ export function PaymentAuditTrail() {
                 <div className="text-xl" style={{ color: '#10B981', fontWeight: '700' }}>
                   {formatCurrency(currentReport.discountsCaptured)}
                 </div>
-                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Discounts Captured</div>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                  Discounts Captured
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+          <div
+            className="bg-white rounded-lg p-6"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
+              <div
+                className="p-2 rounded-lg"
+                style={{ backgroundColor: 'var(--color-error-light)' }}
+              >
                 <Percent className="w-5 h-5" style={{ color: '#EF4444' }} />
               </div>
               <div>
                 <div className="text-xl" style={{ color: '#EF4444', fontWeight: '700' }}>
                   {formatCurrency(currentReport.discountsMissed)}
                 </div>
-                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Discounts Missed</div>
+                <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                  Discounts Missed
+                </div>
               </div>
             </div>
           </div>
@@ -206,14 +241,23 @@ export function PaymentAuditTrail() {
         {/* Charts Row */}
         <div className="grid grid-cols-3 gap-6 mb-8">
           {/* Success Rate Trend */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
-            <h3 className="mb-4" style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
+          <div
+            className="bg-white rounded-lg p-6"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
+            <h3
+              className="mb-4"
+              style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}
+            >
               Payment Success Rate
             </h3>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={successRateData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                <XAxis dataKey="period" tick={{ fill: 'var(--color-mercury-grey)', fontSize: 11 }} />
+                <XAxis
+                  dataKey="period"
+                  tick={{ fill: 'var(--color-mercury-grey)', fontSize: 11 }}
+                />
                 <YAxis tick={{ fill: 'var(--color-mercury-grey)', fontSize: 11 }} />
                 <Tooltip
                   contentStyle={{
@@ -223,14 +267,26 @@ export function PaymentAuditTrail() {
                     fontSize: '12px',
                   }}
                 />
-                <Line type="monotone" dataKey="Success Rate" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
+                <Line
+                  type="monotone"
+                  dataKey="Success Rate"
+                  stroke="#10B981"
+                  strokeWidth={2}
+                  dot={{ fill: '#10B981' }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           {/* Success vs Failed */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
-            <h3 className="mb-4" style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
+          <div
+            className="bg-white rounded-lg p-6"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
+            <h3
+              className="mb-4"
+              style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}
+            >
               Current Month Breakdown
             </h3>
             <div className="flex items-center justify-center">
@@ -277,14 +333,23 @@ export function PaymentAuditTrail() {
           </div>
 
           {/* Discounts Captured vs Missed */}
-          <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
-            <h3 className="mb-4" style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
+          <div
+            className="bg-white rounded-lg p-6"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
+            <h3
+              className="mb-4"
+              style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}
+            >
               Discount Analysis (in Lakhs)
             </h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={discountData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                <XAxis dataKey="period" tick={{ fill: 'var(--color-mercury-grey)', fontSize: 11 }} />
+                <XAxis
+                  dataKey="period"
+                  tick={{ fill: 'var(--color-mercury-grey)', fontSize: 11 }}
+                />
                 <YAxis tick={{ fill: 'var(--color-mercury-grey)', fontSize: 11 }} />
                 <Tooltip
                   contentStyle={{
@@ -329,19 +394,25 @@ export function PaymentAuditTrail() {
                 </select>
               </div>
             </div>
-            <div className="divide-y" style={{ borderColor: 'var(--color-silver)', maxHeight: '600px', overflowY: 'auto' }}>
+            <div
+              className="divide-y"
+              style={{ borderColor: 'var(--color-silver)', maxHeight: '600px', overflowY: 'auto' }}
+            >
               {filteredTraces.map((trace) => (
                 <div
                   key={trace.invoiceNo}
                   className="p-4 cursor-pointer transition-colors"
                   style={{
-                    backgroundColor: selectedTrace === trace.invoiceNo ? 'var(--color-cloud)' : '#FFFFFF',
+                    backgroundColor:
+                      selectedTrace === trace.invoiceNo ? 'var(--color-cloud)' : '#FFFFFF',
                   }}
                   onClick={() => setSelectedTrace(trace.invoiceNo)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <div style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '14px' }}>
+                      <div
+                        style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '14px' }}
+                      >
                         {trace.invoiceNo}
                       </div>
                       <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -351,10 +422,16 @@ export function PaymentAuditTrail() {
                     {getStatusBadge(trace.status)}
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="text-sm" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
+                    <div
+                      className="text-sm"
+                      style={{ color: 'var(--color-teal)', fontWeight: '700' }}
+                    >
                       {formatCurrency(trace.amount, trace.currency)}
                     </div>
-                    <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                    <div
+                      className="flex items-center gap-1 text-xs"
+                      style={{ color: 'var(--color-mercury-grey)' }}
+                    >
                       {trace.paymentMode}
                       <ChevronRight className="w-3 h-3" />
                     </div>
@@ -374,26 +451,51 @@ export function PaymentAuditTrail() {
             {selectedTraceData ? (
               <div className="p-6">
                 {/* Summary */}
-                <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                <div
+                  className="mb-6 p-4 rounded-lg"
+                  style={{ backgroundColor: 'var(--color-cloud)' }}
+                >
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Invoice No</div>
-                      <div style={{ color: 'var(--color-ink)', fontWeight: '700' }}>{selectedTraceData.invoiceNo}</div>
+                      <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+                        Invoice No
+                      </div>
+                      <div style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
+                        {selectedTraceData.invoiceNo}
+                      </div>
                     </div>
                     <div>
-                      <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Amount</div>
+                      <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+                        Amount
+                      </div>
                       <div style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
                         {formatCurrency(selectedTraceData.amount, selectedTraceData.currency)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Payment Mode</div>
-                      <div style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{selectedTraceData.paymentMode}</div>
+                      <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+                        Payment Mode
+                      </div>
+                      <div style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                        {selectedTraceData.paymentMode}
+                      </div>
                     </div>
                     {selectedTraceData.bankReference && (
                       <div>
-                        <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Bank Reference</div>
-                        <div style={{ color: '#10B981', fontWeight: '600', fontSize: '12px', fontFamily: 'monospace' }}>
+                        <div
+                          className="text-xs mb-1"
+                          style={{ color: 'var(--color-mercury-grey)' }}
+                        >
+                          Bank Reference
+                        </div>
+                        <div
+                          style={{
+                            color: '#10B981',
+                            fontWeight: '600',
+                            fontSize: '12px',
+                            fontFamily: 'monospace',
+                          }}
+                        >
                           {selectedTraceData.bankReference}
                         </div>
                       </div>
@@ -409,32 +511,49 @@ export function PaymentAuditTrail() {
                         <div
                           className="w-3 h-3 rounded-full"
                           style={{
-                            backgroundColor: event.timestamp === 'Pending' ? '#F59E0B' : 'var(--color-teal)',
+                            backgroundColor:
+                              event.timestamp === 'Pending' ? '#F59E0B' : 'var(--color-teal)',
                           }}
                         />
                         {index < selectedTraceData.timeline.length - 1 && (
-                          <div className="flex-1 w-0.5 mt-2" style={{ backgroundColor: 'var(--color-silver)', minHeight: '40px' }} />
+                          <div
+                            className="flex-1 w-0.5 mt-2"
+                            style={{ backgroundColor: 'var(--color-silver)', minHeight: '40px' }}
+                          />
                         )}
                       </div>
                       <div className="flex-1 pb-4">
                         <div className="flex items-center justify-between mb-1">
-                          <div style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '13px' }}>
+                          <div
+                            style={{
+                              color: 'var(--color-ink)',
+                              fontWeight: '700',
+                              fontSize: '13px',
+                            }}
+                          >
                             {event.stage}
                           </div>
                           <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                            {event.timestamp !== 'Pending' && new Date(event.timestamp).toLocaleString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            {event.timestamp !== 'Pending' &&
+                              new Date(event.timestamp).toLocaleString('en-GB', {
+                                day: '2-digit',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
                             {event.timestamp === 'Pending' && 'Pending'}
                           </div>
                         </div>
-                        <div className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+                        <div
+                          className="text-sm mb-1"
+                          style={{ color: 'var(--color-mercury-grey)' }}
+                        >
                           {event.action}
                         </div>
-                        <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-slate)' }}>
+                        <div
+                          className="flex items-center gap-1 text-xs"
+                          style={{ color: 'var(--color-slate)' }}
+                        >
                           <User className="w-3 h-3" />
                           <span>{event.user}</span>
                           <span>•</span>
@@ -443,7 +562,10 @@ export function PaymentAuditTrail() {
                         {event.details && (
                           <div
                             className="mt-2 p-2 rounded text-xs"
-                            style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
+                            style={{
+                              backgroundColor: 'var(--color-cloud)',
+                              color: 'var(--color-mercury-grey)',
+                            }}
                           >
                             {event.details}
                           </div>
@@ -463,7 +585,10 @@ export function PaymentAuditTrail() {
         </div>
 
         {/* Vendor Payment History */}
-        <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg overflow-hidden"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--color-silver)' }}>
             <h3 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
               Vendor Payment History
@@ -472,26 +597,52 @@ export function PaymentAuditTrail() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
-                  <th className="text-left px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                <tr
+                  style={{
+                    backgroundColor: 'var(--color-cloud)',
+                    borderBottom: '1px solid var(--color-silver)',
+                  }}
+                >
+                  <th
+                    className="text-left px-6 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     VENDOR
                   </th>
-                  <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-right px-4 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     TOTAL PAID (YTD)
                   </th>
-                  <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-center px-4 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     PAYMENTS
                   </th>
-                  <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-center px-4 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     AVG DAYS
                   </th>
-                  <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-center px-4 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     ON-TIME %
                   </th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-left px-4 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     LAST PAYMENT
                   </th>
-                  <th className="text-right px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-right px-6 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     LAST AMOUNT
                   </th>
                 </tr>
@@ -506,7 +657,9 @@ export function PaymentAuditTrail() {
                     }}
                   >
                     <td className="px-6 py-4">
-                      <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '13px' }}>
+                      <div
+                        style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '13px' }}
+                      >
                         {vendor.vendor}
                       </div>
                       <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -514,12 +667,17 @@ export function PaymentAuditTrail() {
                       </div>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <span style={{ color: 'var(--color-teal)', fontWeight: '700', fontSize: '14px' }}>
+                      <span
+                        style={{ color: 'var(--color-teal)', fontWeight: '700', fontSize: '14px' }}
+                      >
                         {formatCurrency(vendor.totalPaid)}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                      <span
+                        className="text-sm"
+                        style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                      >
                         {vendor.paymentsCount}
                       </span>
                     </td>
@@ -539,8 +697,18 @@ export function PaymentAuditTrail() {
                       <span
                         className="px-2 py-1 rounded text-xs"
                         style={{
-                          backgroundColor: vendor.onTimePercentage >= 90 ? '#D1FAE5' : vendor.onTimePercentage >= 75 ? '#FEF3C7' : 'var(--color-error-light)',
-                          color: vendor.onTimePercentage >= 90 ? '#10B981' : vendor.onTimePercentage >= 75 ? '#F59E0B' : '#EF4444',
+                          backgroundColor:
+                            vendor.onTimePercentage >= 90
+                              ? '#D1FAE5'
+                              : vendor.onTimePercentage >= 75
+                                ? '#FEF3C7'
+                                : 'var(--color-error-light)',
+                          color:
+                            vendor.onTimePercentage >= 90
+                              ? '#10B981'
+                              : vendor.onTimePercentage >= 75
+                                ? '#F59E0B'
+                                : '#EF4444',
                           fontWeight: '700',
                         }}
                       >
@@ -557,7 +725,9 @@ export function PaymentAuditTrail() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <span style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '13px' }}>
+                      <span
+                        style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '13px' }}
+                      >
                         {formatCurrency(vendor.lastPaymentAmount)}
                       </span>
                     </td>

@@ -53,9 +53,30 @@ export const kpiData = {
 };
 
 export const agingMovementData: AgingMovement[] = [
-  { month: 'Oct', current: 12500000, days0_30: 18200000, days31_60: 8400000, days61_90: 4200000, days90Plus: 2100000 },
-  { month: 'Nov', current: 14800000, days0_30: 16900000, days31_60: 9100000, days61_90: 4800000, days90Plus: 2400000 },
-  { month: 'Dec', current: 16200000, days0_30: 15400000, days31_60: 7800000, days61_90: 3900000, days90Plus: 2300000 },
+  {
+    month: 'Oct',
+    current: 12500000,
+    days0_30: 18200000,
+    days31_60: 8400000,
+    days61_90: 4200000,
+    days90Plus: 2100000,
+  },
+  {
+    month: 'Nov',
+    current: 14800000,
+    days0_30: 16900000,
+    days31_60: 9100000,
+    days61_90: 4800000,
+    days90Plus: 2400000,
+  },
+  {
+    month: 'Dec',
+    current: 16200000,
+    days0_30: 15400000,
+    days31_60: 7800000,
+    days61_90: 3900000,
+    days90Plus: 2300000,
+  },
 ];
 
 export const vendorAgingData: VendorAging[] = [
@@ -371,7 +392,7 @@ export const departmentOverdueData: DepartmentOverdue[] = [
 ];
 
 // Vendor-wise aging for stacked bar chart
-export const vendorAgingChartData = vendorAgingData.slice(0, 10).map(v => ({
+export const vendorAgingChartData = vendorAgingData.slice(0, 10).map((v) => ({
   vendor: v.vendor.split(' ')[0], // Short name for chart
   '0-30': v.days0_30 / 100000, // Convert to lakhs
   '31-60': v.days31_60 / 100000,

@@ -1,9 +1,22 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Save, Send, AlertCircle, CheckCircle, DollarSign,
-  Calendar, User, Building2, FileText, Clock, Target, TrendingUp,
-  Receipt, CreditCard, Info
+  ArrowLeft,
+  Save,
+  Send,
+  AlertCircle,
+  CheckCircle,
+  DollarSign,
+  Calendar,
+  User,
+  Building2,
+  FileText,
+  Clock,
+  Target,
+  TrendingUp,
+  Receipt,
+  CreditCard,
+  Info,
 } from 'lucide-react';
 import { useAPData, Milestone } from '../contexts/APDataContext';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
@@ -12,19 +25,19 @@ import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 export function AdvanceRequestForm() {
   const navigate = useNavigate();
   const { vendors, getPOsByVendor, getVendorByCode } = useAPData();
-  
+
   // Section 1: Advance Type & Vendor Selection
   const [advanceType, setAdvanceType] = useState<'PO-based' | 'On-Account'>('PO-based');
   const [selectedVendorCode, setSelectedVendorCode] = useState('');
   const [vendorName, setVendorName] = useState('');
   const [vendorGSTIN, setVendorGSTIN] = useState('');
-  
+
   // Section 2: PO & Milestone Selection (PO-based only)
   const [selectedPO, setSelectedPO] = useState('');
   const [selectedMilestones, setSelectedMilestones] = useState<string[]>([]);
   const [availablePOs, setAvailablePOs] = useState<any[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
-  
+
   // Section 3: Advance Amount & Tax Details
   const [requestedAmount, setRequestedAmount] = useState(0);
   const [advancePercentage, setAdvancePercentage] = useState(0);
@@ -36,18 +49,18 @@ export function AdvanceRequestForm() {
   const [tdsRate, setTdsRate] = useState(0);
   const [tdsAmount, setTdsAmount] = useState(0);
   const [netPayable, setNetPayable] = useState(0);
-  
+
   // Section 4: Approval Workflow
   const [approvalWorkflow, setApprovalWorkflow] = useState<'Auto' | 'Manual'>('Manual');
   const [approvers, setApprovers] = useState<string[]>([]);
   const [priority, setPriority] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('Medium');
   const [escalationTimeline, setEscalationTimeline] = useState(24);
-  
+
   // Section 5: Accounting Preview
   const [showAccountingPreview, setShowAccountingPreview] = useState(false);
 
   // Validation errors
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   // Vendor selection handler
   useEffect(() => {
@@ -57,7 +70,7 @@ export function AdvanceRequestForm() {
         setVendorName(vendor.name);
         setVendorGSTIN(vendor.gstin);
         setCurrency(vendor.currency);
-        
+
         // Load POs for selected vendor if PO-based
         if (advanceType === 'PO-based') {
           const pos = getPOsByVendor(selectedVendorCode);
@@ -70,7 +83,7 @@ export function AdvanceRequestForm() {
   // PO selection handler - load milestones
   useEffect(() => {
     if (selectedPO && availablePOs.length > 0) {
-      const po = availablePOs.find(p => p.poNumber === selectedPO);
+      const po = availablePOs.find((p) => p.poNumber === selectedPO);
       if (po && po.milestones) {
         setMilestones(po.milestones);
       } else {
@@ -93,9 +106,9 @@ export function AdvanceRequestForm() {
 
   // Milestone selection handler
   const toggleMilestoneSelection = (milestoneId: string) => {
-    setSelectedMilestones(prev => {
+    setSelectedMilestones((prev) => {
       if (prev.includes(milestoneId)) {
-        return prev.filter(id => id !== milestoneId);
+        return prev.filter((id) => id !== milestoneId);
       } else {
         return [...prev, milestoneId];
       }
@@ -105,25 +118,29 @@ export function AdvanceRequestForm() {
   // Calculate total eligible amount from selected milestones
   const getTotalEligibleAmount = () => {
     return milestones
-      .filter(m => selectedMilestones.includes(m.id))
+      .filter((m) => selectedMilestones.includes(m.id))
       .reduce((sum, m) => sum + m.remainingEligibleAmount, 0);
   };
 
   // Validate form
   const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
-    
+    const newErrors: { [key: string]: string } = {};
+
     if (!selectedVendorCode) newErrors.vendor = 'Vendor is mandatory';
-    if (advanceType === 'PO-based' && !selectedPO) newErrors.po = 'PO selection is mandatory for PO-based advances';
-    if (advanceType === 'PO-based' && selectedMilestones.length === 0) newErrors.milestone = 'At least one milestone must be selected';
-    if (!requestedAmount || requestedAmount <= 0) newErrors.amount = 'Advance amount must be greater than zero';
+    if (advanceType === 'PO-based' && !selectedPO)
+      newErrors.po = 'PO selection is mandatory for PO-based advances';
+    if (advanceType === 'PO-based' && selectedMilestones.length === 0)
+      newErrors.milestone = 'At least one milestone must be selected';
+    if (!requestedAmount || requestedAmount <= 0)
+      newErrors.amount = 'Advance amount must be greater than zero';
     if (advanceType === 'PO-based' && requestedAmount > getTotalEligibleAmount()) {
       newErrors.amount = `Amount cannot exceed eligible amount (₹${getTotalEligibleAmount().toLocaleString()})`;
     }
     if (!advanceDate) newErrors.date = 'Advance date is required';
     if (!purpose.trim()) newErrors.purpose = 'Purpose is required';
-    if (tdsApplicable && !tdsSection) newErrors.tdsSection = 'TDS section is required when TDS is applicable';
-    
+    if (tdsApplicable && !tdsSection)
+      newErrors.tdsSection = 'TDS section is required when TDS is applicable';
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -148,7 +165,7 @@ export function AdvanceRequestForm() {
     { code: '194H', description: 'Commission & Brokerage', rate: 5.0 },
     { code: '194I', description: 'Rent', rate: 10.0 },
     { code: '194J', description: 'Professional Services', rate: 10.0 },
-    { code: '194A', description: 'Interest other than Interest on Securities', rate: 10.0 }
+    { code: '194A', description: 'Interest other than Interest on Securities', rate: 10.0 },
   ];
 
   const approversList = ['Finance Manager', 'CFO', 'Department Head', 'CEO'];
@@ -157,7 +174,7 @@ export function AdvanceRequestForm() {
   const completeness = useMemo(() => {
     const fields = [selectedVendorCode, advanceType, String(requestedAmount), advanceDate, purpose];
     if (advanceType === 'PO-based') fields.push(selectedPO);
-    const filled = fields.filter(v => String(v).trim().length > 0 && v !== '0').length;
+    const filled = fields.filter((v) => String(v).trim().length > 0 && v !== '0').length;
     return Math.round((filled / fields.length) * 100);
   }, [selectedVendorCode, advanceType, requestedAmount, advanceDate, purpose, selectedPO]);
 
@@ -173,7 +190,7 @@ export function AdvanceRequestForm() {
   // Handle TDS Section change - auto-populate rate
   const handleTDSSectionChange = (sectionCode: string) => {
     setTdsSection(sectionCode);
-    const section = tdsSections.find(s => s.code === sectionCode);
+    const section = tdsSections.find((s) => s.code === sectionCode);
     if (section) {
       setTdsRate(section.rate);
     } else {
@@ -196,9 +213,17 @@ export function AdvanceRequestForm() {
     >
       <div className="max-w-[1400px] mx-auto">
         <div className="space-y-6">
-          
           {/* Section 1: Advance Type & Vendor Selection */}
-          <FormSection title="Section 1: Advance Type & Vendor" subtitle="Select advance type and vendor details" columns={2} icon={<div className="w-10 h-10 bg-[var(--color-teal)]/10 rounded-lg flex items-center justify-center"><FileText className="w-5 h-5 text-[var(--color-teal)]" /></div>}>
+          <FormSection
+            title="Section 1: Advance Type & Vendor"
+            subtitle="Select advance type and vendor details"
+            columns={2}
+            icon={
+              <div className="w-10 h-10 bg-[var(--color-teal)]/10 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 text-[var(--color-teal)]" />
+              </div>
+            }
+          >
             <PxFormField label="Advance Type" required>
               <div className="flex gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -242,7 +267,7 @@ export function AdvanceRequestForm() {
                 className="px-select"
               >
                 <option value="">Select Vendor</option>
-                {vendors.map(vendor => (
+                {vendors.map((vendor) => (
                   <option key={vendor.code} value={vendor.code}>
                     {vendor.name}
                   </option>
@@ -256,7 +281,10 @@ export function AdvanceRequestForm() {
                 value={selectedVendorCode}
                 disabled
                 className="px-input"
-                style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
+                style={{
+                  backgroundColor: 'var(--color-cloud)',
+                  color: 'var(--color-mercury-grey)',
+                }}
               />
             </PxFormField>
 
@@ -266,7 +294,10 @@ export function AdvanceRequestForm() {
                 value={vendorGSTIN}
                 disabled
                 className="px-input"
-                style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
+                style={{
+                  backgroundColor: 'var(--color-cloud)',
+                  color: 'var(--color-mercury-grey)',
+                }}
               />
             </PxFormField>
           </FormSection>
@@ -280,7 +311,9 @@ export function AdvanceRequestForm() {
                 </div>
                 <div>
                   <h2 className="text-[var(--color-ink)]">Section 2: PO & Milestone Selection</h2>
-                  <p className="text-sm text-[var(--color-mercury-grey)]">Select purchase order and eligible milestones</p>
+                  <p className="text-sm text-[var(--color-mercury-grey)]">
+                    Select purchase order and eligible milestones
+                  </p>
                 </div>
               </div>
 
@@ -292,17 +325,29 @@ export function AdvanceRequestForm() {
                     <table className="w-full">
                       <thead className="bg-[var(--color-cloud)]">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Select</th>
-                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">PO Number</th>
-                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">PO Date</th>
-                          <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">PO Value</th>
-                          <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">Open Amount</th>
-                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Status</th>
+                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                            Select
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                            PO Number
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                            PO Date
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">
+                            PO Value
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">
+                            Open Amount
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                            Status
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[var(--color-silver)]">
-                        {availablePOs.map(po => (
-                          <tr 
+                        {availablePOs.map((po) => (
+                          <tr
                             key={po.poNumber}
                             className={`hover:bg-[var(--color-cloud)] cursor-pointer ${selectedPO === po.poNumber ? 'bg-[var(--color-teal)]/5' : ''}`}
                             onClick={() => setSelectedPO(po.poNumber)}
@@ -317,7 +362,9 @@ export function AdvanceRequestForm() {
                               />
                             </td>
                             <td className="px-4 py-3 text-[var(--color-ink)]">{po.poNumber}</td>
-                            <td className="px-4 py-3 text-[var(--color-mercury-grey)]">{po.date}</td>
+                            <td className="px-4 py-3 text-[var(--color-mercury-grey)]">
+                              {po.date}
+                            </td>
                             <td className="px-4 py-3 text-right text-[var(--color-ink)]">
                               {currency} {po.amount.toLocaleString()}
                             </td>
@@ -356,18 +403,32 @@ export function AdvanceRequestForm() {
                     <table className="w-full">
                       <thead className="bg-[var(--color-cloud)]">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Select</th>
-                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Milestone Name</th>
-                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Description</th>
-                          <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">Milestone Amount</th>
-                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Due Date</th>
-                          <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">Eligible Advance</th>
-                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Status</th>
+                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                            Select
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                            Milestone Name
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                            Description
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">
+                            Milestone Amount
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                            Due Date
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">
+                            Eligible Advance
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                            Status
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[var(--color-silver)]">
-                        {milestones.map(milestone => (
-                          <tr 
+                        {milestones.map((milestone) => (
+                          <tr
                             key={milestone.id}
                             className={`hover:bg-[var(--color-cloud)] cursor-pointer ${selectedMilestones.includes(milestone.id) ? 'bg-[var(--color-teal)]/5' : ''}`}
                             onClick={() => toggleMilestoneSelection(milestone.id)}
@@ -381,22 +442,30 @@ export function AdvanceRequestForm() {
                               />
                             </td>
                             <td className="px-4 py-3 text-[var(--color-ink)]">{milestone.name}</td>
-                            <td className="px-4 py-3 text-[var(--color-mercury-grey)] text-sm">{milestone.description}</td>
+                            <td className="px-4 py-3 text-[var(--color-mercury-grey)] text-sm">
+                              {milestone.description}
+                            </td>
                             <td className="px-4 py-3 text-right text-[var(--color-ink)]">
                               {currency} {milestone.amount.toLocaleString()}
                             </td>
-                            <td className="px-4 py-3 text-[var(--color-mercury-grey)]">{milestone.dueDate}</td>
+                            <td className="px-4 py-3 text-[var(--color-mercury-grey)]">
+                              {milestone.dueDate}
+                            </td>
                             <td className="px-4 py-3 text-right">
                               <span className="text-[var(--color-teal)]">
                                 {currency} {milestone.remainingEligibleAmount.toLocaleString()}
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                milestone.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                milestone.status === 'In Progress' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
+                              <span
+                                className={`px-2 py-1 rounded text-xs ${
+                                  milestone.status === 'Completed'
+                                    ? 'bg-green-100 text-green-700'
+                                    : milestone.status === 'In Progress'
+                                      ? 'bg-yellow-100 text-yellow-700'
+                                      : 'bg-gray-100 text-gray-700'
+                                }`}
+                              >
                                 {milestone.status}
                               </span>
                             </td>
@@ -414,7 +483,9 @@ export function AdvanceRequestForm() {
                   {selectedMilestones.length > 0 && (
                     <div className="mt-4 p-4 bg-[var(--color-cloud)] rounded-lg border border-[var(--color-silver)]">
                       <div className="flex items-center justify-between">
-                        <span className="text-[var(--color-mercury-grey)]">Total Eligible Advance Amount:</span>
+                        <span className="text-[var(--color-mercury-grey)]">
+                          Total Eligible Advance Amount:
+                        </span>
                         <span className="text-[var(--color-teal)]">
                           {currency} {getTotalEligibleAmount().toLocaleString()}
                         </span>
@@ -428,17 +499,30 @@ export function AdvanceRequestForm() {
                 <div className="text-center py-8 text-[var(--color-mercury-grey)]">
                   <Target className="w-12 h-12 mx-auto mb-3 opacity-50" />
                   <p>No milestones defined for this PO</p>
-                  <p className="text-sm mt-1">Configure milestones in PO settings to enable milestone-based advances</p>
+                  <p className="text-sm mt-1">
+                    Configure milestones in PO settings to enable milestone-based advances
+                  </p>
                 </div>
               )}
             </div>
           )}
 
           {/* Section 3: Advance Amount & Tax Details */}
-          <FormSection title="Section 3: Advance Amount & Tax Details" subtitle="Specify advance amount and tax information" columns={2} icon={<div className="w-10 h-10 bg-[var(--color-teal)]/10 rounded-lg flex items-center justify-center"><DollarSign className="w-5 h-5 text-[var(--color-teal)]" /></div>}>
+          <FormSection
+            title="Section 3: Advance Amount & Tax Details"
+            subtitle="Specify advance amount and tax information"
+            columns={2}
+            icon={
+              <div className="w-10 h-10 bg-[var(--color-teal)]/10 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-[var(--color-teal)]" />
+              </div>
+            }
+          >
             <PxFormField label="Requested Advance Amount" required error={errors.amount}>
               <div className="relative">
-                <span className="absolute left-3 top-2.5 text-[var(--color-mercury-grey)]">{currency}</span>
+                <span className="absolute left-3 top-2.5 text-[var(--color-mercury-grey)]">
+                  {currency}
+                </span>
                 <input
                   type="number"
                   value={requestedAmount || ''}
@@ -456,7 +540,10 @@ export function AdvanceRequestForm() {
                 value={currency}
                 disabled
                 className="px-input"
-                style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
+                style={{
+                  backgroundColor: 'var(--color-cloud)',
+                  color: 'var(--color-mercury-grey)',
+                }}
               />
             </PxFormField>
 
@@ -501,7 +588,7 @@ export function AdvanceRequestForm() {
                     className="px-select"
                   >
                     <option value="">Select TDS Section</option>
-                    {tdsSections.map(section => (
+                    {tdsSections.map((section) => (
                       <option key={section.code} value={section.code}>
                         {section.code} - {section.description}
                       </option>
@@ -526,7 +613,10 @@ export function AdvanceRequestForm() {
                     value={`${currency} ${tdsAmount.toLocaleString()}`}
                     disabled
                     className="px-input"
-                    style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
+                    style={{
+                      backgroundColor: 'var(--color-cloud)',
+                      color: 'var(--color-mercury-grey)',
+                    }}
                   />
                 </PxFormField>
 
@@ -557,7 +647,16 @@ export function AdvanceRequestForm() {
           </FormSection>
 
           {/* Section 4: Approval Workflow */}
-          <FormSection title="Section 4: Approval Workflow" subtitle="Configure approval workflow and approvers" columns={2} icon={<div className="w-10 h-10 bg-[var(--color-teal)]/10 rounded-lg flex items-center justify-center"><CheckCircle className="w-5 h-5 text-[var(--color-teal)]" /></div>}>
+          <FormSection
+            title="Section 4: Approval Workflow"
+            subtitle="Configure approval workflow and approvers"
+            columns={2}
+            icon={
+              <div className="w-10 h-10 bg-[var(--color-teal)]/10 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-[var(--color-teal)]" />
+              </div>
+            }
+          >
             <PxFormField label="Approval Workflow">
               <select
                 value={approvalWorkflow}
@@ -594,7 +693,7 @@ export function AdvanceRequestForm() {
             {approvalWorkflow === 'Manual' && (
               <PxFormField label="Approvers" colSpan={2}>
                 <div className="grid grid-cols-2 gap-3">
-                  {approversList.map(approver => (
+                  {approversList.map((approver) => (
                     <label key={approver} className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -603,7 +702,7 @@ export function AdvanceRequestForm() {
                           if (e.target.checked) {
                             setApprovers([...approvers, approver]);
                           } else {
-                            setApprovers(approvers.filter(a => a !== approver));
+                            setApprovers(approvers.filter((a) => a !== approver));
                           }
                         }}
                         className="w-4 h-4 text-[var(--color-teal)] accent-[var(--color-teal)] rounded"
@@ -628,7 +727,10 @@ export function AdvanceRequestForm() {
                     ) : (
                       <div className="space-y-2">
                         <p className="text-sm text-[var(--color-mercury-grey)]">
-                          Approval Sequence: {approvers.length > 0 ? approvers.join(' \u2192 ') : 'No approvers selected'}
+                          Approval Sequence:{' '}
+                          {approvers.length > 0
+                            ? approvers.join(' \u2192 ')
+                            : 'No approvers selected'}
                         </p>
                         <p className="text-sm text-[var(--color-mercury-grey)]">
                           SLA: {escalationTimeline} hours | Priority: {priority}
@@ -649,7 +751,9 @@ export function AdvanceRequestForm() {
               </div>
               <div className="flex-1">
                 <h2 className="text-[var(--color-ink)]">Section 5: Accounting Preview</h2>
-                <p className="text-sm text-[var(--color-mercury-grey)]">Preview accounting entries (posted on approval)</p>
+                <p className="text-sm text-[var(--color-mercury-grey)]">
+                  Preview accounting entries (posted on approval)
+                </p>
               </div>
               <button
                 onClick={() => setShowAccountingPreview(!showAccountingPreview)}
@@ -664,9 +768,15 @@ export function AdvanceRequestForm() {
                 <table className="w-full">
                   <thead className="bg-[var(--color-cloud)]">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">GL Account</th>
-                      <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">Debit Amount</th>
-                      <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">Credit Amount</th>
+                      <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                        GL Account
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">
+                        Debit Amount
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">
+                        Credit Amount
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--color-silver)]">
@@ -687,7 +797,9 @@ export function AdvanceRequestForm() {
                       </tr>
                     )}
                     <tr>
-                      <td className="px-4 py-3 text-[var(--color-ink)]">Bank / Cash / AP Clearing</td>
+                      <td className="px-4 py-3 text-[var(--color-ink)]">
+                        Bank / Cash / AP Clearing
+                      </td>
                       <td className="px-4 py-3 text-right text-[var(--color-mercury-grey)]">-</td>
                       <td className="px-4 py-3 text-right text-[var(--color-ink)]">
                         {currency} {netPayable.toLocaleString()}
@@ -716,7 +828,6 @@ export function AdvanceRequestForm() {
               </div>
             )}
           </div>
-
         </div>
       </div>
     </FormShell>

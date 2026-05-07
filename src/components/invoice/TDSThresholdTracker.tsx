@@ -39,7 +39,8 @@ export function TDSThresholdTracker({ lineItems }: TDSThresholdTrackerProps) {
       {Object.entries(LIMITS).map(([section, limit]) => {
         const amount = totals[section] || 0;
         const progress = pct(amount, limit);
-        const barColor = progress >= 100 ? '#DC2626' : progress >= 75 ? '#D97706' : BASE_COLORS[section];
+        const barColor =
+          progress >= 100 ? '#DC2626' : progress >= 75 ? '#D97706' : BASE_COLORS[section];
         const warning =
           progress >= 100
             ? 'Threshold crossed - TDS applies on all prior payments this FY'
@@ -49,15 +50,29 @@ export function TDSThresholdTracker({ lineItems }: TDSThresholdTrackerProps) {
 
         return (
           <div key={section} className="space-y-1">
-            <div className="flex items-center justify-between text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-              <span>{section} ({limit.toLocaleString('en-IN')})</span>
+            <div
+              className="flex items-center justify-between text-xs"
+              style={{ color: 'var(--color-mercury-grey)' }}
+            >
+              <span>
+                {section} ({limit.toLocaleString('en-IN')})
+              </span>
               <span>{amount.toLocaleString('en-IN')}</span>
             </div>
             <div className="h-2 rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
-              <div className="h-2 rounded-full" style={{ width: `${progress}%`, backgroundColor: barColor }} />
+              <div
+                className="h-2 rounded-full"
+                style={{ width: `${progress}%`, backgroundColor: barColor }}
+              />
             </div>
             {warning && (
-              <span className="inline-block px-2 py-1 rounded-full text-xs" style={{ backgroundColor: progress >= 100 ? '#FEE2E2' : '#FEF3C7', color: progress >= 100 ? '#B91C1C' : '#92400E' }}>
+              <span
+                className="inline-block px-2 py-1 rounded-full text-xs"
+                style={{
+                  backgroundColor: progress >= 100 ? '#FEE2E2' : '#FEF3C7',
+                  color: progress >= 100 ? '#B91C1C' : '#92400E',
+                }}
+              >
                 {warning}
               </span>
             )}
@@ -67,4 +82,3 @@ export function TDSThresholdTracker({ lineItems }: TDSThresholdTrackerProps) {
     </div>
   );
 }
-

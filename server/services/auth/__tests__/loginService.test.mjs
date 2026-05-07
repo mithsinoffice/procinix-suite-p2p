@@ -34,8 +34,14 @@ function makeUserRow({
   tenantId = 'tenant-001',
   status = 'Active',
 } = {}) {
-  const payload = { email, ...(passwordHash ? { passwordHash } : {}), ...(password ? { password } : {}) };
-  return [{ id, payload: JSON.stringify(payload), tenant_id: tenantId, default_entity_id: null, status }];
+  const payload = {
+    email,
+    ...(passwordHash ? { passwordHash } : {}),
+    ...(password ? { password } : {}),
+  };
+  return [
+    { id, payload: JSON.stringify(payload), tenant_id: tenantId, default_entity_id: null, status },
+  ];
 }
 
 beforeEach(() => {
@@ -46,9 +52,7 @@ beforeEach(() => {
 
 describe('authenticateUser', () => {
   it('returns ok=true for valid bcrypt-hashed user', async () => {
-    vi.mocked(query).mockResolvedValueOnce(
-      makeUserRow({ passwordHash: '$2b$12$hash' }),
-    );
+    vi.mocked(query).mockResolvedValueOnce(makeUserRow({ passwordHash: '$2b$12$hash' }));
     vi.mocked(bcrypt.compare).mockResolvedValueOnce(true);
 
     const result = await authenticateUser({ email: 'alice@example.com', password: 'correct' });
@@ -72,8 +76,8 @@ describe('authenticateUser', () => {
 
   it('returns ok=true for valid legacy plaintext user and triggers lazy hash', async () => {
     vi.mocked(query)
-      .mockResolvedValueOnce(makeUserRow({ password: 'plain123' }))  // SELECT
-      .mockResolvedValueOnce([{}]);                                    // UPDATE (lazy)
+      .mockResolvedValueOnce(makeUserRow({ password: 'plain123' })) // SELECT
+      .mockResolvedValueOnce([{}]); // UPDATE (lazy)
     vi.mocked(bcrypt.hash).mockResolvedValueOnce('$2b$12$lazyhash');
 
     const result = await authenticateUser({ email: 'alice@example.com', password: 'plain123' });
@@ -86,9 +90,9 @@ describe('authenticateUser', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(bcrypt.hash).toHaveBeenCalledWith('plain123', 12);
-    const updateCall = vi.mocked(query).mock.calls.find(([sql]) =>
-      typeof sql === 'string' && sql.includes('UPDATE'),
-    );
+    const updateCall = vi
+      .mocked(query)
+      .mock.calls.find(([sql]) => typeof sql === 'string' && sql.includes('UPDATE'));
     expect(updateCall).toBeDefined();
     const updatedPayload = JSON.parse(updateCall[1][0]);
     expect(updatedPayload.passwordHash).toBe('$2b$12$lazyhash');
@@ -149,12 +153,14 @@ describe('createSession + lookupSession', () => {
   });
 
   it('lookupSession returns session metadata for a valid token', async () => {
-    vi.mocked(query).mockResolvedValueOnce([{
-      id: 'sess-1',
-      user_id: 'u-001',
-      tenant_id: 'tenant-001',
-      user_email: 'alice@example.com',
-    }]);
+    vi.mocked(query).mockResolvedValueOnce([
+      {
+        id: 'sess-1',
+        user_id: 'u-001',
+        tenant_id: 'tenant-001',
+        user_email: 'alice@example.com',
+      },
+    ]);
 
     const session = await lookupSession('a'.repeat(64));
 
@@ -166,8 +172,8 @@ describe('createSession + lookupSession', () => {
     // Verify the token_hash (SHA-256) was passed, not the raw token
     const [sql, params] = vi.mocked(query).mock.calls[0];
     expect(sql).toMatch(/sessions/i);
-    expect(params[0]).not.toBe('a'.repeat(64));  // hash, not raw token
-    expect(params[0]).toHaveLength(64);           // SHA-256 hex
+    expect(params[0]).not.toBe('a'.repeat(64)); // hash, not raw token
+    expect(params[0]).toHaveLength(64); // SHA-256 hex
   });
 
   it('lookupSession returns null when no rows found', async () => {
@@ -250,9 +256,10 @@ describe('fetchContext', () => {
   it('returns tenantName, tenantCode and mapped entities', async () => {
     vi.mocked(query)
       .mockResolvedValueOnce([{ id: 't-1', name: 'Acme Corp', code: 'ACME' }]) // tenant
-      .mockResolvedValueOnce([                                                    // entities
+      .mockResolvedValueOnce([
+        // entities
         { id: 'e-1', name: 'Main Office', code: 'MAIN', isDefault: 1 },
-        { id: 'e-2', name: 'Warehouse',   code: 'WH',   isDefault: 0 },
+        { id: 'e-2', name: 'Warehouse', code: 'WH', isDefault: 0 },
       ]);
 
     const ctx = await fetchContext('u-1', 't-1');

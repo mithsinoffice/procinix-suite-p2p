@@ -1,6 +1,6 @@
 /** Client-side visibility (must match server SUPER_ADMIN_EMAILS for API mutations). */
 export function isSuperAdminUser(
-  user: { email: string; role?: string; roles?: string[] } | null,
+  user: { email: string; role?: string; roles?: string[] } | null
 ): boolean {
   if (!user?.email) return false;
   const env = import.meta.env.VITE_SUPER_ADMIN_EMAILS || '';
@@ -8,7 +8,7 @@ export function isSuperAdminUser(
     env
       .split(',')
       .map((s) => s.trim().toLowerCase())
-      .filter(Boolean),
+      .filter(Boolean)
   );
   const email = user.email.trim().toLowerCase();
   if (allow.has(email)) return true;

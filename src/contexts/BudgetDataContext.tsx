@@ -3,7 +3,14 @@ import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentS
 
 // Budget Types
 export type BudgetType = 'Original' | 'Interim' | 'Revised' | 'Forecast';
-export type BudgetStatus = 'Draft' | 'Submitted' | 'In Approval' | 'Approved' | 'Rejected' | 'Active' | 'Closed';
+export type BudgetStatus =
+  | 'Draft'
+  | 'Submitted'
+  | 'In Approval'
+  | 'Approved'
+  | 'Rejected'
+  | 'Active'
+  | 'Closed';
 export type AllocationPeriod = 'Monthly' | 'Quarterly' | 'Annual';
 export type ControlType = 'Hard Stop' | 'Soft Warning' | 'Advisory';
 export type ScenarioType = 'Base' | 'Optimistic' | 'Conservative' | 'Custom';
@@ -172,12 +179,12 @@ export function BudgetDataProvider({ children }: { children: ReactNode }) {
           location: 'Delhi NCR',
           costCentre: 'ACIL-METRO-P2',
           profitCentre: 'PC-PROJECTS',
-          project: 'ACIL-METRO-P2'
+          project: 'ACIL-METRO-P2',
         },
         allocations: [
           { period: 'Apr 2025', plannedAmount: 45833333, revisedAmount: 45833333 },
           { period: 'May 2025', plannedAmount: 45833333, revisedAmount: 45833333 },
-          { period: 'Jun 2025', plannedAmount: 45833333, revisedAmount: 45833333 }
+          { period: 'Jun 2025', plannedAmount: 45833333, revisedAmount: 45833333 },
         ],
         allocationPeriod: 'Monthly',
         status: 'Approved',
@@ -202,10 +209,10 @@ export function BudgetDataProvider({ children }: { children: ReactNode }) {
             actionDate: '2025-03-05',
             slaHours: 48,
             slaDue: '2025-03-07',
-            overdue: false
-          }
-        ]
-      }
+            overdue: false,
+          },
+        ],
+      },
     ],
     revisions: [
       {
@@ -218,8 +225,8 @@ export function BudgetDataProvider({ children }: { children: ReactNode }) {
         netChange: 30000000,
         effectiveDate: '2025-07-01',
         requestedBy: 'Rajesh Kumar',
-        status: 'Submitted'
-      }
+        status: 'Submitted',
+      },
     ],
     transfers: [],
     scenarios: [
@@ -235,8 +242,8 @@ export function BudgetDataProvider({ children }: { children: ReactNode }) {
         projectedAvailable: 642150000,
         breachRisk: 'Medium',
         createdBy: 'Priya Mehta',
-        createdDate: '2025-05-15'
-      }
+        createdDate: '2025-05-15',
+      },
     ],
     policies: [
       {
@@ -246,15 +253,15 @@ export function BudgetDataProvider({ children }: { children: ReactNode }) {
         thresholdPercent: 90,
         applicableDimensions: {
           project: 'ACIL-METRO-P2',
-          expenseCategory: 'Materials'
+          expenseCategory: 'Materials',
         },
         overridePermissions: ['CFO', 'Project Director'],
         alertRecipients: ['rajesh.kumar@company.com', 'amit.sharma@company.com'],
         isActive: true,
         createdBy: 'Amit Sharma',
-        createdDate: '2025-03-01'
-      }
-    ]
+        createdDate: '2025-03-01',
+      },
+    ],
   };
 
   const [budgets, setBudgets] = useState<Budget[]>(defaultDocument.budgets);
@@ -298,59 +305,61 @@ export function BudgetDataProvider({ children }: { children: ReactNode }) {
       revisions,
       transfers,
       scenarios,
-      policies
+      policies,
     });
   }, [budgets, isHydrating, policies, revisions, scenarios, transfers]);
 
   const addBudget = (budget: Budget) => {
-    setBudgets(prev => [...prev, budget]);
+    setBudgets((prev) => [...prev, budget]);
   };
 
   const updateBudget = (id: string, updates: Partial<Budget>) => {
-    setBudgets(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+    setBudgets((prev) => prev.map((b) => (b.id === id ? { ...b, ...updates } : b)));
   };
 
   const deleteBudget = (id: string) => {
-    setBudgets(prev => prev.filter(b => b.id !== id));
+    setBudgets((prev) => prev.filter((b) => b.id !== id));
   };
 
   const addRevision = (revision: BudgetRevision) => {
-    setRevisions(prev => [...prev, revision]);
+    setRevisions((prev) => [...prev, revision]);
   };
 
   const addTransfer = (transfer: BudgetTransfer) => {
-    setTransfers(prev => [...prev, transfer]);
+    setTransfers((prev) => [...prev, transfer]);
   };
 
   const addScenario = (scenario: BudgetScenario) => {
-    setScenarios(prev => [...prev, scenario]);
+    setScenarios((prev) => [...prev, scenario]);
   };
 
   const addPolicy = (policy: BudgetPolicy) => {
-    setPolicies(prev => [...prev, policy]);
+    setPolicies((prev) => [...prev, policy]);
   };
 
   const updatePolicy = (id: string, updates: Partial<BudgetPolicy>) => {
-    setPolicies(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    setPolicies((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
   };
 
   return (
-    <BudgetDataContext.Provider value={{
-      budgets,
-      revisions,
-      transfers,
-      scenarios,
-      policies,
-      isHydrating,
-      addBudget,
-      updateBudget,
-      deleteBudget,
-      addRevision,
-      addTransfer,
-      addScenario,
-      addPolicy,
-      updatePolicy
-    }}>
+    <BudgetDataContext.Provider
+      value={{
+        budgets,
+        revisions,
+        transfers,
+        scenarios,
+        policies,
+        isHydrating,
+        addBudget,
+        updateBudget,
+        deleteBudget,
+        addRevision,
+        addTransfer,
+        addScenario,
+        addPolicy,
+        updatePolicy,
+      }}
+    >
       {children}
     </BudgetDataContext.Provider>
   );

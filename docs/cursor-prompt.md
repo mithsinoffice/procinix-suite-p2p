@@ -29,19 +29,22 @@ database. For each, note whether it currently filters by `tenant_id`. Produce
 a table: `endpoint | method | tables touched | filters by tenant_id? | needs permission`
 
 Step 7: run this and report findings:
+
 ```
 find . -path ./node_modules -prune -o -type f -print | grep -E ' [0-9]+\.' | grep -v node_modules
 ```
+
 List any macOS duplicate files that should be deleted in Phase 0.
 
 Step 8: produce a phase-by-phase delivery plan based on the 9 phases in
 addendum §4. For each phase list:
-  - Existing files to modify (cite paths)
-  - New files to create (cite paths)
-  - Migrations to add (cite filename, e.g. `sql/mysql/migrations/20260422_...sql`)
-  - Tests to add (paths under `src/utils/__tests__/` and any new server tests)
-  - Risks and how to mitigate
-  - Rollback procedure
+
+- Existing files to modify (cite paths)
+- New files to create (cite paths)
+- Migrations to add (cite filename, e.g. `sql/mysql/migrations/20260422_...sql`)
+- Tests to add (paths under `src/utils/__tests__/` and any new server tests)
+- Risks and how to mitigate
+- Rollback procedure
 
 Output everything above as a single markdown response. Do not write
 application code, do not write SQL, do not modify any files. I will review

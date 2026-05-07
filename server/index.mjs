@@ -11,10 +11,17 @@ const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const DIST_PATH = join(__dirname, '..', 'build');
 
 const MIME_TYPES = {
-  '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css',
-  '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg',
-  '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
-  '.woff': 'font/woff', '.webp': 'image/webp',
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
+  '.webp': 'image/webp',
 };
 
 async function serveStaticFile(res, filePath) {
@@ -24,12 +31,25 @@ async function serveStaticFile(res, filePath) {
     const ext = extname(filePath);
     const mime = MIME_TYPES[ext] || 'application/octet-stream';
     const data = await readFile(filePath);
-    res.writeHead(200, { 'Content-Type': mime, 'Content-Length': data.length, 'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000' });
+    res.writeHead(200, {
+      'Content-Type': mime,
+      'Content-Length': data.length,
+      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000',
+    });
     res.end(data);
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
-import { pingDatabase, query, closePool, withTransaction, connExecute, getConnection as getMysqlConnection } from './mysql.mjs';
+import {
+  pingDatabase,
+  query,
+  closePool,
+  withTransaction,
+  connExecute,
+  getConnection as getMysqlConnection,
+} from './mysql.mjs';
 import {
   MASTER_STORAGE,
   getQualifiedAuditTableName,
@@ -37,27 +57,71 @@ import {
 } from './masterStorage.mjs';
 import { sendVendorInvitationEmailServer } from './vendorInvitationMail.mjs';
 import { sendPortalWelcomeEmailServer } from './portalWelcomeMail.mjs';
-import { startEmailPoller, pollOnce, checkGeminiKey, restartEmailPoller } from './services/invoiceIngestion/emailPoller.mjs';
-import { listSettings, setSetting, loadSettingsToEnv, onSettingsChange } from './services/settings/settingsStore.mjs';
+import {
+  startEmailPoller,
+  pollOnce,
+  checkGeminiKey,
+  restartEmailPoller,
+} from './services/invoiceIngestion/emailPoller.mjs';
+import {
+  listSettings,
+  setSetting,
+  loadSettingsToEnv,
+  onSettingsChange,
+} from './services/settings/settingsStore.mjs';
 import { processInvoiceEmail } from './services/invoiceIngestion/orchestrator.mjs';
 import { extractInvoiceData } from './services/invoiceIngestion/geminiOCR.mjs';
-import { validateInvoiceData, validateInvoiceDataWithPolicy } from './services/invoiceIngestion/validator.mjs';
+import {
+  validateInvoiceData,
+  validateInvoiceDataWithPolicy,
+} from './services/invoiceIngestion/validator.mjs';
 import { matchToPO } from './services/invoiceIngestion/poMatcher.mjs';
 import { createInvoiceFromExtraction } from './services/invoiceIngestion/invoiceCreator.mjs';
 import { handleExceptions } from './services/invoiceIngestion/exceptionHandler.mjs';
 import { triggerWorkflow } from './services/invoiceIngestion/workflowTrigger.mjs';
-import { mapLegacyToLifecycle, mapProcessingStatusToLifecycle, LIFECYCLE_STATES } from './services/invoices/lifecycleMapping.mjs';
+import {
+  mapLegacyToLifecycle,
+  mapProcessingStatusToLifecycle,
+  LIFECYCLE_STATES,
+} from './services/invoices/lifecycleMapping.mjs';
 import { assertValidTransition } from './services/invoices/lifecycleTransitions.mjs';
 import { processMatch } from './services/agents/matchAgent.mjs';
-import { processInvoiceWithAgents, startAgentRetryScheduler, stopAgentRetryScheduler, resetAndRequeueInvoice } from './services/agents/orchestrator.mjs';
+import {
+  processInvoiceWithAgents,
+  startAgentRetryScheduler,
+  stopAgentRetryScheduler,
+  resetAndRequeueInvoice,
+} from './services/agents/orchestrator.mjs';
 import { checkAndExitIfInvalid } from './services/startup/validateEnv.mjs';
-import { authenticateUser, createSession, lookupSession, ensureSessionsTable } from './services/auth/loginService.mjs';
+import {
+  authenticateUser,
+  createSession,
+  lookupSession,
+  ensureSessionsTable,
+} from './services/auth/loginService.mjs';
 import { handleAuthRoute } from './routes/auth.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
-import { verifyPAN, verifyPANComprehensive, verifyGSTIN, verifyBankAccount, verifyMSME } from './services/kyc/panVerification.mjs';
+import {
+  verifyPAN,
+  verifyPANComprehensive,
+  verifyGSTIN,
+  verifyBankAccount,
+  verifyMSME,
+} from './services/kyc/panVerification.mjs';
 import { getForceClosurePreview, forceclosePO } from './services/po/forceClosure.mjs';
-import { checkAndProcessExpiries, sendExpiryReminders, extendPO, getExpiringPOs } from './services/po/poExpiry.mjs';
-import { createAmendment, approveAmendment, rejectAmendment, getAmendmentHistory, getAmendmentPreview } from './services/po/poAmendment.mjs';
+import {
+  checkAndProcessExpiries,
+  sendExpiryReminders,
+  extendPO,
+  getExpiringPOs,
+} from './services/po/poExpiry.mjs';
+import {
+  createAmendment,
+  approveAmendment,
+  rejectAmendment,
+  getAmendmentHistory,
+  getAmendmentPreview,
+} from './services/po/poAmendment.mjs';
 import {
   approveItem,
   bulkApprove,
@@ -91,7 +155,9 @@ import {
 } from './services/tenant/tenantAdmin.mjs';
 import cron from 'node-cron';
 
-const MASTER_SCHEMA_NAMES = [...new Set(Object.values(MASTER_STORAGE).map((storage) => storage.database))];
+const MASTER_SCHEMA_NAMES = [
+  ...new Set(Object.values(MASTER_STORAGE).map((storage) => storage.database)),
+];
 const PENDING_APPROVAL_STATUSES = ['Draft', 'Pending Approval', 'Pending', 'Changes Requested'];
 let vendorLearningTableReady = false;
 let fieldLearningTableReady = false;
@@ -305,7 +371,8 @@ const MASTER_WORKFLOW_TARGETS = new Set([
 function sendJson(res, statusCode, payload) {
   const headers = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Email, X-Tenant-Id, X-Entity-Id, X-User-Name, X-User-Id',
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, X-User-Email, X-Tenant-Id, X-Entity-Id, X-User-Name, X-User-Id',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   };
   if (res._corsOrigin) {
@@ -517,7 +584,9 @@ function mergeCanonicalMasterRecord(row) {
   const payload =
     typeof row?.payload === 'string'
       ? JSON.parse(row.payload || '{}')
-      : (row?.payload && typeof row.payload === 'object' ? row.payload : {});
+      : row?.payload && typeof row.payload === 'object'
+        ? row.payload
+        : {};
 
   const approvalStatus = row?.approval_status ?? inferApprovalStatus(payload);
   const status = row?.status ?? inferStatus(payload);
@@ -539,7 +608,10 @@ function resolveNextApprovalStatus(previousRecord, incomingRecord) {
   const incomingApprovalStatus = inferApprovalStatus(incomingRecord);
   const terminalStatuses = new Set(['Approved', 'Rejected']);
 
-  if (terminalStatuses.has(previousApprovalStatus || '') && !terminalStatuses.has(incomingApprovalStatus || '')) {
+  if (
+    terminalStatuses.has(previousApprovalStatus || '') &&
+    !terminalStatuses.has(incomingApprovalStatus || '')
+  ) {
     return previousApprovalStatus;
   }
 
@@ -585,11 +657,17 @@ async function getAuditTableConfig(masterKey) {
 
     const recordIdColumn = cols.has('record_id')
       ? 'record_id'
-      : (cols.has('recordId') ? 'recordId' : (cols.has('master_record_id') ? 'master_record_id' : null));
+      : cols.has('recordId')
+        ? 'recordId'
+        : cols.has('master_record_id')
+          ? 'master_record_id'
+          : null;
 
     const changedAtColumn = cols.has('changed_at')
       ? 'changed_at'
-      : (cols.has('created_at') ? 'created_at' : null);
+      : cols.has('created_at')
+        ? 'created_at'
+        : null;
 
     const versionNoColumn = cols.has('version_no') ? 'version_no' : null;
 
@@ -602,7 +680,14 @@ async function getAuditTableConfig(masterKey) {
   }
 }
 
-async function appendMasterVersion(masterKey, recordId, oldValues, newValues, actionType, conn = null) {
+async function appendMasterVersion(
+  masterKey,
+  recordId,
+  oldValues,
+  newValues,
+  actionType,
+  conn = null
+) {
   const auditTableName = getQualifiedAuditTableName(masterKey);
   if (!auditTableName) {
     return;
@@ -783,7 +868,14 @@ function applyApprovalActionToRecord(record, nextStatus, action, actor, comments
   return nextRecord;
 }
 
-async function updateGenericMasterApproval(masterKey, recordId, nextStatus, action, actor, comments) {
+async function updateGenericMasterApproval(
+  masterKey,
+  recordId,
+  nextStatus,
+  action,
+  actor,
+  comments
+) {
   const tableName = getQualifiedTableName(masterKey);
   const auditTableName = getQualifiedAuditTableName(masterKey);
 
@@ -805,7 +897,13 @@ async function updateGenericMasterApproval(masterKey, recordId, nextStatus, acti
     }
 
     const previousRecord = mapGenericMasterRow(rows[0]);
-    const updatedRecord = applyApprovalActionToRecord(previousRecord, nextStatus, action, actor, comments);
+    const updatedRecord = applyApprovalActionToRecord(
+      previousRecord,
+      nextStatus,
+      action,
+      actor,
+      comments
+    );
 
     await connExecute(
       conn,
@@ -871,7 +969,13 @@ async function updateItemApproval(recordId, nextStatus, action, actor, comments)
     }
 
     const previousRecord = mapItemRow(rows[0]);
-    const updatedRecord = applyApprovalActionToRecord(previousRecord, nextStatus, action, actor, comments);
+    const updatedRecord = applyApprovalActionToRecord(
+      previousRecord,
+      nextStatus,
+      action,
+      actor,
+      comments
+    );
 
     await connExecute(
       conn,
@@ -911,7 +1015,8 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'OPTIONS') {
     const headers = {
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Email, X-Tenant-Id, X-Entity-Id, X-User-Name, X-User-Id',
+      'Access-Control-Allow-Headers':
+        'Content-Type, Authorization, X-User-Email, X-Tenant-Id, X-Entity-Id, X-User-Name, X-User-Id',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Max-Age': '86400',
     };
@@ -927,7 +1032,7 @@ const server = http.createServer(async (req, res) => {
   const pathname = url.pathname;
 
   // Auth gate
-  if (!await isAuthenticated(req, pathname)) {
+  if (!(await isAuthenticated(req, pathname))) {
     return sendJson(res, 401, { ok: false, error: 'Unauthorized' });
   }
 
@@ -976,7 +1081,9 @@ const server = http.createServer(async (req, res) => {
 
     // Simple entities listing for regular users (no admin gate)
     if (req.method === 'GET' && pathname === '/api/entities') {
-      const rows = await query('SELECT id, name, code, tenant_id, is_default FROM entities ORDER BY is_default DESC, name ASC');
+      const rows = await query(
+        'SELECT id, name, code, tenant_id, is_default FROM entities ORDER BY is_default DESC, name ASC'
+      );
       return sendJson(res, 200, { success: true, data: rows });
     }
 
@@ -1013,7 +1120,12 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/health') {
       const database = await pingDatabase();
-      return sendJson(res, 200, { ok: true, database, env: process.env.NODE_ENV || 'development', version: '1.0.0' });
+      return sendJson(res, 200, {
+        ok: true,
+        database,
+        env: process.env.NODE_ENV || 'development',
+        version: '1.0.0',
+      });
     }
 
     if (req.method === 'GET' && pathname === '/api/mysql/health') {
@@ -1073,16 +1185,19 @@ const server = http.createServer(async (req, res) => {
       }
 
       const nextStatus =
-        action === 'approve'
-          ? 'Approved'
-          : action === 'reject'
-            ? 'Rejected'
-            : 'Changes Requested';
+        action === 'approve' ? 'Approved' : action === 'reject' ? 'Rejected' : 'Changes Requested';
 
       const updatedRecord =
         masterKey === 'item_master'
           ? await updateItemApproval(recordId, nextStatus, action, actor, comments)
-          : await updateGenericMasterApproval(masterKey, recordId, nextStatus, action, actor, comments);
+          : await updateGenericMasterApproval(
+              masterKey,
+              recordId,
+              nextStatus,
+              action,
+              actor,
+              comments
+            );
 
       if (!updatedRecord) {
         return sendJson(res, 404, { success: false, error: 'Master record not found' });
@@ -1148,7 +1263,12 @@ const server = http.createServer(async (req, res) => {
         if (approvalIds.length === 0) {
           return sendJson(res, 400, { success: false, error: 'approval_ids is required' });
         }
-        const result = await bulkApprove(approvalIds, approverId, { getConnection: getMysqlConnection }, body?.comments || 'Bulk approved');
+        const result = await bulkApprove(
+          approvalIds,
+          approverId,
+          { getConnection: getMysqlConnection },
+          body?.comments || 'Bulk approved'
+        );
         return sendJson(res, 200, result);
       } catch (error) {
         console.error('[Approvals] bulk approve error', error);
@@ -1170,7 +1290,11 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    if (req.method === 'GET' && pathname.startsWith('/api/approvals/') && pathname.endsWith('/detail')) {
+    if (
+      req.method === 'GET' &&
+      pathname.startsWith('/api/approvals/') &&
+      pathname.endsWith('/detail')
+    ) {
       try {
         const approverId = getRequestUserId(req);
         const approvalId = pathname.split('/')[3];
@@ -1187,12 +1311,18 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    if (req.method === 'POST' && pathname.startsWith('/api/approvals/') && pathname.endsWith('/approve')) {
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/approvals/') &&
+      pathname.endsWith('/approve')
+    ) {
       try {
         const approverId = getRequestUserId(req);
         const approvalId = pathname.split('/')[3];
         const body = await readJsonBody(req);
-        const result = await approveItem(approvalId, approverId, body?.comments || null, { getConnection: getMysqlConnection });
+        const result = await approveItem(approvalId, approverId, body?.comments || null, {
+          getConnection: getMysqlConnection,
+        });
         const detail = await getApprovalDetail(approvalId, approverId, {
           execute: async (sql, params = []) => [await query(sql, params)],
         });
@@ -1203,7 +1333,11 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    if (req.method === 'POST' && pathname.startsWith('/api/approvals/') && pathname.endsWith('/reject')) {
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/approvals/') &&
+      pathname.endsWith('/reject')
+    ) {
       try {
         const approverId = getRequestUserId(req);
         const approvalId = pathname.split('/')[3];
@@ -1211,7 +1345,9 @@ const server = http.createServer(async (req, res) => {
         if (!body?.reason || !String(body.reason).trim()) {
           return sendJson(res, 400, { success: false, error: 'reason is required' });
         }
-        const result = await rejectItem(approvalId, approverId, String(body.reason).trim(), { getConnection: getMysqlConnection });
+        const result = await rejectItem(approvalId, approverId, String(body.reason).trim(), {
+          getConnection: getMysqlConnection,
+        });
         return sendJson(res, 200, result);
       } catch (error) {
         console.error('[Approvals] reject error', error);
@@ -1240,7 +1376,10 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/kyc/verify-pan') {
       const body = await readJsonBody(req);
       if (body.consent !== 'Y' && body.consent !== true) {
-        return sendJson(res, 400, { success: false, error: 'Vendor consent required (consent="Y") before KYC verification.' });
+        return sendJson(res, 400, {
+          success: false,
+          error: 'Vendor consent required (consent="Y") before KYC verification.',
+        });
       }
       const result = await verifyPAN(query, body.pan, { reason: body.reason });
       return sendJson(res, result.success ? 200 : 400, result);
@@ -1249,7 +1388,10 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/kyc/verify-pan-comprehensive') {
       const body = await readJsonBody(req);
       if (body.consent !== 'Y' && body.consent !== true) {
-        return sendJson(res, 400, { success: false, error: 'Vendor consent required (consent="Y") before KYC verification.' });
+        return sendJson(res, 400, {
+          success: false,
+          error: 'Vendor consent required (consent="Y") before KYC verification.',
+        });
       }
       const result = await verifyPANComprehensive(query, body.pan, { reason: body.reason });
       return sendJson(res, result.success ? 200 : 400, result);
@@ -1258,7 +1400,10 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/kyc/verify-gstin') {
       const body = await readJsonBody(req);
       if (body.consent !== 'Y' && body.consent !== true) {
-        return sendJson(res, 400, { success: false, error: 'Vendor consent required (consent="Y") before KYC verification.' });
+        return sendJson(res, 400, {
+          success: false,
+          error: 'Vendor consent required (consent="Y") before KYC verification.',
+        });
       }
       const result = await verifyGSTIN(query, body.gstin, { reason: body.reason });
       return sendJson(res, result.success ? 200 : 400, result);
@@ -1267,16 +1412,24 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/kyc/verify-bank') {
       const body = await readJsonBody(req);
       if (body.consent !== 'Y' && body.consent !== true) {
-        return sendJson(res, 400, { success: false, error: 'Vendor consent required (consent="Y") before KYC verification.' });
+        return sendJson(res, 400, {
+          success: false,
+          error: 'Vendor consent required (consent="Y") before KYC verification.',
+        });
       }
-      const result = await verifyBankAccount(query, body.account_number, body.ifsc, { reason: body.reason });
+      const result = await verifyBankAccount(query, body.account_number, body.ifsc, {
+        reason: body.reason,
+      });
       return sendJson(res, result.success ? 200 : 400, result);
     }
 
     if (req.method === 'POST' && pathname === '/api/kyc/verify-msme') {
       const body = await readJsonBody(req);
       if (body.consent !== 'Y' && body.consent !== true) {
-        return sendJson(res, 400, { success: false, error: 'Vendor consent required (consent="Y") before KYC verification.' });
+        return sendJson(res, 400, {
+          success: false,
+          error: 'Vendor consent required (consent="Y") before KYC verification.',
+        });
       }
       const result = await verifyMSME(query, body.udyam_number, { reason: body.reason });
       return sendJson(res, result.success ? 200 : 400, result);
@@ -1319,7 +1472,9 @@ const server = http.createServer(async (req, res) => {
       );
 
       const payload = rows[0]?.payload
-        ? (typeof rows[0].payload === 'string' ? JSON.parse(rows[0].payload) : rows[0].payload)
+        ? typeof rows[0].payload === 'string'
+          ? JSON.parse(rows[0].payload)
+          : rows[0].payload
         : null;
 
       return sendJson(res, 200, { success: true, payload });
@@ -1361,7 +1516,10 @@ const server = http.createServer(async (req, res) => {
       const masterKey = pathname.replace('/api/masters/', '');
       const tableName = getQualifiedTableName(masterKey);
       if (!tableName) {
-        return sendJson(res, 404, { success: false, error: `Unsupported master key: ${masterKey}` });
+        return sendJson(res, 404, {
+          success: false,
+          error: `Unsupported master key: ${masterKey}`,
+        });
       }
 
       const rows = await query(
@@ -1384,7 +1542,10 @@ const server = http.createServer(async (req, res) => {
       const masterKey = pathname.replace('/api/masters/', '');
       const tableName = getQualifiedTableName(masterKey);
       if (!tableName) {
-        return sendJson(res, 404, { success: false, error: `Unsupported master key: ${masterKey}` });
+        return sendJson(res, 404, {
+          success: false,
+          error: `Unsupported master key: ${masterKey}`,
+        });
       }
 
       const body = await readJsonBody(req);
@@ -1398,10 +1559,7 @@ const server = http.createServer(async (req, res) => {
       );
 
       const existingById = new Map(
-        existingRows.map((row) => [
-          row.id,
-          mergeCanonicalMasterRecord(row),
-        ])
+        existingRows.map((row) => [row.id, mergeCanonicalMasterRecord(row)])
       );
 
       const seenIds = new Set();
@@ -1414,7 +1572,9 @@ const server = http.createServer(async (req, res) => {
           ...(previous ?? {}),
           ...record,
           id,
-          ...(nextStatus ? { status: nextStatus, isActive: String(nextStatus).toLowerCase() !== 'inactive' } : {}),
+          ...(nextStatus
+            ? { status: nextStatus, isActive: String(nextStatus).toLowerCase() !== 'inactive' }
+            : {}),
           ...(nextApprovalStatus ? { approvalStatus: nextApprovalStatus } : {}),
         };
 
@@ -1569,7 +1729,8 @@ const server = http.createServer(async (req, res) => {
         ...row,
         workflowCategory: inferWorkflowCategory(row.module),
         workflowTarget: row.module,
-        conditions: typeof row.conditions === 'string' ? JSON.parse(row.conditions) : row.conditions,
+        conditions:
+          typeof row.conditions === 'string' ? JSON.parse(row.conditions) : row.conditions,
         steps: typeof row.steps === 'string' ? JSON.parse(row.steps) : row.steps,
       }));
 
@@ -1652,7 +1813,11 @@ const server = http.createServer(async (req, res) => {
         const itemAuditTable = getQualifiedAuditTableName('item_master');
 
         const result = await withTransaction(async (conn) => {
-          const previousRows = await connExecute(conn, `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1 FOR UPDATE`, [id]);
+          const previousRows = await connExecute(
+            conn,
+            `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1 FOR UPDATE`,
+            [id]
+          );
           if (previousRows.length === 0) {
             return { notFound: true };
           }
@@ -1714,7 +1879,11 @@ const server = http.createServer(async (req, res) => {
             ]
           );
 
-          const updatedRows = await connExecute(conn, `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1`, [id]);
+          const updatedRows = await connExecute(
+            conn,
+            `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1`,
+            [id]
+          );
 
           if (itemAuditTable) {
             await appendMasterVersion(
@@ -1740,7 +1909,11 @@ const server = http.createServer(async (req, res) => {
         const itemAuditTable = getQualifiedAuditTableName('item_master');
 
         const result = await withTransaction(async (conn) => {
-          const existingRows = await connExecute(conn, `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1 FOR UPDATE`, [id]);
+          const existingRows = await connExecute(
+            conn,
+            `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1 FOR UPDATE`,
+            [id]
+          );
           if (existingRows.length === 0) {
             return { notFound: true };
           }
@@ -1822,7 +1995,11 @@ const server = http.createServer(async (req, res) => {
           ]
         );
 
-        const createdRows = await connExecute(conn, `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1`, [id]);
+        const createdRows = await connExecute(
+          conn,
+          `SELECT * FROM ${itemTableName} WHERE id = ? LIMIT 1`,
+          [id]
+        );
 
         if (itemAuditTable) {
           await appendMasterVersion(
@@ -1844,10 +2021,16 @@ const server = http.createServer(async (req, res) => {
     // ── OCR score & learning endpoints ───────────────────
     if (req.method === 'GET' && /^\/api\/invoices\/[^/]+\/ocr-scores$/.test(pathname)) {
       const invoiceId = pathname.split('/')[3];
-      const rows = await query('SELECT id, ingestion_log_id, metadata FROM invoices WHERE id = ? LIMIT 1', [invoiceId]);
+      const rows = await query(
+        'SELECT id, ingestion_log_id, metadata FROM invoices WHERE id = ? LIMIT 1',
+        [invoiceId]
+      );
       if (!rows.length) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
       const invoice = rows[0];
-      const metadata = typeof invoice.metadata === 'string' ? JSON.parse(invoice.metadata || '{}') : (invoice.metadata || {});
+      const metadata =
+        typeof invoice.metadata === 'string'
+          ? JSON.parse(invoice.metadata || '{}')
+          : invoice.metadata || {};
       const ocrFromMeta = metadata?.ocrScores || {};
       let ocrFromLog = null;
       if (invoice.ingestion_log_id) {
@@ -1859,8 +2042,14 @@ const server = http.createServer(async (req, res) => {
         if (logRows.length) {
           const lr = logRows[0];
           ocrFromLog = {
-            fields: typeof lr.ocr_field_scores === 'string' ? JSON.parse(lr.ocr_field_scores || '{}') : (lr.ocr_field_scores || {}),
-            overall_confidence: Number(lr.ocr_overall_confidence || 0) > 1 ? Number(lr.ocr_overall_confidence || 0) / 100 : Number(lr.ocr_overall_confidence || 0),
+            fields:
+              typeof lr.ocr_field_scores === 'string'
+                ? JSON.parse(lr.ocr_field_scores || '{}')
+                : lr.ocr_field_scores || {},
+            overall_confidence:
+              Number(lr.ocr_overall_confidence || 0) > 1
+                ? Number(lr.ocr_overall_confidence || 0) / 100
+                : Number(lr.ocr_overall_confidence || 0),
             fields_matched: Number(lr.fields_matched || 0),
             fields_conflicted: Number(lr.fields_conflicted || 0),
             fields_low_confidence: Number(lr.fields_low_confidence || 0),
@@ -1869,10 +2058,13 @@ const server = http.createServer(async (req, res) => {
         }
       }
       const payload = {
-        overall_confidence: ocrFromLog?.overall_confidence ?? Number(ocrFromMeta.overall_confidence || 0),
+        overall_confidence:
+          ocrFromLog?.overall_confidence ?? Number(ocrFromMeta.overall_confidence || 0),
         fields_matched: ocrFromLog?.fields_matched ?? Number(ocrFromMeta.fields_matched || 0),
-        fields_conflicted: ocrFromLog?.fields_conflicted ?? Number(ocrFromMeta.fields_conflicted || 0),
-        fields_low_confidence: ocrFromLog?.fields_low_confidence ?? Number(ocrFromMeta.fields_low_confidence || 0),
+        fields_conflicted:
+          ocrFromLog?.fields_conflicted ?? Number(ocrFromMeta.fields_conflicted || 0),
+        fields_low_confidence:
+          ocrFromLog?.fields_low_confidence ?? Number(ocrFromMeta.fields_low_confidence || 0),
         fields_not_found: ocrFromLog?.fields_not_found ?? Number(ocrFromMeta.fields_not_found || 0),
         touchless_eligible: Boolean(ocrFromMeta.touchless_eligible),
         fields: ocrFromLog?.fields ?? ocrFromMeta.fields ?? {},
@@ -1884,8 +2076,12 @@ const server = http.createServer(async (req, res) => {
       await ensureOcrLearningTables();
       const invoiceId = pathname.split('/')[3];
       const body = await readJsonBody(req);
-      const invoiceRows = await query('SELECT ingestion_log_id, entity_id FROM invoices WHERE id = ? LIMIT 1', [invoiceId]);
-      if (!invoiceRows.length) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+      const invoiceRows = await query(
+        'SELECT ingestion_log_id, entity_id FROM invoices WHERE id = ? LIMIT 1',
+        [invoiceId]
+      );
+      if (!invoiceRows.length)
+        return sendJson(res, 404, { success: false, error: 'Invoice not found' });
       const correctionId = randomUUID();
       await query(
         `INSERT INTO ocr_field_corrections
@@ -1911,10 +2107,16 @@ const server = http.createServer(async (req, res) => {
       await ensureOcrLearningTables();
       const invoiceId = pathname.split('/')[3];
       const body = await readJsonBody(req);
-      const correctionIds = Array.isArray(body?.correction_ids) ? body.correction_ids.filter(Boolean) : [];
-      if (!correctionIds.length) return sendJson(res, 400, { success: false, error: 'correction_ids required' });
+      const correctionIds = Array.isArray(body?.correction_ids)
+        ? body.correction_ids.filter(Boolean)
+        : [];
+      if (!correctionIds.length)
+        return sendJson(res, 400, { success: false, error: 'correction_ids required' });
       const placeholders = correctionIds.map(() => '?').join(',');
-      const corrections = await query(`SELECT * FROM ocr_field_corrections WHERE invoice_id = ? AND id IN (${placeholders})`, [invoiceId, ...correctionIds]);
+      const corrections = await query(
+        `SELECT * FROM ocr_field_corrections WHERE invoice_id = ? AND id IN (${placeholders})`,
+        [invoiceId, ...correctionIds]
+      );
       for (const c of corrections) {
         const typeMap = {
           vendor_name_mapping: 'vendor_name_alias',
@@ -1954,7 +2156,10 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && /^\/api\/invoices\/[^/]+\/confirm-all-learnings$/.test(pathname)) {
       await ensureOcrLearningTables();
       const invoiceId = pathname.split('/')[3];
-      const pending = await query('SELECT * FROM ocr_field_corrections WHERE invoice_id = ? AND confirmed = FALSE', [invoiceId]);
+      const pending = await query(
+        'SELECT * FROM ocr_field_corrections WHERE invoice_id = ? AND confirmed = FALSE',
+        [invoiceId]
+      );
       const ids = pending.map((p) => p.id);
       if (!ids.length) return sendJson(res, 200, { success: true, count: 0 });
       for (const c of pending) {
@@ -1994,18 +2199,30 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, count: ids.length });
     }
 
-    if (req.method === 'DELETE' && /^\/api\/invoices\/[^/]+\/discard-correction\/[^/]+$/.test(pathname)) {
+    if (
+      req.method === 'DELETE' &&
+      /^\/api\/invoices\/[^/]+\/discard-correction\/[^/]+$/.test(pathname)
+    ) {
       const parts = pathname.split('/');
       const invoiceId = parts[3];
       const correctionId = parts[5];
-      await query('DELETE FROM ocr_field_corrections WHERE invoice_id = ? AND id = ? AND confirmed = FALSE', [invoiceId, correctionId]);
+      await query(
+        'DELETE FROM ocr_field_corrections WHERE invoice_id = ? AND id = ? AND confirmed = FALSE',
+        [invoiceId, correctionId]
+      );
       return sendJson(res, 200, { success: true });
     }
 
     // ── PDF file serving ──────────────────────────────────
-    if (req.method === 'GET' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/pdf')) {
+    if (
+      req.method === 'GET' &&
+      pathname.startsWith('/api/invoices/') &&
+      pathname.endsWith('/pdf')
+    ) {
       const invoiceId = pathname.split('/')[3];
-      const rows = await query('SELECT attachment_path FROM invoices WHERE id = ? LIMIT 1', [invoiceId]);
+      const rows = await query('SELECT attachment_path FROM invoices WHERE id = ? LIMIT 1', [
+        invoiceId,
+      ]);
       if (rows.length === 0 || !rows[0].attachment_path) {
         return sendJson(res, 404, { success: false, error: 'PDF not found' });
       }
@@ -2059,7 +2276,11 @@ const server = http.createServer(async (req, res) => {
       }
     };
 
-    if (req.method === 'GET' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/audit-log')) {
+    if (
+      req.method === 'GET' &&
+      pathname.startsWith('/api/invoices/') &&
+      pathname.endsWith('/audit-log')
+    ) {
       const invoiceId = pathname.replace('/api/invoices/', '').replace('/audit-log', '');
       await query(`
         CREATE TABLE IF NOT EXISTS invoice_audit_log (
@@ -2082,25 +2303,46 @@ const server = http.createServer(async (req, res) => {
     // ── Lifecycle transition endpoints ────────────────────
     // Each: read current state → guard → UPDATE in transaction → audit log → return
 
-    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/verify')) {
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/invoices/') &&
+      pathname.endsWith('/verify')
+    ) {
       const invoiceId = pathname.split('/')[3];
-      const [invoice] = await query('SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?', [invoiceId]);
+      const [invoice] = await query(
+        'SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?',
+        [invoiceId]
+      );
       if (!invoice) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
 
-      try { assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.UNDER_VERIFICATION); }
-      catch (e) { return sendJson(res, 422, { success: false, error: e.message }); }
+      try {
+        assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.UNDER_VERIFICATION);
+      } catch (e) {
+        return sendJson(res, 422, { success: false, error: e.message });
+      }
 
       const body = await readJsonBody(req).catch(() => ({}));
       const actor = body.actor || req.headers['x-user-id'] || '1';
 
       await withTransaction(async (conn) => {
-        await connExecute(conn,
+        await connExecute(
+          conn,
           "UPDATE invoices SET lifecycle_state = ?, status = 'pending_approval', updated_at = NOW() WHERE id = ?",
           [LIFECYCLE_STATES.UNDER_VERIFICATION, invoiceId]
         );
-        await connExecute(conn,
+        await connExecute(
+          conn,
           'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-          [randomUUID(), invoice.tenant_id, invoiceId, 'verify', invoice.lifecycle_state, LIFECYCLE_STATES.UNDER_VERIFICATION, actor, 'user']
+          [
+            randomUUID(),
+            invoice.tenant_id,
+            invoiceId,
+            'verify',
+            invoice.lifecycle_state,
+            LIFECYCLE_STATES.UNDER_VERIFICATION,
+            actor,
+            'user',
+          ]
         );
       });
 
@@ -2108,26 +2350,49 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: updated });
     }
 
-    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/exception')) {
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/invoices/') &&
+      pathname.endsWith('/exception')
+    ) {
       const invoiceId = pathname.split('/')[3];
-      const [invoice] = await query('SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?', [invoiceId]);
+      const [invoice] = await query(
+        'SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?',
+        [invoiceId]
+      );
       if (!invoice) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
 
-      try { assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.EXCEPTION_HOLD); }
-      catch (e) { return sendJson(res, 422, { success: false, error: e.message }); }
+      try {
+        assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.EXCEPTION_HOLD);
+      } catch (e) {
+        return sendJson(res, 422, { success: false, error: e.message });
+      }
 
       const body = await readJsonBody(req).catch(() => ({}));
       if (!body.reason) return sendJson(res, 400, { success: false, error: 'reason is required' });
       const actor = body.actor || req.headers['x-user-id'] || '1';
 
       await withTransaction(async (conn) => {
-        await connExecute(conn,
+        await connExecute(
+          conn,
           "UPDATE invoices SET lifecycle_state = ?, status = 'draft', processing_status = 'exception', updated_at = NOW() WHERE id = ?",
           [LIFECYCLE_STATES.EXCEPTION_HOLD, invoiceId]
         );
-        await connExecute(conn,
+        await connExecute(
+          conn,
           'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, reason_code, reason_note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-          [randomUUID(), invoice.tenant_id, invoiceId, 'exception_raised', invoice.lifecycle_state, LIFECYCLE_STATES.EXCEPTION_HOLD, actor, 'user', body.reasonCode || null, body.reason]
+          [
+            randomUUID(),
+            invoice.tenant_id,
+            invoiceId,
+            'exception_raised',
+            invoice.lifecycle_state,
+            LIFECYCLE_STATES.EXCEPTION_HOLD,
+            actor,
+            'user',
+            body.reasonCode || null,
+            body.reason,
+          ]
         );
       });
 
@@ -2135,25 +2400,47 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: updated });
     }
 
-    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/resume')) {
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/invoices/') &&
+      pathname.endsWith('/resume')
+    ) {
       const invoiceId = pathname.split('/')[3];
-      const [invoice] = await query('SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?', [invoiceId]);
+      const [invoice] = await query(
+        'SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?',
+        [invoiceId]
+      );
       if (!invoice) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
 
-      try { assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.UNDER_VERIFICATION); }
-      catch (e) { return sendJson(res, 422, { success: false, error: e.message }); }
+      try {
+        assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.UNDER_VERIFICATION);
+      } catch (e) {
+        return sendJson(res, 422, { success: false, error: e.message });
+      }
 
       const body = await readJsonBody(req).catch(() => ({}));
       const actor = body.actor || req.headers['x-user-id'] || '1';
 
       await withTransaction(async (conn) => {
-        await connExecute(conn,
+        await connExecute(
+          conn,
           "UPDATE invoices SET lifecycle_state = ?, status = 'pending_approval', processing_status = NULL, updated_at = NOW() WHERE id = ?",
           [LIFECYCLE_STATES.UNDER_VERIFICATION, invoiceId]
         );
-        await connExecute(conn,
+        await connExecute(
+          conn,
           'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, reason_note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-          [randomUUID(), invoice.tenant_id, invoiceId, 'exception_resolved', invoice.lifecycle_state, LIFECYCLE_STATES.UNDER_VERIFICATION, actor, 'user', body.notes || null]
+          [
+            randomUUID(),
+            invoice.tenant_id,
+            invoiceId,
+            'exception_resolved',
+            invoice.lifecycle_state,
+            LIFECYCLE_STATES.UNDER_VERIFICATION,
+            actor,
+            'user',
+            body.notes || null,
+          ]
         );
       });
 
@@ -2161,16 +2448,27 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: updated });
     }
 
-    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/reject')) {
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/invoices/') &&
+      pathname.endsWith('/reject')
+    ) {
       const invoiceId = pathname.split('/')[3];
-      const [invoice] = await query('SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?', [invoiceId]);
+      const [invoice] = await query(
+        'SELECT id, lifecycle_state, status, tenant_id FROM invoices WHERE id = ?',
+        [invoiceId]
+      );
       if (!invoice) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
 
-      try { assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.REJECTED); }
-      catch (e) { return sendJson(res, 422, { success: false, error: e.message }); }
+      try {
+        assertValidTransition(invoice.lifecycle_state ?? null, LIFECYCLE_STATES.REJECTED);
+      } catch (e) {
+        return sendJson(res, 422, { success: false, error: e.message });
+      }
 
       const body = await readJsonBody(req).catch(() => ({}));
-      if (!body.reasonCode) return sendJson(res, 400, { success: false, error: 'reasonCode is required' });
+      if (!body.reasonCode)
+        return sendJson(res, 400, { success: false, error: 'reasonCode is required' });
       const actor = body.actor || req.headers['x-user-id'] || '1';
 
       // Validate reasonCode against tenant's rejection reasons
@@ -2178,16 +2476,33 @@ const server = http.createServer(async (req, res) => {
         'SELECT reason_code FROM invoice_rejection_reasons WHERE tenant_id = ? AND reason_code = ? AND is_active = 1',
         [invoice.tenant_id, body.reasonCode]
       );
-      if (!validReason) return sendJson(res, 400, { success: false, error: `Invalid rejection reason code: ${body.reasonCode}` });
+      if (!validReason)
+        return sendJson(res, 400, {
+          success: false,
+          error: `Invalid rejection reason code: ${body.reasonCode}`,
+        });
 
       await withTransaction(async (conn) => {
-        await connExecute(conn,
+        await connExecute(
+          conn,
           "UPDATE invoices SET lifecycle_state = ?, status = 'Rejected', processing_status = 'rejected', rejection_reason_code = ?, rejection_reason_note = ?, updated_at = NOW() WHERE id = ?",
           [LIFECYCLE_STATES.REJECTED, body.reasonCode, body.reasonNote || null, invoiceId]
         );
-        await connExecute(conn,
+        await connExecute(
+          conn,
           'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, reason_code, reason_note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-          [randomUUID(), invoice.tenant_id, invoiceId, 'reject', invoice.lifecycle_state, LIFECYCLE_STATES.REJECTED, actor, 'user', body.reasonCode, body.reasonNote || null]
+          [
+            randomUUID(),
+            invoice.tenant_id,
+            invoiceId,
+            'reject',
+            invoice.lifecycle_state,
+            LIFECYCLE_STATES.REJECTED,
+            actor,
+            'user',
+            body.reasonCode,
+            body.reasonNote || null,
+          ]
         );
       });
 
@@ -2195,26 +2510,36 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: updated });
     }
 
-    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/resubmit')) {
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/invoices/') &&
+      pathname.endsWith('/resubmit')
+    ) {
       const invoiceId = pathname.split('/')[3];
       const [parent] = await query('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
       if (!parent) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
 
       if (parent.lifecycle_state !== LIFECYCLE_STATES.REJECTED) {
-        return sendJson(res, 422, { success: false, error: `Cannot resubmit: invoice is in state '${parent.lifecycle_state}', must be 'Rejected'` });
+        return sendJson(res, 422, {
+          success: false,
+          error: `Cannot resubmit: invoice is in state '${parent.lifecycle_state}', must be 'Rejected'`,
+        });
       }
 
       const body = await readJsonBody(req).catch(() => ({}));
       const actor = body.actor || req.headers['x-user-id'] || '1';
 
       const newId = randomUUID();
-      const newLifecycle = parent.metadata ? LIFECYCLE_STATES.OCR_EXTRACTED : LIFECYCLE_STATES.INGESTED;
+      const newLifecycle = parent.metadata
+        ? LIFECYCLE_STATES.OCR_EXTRACTED
+        : LIFECYCLE_STATES.INGESTED;
       const newCount = (Number(parent.resubmission_count) || 0) + 1;
 
       await withTransaction(async (conn) => {
         // Clone invoice row (OCR data, vendor, PO, entity, attachment)
         // Does NOT clone: approval history, audit log, match result, duplicate check, voucher, rejection, TDS
-        await connExecute(conn,
+        await connExecute(
+          conn,
           `INSERT INTO invoices (id, invoice_number, invoice_date, due_date,
             vendor_name, vendor_gstin, vendor_pan, vendor_email,
             bill_to_entity, bill_to_gstin,
@@ -2239,43 +2564,106 @@ const server = http.createServer(async (req, res) => {
             ?, ?,
             ?,
             NOW(), NOW())`,
-          [newId, parent.invoice_number, parent.invoice_date, parent.due_date,
-            parent.vendor_name, parent.vendor_gstin, parent.vendor_pan, parent.vendor_email,
-            parent.bill_to_entity, parent.bill_to_gstin,
-            parent.currency, parent.subtotal, parent.tax_amount, parent.total_amount,
-            parent.po_number, parent.po_id, parent.payment_terms, parent.notes,
-            typeof parent.metadata === 'string' ? parent.metadata : JSON.stringify(parent.metadata || null),
-            parent.attachment_path, parent.source, parent.document_id,
+          [
+            newId,
+            parent.invoice_number,
+            parent.invoice_date,
+            parent.due_date,
+            parent.vendor_name,
+            parent.vendor_gstin,
+            parent.vendor_pan,
+            parent.vendor_email,
+            parent.bill_to_entity,
+            parent.bill_to_gstin,
+            parent.currency,
+            parent.subtotal,
+            parent.tax_amount,
+            parent.total_amount,
+            parent.po_number,
+            parent.po_id,
+            parent.payment_terms,
+            parent.notes,
+            typeof parent.metadata === 'string'
+              ? parent.metadata
+              : JSON.stringify(parent.metadata || null),
+            parent.attachment_path,
+            parent.source,
+            parent.document_id,
             newLifecycle,
-            parent.vendor_id, parent.vendor_id_match_confidence,
-            parent.tenant_id, parent.entity_id,
-            invoiceId, newCount,
-            parent.financial_year]
+            parent.vendor_id,
+            parent.vendor_id_match_confidence,
+            parent.tenant_id,
+            parent.entity_id,
+            invoiceId,
+            newCount,
+            parent.financial_year,
+          ]
         );
 
         // Clone line items
-        const parentLines = await connExecute(conn,
+        const parentLines = await connExecute(
+          conn,
           'SELECT * FROM invoice_line_items WHERE invoice_id = ?',
           [invoiceId]
         );
-        for (const line of (parentLines[0] || parentLines || [])) {
-          await connExecute(conn,
+        for (const line of parentLines[0] || parentLines || []) {
+          await connExecute(
+            conn,
             `INSERT INTO invoice_line_items (id, invoice_id, line_number, description, hsn_sac, quantity, unit_price, amount, gst_rate, taxable_amount, cgst_amount, sgst_amount, igst_amount, utgst_amount, cess_rate, cess_amount, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [randomUUID(), newId, line.line_number, line.description, line.hsn_sac, line.quantity, line.unit_price, line.amount, line.gst_rate, line.taxable_amount, line.cgst_amount || null, line.sgst_amount || null, line.igst_amount || null, line.utgst_amount || null, line.cess_rate || null, line.cess_amount || null]
+            [
+              randomUUID(),
+              newId,
+              line.line_number,
+              line.description,
+              line.hsn_sac,
+              line.quantity,
+              line.unit_price,
+              line.amount,
+              line.gst_rate,
+              line.taxable_amount,
+              line.cgst_amount || null,
+              line.sgst_amount || null,
+              line.igst_amount || null,
+              line.utgst_amount || null,
+              line.cess_rate || null,
+              line.cess_amount || null,
+            ]
           );
         }
 
         // Audit log on parent (resubmitted)
-        await connExecute(conn,
+        await connExecute(
+          conn,
           'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, reason_note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-          [randomUUID(), parent.tenant_id, invoiceId, 'resubmitted', LIFECYCLE_STATES.REJECTED, LIFECYCLE_STATES.REJECTED, actor, 'user', `Resubmitted as ${newId}`]
+          [
+            randomUUID(),
+            parent.tenant_id,
+            invoiceId,
+            'resubmitted',
+            LIFECYCLE_STATES.REJECTED,
+            LIFECYCLE_STATES.REJECTED,
+            actor,
+            'user',
+            `Resubmitted as ${newId}`,
+          ]
         );
 
         // Audit log on new invoice (created via resubmission)
-        await connExecute(conn,
+        await connExecute(
+          conn,
           'INSERT INTO invoice_audit_log (id, tenant_id, invoice_id, action, from_state, to_state, actor_id, actor_source, reason_note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-          [randomUUID(), parent.tenant_id, newId, 'resubmission_created', null, newLifecycle, actor, 'user', `Resubmitted from ${invoiceId} (submission #${newCount})`]
+          [
+            randomUUID(),
+            parent.tenant_id,
+            newId,
+            'resubmission_created',
+            null,
+            newLifecycle,
+            actor,
+            'user',
+            `Resubmitted from ${invoiceId} (submission #${newCount})`,
+          ]
         );
       });
 
@@ -2283,33 +2671,65 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: newInvoice });
     }
 
-    if (req.method === 'POST' && pathname.startsWith('/api/invoices/') && pathname.endsWith('/match')) {
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/invoices/') &&
+      pathname.endsWith('/match')
+    ) {
       const invoiceId = pathname.split('/')[3];
       const [invoice] = await query('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
       if (!invoice) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
 
-      const result = await processMatch(invoiceId, {
-        po_number: invoice.po_number,
-        vendor_name: invoice.vendor_name,
-        total_amount: invoice.total_amount,
-        invoice_date: invoice.invoice_date,
-      }, invoice.entity_id);
+      const result = await processMatch(
+        invoiceId,
+        {
+          po_number: invoice.po_number,
+          vendor_name: invoice.vendor_name,
+          total_amount: invoice.total_amount,
+          invoice_date: invoice.invoice_date,
+        },
+        invoice.entity_id
+      );
 
-      return sendJson(res, 200, { success: true, data: { matchResult: result.matchResult, matchScore: result.matchScore, matchDetails: result.variances, explanation: result.explanation } });
+      return sendJson(res, 200, {
+        success: true,
+        data: {
+          matchResult: result.matchResult,
+          matchScore: result.matchScore,
+          matchDetails: result.variances,
+          explanation: result.explanation,
+        },
+      });
     }
 
-    if (req.method === 'GET' && pathname.startsWith('/api/invoices/') && !pathname.includes('ingestion')) {
+    if (
+      req.method === 'GET' &&
+      pathname.startsWith('/api/invoices/') &&
+      !pathname.includes('ingestion')
+    ) {
       const invoiceId = pathname.replace('/api/invoices/', '');
       const rows = await query('SELECT * FROM invoices WHERE id = ? LIMIT 1', [invoiceId]);
-      if (rows.length === 0) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+      if (rows.length === 0)
+        return sendJson(res, 404, { success: false, error: 'Invoice not found' });
       const invoice = rows[0];
-      invoice.metadata = typeof invoice.metadata === 'string' ? JSON.parse(invoice.metadata) : invoice.metadata;
-      invoice.bank_details = typeof invoice.bank_details === 'string' ? JSON.parse(invoice.bank_details) : invoice.bank_details;
-      const lineItems = await query('SELECT * FROM invoice_line_items WHERE invoice_id = ? ORDER BY line_number', [invoiceId]);
+      invoice.metadata =
+        typeof invoice.metadata === 'string' ? JSON.parse(invoice.metadata) : invoice.metadata;
+      invoice.bank_details =
+        typeof invoice.bank_details === 'string'
+          ? JSON.parse(invoice.bank_details)
+          : invoice.bank_details;
+      const lineItems = await query(
+        'SELECT * FROM invoice_line_items WHERE invoice_id = ? ORDER BY line_number',
+        [invoiceId]
+      );
       return sendJson(res, 200, { success: true, data: { ...invoice, line_items: lineItems } });
     }
 
-    if (req.method === 'PUT' && pathname.startsWith('/api/invoices/') && !pathname.includes('ingestion')) {
+    if (
+      req.method === 'PUT' &&
+      pathname.startsWith('/api/invoices/') &&
+      !pathname.includes('ingestion')
+    ) {
       const invoiceId = pathname.replace('/api/invoices/', '');
       const body = await readJsonBody(req);
       const invoicePatch = body?.invoice && typeof body.invoice === 'object' ? body.invoice : {};
@@ -2320,7 +2740,10 @@ const server = http.createServer(async (req, res) => {
         return value.includes('T') ? value.slice(0, 10) : value;
       };
 
-      const existingRows = await query('SELECT id, metadata, bank_details FROM invoices WHERE id = ? LIMIT 1', [invoiceId]);
+      const existingRows = await query(
+        'SELECT id, metadata, bank_details FROM invoices WHERE id = ? LIMIT 1',
+        [invoiceId]
+      );
       if (existingRows.length === 0) {
         return sendJson(res, 404, { success: false, error: 'Invoice not found' });
       }
@@ -2350,16 +2773,21 @@ const server = http.createServer(async (req, res) => {
       const nextMetadata =
         invoicePatch.metadata && typeof invoicePatch.metadata === 'object'
           ? invoicePatch.metadata
-          : (typeof existing.metadata === 'string' ? JSON.parse(existing.metadata) : (existing.metadata || {}));
+          : typeof existing.metadata === 'string'
+            ? JSON.parse(existing.metadata)
+            : existing.metadata || {};
       const nextBankDetails =
         invoicePatch.bank_details && typeof invoicePatch.bank_details === 'object'
           ? invoicePatch.bank_details
-          : (typeof existing.bank_details === 'string' ? JSON.parse(existing.bank_details) : (existing.bank_details || null));
+          : typeof existing.bank_details === 'string'
+            ? JSON.parse(existing.bank_details)
+            : existing.bank_details || null;
 
       const patchStatus = invoicePatch.status ?? 'draft';
-      const resolvedLifecycle = invoicePatch.lifecycle_state
-        || mapLegacyToLifecycle(patchStatus, invoicePatch.processing_status)
-        || null;
+      const resolvedLifecycle =
+        invoicePatch.lifecycle_state ||
+        mapLegacyToLifecycle(patchStatus, invoicePatch.processing_status) ||
+        null;
 
       if (invoicePatch.lifecycle_state && resolvedLifecycle) {
         try {
@@ -2425,8 +2853,9 @@ const server = http.createServer(async (req, res) => {
           invoiceId,
         ]
       );
-      const isSubmitting = invoicePatch.status === 'pending_approval'
-        || invoicePatch.lifecycle_state === LIFECYCLE_STATES.UNDER_VERIFICATION;
+      const isSubmitting =
+        invoicePatch.status === 'pending_approval' ||
+        invoicePatch.lifecycle_state === LIFECYCLE_STATES.UNDER_VERIFICATION;
       await appendInvoiceAuditLog({
         invoiceId,
         userId: req.userId || req.headers['x-user-id'] || null,
@@ -2436,9 +2865,13 @@ const server = http.createServer(async (req, res) => {
       });
 
       if (hasLineItemsPayload) {
-        const lineTaxable = lineItems.reduce((sum, item) => sum + Number(item.amount ?? item.taxable_amount ?? 0), 0);
+        const lineTaxable = lineItems.reduce(
+          (sum, item) => sum + Number(item.amount ?? item.taxable_amount ?? 0),
+          0
+        );
         const lineGST = lineItems.reduce(
-          (sum, item) => sum + Number(item.igst ?? 0) + Number(item.cgst ?? 0) + Number(item.sgst ?? 0),
+          (sum, item) =>
+            sum + Number(item.igst ?? 0) + Number(item.cgst ?? 0) + Number(item.sgst ?? 0),
           0
         );
         const headerTotal = Number(invoicePatch.total_amount ?? 0);
@@ -2477,16 +2910,24 @@ const server = http.createServer(async (req, res) => {
 
       const rows = await query('SELECT * FROM invoices WHERE id = ? LIMIT 1', [invoiceId]);
       const updated = rows[0];
-      updated.metadata = typeof updated.metadata === 'string' ? JSON.parse(updated.metadata) : updated.metadata;
-      updated.bank_details = typeof updated.bank_details === 'string' ? JSON.parse(updated.bank_details) : updated.bank_details;
-      const updatedLines = await query('SELECT * FROM invoice_line_items WHERE invoice_id = ? ORDER BY line_number', [invoiceId]);
+      updated.metadata =
+        typeof updated.metadata === 'string' ? JSON.parse(updated.metadata) : updated.metadata;
+      updated.bank_details =
+        typeof updated.bank_details === 'string'
+          ? JSON.parse(updated.bank_details)
+          : updated.bank_details;
+      const updatedLines = await query(
+        'SELECT * FROM invoice_line_items WHERE invoice_id = ? ORDER BY line_number',
+        [invoiceId]
+      );
       return sendJson(res, 200, { success: true, data: { ...updated, line_items: updatedLines } });
     }
 
     // ── AP Payment batches (payable list → proposal → batch → approve → execute → payments) ──
     if (req.method === 'GET' && pathname === '/api/ap/payable-invoices') {
       const tenantId = readApTenantId(req, url);
-      const entityId = url.searchParams.get('entityId') || String(req.headers['x-entity-id'] ?? '').trim() || null;
+      const entityId =
+        url.searchParams.get('entityId') || String(req.headers['x-entity-id'] ?? '').trim() || null;
       if (!tenantId) {
         return sendJson(res, 400, { success: false, error: 'tenant_required' });
       }
@@ -2500,7 +2941,8 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/api/ap/payments-dashboard') {
       const tenantId = readApTenantId(req, url);
-      const entityId = url.searchParams.get('entityId') || String(req.headers['x-entity-id'] ?? '').trim() || null;
+      const entityId =
+        url.searchParams.get('entityId') || String(req.headers['x-entity-id'] ?? '').trim() || null;
       if (!tenantId) {
         return sendJson(res, 400, { success: false, error: 'tenant_required' });
       }
@@ -2551,17 +2993,23 @@ const server = http.createServer(async (req, res) => {
           tenantId,
           entityId: body.entityId || null,
           invoiceIds: Array.isArray(body.invoiceIds) ? body.invoiceIds.map(String) : [],
-          amountsByInvoiceId: body.amounts && typeof body.amounts === 'object' ? body.amounts : null,
+          amountsByInvoiceId:
+            body.amounts && typeof body.amounts === 'object' ? body.amounts : null,
           createdByEmail: readActorEmail(req) || body.createdByEmail || null,
           createdByName: readActorName(req) || body.createdByName || null,
         });
         return sendJson(res, 201, { success: true, data: result });
       } catch (e) {
-        return sendJson(res, e.statusCode || 500, { success: false, error: e.message, invoiceIds: e.invoiceIds });
+        return sendJson(res, e.statusCode || 500, {
+          success: false,
+          error: e.message,
+          invoiceIds: e.invoiceIds,
+        });
       }
     }
 
-    const paymentBatchActionRe = /^\/api\/ap\/payment-batches\/([^/]+)\/(submit|approve|reject|execute)$/;
+    const paymentBatchActionRe =
+      /^\/api\/ap\/payment-batches\/([^/]+)\/(submit|approve|reject|execute)$/;
     if (req.method === 'POST' && paymentBatchActionRe.test(pathname)) {
       const [, batchId, action] = pathname.match(paymentBatchActionRe);
       const body = await readJsonBody(req);
@@ -2630,7 +3078,12 @@ const server = http.createServer(async (req, res) => {
       const offset = (page - 1) * limit;
 
       // Sorting
-      const VALID_SORT_COLS = { last_action: 'i.last_action_at', created_at: 'i.created_at', invoice_date: 'i.invoice_date', total_amount: 'i.total_amount' };
+      const VALID_SORT_COLS = {
+        last_action: 'i.last_action_at',
+        created_at: 'i.created_at',
+        invoice_date: 'i.invoice_date',
+        total_amount: 'i.total_amount',
+      };
       const sortBy = VALID_SORT_COLS[url.searchParams.get('sort_by')] || null;
       const sortDir = url.searchParams.get('sort_dir')?.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
       const orderClause = sortBy
@@ -2661,7 +3114,10 @@ const server = http.createServer(async (req, res) => {
       const conditions = [];
       const params = [];
 
-      if (source) { conditions.push('i.source = ?'); params.push(source); }
+      if (source) {
+        conditions.push('i.source = ?');
+        params.push(source);
+      }
 
       // Legacy status filter with dual-read (backward compatible)
       if (status) {
@@ -2675,33 +3131,54 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      if (vendorId) { conditions.push('i.vendor_id = ?'); params.push(vendorId); }
-      if (invoiceNo) { conditions.push('i.invoice_number = ?'); params.push(invoiceNo); }
+      if (vendorId) {
+        conditions.push('i.vendor_id = ?');
+        params.push(vendorId);
+      }
+      if (invoiceNo) {
+        conditions.push('i.invoice_number = ?');
+        params.push(invoiceNo);
+      }
 
       // New WS-1a filters
       if (lifecycleParam) {
-        const states = lifecycleParam.split(',').map((s) => s.trim()).filter(Boolean);
+        const states = lifecycleParam
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
         if (states.length > 0) {
           conditions.push(`i.lifecycle_state IN (${states.map(() => '?').join(',')})`);
           params.push(...states);
         }
       }
 
-      if (financialYear) { conditions.push('i.financial_year = ?'); params.push(financialYear); }
+      if (financialYear) {
+        conditions.push('i.financial_year = ?');
+        params.push(financialYear);
+      }
 
-      if (isResubmission === 'true') { conditions.push('i.resubmission_count > 0'); }
-      else if (isResubmission === 'false') { conditions.push('i.resubmission_count = 0'); }
+      if (isResubmission === 'true') {
+        conditions.push('i.resubmission_count > 0');
+      } else if (isResubmission === 'false') {
+        conditions.push('i.resubmission_count = 0');
+      }
 
       if (duplicateDecision) {
-        const decisions = duplicateDecision.split(',').map((s) => s.trim()).filter(Boolean);
+        const decisions = duplicateDecision
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
         if (decisions.length > 0) {
           conditions.push(`i.duplicate_decision IN (${decisions.map(() => '?').join(',')})`);
           params.push(...decisions);
         }
       }
 
-      if (hasException === 'true') { conditions.push("i.lifecycle_state = 'Exception Hold'"); }
-      else if (hasException === 'false') { conditions.push("i.lifecycle_state != 'Exception Hold'"); }
+      if (hasException === 'true') {
+        conditions.push("i.lifecycle_state = 'Exception Hold'");
+      } else if (hasException === 'false') {
+        conditions.push("i.lifecycle_state != 'Exception Hold'");
+      }
 
       if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
       sql += ` ${orderClause} LIMIT ${Number(limit)} OFFSET ${Number(offset)}`;
@@ -2713,9 +3190,12 @@ const server = http.createServer(async (req, res) => {
         ...row,
         is_resubmission: (Number(row.resubmission_count) || 0) > 0,
         payment_outstanding: (Number(row.total_amount) || 0) - (Number(row.payment_total) || 0),
-        payment_progress_pct: row.total_amount > 0
-          ? parseFloat(((Number(row.payment_total) || 0) / Number(row.total_amount) * 100).toFixed(2))
-          : 0,
+        payment_progress_pct:
+          row.total_amount > 0
+            ? parseFloat(
+                (((Number(row.payment_total) || 0) / Number(row.total_amount)) * 100).toFixed(2)
+              )
+            : 0,
       }));
 
       return sendJson(res, 200, { success: true, data, page, limit });
@@ -2725,7 +3205,9 @@ const server = http.createServer(async (req, res) => {
       await ensureVendorLearningTable();
       const entityName = String(url.searchParams.get('entity_name') || '').trim();
       const sourceVendorName = String(url.searchParams.get('vendor_name') || '').trim();
-      const sourceVendorGstin = String(url.searchParams.get('vendor_gstin') || '').trim().toUpperCase();
+      const sourceVendorGstin = String(url.searchParams.get('vendor_gstin') || '')
+        .trim()
+        .toUpperCase();
       if (!entityName || (!sourceVendorName && !sourceVendorGstin)) {
         return sendJson(res, 200, { success: true, mapping: null });
       }
@@ -2747,9 +3229,12 @@ const server = http.createServer(async (req, res) => {
         `,
         [
           entityName,
-          sourceVendorGstin, sourceVendorGstin,
-          sourceVendorName, sourceVendorName,
-          sourceVendorGstin, sourceVendorGstin,
+          sourceVendorGstin,
+          sourceVendorGstin,
+          sourceVendorName,
+          sourceVendorName,
+          sourceVendorGstin,
+          sourceVendorGstin,
         ]
       );
       return sendJson(res, 200, { success: true, mapping: rows[0] || null });
@@ -2760,11 +3245,18 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       const entityName = String(body?.entity_name || '').trim();
       const sourceVendorName = String(body?.source_vendor_name || '').trim();
-      const sourceVendorGstin = String(body?.source_vendor_gstin || '').trim().toUpperCase();
+      const sourceVendorGstin = String(body?.source_vendor_gstin || '')
+        .trim()
+        .toUpperCase();
       const masterVendorName = String(body?.master_vendor_name || '').trim();
-      const masterVendorGstin = String(body?.master_vendor_gstin || '').trim().toUpperCase();
+      const masterVendorGstin = String(body?.master_vendor_gstin || '')
+        .trim()
+        .toUpperCase();
       if (!entityName || !masterVendorName || (!sourceVendorName && !sourceVendorGstin)) {
-        return sendJson(res, 400, { success: false, error: 'entity_name, source vendor and master vendor are required' });
+        return sendJson(res, 400, {
+          success: false,
+          error: 'entity_name, source vendor and master vendor are required',
+        });
       }
       await query(
         `
@@ -2827,7 +3319,10 @@ const server = http.createServer(async (req, res) => {
       const sourceValue = String(body?.source_value || '').trim();
       const mappedValue = String(body?.mapped_value || '').trim();
       if (!mappingType || !sourceValue || !mappedValue) {
-        return sendJson(res, 400, { success: false, error: 'mapping_type, source_value and mapped_value are required' });
+        return sendJson(res, 400, {
+          success: false,
+          error: 'mapping_type, source_value and mapped_value are required',
+        });
       }
       await query(
         `
@@ -2858,18 +3353,31 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/invoice-ingestion/workbench-stats') {
       try {
         const [invoices] = await query('SELECT COUNT(*) as total FROM p2p_schema_mt.invoices');
-        const [green] = await query("SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'green'");
-        const [amber] = await query("SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'amber'");
-        const [red] = await query("SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'red' OR lane IS NULL");
-        const [pending] = await query("SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE status = 'pending_approval' OR lifecycle_state = ?", [LIFECYCLE_STATES.UNDER_VERIFICATION]);
-        const [avgScore] = await query('SELECT AVG(readiness_score) as avg FROM p2p_schema_mt.invoices');
+        const [green] = await query(
+          "SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'green'"
+        );
+        const [amber] = await query(
+          "SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'amber'"
+        );
+        const [red] = await query(
+          "SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'red' OR lane IS NULL"
+        );
+        const [pending] = await query(
+          "SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE status = 'pending_approval' OR lifecycle_state = ?",
+          [LIFECYCLE_STATES.UNDER_VERIFICATION]
+        );
+        const [avgScore] = await query(
+          'SELECT AVG(readiness_score) as avg FROM p2p_schema_mt.invoices'
+        );
         const total = invoices.total || 0;
         const greenCount = green.cnt || 0;
         const stpRate = total > 0 ? Math.round((greenCount / total) * 100) : 0;
 
         let exceptionsByType = { vendor: 0, ocr: 0, data: 0, po: 0 };
         try {
-          const [exc] = await query("SELECT exception_type, COUNT(*) as cnt FROM p2p_schema_mt.invoice_exceptions WHERE resolved = FALSE GROUP BY exception_type");
+          const [exc] = await query(
+            'SELECT exception_type, COUNT(*) as cnt FROM p2p_schema_mt.invoice_exceptions WHERE resolved = FALSE GROUP BY exception_type'
+          );
           if (Array.isArray(exc)) {
             for (const e of exc) {
               const t = (e.exception_type || '').toLowerCase();
@@ -2879,9 +3387,15 @@ const server = http.createServer(async (req, res) => {
               else exceptionsByType.data += e.cnt;
             }
           }
-        } catch { /* exceptions table may not exist */ }
+        } catch {
+          /* exceptions table may not exist */
+        }
 
-        const totalExceptions = exceptionsByType.vendor + exceptionsByType.ocr + exceptionsByType.data + exceptionsByType.po;
+        const totalExceptions =
+          exceptionsByType.vendor +
+          exceptionsByType.ocr +
+          exceptionsByType.data +
+          exceptionsByType.po;
 
         return sendJson(res, 200, {
           success: true,
@@ -2892,18 +3406,28 @@ const server = http.createServer(async (req, res) => {
             avg_readiness: Math.round((avgScore.avg || 0) * 100),
             unresolved_exceptions: totalExceptions,
             exceptions_by_type: exceptionsByType,
-            lane_counts: { green: greenCount, amber: amber.cnt || 0, red: red.cnt || 0, pending: pending.cnt || 0 },
+            lane_counts: {
+              green: greenCount,
+              amber: amber.cnt || 0,
+              red: red.cnt || 0,
+              pending: pending.cnt || 0,
+            },
             last_poll_time: new Date().toISOString(),
-          }
+          },
         });
       } catch (err) {
         return sendJson(res, 200, {
           success: true,
           data: {
-            total_processed: 0, stp_rate: 0, stp_count: 0, avg_readiness: 0,
-            unresolved_exceptions: 0, exceptions_by_type: { vendor: 0, ocr: 0, data: 0, po: 0 },
-            lane_counts: { green: 0, amber: 0, red: 0, pending: 0 }, last_poll_time: new Date().toISOString(),
-          }
+            total_processed: 0,
+            stp_rate: 0,
+            stp_count: 0,
+            avg_readiness: 0,
+            unresolved_exceptions: 0,
+            exceptions_by_type: { vendor: 0, ocr: 0, data: 0, po: 0 },
+            lane_counts: { green: 0, amber: 0, red: 0, pending: 0 },
+            last_poll_time: new Date().toISOString(),
+          },
         });
       }
     }
@@ -2912,7 +3436,9 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/invoice-ingestion/trigger') {
       const { emails, results } = await pollOnce();
       for (const email of emails) {
-        try { await processInvoiceEmail(email); } catch (err) {
+        try {
+          await processInvoiceEmail(email);
+        } catch (err) {
           console.error('[Ingestion] trigger process error:', err.message);
         }
       }
@@ -2921,11 +3447,17 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && pathname === '/api/invoice-ingestion/logs') {
       const status = url.searchParams.get('status');
-      const limit = Math.min(Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 50), 200);
+      const limit = Math.min(
+        Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 50),
+        200
+      );
       const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0);
       let sql = 'SELECT * FROM invoice_ingestion_log';
       const params = [];
-      if (status) { sql += ' WHERE status = ?'; params.push(status); }
+      if (status) {
+        sql += ' WHERE status = ?';
+        params.push(status);
+      }
       sql += ` ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
       const rows = await query(sql, params);
       return sendJson(res, 200, { success: true, data: rows });
@@ -2943,14 +3475,24 @@ const server = http.createServer(async (req, res) => {
       const invoiceId = url.searchParams.get('invoice_id');
       let sql = 'SELECT * FROM invoice_exceptions WHERE resolved = FALSE';
       const params = [];
-      if (severity) { sql += ' AND severity = ?'; params.push(severity); }
-      if (invoiceId) { sql += ' AND invoice_id = ?'; params.push(invoiceId); }
+      if (severity) {
+        sql += ' AND severity = ?';
+        params.push(severity);
+      }
+      if (invoiceId) {
+        sql += ' AND invoice_id = ?';
+        params.push(invoiceId);
+      }
       sql += ' ORDER BY created_at DESC';
       const rows = await query(sql, params);
       return sendJson(res, 200, { success: true, data: rows });
     }
 
-    if (req.method === 'PATCH' && pathname.startsWith('/api/invoice-ingestion/exceptions/') && pathname.endsWith('/resolve')) {
+    if (
+      req.method === 'PATCH' &&
+      pathname.startsWith('/api/invoice-ingestion/exceptions/') &&
+      pathname.endsWith('/resolve')
+    ) {
       const exId = pathname.split('/')[4];
       await query(
         'UPDATE invoice_exceptions SET resolved = TRUE, resolved_at = CURRENT_TIMESTAMP WHERE id = ?',
@@ -2962,8 +3504,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname.match(/^\/api\/invoice-ingestion\/revalidate\/[^/]+$/)) {
       const invoiceId = pathname.split('/').pop();
       try {
-        const invoiceRows = await query('SELECT * FROM p2p_schema_mt.invoices WHERE id = ? LIMIT 1', [invoiceId]);
-        if (invoiceRows.length === 0) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+        const invoiceRows = await query(
+          'SELECT * FROM p2p_schema_mt.invoices WHERE id = ? LIMIT 1',
+          [invoiceId]
+        );
+        if (invoiceRows.length === 0)
+          return sendJson(res, 404, { success: false, error: 'Invoice not found' });
         const invoice = invoiceRows[0];
 
         let score = 0;
@@ -2975,33 +3521,75 @@ const server = http.createServer(async (req, res) => {
             "SELECT id FROM `vendor_master`.`vendor_master` WHERE payload->>'$.legalName' = ? OR payload->>'$.vendorName' = ? LIMIT 1",
             [invoice.vendor_name, invoice.vendor_name]
           );
-          if (vendorRows.length > 0) { score += 25; checks.push({ check: 'vendor_found', passed: true }); }
-          else { checks.push({ check: 'vendor_found', passed: false, detail: `Vendor "${invoice.vendor_name}" not in master` }); }
+          if (vendorRows.length > 0) {
+            score += 25;
+            checks.push({ check: 'vendor_found', passed: true });
+          } else {
+            checks.push({
+              check: 'vendor_found',
+              passed: false,
+              detail: `Vendor "${invoice.vendor_name}" not in master`,
+            });
+          }
         }
 
         // Amount check (+10)
-        if (invoice.total_amount > 0) { score += 10; checks.push({ check: 'amount_valid', passed: true }); }
-        else { checks.push({ check: 'amount_valid', passed: false }); }
+        if (invoice.total_amount > 0) {
+          score += 10;
+          checks.push({ check: 'amount_valid', passed: true });
+        } else {
+          checks.push({ check: 'amount_valid', passed: false });
+        }
 
         // Invoice date check (+10)
-        if (invoice.invoice_date) { score += 10; checks.push({ check: 'date_valid', passed: true }); }
-        else { checks.push({ check: 'date_valid', passed: false }); }
+        if (invoice.invoice_date) {
+          score += 10;
+          checks.push({ check: 'date_valid', passed: true });
+        } else {
+          checks.push({ check: 'date_valid', passed: false });
+        }
 
         // Invoice number not duplicate (+15)
-        const dupRows = await query('SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE invoice_number = ? AND id != ?', [invoice.invoice_number, invoiceId]);
+        const dupRows = await query(
+          'SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE invoice_number = ? AND id != ?',
+          [invoice.invoice_number, invoiceId]
+        );
         const dupCount = dupRows[0]?.cnt || 0;
-        if (dupCount === 0) { score += 15; checks.push({ check: 'not_duplicate', passed: true }); }
-        else { checks.push({ check: 'not_duplicate', passed: false, detail: 'Duplicate invoice number' }); }
+        if (dupCount === 0) {
+          score += 15;
+          checks.push({ check: 'not_duplicate', passed: true });
+        } else {
+          checks.push({
+            check: 'not_duplicate',
+            passed: false,
+            detail: 'Duplicate invoice number',
+          });
+        }
 
         // Required fields (+10)
-        if (invoice.invoice_number && invoice.vendor_name && invoice.total_amount && invoice.currency) { score += 10; }
+        if (
+          invoice.invoice_number &&
+          invoice.vendor_name &&
+          invoice.total_amount &&
+          invoice.currency
+        ) {
+          score += 10;
+        }
 
         // GSTIN check (+10)
-        if (invoice.vendor_gstin && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(invoice.vendor_gstin)) { score += 10; }
-        else if (!invoice.vendor_gstin) { score += 5; } // not applicable
+        if (
+          invoice.vendor_gstin &&
+          /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(invoice.vendor_gstin)
+        ) {
+          score += 10;
+        } else if (!invoice.vendor_gstin) {
+          score += 5;
+        } // not applicable
 
         // PO match (+20)
-        if (invoice.matched_po_id) { score += 20; }
+        if (invoice.matched_po_id) {
+          score += 20;
+        }
 
         // Determine lane
         const lane = score >= 80 ? 'green' : score >= 50 ? 'amber' : 'red';
@@ -3010,8 +3598,14 @@ const server = http.createServer(async (req, res) => {
         // NOTE: transition guard bypassed — automated pipeline flow, not user-facing
         const newStatus = lane === 'green' ? 'pending_approval' : 'draft';
         const newLifecycle = mapLegacyToLifecycle(newStatus);
-        await query('UPDATE p2p_schema_mt.invoices SET readiness_score = ?, lane = ?, status = ?' + (newLifecycle ? ', lifecycle_state = ?' : '') + ' WHERE id = ?',
-          newLifecycle ? [score / 100, lane, newStatus, newLifecycle, invoiceId] : [score / 100, lane, newStatus, invoiceId]);
+        await query(
+          'UPDATE p2p_schema_mt.invoices SET readiness_score = ?, lane = ?, status = ?' +
+            (newLifecycle ? ', lifecycle_state = ?' : '') +
+            ' WHERE id = ?',
+          newLifecycle
+            ? [score / 100, lane, newStatus, newLifecycle, invoiceId]
+            : [score / 100, lane, newStatus, invoiceId]
+        );
 
         return sendJson(res, 200, { success: true, score, lane, checks });
       } catch (err) {
@@ -3024,21 +3618,31 @@ const server = http.createServer(async (req, res) => {
       const logId = pathname.replace('/api/invoice-ingestion/reprocess/', '');
       const logs = await query('SELECT * FROM invoice_ingestion_log WHERE id = ? LIMIT 1', [logId]);
       if (logs.length === 0) return sendJson(res, 404, { success: false, error: 'Log not found' });
-      await query('UPDATE invoice_ingestion_log SET status = ?, error_message = NULL WHERE id = ?', ['received', logId]);
+      await query(
+        'UPDATE invoice_ingestion_log SET status = ?, error_message = NULL WHERE id = ?',
+        ['received', logId]
+      );
       return sendJson(res, 200, { success: true, message: 'Queued for reprocessing' });
     }
 
-    if (req.method === 'POST' && pathname.match(/^\/api\/invoice-ingestion\/agent-retry\/([^/]+)$/)) {
+    if (
+      req.method === 'POST' &&
+      pathname.match(/^\/api\/invoice-ingestion\/agent-retry\/([^/]+)$/)
+    ) {
       const invoiceId = pathname.match(/^\/api\/invoice-ingestion\/agent-retry\/([^/]+)$/)[1];
       const result = await resetAndRequeueInvoice(invoiceId);
-      if (result === null) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+      if (result === null)
+        return sendJson(res, 404, { success: false, error: 'Invoice not found' });
       return sendJson(res, 200, { success: true, data: result });
     }
 
     if (req.method === 'POST' && pathname === '/api/invoice-ingestion/manual-upload') {
       // Check API key before OCR
       if (!checkGeminiKey()) {
-        return sendJson(res, 503, { success: false, error: 'GOOGLE_AI_API_KEY not configured — cannot run OCR' });
+        return sendJson(res, 503, {
+          success: false,
+          error: 'GOOGLE_AI_API_KEY not configured — cannot run OCR',
+        });
       }
 
       let buffer, mimeType, filename;
@@ -3047,14 +3651,18 @@ const server = http.createServer(async (req, res) => {
       if (contentType.includes('multipart/form-data')) {
         // Parse multipart/form-data
         const boundary = contentType.split('boundary=')[1];
-        if (!boundary) return sendJson(res, 400, { success: false, error: 'Missing multipart boundary' });
+        if (!boundary)
+          return sendJson(res, 400, { success: false, error: 'Missing multipart boundary' });
         const rawChunks = [];
         for await (const chunk of req) rawChunks.push(chunk);
         const raw = Buffer.concat(rawChunks);
         const parts = parseMultipart(raw, boundary);
         const filePart = parts.find((p) => p.name === 'invoice' || p.name === 'file');
         if (!filePart || !filePart.data || filePart.data.length === 0) {
-          return sendJson(res, 400, { success: false, error: 'No file found in form-data. Use field name "invoice" or "file"' });
+          return sendJson(res, 400, {
+            success: false,
+            error: 'No file found in form-data. Use field name "invoice" or "file"',
+          });
         }
         buffer = filePart.data;
         filename = filePart.filename || 'manual-upload.pdf';
@@ -3063,13 +3671,16 @@ const server = http.createServer(async (req, res) => {
         // JSON with base64 file
         const body = await readJsonBody(req);
         const fileData = body.file;
-        if (!fileData) return sendJson(res, 400, { success: false, error: 'file (base64) is required' });
+        if (!fileData)
+          return sendJson(res, 400, { success: false, error: 'file (base64) is required' });
         buffer = Buffer.from(fileData, 'base64');
         mimeType = body.mimeType || 'application/pdf';
         filename = body.filename || 'manual-upload.pdf';
       }
 
-      console.log(`[ManualUpload] Processing ${filename} (${(buffer.length / 1024).toFixed(1)} KB, ${mimeType})`);
+      console.log(
+        `[ManualUpload] Processing ${filename} (${(buffer.length / 1024).toFixed(1)} KB, ${mimeType})`
+      );
 
       const logId = randomUUID();
       await query(
@@ -3081,14 +3692,27 @@ const server = http.createServer(async (req, res) => {
       try {
         console.log('[ManualUpload] Step 1: Gemini OCR...');
         const extracted = await extractInvoiceData(buffer, mimeType);
-        console.log('[ManualUpload] Step 1 done. Invoice:', extracted.invoice_number, 'Vendor:', extracted.vendor_name, 'Amount:', extracted.total_amount, 'Confidence:', extracted.confidence_score);
+        console.log(
+          '[ManualUpload] Step 1 done. Invoice:',
+          extracted.invoice_number,
+          'Vendor:',
+          extracted.vendor_name,
+          'Amount:',
+          extracted.total_amount,
+          'Confidence:',
+          extracted.confidence_score
+        );
 
         console.log('[ManualUpload] Step 2: Validating...');
         const duplicateRows = await query(
           `SELECT id FROM invoices
            WHERE vendor_name = ? AND invoice_number = ? AND YEAR(invoice_date) = YEAR(?)
            LIMIT 1`,
-          [extracted.vendor_name || '', extracted.invoice_number || '', extracted.invoice_date || new Date().toISOString().slice(0, 10)]
+          [
+            extracted.vendor_name || '',
+            extracted.invoice_number || '',
+            extracted.invoice_date || new Date().toISOString().slice(0, 10),
+          ]
         );
         const validation = await validateInvoiceDataWithPolicy(extracted, {
           existingInvoiceByVendorInvoiceNo: duplicateRows.length > 0,
@@ -3102,14 +3726,34 @@ const server = http.createServer(async (req, res) => {
             is_msme: false,
           },
         });
-        console.log('[ManualUpload] Step 2 done. Valid:', validation.valid, 'Errors:', validation.errors.length, 'Warnings:', validation.warnings.length);
+        console.log(
+          '[ManualUpload] Step 2 done. Valid:',
+          validation.valid,
+          'Errors:',
+          validation.errors.length,
+          'Warnings:',
+          validation.warnings.length
+        );
 
         console.log('[ManualUpload] Step 3: PO matching...');
         const match = await matchToPO(extracted, null);
-        console.log('[ManualUpload] Step 3 done. Matched:', match.matched, 'Type:', match.matchType);
+        console.log(
+          '[ManualUpload] Step 3 done. Matched:',
+          match.matched,
+          'Type:',
+          match.matchType
+        );
 
         console.log('[ManualUpload] Step 4: Creating invoice...');
-        const { invoiceId, status } = await createInvoiceFromExtraction(extracted, validation, match, logId, null, buffer, filename);
+        const { invoiceId, status } = await createInvoiceFromExtraction(
+          extracted,
+          validation,
+          match,
+          logId,
+          null,
+          buffer,
+          filename
+        );
         console.log('[ManualUpload] Step 4 done. Invoice ID:', invoiceId, 'Status:', status);
         await appendInvoiceAuditLog({
           invoiceId,
@@ -3127,13 +3771,28 @@ const server = http.createServer(async (req, res) => {
         await triggerWorkflow(invoiceId, validation, match);
         console.log('[ManualUpload] Step 6 done.');
 
-        await query('UPDATE invoice_ingestion_log SET status = ?, processed_at = CURRENT_TIMESTAMP WHERE id = ?', ['processed', logId]);
+        await query(
+          'UPDATE invoice_ingestion_log SET status = ?, processed_at = CURRENT_TIMESTAMP WHERE id = ?',
+          ['processed', logId]
+        );
         console.log('[ManualUpload] ✓ Complete. Invoice', invoiceId, 'created.');
-        return sendJson(res, 201, { success: true, invoiceId, status, extracted, validation, match, exceptions });
+        return sendJson(res, 201, {
+          success: true,
+          invoiceId,
+          status,
+          extracted,
+          validation,
+          match,
+          exceptions,
+        });
       } catch (err) {
         console.error('[ManualUpload] ✗ Failed:', err.message);
         console.error(err.stack);
-        await query('UPDATE invoice_ingestion_log SET status = ?, error_message = ? WHERE id = ?', ['failed', err.message, logId]);
+        await query('UPDATE invoice_ingestion_log SET status = ?, error_message = ? WHERE id = ?', [
+          'failed',
+          err.message,
+          logId,
+        ]);
         return sendJson(res, 500, { ok: false, error: err.message });
       }
     }
@@ -3145,9 +3804,18 @@ const server = http.createServer(async (req, res) => {
       const type = url.searchParams.get('type') || '';
       let sql = 'SELECT * FROM p2p_schema_mt.gl_codes WHERE is_active = TRUE';
       const params = [];
-      if (entityId) { sql += ' AND entity_id = ?'; params.push(entityId); }
-      if (type) { sql += ' AND gl_type = ?'; params.push(type); }
-      if (q) { sql += ' AND (gl_code LIKE ? OR gl_description LIKE ?)'; params.push(`%${q}%`, `%${q}%`); }
+      if (entityId) {
+        sql += ' AND entity_id = ?';
+        params.push(entityId);
+      }
+      if (type) {
+        sql += ' AND gl_type = ?';
+        params.push(type);
+      }
+      if (q) {
+        sql += ' AND (gl_code LIKE ? OR gl_description LIKE ?)';
+        params.push(`%${q}%`, `%${q}%`);
+      }
       sql += ' ORDER BY gl_code LIMIT 10';
       const rows = await query(sql, params);
       return sendJson(res, 200, { success: true, data: rows });
@@ -3157,7 +3825,10 @@ const server = http.createServer(async (req, res) => {
       const entityId = url.searchParams.get('entityId') || '';
       let sql = 'SELECT * FROM p2p_schema_mt.gl_codes WHERE is_active = TRUE';
       const params = [];
-      if (entityId) { sql += ' AND entity_id = ?'; params.push(entityId); }
+      if (entityId) {
+        sql += ' AND entity_id = ?';
+        params.push(entityId);
+      }
       sql += ' ORDER BY gl_code';
       const rows = await query(sql, params);
       return sendJson(res, 200, { success: true, data: rows });
@@ -3176,7 +3847,10 @@ const server = http.createServer(async (req, res) => {
     // ── GL Code Mappings for Items ──────────────────────────
     if (req.method === 'GET' && pathname.match(/^\/api\/items\/[^/]+\/gl-mappings$/)) {
       const itemId = pathname.split('/')[3];
-      const rows = await query('SELECT * FROM p2p_schema_mt.item_gl_mappings WHERE item_id = ? ORDER BY entity_id', [itemId]);
+      const rows = await query(
+        'SELECT * FROM p2p_schema_mt.item_gl_mappings WHERE item_id = ? ORDER BY entity_id',
+        [itemId]
+      );
       return sendJson(res, 200, { success: true, data: rows });
     }
 
@@ -3186,7 +3860,8 @@ const server = http.createServer(async (req, res) => {
       const mappings = Array.isArray(body.mappings) ? body.mappings : [];
       for (const m of mappings) {
         const id = m.id || randomUUID();
-        await query(`INSERT INTO p2p_schema_mt.item_gl_mappings
+        await query(
+          `INSERT INTO p2p_schema_mt.item_gl_mappings
           (id, item_id, entity_id, expense_gl_code, expense_gl_description, asset_gl_code, asset_gl_description, cogs_gl_code, cogs_gl_description, revenue_gl_code, revenue_gl_description, input_tax_gl_code, input_tax_gl_description, output_tax_gl_code, output_tax_gl_description, stock_gl_code, stock_gl_description, purchase_price_variance_gl, cost_centre, profit_centre, is_active, created_by)
           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
           ON DUPLICATE KEY UPDATE
@@ -3200,7 +3875,31 @@ const server = http.createServer(async (req, res) => {
             purchase_price_variance_gl=VALUES(purchase_price_variance_gl),
             cost_centre=VALUES(cost_centre), profit_centre=VALUES(profit_centre),
             is_active=VALUES(is_active)`,
-          [id, itemId, m.entity_id, m.expense_gl_code||null, m.expense_gl_description||null, m.asset_gl_code||null, m.asset_gl_description||null, m.cogs_gl_code||null, m.cogs_gl_description||null, m.revenue_gl_code||null, m.revenue_gl_description||null, m.input_tax_gl_code||null, m.input_tax_gl_description||null, m.output_tax_gl_code||null, m.output_tax_gl_description||null, m.stock_gl_code||null, m.stock_gl_description||null, m.purchase_price_variance_gl||null, m.cost_centre||null, m.profit_centre||null, m.is_active !== false, m.created_by||'System']);
+          [
+            id,
+            itemId,
+            m.entity_id,
+            m.expense_gl_code || null,
+            m.expense_gl_description || null,
+            m.asset_gl_code || null,
+            m.asset_gl_description || null,
+            m.cogs_gl_code || null,
+            m.cogs_gl_description || null,
+            m.revenue_gl_code || null,
+            m.revenue_gl_description || null,
+            m.input_tax_gl_code || null,
+            m.input_tax_gl_description || null,
+            m.output_tax_gl_code || null,
+            m.output_tax_gl_description || null,
+            m.stock_gl_code || null,
+            m.stock_gl_description || null,
+            m.purchase_price_variance_gl || null,
+            m.cost_centre || null,
+            m.profit_centre || null,
+            m.is_active !== false,
+            m.created_by || 'System',
+          ]
+        );
       }
       return sendJson(res, 200, { success: true, count: mappings.length });
     }
@@ -3210,22 +3909,54 @@ const server = http.createServer(async (req, res) => {
       const search = url.searchParams.get('search') || '';
       let sql = 'SELECT * FROM p2p_schema_mt.vendors WHERE is_active = TRUE';
       const params = [];
-      if (search) { sql += ' AND (vendor_legal_name LIKE ? OR vendor_code LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
+      if (search) {
+        sql += ' AND (vendor_legal_name LIKE ? OR vendor_code LIKE ?)';
+        params.push(`%${search}%`, `%${search}%`);
+      }
       sql += ' ORDER BY created_at DESC';
       const rows = await query(sql, params);
       return sendJson(res, 200, { success: true, data: rows });
     }
 
-    if (req.method === 'GET' && pathname.match(/^\/api\/vendors\/[^/]+$/) && !pathname.includes('/audit')) {
+    if (
+      req.method === 'GET' &&
+      pathname.match(/^\/api\/vendors\/[^/]+$/) &&
+      !pathname.includes('/audit')
+    ) {
       const vendorId = pathname.split('/')[3];
       const [vendor] = await query('SELECT * FROM p2p_schema_mt.vendors WHERE id = ?', [vendorId]);
       if (!vendor) return sendJson(res, 404, { error: 'Vendor not found' });
-      const spocs = await query('SELECT * FROM p2p_schema_mt.vendor_spocs WHERE vendor_id = ? ORDER BY sort_order', [vendorId]);
-      const [pan] = await query('SELECT * FROM p2p_schema_mt.vendor_pan_compliance WHERE vendor_id = ?', [vendorId]);
-      const gst = await query('SELECT * FROM p2p_schema_mt.vendor_gst_registrations WHERE vendor_id = ? ORDER BY sort_order', [vendorId]);
-      const banks = await query('SELECT * FROM p2p_schema_mt.vendor_bank_accounts WHERE vendor_id = ? ORDER BY sort_order', [vendorId]);
-      const entityMappings = await query('SELECT * FROM p2p_schema_mt.vendor_entity_mappings WHERE vendor_id = ?', [vendorId]);
-      return sendJson(res, 200, { success: true, data: { ...vendor, spocs, pan_compliance: pan || null, gst_registrations: gst, bank_accounts: banks, entity_mappings: entityMappings } });
+      const spocs = await query(
+        'SELECT * FROM p2p_schema_mt.vendor_spocs WHERE vendor_id = ? ORDER BY sort_order',
+        [vendorId]
+      );
+      const [pan] = await query(
+        'SELECT * FROM p2p_schema_mt.vendor_pan_compliance WHERE vendor_id = ?',
+        [vendorId]
+      );
+      const gst = await query(
+        'SELECT * FROM p2p_schema_mt.vendor_gst_registrations WHERE vendor_id = ? ORDER BY sort_order',
+        [vendorId]
+      );
+      const banks = await query(
+        'SELECT * FROM p2p_schema_mt.vendor_bank_accounts WHERE vendor_id = ? ORDER BY sort_order',
+        [vendorId]
+      );
+      const entityMappings = await query(
+        'SELECT * FROM p2p_schema_mt.vendor_entity_mappings WHERE vendor_id = ?',
+        [vendorId]
+      );
+      return sendJson(res, 200, {
+        success: true,
+        data: {
+          ...vendor,
+          spocs,
+          pan_compliance: pan || null,
+          gst_registrations: gst,
+          bank_accounts: banks,
+          entity_mappings: entityMappings,
+        },
+      });
     }
 
     // Helper: convert ISO datetime to MySQL DATETIME format
@@ -3242,42 +3973,151 @@ const server = http.createServer(async (req, res) => {
       // Drift fix 1: persist client_erp_vendor_code
       await query(
         'INSERT INTO p2p_schema_mt.vendors (id, vendor_code, client_erp_vendor_code, vendor_legal_name, vendor_trade_name, vendor_group_name, vendor_group_code, vendor_type, address_line, city, state, pin_code, country, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-        [vendorId, body.vendor_code || `V-${Date.now().toString(36).toUpperCase()}`, body.client_erp_vendor_code||null, body.vendor_legal_name, body.vendor_trade_name||null, body.vendor_group_name||null, body.vendor_group_code||null, body.vendor_type||'goods_supplier', body.address_line||null, body.city||null, body.state||null, body.pin_code||null, body.country||'India', body.status||'draft']
+        [
+          vendorId,
+          body.vendor_code || `V-${Date.now().toString(36).toUpperCase()}`,
+          body.client_erp_vendor_code || null,
+          body.vendor_legal_name,
+          body.vendor_trade_name || null,
+          body.vendor_group_name || null,
+          body.vendor_group_code || null,
+          body.vendor_type || 'goods_supplier',
+          body.address_line || null,
+          body.city || null,
+          body.state || null,
+          body.pin_code || null,
+          body.country || 'India',
+          body.status || 'draft',
+        ]
       );
-      for (const s of (body.spocs || [])) {
-        await query('INSERT INTO p2p_schema_mt.vendor_spocs (id, vendor_id, spoc_name, designation, email, phone, is_primary, location_label, city, state, pin_code) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-          [randomUUID(), vendorId, s.spoc_name, s.designation||null, s.email, s.phone||null, s.is_primary||false, s.location_label||null, s.city||null, s.state||null, s.pin_code||null]);
+      for (const s of body.spocs || []) {
+        await query(
+          'INSERT INTO p2p_schema_mt.vendor_spocs (id, vendor_id, spoc_name, designation, email, phone, is_primary, location_label, city, state, pin_code) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+          [
+            randomUUID(),
+            vendorId,
+            s.spoc_name,
+            s.designation || null,
+            s.email,
+            s.phone || null,
+            s.is_primary || false,
+            s.location_label || null,
+            s.city || null,
+            s.state || null,
+            s.pin_code || null,
+          ]
+        );
       }
       if (body.pan_compliance) {
         const p = body.pan_compliance;
         const panSrc = p.pan_verification_source || 'manual';
-        const panAt = panSrc !== 'not_verified' ? toMysqlDatetime(p.pan_verified_at || new Date()) : null;
+        const panAt =
+          panSrc !== 'not_verified' ? toMysqlDatetime(p.pan_verified_at || new Date()) : null;
         await query(
           `INSERT INTO p2p_schema_mt.vendor_pan_compliance (id, vendor_id, pan, entity_type, pan_status, cin_number, msme_number, msme_category, section_206ab, gst_return_filed, tds_sections, rcm_applicable, lower_tds_section, lower_tds_cert_number, lower_tds_cert_valid_from, lower_tds_cert_valid_to, lower_tds_cert_rate, pan_verification_source, pan_verified_at, pan_verification_reference, msme_verification_source, msme_verified_at, msme_verification_reference, cin_verification_source, cin_verified_at, cin_verification_reference, section_206ab_verification_source, section_206ab_verified_at, section_206ab_verification_reference) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [randomUUID(), vendorId, p.pan||null, p.entity_type||null, p.pan_status||'not_verified', p.cin_number||null, p.msme_number||null, p.msme_category||null, p.section_206ab||'not_applicable', p.gst_return_filed||'regular_filer', JSON.stringify(p.tds_sections||[]), p.rcm_applicable||'no_forward_charge', p.lower_tds_section||'not_applicable', p.lower_tds_cert_number||null, p.lower_tds_cert_valid_from||null, p.lower_tds_cert_valid_to||null, p.lower_tds_cert_rate!=null?Number(p.lower_tds_cert_rate):null, panSrc, panAt, p.pan_verification_reference||null, p.msme_verification_source||'not_verified', toMysqlDatetime(p.msme_verified_at), p.msme_verification_reference||null, p.cin_verification_source||'not_verified', toMysqlDatetime(p.cin_verified_at), p.cin_verification_reference||null, p.section_206ab_verification_source||'not_verified', toMysqlDatetime(p.section_206ab_verified_at), p.section_206ab_verification_reference||null]
+          [
+            randomUUID(),
+            vendorId,
+            p.pan || null,
+            p.entity_type || null,
+            p.pan_status || 'not_verified',
+            p.cin_number || null,
+            p.msme_number || null,
+            p.msme_category || null,
+            p.section_206ab || 'not_applicable',
+            p.gst_return_filed || 'regular_filer',
+            JSON.stringify(p.tds_sections || []),
+            p.rcm_applicable || 'no_forward_charge',
+            p.lower_tds_section || 'not_applicable',
+            p.lower_tds_cert_number || null,
+            p.lower_tds_cert_valid_from || null,
+            p.lower_tds_cert_valid_to || null,
+            p.lower_tds_cert_rate != null ? Number(p.lower_tds_cert_rate) : null,
+            panSrc,
+            panAt,
+            p.pan_verification_reference || null,
+            p.msme_verification_source || 'not_verified',
+            toMysqlDatetime(p.msme_verified_at),
+            p.msme_verification_reference || null,
+            p.cin_verification_source || 'not_verified',
+            toMysqlDatetime(p.cin_verified_at),
+            p.cin_verification_reference || null,
+            p.section_206ab_verification_source || 'not_verified',
+            toMysqlDatetime(p.section_206ab_verified_at),
+            p.section_206ab_verification_reference || null,
+          ]
         );
       }
-      for (const g of (body.gst_registrations || [])) {
+      for (const g of body.gst_registrations || []) {
         const gSrc = g.verification_source || 'not_verified';
-        const gAt = (gSrc !== 'not_verified') ? toMysqlDatetime(g.verified_at || new Date()) : null;
+        const gAt = gSrc !== 'not_verified' ? toMysqlDatetime(g.verified_at || new Date()) : null;
         await query(
           'INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
-          [randomUUID(), vendorId, g.gstin, g.gst_type, g.state||null, g.gst_state_code||null, g.city||null, g.pin_code||null, g.address||null, g.spoc_id||null, g.status||'active', gSrc, gAt, g.verification_reference||null, g.verification_raw_response ? JSON.stringify(g.verification_raw_response) : null]
+          [
+            randomUUID(),
+            vendorId,
+            g.gstin,
+            g.gst_type,
+            g.state || null,
+            g.gst_state_code || null,
+            g.city || null,
+            g.pin_code || null,
+            g.address || null,
+            g.spoc_id || null,
+            g.status || 'active',
+            gSrc,
+            gAt,
+            g.verification_reference || null,
+            g.verification_raw_response ? JSON.stringify(g.verification_raw_response) : null,
+          ]
         );
       }
-      for (const b of (body.bank_accounts || [])) {
+      for (const b of body.bank_accounts || []) {
         const bSrc = b.verification_source || 'not_verified';
-        const bAt = (bSrc !== 'not_verified') ? toMysqlDatetime(b.verified_at || new Date()) : null;
+        const bAt = bSrc !== 'not_verified' ? toMysqlDatetime(b.verified_at || new Date()) : null;
         await query(
           'INSERT INTO p2p_schema_mt.vendor_bank_accounts (id, vendor_id, account_number, ifsc_code, branch_name, bank_name, account_type, currency, is_primary, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
-          [randomUUID(), vendorId, b.account_number, b.ifsc_code, b.branch_name||null, b.bank_name||null, b.account_type||'current', b.currency||'INR', b.is_primary||false, b.status||'active', bSrc, bAt, b.verification_reference||null, b.verification_raw_response ? JSON.stringify(b.verification_raw_response) : null]
+          [
+            randomUUID(),
+            vendorId,
+            b.account_number,
+            b.ifsc_code,
+            b.branch_name || null,
+            b.bank_name || null,
+            b.account_type || 'current',
+            b.currency || 'INR',
+            b.is_primary || false,
+            b.status || 'active',
+            bSrc,
+            bAt,
+            b.verification_reference || null,
+            b.verification_raw_response ? JSON.stringify(b.verification_raw_response) : null,
+          ]
         );
       }
       // Drift fix 5: CREATE path includes block_for_po/payment + drift fixes 2-3: credit_days/limit + default_tds_section_override
-      for (const e of (body.entity_mappings || [])) {
+      for (const e of body.entity_mappings || []) {
         await query(
           'INSERT INTO p2p_schema_mt.vendor_entity_mappings (id, vendor_id, entity_id, gl_code_expense, gl_code_expense_desc, gl_code_cogs, gl_code_cogs_desc, payment_terms, credit_days, credit_limit, cost_centre_id, profit_centre_id, block_for_po, block_for_po_reason, block_for_payment, block_for_payment_reason, default_tds_section_override) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-          [randomUUID(), vendorId, e.entity_id, e.gl_code_expense||null, e.gl_code_expense_desc||null, e.gl_code_cogs||null, e.gl_code_cogs_desc||null, e.payment_terms||null, e.credit_days!=null?Number(e.credit_days):null, e.credit_limit!=null?Number(e.credit_limit):null, e.cost_centre_id||null, e.profit_centre_id||null, e.block_for_po||false, e.block_for_po_reason||null, e.block_for_payment||false, e.block_for_payment_reason||null, e.default_tds_section_override||null]
+          [
+            randomUUID(),
+            vendorId,
+            e.entity_id,
+            e.gl_code_expense || null,
+            e.gl_code_expense_desc || null,
+            e.gl_code_cogs || null,
+            e.gl_code_cogs_desc || null,
+            e.payment_terms || null,
+            e.credit_days != null ? Number(e.credit_days) : null,
+            e.credit_limit != null ? Number(e.credit_limit) : null,
+            e.cost_centre_id || null,
+            e.profit_centre_id || null,
+            e.block_for_po || false,
+            e.block_for_po_reason || null,
+            e.block_for_payment || false,
+            e.block_for_payment_reason || null,
+            e.default_tds_section_override || null,
+          ]
         );
       }
       return sendJson(res, 200, { success: true, data: { id: vendorId } });
@@ -3289,33 +4129,112 @@ const server = http.createServer(async (req, res) => {
       // Drift fix 1: persist client_erp_vendor_code
       await query(
         'UPDATE p2p_schema_mt.vendors SET vendor_legal_name=?, vendor_trade_name=?, vendor_group_name=?, vendor_group_code=?, vendor_type=?, address_line=?, city=?, state=?, pin_code=?, country=?, status=?, client_erp_vendor_code=? WHERE id=?',
-        [body.vendor_legal_name, body.vendor_trade_name||null, body.vendor_group_name||null, body.vendor_group_code||null, body.vendor_type, body.address_line||null, body.city||null, body.state||null, body.pin_code||null, body.country||'India', body.status||'draft', body.client_erp_vendor_code||null, vendorId]
+        [
+          body.vendor_legal_name,
+          body.vendor_trade_name || null,
+          body.vendor_group_name || null,
+          body.vendor_group_code || null,
+          body.vendor_type,
+          body.address_line || null,
+          body.city || null,
+          body.state || null,
+          body.pin_code || null,
+          body.country || 'India',
+          body.status || 'draft',
+          body.client_erp_vendor_code || null,
+          vendorId,
+        ]
       );
       if (body.spocs) {
         await query('DELETE FROM p2p_schema_mt.vendor_spocs WHERE vendor_id=?', [vendorId]);
         for (const s of body.spocs) {
-          await query('INSERT INTO p2p_schema_mt.vendor_spocs (id, vendor_id, spoc_name, designation, email, phone, is_primary, location_label, city, state, pin_code) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-            [randomUUID(), vendorId, s.spoc_name, s.designation||null, s.email, s.phone||null, s.is_primary||false, s.location_label||null, s.city||null, s.state||null, s.pin_code||null]);
+          await query(
+            'INSERT INTO p2p_schema_mt.vendor_spocs (id, vendor_id, spoc_name, designation, email, phone, is_primary, location_label, city, state, pin_code) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+            [
+              randomUUID(),
+              vendorId,
+              s.spoc_name,
+              s.designation || null,
+              s.email,
+              s.phone || null,
+              s.is_primary || false,
+              s.location_label || null,
+              s.city || null,
+              s.state || null,
+              s.pin_code || null,
+            ]
+          );
         }
       }
       if (body.pan_compliance) {
-        await query('DELETE FROM p2p_schema_mt.vendor_pan_compliance WHERE vendor_id=?', [vendorId]);
+        await query('DELETE FROM p2p_schema_mt.vendor_pan_compliance WHERE vendor_id=?', [
+          vendorId,
+        ]);
         const p = body.pan_compliance;
         const panSrc = p.pan_verification_source || 'manual';
-        const panAt = panSrc !== 'not_verified' ? toMysqlDatetime(p.pan_verified_at || new Date()) : null;
+        const panAt =
+          panSrc !== 'not_verified' ? toMysqlDatetime(p.pan_verified_at || new Date()) : null;
         await query(
           `INSERT INTO p2p_schema_mt.vendor_pan_compliance (id, vendor_id, pan, entity_type, pan_status, cin_number, msme_number, msme_category, section_206ab, gst_return_filed, tds_sections, rcm_applicable, lower_tds_section, lower_tds_cert_number, lower_tds_cert_valid_from, lower_tds_cert_valid_to, lower_tds_cert_rate, pan_verification_source, pan_verified_at, pan_verification_reference, msme_verification_source, msme_verified_at, msme_verification_reference, cin_verification_source, cin_verified_at, cin_verification_reference, section_206ab_verification_source, section_206ab_verified_at, section_206ab_verification_reference) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-          [randomUUID(), vendorId, p.pan||null, p.entity_type||null, p.pan_status||'not_verified', p.cin_number||null, p.msme_number||null, p.msme_category||null, p.section_206ab||'not_applicable', p.gst_return_filed||'regular_filer', JSON.stringify(p.tds_sections||[]), p.rcm_applicable||'no_forward_charge', p.lower_tds_section||'not_applicable', p.lower_tds_cert_number||null, p.lower_tds_cert_valid_from||null, p.lower_tds_cert_valid_to||null, p.lower_tds_cert_rate!=null?Number(p.lower_tds_cert_rate):null, panSrc, panAt, p.pan_verification_reference||null, p.msme_verification_source||'not_verified', toMysqlDatetime(p.msme_verified_at), p.msme_verification_reference||null, p.cin_verification_source||'not_verified', toMysqlDatetime(p.cin_verified_at), p.cin_verification_reference||null, p.section_206ab_verification_source||'not_verified', toMysqlDatetime(p.section_206ab_verified_at), p.section_206ab_verification_reference||null]
+          [
+            randomUUID(),
+            vendorId,
+            p.pan || null,
+            p.entity_type || null,
+            p.pan_status || 'not_verified',
+            p.cin_number || null,
+            p.msme_number || null,
+            p.msme_category || null,
+            p.section_206ab || 'not_applicable',
+            p.gst_return_filed || 'regular_filer',
+            JSON.stringify(p.tds_sections || []),
+            p.rcm_applicable || 'no_forward_charge',
+            p.lower_tds_section || 'not_applicable',
+            p.lower_tds_cert_number || null,
+            p.lower_tds_cert_valid_from || null,
+            p.lower_tds_cert_valid_to || null,
+            p.lower_tds_cert_rate != null ? Number(p.lower_tds_cert_rate) : null,
+            panSrc,
+            panAt,
+            p.pan_verification_reference || null,
+            p.msme_verification_source || 'not_verified',
+            toMysqlDatetime(p.msme_verified_at),
+            p.msme_verification_reference || null,
+            p.cin_verification_source || 'not_verified',
+            toMysqlDatetime(p.cin_verified_at),
+            p.cin_verification_reference || null,
+            p.section_206ab_verification_source || 'not_verified',
+            toMysqlDatetime(p.section_206ab_verified_at),
+            p.section_206ab_verification_reference || null,
+          ]
         );
       }
       if (body.gst_registrations) {
-        await query('DELETE FROM p2p_schema_mt.vendor_gst_registrations WHERE vendor_id=?', [vendorId]);
+        await query('DELETE FROM p2p_schema_mt.vendor_gst_registrations WHERE vendor_id=?', [
+          vendorId,
+        ]);
         for (const g of body.gst_registrations) {
           const gSrc = g.verification_source || 'not_verified';
-          const gAt = (gSrc !== 'not_verified') ? toMysqlDatetime(g.verified_at || new Date()) : null;
+          const gAt = gSrc !== 'not_verified' ? toMysqlDatetime(g.verified_at || new Date()) : null;
           await query(
             'INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
-            [randomUUID(), vendorId, g.gstin, g.gst_type, g.state||null, g.gst_state_code||null, g.city||null, g.pin_code||null, g.address||null, g.spoc_id||null, g.status||'active', gSrc, gAt, g.verification_reference||null, g.verification_raw_response ? JSON.stringify(g.verification_raw_response) : null]
+            [
+              randomUUID(),
+              vendorId,
+              g.gstin,
+              g.gst_type,
+              g.state || null,
+              g.gst_state_code || null,
+              g.city || null,
+              g.pin_code || null,
+              g.address || null,
+              g.spoc_id || null,
+              g.status || 'active',
+              gSrc,
+              gAt,
+              g.verification_reference || null,
+              g.verification_raw_response ? JSON.stringify(g.verification_raw_response) : null,
+            ]
           );
         }
       }
@@ -3323,20 +4242,55 @@ const server = http.createServer(async (req, res) => {
         await query('DELETE FROM p2p_schema_mt.vendor_bank_accounts WHERE vendor_id=?', [vendorId]);
         for (const b of body.bank_accounts) {
           const bSrc = b.verification_source || 'not_verified';
-          const bAt = (bSrc !== 'not_verified') ? toMysqlDatetime(b.verified_at || new Date()) : null;
+          const bAt = bSrc !== 'not_verified' ? toMysqlDatetime(b.verified_at || new Date()) : null;
           await query(
             'INSERT INTO p2p_schema_mt.vendor_bank_accounts (id, vendor_id, account_number, ifsc_code, branch_name, bank_name, account_type, currency, is_primary, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
-            [randomUUID(), vendorId, b.account_number, b.ifsc_code, b.branch_name||null, b.bank_name||null, b.account_type||'current', b.currency||'INR', b.is_primary||false, b.status||'active', bSrc, bAt, b.verification_reference||null, b.verification_raw_response ? JSON.stringify(b.verification_raw_response) : null]
+            [
+              randomUUID(),
+              vendorId,
+              b.account_number,
+              b.ifsc_code,
+              b.branch_name || null,
+              b.bank_name || null,
+              b.account_type || 'current',
+              b.currency || 'INR',
+              b.is_primary || false,
+              b.status || 'active',
+              bSrc,
+              bAt,
+              b.verification_reference || null,
+              b.verification_raw_response ? JSON.stringify(b.verification_raw_response) : null,
+            ]
           );
         }
       }
       if (body.entity_mappings) {
-        await query('DELETE FROM p2p_schema_mt.vendor_entity_mappings WHERE vendor_id=?', [vendorId]);
+        await query('DELETE FROM p2p_schema_mt.vendor_entity_mappings WHERE vendor_id=?', [
+          vendorId,
+        ]);
         // Drift fixes 2-3: credit_days/limit + drift fix 5: block_for_* on both paths + default_tds_section_override
         for (const e of body.entity_mappings) {
           await query(
             'INSERT INTO p2p_schema_mt.vendor_entity_mappings (id, vendor_id, entity_id, gl_code_expense, gl_code_expense_desc, gl_code_cogs, gl_code_cogs_desc, payment_terms, credit_days, credit_limit, cost_centre_id, profit_centre_id, block_for_po, block_for_po_reason, block_for_payment, block_for_payment_reason, default_tds_section_override) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-            [randomUUID(), vendorId, e.entity_id, e.gl_code_expense||null, e.gl_code_expense_desc||null, e.gl_code_cogs||null, e.gl_code_cogs_desc||null, e.payment_terms||null, e.credit_days!=null?Number(e.credit_days):null, e.credit_limit!=null?Number(e.credit_limit):null, e.cost_centre_id||null, e.profit_centre_id||null, e.block_for_po||false, e.block_for_po_reason||null, e.block_for_payment||false, e.block_for_payment_reason||null, e.default_tds_section_override||null]
+            [
+              randomUUID(),
+              vendorId,
+              e.entity_id,
+              e.gl_code_expense || null,
+              e.gl_code_expense_desc || null,
+              e.gl_code_cogs || null,
+              e.gl_code_cogs_desc || null,
+              e.payment_terms || null,
+              e.credit_days != null ? Number(e.credit_days) : null,
+              e.credit_limit != null ? Number(e.credit_limit) : null,
+              e.cost_centre_id || null,
+              e.profit_centre_id || null,
+              e.block_for_po || false,
+              e.block_for_po_reason || null,
+              e.block_for_payment || false,
+              e.block_for_payment_reason || null,
+              e.default_tds_section_override || null,
+            ]
           );
         }
       }
@@ -3345,13 +4299,18 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'DELETE' && pathname.match(/^\/api\/vendors\/[^/]+$/)) {
       const vendorId = pathname.split('/')[3];
-      await query('UPDATE p2p_schema_mt.vendors SET is_active = FALSE, status = ? WHERE id = ?', ['inactive', vendorId]);
+      await query('UPDATE p2p_schema_mt.vendors SET is_active = FALSE, status = ? WHERE id = ?', [
+        'inactive',
+        vendorId,
+      ]);
       return sendJson(res, 200, { success: true });
     }
 
     if (req.method === 'POST' && pathname.match(/^\/api\/vendors\/[^/]+\/submit$/)) {
       const vendorId = pathname.split('/')[3];
-      await query("UPDATE p2p_schema_mt.vendors SET status = 'pending_approval' WHERE id = ?", [vendorId]);
+      await query("UPDATE p2p_schema_mt.vendors SET status = 'pending_approval' WHERE id = ?", [
+        vendorId,
+      ]);
       return sendJson(res, 200, { success: true });
     }
 
@@ -3360,7 +4319,10 @@ const server = http.createServer(async (req, res) => {
       const agent = url.searchParams.get('agent');
       let sql = 'SELECT * FROM ap_agent_config WHERE is_active = TRUE';
       const params = [];
-      if (agent) { sql += ' AND agent_name = ?'; params.push(agent); }
+      if (agent) {
+        sql += ' AND agent_name = ?';
+        params.push(agent);
+      }
       sql += ' ORDER BY agent_name, display_order';
       const rows = await query(sql, params);
       return sendJson(res, 200, { success: true, data: rows });
@@ -3369,8 +4331,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'PUT' && pathname === '/api/ap/agent-config') {
       const body = await readJsonBody(req);
       const { id, config_value } = body;
-      if (!id || config_value === undefined) return sendJson(res, 400, { success: false, error: 'id and config_value required' });
-      await query('UPDATE ap_agent_config SET config_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [String(config_value), id]);
+      if (!id || config_value === undefined)
+        return sendJson(res, 400, { success: false, error: 'id and config_value required' });
+      await query(
+        'UPDATE ap_agent_config SET config_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [String(config_value), id]
+      );
       return sendJson(res, 200, { success: true });
     }
 
@@ -3378,9 +4344,13 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/api/ap/invoices') {
       const lane = url.searchParams.get('lane');
       const status = url.searchParams.get('status');
-      let sql = 'SELECT id, invoice_number, invoice_date, due_date, vendor_name, vendor_gstin, currency, subtotal, tax_amount, total_amount, po_number, po_id, status, source, lane, posting_readiness_score, processing_status, auto_post_flag, human_touched_flag, attachment_path, created_at FROM invoices WHERE source = ?';
+      let sql =
+        'SELECT id, invoice_number, invoice_date, due_date, vendor_name, vendor_gstin, currency, subtotal, tax_amount, total_amount, po_number, po_id, status, source, lane, posting_readiness_score, processing_status, auto_post_flag, human_touched_flag, attachment_path, created_at FROM invoices WHERE source = ?';
       const params = ['email_ingestion'];
-      if (lane) { sql += ' AND lane = ?'; params.push(lane); }
+      if (lane) {
+        sql += ' AND lane = ?';
+        params.push(lane);
+      }
       if (status) {
         const mappedLifecycle = mapProcessingStatusToLifecycle(status);
         if (mappedLifecycle) {
@@ -3396,7 +4366,11 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: rows });
     }
 
-    if (req.method === 'GET' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/decisions')) {
+    if (
+      req.method === 'GET' &&
+      pathname.startsWith('/api/ap/invoices/') &&
+      pathname.endsWith('/decisions')
+    ) {
       const invoiceId = pathname.split('/')[4];
       const decisions = await query(
         'SELECT * FROM ap_invoice_agent_decisions WHERE invoice_id = ? ORDER BY created_at ASC',
@@ -3409,15 +4383,24 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: { decisions, explanations } });
     }
 
-    if (req.method === 'POST' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/approve')) {
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/ap/invoices/') &&
+      pathname.endsWith('/approve')
+    ) {
       const invoiceId = pathname.split('/')[4];
-      const [currentInv] = await query('SELECT lifecycle_state FROM invoices WHERE id = ?', [invoiceId]);
+      const [currentInv] = await query('SELECT lifecycle_state FROM invoices WHERE id = ?', [
+        invoiceId,
+      ]);
       try {
         assertValidTransition(currentInv?.lifecycle_state ?? null, LIFECYCLE_STATES.PROCESSED);
       } catch (e) {
         return sendJson(res, 422, { success: false, error: e.message });
       }
-      await query('UPDATE invoices SET status = ?, processing_status = ?, lifecycle_state = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?', ['Approved', 'posted', LIFECYCLE_STATES.PROCESSED, invoiceId]);
+      await query(
+        'UPDATE invoices SET status = ?, processing_status = ?, lifecycle_state = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        ['Approved', 'posted', LIFECYCLE_STATES.PROCESSED, invoiceId]
+      );
       await query(
         'INSERT INTO ap_invoice_reviewer_actions (id, invoice_id, action_type, actor, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
         [randomUUID(), invoiceId, 'approve', 'API User']
@@ -3425,15 +4408,24 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true });
     }
 
-    if (req.method === 'POST' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/reject')) {
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/ap/invoices/') &&
+      pathname.endsWith('/reject')
+    ) {
       const invoiceId = pathname.split('/')[4];
-      const [currentInv] = await query('SELECT lifecycle_state FROM invoices WHERE id = ?', [invoiceId]);
+      const [currentInv] = await query('SELECT lifecycle_state FROM invoices WHERE id = ?', [
+        invoiceId,
+      ]);
       try {
         assertValidTransition(currentInv?.lifecycle_state ?? null, LIFECYCLE_STATES.REJECTED);
       } catch (e) {
         return sendJson(res, 422, { success: false, error: e.message });
       }
-      await query('UPDATE invoices SET status = ?, processing_status = ?, lifecycle_state = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?', ['Rejected', 'rejected', LIFECYCLE_STATES.REJECTED, invoiceId]);
+      await query(
+        'UPDATE invoices SET status = ?, processing_status = ?, lifecycle_state = ?, human_touched_flag = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        ['Rejected', 'rejected', LIFECYCLE_STATES.REJECTED, invoiceId]
+      );
       await query(
         'INSERT INTO ap_invoice_reviewer_actions (id, invoice_id, action_type, actor, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
         [randomUUID(), invoiceId, 'reject', 'API User']
@@ -3441,12 +4433,23 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true });
     }
 
-    if (req.method === 'POST' && pathname.startsWith('/api/ap/invoices/') && pathname.endsWith('/correct')) {
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/ap/invoices/') &&
+      pathname.endsWith('/correct')
+    ) {
       const invoiceId = pathname.split('/')[4];
       const body = await readJsonBody(req);
       await query(
         'INSERT INTO ap_invoice_reviewer_actions (id, invoice_id, action_type, field_corrections, comments, actor, created_at) VALUES (?, ?, ?, CAST(? AS JSON), ?, ?, CURRENT_TIMESTAMP)',
-        [randomUUID(), invoiceId, 'correct', JSON.stringify(body.corrections || {}), body.comments || '', 'API User']
+        [
+          randomUUID(),
+          invoiceId,
+          'correct',
+          JSON.stringify(body.corrections || {}),
+          body.comments || '',
+          'API User',
+        ]
       );
       // Apply corrections to invoice
       if (body.corrections) {
@@ -3454,7 +4457,16 @@ const server = http.createServer(async (req, res) => {
         const sets = [];
         const vals = [];
         for (const [field, value] of Object.entries(corr)) {
-          if (['vendor_name','invoice_number','invoice_date','total_amount','currency','vendor_gstin'].includes(field)) {
+          if (
+            [
+              'vendor_name',
+              'invoice_number',
+              'invoice_date',
+              'total_amount',
+              'currency',
+              'vendor_gstin',
+            ].includes(field)
+          ) {
             sets.push(`${field} = ?`);
             vals.push(value);
           }
@@ -3469,14 +4481,27 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/api/ap/dashboard/stats') {
-      const lanes = await query("SELECT lane, COUNT(*) as cnt FROM invoices WHERE source = 'email_ingestion' AND lane IS NOT NULL GROUP BY lane");
-      const [total] = await query("SELECT COUNT(*) as cnt FROM invoices WHERE source = 'email_ingestion'");
-      const [autoPosted] = await query("SELECT COUNT(*) as cnt FROM invoices WHERE source = 'email_ingestion' AND auto_post_flag = TRUE");
-      const [exceptions] = await query("SELECT COUNT(*) as cnt FROM ap_invoice_exception_cases WHERE resolved = FALSE");
-      const [avgReadiness] = await query("SELECT AVG(posting_readiness_score) as avg_score FROM invoices WHERE source = 'email_ingestion' AND posting_readiness_score IS NOT NULL");
+      const lanes = await query(
+        "SELECT lane, COUNT(*) as cnt FROM invoices WHERE source = 'email_ingestion' AND lane IS NOT NULL GROUP BY lane"
+      );
+      const [total] = await query(
+        "SELECT COUNT(*) as cnt FROM invoices WHERE source = 'email_ingestion'"
+      );
+      const [autoPosted] = await query(
+        "SELECT COUNT(*) as cnt FROM invoices WHERE source = 'email_ingestion' AND auto_post_flag = TRUE"
+      );
+      const [exceptions] = await query(
+        'SELECT COUNT(*) as cnt FROM ap_invoice_exception_cases WHERE resolved = FALSE'
+      );
+      const [avgReadiness] = await query(
+        "SELECT AVG(posting_readiness_score) as avg_score FROM invoices WHERE source = 'email_ingestion' AND posting_readiness_score IS NOT NULL"
+      );
 
       const laneMap = {};
-      if (Array.isArray(lanes)) lanes.forEach(r => { laneMap[r.lane] = r.cnt; });
+      if (Array.isArray(lanes))
+        lanes.forEach((r) => {
+          laneMap[r.lane] = r.cnt;
+        });
 
       return sendJson(res, 200, {
         success: true,
@@ -3488,7 +4513,7 @@ const server = http.createServer(async (req, res) => {
           autoPosted: autoPosted?.cnt || 0,
           exceptions: exceptions?.cnt || 0,
           avgReadiness: avgReadiness?.avg_score ? Number(avgReadiness.avg_score).toFixed(1) : 0,
-          stpRate: total?.cnt > 0 ? ((laneMap.green || 0) / total.cnt * 100).toFixed(1) : 0,
+          stpRate: total?.cnt > 0 ? (((laneMap.green || 0) / total.cnt) * 100).toFixed(1) : 0,
         },
       });
     }
@@ -3496,26 +4521,32 @@ const server = http.createServer(async (req, res) => {
     // ── Agentic Pipeline Trigger ────────────────────────
     if (req.method === 'POST' && pathname === '/api/ap/process-invoice') {
       if (!checkGeminiKey()) {
-        return sendJson(res, 503, { success: false, error: 'GOOGLE_AI_API_KEY not configured — cannot run OCR' });
+        return sendJson(res, 503, {
+          success: false,
+          error: 'GOOGLE_AI_API_KEY not configured — cannot run OCR',
+        });
       }
       const contentType = req.headers['content-type'] || '';
       let buffer, mimeType, filename;
 
       if (contentType.includes('multipart/form-data')) {
         const boundary = contentType.split('boundary=')[1];
-        if (!boundary) return sendJson(res, 400, { success: false, error: 'Missing multipart boundary' });
+        if (!boundary)
+          return sendJson(res, 400, { success: false, error: 'Missing multipart boundary' });
         const rawChunks = [];
         for await (const chunk of req) rawChunks.push(chunk);
         const raw = Buffer.concat(rawChunks);
         const parts = parseMultipart(raw, boundary);
         const filePart = parts.find((p) => p.name === 'invoice' || p.name === 'file');
-        if (!filePart?.data?.length) return sendJson(res, 400, { success: false, error: 'No file in form-data' });
+        if (!filePart?.data?.length)
+          return sendJson(res, 400, { success: false, error: 'No file in form-data' });
         buffer = filePart.data;
         filename = filePart.filename || 'upload.pdf';
         mimeType = filePart.contentType || 'application/pdf';
       } else {
         const body = await readJsonBody(req);
-        if (!body.file) return sendJson(res, 400, { success: false, error: 'file (base64) required' });
+        if (!body.file)
+          return sendJson(res, 400, { success: false, error: 'file (base64) required' });
         buffer = Buffer.from(body.file, 'base64');
         mimeType = body.mimeType || 'application/pdf';
         filename = body.filename || 'upload.pdf';
@@ -3550,7 +4581,10 @@ const server = http.createServer(async (req, res) => {
     // ═══════════════════════════════════════════════════════════════
 
     // --- Force Closure ---
-    if (req.method === 'GET' && pathname.match(/^\/api\/purchase-orders\/[^/]+\/closure-preview$/)) {
+    if (
+      req.method === 'GET' &&
+      pathname.match(/^\/api\/purchase-orders\/[^/]+\/closure-preview$/)
+    ) {
       const poId = pathname.split('/')[3];
       const preview = await getForceClosurePreview(query, poId);
       return sendJson(res, 200, { success: true, data: preview });
@@ -3591,7 +4625,10 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: result });
     }
 
-    if (req.method === 'PUT' && pathname.match(/^\/api\/purchase-orders\/[^/]+\/amendments\/[^/]+\/approve$/)) {
+    if (
+      req.method === 'PUT' &&
+      pathname.match(/^\/api\/purchase-orders\/[^/]+\/amendments\/[^/]+\/approve$/)
+    ) {
       const parts = pathname.split('/');
       const amendmentId = parts[5];
       const body = await readJsonBody(req);
@@ -3599,11 +4636,19 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: result });
     }
 
-    if (req.method === 'PUT' && pathname.match(/^\/api\/purchase-orders\/[^/]+\/amendments\/[^/]+\/reject$/)) {
+    if (
+      req.method === 'PUT' &&
+      pathname.match(/^\/api\/purchase-orders\/[^/]+\/amendments\/[^/]+\/reject$/)
+    ) {
       const parts = pathname.split('/');
       const amendmentId = parts[5];
       const body = await readJsonBody(req);
-      const result = await rejectAmendment(query, amendmentId, body.userId || 'system', body.rejectionReason || '');
+      const result = await rejectAmendment(
+        query,
+        amendmentId,
+        body.userId || 'system',
+        body.rejectionReason || ''
+      );
       return sendJson(res, 200, { success: true, data: result });
     }
 
@@ -3639,13 +4684,33 @@ const server = http.createServer(async (req, res) => {
       if (lowerName.includes('email')) {
         push(`${fieldName} should match valid email format.`, 'Format validation', 'Error', 0.78);
       } else if (lowerName.includes('gst')) {
-        push(`${fieldName} should match standard GSTIN pattern.`, 'Format validation', 'Error', 0.8);
+        push(
+          `${fieldName} should match standard GSTIN pattern.`,
+          'Format validation',
+          'Error',
+          0.8
+        );
       } else if (lowerName.includes('date') || fieldType.toLowerCase() === 'date') {
-        push(`${fieldName} should be a valid date and not in invalid range.`, 'Format validation', 'Warning', 0.74);
+        push(
+          `${fieldName} should be a valid date and not in invalid range.`,
+          'Format validation',
+          'Warning',
+          0.74
+        );
       } else if (lowerName.includes('amount') || lowerName.includes('total')) {
-        push(`${fieldName} should be positive and within threshold.`, 'Threshold check', 'Warning', 0.73);
+        push(
+          `${fieldName} should be positive and within threshold.`,
+          'Threshold check',
+          'Warning',
+          0.73
+        );
       } else {
-        push(`${fieldName} should follow expected ${fieldType} format.`, 'Format validation', 'Warning', 0.7);
+        push(
+          `${fieldName} should follow expected ${fieldType} format.`,
+          'Format validation',
+          'Warning',
+          0.7
+        );
       }
 
       return suggestions.slice(0, 3);
@@ -3653,41 +4718,80 @@ const server = http.createServer(async (req, res) => {
 
     const buildReviewFallback = (body = {}) => {
       const rules = Array.isArray(body.rules) ? body.rules : [];
-      const requiredCoverage = rules.filter((r) => String(r?.type || r?.ruleType || '').toLowerCase().includes('required')).length;
-      const predicted_accuracy = Math.min(95, Math.max(60, 62 + rules.length * 3 + requiredCoverage * 2));
+      const requiredCoverage = rules.filter((r) =>
+        String(r?.type || r?.ruleType || '')
+          .toLowerCase()
+          .includes('required')
+      ).length;
+      const predicted_accuracy = Math.min(
+        95,
+        Math.max(60, 62 + rules.length * 3 + requiredCoverage * 2)
+      );
       return {
         predicted_accuracy,
-        gaps: rules.length < 3 ? [{
-          field: 'General',
-          missing_rule: 'Coverage is low across key fields',
-          severity: 'Medium',
-          recommendation: 'Add required, format, and cross-field validations for critical columns.',
-        }] : [],
+        gaps:
+          rules.length < 3
+            ? [
+                {
+                  field: 'General',
+                  missing_rule: 'Coverage is low across key fields',
+                  severity: 'Medium',
+                  recommendation:
+                    'Add required, format, and cross-field validations for critical columns.',
+                },
+              ]
+            : [],
         recommendations: [
           'Add at least one format validation for identity fields.',
           'Use threshold checks for numeric amount fields.',
           'Use warning severity for soft checks and error for hard blocks.',
         ],
-        fraud_risks: rules.length < 2 ? ['Insufficient rules can allow malformed records to pass.'] : [],
+        fraud_risks:
+          rules.length < 2 ? ['Insufficient rules can allow malformed records to pass.'] : [],
       };
     };
 
     if (req.method === 'POST' && pathname === '/api/agents/ai/review-rules') {
       const body = await readJsonBody(req);
       const apiKey = process.env.GOOGLE_AI_API_KEY;
-      if (!apiKey) return sendJson(res, 500, { success: false, error: 'GOOGLE_AI_API_KEY is not configured in .env.mysql.local' });
+      if (!apiKey)
+        return sendJson(res, 500, {
+          success: false,
+          error: 'GOOGLE_AI_API_KEY is not configured in .env.mysql.local',
+        });
       let review;
       try {
         const { GoogleGenerativeAI } = await import('@google/generative-ai');
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
         const result = await model.generateContent({
-          contents: [{ role: 'user', parts: [{ text: `Review these validation rules for a ${body.module || 'P2P'} form and analyze completeness. Rules: ${JSON.stringify(body.rules || [])}. Form: ${body.form_context || ''}. Return JSON: { "predicted_accuracy": number 0-100, "gaps": [{"field": "...", "missing_rule": "...", "severity": "High|Medium|Low", "recommendation": "..."}], "recommendations": ["..."], "fraud_risks": ["..."], "compliance_gaps": ["..."] }. Return ONLY valid JSON, no markdown.` }] }],
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `Review these validation rules for a ${body.module || 'P2P'} form and analyze completeness. Rules: ${JSON.stringify(body.rules || [])}. Form: ${body.form_context || ''}. Return JSON: { "predicted_accuracy": number 0-100, "gaps": [{"field": "...", "missing_rule": "...", "severity": "High|Medium|Low", "recommendation": "..."}], "recommendations": ["..."], "fraud_risks": ["..."], "compliance_gaps": ["..."] }. Return ONLY valid JSON, no markdown.`,
+                },
+              ],
+            },
+          ],
         });
         const text = result.response?.text?.() || '{}';
-        try { review = JSON.parse(text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()); } catch { review = buildReviewFallback(body); }
+        try {
+          review = JSON.parse(
+            text
+              .replace(/```json\n?/g, '')
+              .replace(/```\n?/g, '')
+              .trim()
+          );
+        } catch {
+          review = buildReviewFallback(body);
+        }
       } catch (error) {
-        console.warn('[agents/ai/review-rules] AI provider unavailable, using fallback:', error?.message || error);
+        console.warn(
+          '[agents/ai/review-rules] AI provider unavailable, using fallback:',
+          error?.message || error
+        );
         review = buildReviewFallback(body);
       }
       return sendJson(res, 200, { success: true, review });
@@ -3696,19 +4800,44 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/agents/ai/suggest-rules') {
       const body = await readJsonBody(req);
       const apiKey = process.env.GOOGLE_AI_API_KEY;
-      if (!apiKey) return sendJson(res, 500, { success: false, error: 'GOOGLE_AI_API_KEY is not configured in .env.mysql.local' });
+      if (!apiKey)
+        return sendJson(res, 500, {
+          success: false,
+          error: 'GOOGLE_AI_API_KEY is not configured in .env.mysql.local',
+        });
       let suggestions;
       try {
         const { GoogleGenerativeAI } = await import('@google/generative-ai');
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
         const result = await model.generateContent({
-          contents: [{ role: 'user', parts: [{ text: `You are an expert at P2P (procure-to-pay) data validation. Given the following agent context, suggest validation rules as a JSON array. Each rule: { "id": "unique-id", "type": "rule", "description": "human readable", "confidence": 0.0-1.0, "suggested": { "fieldName": "...", "ruleType": "Required|Format validation|Duplicate check|Cross-reference|Math validation|Threshold check|Custom", "ruleConfig": {}, "severity": "Error|Warning|Info" }, "status": "pending" }. Return ONLY a valid JSON array, no markdown.\n\nContext: ${JSON.stringify(body)}` }] }],
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `You are an expert at P2P (procure-to-pay) data validation. Given the following agent context, suggest validation rules as a JSON array. Each rule: { "id": "unique-id", "type": "rule", "description": "human readable", "confidence": 0.0-1.0, "suggested": { "fieldName": "...", "ruleType": "Required|Format validation|Duplicate check|Cross-reference|Math validation|Threshold check|Custom", "ruleConfig": {}, "severity": "Error|Warning|Info" }, "status": "pending" }. Return ONLY a valid JSON array, no markdown.\n\nContext: ${JSON.stringify(body)}`,
+                },
+              ],
+            },
+          ],
         });
         const text = result.response?.text?.() || '[]';
-        try { suggestions = JSON.parse(text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()); } catch { suggestions = []; }
+        try {
+          suggestions = JSON.parse(
+            text
+              .replace(/```json\n?/g, '')
+              .replace(/```\n?/g, '')
+              .trim()
+          );
+        } catch {
+          suggestions = [];
+        }
       } catch (error) {
-        console.warn('[agents/ai/suggest-rules] AI provider unavailable, using fallback:', error?.message || error);
+        console.warn(
+          '[agents/ai/suggest-rules] AI provider unavailable, using fallback:',
+          error?.message || error
+        );
         suggestions = buildRuleSuggestionsFallback(body);
       }
       if (!Array.isArray(suggestions) || suggestions.length === 0) {
@@ -3720,26 +4849,58 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/agents/ai/generate-rules') {
       const body = await readJsonBody(req);
       const apiKey = process.env.GOOGLE_AI_API_KEY;
-      if (!apiKey) return sendJson(res, 500, { success: false, error: 'GOOGLE_AI_API_KEY is not configured in .env.mysql.local' });
-      const prompt = typeof body.description === 'string' ? body.description : typeof body.prompt === 'string' ? body.prompt : JSON.stringify(body);
+      if (!apiKey)
+        return sendJson(res, 500, {
+          success: false,
+          error: 'GOOGLE_AI_API_KEY is not configured in .env.mysql.local',
+        });
+      const prompt =
+        typeof body.description === 'string'
+          ? body.description
+          : typeof body.prompt === 'string'
+            ? body.prompt
+            : JSON.stringify(body);
       let suggestions;
       try {
         const { GoogleGenerativeAI } = await import('@google/generative-ai');
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
         const result = await model.generateContent({
-          contents: [{ role: 'user', parts: [{ text: `Convert this plain-English validation description into structured rule JSON. Return a JSON array of rules: { "id": "unique-id", "type": "rule", "description": "...", "confidence": 0.0-1.0, "suggested": { "fieldName": "...", "ruleType": "Required|Format validation|Duplicate check|Cross-reference|Math validation|Threshold check|Custom", "ruleConfig": {}, "severity": "Error|Warning|Info" }, "status": "pending" }. Return ONLY a valid JSON array, no markdown.\n\nDescription: ${prompt}\nForm: ${body.formName || ''}\nModule: ${body.module || ''}\nFields: ${JSON.stringify(body.fields || [])}` }] }],
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `Convert this plain-English validation description into structured rule JSON. Return a JSON array of rules: { "id": "unique-id", "type": "rule", "description": "...", "confidence": 0.0-1.0, "suggested": { "fieldName": "...", "ruleType": "Required|Format validation|Duplicate check|Cross-reference|Math validation|Threshold check|Custom", "ruleConfig": {}, "severity": "Error|Warning|Info" }, "status": "pending" }. Return ONLY a valid JSON array, no markdown.\n\nDescription: ${prompt}\nForm: ${body.formName || ''}\nModule: ${body.module || ''}\nFields: ${JSON.stringify(body.fields || [])}`,
+                },
+              ],
+            },
+          ],
         });
         const text = result.response?.text?.() || '[]';
-        try { suggestions = JSON.parse(text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()); } catch { suggestions = []; }
+        try {
+          suggestions = JSON.parse(
+            text
+              .replace(/```json\n?/g, '')
+              .replace(/```\n?/g, '')
+              .trim()
+          );
+        } catch {
+          suggestions = [];
+        }
       } catch (error) {
-        console.warn('[agents/ai/generate-rules] AI provider unavailable, using fallback:', error?.message || error);
+        console.warn(
+          '[agents/ai/generate-rules] AI provider unavailable, using fallback:',
+          error?.message || error
+        );
         suggestions = buildRuleSuggestionsFallback({
           field_name: body.field_name || 'custom_field',
           field_type: 'Text',
         }).map((rule) => ({
           ...rule,
-          description: prompt ? `${rule.description} Context: ${prompt.slice(0, 120)}` : rule.description,
+          description: prompt
+            ? `${rule.description} Context: ${prompt.slice(0, 120)}`
+            : rule.description,
         }));
       }
       if (!Array.isArray(suggestions) || suggestions.length === 0) {
@@ -3754,16 +4915,38 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/agents/ai/suggest-actions') {
       const body = await readJsonBody(req);
       const apiKey = process.env.GOOGLE_AI_API_KEY;
-      if (!apiKey) return sendJson(res, 500, { success: false, error: 'GOOGLE_AI_API_KEY is not configured in .env.mysql.local' });
+      if (!apiKey)
+        return sendJson(res, 500, {
+          success: false,
+          error: 'GOOGLE_AI_API_KEY is not configured in .env.mysql.local',
+        });
       const { GoogleGenerativeAI } = await import('@google/generative-ai');
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
       const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: `You are an expert at P2P automation. Given agent context, suggest post-validation actions as a JSON array. Each action: { "id": "unique-id", "type": "action", "description": "...", "confidence": 0.0-1.0, "suggested": { "actionType": "Create record|Link entity|Trigger approval|Send notification|Create exception|Webhook", "triggerCondition": "Always|On success|On failure", "actionConfig": {} }, "status": "pending" }. Return ONLY a valid JSON array, no markdown.\n\nContext: ${JSON.stringify(body)}` }] }],
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `You are an expert at P2P automation. Given agent context, suggest post-validation actions as a JSON array. Each action: { "id": "unique-id", "type": "action", "description": "...", "confidence": 0.0-1.0, "suggested": { "actionType": "Create record|Link entity|Trigger approval|Send notification|Create exception|Webhook", "triggerCondition": "Always|On success|On failure", "actionConfig": {} }, "status": "pending" }. Return ONLY a valid JSON array, no markdown.\n\nContext: ${JSON.stringify(body)}`,
+              },
+            ],
+          },
+        ],
       });
       const text = result.response?.text?.() || '[]';
       let suggestions;
-      try { suggestions = JSON.parse(text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()); } catch { suggestions = []; }
+      try {
+        suggestions = JSON.parse(
+          text
+            .replace(/```json\n?/g, '')
+            .replace(/```\n?/g, '')
+            .trim()
+        );
+      } catch {
+        suggestions = [];
+      }
       return sendJson(res, 200, { success: true, suggestions });
     }
 
@@ -3801,7 +4984,11 @@ const server = http.createServer(async (req, res) => {
     }
 
     // --- Get agent with rules + actions ---
-    if (req.method === 'GET' && pathname.match(/^\/api\/agents\/[^/]+$/) && !pathname.includes('/ai/')) {
+    if (
+      req.method === 'GET' &&
+      pathname.match(/^\/api\/agents\/[^/]+$/) &&
+      !pathname.includes('/ai/')
+    ) {
       const agentId = pathname.split('/')[3];
       try {
         const { agent, rules, actions } = await loadAgent(query, agentId);
@@ -3820,7 +5007,19 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       const fields = [];
       const values = [];
-      const allowed = ['name', 'type', 'purpose', 'module', 'form_name', 'application_on', 'entity_scope', 'trigger_event', 'target_accuracy', 'fallback_action', 'status'];
+      const allowed = [
+        'name',
+        'type',
+        'purpose',
+        'module',
+        'form_name',
+        'application_on',
+        'entity_scope',
+        'trigger_event',
+        'target_accuracy',
+        'fallback_action',
+        'status',
+      ];
       for (const key of allowed) {
         if (body[key] !== undefined) {
           fields.push(`${key} = ?`);
@@ -3858,7 +5057,9 @@ const server = http.createServer(async (req, res) => {
         const tableName = agent.form_name || agent.module;
         if (tableName && /^[A-Za-z0-9_]+$/.test(tableName)) {
           try {
-            testData = await query(`SELECT * FROM p2p_schema_mt.${tableName} ORDER BY created_at DESC LIMIT 20`);
+            testData = await query(
+              `SELECT * FROM p2p_schema_mt.${tableName} ORDER BY created_at DESC LIMIT 20`
+            );
           } catch {
             // Table may not exist; try generic_masters with module filter
             try {
@@ -3874,7 +5075,10 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (testData.length === 0) {
-        return sendJson(res, 400, { success: false, error: 'No test data available. Provide testData in request body.' });
+        return sendJson(res, 400, {
+          success: false,
+          error: 'No test data available. Provide testData in request body.',
+        });
       }
 
       const result = await testAgent(query, agentId, testData);
@@ -3887,7 +5091,10 @@ const server = http.createServer(async (req, res) => {
       const [agent] = await query('SELECT * FROM p2p_schema_mt.agents WHERE id = ?', [agentId]);
       if (!agent) return sendJson(res, 404, { success: false, error: 'Agent not found' });
 
-      await query("UPDATE p2p_schema_mt.agents SET status = 'Active', accuracy_score = GREATEST(accuracy_score, 95) WHERE id = ?", [agentId]);
+      await query(
+        "UPDATE p2p_schema_mt.agents SET status = 'Active', accuracy_score = GREATEST(accuracy_score, 95) WHERE id = ?",
+        [agentId]
+      );
       return sendJson(res, 200, { success: true, message: 'Agent activated' });
     }
 
@@ -3979,7 +5186,14 @@ Return ONLY valid JSON. No markdown wrapping.`;
         const result = await chatModel.generateContent({
           contents: [
             { role: 'user', parts: [{ text: systemPrompt }] },
-            { role: 'model', parts: [{ text: '{"message": "Hello! I\'m the Procinix AI Assistant. I can help you navigate the app, create records, answer questions about procurement workflows, or execute commands. How can I help?", "actions": [], "needsInfo": false}' }] },
+            {
+              role: 'model',
+              parts: [
+                {
+                  text: '{"message": "Hello! I\'m the Procinix AI Assistant. I can help you navigate the app, create records, answer questions about procurement workflows, or execute commands. How can I help?", "actions": [], "needsInfo": false}',
+                },
+              ],
+            },
             ...history,
             { role: 'user', parts: [{ text: body.message || '' }] },
           ],
@@ -3988,7 +5202,12 @@ Return ONLY valid JSON. No markdown wrapping.`;
         const text = result.response?.text?.() || '{}';
         let parsed;
         try {
-          parsed = JSON.parse(text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+          parsed = JSON.parse(
+            text
+              .replace(/```json\n?/g, '')
+              .replace(/```\n?/g, '')
+              .trim()
+          );
         } catch {
           parsed = { message: text, actions: [] };
         }
@@ -3996,7 +5215,11 @@ Return ONLY valid JSON. No markdown wrapping.`;
         return sendJson(res, 200, { success: true, ...parsed });
       } catch (chatErr) {
         console.error('[Chat API Error]', chatErr);
-        return sendJson(res, 500, { success: false, error: 'AI service error', message: 'Sorry, I encountered an error. Please try again.' });
+        return sendJson(res, 500, {
+          success: false,
+          error: 'AI service error',
+          message: 'Sorry, I encountered an error. Please try again.',
+        });
       }
     }
 
@@ -4032,7 +5255,9 @@ Return ONLY valid JSON. No markdown wrapping.`;
 const port = parseInt(process.env.APP_PORT || process.env.PORT || '8787', 10);
 const host = IS_PRODUCTION ? '0.0.0.0' : '127.0.0.1';
 server.listen(port, host, async () => {
-  console.log(`Procinix P2P API listening on http://${host}:${port} [${process.env.NODE_ENV || 'development'}]`);
+  console.log(
+    `Procinix P2P API listening on http://${host}:${port} [${process.env.NODE_ENV || 'development'}]`
+  );
 
   // Load runtime settings from DB and overlay onto process.env BEFORE any service
   // reads env (OCR check, email poller, etc.).
@@ -4040,11 +5265,15 @@ server.listen(port, host, async () => {
   checkAndExitIfInvalid();
 
   // When IMAP credentials or interval change, stop+restart the poller.
-  onSettingsChange('AP_EMAIL_', () => { restartEmailPoller(); });
-  onSettingsChange('AP_POLL_INTERVAL_MINUTES', () => { restartEmailPoller(); });
+  onSettingsChange('AP_EMAIL_', () => {
+    restartEmailPoller();
+  });
+  onSettingsChange('AP_POLL_INTERVAL_MINUTES', () => {
+    restartEmailPoller();
+  });
 
   await ensureSessionsTable().catch((err) =>
-    console.warn('[startup] sessions table check failed (non-fatal):', err.message),
+    console.warn('[startup] sessions table check failed (non-fatal):', err.message)
   );
   checkGeminiKey();
   startEmailPoller(processInvoiceWithAgents);
@@ -4061,12 +5290,20 @@ server.listen(port, host, async () => {
   // PO Expiry cron jobs
   cron.schedule('0 0 * * *', async () => {
     console.log('[CRON] Running PO expiry check...');
-    try { await checkAndProcessExpiries(query); } catch (e) { console.error('[CRON] Expiry check failed:', e.message); }
+    try {
+      await checkAndProcessExpiries(query);
+    } catch (e) {
+      console.error('[CRON] Expiry check failed:', e.message);
+    }
   });
 
   cron.schedule('0 9 * * *', async () => {
     console.log('[CRON] Sending PO expiry reminders...');
-    try { await sendExpiryReminders(query); } catch (e) { console.error('[CRON] Reminder failed:', e.message); }
+    try {
+      await sendExpiryReminders(query);
+    } catch (e) {
+      console.error('[CRON] Reminder failed:', e.message);
+    }
   });
 
   cron.schedule('*/30 * * * *', async () => {

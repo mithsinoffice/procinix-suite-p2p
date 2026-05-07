@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
+import { isMysqlApiEnabled, mysqlApiRequest } from '../lib/mysql/client';
 
 // ============= INTERFACES =============
 
@@ -13,7 +14,14 @@ export interface Invoice {
   poNumber?: string;
   totalAmount: number;
   currency: string;
-  status: 'Draft' | 'Pending Approval' | 'Under Review' | 'Approved' | 'Rejected' | 'Paid' | 'Partially Paid';
+  status:
+    | 'Draft'
+    | 'Pending Approval'
+    | 'Under Review'
+    | 'Approved'
+    | 'Rejected'
+    | 'Paid'
+    | 'Partially Paid';
   dueDate?: string;
   approver?: string;
   paymentStatus: 'Unpaid' | 'Partially Paid' | 'Paid';
@@ -225,12 +233,60 @@ export interface DebitNote {
 // ============= MOCK DATA =============
 
 const mockVendors: Vendor[] = [
-  { code: 'V001', name: 'Acme Supplies Ltd', gstin: '27AAAAA0000A1Z5', type: 'Domestic', paymentTerms: 'Net 30', currency: 'INR', category: 'Contractor' },
-  { code: 'V002', name: 'Global Tech Solutions', gstin: '27BBBBB0000B1Z5', type: 'Domestic', paymentTerms: 'Net 45', currency: 'INR', category: 'Professional Services' },
-  { code: 'V003', name: 'Office Depot India', gstin: '27CCCCC0000C1Z5', type: 'Domestic', paymentTerms: 'Net 15', currency: 'INR', category: 'MSME' },
-  { code: 'V004', name: 'Engineering Parts Co', gstin: '27DDDDD0000D1Z5', type: 'Domestic', paymentTerms: 'Net 60', currency: 'INR', category: 'Contractor' },
-  { code: 'V005', name: 'Marketing Materials Inc', gstin: '27EEEEE0000E1Z5', type: 'Domestic', paymentTerms: 'Net 30', currency: 'INR', category: 'Commission' },
-  { code: 'V006', name: 'Facility Services Ltd', gstin: '27FFFFF0000F1Z5', type: 'Domestic', paymentTerms: 'Net 30', currency: 'INR', category: 'Rent' },
+  {
+    code: 'V001',
+    name: 'Acme Supplies Ltd',
+    gstin: '27AAAAA0000A1Z5',
+    type: 'Domestic',
+    paymentTerms: 'Net 30',
+    currency: 'INR',
+    category: 'Contractor',
+  },
+  {
+    code: 'V002',
+    name: 'Global Tech Solutions',
+    gstin: '27BBBBB0000B1Z5',
+    type: 'Domestic',
+    paymentTerms: 'Net 45',
+    currency: 'INR',
+    category: 'Professional Services',
+  },
+  {
+    code: 'V003',
+    name: 'Office Depot India',
+    gstin: '27CCCCC0000C1Z5',
+    type: 'Domestic',
+    paymentTerms: 'Net 15',
+    currency: 'INR',
+    category: 'MSME',
+  },
+  {
+    code: 'V004',
+    name: 'Engineering Parts Co',
+    gstin: '27DDDDD0000D1Z5',
+    type: 'Domestic',
+    paymentTerms: 'Net 60',
+    currency: 'INR',
+    category: 'Contractor',
+  },
+  {
+    code: 'V005',
+    name: 'Marketing Materials Inc',
+    gstin: '27EEEEE0000E1Z5',
+    type: 'Domestic',
+    paymentTerms: 'Net 30',
+    currency: 'INR',
+    category: 'Commission',
+  },
+  {
+    code: 'V006',
+    name: 'Facility Services Ltd',
+    gstin: '27FFFFF0000F1Z5',
+    type: 'Domestic',
+    paymentTerms: 'Net 30',
+    currency: 'INR',
+    category: 'Rent',
+  },
 ];
 
 const mockPurchaseOrders: PurchaseOrder[] = [
@@ -258,7 +314,7 @@ const mockPurchaseOrders: PurchaseOrder[] = [
         eligibleAdvanceAmount: 20000,
         advanceUtilized: 0,
         remainingEligibleAmount: 20000,
-        status: 'Pending'
+        status: 'Pending',
       },
       {
         id: 'M2-PO1',
@@ -270,8 +326,8 @@ const mockPurchaseOrders: PurchaseOrder[] = [
         eligibleAdvanceAmount: 30000,
         advanceUtilized: 0,
         remainingEligibleAmount: 30000,
-        status: 'Pending'
-      }
+        status: 'Pending',
+      },
     ],
     lineItems: [
       {
@@ -298,7 +354,7 @@ const mockPurchaseOrders: PurchaseOrder[] = [
         netAmount: 986000,
         costCentre: 'CC-IT-001',
         profitCentre: 'PC-CORP-001',
-        project: 'PRJ-2024-IT-INFRA'
+        project: 'PRJ-2024-IT-INFRA',
       },
       {
         id: 'PO1-L2',
@@ -324,9 +380,9 @@ const mockPurchaseOrders: PurchaseOrder[] = [
         netAmount: 435000,
         costCentre: 'CC-IT-001',
         profitCentre: 'PC-CORP-001',
-        project: 'PRJ-2024-IT-INFRA'
-      }
-    ]
+        project: 'PRJ-2024-IT-INFRA',
+      },
+    ],
   },
   {
     id: '2',
@@ -352,7 +408,7 @@ const mockPurchaseOrders: PurchaseOrder[] = [
         eligibleAdvanceAmount: 60000,
         advanceUtilized: 0,
         remainingEligibleAmount: 60000,
-        status: 'In Progress'
+        status: 'In Progress',
       },
       {
         id: 'M2-PO2',
@@ -364,7 +420,7 @@ const mockPurchaseOrders: PurchaseOrder[] = [
         eligibleAdvanceAmount: 80000,
         advanceUtilized: 0,
         remainingEligibleAmount: 80000,
-        status: 'Pending'
+        status: 'Pending',
       },
       {
         id: 'M3-PO2',
@@ -376,8 +432,8 @@ const mockPurchaseOrders: PurchaseOrder[] = [
         eligibleAdvanceAmount: 40000,
         advanceUtilized: 0,
         remainingEligibleAmount: 40000,
-        status: 'Pending'
-      }
+        status: 'Pending',
+      },
     ],
     lineItems: [
       {
@@ -404,9 +460,9 @@ const mockPurchaseOrders: PurchaseOrder[] = [
         netAmount: 486000,
         costCentre: 'CC-OPS-001',
         profitCentre: 'PC-TECH-001',
-        project: 'PRJ-2024-CLOUD'
-      }
-    ]
+        project: 'PRJ-2024-CLOUD',
+      },
+    ],
   },
   {
     id: '3',
@@ -446,10 +502,10 @@ const mockPurchaseOrders: PurchaseOrder[] = [
         netAmount: 235875,
         costCentre: 'CC-ADM-001',
         profitCentre: 'PC-CORP-001',
-        project: ''
-      }
-    ]
-  }
+        project: '',
+      },
+    ],
+  },
 ];
 
 const mockGRNs: GRN[] = [
@@ -477,9 +533,9 @@ const mockGRNs: GRN[] = [
         qtyAccepted: 10,
         qtyRejected: 0,
         unitPrice: 85000,
-        amount: 850000
-      }
-    ]
+        amount: 850000,
+      },
+    ],
   },
   {
     id: '2',
@@ -505,9 +561,9 @@ const mockGRNs: GRN[] = [
         qtyAccepted: 15,
         qtyRejected: 0,
         unitPrice: 25000,
-        amount: 375000
-      }
-    ]
+        amount: 375000,
+      },
+    ],
   },
   {
     id: '3',
@@ -533,10 +589,10 @@ const mockGRNs: GRN[] = [
         qtyAccepted: 25,
         qtyRejected: 0,
         unitPrice: 8500,
-        amount: 212500
-      }
-    ]
-  }
+        amount: 212500,
+      },
+    ],
+  },
 ];
 
 const mockAdvances: Advance[] = [
@@ -551,7 +607,7 @@ const mockAdvances: Advance[] = [
     adjustedAmount: 20000,
     openBalance: 30000,
     date: '2024-11-15',
-    status: 'Partially Adjusted'
+    status: 'Partially Adjusted',
   },
   {
     id: '2',
@@ -564,7 +620,7 @@ const mockAdvances: Advance[] = [
     adjustedAmount: 25000,
     openBalance: 50000,
     date: '2024-11-20',
-    status: 'Partially Adjusted'
+    status: 'Partially Adjusted',
   },
   {
     id: '3',
@@ -577,8 +633,8 @@ const mockAdvances: Advance[] = [
     adjustedAmount: 0,
     openBalance: 100000,
     date: '2024-11-25',
-    status: 'Open'
-  }
+    status: 'Open',
+  },
 ];
 
 const mockAdvanceRequests: AdvanceRequest[] = [
@@ -613,7 +669,7 @@ const mockAdvanceRequests: AdvanceRequest[] = [
     rejectionReason: '',
     createdBy: 'John Doe',
     createdDate: '2024-12-01',
-    submittedDate: '2024-12-01'
+    submittedDate: '2024-12-01',
   },
   {
     id: '2',
@@ -642,8 +698,8 @@ const mockAdvanceRequests: AdvanceRequest[] = [
     rejectionReason: '',
     createdBy: 'Jane Smith',
     createdDate: '2024-12-05',
-    submittedDate: '2024-12-05'
-  }
+    submittedDate: '2024-12-05',
+  },
 ];
 
 const mockAdvanceUtilizations: AdvanceUtilization[] = [
@@ -659,11 +715,11 @@ const mockAdvanceUtilizations: AdvanceUtilization[] = [
         adjustmentDate: '2024-12-03',
         invoiceNumber: 'INV-2024-001',
         adjustedAmount: 20000,
-        narration: 'Payment for initial setup'
-      }
+        narration: 'Payment for initial setup',
+      },
     ],
     remainingBalance: 30000,
-    status: 'Partially Adjusted'
+    status: 'Partially Adjusted',
   },
   {
     id: '2',
@@ -677,12 +733,12 @@ const mockAdvanceUtilizations: AdvanceUtilization[] = [
         adjustmentDate: '2024-12-04',
         invoiceNumber: 'INV-2024-002',
         adjustedAmount: 25000,
-        narration: 'Payment for general expenses'
-      }
+        narration: 'Payment for general expenses',
+      },
     ],
     remainingBalance: 50000,
-    status: 'Partially Adjusted'
-  }
+    status: 'Partially Adjusted',
+  },
 ];
 
 const mockDebitNotes: DebitNote[] = [
@@ -765,7 +821,7 @@ const mockInvoices: Invoice[] = [
     dueDate: '2025-01-14',
     approver: 'John Smith',
     paymentStatus: 'Unpaid',
-    matchStatus: '3-Way Matched'
+    matchStatus: '3-Way Matched',
   },
   {
     id: '2',
@@ -781,7 +837,7 @@ const mockInvoices: Invoice[] = [
     dueDate: '2025-01-28',
     approver: 'Jane Doe',
     paymentStatus: 'Unpaid',
-    matchStatus: 'Partially Matched'
+    matchStatus: 'Partially Matched',
   },
   {
     id: '3',
@@ -797,7 +853,7 @@ const mockInvoices: Invoice[] = [
     dueDate: '2024-12-28',
     approver: 'Mike Johnson',
     paymentStatus: 'Paid',
-    matchStatus: '3-Way Matched'
+    matchStatus: '3-Way Matched',
   },
   {
     id: '4',
@@ -812,7 +868,7 @@ const mockInvoices: Invoice[] = [
     dueDate: '2025-02-11',
     approver: 'Sarah Williams',
     paymentStatus: 'Unpaid',
-    matchStatus: 'Unmatched'
+    matchStatus: 'Unmatched',
   },
   {
     id: '5',
@@ -827,7 +883,7 @@ const mockInvoices: Invoice[] = [
     dueDate: '2025-01-10',
     approver: 'David Brown',
     paymentStatus: 'Unpaid',
-    matchStatus: 'Unmatched'
+    matchStatus: 'Unmatched',
   },
   {
     id: '6',
@@ -842,7 +898,7 @@ const mockInvoices: Invoice[] = [
     dueDate: '2025-01-09',
     approver: 'Emma Davis',
     paymentStatus: 'Unpaid',
-    matchStatus: 'Unmatched'
+    matchStatus: 'Unmatched',
   },
   {
     id: '7',
@@ -858,7 +914,7 @@ const mockInvoices: Invoice[] = [
     dueDate: '2025-01-08',
     approver: 'John Smith',
     paymentStatus: 'Paid',
-    matchStatus: '3-Way Matched'
+    matchStatus: '3-Way Matched',
   },
   {
     id: '8',
@@ -873,8 +929,8 @@ const mockInvoices: Invoice[] = [
     dueDate: '2024-12-22',
     approver: 'Jane Doe',
     paymentStatus: 'Unpaid',
-    matchStatus: 'Unmatched'
-  }
+    matchStatus: 'Unmatched',
+  },
 ];
 
 // ============= CONTEXT =============
@@ -942,8 +998,62 @@ export function APDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
+    const mapDbRowToInvoice = (row: any): Invoice => {
+      const hasPO = !!row.po_number || !!row.po_id;
+      const total = Number(row.total_amount) || 0;
+      const paid = Number(row.payment_total) || 0;
+
+      const lifecycleStatusMap: Record<string, Invoice['status']> = {
+        Ingested: 'Draft',
+        'OCR Extracted': 'Draft',
+        'Under Verification': 'Pending Approval',
+        'Exception Hold': 'Under Review',
+        Processed: 'Approved',
+        'Queued for Payment': 'Approved',
+        Rejected: 'Rejected',
+      };
+      const legacyStatusMap: Record<string, Invoice['status']> = {
+        draft: 'Draft',
+        pending_approval: 'Pending Approval',
+        approved: 'Approved',
+        rejected: 'Rejected',
+        paid: 'Paid',
+      };
+
+      let status: Invoice['status'] =
+        (row.lifecycle_state && lifecycleStatusMap[row.lifecycle_state]) ||
+        (row.status && legacyStatusMap[String(row.status).toLowerCase()]) ||
+        'Pending Approval';
+
+      let paymentStatus: Invoice['paymentStatus'] = 'Unpaid';
+      if (total > 0 && paid >= total) {
+        paymentStatus = 'Paid';
+        status = 'Paid';
+      } else if (paid > 0) {
+        paymentStatus = 'Partially Paid';
+      }
+
+      return {
+        id: String(row.id),
+        invoiceNumber: row.invoice_number || 'AI-Extracted',
+        invoiceDate: row.invoice_date ? String(row.invoice_date).split('T')[0] : '',
+        vendorName: row.vendor_name || '',
+        vendorCode: row.vendor_gstin || row.vendor_id || '',
+        invoiceType: hasPO ? 'PO' : 'Non-PO',
+        poNumber: row.po_number || undefined,
+        totalAmount: total,
+        currency: row.currency || 'INR',
+        status,
+        dueDate: row.due_date ? String(row.due_date).split('T')[0] : undefined,
+        paymentStatus,
+        matchStatus: hasPO ? '3-Way Matched' : undefined,
+      };
+    };
+
     const hydrate = async () => {
-      const document = await ensureDomainDocument('ap_data', defaultDocument, { seedIfMissing: false });
+      const document = await ensureDomainDocument('ap_data', defaultDocument, {
+        seedIfMissing: false,
+      });
       if (!isMounted) {
         return;
       }
@@ -954,9 +1064,29 @@ export function APDataProvider({ children }: { children: ReactNode }) {
       setAdvances(document.advances ?? defaultDocument.advances);
       setAdvanceRequests(document.advanceRequests ?? defaultDocument.advanceRequests);
       setAdvanceUtilizations(document.advanceUtilizations ?? defaultDocument.advanceUtilizations);
-      setInvoices(document.invoices ?? defaultDocument.invoices);
       setDebitNotes(document.debitNotes ?? defaultDocument.debitNotes);
-      setIsHydrating(false);
+
+      // Invoices: prefer MySQL API, fall back to ap_data domain doc
+      let invoicesLoaded = false;
+      if (isMysqlApiEnabled()) {
+        try {
+          const json = await mysqlApiRequest<{ success: boolean; data: any[] }>(
+            '/invoices?limit=500'
+          );
+          if (isMounted && json?.success && Array.isArray(json.data)) {
+            setInvoices(json.data.map(mapDbRowToInvoice));
+            invoicesLoaded = true;
+          }
+        } catch {
+          // fall through to domain doc fallback
+        }
+      }
+
+      if (isMounted && !invoicesLoaded) {
+        setInvoices(document.invoices ?? defaultDocument.invoices);
+      }
+
+      if (isMounted) setIsHydrating(false);
     };
 
     hydrate();
@@ -965,60 +1095,6 @@ export function APDataProvider({ children }: { children: ReactNode }) {
       isMounted = false;
     };
   }, []);
-
-  // Fetch AI-ingested invoices from MySQL and merge into state
-  useEffect(() => {
-    if (isHydrating) return;
-    let cancelled = false;
-
-    const fetchIngested = async () => {
-      try {
-        const res = await fetch('/api/invoices?source=email_ingestion');
-        if (!res.ok) return;
-        const json = await res.json();
-        if (!json.success || !Array.isArray(json.data) || cancelled) return;
-
-        const mapped: Invoice[] = json.data.map((row: any) => {
-          const hasPO = !!row.po_number || !!row.po_id;
-          const statusMap: Record<string, Invoice['status']> = {
-            pending_approval: 'Pending Approval',
-            draft: 'Draft',
-            approved: 'Approved',
-            rejected: 'Rejected',
-            paid: 'Paid',
-          };
-          return {
-            id: row.id,
-            invoiceNumber: row.invoice_number || 'AI-Extracted',
-            invoiceDate: row.invoice_date ? String(row.invoice_date).split('T')[0] : '',
-            vendorName: row.vendor_name || '',
-            vendorCode: row.vendor_gstin || '',
-            invoiceType: hasPO ? 'PO' as const : 'Non-PO' as const,
-            poNumber: row.po_number || undefined,
-            totalAmount: Number(row.total_amount) || 0,
-            currency: row.currency || 'INR',
-            status: statusMap[row.status] || 'Pending Approval' as const,
-            dueDate: row.due_date ? String(row.due_date).split('T')[0] : undefined,
-            paymentStatus: 'Unpaid' as const,
-            matchStatus: hasPO ? '3-Way Matched' as const : undefined,
-            _source: 'ai_ingestion',
-            _dbId: row.id,
-            _hasPO: hasPO,
-          };
-        });
-
-        // Replace all AI-ingested invoices with fresh DB data (removes stale duplicates)
-        setInvoices((current) => {
-          const nonAI = current.filter((i: any) => i._source !== 'ai_ingestion');
-          return [...mapped, ...nonAI];
-        });
-      } catch {
-        // API may not be running
-      }
-    };
-
-    fetchIngested();
-  }, [isHydrating]);
 
   useEffect(() => {
     if (isHydrating) {
@@ -1035,26 +1111,38 @@ export function APDataProvider({ children }: { children: ReactNode }) {
       invoices,
       debitNotes,
     });
-  }, [advances, advanceRequests, advanceUtilizations, debitNotes, grns, invoices, isHydrating, purchaseOrders, vendors]);
+  }, [
+    advances,
+    advanceRequests,
+    advanceUtilizations,
+    debitNotes,
+    grns,
+    invoices,
+    isHydrating,
+    purchaseOrders,
+    vendors,
+  ]);
 
   const getVendorByCode = (code: string) => {
-    return vendors.find(v => v.code === code);
+    return vendors.find((v) => v.code === code);
   };
 
   const getPOsByVendor = (vendorCode: string) => {
-    return purchaseOrders.filter(po => po.vendorCode === vendorCode && po.status !== 'Closed / Cancelled');
+    return purchaseOrders.filter(
+      (po) => po.vendorCode === vendorCode && po.status !== 'Closed / Cancelled'
+    );
   };
 
   const getGRNsByPO = (poNumber: string) => {
-    return grns.filter(grn => grn.poNumber === poNumber);
+    return grns.filter((grn) => grn.poNumber === poNumber);
   };
 
   const getAdvancesByVendor = (vendorCode: string) => {
-    return advances.filter(adv => adv.vendorCode === vendorCode && adv.openBalance > 0);
+    return advances.filter((adv) => adv.vendorCode === vendorCode && adv.openBalance > 0);
   };
 
   const getPOByNumber = (poNumber: string) => {
-    return purchaseOrders.find(po => po.poNumber === poNumber);
+    return purchaseOrders.find((po) => po.poNumber === poNumber);
   };
 
   const getDebitNoteById = (id: string) => {
@@ -1075,42 +1163,24 @@ export function APDataProvider({ children }: { children: ReactNode }) {
 
   const updateInvoice = (id: string, updates: Partial<Invoice>) => {
     setInvoices((current) =>
-      current.map((invoice) => (
-        invoice.id === id
-          ? { ...invoice, ...updates }
-          : invoice
-      ))
+      current.map((invoice) => (invoice.id === id ? { ...invoice, ...updates } : invoice))
     );
   };
 
   const updateDebitNote = (id: string, updates: Partial<DebitNote>) => {
     setDebitNotes((current) =>
-      current.map((debitNote) => (
-        debitNote.id === id
-          ? { ...debitNote, ...updates }
-          : debitNote
-      ))
+      current.map((debitNote) => (debitNote.id === id ? { ...debitNote, ...updates } : debitNote))
     );
   };
 
   const updateAdvanceRequest = (id: string, updates: Partial<AdvanceRequest>) => {
     setAdvanceRequests((current) =>
-      current.map((request) => (
-        request.id === id
-          ? { ...request, ...updates }
-          : request
-      ))
+      current.map((request) => (request.id === id ? { ...request, ...updates } : request))
     );
   };
 
   const updateGRN = (id: string, updates: Partial<GRN>) => {
-    setGRNs((current) =>
-      current.map((grn) => (
-        grn.id === id
-          ? { ...grn, ...updates }
-          : grn
-      ))
-    );
+    setGRNs((current) => current.map((grn) => (grn.id === id ? { ...grn, ...updates } : grn)));
   };
 
   return (
@@ -1137,7 +1207,7 @@ export function APDataProvider({ children }: { children: ReactNode }) {
         updateInvoice,
         updateDebitNote,
         updateAdvanceRequest,
-        updateGRN
+        updateGRN,
       }}
     >
       {children}

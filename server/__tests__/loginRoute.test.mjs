@@ -3,12 +3,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 vi.mock('../services/auth/loginService.mjs', () => ({
-  authenticateUser:    vi.fn(),
-  createSession:       vi.fn(),
-  lookupSession:       vi.fn(),
-  fetchContext:        vi.fn(),
-  getUserById:         vi.fn(),
-  revokeSession:       vi.fn(),
+  authenticateUser: vi.fn(),
+  createSession: vi.fn(),
+  lookupSession: vi.fn(),
+  fetchContext: vi.fn(),
+  getUserById: vi.fn(),
+  revokeSession: vi.fn(),
   ensureSessionsTable: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -30,7 +30,9 @@ function makeReqRes(method, pathname, body, { reqUser } = {}) {
     method,
     url: pathname,
     user: reqUser ?? undefined,
-    [Symbol.asyncIterator]: async function* () { yield* bodyChunks; },
+    [Symbol.asyncIterator]: async function* () {
+      yield* bodyChunks;
+    },
   };
   const responses = [];
   const sendJson = (_res, status, payload) => responses.push({ status, payload });
@@ -53,14 +55,18 @@ describe('handleAuthRoute — POST /api/auth/login', () => {
   });
 
   it('responds 400 when email is missing', async () => {
-    const { req, res, responses, sendJson } = makeReqRes('POST', '/api/auth/login', { password: 'x' });
+    const { req, res, responses, sendJson } = makeReqRes('POST', '/api/auth/login', {
+      password: 'x',
+    });
     const handled = await handleAuthRoute(req, res, '/api/auth/login', sendJson);
     expect(handled).toBe(true);
     expect(responses[0].status).toBe(400);
   });
 
   it('responds 400 when password is missing', async () => {
-    const { req, res, responses, sendJson } = makeReqRes('POST', '/api/auth/login', { email: 'a@b.com' });
+    const { req, res, responses, sendJson } = makeReqRes('POST', '/api/auth/login', {
+      email: 'a@b.com',
+    });
     const handled = await handleAuthRoute(req, res, '/api/auth/login', sendJson);
     expect(handled).toBe(true);
     expect(responses[0].status).toBe(400);
@@ -76,7 +82,8 @@ describe('handleAuthRoute — POST /api/auth/login', () => {
   it('responds 401 when authenticateUser returns ok=false', async () => {
     vi.mocked(authenticateUser).mockResolvedValueOnce({ ok: false, reason: 'invalid_credentials' });
     const { req, res, responses, sendJson } = makeReqRes('POST', '/api/auth/login', {
-      email: 'a@b.com', password: 'wrong',
+      email: 'a@b.com',
+      password: 'wrong',
     });
     const handled = await handleAuthRoute(req, res, '/api/auth/login', sendJson);
     expect(handled).toBe(true);
@@ -90,7 +97,8 @@ describe('handleAuthRoute — POST /api/auth/login', () => {
     vi.mocked(createSession).mockResolvedValueOnce('deadbeef'.repeat(8));
 
     const { req, res, responses, sendJson } = makeReqRes('POST', '/api/auth/login', {
-      email: 'a@b.com', password: 'correct',
+      email: 'a@b.com',
+      password: 'correct',
     });
     const handled = await handleAuthRoute(req, res, '/api/auth/login', sendJson);
     expect(handled).toBe(true);
@@ -110,7 +118,8 @@ describe('handleAuthRoute — POST /api/auth/login', () => {
     });
 
     const { req, res, responses, sendJson } = makeReqRes('POST', '/api/auth/login', {
-      email: 'a@b.com', password: 'correct',
+      email: 'a@b.com',
+      password: 'correct',
     });
     await handleAuthRoute(req, res, '/api/auth/login', sendJson);
     const { user: u } = responses[0].payload;
@@ -124,7 +133,8 @@ describe('handleAuthRoute — POST /api/auth/login', () => {
     vi.mocked(createSession).mockResolvedValueOnce('abc123');
 
     const { req, res, responses, sendJson } = makeReqRes('POST', '/api/auth/login', {
-      email: 'a@b.com', password: 'correct',
+      email: 'a@b.com',
+      password: 'correct',
     });
     await handleAuthRoute(req, res, '/api/auth/login', sendJson);
     const { payload } = responses[0];
@@ -150,10 +160,9 @@ describe('handleAuthRoute — GET /api/auth/me', () => {
 
   it('responds 401 when getUserById returns null (user deleted/inactive)', async () => {
     vi.mocked(getUserById).mockResolvedValueOnce(null);
-    const { req, res, responses, sendJson } = makeReqRes(
-      'GET', '/api/auth/me', null,
-      { reqUser: { userId: 'u-1', sessionId: 's-1', tenantId: 't-1', email: 'a@b.com' } },
-    );
+    const { req, res, responses, sendJson } = makeReqRes('GET', '/api/auth/me', null, {
+      reqUser: { userId: 'u-1', sessionId: 's-1', tenantId: 't-1', email: 'a@b.com' },
+    });
     const handled = await handleAuthRoute(req, res, '/api/auth/me', sendJson);
     expect(handled).toBe(true);
     expect(responses[0].status).toBe(401);
@@ -169,10 +178,9 @@ describe('handleAuthRoute — GET /api/auth/me', () => {
       entities: [{ id: 'e-1', name: 'Main', code: 'MAIN', isDefault: true }],
     });
 
-    const { req, res, responses, sendJson } = makeReqRes(
-      'GET', '/api/auth/me', null,
-      { reqUser: { userId: 'u-1', sessionId: 's-1', tenantId: 't-1', email: 'a@b.com' } },
-    );
+    const { req, res, responses, sendJson } = makeReqRes('GET', '/api/auth/me', null, {
+      reqUser: { userId: 'u-1', sessionId: 's-1', tenantId: 't-1', email: 'a@b.com' },
+    });
     const handled = await handleAuthRoute(req, res, '/api/auth/me', sendJson);
     expect(handled).toBe(true);
     expect(responses[0].status).toBe(200);
@@ -187,10 +195,9 @@ describe('handleAuthRoute — GET /api/auth/me', () => {
 describe('handleAuthRoute — POST /api/auth/logout', () => {
   it('revokes session and responds 200', async () => {
     vi.mocked(revokeSession).mockResolvedValueOnce(undefined);
-    const { req, res, responses, sendJson } = makeReqRes(
-      'POST', '/api/auth/logout', null,
-      { reqUser: { userId: 'u-1', sessionId: 'sess-abc', tenantId: 't-1', email: 'a@b.com' } },
-    );
+    const { req, res, responses, sendJson } = makeReqRes('POST', '/api/auth/logout', null, {
+      reqUser: { userId: 'u-1', sessionId: 'sess-abc', tenantId: 't-1', email: 'a@b.com' },
+    });
     const handled = await handleAuthRoute(req, res, '/api/auth/logout', sendJson);
     expect(handled).toBe(true);
     expect(responses[0].status).toBe(200);
@@ -212,9 +219,9 @@ describe('lookupSession — token validates on subsequent request', () => {
   it('returns session metadata for a valid stored token', async () => {
     const expectedSession = {
       sessionId: 'sess-1',
-      userId:    'u-001',
-      tenantId:  'tenant-001',
-      email:     'a@b.com',
+      userId: 'u-001',
+      tenantId: 'tenant-001',
+      email: 'a@b.com',
     };
     vi.mocked(lookupSession).mockResolvedValueOnce(expectedSession);
 

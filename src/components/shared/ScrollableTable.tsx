@@ -137,7 +137,9 @@ export function ScrollableTable({
         >
           <option value="">{col.placeholder || 'Select...'}</option>
           {(col.options || []).map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
           ))}
         </select>
       );
@@ -146,13 +148,27 @@ export function ScrollableTable({
     if (col.type === 'chips') {
       const chips: string[] = Array.isArray(val) ? val : [];
       return (
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', minHeight: 32, alignItems: 'center' }}>
+        <div
+          style={{ display: 'flex', gap: 4, flexWrap: 'wrap', minHeight: 32, alignItems: 'center' }}
+        >
           {chips.map((c, i) => (
-            <span key={i} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, backgroundColor: 'var(--color-teal-tint, #ECFEFF)', color: 'var(--color-teal)', fontWeight: 500 }}>
+            <span
+              key={i}
+              style={{
+                fontSize: 11,
+                padding: '2px 8px',
+                borderRadius: 12,
+                backgroundColor: 'var(--color-teal-tint, #ECFEFF)',
+                color: 'var(--color-teal)',
+                fontWeight: 500,
+              }}
+            >
               {c}
             </span>
           ))}
-          {chips.length === 0 && <span style={{ color: 'var(--color-mercury-grey)', fontSize: 12 }}>-</span>}
+          {chips.length === 0 && (
+            <span style={{ color: 'var(--color-mercury-grey)', fontSize: 12 }}>-</span>
+          )}
         </div>
       );
     }
@@ -164,22 +180,34 @@ export function ScrollableTable({
         placeholder={col.placeholder || ''}
         onChange={(e) => onRowChange(rowIdx, col.key, e.target.value)}
         style={inputStyle}
-        onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = 'var(--color-teal)'; }}
-        onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = 'var(--color-silver)'; }}
+        onFocus={(e) => {
+          (e.target as HTMLInputElement).style.borderColor = 'var(--color-teal)';
+        }}
+        onBlur={(e) => {
+          (e.target as HTMLInputElement).style.borderColor = 'var(--color-silver)';
+        }}
       />
     );
   }
 
-  const isPrimary = (row: any) => primaryField ? !!row[primaryField] : false;
+  const isPrimary = (row: any) => (primaryField ? !!row[primaryField] : false);
 
   return (
     <div>
       {/* Scroll hint */}
       {canScroll && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          padding: '6px 0', fontSize: 11, color: 'var(--color-mercury-grey)', fontStyle: 'italic',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            padding: '6px 0',
+            fontSize: 11,
+            color: 'var(--color-mercury-grey)',
+            fontStyle: 'italic',
+          }}
+        >
           <span style={{ fontSize: 14 }}>&larr;&rarr;</span> Scroll to see all fields
         </div>
       )}
@@ -204,20 +232,37 @@ export function ScrollableTable({
                   style={{
                     ...headerCellStyle,
                     width: col.width,
-                    ...(col.sticky ? { position: 'sticky' as const, left: 0, zIndex: 2, boxShadow: '2px 0 4px rgba(0,0,0,0.04)' } : {}),
+                    ...(col.sticky
+                      ? {
+                          position: 'sticky' as const,
+                          left: 0,
+                          zIndex: 2,
+                          boxShadow: '2px 0 4px rgba(0,0,0,0.04)',
+                        }
+                      : {}),
                   }}
                 >
                   {col.label}
                   {col.required && <span style={{ color: 'var(--color-error-dark)' }}> *</span>}
                 </th>
               ))}
-              {onRemoveRow && <th style={{ ...headerCellStyle, width: 44, textAlign: 'center' }}></th>}
+              {onRemoveRow && (
+                <th style={{ ...headerCellStyle, width: 44, textAlign: 'center' }}></th>
+              )}
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={columns.length + 2} style={{ textAlign: 'center', padding: 24, color: 'var(--color-mercury-grey)', fontSize: 13 }}>
+                <td
+                  colSpan={columns.length + 2}
+                  style={{
+                    textAlign: 'center',
+                    padding: 24,
+                    color: 'var(--color-mercury-grey)',
+                    fontSize: 13,
+                  }}
+                >
                   No rows added yet. Click "{addButtonLabel}" below.
                 </td>
               </tr>
@@ -229,7 +274,15 @@ export function ScrollableTable({
                 : {};
               return (
                 <tr key={idx} style={rowStyle}>
-                  <td style={{ ...bodyCellStyle, textAlign: 'center', fontSize: 12, color: 'var(--color-mercury-grey)', fontWeight: 600 }}>
+                  <td
+                    style={{
+                      ...bodyCellStyle,
+                      textAlign: 'center',
+                      fontSize: 12,
+                      color: 'var(--color-mercury-grey)',
+                      fontWeight: 600,
+                    }}
+                  >
                     {idx + 1}
                   </td>
                   {columns.map((col) => (
@@ -257,7 +310,13 @@ export function ScrollableTable({
                       <button
                         type="button"
                         onClick={() => onRemoveRow(idx)}
-                        style={{ color: 'var(--color-error-dark)', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+                        style={{
+                          color: 'var(--color-error-dark)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 4,
+                        }}
                         title="Remove row"
                       >
                         <Trash2 style={{ width: 15, height: 15 }} />
@@ -277,11 +336,18 @@ export function ScrollableTable({
           type="button"
           onClick={onAddRow}
           style={{
-            display: 'flex', alignItems: 'center', gap: 6, marginTop: 12,
-            padding: '8px 18px', fontSize: 13, fontWeight: 600,
-            borderRadius: 8, border: '1.5px dashed var(--color-teal)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginTop: 12,
+            padding: '8px 18px',
+            fontSize: 13,
+            fontWeight: 600,
+            borderRadius: 8,
+            border: '1.5px dashed var(--color-teal)',
             backgroundColor: 'var(--color-teal-tint, #ECFEFF)',
-            color: 'var(--color-teal)', cursor: 'pointer',
+            color: 'var(--color-teal)',
+            cursor: 'pointer',
             transition: 'background-color 0.15s',
           }}
         >

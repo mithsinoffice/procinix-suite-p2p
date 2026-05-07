@@ -15,7 +15,10 @@ const currencyFormatters = new Map<string, Intl.NumberFormat>();
 
 function formatCurrency(amount: number, currency = 'INR') {
   if (!currencyFormatters.has(currency)) {
-    currencyFormatters.set(currency, new Intl.NumberFormat('en-IN', { style: 'currency', currency }));
+    currencyFormatters.set(
+      currency,
+      new Intl.NumberFormat('en-IN', { style: 'currency', currency })
+    );
   }
   return currencyFormatters.get(currency)?.format(amount || 0) || String(amount || 0);
 }
@@ -63,15 +66,28 @@ function getMasterImpactInsight(masterKey?: string) {
 
 function getMasterRiskSignal(ageHours: number, breached: boolean) {
   if (breached) {
-    return { tone: 'High Risk', message: 'SLA already breached. Immediate decision recommended to avoid governance backlog.' };
+    return {
+      tone: 'High Risk',
+      message: 'SLA already breached. Immediate decision recommended to avoid governance backlog.',
+    };
   }
   if (ageHours >= 24) {
-    return { tone: 'Medium Risk', message: 'Pending for more than 24h. Delay may block dependent form usage.' };
+    return {
+      tone: 'Medium Risk',
+      message: 'Pending for more than 24h. Delay may block dependent form usage.',
+    };
   }
-  return { tone: 'Low Risk', message: 'Fresh submission. Validate key fields and approve/reject with comments.' };
+  return {
+    tone: 'Low Risk',
+    message: 'Fresh submission. Validate key fields and approve/reject with comments.',
+  };
 }
 
-function getMasterSuggestedAction(masterKey: string | undefined, ageHours: number, breached: boolean) {
+function getMasterSuggestedAction(
+  masterKey: string | undefined,
+  ageHours: number,
+  breached: boolean
+) {
   const criticalMasters = new Set([
     'vendor_master',
     'entity_master',
@@ -89,32 +105,69 @@ function getMasterSuggestedAction(masterKey: string | undefined, ageHours: numbe
   return { label: 'Approve likely', toneClass: 'bg-[#DCFCE7] text-[#166534]' };
 }
 
-function ApprovalQueueItemComponent({ item, onApprove, onReject, onView, selected = false, onToggleSelect }: Props) {
+function ApprovalQueueItemComponent({
+  item,
+  onApprove,
+  onReject,
+  onView,
+  selected = false,
+  onToggleSelect,
+}: Props) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
   const isMasterUpdate = item.module === 'master_update';
-  const masterRef = useMemo(() => (isMasterUpdate ? parseMasterReference(item.reference_id) : null), [isMasterUpdate, item.reference_id]);
-  const masterDisplay = useMemo(() => (masterRef ? `${prettyMasterLabel(masterRef.masterKey)} Master` : 'Master Update'), [masterRef]);
-  const masterRisk = useMemo(() => (isMasterUpdate ? getMasterRiskSignal(item.age_hours || 0, Boolean(item.sla_info?.breached)) : null), [isMasterUpdate, item.age_hours, item.sla_info?.breached]);
-  const masterImpact = useMemo(() => (isMasterUpdate ? getMasterImpactInsight(masterRef?.masterKey) : null), [isMasterUpdate, masterRef?.masterKey]);
+  const masterRef = useMemo(
+    () => (isMasterUpdate ? parseMasterReference(item.reference_id) : null),
+    [isMasterUpdate, item.reference_id]
+  );
+  const masterDisplay = useMemo(
+    () => (masterRef ? `${prettyMasterLabel(masterRef.masterKey)} Master` : 'Master Update'),
+    [masterRef]
+  );
+  const masterRisk = useMemo(
+    () =>
+      isMasterUpdate
+        ? getMasterRiskSignal(item.age_hours || 0, Boolean(item.sla_info?.breached))
+        : null,
+    [isMasterUpdate, item.age_hours, item.sla_info?.breached]
+  );
+  const masterImpact = useMemo(
+    () => (isMasterUpdate ? getMasterImpactInsight(masterRef?.masterKey) : null),
+    [isMasterUpdate, masterRef?.masterKey]
+  );
   const masterSuggestedAction = useMemo(
-    () => (isMasterUpdate ? getMasterSuggestedAction(masterRef?.masterKey, item.age_hours || 0, Boolean(item.sla_info?.breached)) : null),
+    () =>
+      isMasterUpdate
+        ? getMasterSuggestedAction(
+            masterRef?.masterKey,
+            item.age_hours || 0,
+            Boolean(item.sla_info?.breached)
+          )
+        : null,
     [isMasterUpdate, masterRef?.masterKey, item.age_hours, item.sla_info?.breached]
   );
-  const createdAtLabel = useMemo(() => DATE_FORMATTER.format(new Date(item.created_at)), [item.created_at]);
+  const createdAtLabel = useMemo(
+    () => DATE_FORMATTER.format(new Date(item.created_at)),
+    [item.created_at]
+  );
   const invoiceDateLabel = useMemo(
-    () => (item.msme_info?.invoice_date ? DATE_FORMATTER.format(new Date(item.msme_info.invoice_date)) : null),
+    () =>
+      item.msme_info?.invoice_date
+        ? DATE_FORMATTER.format(new Date(item.msme_info.invoice_date))
+        : null,
     [item.msme_info?.invoice_date]
   );
   const deadlineDateLabel = useMemo(
-    () => (item.msme_info?.deadline_date ? DATE_FORMATTER.format(new Date(item.msme_info.deadline_date)) : null),
+    () =>
+      item.msme_info?.deadline_date
+        ? DATE_FORMATTER.format(new Date(item.msme_info.deadline_date))
+        : null,
     [item.msme_info?.deadline_date]
   );
 
-  const className =
-    isMasterUpdate
-      ? 'approval-item-warning'
-      : item.priority === 'critical' && item.msme_info
+  const className = isMasterUpdate
+    ? 'approval-item-warning'
+    : item.priority === 'critical' && item.msme_info
       ? 'approval-item-msme'
       : item.sla_info?.breached
         ? 'approval-item-urgent'
@@ -147,13 +200,21 @@ function ApprovalQueueItemComponent({ item, onApprove, onReject, onView, selecte
               </label>
             )}
             {item.msme_info ? (
-              <span className={`rounded-full px-2 py-0.5 text-[11px] ${`tag-msme-${item.msme_info.msme_category}`}`}>M MSME — {item.msme_info.msme_category}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[11px] ${`tag-msme-${item.msme_info.msme_category}`}`}
+              >
+                M MSME — {item.msme_info.msme_category}
+              </span>
             ) : item.sla_info?.breached ? (
               <span className="tag-overdue rounded-full px-2 py-0.5 text-[11px]">🔴 OVERDUE</span>
             ) : item.priority === 'high' ? (
-              <span className="tag-sla-risk rounded-full px-2 py-0.5 text-[11px]">⚠ SLA warning</span>
+              <span className="tag-sla-risk rounded-full px-2 py-0.5 text-[11px]">
+                ⚠ SLA warning
+              </span>
             ) : null}
-            <span className={`rounded-full px-2 py-0.5 text-[11px] ${isMasterUpdate ? 'bg-[#EEF2FF] text-[#4F46E5]' : 'bg-[var(--color-cloud)] text-[var(--color-mercury-grey)]'}`}>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] ${isMasterUpdate ? 'bg-[#EEF2FF] text-[#4F46E5]' : 'bg-[var(--color-cloud)] text-[var(--color-mercury-grey)]'}`}
+            >
               {prettyModule(item.module)}
             </span>
             {isMasterUpdate && masterRef && (
@@ -175,7 +236,18 @@ function ApprovalQueueItemComponent({ item, onApprove, onReject, onView, selecte
           {isMasterUpdate && masterRisk && (
             <div className="mt-2 rounded-md border border-[#E6EAF0] bg-[#FAFCFF] px-3 py-2">
               <p className="text-[11px] font-semibold text-[#334155]">
-                Insight · <span className={masterRisk.tone === 'High Risk' ? 'text-[#DC2626]' : masterRisk.tone === 'Medium Risk' ? 'text-[#D97706]' : 'text-[#0F766E]'}>{masterRisk.tone}</span>
+                Insight ·{' '}
+                <span
+                  className={
+                    masterRisk.tone === 'High Risk'
+                      ? 'text-[#DC2626]'
+                      : masterRisk.tone === 'Medium Risk'
+                        ? 'text-[#D97706]'
+                        : 'text-[#0F766E]'
+                  }
+                >
+                  {masterRisk.tone}
+                </span>
               </p>
               {masterSuggestedAction && (
                 <p className="mt-1 text-[11px] font-medium text-[#334155]">
@@ -192,7 +264,8 @@ function ApprovalQueueItemComponent({ item, onApprove, onReject, onView, selecte
 
           {item.msme_info && (
             <p className="msme-pill mt-2 inline-flex rounded-full px-2 py-1 text-xs">
-              ⚖ MSME 45-day rule: Invoice date {invoiceDateLabel} · Deadline {deadlineDateLabel} · {item.msme_info.days_remaining} days left
+              ⚖ MSME 45-day rule: Invoice date {invoiceDateLabel} · Deadline {deadlineDateLabel} ·{' '}
+              {item.msme_info.days_remaining} days left
             </p>
           )}
 
@@ -208,17 +281,33 @@ function ApprovalQueueItemComponent({ item, onApprove, onReject, onView, selecte
 
         <div className="w-60 text-right">
           <p className="text-base font-semibold text-[var(--color-ink)]">
-            {isMasterUpdate ? 'Master Approval' : formatCurrency(item.display_amount || 0, item.currency || 'INR')}
+            {isMasterUpdate
+              ? 'Master Approval'
+              : formatCurrency(item.display_amount || 0, item.currency || 'INR')}
           </p>
-          <p className="mt-1 inline-flex rounded-full bg-[var(--color-cloud)] px-2 py-0.5 text-[11px] text-[var(--color-mercury-grey)]">{item.age_hours}h old</p>
+          <p className="mt-1 inline-flex rounded-full bg-[var(--color-cloud)] px-2 py-0.5 text-[11px] text-[var(--color-mercury-grey)]">
+            {item.age_hours}h old
+          </p>
           <div className="mt-3 flex justify-end gap-2">
-            <button type="button" className="rounded-md border border-[var(--color-silver)] bg-white px-3 py-1 text-xs text-[var(--color-ink)]" onClick={() => onApprove(item.id)}>
+            <button
+              type="button"
+              className="rounded-md border border-[var(--color-silver)] bg-white px-3 py-1 text-xs text-[var(--color-ink)]"
+              onClick={() => onApprove(item.id)}
+            >
               ✓ Approve
             </button>
-            <button type="button" className="rounded-md border border-[var(--color-silver)] bg-white px-3 py-1 text-xs text-[var(--color-ink)]" onClick={() => setRejecting((v) => !v)}>
+            <button
+              type="button"
+              className="rounded-md border border-[var(--color-silver)] bg-white px-3 py-1 text-xs text-[var(--color-ink)]"
+              onClick={() => setRejecting((v) => !v)}
+            >
               × Reject
             </button>
-            <button type="button" className="rounded-md border border-[var(--color-silver)] bg-white px-3 py-1 text-xs text-[var(--color-ink)]" onClick={() => onView(item)}>
+            <button
+              type="button"
+              className="rounded-md border border-[var(--color-silver)] bg-white px-3 py-1 text-xs text-[var(--color-ink)]"
+              onClick={() => onView(item)}
+            >
               View
             </button>
           </div>

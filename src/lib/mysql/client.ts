@@ -6,7 +6,7 @@ export function isMysqlApiEnabled() {
 
 // Matches SESSION_TOKEN_KEY / SESSION_USER_KEY in AuthContext.tsx
 const SESSION_TOKEN_KEY = 'procinix.session.token';
-const SESSION_USER_KEY  = 'procinix.session.user';
+const SESSION_USER_KEY = 'procinix.session.user';
 
 /** Bearer + JSON content-type (optional acting user added per-request for /api/admin/*). */
 export function buildMysqlApiHeaders(): Record<string, string> {

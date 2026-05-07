@@ -8,10 +8,25 @@ const AGENT_VERSION = '1.0.0';
 // ── Header fields we track for confidence ──────────────
 
 const HEADER_FIELDS = [
-  'invoice_number', 'invoice_date', 'due_date', 'vendor_name', 'vendor_gstin',
-  'vendor_pan', 'vendor_email', 'bill_to_entity', 'bill_to_gstin', 'currency',
-  'subtotal', 'tax_amount', 'tax_rate', 'total_amount', 'po_number', 'irn',
-  'hsn_sac_summary', 'payment_terms', 'notes',
+  'invoice_number',
+  'invoice_date',
+  'due_date',
+  'vendor_name',
+  'vendor_gstin',
+  'vendor_pan',
+  'vendor_email',
+  'bill_to_entity',
+  'bill_to_gstin',
+  'currency',
+  'subtotal',
+  'tax_amount',
+  'tax_rate',
+  'total_amount',
+  'po_number',
+  'irn',
+  'hsn_sac_summary',
+  'payment_terms',
+  'notes',
 ];
 
 // ── Per-field confidence estimation ────────────────────
@@ -93,29 +108,41 @@ export async function processExtraction(invoiceId, documentId, buffer, mimeType)
 
     await withTransaction(async (conn) => {
       // Extraction record
-      await connExecute(conn,
+      await connExecute(
+        conn,
         `INSERT INTO ap_invoice_extractions
            (id, invoice_id, document_id, provider, model_version, raw_response,
             extraction_score_header, extraction_score_lines, overall_confidence,
             field_count, line_item_count, processing_time_ms, status, created_at)
          VALUES (?, ?, ?, ?, ?, CAST(? AS JSON), ?, ?, ?, ?, ?, ?, 'completed', NOW())`,
         [
-          extractionId, invoiceId, documentId, provider, provider,
+          extractionId,
+          invoiceId,
+          documentId,
+          provider,
+          provider,
           JSON.stringify(extractedData),
-          headerScore, linesScore, overallConfidence,
-          Object.keys(fieldConfidences).length, lineItems.length,
+          headerScore,
+          linesScore,
+          overallConfidence,
+          Object.keys(fieldConfidences).length,
+          lineItems.length,
           Date.now() - startTime,
         ]
       );
 
       // Per-field confidence
       for (const [field, confidence] of Object.entries(fieldConfidences)) {
-        await connExecute(conn,
+        await connExecute(
+          conn,
           `INSERT INTO ap_invoice_field_confidence
              (id, extraction_id, invoice_id, field_name, field_value, confidence, created_at)
            VALUES (?, ?, ?, ?, ?, ?, NOW())`,
           [
-            randomUUID(), extractionId, invoiceId, field,
+            randomUUID(),
+            extractionId,
+            invoiceId,
+            field,
             extractedData[field] != null ? String(extractedData[field]).slice(0, 500) : null,
             confidence,
           ]
@@ -125,13 +152,17 @@ export async function processExtraction(invoiceId, documentId, buffer, mimeType)
       // Line items
       for (let i = 0; i < lineItems.length; i++) {
         const item = lineItems[i];
-        await connExecute(conn,
+        await connExecute(
+          conn,
           `INSERT INTO ap_invoice_extracted_line_items
              (id, extraction_id, invoice_id, line_number, description, quantity,
               unit_price, amount, hsn_sac, gst_rate, confidence, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
           [
-            randomUUID(), extractionId, invoiceId, i + 1,
+            randomUUID(),
+            extractionId,
+            invoiceId,
+            i + 1,
             item.description || null,
             item.quantity ?? null,
             item.unit_price ?? null,
@@ -174,12 +205,25 @@ export async function processExtraction(invoiceId, documentId, buffer, mimeType)
       ]
     );
 
-    console.log(`[${AGENT_NAME}] invoice ${invoiceId}: ${decision} via ${provider}, confidence ${overallConfidence}, ${lineItems.length} line items`);
+    console.log(
+      `[${AGENT_NAME}] invoice ${invoiceId}: ${decision} via ${provider}, confidence ${overallConfidence}, ${lineItems.length} line items`
+    );
 
-    return { extractionId, extractedData, headerScore, linesScore, overallConfidence, provider, explanation };
+    return {
+      extractionId,
+      extractedData,
+      headerScore,
+      linesScore,
+      overallConfidence,
+      provider,
+      explanation,
+    };
   } catch (err) {
     const processingTimeMs = Date.now() - startTime;
-    console.error(`[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`, err.message);
+    console.error(
+      `[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`,
+      err.message
+    );
 
     try {
       await query(
@@ -188,13 +232,18 @@ export async function processExtraction(invoiceId, documentId, buffer, mimeType)
             input_summary, output_summary, processing_time_ms, created_at)
          VALUES (?, ?, ?, ?, 'error', 0, ?, ?, NULL, ?, NOW())`,
         [
-          randomUUID(), invoiceId, AGENT_NAME, AGENT_VERSION,
+          randomUUID(),
+          invoiceId,
+          AGENT_NAME,
+          AGENT_VERSION,
           `Extraction failed: ${err.message}`,
           JSON.stringify({ documentId, mimeType }),
           processingTimeMs,
         ]
       );
-    } catch (_) { /* swallow logging failure */ }
+    } catch (_) {
+      /* swallow logging failure */
+    }
 
     throw err;
   }

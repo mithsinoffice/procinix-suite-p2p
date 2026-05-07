@@ -40,20 +40,12 @@ interface NavItem {
   children?: NavChild[];
 }
 
-function isPathActive(
-  pathname: string,
-  route: string,
-  activePrefixes?: string[]
-): boolean {
+function isPathActive(pathname: string, route: string, activePrefixes?: string[]): boolean {
   if (activePrefixes?.length) {
     return activePrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   }
   if (route === '/dashboards') {
-    return (
-      pathname === '/' ||
-      pathname === '/dashboard' ||
-      pathname === '/dashboards'
-    );
+    return pathname === '/' || pathname === '/dashboard' || pathname === '/dashboards';
   }
   return pathname === route || pathname.startsWith(`${route}/`);
 }
@@ -89,11 +81,7 @@ const navigationItems: NavItem[] = [
       {
         label: 'Vendor Master',
         route: '/vendor-management/master',
-        activePrefixes: [
-          '/vendor-management/master',
-          '/vendors',
-          '/add-vendor',
-        ],
+        activePrefixes: ['/vendor-management/master', '/vendors', '/add-vendor'],
       },
       {
         label: 'Portal Users',
@@ -236,11 +224,7 @@ export function SubkoCoffeeNavigation() {
               );
             }
 
-            const isActive = isPathActive(
-              location.pathname,
-              item.route,
-              item.activePrefixes
-            );
+            const isActive = isPathActive(location.pathname, item.route, item.activePrefixes);
             const Icon = item.icon;
 
             return (
@@ -270,7 +254,9 @@ export function SubkoCoffeeNavigation() {
           {showSuperAdminNav ? (
             <Link
               to="/super-admin"
-              className={linkClass(isPathActive(location.pathname, '/super-admin', ['/super-admin']))}
+              className={linkClass(
+                isPathActive(location.pathname, '/super-admin', ['/super-admin'])
+              )}
               style={linkStyle(isPathActive(location.pathname, '/super-admin', ['/super-admin']))}
               onMouseEnter={(e) => {
                 const isActive = isPathActive(location.pathname, '/super-admin', ['/super-admin']);
@@ -293,7 +279,6 @@ export function SubkoCoffeeNavigation() {
           ) : null}
         </nav>
       </div>
-
     </div>
   );
 }

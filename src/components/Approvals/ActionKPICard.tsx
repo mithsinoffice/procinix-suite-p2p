@@ -17,16 +17,10 @@ interface Props {
 export function ActionKPICard(props: Props) {
   const variantClass = `action-kpi-card-${props.variant}`;
   return (
-    <button
-      type="button"
-      onClick={props.onClick}
-      className={`action-kpi-card ${variantClass}`}
-    >
+    <button type="button" onClick={props.onClick} className={`action-kpi-card ${variantClass}`}>
       <div className="flex items-start justify-between">
         <p className="action-kpi-count">{props.count}</p>
-        <span className="action-kpi-badge">
-          {props.badge}
-        </span>
+        <span className="action-kpi-badge">{props.badge}</span>
       </div>
       <p className="action-kpi-label">{props.label}</p>
       <p className="action-kpi-subtext">{props.subtext}</p>
@@ -40,7 +34,10 @@ export function ActionKPICard(props: Props) {
         </div>
       )}
       <div className="action-kpi-progress-track">
-        <div className="action-kpi-progress-fill" style={{ width: `${Math.min(100, Math.max(0, props.barPercent))}%` }} />
+        <div
+          className="action-kpi-progress-fill"
+          style={{ width: `${Math.min(100, Math.max(0, props.barPercent))}%` }}
+        />
       </div>
     </button>
   );

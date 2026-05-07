@@ -17,9 +17,7 @@ export function AppProviders({ children }: AppProvidersProps) {
         <MasterDataProvider>
           <APDataProvider>
             <ProcurementDataProvider>
-              <BudgetDataProvider>
-                {children}
-              </BudgetDataProvider>
+              <BudgetDataProvider>{children}</BudgetDataProvider>
             </ProcurementDataProvider>
           </APDataProvider>
         </MasterDataProvider>

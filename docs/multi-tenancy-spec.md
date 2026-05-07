@@ -9,6 +9,7 @@
 ## 1. Context
 
 **Current state:**
+
 - Two-level hierarchy working: tenant → entity
 - Super-admin gated by `SUPER_ADMIN_EMAILS` env + `X-User-Email` header
 - Tenant: code, name, status
@@ -18,6 +19,7 @@
 - Frontend: React 18 + Vite + TS, Tailwind, shadcn in `src/components/ui/`
 
 **Gaps:**
+
 - No real RBAC — authorization is a single email allowlist
 - No module subscription; no per-entity module enablement
 - Entity missing legal/tax/fiscal fields (GSTIN, PAN, fiscal year, parent entity, etc.)
@@ -231,17 +233,17 @@ CREATE TABLE tenant_master.audit_log (
 
 **System roles** (`is_system=1`, `tenant_id=NULL`):
 
-| Code | Key permissions |
-|---|---|
-| TENANT_ADMIN | `tenant.admin`, `user.*`, `module.enable`, `entity.write` |
-| ENTITY_ADMIN | `entity.read`, `entity.write`, `user.invite` (scoped to entity) |
-| REQUISITIONER | `pr.create`, `pr.read_own` |
-| APPROVER | `pr.approve`, `po.approve` (requires limit) |
-| BUYER | `po.create`, `rfx.create`, `contract.create`, `vendor.create` |
-| AP_CLERK | `invoice.create`, `invoice.match` |
-| AP_MANAGER | `invoice.approve`, `payment.release` (requires limit) |
-| SUPPLIER_ADMIN | `vendor.create`, `vendor.edit_bank` |
-| AUDITOR | all `*.read` + `audit.read` |
+| Code           | Key permissions                                                 |
+| -------------- | --------------------------------------------------------------- |
+| TENANT_ADMIN   | `tenant.admin`, `user.*`, `module.enable`, `entity.write`       |
+| ENTITY_ADMIN   | `entity.read`, `entity.write`, `user.invite` (scoped to entity) |
+| REQUISITIONER  | `pr.create`, `pr.read_own`                                      |
+| APPROVER       | `pr.approve`, `po.approve` (requires limit)                     |
+| BUYER          | `po.create`, `rfx.create`, `contract.create`, `vendor.create`   |
+| AP_CLERK       | `invoice.create`, `invoice.match`                               |
+| AP_MANAGER     | `invoice.approve`, `payment.release` (requires limit)           |
+| SUPPLIER_ADMIN | `vendor.create`, `vendor.edit_bank`                             |
+| AUDITOR        | all `*.read` + `audit.read`                                     |
 
 **System SoD rules** (`tenant_id=NULL`, `enforcement=BLOCK`):
 
@@ -332,14 +334,14 @@ POST   /api/auth/switch-entity
 
 **New routes:**
 
-| Route | Purpose | Guard |
-|---|---|---|
-| `/super-admin/*` | Platform admin (already exists; harden) | `requireSuperAdmin` |
-| `/admin/tenant` | Tenant settings (branding, locale, security, contract) | `tenant.admin` |
-| `/admin/entities` | Entity list + CRUD with new fields | `entity.write` |
-| `/admin/modules` | Subscriptions + per-entity enablement matrix | `module.enable` |
-| `/admin/users` | User list + role assignment with SoD pre-check | `user.assign_role` |
-| `/admin/audit` | Searchable audit log | `audit.read` |
+| Route             | Purpose                                                | Guard               |
+| ----------------- | ------------------------------------------------------ | ------------------- |
+| `/super-admin/*`  | Platform admin (already exists; harden)                | `requireSuperAdmin` |
+| `/admin/tenant`   | Tenant settings (branding, locale, security, contract) | `tenant.admin`      |
+| `/admin/entities` | Entity list + CRUD with new fields                     | `entity.write`      |
+| `/admin/modules`  | Subscriptions + per-entity enablement matrix           | `module.enable`     |
+| `/admin/users`    | User list + role assignment with SoD pre-check         | `user.assign_role`  |
+| `/admin/audit`    | Searchable audit log                                   | `audit.read`        |
 
 **New components (shadcn-style in `src/components/ui/`):**
 
@@ -362,17 +364,17 @@ POST   /api/auth/switch-entity
 
 The agent should propose its own phase plan after reading this. Suggested order:
 
-| Phase | Scope |
-|---|---|
-| 0 | Schema + migrations + `tenant_master` created + seed data |
-| 1 | JWT auth middleware; tenant/entity scoping on every existing query |
-| 2 | Roles + permissions + middleware enforcement; remove `SUPER_ADMIN_EMAILS` |
-| 3 | Module catalog + subscriptions + entity enablement + frontend matrix |
-| 4 | Enhanced entity fields (tax IDs, hierarchy, fiscal year) + UI |
-| 5 | SoD rules + approval limits + pre-assignment check in API |
-| 6 | Audit log writer + viewer UI |
-| 7 | Tenant security config (SSO placeholder, IP allowlist, MFA, session) |
-| 8 | UI polish (search, filters, status badges, setup checklist, impersonation banner) |
+| Phase | Scope                                                                             |
+| ----- | --------------------------------------------------------------------------------- |
+| 0     | Schema + migrations + `tenant_master` created + seed data                         |
+| 1     | JWT auth middleware; tenant/entity scoping on every existing query                |
+| 2     | Roles + permissions + middleware enforcement; remove `SUPER_ADMIN_EMAILS`         |
+| 3     | Module catalog + subscriptions + entity enablement + frontend matrix              |
+| 4     | Enhanced entity fields (tax IDs, hierarchy, fiscal year) + UI                     |
+| 5     | SoD rules + approval limits + pre-assignment check in API                         |
+| 6     | Audit log writer + viewer UI                                                      |
+| 7     | Tenant security config (SSO placeholder, IP allowlist, MFA, session)              |
+| 8     | UI polish (search, filters, status badges, setup checklist, impersonation banner) |
 
 Each phase ends with: migration applied, seed data, API + integration tests, UI, CHANGELOG entry.
 

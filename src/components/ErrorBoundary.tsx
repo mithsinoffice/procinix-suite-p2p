@@ -33,10 +33,25 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div style={{ padding: '48px', textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
           <div style={{ marginBottom: '16px', fontSize: '48px' }}>!</div>
-          <h1 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-ink)', marginBottom: '8px' }}>
+          <h1
+            style={{
+              fontSize: '20px',
+              fontWeight: 600,
+              color: 'var(--color-ink)',
+              marginBottom: '8px',
+            }}
+          >
             Something went wrong
           </h1>
-          <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', marginBottom: '24px', maxWidth: '480px', margin: '0 auto 24px' }}>
+          <p
+            style={{
+              fontSize: '14px',
+              color: 'var(--color-mercury-grey)',
+              marginBottom: '24px',
+              maxWidth: '480px',
+              margin: '0 auto 24px',
+            }}
+          >
             An unexpected error occurred. Please refresh the page or navigate back.
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
@@ -73,19 +88,21 @@ export class ErrorBoundary extends Component<Props, State> {
             </button>
           </div>
           {process.env.NODE_ENV === 'development' && this.state.error && (
-            <pre style={{
-              marginTop: '32px',
-              padding: '16px',
-              backgroundColor: '#FEF2F2',
-              border: '1px solid #FECACA',
-              borderRadius: '8px',
-              fontSize: '12px',
-              color: '#991B1B',
-              textAlign: 'left',
-              maxWidth: '640px',
-              margin: '32px auto 0',
-              overflow: 'auto',
-            }}>
+            <pre
+              style={{
+                marginTop: '32px',
+                padding: '16px',
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                borderRadius: '8px',
+                fontSize: '12px',
+                color: '#991B1B',
+                textAlign: 'left',
+                maxWidth: '640px',
+                margin: '32px auto 0',
+                overflow: 'auto',
+              }}
+            >
               {this.state.error.message}
               {'\n'}
               {this.state.error.stack}

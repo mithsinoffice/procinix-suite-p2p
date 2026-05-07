@@ -7,12 +7,24 @@ const AGENT_VERSION = '1.0.0';
 // ── Keyword → GL code mapping ─────────────────────────
 
 const KEYWORD_GL_MAP = [
-  { keywords: ['cloud', 'hosting', 'server', 'aws', 'azure'], glCode: '6200-IT', glName: 'IT Services' },
+  {
+    keywords: ['cloud', 'hosting', 'server', 'aws', 'azure'],
+    glCode: '6200-IT',
+    glName: 'IT Services',
+  },
   { keywords: ['license', 'software', 'saas'], glCode: '6210-SW', glName: 'Software Licenses' },
   { keywords: ['rent', 'lease', 'office'], glCode: '6300-RE', glName: 'Rent & Lease' },
   { keywords: ['travel', 'cab', 'flight', 'hotel'], glCode: '6400-TR', glName: 'Travel' },
-  { keywords: ['consulting', 'advisory', 'professional'], glCode: '6500-PR', glName: 'Professional Services' },
-  { keywords: ['raw material', 'supplies', 'packaging'], glCode: '5001-RM', glName: 'Raw Materials' },
+  {
+    keywords: ['consulting', 'advisory', 'professional'],
+    glCode: '6500-PR',
+    glName: 'Professional Services',
+  },
+  {
+    keywords: ['raw material', 'supplies', 'packaging'],
+    glCode: '5001-RM',
+    glName: 'Raw Materials',
+  },
 ];
 
 const DEFAULT_GL = { glCode: '6900-GE', glName: 'General Expense' };
@@ -58,11 +70,13 @@ function extractHistoryCoding(historyRows) {
 
   for (const row of historyRows) {
     // Try to get coding from ap_invoice_accounting_suggestions via invoice metadata
-    const meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {});
+    const meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata || {};
     const coding = meta?.coding || {};
     if (coding.glCode) glCodes[coding.glCode] = (glCodes[coding.glCode] || 0) + 1;
-    if (coding.costCenter) costCenters[coding.costCenter] = (costCenters[coding.costCenter] || 0) + 1;
-    if (coding.profitCenter) profitCenters[coding.profitCenter] = (profitCenters[coding.profitCenter] || 0) + 1;
+    if (coding.costCenter)
+      costCenters[coding.costCenter] = (costCenters[coding.costCenter] || 0) + 1;
+    if (coding.profitCenter)
+      profitCenters[coding.profitCenter] = (profitCenters[coding.profitCenter] || 0) + 1;
   }
 
   const topGL = Object.entries(glCodes).sort((a, b) => b[1] - a[1])[0];
@@ -140,7 +154,7 @@ export async function processCoding(invoiceId, extractedData, vendorMatchResult,
         glName = historyCoding.glName;
         costCenter = historyCoding.costCenter;
         profitCenter = historyCoding.profitCenter;
-        confidence = 0.90;
+        confidence = 0.9;
         source = 'vendor_history';
       } else {
         // Source 3/4: Keyword or fallback
@@ -153,7 +167,7 @@ export async function processCoding(invoiceId, extractedData, vendorMatchResult,
         } else {
           glCode = DEFAULT_GL.glCode;
           glName = DEFAULT_GL.glName;
-          confidence = 0.50;
+          confidence = 0.5;
           source = 'default_fallback';
         }
         costCenter = 'CC-GENERAL';
@@ -189,14 +203,14 @@ export async function processCoding(invoiceId, extractedData, vendorMatchResult,
         glName = historyCoding.glName;
         costCenter = historyCoding.costCenter;
         profitCenter = historyCoding.profitCenter;
-        confidence = 0.90;
+        confidence = 0.9;
         source = 'vendor_history';
       } else {
         glCode = DEFAULT_GL.glCode;
         glName = DEFAULT_GL.glName;
         costCenter = 'CC-GENERAL';
         profitCenter = 'PC-GENERAL';
-        confidence = 0.50;
+        confidence = 0.5;
         source = 'default_fallback';
       }
 
@@ -223,30 +237,46 @@ export async function processCoding(invoiceId, extractedData, vendorMatchResult,
     const explanationParts = [];
 
     if (poCoding) {
-      explanationParts.push(`Coding derived from matched PO (${matchResult.poNumber}): GL ${poCoding.glCode}, CC ${poCoding.costCenter}, PC ${poCoding.profitCenter}`);
+      explanationParts.push(
+        `Coding derived from matched PO (${matchResult.poNumber}): GL ${poCoding.glCode}, CC ${poCoding.costCenter}, PC ${poCoding.profitCenter}`
+      );
     } else if (historyCoding) {
-      explanationParts.push(`Coding derived from vendor history: GL ${historyCoding.glCode} used ${historyCoding.usageCount}/${historyCoding.totalInvoices} times for "${vendorName}"`);
+      explanationParts.push(
+        `Coding derived from vendor history: GL ${historyCoding.glCode} used ${historyCoding.usageCount}/${historyCoding.totalInvoices} times for "${vendorName}"`
+      );
     } else {
-      const kwCount = suggestions.filter(s => s.source.startsWith('keyword:')).length;
-      const fallbackCount = suggestions.filter(s => s.source === 'default_fallback').length;
-      explanationParts.push(`Coding derived from keyword matching (${kwCount} matched) and fallback defaults (${fallbackCount})`);
+      const kwCount = suggestions.filter((s) => s.source.startsWith('keyword:')).length;
+      const fallbackCount = suggestions.filter((s) => s.source === 'default_fallback').length;
+      explanationParts.push(
+        `Coding derived from keyword matching (${kwCount} matched) and fallback defaults (${fallbackCount})`
+      );
     }
 
-    explanationParts.push(`${suggestions.length} line-item suggestion(s) generated, overall certainty: ${overallCertainty}`);
+    explanationParts.push(
+      `${suggestions.length} line-item suggestion(s) generated, overall certainty: ${overallCertainty}`
+    );
     const explanation = explanationParts.join('. ');
 
     // Persist suggestions
     await withTransaction(async (conn) => {
       for (const s of suggestions) {
-        await connExecute(conn,
+        await connExecute(
+          conn,
           `INSERT INTO ap_invoice_accounting_suggestions
              (id, invoice_id, line_item_id, gl_code, gl_name,
               cost_center, profit_center, confidence, source, explanation, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
           [
-            randomUUID(), invoiceId, s.lineItemId || null,
-            s.glCode, s.glName, s.costCenter, s.profitCenter,
-            s.confidence, s.source, s.description || null,
+            randomUUID(),
+            invoiceId,
+            s.lineItemId || null,
+            s.glCode,
+            s.glName,
+            s.costCenter,
+            s.profitCenter,
+            s.confidence,
+            s.source,
+            s.description || null,
           ]
         );
       }
@@ -254,9 +284,12 @@ export async function processCoding(invoiceId, extractedData, vendorMatchResult,
 
     // Log agent decision
     const processingTimeMs = Date.now() - startTime;
-    const decision = overallCertainty >= 0.90 ? 'high_certainty'
-      : overallCertainty >= 0.70 ? 'medium_certainty'
-      : 'low_certainty';
+    const decision =
+      overallCertainty >= 0.9
+        ? 'high_certainty'
+        : overallCertainty >= 0.7
+          ? 'medium_certainty'
+          : 'low_certainty';
 
     await query(
       `INSERT INTO ap_invoice_agent_decisions
@@ -264,20 +297,35 @@ export async function processCoding(invoiceId, extractedData, vendorMatchResult,
           input_summary, output_summary, processing_time_ms, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        randomUUID(), invoiceId, AGENT_NAME, AGENT_VERSION,
-        decision, overallCertainty, explanation,
-        JSON.stringify({ vendorName, vendorId, poId: matchResult?.poId, lineItemCount: lineItems.length }),
+        randomUUID(),
+        invoiceId,
+        AGENT_NAME,
+        AGENT_VERSION,
+        decision,
+        overallCertainty,
+        explanation,
+        JSON.stringify({
+          vendorName,
+          vendorId,
+          poId: matchResult?.poId,
+          lineItemCount: lineItems.length,
+        }),
         JSON.stringify({ suggestionCount: suggestions.length, overallCertainty, primarySource }),
         processingTimeMs,
       ]
     );
 
-    console.log(`[${AGENT_NAME}] invoice ${invoiceId}: ${decision} — ${suggestions.length} suggestions, certainty ${overallCertainty}, source ${primarySource}`);
+    console.log(
+      `[${AGENT_NAME}] invoice ${invoiceId}: ${decision} — ${suggestions.length} suggestions, certainty ${overallCertainty}, source ${primarySource}`
+    );
 
     return { suggestions, overallCertainty, explanation };
   } catch (err) {
     const processingTimeMs = Date.now() - startTime;
-    console.error(`[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`, err.message);
+    console.error(
+      `[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`,
+      err.message
+    );
 
     try {
       await query(
@@ -286,13 +334,18 @@ export async function processCoding(invoiceId, extractedData, vendorMatchResult,
             input_summary, output_summary, processing_time_ms, created_at)
          VALUES (?, ?, ?, ?, 'error', 0, ?, ?, NULL, ?, NOW())`,
         [
-          randomUUID(), invoiceId, AGENT_NAME, AGENT_VERSION,
+          randomUUID(),
+          invoiceId,
+          AGENT_NAME,
+          AGENT_VERSION,
           `Coding suggestion failed: ${err.message}`,
           JSON.stringify({ vendorName: extractedData?.vendor_name }),
           processingTimeMs,
         ]
       );
-    } catch (_) { /* swallow logging failure */ }
+    } catch (_) {
+      /* swallow logging failure */
+    }
 
     throw err;
   }

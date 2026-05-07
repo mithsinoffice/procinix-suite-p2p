@@ -46,7 +46,7 @@ export function Login({ variant = 'default' }: LoginProps) {
       if (variant === 'super_admin' && !isSuperAdminUser(user)) {
         logout();
         setError(
-          'This account is not allowlisted for super admin. Add your email to SUPER_ADMIN_EMAILS (server) and VITE_SUPER_ADMIN_EMAILS (client build), or assign the Super Admin role in Roles / User Master.',
+          'This account is not allowlisted for super admin. Add your email to SUPER_ADMIN_EMAILS (server) and VITE_SUPER_ADMIN_EMAILS (client build), or assign the Super Admin role in Roles / User Master.'
         );
         setLoading(false);
         return;
@@ -74,17 +74,51 @@ export function Login({ variant = 'default' }: LoginProps) {
   };
 
   const demoAccounts = [
-    { email: 'rajesh.kumar@procinix.ai', password: 'admin123', role: 'Admin', name: 'Rajesh Kumar' },
-    { email: 'priya.sharma@procinix.ai', password: 'creator123', role: 'PO Creator', name: 'Priya Sharma' },
-    { email: 'amit.patel@procinix.ai', password: 'approver123', role: 'PO Approver', name: 'Amit Patel' },
-    { email: 'sunita.reddy@procinix.ai', password: 'grn123', role: 'GRN Manager', name: 'Sunita Reddy' },
-    { email: 'vikram.shah@procinix.ai', password: 'mumbai123', role: 'Location Manager - Mumbai', name: 'Vikram Shah' },
-    { email: 'anjali.iyer@procinix.ai', password: 'bangalore123', role: 'Location Manager - Bangalore', name: 'Anjali Iyer' },
-    { email: 'karthik.menon@procinix.ai', password: 'multi123', role: 'Multi-Role (Creator + Approver + GRN)', name: 'Karthik Menon' },
+    {
+      email: 'rajesh.kumar@procinix.ai',
+      password: 'admin123',
+      role: 'Admin',
+      name: 'Rajesh Kumar',
+    },
+    {
+      email: 'priya.sharma@procinix.ai',
+      password: 'creator123',
+      role: 'PO Creator',
+      name: 'Priya Sharma',
+    },
+    {
+      email: 'amit.patel@procinix.ai',
+      password: 'approver123',
+      role: 'PO Approver',
+      name: 'Amit Patel',
+    },
+    {
+      email: 'sunita.reddy@procinix.ai',
+      password: 'grn123',
+      role: 'GRN Manager',
+      name: 'Sunita Reddy',
+    },
+    {
+      email: 'vikram.shah@procinix.ai',
+      password: 'mumbai123',
+      role: 'Location Manager - Mumbai',
+      name: 'Vikram Shah',
+    },
+    {
+      email: 'anjali.iyer@procinix.ai',
+      password: 'bangalore123',
+      role: 'Location Manager - Bangalore',
+      name: 'Anjali Iyer',
+    },
+    {
+      email: 'karthik.menon@procinix.ai',
+      password: 'multi123',
+      role: 'Multi-Role (Creator + Approver + GRN)',
+      name: 'Karthik Menon',
+    },
   ];
 
-  const title =
-    variant === 'super_admin' ? 'Super admin — sign in' : 'Procinix P2P Automation ERP';
+  const title = variant === 'super_admin' ? 'Super admin — sign in' : 'Procinix P2P Automation ERP';
   const subtitle =
     variant === 'super_admin'
       ? 'Manage tenants and platform entities (allowlisted operators only).'
@@ -106,25 +140,40 @@ export function Login({ variant = 'default' }: LoginProps) {
             <p style={{ color: 'var(--color-mercury-grey)' }}>{subtitle}</p>
             {variant === 'default' ? (
               <p className="mt-3 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                <Link to="/super-admin/login" className="underline font-medium" style={{ color: 'var(--color-teal)' }}>
+                <Link
+                  to="/super-admin/login"
+                  className="underline font-medium"
+                  style={{ color: 'var(--color-teal)' }}
+                >
                   Super admin (tenant setup)
                 </Link>
               </p>
             ) : (
               <p className="mt-3 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                <Link to="/login" className="underline font-medium" style={{ color: 'var(--color-teal)' }}>
+                <Link
+                  to="/login"
+                  className="underline font-medium"
+                  style={{ color: 'var(--color-teal)' }}
+                >
                   Standard ERP login
                 </Link>
               </p>
             )}
           </div>
 
-          <div className="bg-white rounded-lg p-8" style={{ border: '1px solid var(--color-silver)' }}>
+          <div
+            className="bg-white rounded-lg p-8"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
             <form onSubmit={handleSubmit} className="space-y-6">
               {isMysqlApiEnabled() && variant === 'default' ? (
                 <div>
-                  <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-                    Tenant code <span className="text-xs font-normal">(optional if only one tenant)</span>
+                  <label
+                    className="block text-sm mb-2"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    Tenant code{' '}
+                    <span className="text-xs font-normal">(optional if only one tenant)</span>
                   </label>
                   <div className="relative">
                     <Building2
@@ -147,7 +196,10 @@ export function Login({ variant = 'default' }: LoginProps) {
               ) : null}
 
               <div>
-                <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                <label
+                  className="block text-sm mb-2"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
                   Email Address
                 </label>
                 <div className="relative">
@@ -171,7 +223,10 @@ export function Login({ variant = 'default' }: LoginProps) {
               </div>
 
               <div>
-                <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                <label
+                  className="block text-sm mb-2"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
                   Password
                 </label>
                 <div className="relative">
@@ -203,7 +258,10 @@ export function Login({ variant = 'default' }: LoginProps) {
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 p-3 rounded-lg" style={{ backgroundColor: '#FFE8EA' }}>
+                <div
+                  className="flex items-center gap-2 p-3 rounded-lg"
+                  style={{ backgroundColor: '#FFE8EA' }}
+                >
                   <AlertCircle className="w-5 h-5" style={{ color: 'var(--color-error)' }} />
                   <p className="text-sm" style={{ color: 'var(--color-error)' }}>
                     {error}
@@ -216,8 +274,12 @@ export function Login({ variant = 'default' }: LoginProps) {
                 disabled={loading}
                 className="w-full py-3 rounded-lg text-white transition-colors disabled:opacity-50"
                 style={{ backgroundColor: 'var(--color-teal)' }}
-                onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
-                onMouseLeave={(e) => !loading && (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
+                onMouseEnter={(e) =>
+                  !loading && (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
+                }
+                onMouseLeave={(e) =>
+                  !loading && (e.currentTarget.style.backgroundColor = 'var(--color-teal)')
+                }
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
@@ -225,26 +287,40 @@ export function Login({ variant = 'default' }: LoginProps) {
           </div>
         </div>
         <div className="flex items-center justify-center gap-2 mt-8" style={{ opacity: 0.75 }}>
-          <span style={{ color: 'var(--color-mercury-grey)', fontSize: '11px', letterSpacing: '0.04em' }}>
+          <span
+            style={{
+              color: 'var(--color-mercury-grey)',
+              fontSize: '11px',
+              letterSpacing: '0.04em',
+            }}
+          >
             Powered by
           </span>
           <img src={procinixLogo} alt="Procinix" style={{ height: '20px', width: 'auto' }} />
         </div>
       </div>
 
-      <div className="w-[480px] p-8 flex flex-col max-lg:hidden" style={{ backgroundColor: '#2A3A42' }}>
+      <div
+        className="w-[480px] p-8 flex flex-col max-lg:hidden"
+        style={{ backgroundColor: '#2A3A42' }}
+      >
         <div className="flex-1 flex flex-col justify-center">
           {variant === 'super_admin' ? (
             <>
               <h2 className="text-2xl text-white mb-6">Tenant & entity setup</h2>
               <p className="text-sm mb-6" style={{ color: 'var(--color-slate)' }}>
-                After sign-in you can create tenants and their platform entities. API calls require your user email to
-                match <code className="text-xs">SUPER_ADMIN_EMAILS</code> on the API server.
+                After sign-in you can create tenants and their platform entities. API calls require
+                your user email to match <code className="text-xs">SUPER_ADMIN_EMAILS</code> on the
+                API server.
               </p>
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#1F2D35', border: '1px solid #3A4A52' }}>
+              <div
+                className="p-4 rounded-lg"
+                style={{ backgroundColor: '#1F2D35', border: '1px solid #3A4A52' }}
+              >
                 <p className="text-xs" style={{ color: 'var(--color-slate)' }}>
-                  Use the same User Master credentials as the main ERP. Assign the <strong>Super Admin</strong> role in
-                  Roles Master, or add your email to the allowlist env vars documented in <code>.env.example</code>.
+                  Use the same User Master credentials as the main ERP. Assign the{' '}
+                  <strong>Super Admin</strong> role in Roles Master, or add your email to the
+                  allowlist env vars documented in <code>.env.example</code>.
                 </p>
               </div>
             </>
@@ -292,11 +368,15 @@ export function Login({ variant = 'default' }: LoginProps) {
             <>
               <h2 className="text-2xl text-white mb-6">Master-Driven Login</h2>
               <p className="text-sm mb-6" style={{ color: 'var(--color-slate)' }}>
-                Sign-in validates against approved records from Employee Master, User Master, and Roles Master. Tenant
-                scope is resolved from User Master and <code className="text-xs">user_entity_access</code>.
+                Sign-in validates against approved records from Employee Master, User Master, and
+                Roles Master. Tenant scope is resolved from User Master and{' '}
+                <code className="text-xs">user_entity_access</code>.
               </p>
               <div className="space-y-4">
-                <div className="p-4 rounded-lg" style={{ backgroundColor: '#1F2D35', border: '1px solid #3A4A52' }}>
+                <div
+                  className="p-4 rounded-lg"
+                  style={{ backgroundColor: '#1F2D35', border: '1px solid #3A4A52' }}
+                >
                   <p className="text-sm text-white mb-2">What is required</p>
                   <ul className="text-xs space-y-1" style={{ color: 'var(--color-slate)' }}>
                     <li>• Employee must be active and approved in Employee Master</li>
@@ -304,11 +384,14 @@ export function Login({ variant = 'default' }: LoginProps) {
                     <li>• Assigned role must be active and approved in Roles Master</li>
                   </ul>
                 </div>
-                <div className="p-4 rounded-lg" style={{ backgroundColor: '#1F2D35', border: '1px solid #3A4A52' }}>
+                <div
+                  className="p-4 rounded-lg"
+                  style={{ backgroundColor: '#1F2D35', border: '1px solid #3A4A52' }}
+                >
                   <p className="text-sm text-white mb-2">Multi-entity</p>
                   <p className="text-xs" style={{ color: 'var(--color-slate)' }}>
-                    If you have access to more than one platform entity, you will be asked to choose one right after
-                    login.
+                    If you have access to more than one platform entity, you will be asked to choose
+                    one right after login.
                   </p>
                 </div>
               </div>
@@ -316,14 +399,27 @@ export function Login({ variant = 'default' }: LoginProps) {
           )}
 
           {variant === 'default' ? (
-            <div className="mt-8 p-4 rounded-lg" style={{ backgroundColor: '#1F2D35', border: '1px solid #3A4A52' }}>
+            <div
+              className="mt-8 p-4 rounded-lg"
+              style={{ backgroundColor: '#1F2D35', border: '1px solid #3A4A52' }}
+            >
               <p className="text-sm text-white mb-2">Role Permissions:</p>
               <ul className="text-xs space-y-1" style={{ color: 'var(--color-slate)' }}>
-                <li>• <strong>Admin:</strong> Full system access</li>
-                <li>• <strong>PO Creator:</strong> Create & edit purchase orders</li>
-                <li>• <strong>PO Approver:</strong> Approve/reject purchase orders</li>
-                <li>• <strong>GRN Manager:</strong> Create GRNs & allocate to locations</li>
-                <li>• <strong>Location Manager:</strong> Accept GRN allocations for their location</li>
+                <li>
+                  • <strong>Admin:</strong> Full system access
+                </li>
+                <li>
+                  • <strong>PO Creator:</strong> Create & edit purchase orders
+                </li>
+                <li>
+                  • <strong>PO Approver:</strong> Approve/reject purchase orders
+                </li>
+                <li>
+                  • <strong>GRN Manager:</strong> Create GRNs & allocate to locations
+                </li>
+                <li>
+                  • <strong>Location Manager:</strong> Accept GRN allocations for their location
+                </li>
               </ul>
             </div>
           ) : null}

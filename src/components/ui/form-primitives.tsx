@@ -54,8 +54,8 @@ export function FormShell({
     typeof completeness === 'number'
       ? completeness
       : completeness && completeness.total > 0
-      ? Math.round((completeness.filled / completeness.total) * 100)
-      : 0;
+        ? Math.round((completeness.filled / completeness.total) * 100)
+        : 0;
 
   return (
     <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
@@ -68,11 +68,37 @@ export function FormShell({
           {/* Breadcrumbs */}
           {masterName && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <a href="/masters" style={{ fontSize: 12, color: 'var(--color-teal)', textDecoration: 'none', fontWeight: 500 }}>Masters</a>
+              <a
+                href="/masters"
+                style={{
+                  fontSize: 12,
+                  color: 'var(--color-teal)',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                Masters
+              </a>
               <ChevronRight style={{ width: 12, height: 12, color: 'var(--color-mercury-grey)' }} />
-              <a href="#" onClick={(e) => { e.preventDefault(); onBack(); }} style={{ fontSize: 12, color: 'var(--color-teal)', textDecoration: 'none', fontWeight: 500 }}>{masterName}</a>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onBack();
+                }}
+                style={{
+                  fontSize: 12,
+                  color: 'var(--color-teal)',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                {masterName}
+              </a>
               <ChevronRight style={{ width: 12, height: 12, color: 'var(--color-mercury-grey)' }} />
-              <span style={{ fontSize: 12, color: 'var(--color-ink)', fontWeight: 600 }}>{title}</span>
+              <span style={{ fontSize: 12, color: 'var(--color-ink)', fontWeight: 600 }}>
+                {title}
+              </span>
             </div>
           )}
           <div className="flex items-center justify-between">
@@ -90,12 +116,8 @@ export function FormShell({
                   <h1 className="text-2xl" style={{ color: 'var(--color-ink)' }}>
                     {title}
                   </h1>
-                  {modeLabel && (
-                    <span className="badge-teal text-xs">{modeLabel}</span>
-                  )}
-                  {draftStatus && (
-                    <span className="badge-neutral text-xs">{draftStatus}</span>
-                  )}
+                  {modeLabel && <span className="badge-teal text-xs">{modeLabel}</span>}
+                  {draftStatus && <span className="badge-neutral text-xs">{draftStatus}</span>}
                   {headerExtra}
                 </div>
                 {subtitle && (
@@ -120,8 +142,8 @@ export function FormShell({
                           completenessPercent >= 100
                             ? '#16A34A'
                             : completenessPercent >= 50
-                            ? '#D97706'
-                            : 'var(--color-error)',
+                              ? '#D97706'
+                              : 'var(--color-error)',
                       }}
                     />
                   </div>
@@ -131,12 +153,18 @@ export function FormShell({
                 </div>
               )}
               {saveStatus === 'saving' && (
-                <span className="text-xs px-2 py-1 rounded" style={{ color: '#D97706', backgroundColor: '#FEF3C7' }}>
+                <span
+                  className="text-xs px-2 py-1 rounded"
+                  style={{ color: '#D97706', backgroundColor: '#FEF3C7' }}
+                >
                   Saving...
                 </span>
               )}
               {saveStatus === 'saved' && (
-                <span className="text-xs px-2 py-1 rounded" style={{ color: '#16A34A', backgroundColor: '#DCFCE7' }}>
+                <span
+                  className="text-xs px-2 py-1 rounded"
+                  style={{ color: '#16A34A', backgroundColor: '#DCFCE7' }}
+                >
                   Saved
                 </span>
               )}
@@ -146,7 +174,11 @@ export function FormShell({
                   type="button"
                   onClick={onCancel}
                   className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
-                  style={{ backgroundColor: '#FFFFFF', color: 'var(--color-ink)', border: '1px solid var(--color-silver)' }}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    color: 'var(--color-ink)',
+                    border: '1px solid var(--color-silver)',
+                  }}
                 >
                   Cancel
                 </button>
@@ -168,7 +200,9 @@ export function FormShell({
                   onClick={onSubmit}
                   disabled={submitDisabled}
                   className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-                  style={{ backgroundColor: submitDisabled ? 'var(--color-silver)' : 'var(--color-teal)' }}
+                  style={{
+                    backgroundColor: submitDisabled ? 'var(--color-silver)' : 'var(--color-teal)',
+                  }}
                 >
                   <Send className="w-4 h-4" />
                   {submitLabel}
@@ -215,10 +249,10 @@ export function FormSection({
     columns === 1
       ? 'grid grid-cols-1 gap-6'
       : columns === 2
-      ? 'grid grid-cols-1 md:grid-cols-2 gap-6'
-      : columns === 3
-      ? 'grid grid-cols-3 gap-6'
-      : 'grid grid-cols-4 gap-6';
+        ? 'grid grid-cols-1 md:grid-cols-2 gap-6'
+        : columns === 3
+          ? 'grid grid-cols-3 gap-6'
+          : 'grid grid-cols-4 gap-6';
 
   const outerClass = flat
     ? `py-6 ${className ?? ''}`
@@ -234,7 +268,10 @@ export function FormSection({
           <div className="flex items-center gap-3">
             {icon}
             <div>
-              <h2 className={flat ? 'text-base' : 'text-xl'} style={{ color: 'var(--color-ink)', fontWeight: flat ? 600 : undefined }}>
+              <h2
+                className={flat ? 'text-base' : 'text-xl'}
+                style={{ color: 'var(--color-ink)', fontWeight: flat ? 600 : undefined }}
+              >
                 {title}
               </h2>
               {subtitle && (
@@ -282,9 +319,7 @@ export function PxFormField({
         style={{ color: filled ? 'var(--color-ink)' : 'var(--color-mercury-grey)' }}
       >
         {label}
-        {required && (
-          <span style={{ color: 'var(--color-error-dark)' }}> *</span>
-        )}
+        {required && <span style={{ color: 'var(--color-error-dark)' }}> *</span>}
       </label>
       {children}
       {error && (

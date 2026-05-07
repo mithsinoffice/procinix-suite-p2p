@@ -106,7 +106,9 @@ function deriveFinancialYear(dateStr) {
  */
 export async function getVendorLedger({ vendorId, entityId, fromDate, toDate, db }) {
   if (!entityId) {
-    throw new Error('entityId is required for vendor ledger. Group-wide ledger (no entity filter) is deferred to a later workstream.');
+    throw new Error(
+      'entityId is required for vendor ledger. Group-wide ledger (no entity filter) is deferred to a later workstream.'
+    );
   }
 
   const financialYear = deriveFinancialYear(fromDate);

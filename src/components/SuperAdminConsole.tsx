@@ -40,7 +40,7 @@ export function SuperAdminConsole() {
       const res = await mysqlApiRequest<{ success: boolean; data: TenantRow[] }>('/admin/tenants');
       const list = res.data || [];
       setTenants(list);
-      setSelectedTenantId((prev) => (prev || (list[0]?.id ?? '')));
+      setSelectedTenantId((prev) => prev || (list[0]?.id ?? ''));
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load tenants');
     }
@@ -54,7 +54,7 @@ export function SuperAdminConsole() {
     setLoadError('');
     try {
       const res = await mysqlApiRequest<{ success: boolean; data: EntityRow[] }>(
-        `/admin/tenants/${encodeURIComponent(tenantId)}/entities`,
+        `/admin/tenants/${encodeURIComponent(tenantId)}/entities`
       );
       setEntities(res.data || []);
     } catch (e) {
@@ -125,15 +125,20 @@ export function SuperAdminConsole() {
       <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
         Create tenants first, then add entities under each tenant. Server enforces access via{' '}
         <code className="text-xs bg-slate-100 px-1 rounded">SUPER_ADMIN_EMAILS</code> and the{' '}
-        <code className="text-xs bg-slate-100 px-1 rounded">X-User-Email</code> header (set automatically after you sign
-        in here).
+        <code className="text-xs bg-slate-100 px-1 rounded">X-User-Email</code> header (set
+        automatically after you sign in here).
       </p>
 
       {loadError ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{loadError}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {loadError}
+        </div>
       ) : null}
 
-      <section className="rounded-xl border bg-white p-6" style={{ borderColor: 'var(--color-silver)' }}>
+      <section
+        className="rounded-xl border bg-white p-6"
+        style={{ borderColor: 'var(--color-silver)' }}
+      >
         <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-ink)' }}>
           Tenants
         </h2>
@@ -195,7 +200,10 @@ export function SuperAdminConsole() {
         </form>
       </section>
 
-      <section className="rounded-xl border bg-white p-6" style={{ borderColor: 'var(--color-silver)' }}>
+      <section
+        className="rounded-xl border bg-white p-6"
+        style={{ borderColor: 'var(--color-silver)' }}
+      >
         <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-ink)' }}>
           Entities under tenant
         </h2>
@@ -242,7 +250,11 @@ export function SuperAdminConsole() {
         <form onSubmit={createEntity} className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={newEntityDefault} onChange={(e) => setNewEntityDefault(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={newEntityDefault}
+                onChange={(e) => setNewEntityDefault(e.target.checked)}
+              />
               Set as default entity for this tenant
             </label>
           </div>

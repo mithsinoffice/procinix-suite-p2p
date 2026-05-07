@@ -37,19 +37,22 @@ const RELATIONSHIP_TYPES: VendorGroupRecord['relationshipType'][] = [
 ];
 
 export function VendorGroupMaster() {
-  const [records, setRecords] = useIncrementalMasterRecords<VendorGroupRecord>('vendor_group_master', [
-    {
-      id: 'vg-1',
-      groupCode: 'VG001',
-      clientErpVendorGroupCode: 'ERP-VG-001',
-      groupName: 'Independent Vendors',
-      relationshipType: 'Third party',
-      description: 'Default group for non-related suppliers.',
-      status: 'Active',
-      approvalStatus: 'Approved',
-      entityMappings: [],
-    },
-  ]);
+  const [records, setRecords] = useIncrementalMasterRecords<VendorGroupRecord>(
+    'vendor_group_master',
+    [
+      {
+        id: 'vg-1',
+        groupCode: 'VG001',
+        clientErpVendorGroupCode: 'ERP-VG-001',
+        groupName: 'Independent Vendors',
+        relationshipType: 'Third party',
+        description: 'Default group for non-related suppliers.',
+        status: 'Active',
+        approvalStatus: 'Approved',
+        entityMappings: [],
+      },
+    ]
+  );
 
   const [showForm, setShowForm] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -57,7 +60,8 @@ export function VendorGroupMaster() {
   const [groupCode, setGroupCode] = useState('');
   const [clientErpVendorGroupCode, setClientErpVendorGroupCode] = useState('');
   const [groupName, setGroupName] = useState('');
-  const [relationshipType, setRelationshipType] = useState<VendorGroupRecord['relationshipType']>('Third party');
+  const [relationshipType, setRelationshipType] =
+    useState<VendorGroupRecord['relationshipType']>('Third party');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
   const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
@@ -83,7 +87,8 @@ export function VendorGroupMaster() {
           .toLowerCase();
         const matchesSearch = haystack.includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter.length === 0 || statusFilter.includes(record.status);
-        const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(record.approvalStatus);
+        const matchesApproval =
+          approvalFilter.length === 0 || approvalFilter.includes(record.approvalStatus);
         return matchesSearch && matchesStatus && matchesApproval;
       }),
     [records, searchTerm, statusFilter, approvalFilter]
@@ -108,13 +113,19 @@ export function VendorGroupMaster() {
     setEditingId(null);
   };
 
-  const handleSubmit = (approvalStatus: VendorGroupRecord['approvalStatus'] = 'Pending Approval') => {
+  const handleSubmit = (
+    approvalStatus: VendorGroupRecord['approvalStatus'] = 'Pending Approval'
+  ) => {
     const normalizedErpCode = clientErpVendorGroupCode.trim().toLowerCase();
     const duplicateErpCodeRecord = records.find((record) => {
       if (isEditMode && editingId && record.id === editingId) {
         return false;
       }
-      return String(record.clientErpVendorGroupCode || '').trim().toLowerCase() === normalizedErpCode;
+      return (
+        String(record.clientErpVendorGroupCode || '')
+          .trim()
+          .toLowerCase() === normalizedErpCode
+      );
     });
 
     if (duplicateErpCodeRecord) {
@@ -181,10 +192,18 @@ export function VendorGroupMaster() {
     const changes: Change[] = [];
     if (record.originalData) {
       if (record.originalData.groupCode !== record.groupCode) {
-        changes.push({ field: 'Group Code', oldValue: record.originalData.groupCode, newValue: record.groupCode });
+        changes.push({
+          field: 'Group Code',
+          oldValue: record.originalData.groupCode,
+          newValue: record.groupCode,
+        });
       }
       if (record.originalData.groupName !== record.groupName) {
-        changes.push({ field: 'Group Name', oldValue: record.originalData.groupName, newValue: record.groupName });
+        changes.push({
+          field: 'Group Name',
+          oldValue: record.originalData.groupName,
+          newValue: record.groupName,
+        });
       }
       if (record.originalData.clientErpVendorGroupCode !== record.clientErpVendorGroupCode) {
         changes.push({
@@ -201,7 +220,11 @@ export function VendorGroupMaster() {
         });
       }
       if (record.originalData.status !== record.status) {
-        changes.push({ field: 'Status', oldValue: record.originalData.status, newValue: record.status });
+        changes.push({
+          field: 'Status',
+          oldValue: record.originalData.status,
+          newValue: record.status,
+        });
       }
     }
     setCurrentReviewRecord(record);
@@ -211,7 +234,12 @@ export function VendorGroupMaster() {
 
   const handleApprove = async () => {
     if (currentReviewRecord) {
-      const next = await applyMasterApprovalAction('vendor_group_master', records, currentReviewRecord.id, 'approve');
+      const next = await applyMasterApprovalAction(
+        'vendor_group_master',
+        records,
+        currentReviewRecord.id,
+        'approve'
+      );
       setRecords(next);
     }
     setShowApprovalModal(false);
@@ -220,7 +248,12 @@ export function VendorGroupMaster() {
 
   const handleReject = async () => {
     if (currentReviewRecord) {
-      const next = await applyMasterApprovalAction('vendor_group_master', records, currentReviewRecord.id, 'reject');
+      const next = await applyMasterApprovalAction(
+        'vendor_group_master',
+        records,
+        currentReviewRecord.id,
+        'reject'
+      );
       setRecords(next);
     }
     setShowApprovalModal(false);
@@ -255,7 +288,18 @@ export function VendorGroupMaster() {
     handleSubmit('Draft');
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
-  }, [groupCode, clientErpVendorGroupCode, groupName, relationshipType, status, description, entityMappings, isEditMode, editingId, records]);
+  }, [
+    groupCode,
+    clientErpVendorGroupCode,
+    groupName,
+    relationshipType,
+    status,
+    description,
+    entityMappings,
+    isEditMode,
+    editingId,
+    records,
+  ]);
 
   useFormKeyboardSave(handleSaveDraft);
 
@@ -296,9 +340,19 @@ export function VendorGroupMaster() {
       >
         <FormSection title="Vendor Group Details" columns={2}>
           <PxFormField label="Group Code" required filled={!!groupCode.trim()}>
-            <input value={groupCode} readOnly className="px-input" placeholder="System generated" style={{ backgroundColor: '#F6F9FC', color: '#6E7A82' }} />
+            <input
+              value={groupCode}
+              readOnly
+              className="px-input"
+              placeholder="System generated"
+              style={{ backgroundColor: '#F6F9FC', color: '#6E7A82' }}
+            />
           </PxFormField>
-          <PxFormField label="Client ERP Vendor Group Code" required filled={!!clientErpVendorGroupCode.trim()}>
+          <PxFormField
+            label="Client ERP Vendor Group Code"
+            required
+            filled={!!clientErpVendorGroupCode.trim()}
+          >
             <input
               value={clientErpVendorGroupCode}
               onChange={(event) => setClientErpVendorGroupCode(event.target.value)}
@@ -307,10 +361,21 @@ export function VendorGroupMaster() {
             />
           </PxFormField>
           <PxFormField label="Group Name" required filled={!!groupName.trim()}>
-            <input value={groupName} onChange={(event) => setGroupName(event.target.value)} className="px-input" placeholder="e.g., Tata Group" />
+            <input
+              value={groupName}
+              onChange={(event) => setGroupName(event.target.value)}
+              className="px-input"
+              placeholder="e.g., Tata Group"
+            />
           </PxFormField>
           <PxFormField label="Relationship Type" required filled={!!relationshipType}>
-            <select value={relationshipType} onChange={(event) => setRelationshipType(event.target.value as VendorGroupRecord['relationshipType'])} className="px-select">
+            <select
+              value={relationshipType}
+              onChange={(event) =>
+                setRelationshipType(event.target.value as VendorGroupRecord['relationshipType'])
+              }
+              className="px-select"
+            >
               {RELATIONSHIP_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {type}
@@ -319,13 +384,22 @@ export function VendorGroupMaster() {
             </select>
           </PxFormField>
           <PxFormField label="Status" required filled={!!status}>
-            <select value={status} onChange={(event) => setStatus(event.target.value as 'Active' | 'Inactive')} className="px-select">
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value as 'Active' | 'Inactive')}
+              className="px-select"
+            >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
           <PxFormField label="Description" filled={!!description.trim()}>
-            <input value={description} onChange={(event) => setDescription(event.target.value)} className="px-input" placeholder="Describe the group purpose" />
+            <input
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              className="px-input"
+              placeholder="Describe the group purpose"
+            />
           </PxFormField>
           <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
@@ -346,8 +420,12 @@ export function VendorGroupMaster() {
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
           style={{ backgroundColor: 'var(--color-teal)' }}
-          onMouseEnter={(event) => (event.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
-          onMouseLeave={(event) => (event.currentTarget.style.backgroundColor = 'var(--color-teal)')}
+          onMouseEnter={(event) =>
+            (event.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
+          }
+          onMouseLeave={(event) =>
+            (event.currentTarget.style.backgroundColor = 'var(--color-teal)')
+          }
         >
           <Plus className="w-5 h-5" />
           Add Vendor Group
@@ -371,8 +449,18 @@ export function VendorGroupMaster() {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         filters={[
-          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
-          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+          {
+            key: 'status',
+            label: 'Status',
+            options: ['Active', 'Inactive'],
+            selected: statusFilter,
+          },
+          {
+            key: 'approval',
+            label: 'Approval',
+            options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'],
+            selected: approvalFilter,
+          },
         ]}
         onFilterChange={(key, values) => {
           if (key === 'status') setStatusFilter(values);
@@ -396,47 +484,122 @@ export function VendorGroupMaster() {
           <table className="w-full">
             <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Group Code</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Client ERP Group Code</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Group Name</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Relationship Type</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Group Code
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Client ERP Group Code
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Group Name
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Relationship Type
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Status
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Approval Status
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredRecords.map((record, index) => (
-                <tr key={record.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: 600 }}>{record.groupCode}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{record.clientErpVendorGroupCode || '—'}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{record.groupName}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{record.relationshipType}</td>
+                <tr
+                  key={record.id}
+                  style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}
+                >
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: 600 }}>
+                    {record.groupCode}
+                  </td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                    {record.clientErpVendorGroupCode || '—'}
+                  </td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
+                    {record.groupName}
+                  </td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                    {record.relationshipType}
+                  </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: record.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA', color: record.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)' }}>
+                    <span
+                      className="px-3 py-1 rounded-full text-sm"
+                      style={{
+                        backgroundColor:
+                          record.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA',
+                        color:
+                          record.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)',
+                      }}
+                    >
                       {record.status}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={getStatusBadgeStyle(record.approvalStatus)}>
+                    <span
+                      className="px-3 py-1 rounded-full text-sm"
+                      style={getStatusBadgeStyle(record.approvalStatus)}
+                    >
                       {record.approvalStatus}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       {record.approvalStatus === 'Pending Approval' && (
-                        <button onClick={() => handleReview(record)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-teal)' }} title="Review Changes">
+                        <button
+                          onClick={() => handleReview(record)}
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: 'var(--color-teal)' }}
+                          title="Review Changes"
+                        >
                           <Eye className="w-4 h-4" />
                         </button>
                       )}
-                      <button onClick={() => handleEdit(record)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }} title="Edit">
+                      <button
+                        onClick={() => handleEdit(record)}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: 'var(--color-mercury-grey)' }}
+                        title="Edit"
+                      >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(record.id)}
                         className="p-2 rounded-lg transition-colors"
-                        style={{ color: record.approvalStatus === 'Approved' ? '#C4C4C4' : 'var(--color-error)', cursor: record.approvalStatus === 'Approved' ? 'not-allowed' : 'pointer' }}
-                        title={record.approvalStatus === 'Approved' ? 'Cannot delete approved records' : 'Delete'}
+                        style={{
+                          color:
+                            record.approvalStatus === 'Approved' ? '#C4C4C4' : 'var(--color-error)',
+                          cursor: record.approvalStatus === 'Approved' ? 'not-allowed' : 'pointer',
+                        }}
+                        title={
+                          record.approvalStatus === 'Approved'
+                            ? 'Cannot delete approved records'
+                            : 'Delete'
+                        }
                         disabled={record.approvalStatus === 'Approved'}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -452,4 +615,3 @@ export function VendorGroupMaster() {
     </MasterPageShell>
   );
 }
-

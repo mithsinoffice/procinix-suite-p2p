@@ -1,6 +1,24 @@
 const VALID_CURRENCIES = new Set([
-  'INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD', 'JPY', 'AUD', 'CAD', 'CHF',
-  'CNY', 'HKD', 'MYR', 'THB', 'SAR', 'QAR', 'BHD', 'OMR', 'KWD', 'ZAR',
+  'INR',
+  'USD',
+  'EUR',
+  'GBP',
+  'AED',
+  'SGD',
+  'JPY',
+  'AUD',
+  'CAD',
+  'CHF',
+  'CNY',
+  'HKD',
+  'MYR',
+  'THB',
+  'SAR',
+  'QAR',
+  'BHD',
+  'OMR',
+  'KWD',
+  'ZAR',
 ]);
 
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]$/;
@@ -29,7 +47,9 @@ function determineExpectedTDSRate(line = {}, vendor = {}) {
 
 function validateAndCleanGSTIN(raw) {
   if (!raw) return { valid: false, cleaned: null };
-  const cleaned = raw.toString().toUpperCase()
+  const cleaned = raw
+    .toString()
+    .toUpperCase()
     .replace(/\s+/g, '')
     .replace(/[^A-Z0-9]/g, '');
   const match = cleaned.match(/[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]/);
@@ -93,15 +113,25 @@ export function validateInvoiceData(data) {
   }
 
   // Math checks
-  if (typeof data.subtotal === 'number' && typeof data.tax_amount === 'number' && typeof data.total_amount === 'number') {
+  if (
+    typeof data.subtotal === 'number' &&
+    typeof data.tax_amount === 'number' &&
+    typeof data.total_amount === 'number'
+  ) {
     const expected = data.subtotal + data.tax_amount;
     if (Math.abs(expected - data.total_amount) > 0.01) {
-      warnings.push(`total_amount (${data.total_amount}) != subtotal (${data.subtotal}) + tax_amount (${data.tax_amount}) = ${expected}`);
+      warnings.push(
+        `total_amount (${data.total_amount}) != subtotal (${data.subtotal}) + tax_amount (${data.tax_amount}) = ${expected}`
+      );
     }
   }
 
   // Line items sum check
-  if (Array.isArray(data.line_items) && data.line_items.length > 0 && typeof data.subtotal === 'number') {
+  if (
+    Array.isArray(data.line_items) &&
+    data.line_items.length > 0 &&
+    typeof data.subtotal === 'number'
+  ) {
     const lineSum = data.line_items.reduce((sum, li) => sum + (Number(li.amount) || 0), 0);
     if (Math.abs(lineSum - data.subtotal) > 0.01) {
       warnings.push(`line items sum (${lineSum}) != subtotal (${data.subtotal})`);
@@ -128,8 +158,7 @@ export function validateInvoiceData(data) {
   }
 
   const requiresManualReview =
-    errors.length > 0 ||
-    (typeof data.confidence_score === 'number' && data.confidence_score < 0.7);
+    errors.length > 0 || (typeof data.confidence_score === 'number' && data.confidence_score < 0.7);
 
   return {
     valid: errors.length === 0,
@@ -141,11 +170,7 @@ export function validateInvoiceData(data) {
 
 export async function validateInvoiceDataWithPolicy(data, options = {}) {
   const result = validateInvoiceData(data);
-  const {
-    existingInvoiceByVendorInvoiceNo,
-    vendor,
-    fiscalYear,
-  } = options;
+  const { existingInvoiceByVendorInvoiceNo, vendor, fiscalYear } = options;
 
   if (existingInvoiceByVendorInvoiceNo) {
     result.valid = false;
@@ -154,12 +179,20 @@ export async function validateInvoiceDataWithPolicy(data, options = {}) {
   }
 
   const lineItems = Array.isArray(data.line_items) ? data.line_items : [];
-  const taxableTotal = lineItems.reduce((sum, item) => sum + Number(item.taxable_amount ?? item.amount ?? 0), 0);
-  const gstTotal = lineItems.reduce((sum, item) => sum + Number(item.igst || 0) + Number(item.cgst || 0) + Number(item.sgst || 0), 0);
+  const taxableTotal = lineItems.reduce(
+    (sum, item) => sum + Number(item.taxable_amount ?? item.amount ?? 0),
+    0
+  );
+  const gstTotal = lineItems.reduce(
+    (sum, item) => sum + Number(item.igst || 0) + Number(item.cgst || 0) + Number(item.sgst || 0),
+    0
+  );
   const headerTotal = Number(data.total_amount || 0);
   if (Math.abs(taxableTotal + gstTotal - headerTotal) > 1) {
     result.valid = false;
-    result.errors.push('Header total mismatch: taxable + GST does not reconcile within rounding tolerance');
+    result.errors.push(
+      'Header total mismatch: taxable + GST does not reconcile within rounding tolerance'
+    );
   }
 
   for (const [idx, line] of lineItems.entries()) {

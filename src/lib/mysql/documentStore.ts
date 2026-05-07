@@ -56,10 +56,12 @@ function writeLocal<T>(domain: DocumentDomain, payload: T) {
 export async function ensureDomainDocument<T>(
   domain: DocumentDomain,
   fallback: T,
-  options?: EnsureDomainDocumentOptions,
+  options?: EnsureDomainDocumentOptions
 ): Promise<T> {
   try {
-    const response = await mysqlApiRequest<{ success: boolean; payload: T | null }>(`/documents/${domain}`);
+    const response = await mysqlApiRequest<{ success: boolean; payload: T | null }>(
+      `/documents/${domain}`
+    );
     if (response.payload) {
       writeLocal(domain, response.payload);
       return response.payload;

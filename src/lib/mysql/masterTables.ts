@@ -38,7 +38,7 @@ const MASTER_KEYS = [
   'gl_code_master',
 ] as const;
 
-export type MasterKey = typeof MASTER_KEYS[number];
+export type MasterKey = (typeof MASTER_KEYS)[number];
 
 function getStorageKey(masterKey: string) {
   return `${STORAGE_PREFIX}:${masterKey}`;
@@ -57,11 +57,7 @@ function isSeededVendorRecord(record: unknown) {
   const id = normalizeKeyPart(candidate.id);
   const createdBy = normalizeKeyPart(candidate.createdBy);
 
-  return (
-    id.startsWith('VEN-DEMO-') ||
-    id.startsWith('VEN-SUBKO-') ||
-    createdBy === 'SYSTEM'
-  );
+  return id.startsWith('VEN-DEMO-') || id.startsWith('VEN-SUBKO-') || createdBy === 'SYSTEM';
 }
 
 function sanitizeVendorMasterRecords<T>(records: T[]): T[] {
@@ -125,10 +121,24 @@ function sanitizeEntityMasterRecords<T>(records: T[]): T[] {
     const nextUpdated = String(candidate.updatedAt || candidate.createdAt || '');
 
     const currentScore =
-      (currentApproval === 'APPROVED' ? 4 : currentApproval === 'PENDING APPROVAL' ? 3 : currentApproval ? 2 : 1) * 1000000 +
+      (currentApproval === 'APPROVED'
+        ? 4
+        : currentApproval === 'PENDING APPROVAL'
+          ? 3
+          : currentApproval
+            ? 2
+            : 1) *
+        1000000 +
       Date.parse(currentUpdated || '1970-01-01');
     const nextScore =
-      (nextApproval === 'APPROVED' ? 4 : nextApproval === 'PENDING APPROVAL' ? 3 : nextApproval ? 2 : 1) * 1000000 +
+      (nextApproval === 'APPROVED'
+        ? 4
+        : nextApproval === 'PENDING APPROVAL'
+          ? 3
+          : nextApproval
+            ? 2
+            : 1) *
+        1000000 +
       Date.parse(nextUpdated || '1970-01-01');
 
     if (nextScore >= currentScore) {
@@ -171,10 +181,7 @@ function readLocal<T>(masterKey: string, fallback: T[]): T[] {
   }
 }
 
-export function getCachedRelationalMasterRecords<T>(
-  masterKey: MasterKey,
-  fallback: T[]
-): T[] {
+export function getCachedRelationalMasterRecords<T>(masterKey: MasterKey, fallback: T[]): T[] {
   return readLocal(masterKey, fallback);
 }
 
@@ -230,31 +237,33 @@ export async function ensureRelationalMasterRecords<T>(
   }
 
   const loadPromise = (async () => {
-  try {
-    const response = await mysqlApiRequest<{ success: boolean; data: T[] }>(`/masters/${masterKey}`);
-    const sanitizedResponse = sanitizeMasterRecords(masterKey, response.data);
-    if (sanitizedResponse.length > 0) {
-      writeLocal(masterKey, sanitizedResponse);
-      return sanitizedResponse;
-    }
+    try {
+      const response = await mysqlApiRequest<{ success: boolean; data: T[] }>(
+        `/masters/${masterKey}`
+      );
+      const sanitizedResponse = sanitizeMasterRecords(masterKey, response.data);
+      if (sanitizedResponse.length > 0) {
+        writeLocal(masterKey, sanitizedResponse);
+        return sanitizedResponse;
+      }
 
-    // Vendor master must never auto-seed scaffold/demo rows.
-    if (masterKey === 'vendor_master') {
-      writeLocal(masterKey, []);
-      return [];
-    }
+      // Vendor master must never auto-seed scaffold/demo rows.
+      if (masterKey === 'vendor_master') {
+        writeLocal(masterKey, []);
+        return [];
+      }
 
-    const legacyRecords = await readLegacyMasterRecords<T>(masterKey);
-    const seedRecords = legacyRecords ?? fallback;
-    await saveRelationalMasterRecords(masterKey, seedRecords);
-    return seedRecords;
-  } catch (error) {
-    console.warn(`Falling back to local master storage for ${masterKey}`, error);
-    if (masterKey === 'vendor_master') {
-      return [];
+      const legacyRecords = await readLegacyMasterRecords<T>(masterKey);
+      const seedRecords = legacyRecords ?? fallback;
+      await saveRelationalMasterRecords(masterKey, seedRecords);
+      return seedRecords;
+    } catch (error) {
+      console.warn(`Falling back to local master storage for ${masterKey}`, error);
+      if (masterKey === 'vendor_master') {
+        return [];
+      }
+      return readLocal(masterKey, fallback);
     }
-    return readLocal(masterKey, fallback);
-  }
   })();
 
   relationalMasterInFlight.set(masterKey, loadPromise as Promise<unknown[]>);

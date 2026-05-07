@@ -44,9 +44,7 @@ function parsePayload(row) {
 
 function buildSafeUser(row, payload) {
   const roleFromAssignments =
-    payload.userRoles?.[0]?.roleName ??
-    payload.user_roles?.[0]?.roleName ??
-    null;
+    payload.userRoles?.[0]?.roleName ?? payload.user_roles?.[0]?.roleName ?? null;
   return {
     id: String(row.id),
     email: String(payload.email ?? '').trim(),
@@ -66,7 +64,9 @@ function buildSafeUser(row, payload) {
  * Returns { ok: true, user } | { ok: false, reason: 'invalid_credentials' }
  */
 export async function authenticateUser({ email, password }) {
-  const normalizedEmail = String(email ?? '').trim().toLowerCase();
+  const normalizedEmail = String(email ?? '')
+    .trim()
+    .toLowerCase();
 
   const rows = await query(
     `SELECT id, payload, tenant_id, default_entity_id, status
@@ -74,7 +74,7 @@ export async function authenticateUser({ email, password }) {
      WHERE LOWER(JSON_UNQUOTE(JSON_EXTRACT(payload, '$.email'))) = ?
        AND status = 'Active'
      LIMIT 1`,
-    [normalizedEmail],
+    [normalizedEmail]
   );
 
   const row = rows[0] ?? null;
@@ -95,8 +95,7 @@ export async function authenticateUser({ email, password }) {
   }
 
   // ── legacy plaintext path (un-migrated user) ──────────────────────────────
-  const legacyPass =
-    payload.password ?? payload.loginPassword ?? payload.tempPassword ?? '';
+  const legacyPass = payload.password ?? payload.loginPassword ?? payload.tempPassword ?? '';
 
   if (!legacyPass || legacyPass !== password) {
     return { ok: false, reason: 'invalid_credentials' };
@@ -105,18 +104,19 @@ export async function authenticateUser({ email, password }) {
   console.warn(`[auth] WARN: User ${row.id} has unhashed password — lazy migration in progress`);
 
   // Hash the correct password and persist asynchronously (fire-and-forget)
-  bcrypt.hash(password, BCRYPT_COST).then((newHash) => {
-    const updatedPayload = { ...payload, passwordHash: newHash };
-    delete updatedPayload.password;
-    delete updatedPayload.loginPassword;
-    delete updatedPayload.tempPassword;
-    return query(
-      'UPDATE `user_master`.`user_master` SET payload = CAST(? AS JSON) WHERE id = ?',
-      [JSON.stringify(updatedPayload), row.id],
-    );
-  }).catch((err) =>
-    console.error(`[auth] Lazy hash persistence failed for user ${row.id}:`, err),
-  );
+  bcrypt
+    .hash(password, BCRYPT_COST)
+    .then((newHash) => {
+      const updatedPayload = { ...payload, passwordHash: newHash };
+      delete updatedPayload.password;
+      delete updatedPayload.loginPassword;
+      delete updatedPayload.tempPassword;
+      return query(
+        'UPDATE `user_master`.`user_master` SET payload = CAST(? AS JSON) WHERE id = ?',
+        [JSON.stringify(updatedPayload), row.id]
+      );
+    })
+    .catch((err) => console.error(`[auth] Lazy hash persistence failed for user ${row.id}:`, err));
 
   return { ok: true, user: buildSafeUser(row, payload) };
 }
@@ -136,14 +136,7 @@ export async function createSession(user) {
     `INSERT INTO \`p2p_schema_mt\`.\`sessions\`
        (id, user_id, tenant_id, token_hash, user_email, expires_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [
-      randomUUID(),
-      user.id,
-      user.tenantId ?? '',
-      tokenHash,
-      user.email,
-      expiresAt,
-    ],
+    [randomUUID(), user.id, user.tenantId ?? '', tokenHash, user.email, expiresAt]
   );
 
   return token;
@@ -163,7 +156,7 @@ export async function lookupSession(rawToken) {
        AND expires_at > NOW()
        AND revoked_at IS NULL
      LIMIT 1`,
-    [tokenHash],
+    [tokenHash]
   );
 
   const row = rows[0] ?? null;
@@ -171,9 +164,9 @@ export async function lookupSession(rawToken) {
 
   return {
     sessionId: String(row.id),
-    userId:    String(row.user_id),
-    tenantId:  String(row.tenant_id),
-    email:     String(row.user_email),
+    userId: String(row.user_id),
+    tenantId: String(row.tenant_id),
+    email: String(row.user_email),
   };
 }
 
@@ -182,10 +175,7 @@ export async function lookupSession(rawToken) {
  */
 export async function revokeSession(sessionId) {
   if (!sessionId) return;
-  await query(
-    "UPDATE `p2p_schema_mt`.`sessions` SET revoked_at = NOW() WHERE id = ?",
-    [sessionId],
-  );
+  await query('UPDATE `p2p_schema_mt`.`sessions` SET revoked_at = NOW() WHERE id = ?', [sessionId]);
 }
 
 /**
@@ -194,10 +184,9 @@ export async function revokeSession(sessionId) {
 export async function fetchContext(userId, tenantId) {
   if (!tenantId) return null;
 
-  const [tenantRow] = await query(
-    'SELECT id, name, code FROM tenants WHERE id = ? LIMIT 1',
-    [tenantId],
-  );
+  const [tenantRow] = await query('SELECT id, name, code FROM tenants WHERE id = ? LIMIT 1', [
+    tenantId,
+  ]);
   if (!tenantRow) return null;
 
   const entRows = await query(
@@ -206,7 +195,7 @@ export async function fetchContext(userId, tenantId) {
      INNER JOIN entities e ON e.id = uea.entity_id
      WHERE BINARY uea.user_id = ? AND BINARY uea.tenant_id = ?
      ORDER BY e.is_default DESC, e.name ASC`,
-    [userId, tenantId],
+    [userId, tenantId]
   );
 
   return {
@@ -232,7 +221,7 @@ export async function getUserById(userId) {
      FROM \`user_master\`.\`user_master\`
      WHERE id = ? AND status = 'Active'
      LIMIT 1`,
-    [userId],
+    [userId]
   );
 
   const row = rows[0] ?? null;

@@ -25,9 +25,7 @@ export async function run({ dryRun = process.env.MIGRATE_DRY_RUN === '1' } = {})
     console.log('[migrate:password-hash] DRY RUN — no writes will occur');
   }
 
-  const rows = await query(
-    'SELECT id, payload FROM `user_master`.`user_master` ORDER BY id ASC',
-  );
+  const rows = await query('SELECT id, payload FROM `user_master`.`user_master` ORDER BY id ASC');
 
   let migrated = 0;
   let skipped = 0;
@@ -44,7 +42,9 @@ export async function run({ dryRun = process.env.MIGRATE_DRY_RUN === '1' } = {})
 
     const plaintext = resolvePlaintext(payload);
     if (!plaintext) {
-      console.log(`[migrate:password-hash] Skipping user ${label} (id=${row.id}) — no password field`);
+      console.log(
+        `[migrate:password-hash] Skipping user ${label} (id=${row.id}) — no password field`
+      );
       skipped++;
       continue;
     }
@@ -62,7 +62,7 @@ export async function run({ dryRun = process.env.MIGRATE_DRY_RUN === '1' } = {})
         await connExecute(
           conn,
           'UPDATE `user_master`.`user_master` SET payload = CAST(? AS JSON) WHERE id = ?',
-          [JSON.stringify(updatedPayload), row.id],
+          [JSON.stringify(updatedPayload), row.id]
         );
       });
       console.log(`[migrate:password-hash] Migrated user ${label} (id=${row.id})`);

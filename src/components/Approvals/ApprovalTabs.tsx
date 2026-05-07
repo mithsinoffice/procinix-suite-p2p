@@ -30,7 +30,11 @@ export function ApprovalTabs({ counts, activeTab, onChange }: Props) {
             className={`approval-tab ${active ? 'approval-tab-active' : 'approval-tab-inactive'}`}
           >
             <span>{tab.label}</span>
-            <span className={`approval-tab-count ${active ? 'approval-tab-count-active' : 'approval-tab-count-inactive'}`}>{count}</span>
+            <span
+              className={`approval-tab-count ${active ? 'approval-tab-count-active' : 'approval-tab-count-inactive'}`}
+            >
+              {count}
+            </span>
           </button>
         );
       })}

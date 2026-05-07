@@ -43,12 +43,12 @@ export function AgentLogs() {
         { rule: 'Duplicate check', field: 'invoice_number', passed: true },
         { rule: 'Format validation', field: 'vendor_gstin', passed: true },
         { rule: 'Math validation', field: 'total_amount', passed: true },
-        { rule: 'Cross-field check', field: 'total_amount', passed: true }
+        { rule: 'Cross-field check', field: 'total_amount', passed: true },
       ],
       finalDecision: 'approved',
       durationMs: 342,
       recordId: 'INV-2024-5432',
-      recordLink: '/ap/invoices/view/INV-2024-5432'
+      recordLink: '/ap/invoices/view/INV-2024-5432',
     },
     {
       id: '2',
@@ -59,13 +59,23 @@ export function AgentLogs() {
       rulesExecuted: [
         { rule: 'Required validation', field: 'invoice_number', passed: true },
         { rule: 'Duplicate check', field: 'invoice_number', passed: true },
-        { rule: 'Format validation', field: 'vendor_gstin', passed: false, reason: 'GSTIN format invalid' },
-        { rule: 'Threshold check', field: 'total_amount', passed: false, reason: 'Amount exceeds ₹10,00,000 threshold' }
+        {
+          rule: 'Format validation',
+          field: 'vendor_gstin',
+          passed: false,
+          reason: 'GSTIN format invalid',
+        },
+        {
+          rule: 'Threshold check',
+          field: 'total_amount',
+          passed: false,
+          reason: 'Amount exceeds ₹10,00,000 threshold',
+        },
       ],
       finalDecision: 'flagged',
       durationMs: 456,
       recordId: 'INV-2024-5431',
-      recordLink: '/ap/invoices/view/INV-2024-5431'
+      recordLink: '/ap/invoices/view/INV-2024-5431',
     },
     {
       id: '3',
@@ -76,12 +86,12 @@ export function AgentLogs() {
       rulesExecuted: [
         { rule: 'Required validation', field: 'po_number', passed: true },
         { rule: 'Vendor exists', field: 'vendor_id', passed: true },
-        { rule: 'Budget check', field: 'total_value', passed: true }
+        { rule: 'Budget check', field: 'total_value', passed: true },
       ],
       finalDecision: 'approved',
       durationMs: 278,
       recordId: 'PO-2024-8923',
-      recordLink: '/procurement/po/view/PO-2024-8923'
+      recordLink: '/procurement/po/view/PO-2024-8923',
     },
     {
       id: '4',
@@ -92,12 +102,17 @@ export function AgentLogs() {
       rulesExecuted: [
         { rule: 'Required validation', field: 'legal_name', passed: true },
         { rule: 'GSTIN format', field: 'gstin', passed: true },
-        { rule: 'Blacklist check', field: 'vendor_name', passed: false, reason: 'Vendor found in fraud blacklist' }
+        {
+          rule: 'Blacklist check',
+          field: 'vendor_name',
+          passed: false,
+          reason: 'Vendor found in fraud blacklist',
+        },
       ],
       finalDecision: 'rejected',
       durationMs: 521,
       recordId: 'VEN-2024-1234',
-      recordLink: '/masters/vendors/view/VEN-2024-1234'
+      recordLink: '/masters/vendors/view/VEN-2024-1234',
     },
     {
       id: '5',
@@ -110,21 +125,25 @@ export function AgentLogs() {
         { rule: 'Duplicate check', field: 'invoice_number', passed: true },
         { rule: 'Format validation', field: 'vendor_gstin', passed: true },
         { rule: '3-way match', field: 'po_number', passed: true },
-        { rule: 'GRN quantity match', field: 'line_items', passed: true }
+        { rule: 'GRN quantity match', field: 'line_items', passed: true },
       ],
       finalDecision: 'approved',
       durationMs: 412,
       recordId: 'INV-2024-5430',
-      recordLink: '/ap/invoices/view/INV-2024-5430'
-    }
+      recordLink: '/ap/invoices/view/INV-2024-5430',
+    },
   ];
 
   const getDecisionColor = (decision: string) => {
     switch (decision) {
-      case 'approved': return { bg: '#D1FAE5', text: '#065F46' };
-      case 'flagged': return { bg: '#FEF3C7', text: '#92400E' };
-      case 'rejected': return { bg: '#FEE2E2', text: '#991B1B' };
-      default: return { bg: '#F6F9FC', text: '#6E7A82' };
+      case 'approved':
+        return { bg: '#D1FAE5', text: '#065F46' };
+      case 'flagged':
+        return { bg: '#FEF3C7', text: '#92400E' };
+      case 'rejected':
+        return { bg: '#FEE2E2', text: '#991B1B' };
+      default:
+        return { bg: '#F6F9FC', text: '#6E7A82' };
     }
   };
 
@@ -142,7 +161,12 @@ export function AgentLogs() {
         </div>
         <button
           className="flex items-center gap-2 px-4 py-2 rounded-lg"
-          style={{ border: '1px solid #E1E6EA', color: '#0A0F14', fontSize: '13px', fontWeight: '600' }}
+          style={{
+            border: '1px solid #E1E6EA',
+            color: '#0A0F14',
+            fontSize: '13px',
+            fontWeight: '600',
+          }}
         >
           <Download className="w-4 h-4" />
           Export logs
@@ -150,9 +174,15 @@ export function AgentLogs() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg p-4 mb-6 flex items-center gap-4" style={{ border: '1px solid #E1E6EA' }}>
+      <div
+        className="bg-white rounded-lg p-4 mb-6 flex items-center gap-4"
+        style={{ border: '1px solid #E1E6EA' }}
+      >
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: '#9AA6AF' }} />
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
+            style={{ color: '#9AA6AF' }}
+          />
           <input
             type="text"
             placeholder="Search logs..."
@@ -180,32 +210,88 @@ export function AgentLogs() {
         <table className="w-full">
           <thead>
             <tr style={{ backgroundColor: '#F6F9FC', borderBottom: '0.5px solid #E1E6EA' }}>
-              <th className="text-left px-6 py-3" style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>
+              <th
+                className="text-left px-6 py-3"
+                style={{
+                  color: '#6E7A82',
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
                 Timestamp
               </th>
-              <th className="text-left px-6 py-3" style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>
+              <th
+                className="text-left px-6 py-3"
+                style={{
+                  color: '#6E7A82',
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
                 Agent
               </th>
-              <th className="text-left px-6 py-3" style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>
+              <th
+                className="text-left px-6 py-3"
+                style={{
+                  color: '#6E7A82',
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
                 Input Summary
               </th>
-              <th className="text-center px-6 py-3" style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>
+              <th
+                className="text-center px-6 py-3"
+                style={{
+                  color: '#6E7A82',
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
                 Rules
               </th>
-              <th className="text-center px-6 py-3" style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>
+              <th
+                className="text-center px-6 py-3"
+                style={{
+                  color: '#6E7A82',
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
                 Decision
               </th>
-              <th className="text-center px-6 py-3" style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>
+              <th
+                className="text-center px-6 py-3"
+                style={{
+                  color: '#6E7A82',
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
                 Duration
               </th>
-              <th className="text-center px-6 py-3" style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>
+              <th
+                className="text-center px-6 py-3"
+                style={{
+                  color: '#6E7A82',
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  fontWeight: '600',
+                }}
+              >
                 Actions
               </th>
             </tr>
           </thead>
           <tbody>
             {logs.map((log) => {
-              const passedRules = log.rulesExecuted.filter(r => r.passed).length;
+              const passedRules = log.rulesExecuted.filter((r) => r.passed).length;
               const totalRules = log.rulesExecuted.length;
               const decisionColors = getDecisionColor(log.finalDecision);
 
@@ -222,7 +308,10 @@ export function AgentLogs() {
                       {log.timestamp}
                     </div>
                   </td>
-                  <td className="px-6 py-4" style={{ color: '#0A0F14', fontSize: '13px', fontWeight: '600' }}>
+                  <td
+                    className="px-6 py-4"
+                    style={{ color: '#0A0F14', fontSize: '13px', fontWeight: '600' }}
+                  >
                     {log.agentName}
                   </td>
                   <td className="px-6 py-4" style={{ color: '#6E7A82', fontSize: '13px' }}>
@@ -238,13 +327,16 @@ export function AgentLogs() {
                       style={{
                         backgroundColor: decisionColors.bg,
                         color: decisionColors.text,
-                        fontWeight: '600'
+                        fontWeight: '600',
                       }}
                     >
                       {log.finalDecision}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-center" style={{ color: '#6E7A82', fontSize: '13px' }}>
+                  <td
+                    className="px-6 py-4 text-center"
+                    style={{ color: '#6E7A82', fontSize: '13px' }}
+                  >
                     {log.durationMs}ms
                   </td>
                   <td className="px-6 py-4 text-center">
@@ -296,14 +388,25 @@ export function AgentLogs() {
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-6">
               <div className="mb-6">
-                <div style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                <div
+                  style={{
+                    color: '#6E7A82',
+                    fontSize: '11px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    marginBottom: '8px',
+                  }}
+                >
                   Input Summary
                 </div>
                 <div className="p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC' }}>
                   <div style={{ color: '#0A0F14', fontSize: '13px' }}>
                     {selectedLog.inputSummary}
                   </div>
-                  <div className="mt-2 flex items-center gap-4" style={{ fontSize: '12px', color: '#6E7A82' }}>
+                  <div
+                    className="mt-2 flex items-center gap-4"
+                    style={{ fontSize: '12px', color: '#6E7A82' }}
+                  >
                     <span>Trigger: {selectedLog.trigger}</span>
                     <span>Duration: {selectedLog.durationMs}ms</span>
                     <span>Record: {selectedLog.recordId}</span>
@@ -312,7 +415,15 @@ export function AgentLogs() {
               </div>
 
               <div className="mb-6">
-                <div style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                <div
+                  style={{
+                    color: '#6E7A82',
+                    fontSize: '11px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    marginBottom: '8px',
+                  }}
+                >
                   Rules Executed ({selectedLog.rulesExecuted.length})
                 </div>
                 <div className="space-y-2">
@@ -334,13 +445,19 @@ export function AgentLogs() {
                           </span>
                           <span
                             className="px-2 py-1 rounded text-xs"
-                            style={{ backgroundColor: '#F6F9FC', color: '#6E7A82', fontWeight: '600' }}
+                            style={{
+                              backgroundColor: '#F6F9FC',
+                              color: '#6E7A82',
+                              fontWeight: '600',
+                            }}
                           >
                             {rule.field}
                           </span>
                         </div>
                         {rule.reason && (
-                          <div style={{ color: rule.passed ? '#047857' : '#991B1B', fontSize: '12px' }}>
+                          <div
+                            style={{ color: rule.passed ? '#047857' : '#991B1B', fontSize: '12px' }}
+                          >
                             {rule.reason}
                           </div>
                         )}
@@ -351,36 +468,55 @@ export function AgentLogs() {
               </div>
 
               <div>
-                <div style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                <div
+                  style={{
+                    color: '#6E7A82',
+                    fontSize: '11px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    marginBottom: '8px',
+                  }}
+                >
                   Final Decision
                 </div>
                 <div
                   className="p-5 rounded-lg"
                   style={{
                     backgroundColor: getDecisionColor(selectedLog.finalDecision).bg,
-                    border: `2px solid ${getDecisionColor(selectedLog.finalDecision).text}40`
+                    border: `2px solid ${getDecisionColor(selectedLog.finalDecision).text}40`,
                   }}
                 >
                   <div
                     className="text-lg capitalize mb-2"
                     style={{
                       color: getDecisionColor(selectedLog.finalDecision).text,
-                      fontWeight: '700'
+                      fontWeight: '700',
                     }}
                   >
                     {selectedLog.finalDecision}
                   </div>
-                  <div style={{ color: getDecisionColor(selectedLog.finalDecision).text, fontSize: '13px' }}>
-                    {selectedLog.finalDecision === 'approved' && 'All validations passed. Record approved automatically.'}
-                    {selectedLog.finalDecision === 'flagged' && 'Some validations failed. Record flagged for manual review.'}
-                    {selectedLog.finalDecision === 'rejected' && 'Critical validations failed. Record rejected.'}
+                  <div
+                    style={{
+                      color: getDecisionColor(selectedLog.finalDecision).text,
+                      fontSize: '13px',
+                    }}
+                  >
+                    {selectedLog.finalDecision === 'approved' &&
+                      'All validations passed. Record approved automatically.'}
+                    {selectedLog.finalDecision === 'flagged' &&
+                      'Some validations failed. Record flagged for manual review.'}
+                    {selectedLog.finalDecision === 'rejected' &&
+                      'Critical validations failed. Record rejected.'}
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: '1px solid #E1E6EA' }}>
+            <div
+              className="flex items-center justify-between px-6 py-4"
+              style={{ borderTop: '1px solid #E1E6EA' }}
+            >
               <button
                 onClick={() => setSelectedLog(null)}
                 className="px-4 py-2 rounded-lg text-sm"

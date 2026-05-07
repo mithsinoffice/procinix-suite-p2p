@@ -54,7 +54,12 @@ export async function handleAuthRoute(req, res, pathname, sendJson) {
 
     const ctx = await fetchContext(result.user.id, result.user.tenantId).catch(() => null);
     const enrichedUser = ctx
-      ? { ...result.user, tenantName: ctx.tenantName, tenantCode: ctx.tenantCode, entities: ctx.entities }
+      ? {
+          ...result.user,
+          tenantName: ctx.tenantName,
+          tenantCode: ctx.tenantCode,
+          entities: ctx.entities,
+        }
       : result.user;
 
     sendJson(res, 200, { token, user: enrichedUser });
@@ -77,7 +82,12 @@ export async function handleAuthRoute(req, res, pathname, sendJson) {
 
     const ctx = await fetchContext(userId, req.user.tenantId).catch(() => null);
     const enrichedUser = ctx
-      ? { ...userRow, tenantName: ctx.tenantName, tenantCode: ctx.tenantCode, entities: ctx.entities }
+      ? {
+          ...userRow,
+          tenantName: ctx.tenantName,
+          tenantCode: ctx.tenantCode,
+          entities: ctx.entities,
+        }
       : userRow;
 
     sendJson(res, 200, { user: enrichedUser });

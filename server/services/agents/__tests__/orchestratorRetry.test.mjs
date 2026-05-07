@@ -6,35 +6,32 @@ vi.mock('../../../mysql.mjs', () => ({
   query: vi.fn(),
 }));
 
-vi.mock('../intakeAgent.mjs',           () => ({ processIntake:        vi.fn() }));
-vi.mock('../extractionAgent.mjs',       () => ({ processExtraction:     vi.fn() }));
-vi.mock('../vendorIdentityAgent.mjs',   () => ({ processVendorMatch:    vi.fn() }));
-vi.mock('../duplicateFraudAgent.mjs',   () => ({ processDuplicateCheck: vi.fn() }));
-vi.mock('../matchAgent.mjs',            () => ({ processMatch:          vi.fn() }));
-vi.mock('../taxComplianceAgent.mjs',    () => ({ processTaxValidation:  vi.fn() }));
-vi.mock('../codingAgent.mjs',           () => ({ processCoding:         vi.fn() }));
-vi.mock('../workflowRoutingAgent.mjs',  () => ({ processRouting:        vi.fn() }));
-vi.mock('../agentRunner.mjs',           () => ({ runAgent:              vi.fn() }));
-vi.mock('nodemailer',                   () => ({
+vi.mock('../intakeAgent.mjs', () => ({ processIntake: vi.fn() }));
+vi.mock('../extractionAgent.mjs', () => ({ processExtraction: vi.fn() }));
+vi.mock('../vendorIdentityAgent.mjs', () => ({ processVendorMatch: vi.fn() }));
+vi.mock('../duplicateFraudAgent.mjs', () => ({ processDuplicateCheck: vi.fn() }));
+vi.mock('../matchAgent.mjs', () => ({ processMatch: vi.fn() }));
+vi.mock('../taxComplianceAgent.mjs', () => ({ processTaxValidation: vi.fn() }));
+vi.mock('../codingAgent.mjs', () => ({ processCoding: vi.fn() }));
+vi.mock('../workflowRoutingAgent.mjs', () => ({ processRouting: vi.fn() }));
+vi.mock('../agentRunner.mjs', () => ({ runAgent: vi.fn() }));
+vi.mock('nodemailer', () => ({
   default: { createTransport: vi.fn(() => ({ sendMail: vi.fn().mockResolvedValue({}) })) },
 }));
 vi.mock('../../../appMail.mjs', () => ({ getAppMailFrom: () => 'test@procinix.ai' }));
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 
-const { query }               = await import('../../../mysql.mjs');
-const { processVendorMatch }  = await import('../vendorIdentityAgent.mjs');
+const { query } = await import('../../../mysql.mjs');
+const { processVendorMatch } = await import('../vendorIdentityAgent.mjs');
 const { processDuplicateCheck } = await import('../duplicateFraudAgent.mjs');
-const { processMatch }        = await import('../matchAgent.mjs');
+const { processMatch } = await import('../matchAgent.mjs');
 const { processTaxValidation } = await import('../taxComplianceAgent.mjs');
-const { processCoding }       = await import('../codingAgent.mjs');
-const { processRouting }      = await import('../workflowRoutingAgent.mjs');
+const { processCoding } = await import('../codingAgent.mjs');
+const { processRouting } = await import('../workflowRoutingAgent.mjs');
 
-const {
-  reprocessAgentPipeline,
-  processRetryQueue,
-  MAX_AGENT_RETRIES,
-} = await import('../orchestrator.mjs');
+const { reprocessAgentPipeline, processRetryQueue, MAX_AGENT_RETRIES } =
+  await import('../orchestrator.mjs');
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -50,14 +47,35 @@ const METADATA = {
 };
 
 const GOOD_VENDOR_MATCH = {
-  matchedVendorName: 'Acme Corp', matchConfidence: 0.95, method: 'exact',
-  isNewVendor: false, explanation: 'Matched',
+  matchedVendorName: 'Acme Corp',
+  matchConfidence: 0.95,
+  method: 'exact',
+  isNewVendor: false,
+  explanation: 'Matched',
 };
 const GOOD_DUP_CHECK = { riskScore: 0, isDuplicate: false, checks: [], explanation: 'Clean' };
-const GOOD_MATCH     = { matchType: 'po_match', poNumber: 'PO-1', matchConfidence: 0.9, poId: 'po-uuid-1', explanation: 'Matched' };
-const GOOD_TAX       = { score: 100, arithmeticValid: true, gstTypeValid: true, issues: [], explanation: 'Valid' };
-const GOOD_CODING    = { overallCertainty: 0.9, suggestions: [], explanation: 'Coded' };
-const GOOD_ROUTING   = { lane: 'auto', postingReadiness: 'ready', laneReason: 'All checks pass', explanation: 'Auto', confidenceScores: {} };
+const GOOD_MATCH = {
+  matchType: 'po_match',
+  poNumber: 'PO-1',
+  matchConfidence: 0.9,
+  poId: 'po-uuid-1',
+  explanation: 'Matched',
+};
+const GOOD_TAX = {
+  score: 100,
+  arithmeticValid: true,
+  gstTypeValid: true,
+  issues: [],
+  explanation: 'Valid',
+};
+const GOOD_CODING = { overallCertainty: 0.9, suggestions: [], explanation: 'Coded' };
+const GOOD_ROUTING = {
+  lane: 'auto',
+  postingReadiness: 'ready',
+  laneReason: 'All checks pass',
+  explanation: 'Auto',
+  confidenceScores: {},
+};
 
 // query mock factory — returns different data based on the SQL statement
 function buildQueryMock({ attemptCount = 1, invoiceExists = true } = {}) {
@@ -67,12 +85,16 @@ function buildQueryMock({ attemptCount = 1, invoiceExists = true } = {}) {
     // SELECT invoice
     if (/FROM invoices WHERE id/i.test(sql)) {
       return invoiceExists
-        ? Promise.resolve([{ id: INVOICE_ID, metadata: JSON.stringify(METADATA), document_id: 'doc-1' }])
+        ? Promise.resolve([
+            { id: INVOICE_ID, metadata: JSON.stringify(METADATA), document_id: 'doc-1' },
+          ])
         : Promise.resolve([]);
     }
     // SELECT retry queue
     if (/FROM agent_retry_queue/i.test(sql)) {
-      return Promise.resolve(attemptCount > 0 ? [{ attempt_count: attemptCount, invoice_id: INVOICE_ID }] : []);
+      return Promise.resolve(
+        attemptCount > 0 ? [{ attempt_count: attemptCount, invoice_id: INVOICE_ID }] : []
+      );
     }
     // All other queries (INSERT, UPDATE) → success
     return Promise.resolve({ affectedRows: 1 });
@@ -102,14 +124,14 @@ describe('orchestrator agent retry', () => {
 
       await reprocessAgentPipeline(INVOICE_ID);
 
-      const exceptionInserts = query.mock.calls.filter(
-        ([sql]) => /INSERT INTO invoice_exceptions/i.test(sql)
+      const exceptionInserts = query.mock.calls.filter(([sql]) =>
+        /INSERT INTO invoice_exceptions/i.test(sql)
       );
       expect(exceptionInserts.length).toBeGreaterThanOrEqual(1);
 
       const [, params] = exceptionInserts[0];
-      expect(params[1]).toBe(INVOICE_ID);           // invoice_id positional param
-      const detail = JSON.parse(params[2]);          // exception_detail JSON
+      expect(params[1]).toBe(INVOICE_ID); // invoice_id positional param
+      const detail = JSON.parse(params[2]); // exception_detail JSON
       expect(detail.agent).toBe('vendorIdentityAgent');
       expect(detail.message).toBe('vendor API down');
       expect(detail.attempt).toBe(1);
@@ -122,8 +144,8 @@ describe('orchestrator agent retry', () => {
 
       await reprocessAgentPipeline(INVOICE_ID);
 
-      const exceptionInserts = query.mock.calls.filter(
-        ([sql]) => /INSERT INTO invoice_exceptions/i.test(sql)
+      const exceptionInserts = query.mock.calls.filter(([sql]) =>
+        /INSERT INTO invoice_exceptions/i.test(sql)
       );
       expect(exceptionInserts.length).toBeGreaterThanOrEqual(2);
       const agents = exceptionInserts.map(([, p]) => JSON.parse(p[2]).agent);
@@ -141,8 +163,8 @@ describe('orchestrator agent retry', () => {
 
       await reprocessAgentPipeline(INVOICE_ID);
 
-      const retryInserts = query.mock.calls.filter(
-        ([sql]) => /INSERT INTO agent_retry_queue/i.test(sql)
+      const retryInserts = query.mock.calls.filter(([sql]) =>
+        /INSERT INTO agent_retry_queue/i.test(sql)
       );
       expect(retryInserts.length).toBeGreaterThanOrEqual(1);
 
@@ -209,8 +231,8 @@ describe('orchestrator agent retry', () => {
 
       await reprocessAgentPipeline(INVOICE_ID);
 
-      const retryInserts = query.mock.calls.filter(
-        ([sql]) => /INSERT INTO agent_retry_queue/i.test(sql)
+      const retryInserts = query.mock.calls.filter(([sql]) =>
+        /INSERT INTO agent_retry_queue/i.test(sql)
       );
       expect(retryInserts.length).toBe(0);
     });
@@ -228,7 +250,9 @@ describe('orchestrator agent retry', () => {
           return Promise.resolve([{ invoice_id: INVOICE_ID }]);
         }
         if (/FROM invoices WHERE id/i.test(sql)) {
-          return Promise.resolve([{ id: INVOICE_ID, metadata: JSON.stringify(METADATA), document_id: 'doc-1' }]);
+          return Promise.resolve([
+            { id: INVOICE_ID, metadata: JSON.stringify(METADATA), document_id: 'doc-1' },
+          ]);
         }
         if (/FROM agent_retry_queue/i.test(sql)) {
           return Promise.resolve([{ attempt_count: 1 }]);
@@ -239,15 +263,13 @@ describe('orchestrator agent retry', () => {
       await processRetryQueue();
 
       // Should have queried for due retries
-      const dueCalls = query.mock.calls.filter(
-        ([sql]) => /FROM agent_retry_queue WHERE status = 'pending'/i.test(sql)
+      const dueCalls = query.mock.calls.filter(([sql]) =>
+        /FROM agent_retry_queue WHERE status = 'pending'/i.test(sql)
       );
       expect(dueCalls.length).toBeGreaterThanOrEqual(1);
 
       // Should have attempted to reprocess the invoice
-      const invoiceCalls = query.mock.calls.filter(
-        ([sql]) => /FROM invoices WHERE id/i.test(sql)
-      );
+      const invoiceCalls = query.mock.calls.filter(([sql]) => /FROM invoices WHERE id/i.test(sql));
       expect(invoiceCalls.length).toBeGreaterThanOrEqual(1);
     });
 

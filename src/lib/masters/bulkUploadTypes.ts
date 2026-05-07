@@ -6,7 +6,15 @@
 
 import type { MasterKey } from '../mysql/masterTables';
 
-export type FieldType = 'string' | 'number' | 'integer' | 'boolean' | 'date' | 'email' | 'url' | 'enum';
+export type FieldType =
+  | 'string'
+  | 'number'
+  | 'integer'
+  | 'boolean'
+  | 'date'
+  | 'email'
+  | 'url'
+  | 'enum';
 
 export interface MasterFieldDef {
   /** Canonical field key on the record (matches the TS interface on the master component). */

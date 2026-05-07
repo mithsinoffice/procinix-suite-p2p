@@ -55,7 +55,11 @@ export function ExpiryBadge({ validUntil, autoExpired, forceClosed }: ExpiryBadg
     );
   }
 
-  const formatted = expiry.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const formatted = expiry.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
   return (
     <span style={pillStyle('var(--color-success-light)', 'var(--color-success-dark)')}>
       Valid until {formatted}

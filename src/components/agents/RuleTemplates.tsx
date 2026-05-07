@@ -26,21 +26,32 @@ const templates: RuleTemplate[] = [
   {
     id: 'standard-invoice',
     name: 'Standard Invoice Validation',
-    description: 'Essential validation rules for AP invoices including required fields and format checks',
+    description:
+      'Essential validation rules for AP invoices including required fields and format checks',
     icon: FileText,
     color: '#00A9B7',
     ruleCount: 8,
     formType: ['AP Invoice'],
     rules: [
       { field: 'invoice_number', type: 'Required', config: 'Cannot be empty', severity: 'Block' },
-      { field: 'invoice_number', type: 'Duplicate', config: 'Check against existing invoices', severity: 'Block' },
+      {
+        field: 'invoice_number',
+        type: 'Duplicate',
+        config: 'Check against existing invoices',
+        severity: 'Block',
+      },
       { field: 'invoice_date', type: 'Required', config: 'Cannot be empty', severity: 'Block' },
       { field: 'vendor_name', type: 'Required', config: 'Cannot be empty', severity: 'Block' },
       { field: 'total_amount', type: 'Required', config: 'Cannot be empty', severity: 'Block' },
       { field: 'total_amount', type: 'Math', config: 'Must be > 0', severity: 'Block' },
       { field: 'currency', type: 'Required', config: 'Cannot be empty', severity: 'Block' },
-      { field: 'invoice_date', type: 'Threshold', config: 'Cannot be > 7 days in future', severity: 'Warning' }
-    ]
+      {
+        field: 'invoice_date',
+        type: 'Threshold',
+        config: 'Cannot be > 7 days in future',
+        severity: 'Warning',
+      },
+    ],
   },
   {
     id: 'gst-compliance',
@@ -51,29 +62,75 @@ const templates: RuleTemplate[] = [
     ruleCount: 5,
     formType: ['AP Invoice', 'Vendor Master'],
     rules: [
-      { field: 'vendor_gstin', type: 'Format', config: 'Must match pattern: [0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}', severity: 'Block' },
-      { field: 'vendor_gstin', type: 'CrossReference', config: 'State code must match vendor address state', severity: 'Block' },
+      {
+        field: 'vendor_gstin',
+        type: 'Format',
+        config: 'Must match pattern: [0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}',
+        severity: 'Block',
+      },
+      {
+        field: 'vendor_gstin',
+        type: 'CrossReference',
+        config: 'State code must match vendor address state',
+        severity: 'Block',
+      },
       { field: 'tax_amount', type: 'Required', config: 'Cannot be empty', severity: 'Block' },
       { field: 'tax_amount', type: 'Math', config: 'Must be >= 0', severity: 'Block' },
-      { field: 'hsn_code', type: 'Format', config: 'Must be 4, 6, or 8 digits', severity: 'Warning' }
-    ]
+      {
+        field: 'hsn_code',
+        type: 'Format',
+        config: 'Must be 4, 6, or 8 digits',
+        severity: 'Warning',
+      },
+    ],
   },
   {
     id: 'fraud-detection',
     name: 'Fraud Detection Pack',
-    description: 'Advanced fraud detection rules including duplicate checks and threshold validation',
+    description:
+      'Advanced fraud detection rules including duplicate checks and threshold validation',
     icon: AlertTriangle,
     color: '#EF4444',
     ruleCount: 6,
     formType: ['AP Invoice', 'Payment Proposal'],
     rules: [
-      { field: 'vendor_name', type: 'Blacklist', config: 'Check against fraud blacklist', severity: 'Block' },
-      { field: 'bank_account', type: 'CrossReference', config: 'Must match vendor master record', severity: 'Block' },
-      { field: 'total_amount', type: 'Threshold', config: 'Flag if > ₹5,00,000', severity: 'Warning' },
-      { field: 'invoice_number', type: 'Duplicate', config: 'Check for duplicate across all vendors', severity: 'Block' },
-      { field: 'payment_date', type: 'Threshold', config: 'Flag if same-day payment', severity: 'Warning' },
-      { field: 'vendor_email', type: 'Format', config: 'Must be valid email format', severity: 'Warning' }
-    ]
+      {
+        field: 'vendor_name',
+        type: 'Blacklist',
+        config: 'Check against fraud blacklist',
+        severity: 'Block',
+      },
+      {
+        field: 'bank_account',
+        type: 'CrossReference',
+        config: 'Must match vendor master record',
+        severity: 'Block',
+      },
+      {
+        field: 'total_amount',
+        type: 'Threshold',
+        config: 'Flag if > ₹5,00,000',
+        severity: 'Warning',
+      },
+      {
+        field: 'invoice_number',
+        type: 'Duplicate',
+        config: 'Check for duplicate across all vendors',
+        severity: 'Block',
+      },
+      {
+        field: 'payment_date',
+        type: 'Threshold',
+        config: 'Flag if same-day payment',
+        severity: 'Warning',
+      },
+      {
+        field: 'vendor_email',
+        type: 'Format',
+        config: 'Must be valid email format',
+        severity: 'Warning',
+      },
+    ],
   },
   {
     id: '3way-match',
@@ -84,12 +141,32 @@ const templates: RuleTemplate[] = [
     ruleCount: 4,
     formType: ['AP Invoice'],
     rules: [
-      { field: 'po_number', type: 'CrossReference', config: 'Must exist in PO system', severity: 'Block' },
-      { field: 'grn_number', type: 'CrossReference', config: 'Must exist and match PO', severity: 'Block' },
-      { field: 'total_amount', type: 'Math', config: 'Must match PO total ± 5%', severity: 'Warning' },
-      { field: 'line_items', type: 'CrossReference', config: 'Quantities must match GRN', severity: 'Block' }
-    ]
-  }
+      {
+        field: 'po_number',
+        type: 'CrossReference',
+        config: 'Must exist in PO system',
+        severity: 'Block',
+      },
+      {
+        field: 'grn_number',
+        type: 'CrossReference',
+        config: 'Must exist and match PO',
+        severity: 'Block',
+      },
+      {
+        field: 'total_amount',
+        type: 'Math',
+        config: 'Must match PO total ± 5%',
+        severity: 'Warning',
+      },
+      {
+        field: 'line_items',
+        type: 'CrossReference',
+        config: 'Quantities must match GRN',
+        severity: 'Block',
+      },
+    ],
+  },
 ];
 
 interface RuleTemplatesProps {
@@ -143,12 +220,19 @@ export function RuleTemplates({ onApplyTemplate }: RuleTemplatesProps) {
                   <Icon className="w-5 h-5" style={{ color: template.color }} />
                 </div>
                 <div className="flex-1">
-                  <div className="mb-1" style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}>
+                  <div
+                    className="mb-1"
+                    style={{ color: '#0A0F14', fontWeight: '600', fontSize: '14px' }}
+                  >
                     {template.name}
                   </div>
                   <div
                     className="px-2 py-1 rounded-full text-xs inline-block"
-                    style={{ backgroundColor: `${template.color}20`, color: template.color, fontWeight: '600' }}
+                    style={{
+                      backgroundColor: `${template.color}20`,
+                      color: template.color,
+                      fontWeight: '600',
+                    }}
                   >
                     {template.ruleCount} rules
                   </div>
@@ -177,7 +261,10 @@ export function RuleTemplates({ onApplyTemplate }: RuleTemplatesProps) {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid #E1E6EA' }}>
+            <div
+              className="flex items-center justify-between p-6"
+              style={{ borderBottom: '1px solid #E1E6EA' }}
+            >
               <div className="flex items-center gap-3">
                 <div
                   className="w-12 h-12 rounded-lg flex items-center justify-center"
@@ -208,7 +295,15 @@ export function RuleTemplates({ onApplyTemplate }: RuleTemplatesProps) {
                 {selectedTemplate.description}
               </p>
 
-              <div style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
+              <div
+                style={{
+                  color: '#6E7A82',
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  marginBottom: '12px',
+                }}
+              >
                 Rules Preview
               </div>
 
@@ -226,7 +321,11 @@ export function RuleTemplates({ onApplyTemplate }: RuleTemplatesProps) {
                         </span>
                         <span
                           className="px-2 py-1 rounded text-xs"
-                          style={{ backgroundColor: `${selectedTemplate.color}20`, color: selectedTemplate.color, fontWeight: '600' }}
+                          style={{
+                            backgroundColor: `${selectedTemplate.color}20`,
+                            color: selectedTemplate.color,
+                            fontWeight: '600',
+                          }}
                         >
                           {rule.type}
                         </span>
@@ -236,22 +335,23 @@ export function RuleTemplates({ onApplyTemplate }: RuleTemplatesProps) {
                         style={{
                           backgroundColor: rule.severity === 'Block' ? '#FEE2E2' : '#FEF3C7',
                           color: rule.severity === 'Block' ? '#991B1B' : '#92400E',
-                          fontWeight: '600'
+                          fontWeight: '600',
                         }}
                       >
                         {rule.severity}
                       </span>
                     </div>
-                    <div style={{ color: '#6E7A82', fontSize: '12px' }}>
-                      {rule.config}
-                    </div>
+                    <div style={{ color: '#6E7A82', fontSize: '12px' }}>{rule.config}</div>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between p-6" style={{ borderTop: '1px solid #E1E6EA' }}>
+            <div
+              className="flex items-center justify-between p-6"
+              style={{ borderTop: '1px solid #E1E6EA' }}
+            >
               <button
                 onClick={() => setShowModal(false)}
                 className="px-4 py-2 rounded-lg text-sm"

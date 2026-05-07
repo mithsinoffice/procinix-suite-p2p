@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -13,12 +13,37 @@ import {
   AlertTriangle,
   FileText,
 } from 'lucide-react';
-import { mockPaymentBatches } from '../data/paymentBatchData';
+import { mockPaymentBatches, type PaymentBatchListRow } from '../data/paymentBatchData';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchPaymentBatches } from '../lib/paymentsApi';
 
 export function PaymentBatches() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [batches, setBatches] = useState<PaymentBatchListRow[]>(mockPaymentBatches);
+  const [listLoading, setListLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  const loadBatches = useCallback(async () => {
+    if (!user?.tenantId) {
+      setBatches(mockPaymentBatches);
+      return;
+    }
+    setListLoading(true);
+    try {
+      const rows = await fetchPaymentBatches(user.tenantId);
+      setBatches(rows.length ? rows : []);
+    } catch {
+      setBatches([]);
+    } finally {
+      setListLoading(false);
+    }
+  }, [user?.tenantId]);
+
+  useEffect(() => {
+    void loadBatches();
+  }, [loadBatches]);
 
   const formatCurrency = (amount: number, currency: string = 'INR') => {
     if (currency === 'USD') {
@@ -41,13 +66,23 @@ export function PaymentBatches() {
 
   const getStatusBadge = (status: string) => {
     const config = {
-      'draft': { label: 'Draft', bg: '#F3F4F6', color: '#6B7280', icon: FileText },
+      draft: { label: 'Draft', bg: '#F3F4F6', color: '#6B7280', icon: FileText },
       'pending-approval': { label: 'Pending', bg: '#FEF3C7', color: '#F59E0B', icon: Clock },
-      'approved': { label: 'Approved', bg: '#D1FAE5', color: '#10B981', icon: CheckCircle },
-      'executed': { label: 'Executed', bg: '#E0F2F1', color: 'var(--color-teal)', icon: CheckCircle },
-      'failed': { label: 'Failed', bg: 'var(--color-error-light)', color: '#EF4444', icon: XCircle },
-      'partially-executed': { label: 'Partial', bg: '#FEF3C7', color: '#F59E0B', icon: AlertTriangle },
-      'rejected': { label: 'Rejected', bg: 'var(--color-error-light)', color: '#EF4444', icon: XCircle },
+      approved: { label: 'Approved', bg: '#D1FAE5', color: '#10B981', icon: CheckCircle },
+      executed: { label: 'Executed', bg: '#E0F2F1', color: 'var(--color-teal)', icon: CheckCircle },
+      failed: { label: 'Failed', bg: 'var(--color-error-light)', color: '#EF4444', icon: XCircle },
+      'partially-executed': {
+        label: 'Partial',
+        bg: '#FEF3C7',
+        color: '#F59E0B',
+        icon: AlertTriangle,
+      },
+      rejected: {
+        label: 'Rejected',
+        bg: 'var(--color-error-light)',
+        color: '#EF4444',
+        icon: XCircle,
+      },
     };
 
     const { label, bg, color, icon: Icon } = config[status as keyof typeof config] || config.draft;
@@ -58,19 +93,18 @@ export function PaymentBatches() {
         style={{ backgroundColor: bg }}
       >
         <Icon className="w-3.5 h-3.5" style={{ color }} />
-        <span style={{ color, fontWeight: '600', fontSize: '12px' }}>
-          {label}
-        </span>
+        <span style={{ color, fontWeight: '600', fontSize: '12px' }}>{label}</span>
       </div>
     );
   };
 
-  const filteredBatches = mockPaymentBatches.filter(batch => {
+  const filteredBatches = batches.filter((batch) => {
     if (statusFilter !== 'all' && batch.status !== statusFilter) return false;
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      return batch.batchNo.toLowerCase().includes(query) ||
-             batch.createdBy.toLowerCase().includes(query);
+      return (
+        batch.batchNo.toLowerCase().includes(query) || batch.createdBy.toLowerCase().includes(query)
+      );
     }
     return true;
   });
@@ -96,15 +130,21 @@ export function PaymentBatches() {
           </div>
           <div className="flex items-center gap-3">
             <button
+              type="button"
+              onClick={() => void loadBatches()}
+              disabled={listLoading}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
                 backgroundColor: '#FFFFFF',
                 border: '1px solid var(--color-silver)',
                 color: 'var(--color-mercury-grey)',
+                opacity: listLoading ? 0.6 : 1,
               }}
             >
               <RefreshCw className="w-4 h-4" />
-              <span className="text-sm" style={{ fontWeight: '500' }}>Refresh</span>
+              <span className="text-sm" style={{ fontWeight: '500' }}>
+                {listLoading ? 'Refreshing…' : 'Refresh'}
+              </span>
             </button>
             <button
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
@@ -115,7 +155,9 @@ export function PaymentBatches() {
               }}
             >
               <Download className="w-4 h-4" />
-              <span className="text-sm" style={{ fontWeight: '500' }}>Export</span>
+              <span className="text-sm" style={{ fontWeight: '500' }}>
+                Export
+              </span>
             </button>
             <button
               onClick={() => navigate('/ap/payment-proposal')}
@@ -127,7 +169,9 @@ export function PaymentBatches() {
               }}
             >
               <Plus className="w-4 h-4" />
-              <span className="text-sm" style={{ fontWeight: '600' }}>Create Batch</span>
+              <span className="text-sm" style={{ fontWeight: '600' }}>
+                Create Batch
+              </span>
             </button>
           </div>
         </div>
@@ -135,12 +179,18 @@ export function PaymentBatches() {
 
       {/* Filters */}
       <div className="px-8 py-4">
-        <div className="bg-white rounded-lg p-4" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-4"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center gap-4">
             {/* Search */}
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-slate)' }} />
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
+                  style={{ color: 'var(--color-slate)' }}
+                />
                 <input
                   type="text"
                   value={searchQuery}
@@ -184,33 +234,65 @@ export function PaymentBatches() {
 
       {/* Batches Table */}
       <div className="px-8 pb-8">
-        <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg overflow-hidden"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '2px solid var(--color-silver)' }}>
-                  <th className="text-left px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                <tr
+                  style={{
+                    backgroundColor: 'var(--color-cloud)',
+                    borderBottom: '2px solid var(--color-silver)',
+                  }}
+                >
+                  <th
+                    className="text-left px-6 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     BATCH NO
                   </th>
-                  <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-right px-4 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     AMOUNT
                   </th>
-                  <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-center px-4 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     INVOICES
                   </th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-left px-4 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     PAYMENT DATE
                   </th>
-                  <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-center px-4 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     MODE
                   </th>
-                  <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-center px-4 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     STATUS
                   </th>
-                  <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-left px-4 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     CREATED BY
                   </th>
-                  <th className="text-center px-6 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <th
+                    className="text-center px-6 py-3 text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     ACTION
                   </th>
                 </tr>
@@ -225,7 +307,9 @@ export function PaymentBatches() {
                     }}
                   >
                     <td className="px-6 py-4">
-                      <div style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '14px' }}>
+                      <div
+                        style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '14px' }}
+                      >
                         {batch.batchNo}
                       </div>
                       <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -237,14 +321,20 @@ export function PaymentBatches() {
                       </div>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <div style={{ color: 'var(--color-teal)', fontWeight: '700', fontSize: '15px' }}>
+                      <div
+                        style={{ color: 'var(--color-teal)', fontWeight: '700', fontSize: '15px' }}
+                      >
                         {formatCurrency(batch.totalAmount, batch.currency)}
                       </div>
                     </td>
                     <td className="px-4 py-4 text-center">
                       <div
                         className="inline-block px-2 py-1 rounded text-sm"
-                        style={{ backgroundColor: '#E0F2F1', color: 'var(--color-teal)', fontWeight: '600' }}
+                        style={{
+                          backgroundColor: '#E0F2F1',
+                          color: 'var(--color-teal)',
+                          fontWeight: '600',
+                        }}
                       >
                         {batch.invoiceCount}
                       </div>
@@ -259,15 +349,19 @@ export function PaymentBatches() {
                       </div>
                     </td>
                     <td className="px-4 py-4 text-center">
-                      <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                      <span
+                        className="text-sm"
+                        style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                      >
                         {batch.paymentMode}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-center">
-                      {getStatusBadge(batch.status)}
-                    </td>
+                    <td className="px-4 py-4 text-center">{getStatusBadge(batch.status)}</td>
                     <td className="px-4 py-4">
-                      <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
+                      <div
+                        className="text-sm"
+                        style={{ color: 'var(--color-ink)', fontWeight: '500' }}
+                      >
                         {batch.createdBy.split(' (')[0]}
                       </div>
                       <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -296,7 +390,7 @@ export function PaymentBatches() {
         </div>
 
         <div className="mt-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-          Showing {filteredBatches.length} of {mockPaymentBatches.length} batches
+          Showing {filteredBatches.length} of {batches.length} batches
         </div>
       </div>
     </div>

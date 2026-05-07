@@ -32,7 +32,9 @@ export function PerformanceKPICard({
       <p className="kpi-card-value">{value}</p>
       {subtext && <p className="kpi-card-subtext">{subtext}</p>}
       {trend && (
-        <p className={`kpi-card-trend ${trendDirection === 'up' ? 'kpi-card-trend-up' : 'kpi-card-trend-down'}`}>
+        <p
+          className={`kpi-card-trend ${trendDirection === 'up' ? 'kpi-card-trend-up' : 'kpi-card-trend-down'}`}
+        >
           {trendDirection === 'up' ? '↑' : '↓'} {trend}
         </p>
       )}

@@ -107,11 +107,15 @@ async function fetchEmails() {
 
       console.log(`[EmailPoller] Fetching ${uids.length} email(s) [mode: ${fetchMode}]`);
 
-      const messages = client.fetch(uids, {
-        envelope: true,
-        bodyStructure: true,
-        uid: true,
-      }, { uid: true });
+      const messages = client.fetch(
+        uids,
+        {
+          envelope: true,
+          bodyStructure: true,
+          uid: true,
+        },
+        { uid: true }
+      );
 
       let emailIndex = 0;
       for await (const msg of messages) {
@@ -139,7 +143,9 @@ async function fetchEmails() {
           const isAtt = isValidAttachment(part);
 
           if (filename || part.disposition === 'attachment') {
-            console.log(`    Part ${part.part}: ${filename || '(unnamed)'} [${mime}] ${isAtt ? '→ WILL DOWNLOAD' : '→ SKIP (not invoice type)'}`);
+            console.log(
+              `    Part ${part.part}: ${filename || '(unnamed)'} [${mime}] ${isAtt ? '→ WILL DOWNLOAD' : '→ SKIP (not invoice type)'}`
+            );
           }
 
           if (isAtt) {
@@ -151,7 +157,9 @@ async function fetchEmails() {
         // This avoids socket timeout from long-running shared connection
         const attachments = [];
         if (attachmentParts.length > 0) {
-          console.log(`  Downloading ${attachmentParts.length} attachment(s) via dedicated connection (10min timeout)...`);
+          console.log(
+            `  Downloading ${attachmentParts.length} attachment(s) via dedicated connection (10min timeout)...`
+          );
           let dlClient;
           try {
             const dlConfig = buildImapConfig();
@@ -170,8 +178,13 @@ async function fetchEmails() {
                   }
                   const buffer = Buffer.concat(chunks);
                   if (buffer.length > 0) {
-                    const resolvedMime = ap.mime === 'application/octet-stream' ? inferMimeFromFilename(ap.filename) : ap.mime;
-                    console.log(`    ✓ Downloaded: ${ap.filename || 'unnamed'} (${(buffer.length / 1024).toFixed(1)} KB, mime: ${resolvedMime})`);
+                    const resolvedMime =
+                      ap.mime === 'application/octet-stream'
+                        ? inferMimeFromFilename(ap.filename)
+                        : ap.mime;
+                    console.log(
+                      `    ✓ Downloaded: ${ap.filename || 'unnamed'} (${(buffer.length / 1024).toFixed(1)} KB, mime: ${resolvedMime})`
+                    );
                     attachments.push({
                       filename: ap.filename || `attachment.${mimeToExt(resolvedMime)}`,
                       mimeType: resolvedMime,
@@ -188,7 +201,11 @@ async function fetchEmails() {
             await dlClient.logout();
           } catch (connErr) {
             console.error(`    ✗ Dedicated download connection failed: ${connErr.message}`);
-            try { if (dlClient) await dlClient.logout(); } catch { /* ignore */ }
+            try {
+              if (dlClient) await dlClient.logout();
+            } catch {
+              /* ignore */
+            }
           }
         }
 
@@ -216,10 +233,18 @@ async function fetchEmails() {
     // Always close the main IMAP client once attachments are downloaded.
     // Processing (OCR, validation, workflow) runs WITHOUT IMAP connected —
     // prevents Gmail from killing an idle session during long OCR cycles.
-    try { await client.logout(); } catch { /* ignore */ }
+    try {
+      await client.logout();
+    } catch {
+      /* ignore */
+    }
   } catch (err) {
     console.error('[EmailPoller] IMAP error:', err.message, err.responseText || '', err.code || '');
-    try { await client.logout(); } catch { /* ignore */ }
+    try {
+      await client.logout();
+    } catch {
+      /* ignore */
+    }
   }
 
   return emails;
@@ -296,7 +321,9 @@ export async function markEmailSeen(uid) {
   const inbox = process.env.AP_EMAIL_INBOX || 'INBOX';
   for (let attempt = 1; attempt <= 2; attempt++) {
     const client = new ImapFlow(buildImapConfig());
-    client.on('error', () => { /* swallow — handled below */ });
+    client.on('error', () => {
+      /* swallow — handled below */
+    });
     try {
       await client.connect();
       const lock = await client.getMailboxLock(inbox);
@@ -309,11 +336,17 @@ export async function markEmailSeen(uid) {
       await client.logout();
       return;
     } catch (err) {
-      try { await client.logout(); } catch { /* ignore */ }
+      try {
+        await client.logout();
+      } catch {
+        /* ignore */
+      }
       if (attempt === 2) {
         console.error(`[EmailPoller] Failed to mark UID ${uid} as SEEN after retry:`, err.message);
       } else {
-        console.warn(`[EmailPoller] markEmailSeen attempt 1 failed for UID ${uid}: ${err.message} — retrying`);
+        console.warn(
+          `[EmailPoller] markEmailSeen attempt 1 failed for UID ${uid}: ${err.message} — retrying`
+        );
       }
     }
   }
@@ -350,7 +383,9 @@ export async function pollOnce() {
   }
 
   const toProcess = emails.filter((e) => e._logId);
-  console.log(`[EmailPoller] Poll complete: ${results.processed} to process, ${results.skipped} duplicates, ${results.failed} failed`);
+  console.log(
+    `[EmailPoller] Poll complete: ${results.processed} to process, ${results.skipped} duplicates, ${results.failed} failed`
+  );
   return { emails: toProcess, results };
 }
 
@@ -388,7 +423,9 @@ export function startEmailPoller(processCallback) {
 
       for (const email of emails) {
         try {
-          console.log(`[EmailPoller] Processing: "${email.subject}" (${email.attachments.length} attachment(s))`);
+          console.log(
+            `[EmailPoller] Processing: "${email.subject}" (${email.attachments.length} attachment(s))`
+          );
           await processCallback(email);
 
           // IMAP is already closed; open a fresh short-lived session to mark SEEN.
@@ -406,7 +443,9 @@ export function startEmailPoller(processCallback) {
                 ['failed', err.message, email._logId]
               );
             }
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
       }
     } catch (err) {

@@ -59,11 +59,17 @@ export function VendorGroupSelector({ value, onChange, entityScope }: VendorGrou
 
       {selected && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="px-2 py-1 rounded-full text-xs" style={{ backgroundColor: '#F3E8FF', color: '#7E22CE' }}>
+          <span
+            className="px-2 py-1 rounded-full text-xs"
+            style={{ backgroundColor: '#F3E8FF', color: '#7E22CE' }}
+          >
             {selected.code}
           </span>
           {selected.relationshipType && (
-            <span className="px-2 py-1 rounded-full text-xs" style={{ backgroundColor: '#E0F2FE', color: '#0369A1' }}>
+            <span
+              className="px-2 py-1 rounded-full text-xs"
+              style={{ backgroundColor: '#E0F2FE', color: '#0369A1' }}
+            >
               {selected.relationshipType}
             </span>
           )}
@@ -83,11 +89,17 @@ export function VendorGroupSelector({ value, onChange, entityScope }: VendorGrou
           </button>
           {expanded && (
             <div className="px-3 pb-3 space-y-1">
-              {(entityFilteredNodes.length > 0 ? entityFilteredNodes : selected.entities || []).map((entity) => (
-                <div key={entity.id} className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                  {entity.name}
-                </div>
-              ))}
+              {(entityFilteredNodes.length > 0 ? entityFilteredNodes : selected.entities || []).map(
+                (entity) => (
+                  <div
+                    key={entity.id}
+                    className="text-sm"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    {entity.name}
+                  </div>
+                )
+              )}
               {(selected.entities || []).length === 0 && (
                 <div className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                   No mapped entities configured.
@@ -100,4 +112,3 @@ export function VendorGroupSelector({ value, onChange, entityScope }: VendorGrou
     </div>
   );
 }
-

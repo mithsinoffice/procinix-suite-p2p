@@ -9,7 +9,15 @@ import { ChevronDown, ChevronUp, X, Plus, Sparkles, Play, Check, AlertCircle } f
 
 interface Rule {
   id: string;
-  type: 'Required' | 'Format' | 'Duplicate' | 'CrossReference' | 'Math' | 'Threshold' | 'Blacklist' | 'Custom';
+  type:
+    | 'Required'
+    | 'Format'
+    | 'Duplicate'
+    | 'CrossReference'
+    | 'Math'
+    | 'Threshold'
+    | 'Blacklist'
+    | 'Custom';
   config: string;
   severity: 'Info' | 'Warning' | 'Block';
   color: string;
@@ -36,14 +44,16 @@ export function FieldRuleCard({
   aiSuggestions = [],
   onAddRule,
   onRemoveRule,
-  onSelectField
+  onSelectField,
 }: FieldRuleCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showAddRule, setShowAddRule] = useState(false);
   const [showTest, setShowTest] = useState(false);
   const [testValue, setTestValue] = useState('');
-  const [testResults, setTestResults] = useState<Array<{ rule: string; passed: boolean; reason?: string }>>([]);
-  
+  const [testResults, setTestResults] = useState<
+    Array<{ rule: string; passed: boolean; reason?: string }>
+  >([]);
+
   // New rule form state
   const [ruleType, setRuleType] = useState<Rule['type']>('Required');
   const [ruleConfig, setRuleConfig] = useState('');
@@ -58,7 +68,7 @@ export function FieldRuleCard({
     Math: '#10B981',
     Threshold: '#A855F7',
     Blacklist: '#EF4444',
-    Custom: '#6B7280'
+    Custom: '#6B7280',
   };
 
   const handleAddRule = () => {
@@ -67,7 +77,7 @@ export function FieldRuleCard({
       type: ruleType,
       config: ruleConfig,
       severity: ruleSeverity,
-      color: ruleColors[ruleType]
+      color: ruleColors[ruleType],
     };
     onAddRule(newRule);
     setRuleConfig('');
@@ -76,7 +86,7 @@ export function FieldRuleCard({
 
   const handleTestField = () => {
     // Client-side rule validation
-    const results = rules.map(rule => {
+    const results = rules.map((rule) => {
       let passed = true;
       let reason = '';
 
@@ -149,9 +159,7 @@ export function FieldRuleCard({
                 </span>
               )}
             </div>
-            <div style={{ color: '#9AA6AF', fontSize: '11px', marginTop: '2px' }}>
-              {category}
-            </div>
+            <div style={{ color: '#9AA6AF', fontSize: '11px', marginTop: '2px' }}>{category}</div>
           </div>
         </div>
 
@@ -170,7 +178,15 @@ export function FieldRuleCard({
           {/* Active Rules */}
           {rules.length > 0 && (
             <div>
-              <div style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+              <div
+                style={{
+                  color: '#6E7A82',
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  marginBottom: '8px',
+                }}
+              >
                 Active Rules
               </div>
               <div className="flex flex-wrap gap-2">
@@ -178,13 +194,14 @@ export function FieldRuleCard({
                   <span
                     key={rule.id}
                     className="px-3 py-1.5 rounded-full text-xs flex items-center gap-2"
-                    style={{ backgroundColor: `${rule.color}20`, color: rule.color, fontWeight: '600' }}
+                    style={{
+                      backgroundColor: `${rule.color}20`,
+                      color: rule.color,
+                      fontWeight: '600',
+                    }}
                   >
                     {rule.type}: {rule.config}
-                    <button
-                      onClick={() => onRemoveRule(rule.id)}
-                      className="hover:opacity-70"
-                    >
+                    <button onClick={() => onRemoveRule(rule.id)} className="hover:opacity-70">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -195,7 +212,10 @@ export function FieldRuleCard({
 
           {/* Add Rule Builder */}
           {showAddRule ? (
-            <div className="p-4 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
+            <div
+              className="p-4 rounded-lg"
+              style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+            >
               <div className="grid grid-cols-3 gap-3 mb-3">
                 <select
                   value={ruleType}
@@ -269,7 +289,15 @@ export function FieldRuleCard({
 
           {/* Custom Logic with AI */}
           <div>
-            <div style={{ color: '#6E7A82', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+            <div
+              style={{
+                color: '#6E7A82',
+                fontSize: '11px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                marginBottom: '8px',
+              }}
+            >
               Custom Logic
             </div>
             <textarea
@@ -331,7 +359,10 @@ export function FieldRuleCard({
             </button>
 
             {showTest && (
-              <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}>
+              <div
+                className="mt-3 p-3 rounded-lg"
+                style={{ backgroundColor: '#F6F9FC', border: '1px solid #E1E6EA' }}
+              >
                 <div className="flex gap-2 mb-3">
                   <input
                     type="text"
@@ -359,14 +390,22 @@ export function FieldRuleCard({
                         style={{ backgroundColor: '#FFFFFF' }}
                       >
                         {result.passed ? (
-                          <Check className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color: '#10B981' }} />
+                          <Check
+                            className="w-3 h-3 flex-shrink-0 mt-0.5"
+                            style={{ color: '#10B981' }}
+                          />
                         ) : (
-                          <X className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} />
+                          <X
+                            className="w-3 h-3 flex-shrink-0 mt-0.5"
+                            style={{ color: '#EF4444' }}
+                          />
                         )}
                         <div className="flex-1">
                           <div style={{ color: '#0A0F14', fontWeight: '600' }}>{result.rule}</div>
                           {result.reason && (
-                            <div style={{ color: '#EF4444', fontSize: '11px' }}>{result.reason}</div>
+                            <div style={{ color: '#EF4444', fontSize: '11px' }}>
+                              {result.reason}
+                            </div>
                           )}
                         </div>
                       </div>

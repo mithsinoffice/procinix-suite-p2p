@@ -6,8 +6,17 @@
 // Order matters: longer suffixes first to avoid partial strip
 // (e.g. "Pvt Ltd" before "Pvt", "Corporation" before "Corp").
 const VENDOR_SUFFIXES = [
-  'private limited', 'pvt ltd', 'pvt limited',
-  'corporation', 'limited', 'corp', 'inc', 'llp', 'pvt', 'ltd', 'co',
+  'private limited',
+  'pvt ltd',
+  'pvt limited',
+  'corporation',
+  'limited',
+  'corp',
+  'inc',
+  'llp',
+  'pvt',
+  'ltd',
+  'co',
 ];
 
 /**
@@ -40,12 +49,13 @@ export function normalizeVendorName(name) {
  * Throws if no config row exists (per Q5 — no hardcoded fallback).
  */
 export async function loadDuplicateConfig(tenantId, db) {
-  const rows = await db.query(
-    'SELECT * FROM invoice_duplicate_config WHERE tenant_id = ?',
-    [tenantId]
-  );
+  const rows = await db.query('SELECT * FROM invoice_duplicate_config WHERE tenant_id = ?', [
+    tenantId,
+  ]);
   if (!rows || rows.length === 0) {
-    throw new Error(`invoice_duplicate_config row missing for tenant ${tenantId}. Cannot fall back to hardcoded defaults (Q5 rule).`);
+    throw new Error(
+      `invoice_duplicate_config row missing for tenant ${tenantId}. Cannot fall back to hardcoded defaults (Q5 rule).`
+    );
   }
   return rows[0];
 }
@@ -101,12 +111,19 @@ export async function detectDuplicates({ invoice, tenantId, db }) {
   const sourceInvoiceId = invoice.source_invoice_id || null;
 
   if (!invoiceNumber) {
-    return { tier: null, decision: 'clear', matches: [], overrideRequired: false, vendorFallback: false };
+    return {
+      tier: null,
+      decision: 'clear',
+      matches: [],
+      overrideRequired: false,
+      vendorFallback: false,
+    };
   }
 
   // Build candidate query — all invoices with same invoice_number + tenant_id,
   // excluding self and source_invoice_id (resubmission exception).
-  let candidateSql = 'SELECT id, vendor_id, vendor_name, invoice_number, financial_year, invoice_date, total_amount, entity_id, service_period_from, service_period_to FROM invoices WHERE tenant_id = ? AND invoice_number = ? AND id != ?';
+  let candidateSql =
+    'SELECT id, vendor_id, vendor_name, invoice_number, financial_year, invoice_date, total_amount, entity_id, service_period_from, service_period_to FROM invoices WHERE tenant_id = ? AND invoice_number = ? AND id != ?';
   const candidateParams = [tenantId, invoiceNumber, invoice.id];
 
   if (sourceInvoiceId) {
@@ -114,7 +131,7 @@ export async function detectDuplicates({ invoice, tenantId, db }) {
     candidateParams.push(sourceInvoiceId);
   }
 
-  const candidates = await db.query(candidateSql, candidateParams) || [];
+  const candidates = (await db.query(candidateSql, candidateParams)) || [];
 
   // Determine vendor matching strategy
   let vendorFallback = false;
@@ -130,7 +147,13 @@ export async function detectDuplicates({ invoice, tenantId, db }) {
   let overrideRequired = false;
   const allMatches = [];
 
-  const tierPriority = { tier_1_hard: 5, tier_2_probable: 4, tier_2b_cross_fy: 2, tier_3_cross_entity: 1, tier_4_fuzzy: 3 };
+  const tierPriority = {
+    tier_1_hard: 5,
+    tier_2_probable: 4,
+    tier_2b_cross_fy: 2,
+    tier_3_cross_entity: 1,
+    tier_4_fuzzy: 3,
+  };
 
   for (const candidate of candidates) {
     // Vendor match check
@@ -139,16 +162,25 @@ export async function detectDuplicates({ invoice, tenantId, db }) {
       vendorMatches = candidate.vendor_id === vendorId;
     } else {
       const normalizedCandidate = normalizeVendorName(candidate.vendor_name);
-      vendorMatches = normalizedInvoiceVendor !== '' && normalizedCandidate !== '' && normalizedInvoiceVendor === normalizedCandidate;
+      vendorMatches =
+        normalizedInvoiceVendor !== '' &&
+        normalizedCandidate !== '' &&
+        normalizedInvoiceVendor === normalizedCandidate;
     }
 
     if (!vendorMatches) continue;
 
-    const sameFY = financialYear && candidate.financial_year && financialYear === candidate.financial_year;
+    const sameFY =
+      financialYear && candidate.financial_year && financialYear === candidate.financial_year;
     const sameEntity = entityId && candidate.entity_id && entityId === candidate.entity_id;
-    const sameDate = invoice.invoice_date && candidate.invoice_date &&
-      String(invoice.invoice_date).substring(0, 10) === String(candidate.invoice_date).substring(0, 10);
-    const sameAmount = invoice.total_amount != null && candidate.total_amount != null &&
+    const sameDate =
+      invoice.invoice_date &&
+      candidate.invoice_date &&
+      String(invoice.invoice_date).substring(0, 10) ===
+        String(candidate.invoice_date).substring(0, 10);
+    const sameAmount =
+      invoice.total_amount != null &&
+      candidate.total_amount != null &&
       Number(invoice.total_amount) === Number(candidate.total_amount);
 
     let tier = null;
@@ -186,7 +218,11 @@ export async function detectDuplicates({ invoice, tenantId, db }) {
   }
 
   // Tier 4 fuzzy — runs if no hard/probable match found and config has threshold
-  if (bestDecision === 'clear' || bestDecision === 'tier_2b_cross_fy' || bestDecision === 'tier_3_cross_entity') {
+  if (
+    bestDecision === 'clear' ||
+    bestDecision === 'tier_2b_cross_fy' ||
+    bestDecision === 'tier_3_cross_entity'
+  ) {
     const fuzzyResult = await runFuzzyCheck(invoice, tenantId, config, db, sourceInvoiceId);
     if (fuzzyResult) {
       allMatches.push(...fuzzyResult.matches);
@@ -198,7 +234,11 @@ export async function detectDuplicates({ invoice, tenantId, db }) {
   }
 
   // Determine override requirement
-  if (bestDecision === 'tier_1_hard' || bestDecision === 'tier_2_probable' || bestDecision === 'tier_4_fuzzy') {
+  if (
+    bestDecision === 'tier_1_hard' ||
+    bestDecision === 'tier_2_probable' ||
+    bestDecision === 'tier_4_fuzzy'
+  ) {
     overrideRequired = true;
   }
   // Vendor fallback → always require override regardless of tier
@@ -206,7 +246,13 @@ export async function detectDuplicates({ invoice, tenantId, db }) {
     overrideRequired = true;
   }
 
-  return { tier: bestTier, decision: bestDecision, matches: allMatches, overrideRequired, vendorFallback };
+  return {
+    tier: bestTier,
+    decision: bestDecision,
+    matches: allMatches,
+    overrideRequired,
+    vendorFallback,
+  };
 }
 
 /**
@@ -226,7 +272,8 @@ async function runFuzzyCheck(invoice, tenantId, config, db, sourceInvoiceId) {
   if (!prefix) return null;
 
   // Find candidates by prefix (different invoice_number, same tenant)
-  let sql = 'SELECT id, invoice_number, vendor_id, vendor_name, invoice_date, total_amount, service_period_from, service_period_to FROM invoices WHERE tenant_id = ? AND LEFT(invoice_number, ?) = ? AND invoice_number != ? AND id != ?';
+  let sql =
+    'SELECT id, invoice_number, vendor_id, vendor_name, invoice_date, total_amount, service_period_from, service_period_to FROM invoices WHERE tenant_id = ? AND LEFT(invoice_number, ?) = ? AND invoice_number != ? AND id != ?';
   const params = [tenantId, prefixLength, prefix, invoiceNumber, invoice.id];
   if (sourceInvoiceId) {
     sql += ' AND id != ?';
@@ -248,7 +295,8 @@ async function runFuzzyCheck(invoice, tenantId, config, db, sourceInvoiceId) {
     if (vendorId && candidate.vendor_id) {
       vendorMatches = vendorId === candidate.vendor_id;
     } else {
-      vendorMatches = normalizeVendorName(invoice.vendor_name) === normalizeVendorName(candidate.vendor_name);
+      vendorMatches =
+        normalizeVendorName(invoice.vendor_name) === normalizeVendorName(candidate.vendor_name);
     }
     if (!vendorMatches) continue;
 
@@ -257,7 +305,10 @@ async function runFuzzyCheck(invoice, tenantId, config, db, sourceInvoiceId) {
 
     // Amount tolerance
     if (invoice.total_amount != null && candidate.total_amount != null) {
-      const pctDiff = Math.abs(Number(invoice.total_amount) - Number(candidate.total_amount)) / Math.abs(Number(candidate.total_amount) || 1) * 100;
+      const pctDiff =
+        (Math.abs(Number(invoice.total_amount) - Number(candidate.total_amount)) /
+          Math.abs(Number(candidate.total_amount) || 1)) *
+        100;
       if (pctDiff <= amountTolerancePct) {
         score += 25;
       }
@@ -266,7 +317,8 @@ async function runFuzzyCheck(invoice, tenantId, config, db, sourceInvoiceId) {
     // Date window
     if (invoice.invoice_date && candidate.invoice_date) {
       const daysDiff = Math.abs(
-        (new Date(invoice.invoice_date).getTime() - new Date(candidate.invoice_date).getTime()) / (1000 * 60 * 60 * 24)
+        (new Date(invoice.invoice_date).getTime() - new Date(candidate.invoice_date).getTime()) /
+          (1000 * 60 * 60 * 24)
       );
       if (daysDiff <= dateWindowDays) {
         score += 15;
@@ -275,8 +327,10 @@ async function runFuzzyCheck(invoice, tenantId, config, db, sourceInvoiceId) {
 
     // Period overlap
     score += computePeriodOverlap(
-      invoice.service_period_from, invoice.service_period_to,
-      candidate.service_period_from, candidate.service_period_to,
+      invoice.service_period_from,
+      invoice.service_period_to,
+      candidate.service_period_from,
+      candidate.service_period_to,
       config
     );
 

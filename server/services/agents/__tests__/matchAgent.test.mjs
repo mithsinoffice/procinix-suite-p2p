@@ -24,7 +24,9 @@ function makeFetchers(overrides = {}) {
     getRecurringInvoices: vi.fn().mockResolvedValue(null),
     getGRNsForPO: vi.fn().mockResolvedValue([]),
     getTolerances: vi.fn().mockResolvedValue({}),
-    getSnapshotValues: vi.fn().mockResolvedValue({ po: null, grns: [], snapshotAt: '2026-04-24T00:00:00.000Z' }),
+    getSnapshotValues: vi
+      .fn()
+      .mockResolvedValue({ po: null, grns: [], snapshotAt: '2026-04-24T00:00:00.000Z' }),
     ...overrides,
   };
 }
@@ -96,7 +98,10 @@ describe('processMatch — orchestration via fetchers', () => {
   it('on exact match, calls getGRNsForPO with the matched PO id', async () => {
     const fetchers = makeFetchers({
       getPOExact: vi.fn().mockResolvedValue({
-        id: 'po-123', po_number: 'PO-001', vendor_name: 'Acme Corp', total_amount: 10000,
+        id: 'po-123',
+        po_number: 'PO-001',
+        vendor_name: 'Acme Corp',
+        total_amount: 10000,
       }),
     });
 
@@ -110,7 +115,10 @@ describe('processMatch — orchestration via fetchers', () => {
   it('skips getPOFuzzy and getRecurringInvoices when exact match found', async () => {
     const fetchers = makeFetchers({
       getPOExact: vi.fn().mockResolvedValue({
-        id: 'po-123', po_number: 'PO-001', vendor_name: 'Acme Corp', total_amount: 10000,
+        id: 'po-123',
+        po_number: 'PO-001',
+        vendor_name: 'Acme Corp',
+        total_amount: 10000,
       }),
     });
 
@@ -123,7 +131,10 @@ describe('processMatch — orchestration via fetchers', () => {
   it('falls back to getPOFuzzy when exact match returns null', async () => {
     const fetchers = makeFetchers({
       getPOFuzzy: vi.fn().mockResolvedValue({
-        id: 'po-456', po_number: 'PO-002', vendor_name: 'Acme Corp', total_amount: 10200,
+        id: 'po-456',
+        po_number: 'PO-002',
+        vendor_name: 'Acme Corp',
+        total_amount: 10200,
       }),
     });
 
@@ -148,7 +159,7 @@ describe('processMatch — orchestration via fetchers', () => {
 
     expect(fetchers.getRecurringInvoices).toHaveBeenCalledWith('Acme Corp', 10000);
     expect(result.matchType).toBe('recurring');
-    expect(result.matchConfidence).toBe(0.60);
+    expect(result.matchConfidence).toBe(0.6);
   });
 
   it('returns matchType=none when all fetchers return null', async () => {
@@ -163,7 +174,10 @@ describe('processMatch — orchestration via fetchers', () => {
   it('GRN stub returning [] produces "not yet implemented" explanation', async () => {
     const fetchers = makeFetchers({
       getPOExact: vi.fn().mockResolvedValue({
-        id: 'po-123', po_number: 'PO-001', vendor_name: 'Acme Corp', total_amount: 10000,
+        id: 'po-123',
+        po_number: 'PO-001',
+        vendor_name: 'Acme Corp',
+        total_amount: 10000,
       }),
       getGRNsForPO: vi.fn().mockResolvedValue([]),
     });
@@ -176,20 +190,26 @@ describe('processMatch — orchestration via fetchers', () => {
   it('exact match with vendor mismatch yields confidence 0.80', async () => {
     const fetchers = makeFetchers({
       getPOExact: vi.fn().mockResolvedValue({
-        id: 'po-123', po_number: 'PO-001', vendor_name: 'Different Vendor', total_amount: 10000,
+        id: 'po-123',
+        po_number: 'PO-001',
+        vendor_name: 'Different Vendor',
+        total_amount: 10000,
       }),
     });
 
     const result = await processMatch('inv-1', baseExtractedData, 'entity-1', fetchers);
 
-    expect(result.matchConfidence).toBe(0.80);
+    expect(result.matchConfidence).toBe(0.8);
     expect(result.explanation).toContain('vendor name differs');
   });
 
   it('exact match with amount variance yields confidence 0.85', async () => {
     const fetchers = makeFetchers({
       getPOExact: vi.fn().mockResolvedValue({
-        id: 'po-123', po_number: 'PO-001', vendor_name: 'Acme Corp', total_amount: 20000,
+        id: 'po-123',
+        po_number: 'PO-001',
+        vendor_name: 'Acme Corp',
+        total_amount: 20000,
       }),
     });
 
@@ -206,11 +226,15 @@ describe('processMatch — orchestration via fetchers', () => {
 
 describe('deriveMatchResult', () => {
   it('returns Not Applicable when no PO reference and matchType is none', () => {
-    expect(deriveMatchResult('none', null, { vendor_name: 'X', total_amount: 100 }, {})).toBe('Not Applicable');
+    expect(deriveMatchResult('none', null, { vendor_name: 'X', total_amount: 100 }, {})).toBe(
+      'Not Applicable'
+    );
   });
 
   it('returns Unmatched when matchType is none but PO number was present', () => {
-    expect(deriveMatchResult('none', null, { po_number: 'PO-1', total_amount: 100 }, {})).toBe('Unmatched');
+    expect(deriveMatchResult('none', null, { po_number: 'PO-1', total_amount: 100 }, {})).toBe(
+      'Unmatched'
+    );
   });
 
   it('returns Fully Matched when PO matched and amount within 5%', () => {
@@ -232,7 +256,9 @@ describe('deriveMatchResult', () => {
   });
 
   it('returns Partially Matched for recurring pattern', () => {
-    expect(deriveMatchResult('recurring', null, { vendor_name: 'X', total_amount: 100 }, {})).toBe('Partially Matched');
+    expect(deriveMatchResult('recurring', null, { vendor_name: 'X', total_amount: 100 }, {})).toBe(
+      'Partially Matched'
+    );
   });
 
   it('returns Partially Matched when PO matched but amounts missing', () => {
@@ -254,7 +280,10 @@ describe('processMatch — match persistence to invoices', () => {
   it('writes match_result, match_score, match_details to invoices in transaction', async () => {
     const fetchers = makeFetchers({
       getPOExact: vi.fn().mockResolvedValue({
-        id: 'po-123', po_number: 'PO-001', vendor_name: 'Acme Corp', total_amount: 10000,
+        id: 'po-123',
+        po_number: 'PO-001',
+        vendor_name: 'Acme Corp',
+        total_amount: 10000,
       }),
     });
 
@@ -273,9 +302,9 @@ describe('processMatch — match persistence to invoices', () => {
     expect(updateSql).toContain('match_details');
     expect(updateSql).toContain('match_computed_at');
 
-    expect(updateParams[0]).toBe('Fully Matched');  // match_result
-    expect(updateParams[1]).toBe(98);                // match_score (0.98 * 100)
-    expect(updateParams[3]).toBe('inv-1');            // invoice_id
+    expect(updateParams[0]).toBe('Fully Matched'); // match_result
+    expect(updateParams[1]).toBe(98); // match_score (0.98 * 100)
+    expect(updateParams[3]).toBe('inv-1'); // invoice_id
     expect(result.matchResult).toBe('Fully Matched');
     expect(result.matchScore).toBe(98);
   });
@@ -303,7 +332,10 @@ describe('processMatch — match persistence to invoices', () => {
   it('writes Tolerance Breach when amount between 5% and 10%', async () => {
     const fetchers = makeFetchers({
       getPOExact: vi.fn().mockResolvedValue({
-        id: 'po-123', po_number: 'PO-001', vendor_name: 'Acme Corp', total_amount: 10000,
+        id: 'po-123',
+        po_number: 'PO-001',
+        vendor_name: 'Acme Corp',
+        total_amount: 10000,
       }),
     });
     // 8% variance
@@ -318,7 +350,10 @@ describe('processMatch — match persistence to invoices', () => {
   it('writes Rate Variance when amount exceeds 10%', async () => {
     const fetchers = makeFetchers({
       getPOExact: vi.fn().mockResolvedValue({
-        id: 'po-123', po_number: 'PO-001', vendor_name: 'Acme Corp', total_amount: 10000,
+        id: 'po-123',
+        po_number: 'PO-001',
+        vendor_name: 'Acme Corp',
+        total_amount: 10000,
       }),
     });
     // 25% variance
@@ -349,7 +384,10 @@ describe('processMatch — match persistence to invoices', () => {
   it('match_details JSON contains snapshot structure', async () => {
     const fetchers = makeFetchers({
       getPOExact: vi.fn().mockResolvedValue({
-        id: 'po-123', po_number: 'PO-001', vendor_name: 'Acme Corp', total_amount: 10000,
+        id: 'po-123',
+        po_number: 'PO-001',
+        vendor_name: 'Acme Corp',
+        total_amount: 10000,
       }),
     });
 

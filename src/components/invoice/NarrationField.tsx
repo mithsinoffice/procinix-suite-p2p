@@ -18,7 +18,14 @@ interface NarrationFieldProps {
   };
 }
 
-const TEMPLATES = ['Purchase', 'Works contract', 'Service', 'RCM', 'Import', 'Advance adjustment'] as const;
+const TEMPLATES = [
+  'Purchase',
+  'Works contract',
+  'Service',
+  'RCM',
+  'Import',
+  'Advance adjustment',
+] as const;
 
 function composeTemplate(
   template: (typeof TEMPLATES)[number],
@@ -92,4 +99,3 @@ export function NarrationField({ value, onChange, formContext }: NarrationFieldP
     </div>
   );
 }
-

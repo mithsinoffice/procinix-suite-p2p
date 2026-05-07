@@ -28,33 +28,36 @@ describe('validateEnv', () => {
   });
 
   it('accepts N8N_WEBHOOK_URL as alternative OCR provider to GOOGLE_AI_API_KEY', () => {
-    const env = { ANTHROPIC_API_KEY: 'key', N8N_WEBHOOK_URL: 'https://n8n.example.com/webhook/abc' };
+    const env = {
+      ANTHROPIC_API_KEY: 'key',
+      N8N_WEBHOOK_URL: 'https://n8n.example.com/webhook/abc',
+    };
     const { errors } = validateEnv(env);
-    expect(errors.some(e => e.includes('OCR'))).toBe(false);
+    expect(errors.some((e) => e.includes('OCR'))).toBe(false);
   });
 
   it('errors when both GOOGLE_AI_API_KEY and N8N_WEBHOOK_URL are absent', () => {
     const env = { ANTHROPIC_API_KEY: 'key' };
     const { errors } = validateEnv(env);
-    expect(errors.some(e => e.includes('OCR provider'))).toBe(true);
+    expect(errors.some((e) => e.includes('OCR provider'))).toBe(true);
   });
 
   it('errors when GOOGLE_AI_API_KEY is empty string', () => {
     const env = { GOOGLE_AI_API_KEY: '   ', ANTHROPIC_API_KEY: 'key' };
     const { errors } = validateEnv(env);
-    expect(errors.some(e => e.includes('OCR provider'))).toBe(true);
+    expect(errors.some((e) => e.includes('OCR provider'))).toBe(true);
   });
 
   it('errors when ANTHROPIC_API_KEY is missing', () => {
     const env = { GOOGLE_AI_API_KEY: 'key' };
     const { errors } = validateEnv(env);
-    expect(errors.some(e => e.includes('ANTHROPIC_API_KEY'))).toBe(true);
+    expect(errors.some((e) => e.includes('ANTHROPIC_API_KEY'))).toBe(true);
   });
 
   it('errors when ANTHROPIC_API_KEY is whitespace-only', () => {
     const env = { GOOGLE_AI_API_KEY: 'key', ANTHROPIC_API_KEY: '  ' };
     const { errors } = validateEnv(env);
-    expect(errors.some(e => e.includes('ANTHROPIC_API_KEY'))).toBe(true);
+    expect(errors.some((e) => e.includes('ANTHROPIC_API_KEY'))).toBe(true);
   });
 
   it('accumulates multiple errors independently', () => {
@@ -71,7 +74,7 @@ describe('validateEnv', () => {
       // SMTP_HOST intentionally absent
     };
     const { warnings } = validateEnv(env);
-    expect(warnings.some(w => w.includes('SMTP_HOST'))).toBe(true);
+    expect(warnings.some((w) => w.includes('SMTP_HOST'))).toBe(true);
   });
 
   it('does NOT warn about SMTP when IMAP is not configured', () => {
@@ -97,26 +100,26 @@ describe('validateEnv', () => {
     const { API_SECRET_KEY: _omit, ...withoutKey } = ALL_PRESENT;
     const env = { ...withoutKey, NODE_ENV: 'production' };
     const { errors } = validateEnv(env);
-    expect(errors.some(e => e.includes('API_SECRET_KEY'))).toBe(true);
+    expect(errors.some((e) => e.includes('API_SECRET_KEY'))).toBe(true);
   });
 
   it('errors when NODE_ENV=production and API_SECRET_KEY is whitespace-only', () => {
     const env = { ...ALL_PRESENT, NODE_ENV: 'production', API_SECRET_KEY: '   ' };
     const { errors } = validateEnv(env);
-    expect(errors.some(e => e.includes('API_SECRET_KEY'))).toBe(true);
+    expect(errors.some((e) => e.includes('API_SECRET_KEY'))).toBe(true);
   });
 
   it('does NOT error when NODE_ENV=production and API_SECRET_KEY is set', () => {
     const env = { ...ALL_PRESENT, NODE_ENV: 'production', API_SECRET_KEY: 'secret-key-abc' };
     const { errors } = validateEnv(env);
-    expect(errors.some(e => e.includes('API_SECRET_KEY'))).toBe(false);
+    expect(errors.some((e) => e.includes('API_SECRET_KEY'))).toBe(false);
   });
 
   it('does NOT error when NODE_ENV=development and API_SECRET_KEY is absent', () => {
     const { API_SECRET_KEY: _omit, ...withoutKey } = ALL_PRESENT;
     const env = { ...withoutKey, NODE_ENV: 'development' };
     const { errors } = validateEnv(env);
-    expect(errors.some(e => e.includes('API_SECRET_KEY'))).toBe(false);
+    expect(errors.some((e) => e.includes('API_SECRET_KEY'))).toBe(false);
   });
 });
 
@@ -138,7 +141,10 @@ describe('checkAndExitIfInvalid', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(() =>
-      checkAndExitIfInvalid({ NODE_ENV: 'production', GOOGLE_AI_API_KEY: 'key' /* missing ANTHROPIC */ })
+      checkAndExitIfInvalid({
+        NODE_ENV: 'production',
+        GOOGLE_AI_API_KEY: 'key' /* missing ANTHROPIC */,
+      })
     ).toThrow('process.exit(1)');
 
     expect(exitSpy).toHaveBeenCalledWith(1);
@@ -164,9 +170,13 @@ describe('checkAndExitIfInvalid', () => {
 
   it('logs errors to console.error in production before exiting', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('exit'); });
+    vi.spyOn(process, 'exit').mockImplementation(() => {
+      throw new Error('exit');
+    });
 
-    try { checkAndExitIfInvalid({ NODE_ENV: 'production' }); } catch {}
+    try {
+      checkAndExitIfInvalid({ NODE_ENV: 'production' });
+    } catch {}
 
     expect(errorSpy).toHaveBeenCalled();
   });

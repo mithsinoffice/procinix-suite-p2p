@@ -47,13 +47,19 @@ export function MasterFormPage({
           type="button"
           onClick={onBack}
           className="p-2 rounded-xl transition-colors"
-          style={{ color: 'var(--color-mercury-grey)', backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)' }}
+          style={{
+            color: 'var(--color-mercury-grey)',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid var(--color-fog)',
+          }}
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-1 flex-wrap">
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>{title}</h1>
+            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>
+              {title}
+            </h1>
             <span
               className="px-3 py-1 rounded-full text-xs"
               style={{ backgroundColor: '#ECFEFF', color: '#0F8A95', fontWeight: 700 }}
@@ -67,7 +73,10 @@ export function MasterFormPage({
 
       <div
         className="rounded-[28px] overflow-hidden bg-white w-full min-w-0"
-        style={{ border: '1px solid var(--color-fog)', boxShadow: '0 24px 56px rgba(15, 23, 42, 0.08)' }}
+        style={{
+          border: '1px solid var(--color-fog)',
+          boxShadow: '0 24px 56px rgba(15, 23, 42, 0.08)',
+        }}
       >
         <div
           className="px-8 py-6 flex items-center justify-between"
@@ -79,14 +88,22 @@ export function MasterFormPage({
           }}
         >
           <div>
-            <p className="text-sm mb-1" style={{ color: '#0F8A95', fontWeight: 700 }}>{modeLabel}</p>
-            <h2 className="text-2xl" style={{ color: 'var(--color-ink)' }}>{title}</h2>
+            <p className="text-sm mb-1" style={{ color: '#0F8A95', fontWeight: 700 }}>
+              {modeLabel}
+            </p>
+            <h2 className="text-2xl" style={{ color: 'var(--color-ink)' }}>
+              {title}
+            </h2>
           </div>
           <button
             type="button"
             onClick={onCancel}
             className="p-2 rounded-xl transition-colors"
-            style={{ color: 'var(--color-mercury-grey)', backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)' }}
+            style={{
+              color: 'var(--color-mercury-grey)',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid var(--color-fog)',
+            }}
           >
             <X className="w-5 h-5" />
           </button>
@@ -96,7 +113,10 @@ export function MasterFormPage({
           {usePlainBody ? (
             children
           ) : (
-            <div className="rounded-[24px] p-6" style={{ backgroundColor: '#FBFEFF', border: '1px solid #E8F0F4' }}>
+            <div
+              className="rounded-[24px] p-6"
+              style={{ backgroundColor: '#FBFEFF', border: '1px solid #E8F0F4' }}
+            >
               {children}
             </div>
           )}
@@ -113,7 +133,12 @@ export function MasterFormPage({
             type="button"
             onClick={onCancel}
             className="px-5 py-2.5 rounded-xl"
-            style={{ border: '1px solid var(--color-fog)', color: 'var(--color-mercury-grey)', backgroundColor: '#FFFFFF', fontWeight: 600 }}
+            style={{
+              border: '1px solid var(--color-fog)',
+              color: 'var(--color-mercury-grey)',
+              backgroundColor: '#FFFFFF',
+              fontWeight: 600,
+            }}
           >
             Cancel
           </button>
@@ -122,7 +147,12 @@ export function MasterFormPage({
               type="button"
               onClick={onSaveDraft}
               className="px-5 py-2.5 rounded-xl"
-              style={{ border: '1px solid #BFE8EC', color: '#0F8A95', backgroundColor: '#ECFEFF', fontWeight: 700 }}
+              style={{
+                border: '1px solid #BFE8EC',
+                color: '#0F8A95',
+                backgroundColor: '#ECFEFF',
+                fontWeight: 700,
+              }}
             >
               {draftLabel}
             </button>
@@ -131,7 +161,11 @@ export function MasterFormPage({
             type="button"
             onClick={onSubmit}
             className="px-5 py-2.5 rounded-xl text-white"
-            style={{ backgroundColor: 'var(--color-teal)', fontWeight: 700, boxShadow: '0 12px 24px rgba(0, 169, 183, 0.18)' }}
+            style={{
+              backgroundColor: 'var(--color-teal)',
+              fontWeight: 700,
+              boxShadow: '0 12px 24px rgba(0, 169, 183, 0.18)',
+            }}
           >
             {submitLabel}
           </button>

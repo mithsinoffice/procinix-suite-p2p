@@ -29,7 +29,7 @@ export function ApprovalModal({
   onApprove,
   onReject,
   onRequestInfo,
-  onMoreInfo
+  onMoreInfo,
 }: ApprovalModalProps) {
   if (!isOpen) return null;
 
@@ -37,11 +37,20 @@ export function ApprovalModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: 'var(--color-silver)' }}>
+        <div
+          className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0"
+          style={{ borderColor: 'var(--color-silver)' }}
+        >
           <div>
-            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Review Changes - {recordType}</h2>
+            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
+              Review Changes - {recordType}
+            </h2>
             <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
-              {recordId ? `Record ID: ${recordId}` : recordName ? `Record: ${recordName}` : 'Review record changes'}
+              {recordId
+                ? `Record ID: ${recordId}`
+                : recordName
+                  ? `Record: ${recordName}`
+                  : 'Review record changes'}
             </p>
           </div>
           <button
@@ -55,8 +64,10 @@ export function ApprovalModal({
 
         {/* Changes List - Scrollable */}
         <div className="p-6 flex-1 overflow-y-auto">
-          <h3 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>Proposed Changes</h3>
-          
+          <h3 className="text-lg mb-4" style={{ color: 'var(--color-ink)' }}>
+            Proposed Changes
+          </h3>
+
           {changes.length === 0 ? (
             <p style={{ color: 'var(--color-mercury-grey)' }}>No changes detected</p>
           ) : (
@@ -65,33 +76,51 @@ export function ApprovalModal({
                 <div
                   key={index}
                   className="p-4 rounded-lg"
-                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
+                  style={{
+                    backgroundColor: 'var(--color-cloud)',
+                    border: '1px solid var(--color-silver)',
+                  }}
                 >
                   <div className="mb-2">
-                    <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Field:</span>
-                    <span className="ml-2" style={{ color: 'var(--color-ink)' }}>{change.field}</span>
+                    <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                      Field:
+                    </span>
+                    <span className="ml-2" style={{ color: 'var(--color-ink)' }}>
+                      {change.field}
+                    </span>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4 mt-3">
                     {/* Old Value */}
                     <div
                       className="p-3 rounded-lg"
                       style={{ backgroundColor: '#FFE8EA', border: '1px solid #FFD1D6' }}
                     >
-                      <p className="text-xs mb-1" style={{ color: 'var(--color-error)' }}>Previous Value</p>
+                      <p className="text-xs mb-1" style={{ color: 'var(--color-error)' }}>
+                        Previous Value
+                      </p>
                       <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                        {change.oldValue || <em style={{ color: 'var(--color-mercury-grey)' }}>(empty)</em>}
+                        {change.oldValue || (
+                          <em style={{ color: 'var(--color-mercury-grey)' }}>(empty)</em>
+                        )}
                       </p>
                     </div>
 
                     {/* New Value */}
                     <div
                       className="p-3 rounded-lg"
-                      style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid #B3E5EA' }}
+                      style={{
+                        backgroundColor: 'var(--color-teal-tint)',
+                        border: '1px solid #B3E5EA',
+                      }}
                     >
-                      <p className="text-xs mb-1" style={{ color: 'var(--color-teal)' }}>New Value</p>
+                      <p className="text-xs mb-1" style={{ color: 'var(--color-teal)' }}>
+                        New Value
+                      </p>
                       <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                        {change.newValue || <em style={{ color: 'var(--color-mercury-grey)' }}>(empty)</em>}
+                        {change.newValue || (
+                          <em style={{ color: 'var(--color-mercury-grey)' }}>(empty)</em>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -101,10 +130,13 @@ export function ApprovalModal({
           )}
 
           {/* Approval Actions Info */}
-          <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: '#FFF9E6', border: '1px solid #FFE7A3' }}>
+          <div
+            className="mt-6 p-4 rounded-lg"
+            style={{ backgroundColor: '#FFF9E6', border: '1px solid #FFE7A3' }}
+          >
             <p className="text-sm" style={{ color: '#D97706' }}>
-              <strong>Note:</strong> Once approved, this record will become live and cannot be deleted. 
-              You can only modify it through a new approval workflow.
+              <strong>Note:</strong> Once approved, this record will become live and cannot be
+              deleted. You can only modify it through a new approval workflow.
             </p>
           </div>
         </div>
@@ -120,20 +152,20 @@ export function ApprovalModal({
             style={{
               border: '1px solid var(--color-silver)',
               color: 'var(--color-mercury-grey)',
-              backgroundColor: 'white'
+              backgroundColor: 'white',
             }}
             disabled={!(onRequestInfo ?? onMoreInfo)}
           >
             <MessageSquare className="w-4 h-4" />
             Request More Info
           </button>
-          
+
           <button
             onClick={onReject}
             className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors text-white"
             style={{ backgroundColor: 'var(--color-error)' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E63946'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-error)'}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#E63946')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-error)')}
           >
             <XCircle className="w-4 h-4" />
             Reject
@@ -143,8 +175,8 @@ export function ApprovalModal({
             onClick={onApprove}
             className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors text-white"
             style={{ backgroundColor: 'var(--color-teal)' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
           >
             <CheckCircle className="w-4 h-4" />
             Approve

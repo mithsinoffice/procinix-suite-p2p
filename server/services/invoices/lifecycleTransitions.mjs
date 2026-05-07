@@ -12,18 +12,23 @@
 import { LIFECYCLE_STATES } from './lifecycleMapping.mjs';
 
 const {
-  INGESTED, OCR_EXTRACTED, UNDER_VERIFICATION, EXCEPTION_HOLD,
-  PROCESSED, QUEUED_FOR_PAYMENT, REJECTED,
+  INGESTED,
+  OCR_EXTRACTED,
+  UNDER_VERIFICATION,
+  EXCEPTION_HOLD,
+  PROCESSED,
+  QUEUED_FOR_PAYMENT,
+  REJECTED,
 } = LIFECYCLE_STATES;
 
 export const VALID_TRANSITIONS = Object.freeze({
-  [INGESTED]:           Object.freeze([OCR_EXTRACTED, EXCEPTION_HOLD, REJECTED]),
-  [OCR_EXTRACTED]:      Object.freeze([UNDER_VERIFICATION, EXCEPTION_HOLD, REJECTED]),
+  [INGESTED]: Object.freeze([OCR_EXTRACTED, EXCEPTION_HOLD, REJECTED]),
+  [OCR_EXTRACTED]: Object.freeze([UNDER_VERIFICATION, EXCEPTION_HOLD, REJECTED]),
   [UNDER_VERIFICATION]: Object.freeze([PROCESSED, EXCEPTION_HOLD, REJECTED]),
-  [EXCEPTION_HOLD]:     Object.freeze([UNDER_VERIFICATION, REJECTED]),
-  [PROCESSED]:          Object.freeze([QUEUED_FOR_PAYMENT]),
+  [EXCEPTION_HOLD]: Object.freeze([UNDER_VERIFICATION, REJECTED]),
+  [PROCESSED]: Object.freeze([QUEUED_FOR_PAYMENT]),
   [QUEUED_FOR_PAYMENT]: Object.freeze([]),
-  [REJECTED]:           Object.freeze([]),
+  [REJECTED]: Object.freeze([]),
 });
 
 // States allowed when fromState is null (new invoice creation).
@@ -60,9 +65,7 @@ export function assertValidTransition(fromState, toState) {
   if (isValidTransition(fromState, toState)) return;
 
   const from = fromState ?? '(null)';
-  const allowed = fromState == null
-    ? VALID_INITIAL_STATES
-    : VALID_TRANSITIONS[fromState];
+  const allowed = fromState == null ? VALID_INITIAL_STATES : VALID_TRANSITIONS[fromState];
 
   if (!allowed) {
     throw new Error(

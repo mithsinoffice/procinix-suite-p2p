@@ -1,5 +1,9 @@
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
-import { ensureRelationalMasterRecords, getCachedRelationalMasterRecords, saveRelationalMasterRecords } from '../lib/mysql/masterTables';
+import {
+  ensureRelationalMasterRecords,
+  getCachedRelationalMasterRecords,
+  saveRelationalMasterRecords,
+} from '../lib/mysql/masterTables';
 
 export function useIncrementalMasterRecords<T>(
   masterKey: string,

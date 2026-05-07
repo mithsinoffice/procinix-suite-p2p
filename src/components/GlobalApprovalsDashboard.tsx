@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  CheckCircle, 
-  XCircle, 
-  MessageSquare, 
-  Clock, 
-  FileText, 
-  Package, 
-  Users, 
+import {
+  CheckCircle,
+  XCircle,
+  MessageSquare,
+  Clock,
+  FileText,
+  Package,
+  Users,
   Database,
   ChevronDown,
   ChevronUp,
@@ -25,7 +25,7 @@ import {
   CreditCard,
   UserCheck,
   ShoppingCart,
-  ArrowUpRight
+  ArrowUpRight,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAPData } from '../contexts/APDataContext';
@@ -39,7 +39,7 @@ import { PremiumActionButton } from './ui/premium-register';
 
 /**
  * GLOBAL APPROVALS DASHBOARD
- * 
+ *
  * Consolidates approvals from ALL modules:
  * - Procurement: Purchase Requisitions (PRs), Purchase Orders
  * - Accounts Payable: PO Invoices, Non-PO Invoices
@@ -53,7 +53,16 @@ import { PremiumActionButton } from './ui/premium-register';
 interface ApprovalItem {
   id: string;
   category: ApprovalTabKey;
-  type: 'PR' | 'PO' | 'Invoice' | 'NonPOInvoice' | 'PaymentBatch' | 'VendorAdvance' | 'VendorOnboarding' | 'Master' | 'Location';
+  type:
+    | 'PR'
+    | 'PO'
+    | 'Invoice'
+    | 'NonPOInvoice'
+    | 'PaymentBatch'
+    | 'VendorAdvance'
+    | 'VendorOnboarding'
+    | 'Master'
+    | 'Location';
   module: string; // Source module
   title: string;
   submittedBy: string;
@@ -97,10 +106,7 @@ export function GlobalApprovalsDashboard() {
     updateAdvanceRequest,
     updateGRN,
   } = useAPData();
-  const {
-    purchaseRequests,
-    updatePurchaseRequestStatus,
-  } = useProcurementData();
+  const { purchaseRequests, updatePurchaseRequestStatus } = useProcurementData();
   const navigate = useNavigate();
   const [selectedTab, setSelectedTab] = useState<ApprovalTabKey>('All');
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
@@ -177,7 +183,11 @@ export function GlobalApprovalsDashboard() {
   // Get ETA color based on elapsed time
   const getETAColor = (totalHours: number) => {
     if (totalHours >= 48) {
-      return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)', border: '#FCA5A5' };
+      return {
+        bg: 'var(--color-error-light)',
+        color: 'var(--color-error-dark)',
+        border: '#FCA5A5',
+      };
     } else if (totalHours >= 24) {
       return { bg: '#FED7AA', color: '#EA580C', border: '#FB923C' };
     } else if (totalHours >= 8) {
@@ -230,8 +240,13 @@ export function GlobalApprovalsDashboard() {
         submittedDate: request.submittedDate ?? request.createdDate,
         submittedTime: undefined,
         value: `₹${request.totalAmount.toLocaleString('en-IN')}`,
-        priority: (request.aiRiskLevel === 'High' ? 'High' : request.aiRiskLevel === 'Medium' ? 'Medium' : 'Low') as ApprovalItem['priority'],
-        daysWaiting: request.agingDays ?? getDaysWaiting(request.submittedDate ?? request.createdDate),
+        priority: (request.aiRiskLevel === 'High'
+          ? 'High'
+          : request.aiRiskLevel === 'Medium'
+            ? 'Medium'
+            : 'Low') as ApprovalItem['priority'],
+        daysWaiting:
+          request.agingDays ?? getDaysWaiting(request.submittedDate ?? request.createdDate),
         details: {
           entity: request.entity,
           department: request.department,
@@ -247,14 +262,21 @@ export function GlobalApprovalsDashboard() {
       .map((invoice) => ({
         id: invoice.id,
         category: 'AP_INVOICES' as const,
-        type: (invoice.invoiceType === 'Non-PO' ? 'NonPOInvoice' : 'Invoice') as ApprovalItem['type'],
+        type: (invoice.invoiceType === 'Non-PO'
+          ? 'NonPOInvoice'
+          : 'Invoice') as ApprovalItem['type'],
         module: 'Accounts Payable',
         title: `${invoice.invoiceType === 'Non-PO' ? 'Non-PO ' : ''}Invoice #${invoice.invoiceNumber} - ${invoice.vendorName}`,
         submittedBy: invoice.approver ?? 'AP Team',
         submittedDate: invoice.invoiceDate,
         submittedTime: undefined,
         value: `₹${invoice.totalAmount.toLocaleString('en-IN')}`,
-        priority: invoice.totalAmount >= 1000000 ? 'High' : invoice.totalAmount >= 250000 ? 'Medium' : 'Low',
+        priority:
+          invoice.totalAmount >= 1000000
+            ? 'High'
+            : invoice.totalAmount >= 250000
+              ? 'Medium'
+              : 'Low',
         daysWaiting: getDaysWaiting(invoice.invoiceDate),
         details: {
           vendor: invoice.vendorName,
@@ -264,9 +286,10 @@ export function GlobalApprovalsDashboard() {
           matchStatus: invoice.matchStatus ?? 'Unmatched',
           paymentStatus: invoice.paymentStatus,
         },
-        route: invoice.invoiceType === 'Non-PO'
-          ? `/ap/non-po-invoice-approval/${invoice.id}`
-          : `/ap/invoice-approval/${invoice.id}`,
+        route:
+          invoice.invoiceType === 'Non-PO'
+            ? `/ap/non-po-invoice-approval/${invoice.id}`
+            : `/ap/invoice-approval/${invoice.id}`,
       })),
     ...advanceRequests
       .filter((request) => request.status === 'Submitted')
@@ -280,7 +303,14 @@ export function GlobalApprovalsDashboard() {
         submittedDate: request.submittedDate ?? request.createdDate,
         submittedTime: undefined,
         value: `₹${request.netPayable.toLocaleString('en-IN')}`,
-        priority: request.priority === 'Critical' ? 'High' : request.priority === 'High' ? 'High' : request.priority === 'Medium' ? 'Medium' : 'Low',
+        priority:
+          request.priority === 'Critical'
+            ? 'High'
+            : request.priority === 'High'
+              ? 'High'
+              : request.priority === 'Medium'
+                ? 'Medium'
+                : 'Low',
         daysWaiting: getDaysWaiting(request.submittedDate ?? request.createdDate),
         details: {
           vendor: request.vendor,
@@ -327,7 +357,12 @@ export function GlobalApprovalsDashboard() {
         submittedDate: debitNote.createdDate || debitNote.debitNoteDate,
         submittedTime: undefined,
         value: `₹${debitNote.debitAmount.toLocaleString('en-IN')}`,
-        priority: debitNote.debitAmount >= 500000 ? 'High' : debitNote.debitAmount >= 100000 ? 'Medium' : 'Low',
+        priority:
+          debitNote.debitAmount >= 500000
+            ? 'High'
+            : debitNote.debitAmount >= 100000
+              ? 'Medium'
+              : 'Low',
         daysWaiting: getDaysWaiting(debitNote.createdDate || debitNote.debitNoteDate),
         details: {
           vendor: debitNote.vendorName,
@@ -352,7 +387,9 @@ export function GlobalApprovalsDashboard() {
       case 'PO':
         return item.category === 'PO' || item.type === 'PO';
       case 'AP_INVOICES':
-        return item.category === 'AP_INVOICES' || item.type === 'Invoice' || item.type === 'NonPOInvoice';
+        return (
+          item.category === 'AP_INVOICES' || item.type === 'Invoice' || item.type === 'NonPOInvoice'
+        );
       case 'DEBIT_NOTES':
         return item.category === 'DEBIT_NOTES' || item.module === 'Debit Notes';
       case 'PAYMENTS':
@@ -395,38 +432,68 @@ export function GlobalApprovalsDashboard() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'High': return { bg: 'var(--color-error-light)', text: 'var(--color-error-dark)', border: '#FCA5A5' };
-      case 'Medium': return { bg: '#FEF3C7', text: '#D97706', border: '#FCD34D' };
-      case 'Low': return { bg: '#E0F2FE', text: '#0284C7', border: '#7DD3FC' };
-      default: return { bg: 'var(--color-cloud)', text: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
+      case 'High':
+        return {
+          bg: 'var(--color-error-light)',
+          text: 'var(--color-error-dark)',
+          border: '#FCA5A5',
+        };
+      case 'Medium':
+        return { bg: '#FEF3C7', text: '#D97706', border: '#FCD34D' };
+      case 'Low':
+        return { bg: '#E0F2FE', text: '#0284C7', border: '#7DD3FC' };
+      default:
+        return {
+          bg: 'var(--color-cloud)',
+          text: 'var(--color-mercury-grey)',
+          border: 'var(--color-silver)',
+        };
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'PR': return ShoppingCart;
-      case 'PO': return FileText;
-      case 'Invoice': return Receipt;
-      case 'NonPOInvoice': return Receipt;
-      case 'PaymentBatch': return CreditCard;
-      case 'VendorAdvance': return DollarSign;
-      case 'VendorOnboarding': return UserCheck;
-      case 'Master': return Database;
-      case 'Location': return Package;
-      default: return FileText;
+      case 'PR':
+        return ShoppingCart;
+      case 'PO':
+        return FileText;
+      case 'Invoice':
+        return Receipt;
+      case 'NonPOInvoice':
+        return Receipt;
+      case 'PaymentBatch':
+        return CreditCard;
+      case 'VendorAdvance':
+        return DollarSign;
+      case 'VendorOnboarding':
+        return UserCheck;
+      case 'Master':
+        return Database;
+      case 'Location':
+        return Package;
+      default:
+        return FileText;
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'PR': return 'Purchase Requisition';
-      case 'Invoice': return 'PO Invoice';
-      case 'NonPOInvoice': return 'Non-PO Invoice';
-      case 'PaymentBatch': return 'Payment Batch';
-      case 'VendorAdvance': return 'Vendor Advance';
-      case 'VendorOnboarding': return 'Vendor Onboarding';
-      case 'Location': return 'Location Accept';
-      default: return type;
+      case 'PR':
+        return 'Purchase Requisition';
+      case 'Invoice':
+        return 'PO Invoice';
+      case 'NonPOInvoice':
+        return 'Non-PO Invoice';
+      case 'PaymentBatch':
+        return 'Payment Batch';
+      case 'VendorAdvance':
+        return 'Vendor Advance';
+      case 'VendorOnboarding':
+        return 'Vendor Onboarding';
+      case 'Location':
+        return 'Location Accept';
+      default:
+        return type;
     }
   };
 
@@ -445,7 +512,7 @@ export function GlobalApprovalsDashboard() {
 
   const handleOperationalAction = (
     item: ApprovalItem,
-    action: 'approve' | 'reject' | 'request_info',
+    action: 'approve' | 'reject' | 'request_info'
   ) => {
     if (item.type === 'PR') {
       const request = purchaseRequests.find((entry) => entry.prNumber === item.id);
@@ -518,13 +585,13 @@ export function GlobalApprovalsDashboard() {
 
   const handleMasterAction = async (
     item: ApprovalItem,
-    action: 'approve' | 'reject' | 'request_info',
+    action: 'approve' | 'reject' | 'request_info'
   ) => {
     const masterItem = item as unknown as MasterApprovalItem;
 
     const nextComments =
       action === 'request_info'
-        ? window.prompt('Enter comments for the request:', comments) ?? ''
+        ? (window.prompt('Enter comments for the request:', comments) ?? '')
         : '';
     if (action === 'request_info' && !nextComments) {
       return;
@@ -542,7 +609,7 @@ export function GlobalApprovalsDashboard() {
 
   const getTotalValue = () => {
     return approvals
-      .filter(item => item.value)
+      .filter((item) => item.value)
       .reduce((sum, item) => {
         const value = parseFloat(item.value!.replace(/[₹,]/g, ''));
         return sum + value;
@@ -560,7 +627,7 @@ export function GlobalApprovalsDashboard() {
     { key: 'VENDOR_ADVANCES', label: 'Vendor Advances', icon: DollarSign },
     { key: 'VENDOR_ONBOARDING', label: 'Vendor Onboarding', icon: UserCheck },
     { key: 'MASTER', label: 'Master Updates', icon: Database },
-    { key: 'LOCATION', label: 'Location Accepts', icon: Package }
+    { key: 'LOCATION', label: 'Location Accepts', icon: Package },
   ] as const;
 
   return (
@@ -571,7 +638,8 @@ export function GlobalApprovalsDashboard() {
           Global Approvals
         </h1>
         <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-          Consolidated approvals from all modules - Accounts Payable, Procurement, Payments, Vendor Advances, Vendor Onboarding, Masters
+          Consolidated approvals from all modules - Accounts Payable, Procurement, Payments, Vendor
+          Advances, Vendor Onboarding, Masters
         </p>
       </div>
 
@@ -581,96 +649,144 @@ export function GlobalApprovalsDashboard() {
           <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>
             My Approval Performance (YTD 2024)
           </h2>
-          <span className="text-xs px-3 py-1 rounded-full" style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}>
+          <span
+            className="text-xs px-3 py-1 rounded-full"
+            style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}
+          >
             As of Dec 14, 2024
           </span>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* Total Approvals YTD */}
-          <div 
+          <div
             className="bg-white p-4 rounded-lg"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal-tint)' }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'var(--color-teal-tint)' }}
+              >
                 <Target className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>342</p>
-            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Approvals YTD</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>
+              342
+            </p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+              Total Approvals YTD
+            </p>
             <div className="flex items-center gap-1">
               <TrendingUp className="w-3 h-3" style={{ color: '#059669' }} />
-              <span className="text-xs" style={{ color: '#059669' }}>+15%</span>
+              <span className="text-xs" style={{ color: '#059669' }}>
+                +15%
+              </span>
             </div>
           </div>
 
           {/* On-Time Approvals */}
-          <div 
+          <div
             className="bg-white p-4 rounded-lg"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-success-light)' }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'var(--color-success-light)' }}
+              >
                 <Award className="w-5 h-5" style={{ color: 'var(--color-success-dark)' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>96%</p>
-            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>On-Time Approvals</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>
+              96%
+            </p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+              On-Time Approvals
+            </p>
             <div>
-              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>328 of 342</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                328 of 342
+              </span>
             </div>
           </div>
 
           {/* Avg Approvals Per Month */}
-          <div 
+          <div
             className="bg-white p-4 rounded-lg"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: '#FEF3C7' }}
+              >
                 <Activity className="w-5 h-5" style={{ color: '#D97706' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>31</p>
-            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Avg Approvals/Month</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>
+              31
+            </p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+              Avg Approvals/Month
+            </p>
             <div>
-              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>11 months</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                11 months
+              </span>
             </div>
           </div>
 
           {/* Avg Time Per Approval */}
-          <div 
+          <div
             className="bg-white p-4 rounded-lg"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E0F2FE' }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: '#E0F2FE' }}
+              >
                 <Timer className="w-5 h-5" style={{ color: '#0284C7' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>3.8h</p>
-            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Avg Time/Approval</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>
+              3.8h
+            </p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+              Avg Time/Approval
+            </p>
             <div className="flex items-center gap-1">
               <TrendingUp className="w-3 h-3" style={{ color: '#059669' }} />
-              <span className="text-xs" style={{ color: '#059669' }}>22% faster</span>
+              <span className="text-xs" style={{ color: '#059669' }}>
+                22% faster
+              </span>
             </div>
           </div>
 
           {/* Total Rejections YTD */}
-          <div 
+          <div
             className="bg-white p-4 rounded-lg"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-error-light)' }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'var(--color-error-light)' }}
+              >
                 <ThumbsDown className="w-5 h-5" style={{ color: 'var(--color-error-dark)' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>18</p>
-            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Rejections YTD</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>
+              18
+            </p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+              Total Rejections YTD
+            </p>
             <div>
-              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>5.3% rate</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                5.3% rate
+              </span>
             </div>
           </div>
         </div>
@@ -678,75 +794,94 @@ export function GlobalApprovalsDashboard() {
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div 
+        <div
           className="bg-white p-6 rounded-lg"
           style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal-tint)' }}>
+            <div
+              className="w-12 h-12 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: 'var(--color-teal-tint)' }}
+            >
               <AlertCircle className="w-6 h-6" style={{ color: 'var(--color-teal)' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{allApprovals.length}</p>
-          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Pending Approvals</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
+            {allApprovals.length}
+          </p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            Pending Approvals
+          </p>
         </div>
 
-        <div 
+        <div
           className="bg-white p-6 rounded-lg"
           style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-error-light)' }}>
+            <div
+              className="w-12 h-12 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: 'var(--color-error-light)' }}
+            >
               <Clock className="w-6 h-6" style={{ color: 'var(--color-error-dark)' }} />
             </div>
           </div>
           <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
-            {allApprovals.filter(a => a.daysWaiting > 2).length}
+            {allApprovals.filter((a) => a.daysWaiting > 2).length}
           </p>
-          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Aging (&gt;2 days)</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            Aging (&gt;2 days)
+          </p>
         </div>
 
-        <div 
+        <div
           className="bg-white p-6 rounded-lg"
           style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
+            <div
+              className="w-12 h-12 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: '#FEF3C7' }}
+            >
               <TrendingUp className="w-6 h-6" style={{ color: '#D97706' }} />
             </div>
           </div>
           <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
             ₹{(getTotalValue() / 100000).toFixed(2)}L
           </p>
-          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Total Value</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            Total Value
+          </p>
         </div>
 
-        <div 
+        <div
           className="bg-white p-6 rounded-lg"
           style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-success-light)' }}>
+            <div
+              className="w-12 h-12 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: 'var(--color-success-light)' }}
+            >
               <Calendar className="w-6 h-6" style={{ color: 'var(--color-success-dark)' }} />
             </div>
           </div>
           <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
-            {allApprovals.filter(a => a.daysWaiting <= 1).length}
+            {allApprovals.filter((a) => a.daysWaiting <= 1).length}
           </p>
-          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Recent (Today)</p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            Recent (Today)
+          </p>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div 
-        className="bg-white rounded-lg mb-6"
-        style={{ border: '1px solid var(--color-silver)' }}
-      >
+      <div className="bg-white rounded-lg mb-6" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="flex items-center gap-2 p-2 flex-wrap">
           {tabs.map((tab) => {
             const count = getCountByType(tab.key);
             if (count === 0 && tab.key !== 'All') return null;
-            
+
             const isActive = selectedTab === tab.key;
             const TabIcon = tab.icon;
 
@@ -758,17 +893,17 @@ export function GlobalApprovalsDashboard() {
                 style={{
                   backgroundColor: isActive ? 'var(--color-teal-tint)' : 'transparent',
                   color: isActive ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
-                  border: isActive ? '1px solid var(--color-teal)' : '1px solid transparent'
+                  border: isActive ? '1px solid var(--color-teal)' : '1px solid transparent',
                 }}
               >
                 <TabIcon className="w-4 h-4" />
                 <span className="text-sm">{tab.label}</span>
                 {count > 0 && (
-                  <span 
+                  <span
                     className="px-2 py-0.5 rounded-full text-xs"
                     style={{
                       backgroundColor: isActive ? 'var(--color-teal)' : 'var(--color-silver)',
-                      color: isActive ? '#FFFFFF' : 'var(--color-mercury-grey)'
+                      color: isActive ? '#FFFFFF' : 'var(--color-mercury-grey)',
                     }}
                   >
                     {count}
@@ -783,12 +918,17 @@ export function GlobalApprovalsDashboard() {
       {/* Approvals List */}
       <div className="space-y-3">
         {approvals.length === 0 ? (
-          <div 
+          <div
             className="bg-white p-12 rounded-lg text-center"
             style={{ border: '1px solid var(--color-silver)' }}
           >
-            <CheckCircle className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--color-silver)' }} />
-            <p className="text-lg mb-2" style={{ color: 'var(--color-ink)' }}>All Caught Up!</p>
+            <CheckCircle
+              className="w-16 h-16 mx-auto mb-4"
+              style={{ color: 'var(--color-silver)' }}
+            />
+            <p className="text-lg mb-2" style={{ color: 'var(--color-ink)' }}>
+              All Caught Up!
+            </p>
             <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               No pending approvals for this category
             </p>
@@ -806,94 +946,148 @@ export function GlobalApprovalsDashboard() {
               <div
                 key={item.id}
                 className="bg-white rounded-[20px]"
-                style={{ border: '1px solid var(--color-fog)', boxShadow: '0 14px 32px rgba(15, 23, 42, 0.05)' }}
+                style={{
+                  border: '1px solid var(--color-fog)',
+                  boxShadow: '0 14px 32px rgba(15, 23, 42, 0.05)',
+                }}
               >
-                <div className="grid gap-4 px-5 py-4" style={{ gridTemplateColumns: '2.7fr 1.1fr 1.1fr 1fr 1fr 0.9fr' }}>
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div 
-                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg, #EAFBFE 0%, #DFF6FB 100%)' }}
-                      >
-                        <TypeIcon className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
-                      </div>
+                <div
+                  className="grid gap-4 px-5 py-4"
+                  style={{ gridTemplateColumns: '2.7fr 1.1fr 1.1fr 1fr 1fr 0.9fr' }}
+                >
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: 'linear-gradient(135deg, #EAFBFE 0%, #DFF6FB 100%)' }}
+                    >
+                      <TypeIcon className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
+                    </div>
 
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <h3 className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
-                            {item.title}
-                          </h3>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <h3
+                          className="text-sm"
+                          style={{ color: 'var(--color-ink)', fontWeight: 700 }}
+                        >
+                          {item.title}
+                        </h3>
+                        <span
+                          className="px-2.5 py-1 rounded-full text-[11px]"
+                          style={{
+                            backgroundColor: 'var(--color-cloud)',
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: 700,
+                          }}
+                        >
+                          {getTypeLabel(item.type)}
+                        </span>
+                        <span
+                          className="px-2.5 py-1 rounded-full text-[11px]"
+                          style={{
+                            backgroundColor: priorityColor.bg,
+                            color: priorityColor.text,
+                            border: `1px solid ${priorityColor.border}`,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {item.priority}
+                        </span>
+
+                        {item.daysWaiting > 2 && (
                           <span
-                            className="px-2.5 py-1 rounded-full text-[11px]"
+                            className="px-2.5 py-1 rounded-full text-[11px] flex items-center gap-1"
                             style={{
-                              backgroundColor: 'var(--color-cloud)',
-                              color: 'var(--color-mercury-grey)',
+                              backgroundColor: 'var(--color-error-light)',
+                              color: 'var(--color-error-dark)',
                               fontWeight: 700,
                             }}
                           >
-                            {getTypeLabel(item.type)}
+                            <AlertCircle className="w-3 h-3" />
+                            Aging
                           </span>
-                          <span
-                            className="px-2.5 py-1 rounded-full text-[11px]"
-                            style={{
-                              backgroundColor: priorityColor.bg,
-                              color: priorityColor.text,
-                              border: `1px solid ${priorityColor.border}`,
-                              fontWeight: 700,
-                            }}
-                          >
-                            {item.priority}
-                          </span>
-
-                          {item.daysWaiting > 2 && (
-                            <span
-                              className="px-2.5 py-1 rounded-full text-[11px] flex items-center gap-1"
-                              style={{
-                                backgroundColor: 'var(--color-error-light)',
-                                color: 'var(--color-error-dark)',
-                                fontWeight: 700,
-                              }}
-                            >
-                              <AlertCircle className="w-3 h-3" />
-                              Aging
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{item.id}</p>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="px-3 py-1.5 rounded-full text-xs" style={{ backgroundColor: '#F5F8FB', color: '#334155', fontWeight: 700 }}>
-                        {item.module}
-                      </span>
-                    </div>
-                    <div className="flex items-center" style={{ color: 'var(--color-ink)' }}>{item.submittedBy}</div>
-                    <div className="flex flex-col justify-center">
-                      <span style={{ color: 'var(--color-mercury-grey)' }}>{submittedDisplay.date}</span>
-                      <span className="text-xs" style={{ color: '#94A3B8' }}>{submittedDisplay.time}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="px-3 py-1.5 rounded-full text-xs flex items-center gap-1.5" style={{ backgroundColor: etaColor.bg, color: etaColor.color, border: `1px solid ${etaColor.border}`, fontWeight: 700 }}>
-                        <Clock className="w-3 h-3" />
-                        {formatETA(eta)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-end gap-2">
-                      <PremiumActionButton label={item.type === 'Master' ? 'Review changes' : 'Review approval'} icon={<Eye className="w-4 h-4" />} tone="teal" onClick={() => handleApprovalAction(item)} />
-                      <PremiumActionButton label="Open approval" icon={<ArrowUpRight className="w-4 h-4" />} tone="blue" onClick={() => item.route ? navigate(item.route) : handleApprovalAction(item)} />
-                      <PremiumActionButton label={isExpanded ? 'Collapse details' : 'Expand details'} icon={isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />} tone="slate" onClick={() => setExpandedItem(isExpanded ? null : item.id)} />
+                      <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                        {item.id}
+                      </p>
                     </div>
                   </div>
+                  <div className="flex items-center">
+                    <span
+                      className="px-3 py-1.5 rounded-full text-xs"
+                      style={{ backgroundColor: '#F5F8FB', color: '#334155', fontWeight: 700 }}
+                    >
+                      {item.module}
+                    </span>
+                  </div>
+                  <div className="flex items-center" style={{ color: 'var(--color-ink)' }}>
+                    {item.submittedBy}
+                  </div>
+                  <div className="flex flex-col justify-center">
+                    <span style={{ color: 'var(--color-mercury-grey)' }}>
+                      {submittedDisplay.date}
+                    </span>
+                    <span className="text-xs" style={{ color: '#94A3B8' }}>
+                      {submittedDisplay.time}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span
+                      className="px-3 py-1.5 rounded-full text-xs flex items-center gap-1.5"
+                      style={{
+                        backgroundColor: etaColor.bg,
+                        color: etaColor.color,
+                        border: `1px solid ${etaColor.border}`,
+                        fontWeight: 700,
+                      }}
+                    >
+                      <Clock className="w-3 h-3" />
+                      {formatETA(eta)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-end gap-2">
+                    <PremiumActionButton
+                      label={item.type === 'Master' ? 'Review changes' : 'Review approval'}
+                      icon={<Eye className="w-4 h-4" />}
+                      tone="teal"
+                      onClick={() => handleApprovalAction(item)}
+                    />
+                    <PremiumActionButton
+                      label="Open approval"
+                      icon={<ArrowUpRight className="w-4 h-4" />}
+                      tone="blue"
+                      onClick={() =>
+                        item.route ? navigate(item.route) : handleApprovalAction(item)
+                      }
+                    />
+                    <PremiumActionButton
+                      label={isExpanded ? 'Collapse details' : 'Expand details'}
+                      icon={
+                        isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )
+                      }
+                      tone="slate"
+                      onClick={() => setExpandedItem(isExpanded ? null : item.id)}
+                    />
+                  </div>
+                </div>
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div 
+                  <div
                     className="px-5 pb-5 pt-3"
                     style={{ borderTop: '1px solid #EAF0F4', backgroundColor: '#FBFEFF' }}
                   >
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       {Object.entries(item.details).map(([key, value]) => (
                         <div key={key}>
-                          <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-1">
+                          <p
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                            className="text-xs mb-1"
+                          >
                             {key.replace(/([A-Z])/g, ' $1').trim()}
                           </p>
                           <p style={{ color: 'var(--color-ink)' }} className="text-sm">
@@ -910,14 +1104,21 @@ export function GlobalApprovalsDashboard() {
                         </p>
                         <div className="space-y-2">
                           {item.changes.map((change, idx) => (
-                            <div 
+                            <div
                               key={idx}
                               className="p-3 rounded-lg"
                               style={{ backgroundColor: 'var(--color-cloud)' }}
                             >
-                              <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>{change.field}</p>
+                              <p
+                                className="text-xs mb-1"
+                                style={{ color: 'var(--color-mercury-grey)' }}
+                              >
+                                {change.field}
+                              </p>
                               <div className="flex items-center gap-2 text-sm">
-                                <span style={{ color: 'var(--color-error-dark)' }}>{change.oldValue}</span>
+                                <span style={{ color: 'var(--color-error-dark)' }}>
+                                  {change.oldValue}
+                                </span>
                                 <span style={{ color: 'var(--color-mercury-grey)' }}>→</span>
                                 <span style={{ color: '#059669' }}>{change.newValue}</span>
                               </div>
@@ -932,7 +1133,11 @@ export function GlobalApprovalsDashboard() {
                         <button
                           onClick={() => handleMasterAction(item, 'request_info')}
                           className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
-                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}
+                          style={{
+                            border: '1px solid var(--color-silver)',
+                            color: 'var(--color-mercury-grey)',
+                            backgroundColor: 'white',
+                          }}
                         >
                           <MessageSquare className="w-4 h-4" />
                           Request Info
@@ -959,7 +1164,11 @@ export function GlobalApprovalsDashboard() {
                         <button
                           onClick={() => handleOperationalAction(item, 'request_info')}
                           className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
-                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-mercury-grey)', backgroundColor: 'white' }}
+                          style={{
+                            border: '1px solid var(--color-silver)',
+                            color: 'var(--color-mercury-grey)',
+                            backgroundColor: 'white',
+                          }}
                         >
                           <MessageSquare className="w-4 h-4" />
                           Request Info

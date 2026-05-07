@@ -7,11 +7,29 @@ const AGENT_VERSION = '1.0.0';
 // ── GST state code map ────────────────────────────────
 
 const GST_STATE_MAP = {
-  '01': 'JK', '02': 'HP', '03': 'PB', '04': 'CH', '05': 'UK',
-  '06': 'HR', '07': 'DL', '08': 'RJ', '09': 'UP', '10': 'BR',
-  '19': 'WB', '20': 'JH', '21': 'OD', '22': 'CG', '23': 'MP',
-  '24': 'GJ', '27': 'MH', '29': 'KA', '30': 'GA', '32': 'KL',
-  '33': 'TN', '36': 'TS', '37': 'AP',
+  '01': 'JK',
+  '02': 'HP',
+  '03': 'PB',
+  '04': 'CH',
+  '05': 'UK',
+  '06': 'HR',
+  '07': 'DL',
+  '08': 'RJ',
+  '09': 'UP',
+  10: 'BR',
+  19: 'WB',
+  20: 'JH',
+  21: 'OD',
+  22: 'CG',
+  23: 'MP',
+  24: 'GJ',
+  27: 'MH',
+  29: 'KA',
+  30: 'GA',
+  32: 'KL',
+  33: 'TN',
+  36: 'TS',
+  37: 'AP',
 };
 
 const VALID_GST_RATES = [0, 5, 12, 18, 28];
@@ -22,7 +40,10 @@ const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/;
 
 function checkArithmetic(subtotal, taxAmount, totalAmount) {
   if (subtotal == null || taxAmount == null || totalAmount == null) {
-    return { pass: false, explanation: 'Missing subtotal, tax_amount, or total_amount — cannot verify arithmetic' };
+    return {
+      pass: false,
+      explanation: 'Missing subtotal, tax_amount, or total_amount — cannot verify arithmetic',
+    };
   }
 
   const expected = parseFloat((Number(subtotal) + Number(taxAmount)).toFixed(2));
@@ -30,7 +51,10 @@ function checkArithmetic(subtotal, taxAmount, totalAmount) {
   const diff = Math.abs(expected - actual);
 
   if (diff <= 0.01) {
-    return { pass: true, explanation: `Arithmetic valid: ${subtotal} + ${taxAmount} = ${expected} matches total ${actual}` };
+    return {
+      pass: true,
+      explanation: `Arithmetic valid: ${subtotal} + ${taxAmount} = ${expected} matches total ${actual}`,
+    };
   }
 
   return {
@@ -54,7 +78,10 @@ function checkLineSum(lineItems, subtotal) {
   const diff = Math.abs(lineSum - expected);
 
   if (diff <= 0.01) {
-    return { pass: true, explanation: `Line sum valid: ${lineItems.length} items totalling ${lineSum} matches subtotal ${expected}` };
+    return {
+      pass: true,
+      explanation: `Line sum valid: ${lineItems.length} items totalling ${lineSum} matches subtotal ${expected}`,
+    };
   }
 
   return {
@@ -65,7 +92,11 @@ function checkLineSum(lineItems, subtotal) {
 
 function checkGstType(vendorGstin, billToGstin) {
   if (!vendorGstin || !billToGstin) {
-    return { pass: true, expectedType: null, explanation: 'One or both GSTINs missing — GST type check skipped' };
+    return {
+      pass: true,
+      expectedType: null,
+      explanation: 'One or both GSTINs missing — GST type check skipped',
+    };
   }
 
   const vendorState = vendorGstin.substring(0, 2);
@@ -111,9 +142,10 @@ function checkGstinFormat(vendorGstin, billToGstin) {
     }
   }
 
-  const explanation = issues.length > 0
-    ? issues.join('; ')
-    : `GSTIN format valid${vendorGstin ? ` (vendor: ${vendorGstin})` : ''}${billToGstin ? ` (bill-to: ${billToGstin})` : ''}`;
+  const explanation =
+    issues.length > 0
+      ? issues.join('; ')
+      : `GSTIN format valid${vendorGstin ? ` (vendor: ${vendorGstin})` : ''}${billToGstin ? ` (bill-to: ${billToGstin})` : ''}`;
 
   return { pass, explanation };
 }
@@ -127,18 +159,25 @@ function checkTaxRateConsistency(lineItems) {
   for (let i = 0; i < lineItems.length; i++) {
     const rate = lineItems[i].gst_rate;
     if (rate != null && !VALID_GST_RATES.includes(Number(rate))) {
-      invalidItems.push({ line: i + 1, rate, description: lineItems[i].description || `Line ${i + 1}` });
+      invalidItems.push({
+        line: i + 1,
+        rate,
+        description: lineItems[i].description || `Line ${i + 1}`,
+      });
     }
   }
 
   if (invalidItems.length === 0) {
-    const rates = [...new Set(lineItems.map(li => li.gst_rate).filter(r => r != null))];
-    return { pass: true, explanation: `All line item GST rates are valid standard rates: ${rates.join(', ')}%` };
+    const rates = [...new Set(lineItems.map((li) => li.gst_rate).filter((r) => r != null))];
+    return {
+      pass: true,
+      explanation: `All line item GST rates are valid standard rates: ${rates.join(', ')}%`,
+    };
   }
 
   return {
     pass: false,
-    explanation: `Non-standard GST rates found: ${invalidItems.map(i => `line ${i.line} ("${i.description}") has rate ${i.rate}%`).join('; ')}. Valid rates: ${VALID_GST_RATES.join(', ')}%`,
+    explanation: `Non-standard GST rates found: ${invalidItems.map((i) => `line ${i.line} ("${i.description}") has rate ${i.rate}%`).join('; ')}. Valid rates: ${VALID_GST_RATES.join(', ')}%`,
   };
 }
 
@@ -147,9 +186,10 @@ function checkWithholding(totalAmount) {
     return {
       applicable: false,
       section: null,
-      explanation: totalAmount == null
-        ? 'Total amount missing — cannot assess TDS applicability'
-        : `Total amount ${totalAmount} is ≤ 30,000 — TDS not applicable`,
+      explanation:
+        totalAmount == null
+          ? 'Total amount missing — cannot assess TDS applicability'
+          : `Total amount ${totalAmount} is ≤ 30,000 — TDS not applicable`,
     };
   }
 
@@ -193,18 +233,20 @@ export async function processTaxValidation(invoiceId, extractedData) {
     ];
 
     // Compute score: 100 base, deduct per failure
-    const failures = allChecks.filter(c => !c.pass);
+    const failures = allChecks.filter((c) => !c.pass);
     const deductionPerFailure = 20;
-    const score = Math.max(0, 100 - (failures.length * deductionPerFailure));
+    const score = Math.max(0, 100 - failures.length * deductionPerFailure);
 
     // Collect issues
-    const issues = failures.map(f => ({
+    const issues = failures.map((f) => ({
       check: f.name,
       explanation: f.explanation,
     }));
 
     // Build explanation
-    const explanationParts = allChecks.map(c => `[${c.name.toUpperCase()} ${c.pass ? 'PASS' : 'FAIL'}] ${c.explanation}`);
+    const explanationParts = allChecks.map(
+      (c) => `[${c.name.toUpperCase()} ${c.pass ? 'PASS' : 'FAIL'}] ${c.explanation}`
+    );
     if (withholdingResult.applicable) {
       explanationParts.push(`[WITHHOLDING] ${withholdingResult.explanation}`);
     }
@@ -221,8 +263,11 @@ export async function processTaxValidation(invoiceId, extractedData) {
           issues, score, explanation, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?, ?, NOW())`,
       [
-        taxValidationId, invoiceId,
-        'GST', gstTypeResult.expectedType || 'unknown', gstTypeResult.actualType || 'unknown',
+        taxValidationId,
+        invoiceId,
+        'GST',
+        gstTypeResult.expectedType || 'unknown',
+        gstTypeResult.actualType || 'unknown',
         arithmeticResult.pass ? 1 : 0,
         gstTypeResult.pass ? 1 : 0,
         gstinFormatResult.pass ? 1 : 0,
@@ -237,9 +282,7 @@ export async function processTaxValidation(invoiceId, extractedData) {
 
     // Log agent decision
     const processingTimeMs = Date.now() - startTime;
-    const decision = score === 100 ? 'all_pass'
-      : score >= 60 ? 'partial_pass'
-      : 'fail';
+    const decision = score === 100 ? 'all_pass' : score >= 60 ? 'partial_pass' : 'fail';
 
     await query(
       `INSERT INTO ap_invoice_agent_decisions
@@ -247,17 +290,34 @@ export async function processTaxValidation(invoiceId, extractedData) {
           input_summary, output_summary, processing_time_ms, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        randomUUID(), invoiceId, AGENT_NAME, AGENT_VERSION,
+        randomUUID(),
+        invoiceId,
+        AGENT_NAME,
+        AGENT_VERSION,
         decision,
         parseFloat((score / 100).toFixed(2)),
         explanation,
-        JSON.stringify({ vendorGstin, billToGstin, subtotal, taxAmount, totalAmount, lineItemCount: lineItems.length }),
-        JSON.stringify({ taxValidationId, score, failedChecks: failures.map(f => f.name), withholdingApplicable: withholdingResult.applicable }),
+        JSON.stringify({
+          vendorGstin,
+          billToGstin,
+          subtotal,
+          taxAmount,
+          totalAmount,
+          lineItemCount: lineItems.length,
+        }),
+        JSON.stringify({
+          taxValidationId,
+          score,
+          failedChecks: failures.map((f) => f.name),
+          withholdingApplicable: withholdingResult.applicable,
+        }),
         processingTimeMs,
       ]
     );
 
-    console.log(`[${AGENT_NAME}] invoice ${invoiceId}: ${decision} — score ${score}/100, ${failures.length} failure(s)`);
+    console.log(
+      `[${AGENT_NAME}] invoice ${invoiceId}: ${decision} — score ${score}/100, ${failures.length} failure(s)`
+    );
 
     return {
       taxValidationId,
@@ -272,7 +332,10 @@ export async function processTaxValidation(invoiceId, extractedData) {
     };
   } catch (err) {
     const processingTimeMs = Date.now() - startTime;
-    console.error(`[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`, err.message);
+    console.error(
+      `[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`,
+      err.message
+    );
 
     try {
       await query(
@@ -281,13 +344,18 @@ export async function processTaxValidation(invoiceId, extractedData) {
             input_summary, output_summary, processing_time_ms, created_at)
          VALUES (?, ?, ?, ?, 'error', 0, ?, ?, NULL, ?, NOW())`,
         [
-          randomUUID(), invoiceId, AGENT_NAME, AGENT_VERSION,
+          randomUUID(),
+          invoiceId,
+          AGENT_NAME,
+          AGENT_VERSION,
           `Tax validation failed: ${err.message}`,
           JSON.stringify({ vendorGstin: extractedData?.vendor_gstin }),
           processingTimeMs,
         ]
       );
-    } catch (_) { /* swallow logging failure */ }
+    } catch (_) {
+      /* swallow logging failure */
+    }
 
     throw err;
   }

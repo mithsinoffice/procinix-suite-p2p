@@ -19,7 +19,11 @@ export function JournalEntryPreview({ formValues, compact = false }: JournalEntr
           sgst: line.sgst || 0,
           isRcm: Boolean(formValues.header?.rcm),
           exempt: Boolean(formValues.header?.exempt || formValues.header?.sez),
-          itcEligible: !(formValues.header?.rcm || formValues.header?.exempt || formValues.header?.sez),
+          itcEligible: !(
+            formValues.header?.rcm ||
+            formValues.header?.exempt ||
+            formValues.header?.sez
+          ),
           tdsAmount: line.tdsAmount || 0,
           tdsSection: line.tdsSection || '',
           tdsRate: line.tdsRate || 0,
@@ -46,7 +50,10 @@ export function JournalEntryPreview({ formValues, compact = false }: JournalEntr
 
   return (
     <div className="rounded-lg border" style={{ borderColor: 'var(--color-silver)' }}>
-      <div className="px-3 py-2 text-sm" style={{ borderBottom: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}>
+      <div
+        className="px-3 py-2 text-sm"
+        style={{ borderBottom: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
+      >
         Journal Entry Preview
       </div>
       <div className="overflow-x-auto">
@@ -65,13 +72,19 @@ export function JournalEntryPreview({ formValues, compact = false }: JournalEntr
           </thead>
           <tbody>
             {journal.entries.map((entry) => (
-              <tr key={`${entry.seq}-${entry.particulars}`} style={{ borderTop: '1px solid var(--color-silver)' }}>
+              <tr
+                key={`${entry.seq}-${entry.particulars}`}
+                style={{ borderTop: '1px solid var(--color-silver)' }}
+              >
                 <td className="px-2 py-2">{entry.seq}</td>
                 <td className="px-2 py-2">{entry.particulars}</td>
                 <td className="px-2 py-2">{entry.glCode}</td>
                 <td className="px-2 py-2">{entry.costCentre || '-'}</td>
                 {!compact && (
-                  <td className="px-2 py-2" style={{ backgroundColor: entry.vendorGroup ? '#F3E8FF' : 'transparent' }}>
+                  <td
+                    className="px-2 py-2"
+                    style={{ backgroundColor: entry.vendorGroup ? '#F3E8FF' : 'transparent' }}
+                  >
                     {entry.vendorGroup || '-'}
                   </td>
                 )}
@@ -82,7 +95,12 @@ export function JournalEntryPreview({ formValues, compact = false }: JournalEntr
             ))}
           </tbody>
           <tfoot>
-            <tr style={{ borderTop: '2px solid var(--color-silver)', backgroundColor: 'var(--color-cloud)' }}>
+            <tr
+              style={{
+                borderTop: '2px solid var(--color-silver)',
+                backgroundColor: 'var(--color-cloud)',
+              }}
+            >
               <td className="px-2 py-2" colSpan={compact ? 4 : 5}>
                 {journal.balanced ? 'Balanced ✓' : 'Mismatch ✗'}
               </td>
@@ -96,4 +114,3 @@ export function JournalEntryPreview({ formValues, compact = false }: JournalEntr
     </div>
   );
 }
-

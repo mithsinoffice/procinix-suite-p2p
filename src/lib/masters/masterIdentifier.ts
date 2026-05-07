@@ -19,9 +19,9 @@ import type {
 import { normalizeHeader } from './excelParser';
 
 const WEIGHT_SIGNATURE = 0.35;
-const WEIGHT_REQUIRED = 0.30;
+const WEIGHT_REQUIRED = 0.3;
 const WEIGHT_OPTIONAL = 0.15;
-const WEIGHT_FILENAME = 0.20;
+const WEIGHT_FILENAME = 0.2;
 
 const PRIMARY_THRESHOLD = 0.4;
 const ALTERNATIVE_THRESHOLD = 0.25;
@@ -29,7 +29,10 @@ const ALTERNATIVE_THRESHOLD = 0.25;
 function filenameMatchScore(schema: MasterSchema, fileName: string): number {
   const fn = normalizeHeader(fileName);
   const keyTokens = schema.masterKey.replace(/_master$/, '').replace(/_/g, ' ');
-  const nameTokens = schema.displayName.toLowerCase().replace(/master$/i, '').trim();
+  const nameTokens = schema.displayName
+    .toLowerCase()
+    .replace(/master$/i, '')
+    .trim();
   if (fn.includes(keyTokens)) return 1;
   if (fn.includes(nameTokens)) return 1;
   const words = keyTokens.split(' ');
@@ -41,7 +44,7 @@ function scoreSchema(
   schema: MasterSchema,
   headerSet: Set<string>,
   normalizedToRaw: Map<string, string>,
-  fileName: string,
+  fileName: string
 ): MasterMatchResult {
   // Signature score
   const signature = schema.headerSignature ?? [];
@@ -89,12 +92,8 @@ function scoreSchema(
     WEIGHT_OPTIONAL * optionalScore +
     WEIGHT_FILENAME * fnScore;
 
-  const missingRequired = requiredFields
-    .filter((f) => !mapping[f.key])
-    .map((f) => f.key);
-  const mappedOptional = optionalFields
-    .filter((f) => mapping[f.key])
-    .map((f) => f.key);
+  const missingRequired = requiredFields.filter((f) => !mapping[f.key]).map((f) => f.key);
+  const mappedOptional = optionalFields.filter((f) => mapping[f.key]).map((f) => f.key);
 
   return {
     masterKey: schema.masterKey,
@@ -112,7 +111,7 @@ function scoreSchema(
 export function identifySheet(
   sheet: ParsedSheet,
   registry: MasterSchemaRegistry,
-  fileName = '',
+  fileName = ''
 ): IdentificationOutcome {
   const headerSet = new Set<string>(sheet.normalizedHeaders);
   const normalizedToRaw = new Map<string, string>();
@@ -128,9 +127,7 @@ export function identifySheet(
 
   const top = results[0] ?? null;
   const best = top && top.confidence >= PRIMARY_THRESHOLD ? top : null;
-  const alternatives = results
-    .slice(1, 4)
-    .filter((r) => r.confidence >= ALTERNATIVE_THRESHOLD);
+  const alternatives = results.slice(1, 4).filter((r) => r.confidence >= ALTERNATIVE_THRESHOLD);
 
   return {
     best,

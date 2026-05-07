@@ -59,4 +59,3 @@ describe('buildJournalEntries', () => {
     expect(out.entries.filter((entry) => entry.particulars.includes('Expense')).length).toBe(2);
   });
 });
-

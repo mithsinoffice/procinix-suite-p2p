@@ -50,7 +50,11 @@ const BASE_CONFIG = {
 
 const BASE_LINE = { taxable_amount: 10000, cgst_amount: 900, sgst_amount: 900 };
 
-const BASE_COMPLIANCE = { pan: 'AABCU9603R', section_206ab: 'not_applicable', lower_tds_section: 'not_applicable' };
+const BASE_COMPLIANCE = {
+  pan: 'AABCU9603R',
+  section_206ab: 'not_applicable',
+  lower_tds_section: 'not_applicable',
+};
 
 const OPTS = { tenantId: 't1', vendorId: 'v1', entityId: 'e1', invoiceDate: '2026-01-15' };
 
@@ -156,8 +160,17 @@ describe('TDS engine — 206AB + 206AA stacking', () => {
   it('uses higher of 206AB and 206AA when both apply', async () => {
     const db = makeDb({
       vendorSections: ['194C_IND'],
-      config: { ...BASE_CONFIG, default_rate: 10, pan_not_available_rate: 20, annual_aggregate_threshold: null },
-      compliance: { pan: null, section_206ab: 'specified_person', lower_tds_section: 'not_applicable' },
+      config: {
+        ...BASE_CONFIG,
+        default_rate: 10,
+        pan_not_available_rate: 20,
+        annual_aggregate_threshold: null,
+      },
+      compliance: {
+        pan: null,
+        section_206ab: 'specified_person',
+        lower_tds_section: 'not_applicable',
+      },
     });
 
     const r = await computeTdsForLine({ ...OPTS, lineItem: BASE_LINE, db });
@@ -168,7 +181,12 @@ describe('TDS engine — 206AB + 206AA stacking', () => {
   it('206AB wins when higher than 206AA', async () => {
     const db = makeDb({
       vendorSections: ['194C_IND'],
-      config: { ...BASE_CONFIG, default_rate: 15, pan_not_available_rate: 20, annual_aggregate_threshold: null },
+      config: {
+        ...BASE_CONFIG,
+        default_rate: 15,
+        pan_not_available_rate: 20,
+        annual_aggregate_threshold: null,
+      },
       compliance: { pan: null, section_206ab: 'non_filer', lower_tds_section: 'not_applicable' },
     });
 
@@ -217,7 +235,8 @@ describe('TDS engine — lower TDS certificate', () => {
       vendorSections: ['194C_IND'],
       config: { ...BASE_CONFIG, annual_aggregate_threshold: null },
       compliance: {
-        pan: 'AABCU9603R', section_206ab: 'not_applicable',
+        pan: 'AABCU9603R',
+        section_206ab: 'not_applicable',
         lower_tds_section: '194C_IND',
         lower_tds_cert_number: 'CERT-001',
         lower_tds_cert_valid_from: '2025-04-01',
@@ -236,7 +255,8 @@ describe('TDS engine — lower TDS certificate', () => {
       vendorSections: ['194C_IND'],
       config: { ...BASE_CONFIG },
       compliance: {
-        pan: 'AABCU9603R', section_206ab: 'not_applicable',
+        pan: 'AABCU9603R',
+        section_206ab: 'not_applicable',
         lower_tds_section: '194C_IND',
         lower_tds_cert_number: 'CERT-001',
         lower_tds_cert_valid_from: '2025-04-01',
@@ -255,7 +275,8 @@ describe('TDS engine — lower TDS certificate', () => {
       vendorSections: ['194C_IND'],
       config: { ...BASE_CONFIG, annual_aggregate_threshold: null },
       compliance: {
-        pan: 'AABCU9603R', section_206ab: 'not_applicable',
+        pan: 'AABCU9603R',
+        section_206ab: 'not_applicable',
         lower_tds_section: 'section_206aa',
       },
     });
@@ -322,7 +343,12 @@ describe('TDS engine — single-invoice threshold', () => {
   it('triggers deduction when single line exceeds single-invoice threshold', async () => {
     const db = makeDb({
       vendorSections: ['194C_IND'],
-      config: { ...BASE_CONFIG, annual_aggregate_threshold: 100000, single_invoice_threshold: 20000, default_rate: 10 },
+      config: {
+        ...BASE_CONFIG,
+        annual_aggregate_threshold: 100000,
+        single_invoice_threshold: 20000,
+        default_rate: 10,
+      },
       compliance: BASE_COMPLIANCE,
       ytd: { ytd_base_amount: 0, ytd_tds_amount: 0 },
     });

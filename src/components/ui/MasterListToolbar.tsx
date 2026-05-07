@@ -45,7 +45,17 @@ export function MasterListToolbar({
     if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
     if (typeof val === 'string' || typeof val === 'number') return String(val);
     if (Array.isArray(val)) {
-      return val.map((v: any) => v?.entityName || v?.name || v?.label || v?.roleName || v?.code || (typeof v === 'string' ? v : JSON.stringify(v))).join(', ');
+      return val
+        .map(
+          (v: any) =>
+            v?.entityName ||
+            v?.name ||
+            v?.label ||
+            v?.roleName ||
+            v?.code ||
+            (typeof v === 'string' ? v : JSON.stringify(v))
+        )
+        .join(', ');
     }
     if (typeof val === 'object') return JSON.stringify(val);
     return String(val);
@@ -64,10 +74,7 @@ export function MasterListToolbar({
     );
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, masterName.slice(0, 31));
-    XLSX.writeFile(
-      wb,
-      `${masterKey}_export_${new Date().toISOString().split('T')[0]}.xlsx`
-    );
+    XLSX.writeFile(wb, `${masterKey}_export_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleUpload = () => {
@@ -75,8 +82,7 @@ export function MasterListToolbar({
   };
 
   const hasActiveFilters =
-    searchTerm.trim().length > 0 ||
-    filters.some((f) => f.selected.length > 0);
+    searchTerm.trim().length > 0 || filters.some((f) => f.selected.length > 0);
 
   return (
     <div
@@ -133,10 +139,7 @@ export function MasterListToolbar({
             options={filter.options}
             selected={filter.selected}
             onToggle={(value) =>
-              onFilterChange(
-                filter.key,
-                toggleMultiSelect(filter.selected, value)
-              )
+              onFilterChange(filter.key, toggleMultiSelect(filter.selected, value))
             }
           />
         </div>

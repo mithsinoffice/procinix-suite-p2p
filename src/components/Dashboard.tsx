@@ -6,7 +6,15 @@ import { SpendByDepartment } from './SpendByDepartment';
 import { ApprovalDashboard } from './ApprovalDashboard';
 import { CreatorDashboard } from './CreatorDashboard';
 import { CombinedDashboard } from './CombinedDashboard';
-import { IndianRupee, FileText, AlertTriangle, Clock, TrendingUp, Receipt, Wallet } from 'lucide-react';
+import {
+  IndianRupee,
+  FileText,
+  AlertTriangle,
+  Clock,
+  TrendingUp,
+  Receipt,
+  Wallet,
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardData } from '../contexts/DashboardDataContext';
 
@@ -35,7 +43,7 @@ export function Dashboard() {
       style: 'currency',
       currency: metrics.currency,
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -50,17 +58,24 @@ export function Dashboard() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>
-          Dashboard {metrics.isConsolidated && <span style={{ color: 'var(--color-mercury-grey)', fontSize: '1.5rem' }}>(Consolidated View)</span>}
+          Dashboard{' '}
+          {metrics.isConsolidated && (
+            <span style={{ color: 'var(--color-mercury-grey)', fontSize: '1.5rem' }}>
+              (Consolidated View)
+            </span>
+          )}
         </h1>
         {metrics.isConsolidated && (
-          <div style={{
-            padding: '8px 16px',
-            background: 'var(--color-cloud)',
-            border: '1px solid var(--color-silver)',
-            borderRadius: '6px',
-            color: 'var(--color-mercury-grey)',
-            fontSize: '14px'
-          }}>
+          <div
+            style={{
+              padding: '8px 16px',
+              background: 'var(--color-cloud)',
+              border: '1px solid var(--color-silver)',
+              borderRadius: '6px',
+              color: 'var(--color-mercury-grey)',
+              fontSize: '14px',
+            }}
+          >
             All amounts converted to {metrics.currency}
           </div>
         )}
@@ -88,8 +103,8 @@ export function Dashboard() {
         <KPICard
           title="Pending GRNs"
           value={`${metrics.pendingGRNs}`}
-          change={metrics.pendingGRNs > 0 ? "Requires attention" : "All processed"}
-          changeType={metrics.pendingGRNs > 0 ? "negative" : "positive"}
+          change={metrics.pendingGRNs > 0 ? 'Requires attention' : 'All processed'}
+          changeType={metrics.pendingGRNs > 0 ? 'negative' : 'positive'}
           icon={AlertTriangle}
           iconBg="bg-gray-100"
           iconColor="text-gray-600"
@@ -97,8 +112,8 @@ export function Dashboard() {
         <KPICard
           title="Avg PO Processing Time"
           value={`${metrics.avgPOProcessingTime.toFixed(1)} Days`}
-          change={metrics.avgPOProcessingTime < 3 ? "Within target" : "Needs improvement"}
-          changeType={metrics.avgPOProcessingTime < 3 ? "positive" : "negative"}
+          change={metrics.avgPOProcessingTime < 3 ? 'Within target' : 'Needs improvement'}
+          changeType={metrics.avgPOProcessingTime < 3 ? 'positive' : 'negative'}
           icon={Clock}
           iconBg="bg-gray-100"
           iconColor="text-gray-600"
@@ -128,7 +143,7 @@ export function Dashboard() {
           title="Vendor Advances"
           value={formatCurrency(metrics.totalAdvances)}
           change={`${metrics.pendingAdvances} pending approval`}
-          changeType={metrics.pendingAdvances > 0 ? "neutral" : "positive"}
+          changeType={metrics.pendingAdvances > 0 ? 'neutral' : 'positive'}
           icon={Wallet}
           iconBg="bg-gray-100"
           iconColor="text-gray-600"

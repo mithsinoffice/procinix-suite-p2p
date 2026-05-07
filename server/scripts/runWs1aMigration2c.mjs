@@ -18,10 +18,7 @@ import { fileURLToPath } from 'node:url';
 import mysql from 'mysql2/promise';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MIGRATION_SQL = join(
-  __dirname,
-  '../../sql/mysql/migrations/20260424_ws1a_2c_new_tables.sql'
-);
+const MIGRATION_SQL = join(__dirname, '../../sql/mysql/migrations/20260424_ws1a_2c_new_tables.sql');
 
 // --- Expected post-2c surface: 10 new tables ---
 const NEW_TABLES = [
@@ -130,7 +127,9 @@ async function main() {
       console.log('\nAll 10 new tables present. 2c verified.');
     } else {
       const missing = post.filter((r) => !r.exists).map((r) => r.table);
-      console.log(`\nVerification FAILED: tables ${postSummary.present}/${postSummary.total}. Missing: ${missing.join(', ')}.`);
+      console.log(
+        `\nVerification FAILED: tables ${postSummary.present}/${postSummary.total}. Missing: ${missing.join(', ')}.`
+      );
       process.exitCode = 1;
     }
   } catch (err) {

@@ -68,11 +68,7 @@ function toIsoDate(raw: unknown): string | null {
  * the canonical-cased enumValue on match, otherwise the trimmed string so the
  * validator can report a precise error.
  */
-export function coerceValue(
-  raw: unknown,
-  type: FieldType,
-  enumValues?: string[],
-): unknown {
+export function coerceValue(raw: unknown, type: FieldType, enumValues?: string[]): unknown {
   if (isBlank(raw)) return null;
 
   switch (type) {
@@ -118,7 +114,7 @@ export function coerceValue(
 function validateFieldValue(
   field: MasterFieldDef,
   value: unknown,
-  rowIndex: number,
+  rowIndex: number
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
@@ -185,8 +181,7 @@ function validateFieldValue(
     case 'enum': {
       const allowed = field.enumValues ?? [];
       const match =
-        typeof value === 'string' &&
-        allowed.some((v) => v.toLowerCase() === value.toLowerCase());
+        typeof value === 'string' && allowed.some((v) => v.toLowerCase() === value.toLowerCase());
       if (!match) {
         issues.push({
           rowIndex,
@@ -223,7 +218,7 @@ function validateFieldValue(
 export function validateRows(
   sheet: ParsedSheet,
   schema: MasterSchema,
-  mapping: ColumnMapping,
+  mapping: ColumnMapping
 ): ValidationResult {
   const rows: ValidatedRow[] = [];
   const allIssues: ValidationIssue[] = [];

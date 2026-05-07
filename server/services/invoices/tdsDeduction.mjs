@@ -30,10 +30,22 @@ function deriveFinancialYear(dateStr) {
  * @param {Function} [opts.warn] - Optional logger for warnings (defaults to console.warn)
  * @returns {Promise<{tdsApplicable: boolean, tdsSection: string|null, tdsRate: number, tdsBaseAmount: number, tdsAmount: number, tdsThresholdExempted: boolean, tdsCertificateRef: string|null, exceptionReason?: string, ytdDelta?: {baseAmount: number, tdsAmount: number}}>}
  */
-export async function computeTdsForLine({ tenantId, vendorId, entityId, invoiceDate, lineItem, db, warn = console.warn }) {
+export async function computeTdsForLine({
+  tenantId,
+  vendorId,
+  entityId,
+  invoiceDate,
+  lineItem,
+  db,
+  warn = console.warn,
+}) {
   const noTds = {
-    tdsApplicable: false, tdsSection: null, tdsRate: 0,
-    tdsBaseAmount: 0, tdsAmount: 0, tdsThresholdExempted: false,
+    tdsApplicable: false,
+    tdsSection: null,
+    tdsRate: 0,
+    tdsBaseAmount: 0,
+    tdsAmount: 0,
+    tdsThresholdExempted: false,
     tdsCertificateRef: null,
   };
 
@@ -63,7 +75,11 @@ export async function computeTdsForLine({ tenantId, vendorId, entityId, invoiceD
     if (complianceRows?.length > 0 && complianceRows[0].tds_sections) {
       let sections = complianceRows[0].tds_sections;
       if (typeof sections === 'string') {
-        try { sections = JSON.parse(sections); } catch { sections = []; }
+        try {
+          sections = JSON.parse(sections);
+        } catch {
+          sections = [];
+        }
       }
       if (Array.isArray(sections) && sections.length > 0) {
         resolvedSection = sections[0];
@@ -79,16 +95,17 @@ export async function computeTdsForLine({ tenantId, vendorId, entityId, invoiceD
   if (resolvedSection === '194Q') {
     let turnover = null;
     try {
-      const turnoverRows = await db.query(
-        'SELECT prior_fy_turnover FROM tenants WHERE id = ?',
-        [tenantId]
-      );
+      const turnoverRows = await db.query('SELECT prior_fy_turnover FROM tenants WHERE id = ?', [
+        tenantId,
+      ]);
       turnover = turnoverRows?.[0]?.prior_fy_turnover;
     } catch (err) {
       // Defensive: if prior_fy_turnover column doesn't exist yet (ER_BAD_FIELD_ERROR),
       // treat as turnover unset — 194Q does not apply. Don't crash the engine.
       if (err.code === 'ER_BAD_FIELD_ERROR') {
-        warn('[TDS Engine] tenants.prior_fy_turnover column not found — 194Q gate defaults to not-applicable. Run migration 2f.');
+        warn(
+          '[TDS Engine] tenants.prior_fy_turnover column not found — 194Q gate defaults to not-applicable. Run migration 2f.'
+        );
       } else {
         throw err;
       }
@@ -157,7 +174,9 @@ export async function computeTdsForLine({ tenantId, vendorId, entityId, invoiceD
   if (lowerSection && lowerSection !== 'not_applicable') {
     // Special case: section_206aa is semantically mismatched
     if (lowerSection === 'section_206aa') {
-      warn('[TDS Engine] lower_tds_section=section_206aa is semantically mismatched — passing through to not_applicable handling. Enum cleanup logged to WS-1b.');
+      warn(
+        '[TDS Engine] lower_tds_section=section_206aa is semantically mismatched — passing through to not_applicable handling. Enum cleanup logged to WS-1b.'
+      );
     } else if (lowerSection === resolvedSection || lowerSection === `section_${resolvedSection}`) {
       const certFrom = compliance.lower_tds_cert_valid_from;
       const certTo = compliance.lower_tds_cert_valid_to;
@@ -166,8 +185,12 @@ export async function computeTdsForLine({ tenantId, vendorId, entityId, invoiceD
 
       if (!certFrom || !certTo || certRate == null || !certNumber) {
         return {
-          tdsApplicable: true, tdsSection: resolvedSection, tdsRate: rate,
-          tdsBaseAmount: 0, tdsAmount: 0, tdsThresholdExempted: false,
+          tdsApplicable: true,
+          tdsSection: resolvedSection,
+          tdsRate: rate,
+          tdsBaseAmount: 0,
+          tdsAmount: 0,
+          tdsThresholdExempted: false,
           tdsCertificateRef: null,
           exceptionReason: 'incomplete_lower_tds_certificate',
         };
@@ -188,19 +211,22 @@ export async function computeTdsForLine({ tenantId, vendorId, entityId, invoiceD
   let tdsBaseAmount = Number(lineItem.taxable_amount) || 0;
 
   if (appliesTo === 'incl_gst') {
-    tdsBaseAmount += Number(lineItem.cgst_amount || 0)
-      + Number(lineItem.sgst_amount || 0)
-      + Number(lineItem.igst_amount || 0)
-      + Number(lineItem.utgst_amount || 0)
-      + Number(lineItem.cess_amount || 0);
+    tdsBaseAmount +=
+      Number(lineItem.cgst_amount || 0) +
+      Number(lineItem.sgst_amount || 0) +
+      Number(lineItem.igst_amount || 0) +
+      Number(lineItem.utgst_amount || 0) +
+      Number(lineItem.cess_amount || 0);
   }
   // 'excl_gst' and 'service_charge_only' both use taxable_amount as-is
 
   // ── Step 7: Threshold + catch-up logic ─────────────
   const financialYear = deriveFinancialYear(invoiceDate);
   const behavior = config.threshold_crossing_behavior || 'catch_up';
-  const annualThreshold = config.annual_aggregate_threshold != null ? Number(config.annual_aggregate_threshold) : null;
-  const singleThreshold = config.single_invoice_threshold != null ? Number(config.single_invoice_threshold) : null;
+  const annualThreshold =
+    config.annual_aggregate_threshold != null ? Number(config.annual_aggregate_threshold) : null;
+  const singleThreshold =
+    config.single_invoice_threshold != null ? Number(config.single_invoice_threshold) : null;
 
   // Read YTD aggregate
   const ytdRows = await db.query(
@@ -223,10 +249,10 @@ export async function computeTdsForLine({ tenantId, vendorId, entityId, invoiceD
       if (newCumulativeBase > annualThreshold) {
         if (ytdBase <= annualThreshold) {
           // Crossing threshold this invoice: catch-up on full cumulative
-          tdsAmount = Math.round(newCumulativeBase * rate / 100 * 100) / 100 - ytdTds;
+          tdsAmount = Math.round(((newCumulativeBase * rate) / 100) * 100) / 100 - ytdTds;
         } else {
           // Already above threshold: normal deduction on this line
-          tdsAmount = Math.round(tdsBaseAmount * rate / 100 * 100) / 100;
+          tdsAmount = Math.round(((tdsBaseAmount * rate) / 100) * 100) / 100;
         }
       } else {
         // Below threshold
@@ -234,17 +260,17 @@ export async function computeTdsForLine({ tenantId, vendorId, entityId, invoiceD
       }
     } else if (behavior === 'forward_only') {
       if (newCumulativeBase > annualThreshold) {
-        tdsAmount = Math.round(tdsBaseAmount * rate / 100 * 100) / 100;
+        tdsAmount = Math.round(((tdsBaseAmount * rate) / 100) * 100) / 100;
       } else {
         tdsThresholdExempted = true;
       }
     } else {
       // no_threshold — always apply
-      tdsAmount = Math.round(tdsBaseAmount * rate / 100 * 100) / 100;
+      tdsAmount = Math.round(((tdsBaseAmount * rate) / 100) * 100) / 100;
     }
   } else {
     // No annual threshold or single-invoice triggered
-    tdsAmount = Math.round(tdsBaseAmount * rate / 100 * 100) / 100;
+    tdsAmount = Math.round(((tdsBaseAmount * rate) / 100) * 100) / 100;
   }
 
   return {

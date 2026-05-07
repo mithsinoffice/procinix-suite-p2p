@@ -35,7 +35,11 @@ export async function checkAndProcessExpiries(queryFn) {
           await queryFn(
             `INSERT INTO p2p_schema_mt.po_expiry_log (id, po_id, event_type, event_detail, triggered_by)
              VALUES (?, ?, 'auto_closed', ?, 'system')`,
-            [randomUUID(), log.po_id, JSON.stringify({ reason: 'Extended validity period expired' })]
+            [
+              randomUUID(),
+              log.po_id,
+              JSON.stringify({ reason: 'Extended validity period expired' }),
+            ]
           );
           expired++;
         }
@@ -86,7 +90,11 @@ export async function sendExpiryReminders(queryFn) {
           await queryFn(
             `INSERT INTO p2p_schema_mt.po_expiry_log (id, po_id, event_type, event_detail, triggered_by)
              VALUES (?, ?, 'reminder_sent', ?, 'system')`,
-            [randomUUID(), log.po_id, JSON.stringify({ daysUntilExpiry, expiryDate: detail.newExpiryDate })]
+            [
+              randomUUID(),
+              log.po_id,
+              JSON.stringify({ daysUntilExpiry, expiryDate: detail.newExpiryDate }),
+            ]
           );
           sent++;
         }

@@ -4,12 +4,12 @@ import { isRecordMappedToEntity } from '../../lib/masters/entityMapping';
 
 /**
  * ITEM SELECTOR - SHARED COMPONENT
- * 
+ *
  * This is the ONLY approved way to select items in AP Automation.
- * 
+ *
  * LINKED TO: Item Master (System of Record)
  * USED BY: Procurement PO, AP Invoices, GRN
- * 
+ *
  * GOVERNANCE: Do NOT create standalone item dropdowns.
  * Always use this component to ensure master data consistency.
  */
@@ -37,21 +37,21 @@ export function ItemSelector({
   error,
   filterByCategory,
   filterByType,
-  entityId
+  entityId,
 }: ItemSelectorProps) {
   const { items, getActiveItems, getItemById } = useMasterData();
   let activeItems = entityId
     ? items.filter((item) => item.status === 'Active' && isRecordMappedToEntity(item, entityId))
     : getActiveItems();
-  
+
   // Apply filters
   if (filterByCategory) {
-    activeItems = activeItems.filter(item => item.category === filterByCategory);
+    activeItems = activeItems.filter((item) => item.category === filterByCategory);
   }
   if (filterByType) {
-    activeItems = activeItems.filter(item => item.itemType === filterByType);
+    activeItems = activeItems.filter((item) => item.itemType === filterByType);
   }
-  
+
   const selectedItem = value ? getItemById(value) : undefined;
 
   return (
@@ -60,8 +60,8 @@ export function ItemSelector({
         <label className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
           {label}
           {required && <span style={{ color: 'var(--color-error-dark)' }}> *</span>}
-          <span 
-            className="ml-2 text-xs px-2 py-0.5 rounded" 
+          <span
+            className="ml-2 text-xs px-2 py-0.5 rounded"
             style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}
             title="Linked to Item Master - System of Record"
           >
@@ -69,7 +69,7 @@ export function ItemSelector({
           </span>
         </label>
       )}
-      
+
       <div className="relative">
         <select
           value={value || ''}
@@ -79,7 +79,7 @@ export function ItemSelector({
           style={{
             border: error ? '2px solid var(--color-error-dark)' : '2px solid var(--color-silver)',
             backgroundColor: disabled ? 'var(--color-cloud)' : '#FFFFFF',
-            color: 'var(--color-ink)'
+            color: 'var(--color-ink)',
           }}
         >
           <option value="">{placeholder}</option>
@@ -89,22 +89,25 @@ export function ItemSelector({
             </option>
           ))}
         </select>
-        
-        <Package 
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" 
-          style={{ color: 'var(--color-mercury-grey)' }} 
+
+        <Package
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+          style={{ color: 'var(--color-mercury-grey)' }}
         />
-        
+
         {error && (
-          <AlertCircle 
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4" 
-            style={{ color: 'var(--color-error-dark)' }} 
+          <AlertCircle
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4"
+            style={{ color: 'var(--color-error-dark)' }}
           />
         )}
       </div>
 
       {selectedItem && (
-        <div className="text-xs p-2 rounded" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}>
+        <div
+          className="text-xs p-2 rounded"
+          style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
+        >
           <div className="grid grid-cols-2 gap-2">
             <div>HSN: {selectedItem.hsnCode}</div>
             <div>GST: {selectedItem.gstRate}%</div>
@@ -115,7 +118,9 @@ export function ItemSelector({
       )}
 
       {error && (
-        <p className="text-xs" style={{ color: 'var(--color-error-dark)' }}>{error}</p>
+        <p className="text-xs" style={{ color: 'var(--color-error-dark)' }}>
+          {error}
+        </p>
       )}
     </div>
   );

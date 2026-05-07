@@ -37,16 +37,25 @@ const ENTITY_COLORS = ['#0EA5E9', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444', '#
 const GL_TYPES = ['expense', 'cogs', 'tax', 'stock'] as const;
 
 function getInitials(name: string): string {
-  return name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  return name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 function emptyMapping(entityId: string): GLMapping {
   return {
     entity_id: entityId,
-    expense_gl_code: '', expense_gl_description: '',
-    cogs_gl_code: '', cogs_gl_description: '',
-    input_tax_gl_code: '', input_tax_gl_description: '',
-    stock_gl_code: '', stock_gl_description: '',
+    expense_gl_code: '',
+    expense_gl_description: '',
+    cogs_gl_code: '',
+    cogs_gl_description: '',
+    input_tax_gl_code: '',
+    input_tax_gl_description: '',
+    stock_gl_code: '',
+    stock_gl_description: '',
     cost_centre: '',
   };
 }
@@ -56,7 +65,13 @@ function requiredFieldsFilled(m: GLMapping): boolean {
 }
 
 function anyFieldFilled(m: GLMapping): boolean {
-  return !!(m.expense_gl_code || m.cogs_gl_code || m.input_tax_gl_code || m.stock_gl_code || m.cost_centre);
+  return !!(
+    m.expense_gl_code ||
+    m.cogs_gl_code ||
+    m.input_tax_gl_code ||
+    m.stock_gl_code ||
+    m.cost_centre
+  );
 }
 
 function countMissing(m: GLMapping): number {
@@ -92,7 +107,12 @@ const glSelectStyle = (filled: boolean, disabled: boolean): CSSProperties => ({
   outline: 'none',
 });
 
-export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], initialGLMappings = [] }: EntityGLMappingTableProps) {
+export function EntityGLMappingTable({
+  itemId,
+  onChange,
+  initialEntityIds = [],
+  initialGLMappings = [],
+}: EntityGLMappingTableProps) {
   const { entities, costCentres } = useMasterData();
   const navigate = useNavigate();
   const allEntities = entities.filter((e: any) => e.isActive !== false);
@@ -107,46 +127,52 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
   const cacheKey = (entityId: string, glType: string) => `${entityId}-${glType}`;
 
   // Fetch GL codes for a given entity and type
-  const fetchGLCodes = useCallback(async (entityId: string) => {
-    const fetches = GL_TYPES.map(async (type) => {
-      const key = cacheKey(entityId, type);
-      if (glCodeCache.has(key)) return;
-      try {
-        const res = await mysqlApiRequest<{ success: boolean; data: GLCode[] }>(
-          `/gl-codes?entityId=${entityId}&gl_type=${type}`
-        );
-        setGlCodeCache(prev => {
-          const next = new Map(prev);
-          next.set(key, res.data || []);
-          return next;
-        });
-      } catch {
-        // If entity-specific fetch fails, try without entity filter
+  const fetchGLCodes = useCallback(
+    async (entityId: string) => {
+      const fetches = GL_TYPES.map(async (type) => {
+        const key = cacheKey(entityId, type);
+        if (glCodeCache.has(key)) return;
         try {
           const res = await mysqlApiRequest<{ success: boolean; data: GLCode[] }>(
-            `/gl-codes?gl_type=${type}`
+            `/gl-codes?entityId=${entityId}&gl_type=${type}`
           );
-          setGlCodeCache(prev => {
+          setGlCodeCache((prev) => {
             const next = new Map(prev);
-            next.set(key, (res.data || []).filter(g => !g.entity_id || g.entity_id === entityId));
+            next.set(key, res.data || []);
             return next;
           });
         } catch {
-          setGlCodeCache(prev => {
-            const next = new Map(prev);
-            next.set(key, []);
-            return next;
-          });
+          // If entity-specific fetch fails, try without entity filter
+          try {
+            const res = await mysqlApiRequest<{ success: boolean; data: GLCode[] }>(
+              `/gl-codes?gl_type=${type}`
+            );
+            setGlCodeCache((prev) => {
+              const next = new Map(prev);
+              next.set(
+                key,
+                (res.data || []).filter((g) => !g.entity_id || g.entity_id === entityId)
+              );
+              return next;
+            });
+          } catch {
+            setGlCodeCache((prev) => {
+              const next = new Map(prev);
+              next.set(key, []);
+              return next;
+            });
+          }
         }
-      }
-    });
-    await Promise.all(fetches);
-  }, [glCodeCache]);
+      });
+      await Promise.all(fetches);
+    },
+    [glCodeCache]
+  );
 
   // Fetch GL codes when entity is checked
   useEffect(() => {
-    checkedEntities.forEach(entityId => {
-      const hasAll = GL_TYPES.every(t => glCodeCache.has(cacheKey(entityId, t)));
+    checkedEntities.forEach((entityId) => {
+      const hasAll = GL_TYPES.every((t) => glCodeCache.has(cacheKey(entityId, t)));
       if (!hasAll) fetchGLCodes(entityId);
     });
   }, [checkedEntities]);
@@ -155,7 +181,7 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
   useEffect(() => {
     if (!itemId || loaded) return;
     mysqlApiRequest<{ success: boolean; data: any[] }>(`/items/${itemId}/gl-mappings`)
-      .then(res => {
+      .then((res) => {
         if (res.data?.length > 0) {
           const newRowData = new Map<string, GLMapping>();
           const newChecked = new Set(checkedEntities);
@@ -185,14 +211,12 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
   // Notify parent on changes
   useEffect(() => {
     const selectedEntityIds = [...checkedEntities];
-    const glMappings = selectedEntityIds.map(eid =>
-      rowData.get(eid) || emptyMapping(eid)
-    );
+    const glMappings = selectedEntityIds.map((eid) => rowData.get(eid) || emptyMapping(eid));
     onChange({ selectedEntityIds, glMappings });
   }, [checkedEntities, rowData]);
 
   const toggleEntity = useCallback((entityId: string) => {
-    setCheckedEntities(prev => {
+    setCheckedEntities((prev) => {
       const next = new Set(prev);
       if (next.has(entityId)) {
         next.delete(entityId);
@@ -208,7 +232,7 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
   }, [allEntities]);
 
   const updateField = useCallback((entityId: string, field: keyof GLMapping, value: string) => {
-    setRowData(prev => {
+    setRowData((prev) => {
       const next = new Map(prev);
       const current = next.get(entityId) || emptyMapping(entityId);
       next.set(entityId, { ...current, [field]: value });
@@ -221,7 +245,7 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
     if (checkedArr.length < 2) return;
     const sourceId = checkedArr[0].id;
     const source = rowData.get(sourceId) || emptyMapping(sourceId);
-    setRowData(prev => {
+    setRowData((prev) => {
       const next = new Map(prev);
       for (let i = 1; i < checkedArr.length; i++) {
         const eid = checkedArr[i].id;
@@ -239,8 +263,9 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
   const totalCount = allEntities.length;
 
   // Status counts
-  const doneCount = allEntities.filter((e: any) =>
-    checkedEntities.has(e.id) && requiredFieldsFilled(rowData.get(e.id) || emptyMapping(e.id))
+  const doneCount = allEntities.filter(
+    (e: any) =>
+      checkedEntities.has(e.id) && requiredFieldsFilled(rowData.get(e.id) || emptyMapping(e.id))
   ).length;
   const missingCount = allEntities.filter((e: any) => {
     if (!checkedEntities.has(e.id)) return false;
@@ -267,7 +292,10 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
       {/* Table wrapper */}
       <div style={{ border: '0.5px solid #E1E6EA', borderRadius: 12, overflow: 'hidden' }}>
         {/* Table header bar */}
-        <div className="flex items-center justify-between flex-wrap gap-2" style={{ backgroundColor: '#F6F9FC', padding: '12px 16px' }}>
+        <div
+          className="flex items-center justify-between flex-wrap gap-2"
+          style={{ backgroundColor: '#F6F9FC', padding: '12px 16px' }}
+        >
           <div className="flex items-center gap-3">
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)' }}>
               Entity mapping & GL accounts
@@ -283,7 +311,14 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
             <button
               type="button"
               onClick={selectAll}
-              style={{ fontSize: 12, color: '#00A9B7', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+              style={{
+                fontSize: 12,
+                color: '#00A9B7',
+                fontWeight: 600,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+              }}
             >
               Select all
             </button>
@@ -292,7 +327,14 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                 type="button"
                 onClick={copyRow1}
                 className="flex items-center gap-1"
-                style={{ fontSize: 12, color: '#00A9B7', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{
+                  fontSize: 12,
+                  color: '#00A9B7',
+                  fontWeight: 600,
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
               >
                 <Copy className="w-3.5 h-3.5" /> Copy row 1 &rarr;
               </button>
@@ -353,8 +395,13 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                       backgroundColor: isActive ? undefined : '#FAFCFC',
                       transition: 'opacity 0.15s',
                     }}
-                    onMouseEnter={e => { if (isActive) e.currentTarget.style.backgroundColor = '#FAFEFF'; }}
-                    onMouseLeave={e => { if (isActive) e.currentTarget.style.backgroundColor = ''; else e.currentTarget.style.backgroundColor = '#FAFCFC'; }}
+                    onMouseEnter={(e) => {
+                      if (isActive) e.currentTarget.style.backgroundColor = '#FAFEFF';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (isActive) e.currentTarget.style.backgroundColor = '';
+                      else e.currentTarget.style.backgroundColor = '#FAFCFC';
+                    }}
                   >
                     {/* Checkbox */}
                     <td style={{ padding: '10px 8px 10px 16px', verticalAlign: 'middle' }}>
@@ -367,21 +414,45 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                     </td>
 
                     {/* Entity */}
-                    <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                    <td
+                      style={{
+                        padding: '10px 12px',
+                        whiteSpace: 'nowrap',
+                        verticalAlign: 'middle',
+                      }}
+                    >
                       <div className="flex items-center gap-2.5">
-                        <div style={{
-                          width: 28, height: 28, borderRadius: 6, backgroundColor: color,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#fff', fontSize: 10, fontWeight: 700, flexShrink: 0,
-                        }}>
+                        <div
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 6,
+                            backgroundColor: color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            flexShrink: 0,
+                          }}
+                        >
                           {getInitials(entity.name || entity.legalName || entity.code || '')}
                         </div>
                         <div>
-                          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--color-ink)', lineHeight: 1.3 }}>
+                          <div
+                            style={{
+                              fontSize: 12.5,
+                              fontWeight: 600,
+                              color: 'var(--color-ink)',
+                              lineHeight: 1.3,
+                            }}
+                          >
                             {entity.name || entity.legalName || entity.code}
                           </div>
                           <div style={{ fontSize: 10, color: '#8B95A1' }}>
-                            {[entity.country, entity.currency].filter(Boolean).join(' \u00B7 ') || 'No details'}
+                            {[entity.country, entity.currency].filter(Boolean).join(' \u00B7 ') ||
+                              'No details'}
                           </div>
                         </div>
                       </div>
@@ -391,9 +462,10 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                     <td style={{ padding: '8px 12px', verticalAlign: 'middle' }}>
                       <select
                         value={m.expense_gl_code}
-                        onChange={e => {
+                        onChange={(e) => {
                           const code = e.target.value;
-                          const desc = expenseOptions.find(g => g.gl_code === code)?.gl_description || '';
+                          const desc =
+                            expenseOptions.find((g) => g.gl_code === code)?.gl_description || '';
                           updateField(entity.id, 'expense_gl_code', code);
                           updateField(entity.id, 'expense_gl_description', desc);
                         }}
@@ -401,8 +473,10 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                         style={glSelectStyle(!!m.expense_gl_code, !isActive)}
                       >
                         <option value="">{isActive ? 'Select...' : 'Select entity first'}</option>
-                        {expenseOptions.map(g => (
-                          <option key={g.id || g.gl_code} value={g.gl_code}>{g.gl_code} - {g.gl_description}</option>
+                        {expenseOptions.map((g) => (
+                          <option key={g.id || g.gl_code} value={g.gl_code}>
+                            {g.gl_code} - {g.gl_description}
+                          </option>
                         ))}
                         {isActive && expenseOptions.length === 0 && (
                           <option disabled>No GL codes found</option>
@@ -414,9 +488,10 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                     <td style={{ padding: '8px 12px', verticalAlign: 'middle' }}>
                       <select
                         value={m.cogs_gl_code}
-                        onChange={e => {
+                        onChange={(e) => {
                           const code = e.target.value;
-                          const desc = cogsOptions.find(g => g.gl_code === code)?.gl_description || '';
+                          const desc =
+                            cogsOptions.find((g) => g.gl_code === code)?.gl_description || '';
                           updateField(entity.id, 'cogs_gl_code', code);
                           updateField(entity.id, 'cogs_gl_description', desc);
                         }}
@@ -424,8 +499,10 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                         style={glSelectStyle(!!m.cogs_gl_code, !isActive)}
                       >
                         <option value="">{isActive ? 'Select...' : 'Select entity first'}</option>
-                        {cogsOptions.map(g => (
-                          <option key={g.id || g.gl_code} value={g.gl_code}>{g.gl_code} - {g.gl_description}</option>
+                        {cogsOptions.map((g) => (
+                          <option key={g.id || g.gl_code} value={g.gl_code}>
+                            {g.gl_code} - {g.gl_description}
+                          </option>
                         ))}
                       </select>
                     </td>
@@ -434,9 +511,10 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                     <td style={{ padding: '8px 12px', verticalAlign: 'middle' }}>
                       <select
                         value={m.input_tax_gl_code}
-                        onChange={e => {
+                        onChange={(e) => {
                           const code = e.target.value;
-                          const desc = taxOptions.find(g => g.gl_code === code)?.gl_description || '';
+                          const desc =
+                            taxOptions.find((g) => g.gl_code === code)?.gl_description || '';
                           updateField(entity.id, 'input_tax_gl_code', code);
                           updateField(entity.id, 'input_tax_gl_description', desc);
                         }}
@@ -444,8 +522,10 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                         style={glSelectStyle(!!m.input_tax_gl_code, !isActive)}
                       >
                         <option value="">{isActive ? 'Select...' : 'Select entity first'}</option>
-                        {taxOptions.map(g => (
-                          <option key={g.id || g.gl_code} value={g.gl_code}>{g.gl_code} - {g.gl_description}</option>
+                        {taxOptions.map((g) => (
+                          <option key={g.id || g.gl_code} value={g.gl_code}>
+                            {g.gl_code} - {g.gl_description}
+                          </option>
                         ))}
                       </select>
                     </td>
@@ -454,9 +534,10 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                     <td style={{ padding: '8px 12px', verticalAlign: 'middle' }}>
                       <select
                         value={m.stock_gl_code}
-                        onChange={e => {
+                        onChange={(e) => {
                           const code = e.target.value;
-                          const desc = stockOptions.find(g => g.gl_code === code)?.gl_description || '';
+                          const desc =
+                            stockOptions.find((g) => g.gl_code === code)?.gl_description || '';
                           updateField(entity.id, 'stock_gl_code', code);
                           updateField(entity.id, 'stock_gl_description', desc);
                         }}
@@ -464,8 +545,10 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                         style={glSelectStyle(!!m.stock_gl_code, !isActive)}
                       >
                         <option value="">{isActive ? 'Select...' : 'Select entity first'}</option>
-                        {stockOptions.map(g => (
-                          <option key={g.id || g.gl_code} value={g.gl_code}>{g.gl_code} - {g.gl_description}</option>
+                        {stockOptions.map((g) => (
+                          <option key={g.id || g.gl_code} value={g.gl_code}>
+                            {g.gl_code} - {g.gl_description}
+                          </option>
                         ))}
                       </select>
                     </td>
@@ -474,13 +557,16 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
                     <td style={{ padding: '8px 12px', verticalAlign: 'middle' }}>
                       <select
                         value={m.cost_centre}
-                        onChange={e => updateField(entity.id, 'cost_centre', e.target.value)}
+                        onChange={(e) => updateField(entity.id, 'cost_centre', e.target.value)}
                         disabled={!isActive}
                         style={glSelectStyle(!!m.cost_centre, !isActive)}
                       >
                         <option value="">{isActive ? 'Select...' : 'Select entity first'}</option>
                         {activeCostCentres.map((cc: any) => (
-                          <option key={cc.id} value={cc.code || cc.name}>{cc.code || cc.name}{cc.name && cc.code ? ` - ${cc.name}` : ''}</option>
+                          <option key={cc.id} value={cc.code || cc.name}>
+                            {cc.code || cc.name}
+                            {cc.name && cc.code ? ` - ${cc.name}` : ''}
+                          </option>
                         ))}
                       </select>
                     </td>
@@ -509,17 +595,40 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
         </div>
 
         {/* Table footer */}
-        <div className="flex items-center justify-between flex-wrap gap-2" style={{ backgroundColor: '#F6F9FC', padding: '10px 16px', borderTop: '0.5px solid #E1E6EA' }}>
+        <div
+          className="flex items-center justify-between flex-wrap gap-2"
+          style={{
+            backgroundColor: '#F6F9FC',
+            padding: '10px 16px',
+            borderTop: '0.5px solid #E1E6EA',
+          }}
+        >
           <div className="flex items-center gap-4" style={{ fontSize: 12 }}>
             {doneCount > 0 && (
               <span className="flex items-center gap-1.5">
-                <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    backgroundColor: '#10B981',
+                    display: 'inline-block',
+                  }}
+                />
                 <span style={{ color: '#6B7280' }}>{doneCount} done</span>
               </span>
             )}
             {missingCount > 0 && (
               <span className="flex items-center gap-1.5">
-                <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#F59E0B', display: 'inline-block' }} />
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    backgroundColor: '#F59E0B',
+                    display: 'inline-block',
+                  }}
+                />
                 <span style={{ color: '#6B7280' }}>{missingCount} incomplete</span>
               </span>
             )}
@@ -533,7 +642,14 @@ export function EntityGLMappingTable({ itemId, onChange, initialEntityIds = [], 
             type="button"
             onClick={() => navigate('/masters/gl-code-master')}
             className="flex items-center gap-1"
-            style={{ fontSize: 12, color: '#00A9B7', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{
+              fontSize: 12,
+              color: '#00A9B7',
+              fontWeight: 600,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+            }}
           >
             + Add GL code master <ExternalLink className="w-3 h-3" />
           </button>

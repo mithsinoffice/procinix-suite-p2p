@@ -1,6 +1,6 @@
 /**
  * ENTITY-SCOPED TRANSACTION DATA
- * 
+ *
  * Realistic mock transaction data for:
  * - Purchase Orders
  * - Invoices
@@ -8,9 +8,9 @@
  * - GRNs
  * - Advances
  * - Payments
- * 
+ *
  * ALL DATA IS ENTITY-KEYED for dynamic dashboard filtering
- * 
+ *
  * SAFETY:
  * - Additive to existing prototype
  * - No modifications to existing logic
@@ -55,13 +55,13 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 5,
         lineAmount: 425000,
         costCentre: 'CC-SUBKO-IN-001', // Production - Bangalore
-        budgetCode: 'BUD-2024-PROD'
-      }
+        budgetCode: 'BUD-2024-PROD',
+      },
     ],
     createdBy: 'Kavita Singh',
     createdDate: '2024-01-05',
     approvedBy: 'Suresh Iyer',
-    approvedDate: '2024-01-06'
+    approvedDate: '2024-01-06',
   },
   {
     id: 'PO-SUBKO-IN-002',
@@ -91,7 +91,7 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 18,
         lineAmount: 150000,
         costCentre: 'CC-SUBKO-IN-001',
-        budgetCode: 'BUD-2024-PROD'
+        budgetCode: 'BUD-2024-PROD',
       },
       {
         id: 'LI-003',
@@ -106,13 +106,13 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 18,
         lineAmount: 35000,
         costCentre: 'CC-SUBKO-IN-001',
-        budgetCode: 'BUD-2024-PROD'
-      }
+        budgetCode: 'BUD-2024-PROD',
+      },
     ],
     createdBy: 'Kavita Singh',
     createdDate: '2024-01-08',
     approvedBy: 'Suresh Iyer',
-    approvedDate: '2024-01-09'
+    approvedDate: '2024-01-09',
   },
   {
     id: 'PO-SUBKO-IN-003',
@@ -142,13 +142,13 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 5,
         lineAmount: 255000,
         costCentre: 'CC-SUBKO-IN-001',
-        budgetCode: 'BUD-2024-PROD'
-      }
+        budgetCode: 'BUD-2024-PROD',
+      },
     ],
     createdBy: 'Kavita Singh',
     createdDate: '2024-01-12',
     approvedBy: 'Suresh Iyer',
-    approvedDate: '2024-01-13'
+    approvedDate: '2024-01-13',
   },
   {
     id: 'PO-SUBKO-IN-004',
@@ -178,13 +178,13 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 18,
         lineAmount: 125000,
         costCentre: 'CC-SUBKO-IN-004', // Administration
-        budgetCode: 'BUD-2024-ADMIN'
-      }
+        budgetCode: 'BUD-2024-ADMIN',
+      },
     ],
     createdBy: 'Priya Sharma',
     createdDate: '2024-01-15',
     approvedBy: 'Suresh Iyer',
-    approvedDate: '2024-01-16'
+    approvedDate: '2024-01-16',
   },
   {
     id: 'PO-SUBKO-IN-005',
@@ -214,7 +214,7 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 12,
         lineAmount: 125000,
         costCentre: 'CC-SUBKO-IN-001',
-        budgetCode: 'BUD-2024-PROD'
+        budgetCode: 'BUD-2024-PROD',
       },
       {
         id: 'LI-007',
@@ -229,11 +229,11 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 12,
         lineAmount: 220000,
         costCentre: 'CC-SUBKO-IN-001',
-        budgetCode: 'BUD-2024-PROD'
-      }
+        budgetCode: 'BUD-2024-PROD',
+      },
     ],
     createdBy: 'Kavita Singh',
-    createdDate: '2024-01-18'
+    createdDate: '2024-01-18',
   },
 
   // ──────────────────────────────────────────────────────────────────────
@@ -267,13 +267,13 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 5,
         lineAmount: 45000,
         costCentre: 'CC-SUBKO-UAE-001', // Retail Operations
-        budgetCode: 'BUD-2024-RETAIL-UAE'
-      }
+        budgetCode: 'BUD-2024-RETAIL-UAE',
+      },
     ],
     createdBy: 'Khalid Bin Saeed',
     createdDate: '2024-01-10',
     approvedBy: 'Noor Rahman',
-    approvedDate: '2024-01-11'
+    approvedDate: '2024-01-11',
   },
   {
     id: 'PO-SUBKO-UAE-002',
@@ -303,7 +303,7 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 5,
         lineAmount: 22500,
         costCentre: 'CC-SUBKO-UAE-001',
-        budgetCode: 'BUD-2024-RETAIL-UAE'
+        budgetCode: 'BUD-2024-RETAIL-UAE',
       },
       {
         id: 'LI-010',
@@ -318,13 +318,13 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 5,
         lineAmount: 5500,
         costCentre: 'CC-SUBKO-UAE-001',
-        budgetCode: 'BUD-2024-RETAIL-UAE'
-      }
+        budgetCode: 'BUD-2024-RETAIL-UAE',
+      },
     ],
     createdBy: 'Khalid Bin Saeed',
     createdDate: '2024-01-14',
     approvedBy: 'Noor Rahman',
-    approvedDate: '2024-01-15'
+    approvedDate: '2024-01-15',
   },
   {
     id: 'PO-SUBKO-UAE-003',
@@ -354,13 +354,13 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 5,
         lineAmount: 15000,
         costCentre: 'CC-SUBKO-UAE-003', // Administration
-        budgetCode: 'BUD-2024-ADMIN-UAE'
-      }
+        budgetCode: 'BUD-2024-ADMIN-UAE',
+      },
     ],
     createdBy: 'Rashid Hussain',
     createdDate: '2024-01-17',
     approvedBy: 'Noor Rahman',
-    approvedDate: '2024-01-18'
+    approvedDate: '2024-01-18',
   },
 
   // ──────────────────────────────────────────────────────────────────────
@@ -395,13 +395,13 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         lineAmount: 850000,
         costCentre: 'CC-PROC-IN-001', // Technology
         budgetCode: 'BUD-2024-TECH',
-        projectCode: 'PROJ-CLOUD-2024'
-      }
+        projectCode: 'PROJ-CLOUD-2024',
+      },
     ],
     createdBy: 'Rajesh Patel',
     createdDate: '2024-01-06',
     approvedBy: 'Suresh Pillai',
-    approvedDate: '2024-01-07'
+    approvedDate: '2024-01-07',
   },
   {
     id: 'PO-PROC-IN-002',
@@ -431,13 +431,13 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         gstRate: 18,
         lineAmount: 125000,
         costCentre: 'CC-PROC-IN-010', // Administration
-        budgetCode: 'BUD-2024-ADMIN'
-      }
+        budgetCode: 'BUD-2024-ADMIN',
+      },
     ],
     createdBy: 'Meera Banerjee',
     createdDate: '2024-01-09',
     approvedBy: 'Suresh Pillai',
-    approvedDate: '2024-01-10'
+    approvedDate: '2024-01-10',
   },
   {
     id: 'PO-PROC-IN-003',
@@ -468,14 +468,14 @@ export const ENTITY_SCOPED_POS: POMaster[] = [
         lineAmount: 1250000,
         costCentre: 'CC-PROC-IN-005', // DevOps & Infrastructure
         budgetCode: 'BUD-2024-INFRA',
-        projectCode: 'PROJ-CLOUD-2024'
-      }
+        projectCode: 'PROJ-CLOUD-2024',
+      },
     ],
     createdBy: 'Karthik Venkat',
     createdDate: '2024-01-13',
     approvedBy: 'Suresh Pillai',
-    approvedDate: '2024-01-14'
-  }
+    approvedDate: '2024-01-14',
+  },
 ];
 
 // ============================================================================
@@ -486,22 +486,22 @@ export function getEntityPOs(entityId: string | 'All'): POMaster[] {
   if (entityId === 'All') {
     return ENTITY_SCOPED_POS;
   }
-  return ENTITY_SCOPED_POS.filter(po => po.entityId === entityId);
+  return ENTITY_SCOPED_POS.filter((po) => po.entityId === entityId);
 }
 
 export function getEntityPOSummary(entityId: string | 'All') {
   const pos = getEntityPOs(entityId);
-  
+
   const totalPOs = pos.length;
   const totalValue = pos.reduce((sum, po) => sum + po.totalAmount, 0);
-  const approved = pos.filter(po => po.status === 'Approved').length;
-  const fullyReceived = pos.filter(po => po.status === 'Fully Received').length;
-  const partiallyReceived = pos.filter(po => po.status === 'Partially Received').length;
-  const draft = pos.filter(po => po.status === 'Draft').length;
-  
+  const approved = pos.filter((po) => po.status === 'Approved').length;
+  const fullyReceived = pos.filter((po) => po.status === 'Fully Received').length;
+  const partiallyReceived = pos.filter((po) => po.status === 'Partially Received').length;
+  const draft = pos.filter((po) => po.status === 'Draft').length;
+
   // Get currency - if "All", return null (will need multi-currency handling)
-  const currency = entityId === 'All' ? null : (pos[0]?.currency || 'INR');
-  
+  const currency = entityId === 'All' ? null : pos[0]?.currency || 'INR';
+
   return {
     totalPOs,
     totalValue,
@@ -510,17 +510,17 @@ export function getEntityPOSummary(entityId: string | 'All') {
     partiallyReceived,
     draft,
     currency,
-    avgPOValue: totalPOs > 0 ? totalValue / totalPOs : 0
+    avgPOValue: totalPOs > 0 ? totalValue / totalPOs : 0,
   };
 }
 
 export function getEntityPOTrend(entityId: string | 'All', months: number = 6) {
   const pos = getEntityPOs(entityId);
-  
+
   // Group by month
   const monthlyData: Record<string, { count: number; value: number }> = {};
-  
-  pos.forEach(po => {
+
+  pos.forEach((po) => {
     const month = po.poDate.substring(0, 7); // YYYY-MM
     if (!monthlyData[month]) {
       monthlyData[month] = { count: 0, value: 0 };
@@ -528,27 +528,29 @@ export function getEntityPOTrend(entityId: string | 'All', months: number = 6) {
     monthlyData[month].count++;
     monthlyData[month].value += po.totalAmount;
   });
-  
-  return Object.entries(monthlyData).map(([month, data]) => ({
-    month,
-    count: data.count,
-    value: data.value
-  })).sort((a, b) => a.month.localeCompare(b.month));
+
+  return Object.entries(monthlyData)
+    .map(([month, data]) => ({
+      month,
+      count: data.count,
+      value: data.value,
+    }))
+    .sort((a, b) => a.month.localeCompare(b.month));
 }
 
 export function getEntityVendorSpend(entityId: string | 'All', topN: number = 5) {
   const pos = getEntityPOs(entityId);
-  
+
   // Group by vendor
   const vendorSpend: Record<string, { name: string; totalSpend: number }> = {};
-  
-  pos.forEach(po => {
+
+  pos.forEach((po) => {
     if (!vendorSpend[po.vendorId]) {
       vendorSpend[po.vendorId] = { name: po.vendorName, totalSpend: 0 };
     }
     vendorSpend[po.vendorId].totalSpend += po.totalAmount;
   });
-  
+
   return Object.values(vendorSpend)
     .sort((a, b) => b.totalSpend - a.totalSpend)
     .slice(0, topN);
@@ -556,12 +558,12 @@ export function getEntityVendorSpend(entityId: string | 'All', topN: number = 5)
 
 export function getEntityCostCenterSpend(entityId: string | 'All', topN: number = 5) {
   const pos = getEntityPOs(entityId);
-  
+
   // Group by cost center
   const ccSpend: Record<string, { name: string; totalSpend: number }> = {};
-  
-  pos.forEach(po => {
-    po.lineItems.forEach(item => {
+
+  pos.forEach((po) => {
+    po.lineItems.forEach((item) => {
       const cc = item.costCentre || 'Unallocated';
       if (!ccSpend[cc]) {
         ccSpend[cc] = { name: cc, totalSpend: 0 };
@@ -569,7 +571,7 @@ export function getEntityCostCenterSpend(entityId: string | 'All', topN: number 
       ccSpend[cc].totalSpend += item.lineAmount;
     });
   });
-  
+
   return Object.values(ccSpend)
     .sort((a, b) => b.totalSpend - a.totalSpend)
     .slice(0, topN);
@@ -580,18 +582,18 @@ export function getEntityCostCenterSpend(entityId: string | 'All', topN: number 
 // ============================================================================
 
 export const CURRENCY_SYMBOLS: Record<string, string> = {
-  'INR': '₹',
-  'AED': 'د.إ',
-  'USD': '$',
-  'EUR': '€',
-  'GBP': '£'
+  INR: '₹',
+  AED: 'د.إ',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
 };
 
 export function formatCurrency(amount: number, currency: string): string {
   const symbol = CURRENCY_SYMBOLS[currency] || currency;
   const formatted = amount.toLocaleString('en-IN', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   });
   return `${symbol}${formatted}`;
 }
@@ -616,18 +618,18 @@ export const TRANSACTION_DATA_SUMMARY = {
   entities: {
     'ENT-SUBKO-IN': {
       name: 'Subko Coffee Pvt Ltd – India',
-      poCount: ENTITY_SCOPED_POS.filter(po => po.entityId === 'ENT-SUBKO-IN').length,
-      currency: 'INR'
+      poCount: ENTITY_SCOPED_POS.filter((po) => po.entityId === 'ENT-SUBKO-IN').length,
+      currency: 'INR',
     },
     'ENT-SUBKO-UAE': {
       name: 'Subko Coffee – Dubai',
-      poCount: ENTITY_SCOPED_POS.filter(po => po.entityId === 'ENT-SUBKO-UAE').length,
-      currency: 'AED'
+      poCount: ENTITY_SCOPED_POS.filter((po) => po.entityId === 'ENT-SUBKO-UAE').length,
+      currency: 'AED',
     },
     'ENT-PROCINIX-IN': {
       name: 'Procinix Ltd – India',
-      poCount: ENTITY_SCOPED_POS.filter(po => po.entityId === 'ENT-PROCINIX-IN').length,
-      currency: 'INR'
-    }
-  }
+      poCount: ENTITY_SCOPED_POS.filter((po) => po.entityId === 'ENT-PROCINIX-IN').length,
+      currency: 'INR',
+    },
+  },
 };

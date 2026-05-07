@@ -1,7 +1,31 @@
 import { useState } from 'react';
-import { ArrowLeft, TrendingDown, TrendingUp, Package, Clock, CheckCircle, AlertTriangle, Download } from 'lucide-react';
+import {
+  ArrowLeft,
+  TrendingDown,
+  TrendingUp,
+  Package,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Download,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, LabelList, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  LabelList,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 import ReportDataService from '../utils/reportDataService';
 
 export function ProcurementHeadDesk() {
@@ -9,45 +33,50 @@ export function ProcurementHeadDesk() {
 
   // KPI Data - Using Real Data Service
   const kpiData = {
-    totalPOValue: { 
+    totalPOValue: {
       value: ReportDataService.getTotalPOValue() / 10000000, // Convert to Crore
-      unit: 'Cr', 
-      trend: 12.3, 
-      previousValue: 220.5 
+      unit: 'Cr',
+      trend: 12.3,
+      previousValue: 220.5,
     },
-    openPOValue: { 
+    openPOValue: {
       value: ReportDataService.getOpenPOValue() / 10000000, // Convert to Crore
-      unit: 'Cr', 
-      trend: -8.5, 
-      previousValue: 46.7 
+      unit: 'Cr',
+      trend: -8.5,
+      previousValue: 46.7,
     },
-    pendingGRNs: { 
-      value: ReportDataService.getPendingGRNCount(), 
-      unit: '', 
-      trend: -15.2, 
-      previousValue: 3 
+    pendingGRNs: {
+      value: ReportDataService.getPendingGRNCount(),
+      unit: '',
+      trend: -15.2,
+      previousValue: 3,
     },
-    avgPOProcessingTime: { 
-      value: ReportDataService.getAvgPOProcessingTime(), 
-      unit: ' days', 
-      trend: -18.5, 
-      previousValue: 3.1 
+    avgPOProcessingTime: {
+      value: ReportDataService.getAvgPOProcessingTime(),
+      unit: ' days',
+      trend: -18.5,
+      previousValue: 3.1,
     },
-    prToPOConversion: { 
-      value: ReportDataService.getPRtoPOConversionRate(), 
-      unit: '%', 
-      trend: 2.4, 
-      previousValue: 88.1 
-    }
+    prToPOConversion: {
+      value: ReportDataService.getPRtoPOConversionRate(),
+      unit: '%',
+      trend: 2.4,
+      previousValue: 88.1,
+    },
   };
 
   // Additional KPIs for top strip
   const topKPIs = {
-    prToPoCycleTime: { value: ReportDataService.getAvgPOProcessingTime(), unit: ' days', trend: -18.5, target: 3 },
+    prToPoCycleTime: {
+      value: ReportDataService.getAvgPOProcessingTime(),
+      unit: ' days',
+      trend: -18.5,
+      target: 3,
+    },
     pendingPRs: { value: 24, unit: '', trend: -12.8, target: 20 },
     catalogueSpend: { value: 68, unit: '%', trend: 5.2, target: 65 },
     maverickSpend: { value: 12, unit: '%', trend: -8.3, target: 15 },
-    touchlessPORate: { value: 42, unit: '%', trend: 15.7, target: 40 }
+    touchlessPORate: { value: 42, unit: '%', trend: 15.7, target: 40 },
   };
 
   // Funnel Data: PR → Approval → PO → GRN
@@ -55,7 +84,7 @@ export function ProcurementHeadDesk() {
     { name: 'PRs Created', value: 245, fill: '#3B82F6' },
     { name: 'PRs Approved', value: 221, fill: '#10B981' },
     { name: 'POs Issued', value: 198, fill: 'var(--color-teal)' },
-    { name: 'GRNs Completed', value: 176, fill: '#007D87' }
+    { name: 'GRNs Completed', value: 176, fill: '#007D87' },
   ];
 
   // Cycle Time Trend (Last 6 Months)
@@ -65,7 +94,7 @@ export function ProcurementHeadDesk() {
     { month: 'Sep', days: 3.7 },
     { month: 'Oct', days: 3.5 },
     { month: 'Nov', days: 3.3 },
-    { month: 'Dec', days: 3.2 }
+    { month: 'Dec', days: 3.2 },
   ];
 
   // Department-wise Procurement Delays
@@ -75,7 +104,7 @@ export function ProcurementHeadDesk() {
     { department: 'Operations', delays: 15, avgDelay: 3.1 },
     { department: 'Finance', delays: 5, avgDelay: 1.2 },
     { department: 'HR', delays: 6, avgDelay: 1.5 },
-    { department: 'R&D', delays: 10, avgDelay: 2.7 }
+    { department: 'R&D', delays: 10, avgDelay: 2.7 },
   ];
 
   // Approver Bottlenecks (Heatmap data - simulated as bar chart)
@@ -84,31 +113,43 @@ export function ProcurementHeadDesk() {
     { approver: 'R. Patel', pending: 12, avgTime: 1.9 },
     { approver: 'M. Kumar', pending: 22, avgTime: 3.5 },
     { approver: 'S. Singh', pending: 8, avgTime: 1.2 },
-    { approver: 'P. Desai', pending: 15, avgTime: 2.3 }
+    { approver: 'P. Desai', pending: 15, avgTime: 2.3 },
   ];
 
   // Catalogue vs Non-Catalogue Spend
   const spendCategoryData = [
     { name: 'Catalogue', value: 68, color: 'var(--color-teal)' },
-    { name: 'Non-Catalogue', value: 32, color: 'var(--color-mercury-grey)' }
+    { name: 'Non-Catalogue', value: 32, color: 'var(--color-mercury-grey)' },
   ];
 
   // Vendor Performance Table - Using Real Data
-  const vendorPerformanceData = ReportDataService.getVendorPerformanceData().map((vendor, index) => ({
-    vendor: vendor.vendor,
-    onTimeDelivery: vendor.onTimeDelivery,
-    priceDeviation: index % 3 === 0 ? 1.2 : index % 3 === 1 ? 3.8 : 5.7,
-    slaBreaches: index % 4,
-    rating: vendor.onTimeDelivery >= 92 ? 'Excellent' : vendor.onTimeDelivery >= 88 ? 'Good' : 'Average'
-  }));
+  const vendorPerformanceData = ReportDataService.getVendorPerformanceData().map(
+    (vendor, index) => ({
+      vendor: vendor.vendor,
+      onTimeDelivery: vendor.onTimeDelivery,
+      priceDeviation: index % 3 === 0 ? 1.2 : index % 3 === 1 ? 3.8 : 5.7,
+      slaBreaches: index % 4,
+      rating:
+        vendor.onTimeDelivery >= 92
+          ? 'Excellent'
+          : vendor.onTimeDelivery >= 88
+            ? 'Good'
+            : 'Average',
+    })
+  );
 
   const getRatingColor = (rating: string) => {
     switch (rating) {
-      case 'Excellent': return '#10B981';
-      case 'Good': return 'var(--color-teal)';
-      case 'Average': return '#F59E0B';
-      case 'Poor': return '#EF4444';
-      default: return 'var(--color-mercury-grey)';
+      case 'Excellent':
+        return '#10B981';
+      case 'Good':
+        return 'var(--color-teal)';
+      case 'Average':
+        return '#F59E0B';
+      case 'Poor':
+        return '#EF4444';
+      default:
+        return 'var(--color-mercury-grey)';
     }
   };
 
@@ -117,17 +158,26 @@ export function ProcurementHeadDesk() {
     const isOnTarget = value >= target || (title.includes('Maverick') && value <= target);
 
     return (
-      <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      <div
+        className="bg-white rounded-lg p-5"
+        style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
+      >
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
-            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>{title}</p>
+            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+              {title}
+            </p>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl" style={{ color: 'var(--color-ink)' }}>{value}</span>
-              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{unit}</span>
+              <span className="text-2xl" style={{ color: 'var(--color-ink)' }}>
+                {value}
+              </span>
+              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                {unit}
+              </span>
             </div>
           </div>
           {Icon && (
-            <div 
+            <div
               className="w-10 h-10 rounded-lg flex items-center justify-center"
               style={{ backgroundColor: 'var(--color-cloud)' }}
             >
@@ -135,15 +185,31 @@ export function ProcurementHeadDesk() {
             </div>
           )}
         </div>
-        
+
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-1">
             {isPositive ? (
-              <TrendingUp className="w-3 h-3" style={{ color: title.includes('Maverick') ? '#EF4444' : '#10B981' }} />
+              <TrendingUp
+                className="w-3 h-3"
+                style={{ color: title.includes('Maverick') ? '#EF4444' : '#10B981' }}
+              />
             ) : (
-              <TrendingDown className="w-3 h-3" style={{ color: title.includes('Maverick') ? '#10B981' : '#EF4444' }} />
+              <TrendingDown
+                className="w-3 h-3"
+                style={{ color: title.includes('Maverick') ? '#10B981' : '#EF4444' }}
+              />
             )}
-            <span style={{ color: isPositive ? (title.includes('Maverick') ? '#EF4444' : '#10B981') : (title.includes('Maverick') ? '#10B981' : '#EF4444') }}>
+            <span
+              style={{
+                color: isPositive
+                  ? title.includes('Maverick')
+                    ? '#EF4444'
+                    : '#10B981'
+                  : title.includes('Maverick')
+                    ? '#10B981'
+                    : '#EF4444',
+              }}
+            >
               {Math.abs(trend)}% vs last month
             </span>
           </div>
@@ -153,7 +219,10 @@ export function ProcurementHeadDesk() {
             ) : (
               <AlertTriangle className="w-3 h-3" style={{ color: '#F59E0B' }} />
             )}
-            <span style={{ color: 'var(--color-mercury-grey)' }}>Target: {target}{unit}</span>
+            <span style={{ color: 'var(--color-mercury-grey)' }}>
+              Target: {target}
+              {unit}
+            </span>
           </div>
         </div>
       </div>
@@ -169,24 +238,29 @@ export function ProcurementHeadDesk() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate('/reports')} 
-            className="p-2 rounded-lg transition-colors hover:bg-white" 
+          <button
+            onClick={() => navigate('/reports')}
+            className="p-2 rounded-lg transition-colors hover:bg-white"
             style={{ color: 'var(--color-mercury-grey)' }}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>Procurement Head Desk</h1>
-            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Operational Control & Efficiency Tracking • Last updated: {new Date().toLocaleString('en-IN')}</p>
+            <h1 className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
+              Procurement Head Desk
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+              Operational Control & Efficiency Tracking • Last updated:{' '}
+              {new Date().toLocaleString('en-IN')}
+            </p>
           </div>
         </div>
         <button
           onClick={handleExport}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
           style={{ backgroundColor: 'var(--color-teal)' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
         >
           <Download className="w-4 h-4" />
           Export Dashboard
@@ -195,41 +269,41 @@ export function ProcurementHeadDesk() {
 
       {/* Top KPI Strip */}
       <div className="grid grid-cols-5 gap-4 mb-8">
-        <KPICard 
-          title="PR to PO Cycle Time" 
-          value={topKPIs.prToPoCycleTime.value} 
+        <KPICard
+          title="PR to PO Cycle Time"
+          value={topKPIs.prToPoCycleTime.value}
           unit={topKPIs.prToPoCycleTime.unit}
           trend={topKPIs.prToPoCycleTime.trend}
           target={topKPIs.prToPoCycleTime.target}
           icon={Clock}
         />
-        <KPICard 
-          title="Pending PRs" 
-          value={topKPIs.pendingPRs.value} 
+        <KPICard
+          title="Pending PRs"
+          value={topKPIs.pendingPRs.value}
           unit={topKPIs.pendingPRs.unit}
           trend={topKPIs.pendingPRs.trend}
           target={topKPIs.pendingPRs.target}
           icon={AlertTriangle}
         />
-        <KPICard 
-          title="Catalogue Spend %" 
-          value={topKPIs.catalogueSpend.value} 
+        <KPICard
+          title="Catalogue Spend %"
+          value={topKPIs.catalogueSpend.value}
           unit={topKPIs.catalogueSpend.unit}
           trend={topKPIs.catalogueSpend.trend}
           target={topKPIs.catalogueSpend.target}
           icon={CheckCircle}
         />
-        <KPICard 
-          title="Maverick Spend %" 
-          value={topKPIs.maverickSpend.value} 
+        <KPICard
+          title="Maverick Spend %"
+          value={topKPIs.maverickSpend.value}
           unit={topKPIs.maverickSpend.unit}
           trend={topKPIs.maverickSpend.trend}
           target={topKPIs.maverickSpend.target}
           icon={AlertTriangle}
         />
-        <KPICard 
-          title="Touchless PO Rate" 
-          value={topKPIs.touchlessPORate.value} 
+        <KPICard
+          title="Touchless PO Rate"
+          value={topKPIs.touchlessPORate.value}
           unit={topKPIs.touchlessPORate.unit}
           trend={topKPIs.touchlessPORate.trend}
           target={topKPIs.touchlessPORate.target}
@@ -240,41 +314,94 @@ export function ProcurementHeadDesk() {
       {/* First Row of Charts */}
       <div className="grid grid-cols-3 gap-6 mb-6">
         {/* Funnel Chart: PR → Approval → PO → GRN */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>Procurement Process Funnel</h3>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{
+            border: '1px solid var(--color-silver)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}
+        >
+          <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>
+            Procurement Process Funnel
+          </h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={funnelData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-              <XAxis type="number" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
-              <YAxis dataKey="name" type="category" width={110} stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'white', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '12px' }}
+              <XAxis
+                type="number"
+                stroke="var(--color-mercury-grey)"
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis
+                dataKey="name"
+                type="category"
+                width={110}
+                stroke="var(--color-mercury-grey)"
+                style={{ fontSize: '12px' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid var(--color-silver)',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
               />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                 {funnelData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
-                <LabelList dataKey="value" position="right" style={{ fontSize: '12px', fill: 'var(--color-ink)' }} />
+                <LabelList
+                  dataKey="value"
+                  position="right"
+                  style={{ fontSize: '12px', fill: 'var(--color-ink)' }}
+                />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         {/* Line Chart: Cycle Time Trend */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>PR-to-PO Cycle Time Trend (6M)</h3>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{
+            border: '1px solid var(--color-silver)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}
+        >
+          <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>
+            PR-to-PO Cycle Time Trend (6M)
+          </h3>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={cycleTimeTrendData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-              <XAxis dataKey="month" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
-              <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} label={{ value: 'Days', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' } }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'white', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '12px' }}
+              <XAxis
+                dataKey="month"
+                stroke="var(--color-mercury-grey)"
+                style={{ fontSize: '12px' }}
               />
-              <Line 
-                type="monotone" 
-                dataKey="days" 
-                stroke="var(--color-teal)" 
+              <YAxis
+                stroke="var(--color-mercury-grey)"
+                style={{ fontSize: '12px' }}
+                label={{
+                  value: 'Days',
+                  angle: -90,
+                  position: 'insideLeft',
+                  style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' },
+                }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid var(--color-silver)',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="days"
+                stroke="var(--color-teal)"
                 strokeWidth={3}
                 dot={{ fill: 'var(--color-teal)', r: 4 }}
                 activeDot={{ r: 6 }}
@@ -284,8 +411,16 @@ export function ProcurementHeadDesk() {
         </div>
 
         {/* Donut Chart: Catalogue vs Non-Catalogue */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>Catalogue vs Non-Catalogue Spend</h3>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{
+            border: '1px solid var(--color-silver)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}
+        >
+          <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>
+            Catalogue vs Non-Catalogue Spend
+          </h3>
           <ResponsiveContainer width="100%" height={280}>
             <PieChart>
               <Pie
@@ -300,21 +435,28 @@ export function ProcurementHeadDesk() {
                 {spendCategoryData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
-                <LabelList 
-                  dataKey="value" 
-                  position="inside" 
+                <LabelList
+                  dataKey="value"
+                  position="inside"
                   formatter={(value: number) => `${value}%`}
                   style={{ fontSize: '14px', fill: 'white', fontWeight: 'bold' }}
                 />
               </Pie>
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'white', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '12px' }}
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid var(--color-silver)',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
                 formatter={(value: number) => `${value}%`}
               />
-              <Legend 
-                verticalAlign="bottom" 
+              <Legend
+                verticalAlign="bottom"
                 height={36}
-                formatter={(value) => <span style={{ color: 'var(--color-ink)', fontSize: '12px' }}>{value}</span>}
+                formatter={(value) => (
+                  <span style={{ color: 'var(--color-ink)', fontSize: '12px' }}>{value}</span>
+                )}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -324,18 +466,48 @@ export function ProcurementHeadDesk() {
       {/* Second Row of Charts */}
       <div className="grid grid-cols-2 gap-6 mb-6">
         {/* Bar Chart: Department-wise Delays */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>Department-wise Procurement Delays</h3>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{
+            border: '1px solid var(--color-silver)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}
+        >
+          <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>
+            Department-wise Procurement Delays
+          </h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={departmentDelaysData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-              <XAxis dataKey="department" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
-              <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} label={{ value: 'Delays', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' } }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'white', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '12px' }}
+              <XAxis
+                dataKey="department"
+                stroke="var(--color-mercury-grey)"
+                style={{ fontSize: '12px' }}
               />
-              <Legend 
-                formatter={(value) => <span style={{ color: 'var(--color-ink)', fontSize: '12px' }}>{value === 'delays' ? 'Total Delays' : 'Avg Delay (days)'}</span>}
+              <YAxis
+                stroke="var(--color-mercury-grey)"
+                style={{ fontSize: '12px' }}
+                label={{
+                  value: 'Delays',
+                  angle: -90,
+                  position: 'insideLeft',
+                  style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' },
+                }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid var(--color-silver)',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
+              />
+              <Legend
+                formatter={(value) => (
+                  <span style={{ color: 'var(--color-ink)', fontSize: '12px' }}>
+                    {value === 'delays' ? 'Total Delays' : 'Avg Delay (days)'}
+                  </span>
+                )}
               />
               <Bar dataKey="delays" fill="#EF4444" radius={[4, 4, 0, 0]} />
               <Bar dataKey="avgDelay" fill="#F59E0B" radius={[4, 4, 0, 0]} />
@@ -344,18 +516,45 @@ export function ProcurementHeadDesk() {
         </div>
 
         {/* Approver Bottleneck Heatmap (as horizontal bar) */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>Approver Bottleneck Analysis</h3>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{
+            border: '1px solid var(--color-silver)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}
+        >
+          <h3 className="text-sm mb-4" style={{ color: 'var(--color-ink)' }}>
+            Approver Bottleneck Analysis
+          </h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={approverBottleneckData} layout="horizontal">
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-              <XAxis type="number" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
-              <YAxis dataKey="approver" type="category" width={80} stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'white', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '12px' }}
+              <XAxis
+                type="number"
+                stroke="var(--color-mercury-grey)"
+                style={{ fontSize: '12px' }}
               />
-              <Legend 
-                formatter={(value) => <span style={{ color: 'var(--color-ink)', fontSize: '12px' }}>{value === 'pending' ? 'Pending Items' : 'Avg Processing Time (days)'}</span>}
+              <YAxis
+                dataKey="approver"
+                type="category"
+                width={80}
+                stroke="var(--color-mercury-grey)"
+                style={{ fontSize: '12px' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid var(--color-silver)',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                }}
+              />
+              <Legend
+                formatter={(value) => (
+                  <span style={{ color: 'var(--color-ink)', fontSize: '12px' }}>
+                    {value === 'pending' ? 'Pending Items' : 'Avg Processing Time (days)'}
+                  </span>
+                )}
               />
               <Bar dataKey="pending" fill="#007D87" radius={[0, 4, 4, 0]} />
               <Bar dataKey="avgTime" fill="#F59E0B" radius={[0, 4, 4, 0]} />
@@ -365,65 +564,127 @@ export function ProcurementHeadDesk() {
       </div>
 
       {/* Vendor Performance Table */}
-      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      <div
+        className="bg-white rounded-lg"
+        style={{ border: '1px solid var(--color-silver)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
+      >
         <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--color-silver)' }}>
-          <h3 className="text-sm" style={{ color: 'var(--color-ink)' }}>Vendor Performance Summary</h3>
-          <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>Top vendors by performance metrics • Last 90 days</p>
+          <h3 className="text-sm" style={{ color: 'var(--color-ink)' }}>
+            Vendor Performance Summary
+          </h3>
+          <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
+            Top vendors by performance metrics • Last 90 days
+          </p>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Vendor Name</th>
-                <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>On-time Delivery %</th>
-                <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Price Deviation %</th>
-                <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>SLA Breaches</th>
-                <th className="px-6 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Performance Rating</th>
+                <th
+                  className="px-6 py-3 text-left text-xs"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Vendor Name
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  On-time Delivery %
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Price Deviation %
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  SLA Breaches
+                </th>
+                <th
+                  className="px-6 py-3 text-left text-xs"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Performance Rating
+                </th>
               </tr>
             </thead>
             <tbody>
               {vendorPerformanceData.map((vendor, index) => (
                 <tr key={index} style={{ borderTop: '1px solid var(--color-silver)' }}>
                   <td className="px-6 py-4">
-                    <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{vendor.vendor}</span>
+                    <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                      {vendor.vendor}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[100px]">
-                        <div 
-                          className="h-2 rounded-full" 
-                          style={{ 
+                        <div
+                          className="h-2 rounded-full"
+                          style={{
                             width: `${vendor.onTimeDelivery}%`,
-                            backgroundColor: vendor.onTimeDelivery >= 95 ? '#10B981' : vendor.onTimeDelivery >= 90 ? 'var(--color-teal)' : '#F59E0B'
+                            backgroundColor:
+                              vendor.onTimeDelivery >= 95
+                                ? '#10B981'
+                                : vendor.onTimeDelivery >= 90
+                                  ? 'var(--color-teal)'
+                                  : '#F59E0B',
                           }}
                         />
                       </div>
-                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>{vendor.onTimeDelivery}%</span>
+                      <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                        {vendor.onTimeDelivery}%
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span 
+                    <span
                       className="text-sm px-2 py-1 rounded"
-                      style={{ 
-                        color: vendor.priceDeviation <= 2 ? '#10B981' : vendor.priceDeviation <= 5 ? '#F59E0B' : '#EF4444',
-                        backgroundColor: vendor.priceDeviation <= 2 ? 'var(--color-teal-tint)' : vendor.priceDeviation <= 5 ? '#FFF9E6' : '#FFE8EA'
+                      style={{
+                        color:
+                          vendor.priceDeviation <= 2
+                            ? '#10B981'
+                            : vendor.priceDeviation <= 5
+                              ? '#F59E0B'
+                              : '#EF4444',
+                        backgroundColor:
+                          vendor.priceDeviation <= 2
+                            ? 'var(--color-teal-tint)'
+                            : vendor.priceDeviation <= 5
+                              ? '#FFF9E6'
+                              : '#FFE8EA',
                       }}
                     >
-                      {vendor.priceDeviation > 0 ? '+' : ''}{vendor.priceDeviation}%
+                      {vendor.priceDeviation > 0 ? '+' : ''}
+                      {vendor.priceDeviation}%
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm" style={{ color: vendor.slaBreaches <= 2 ? '#10B981' : vendor.slaBreaches <= 5 ? '#F59E0B' : '#EF4444' }}>
+                    <span
+                      className="text-sm"
+                      style={{
+                        color:
+                          vendor.slaBreaches <= 2
+                            ? '#10B981'
+                            : vendor.slaBreaches <= 5
+                              ? '#F59E0B'
+                              : '#EF4444',
+                      }}
+                    >
                       {vendor.slaBreaches}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span 
+                    <span
                       className="px-3 py-1 rounded-full text-xs"
-                      style={{ 
+                      style={{
                         backgroundColor: `${getRatingColor(vendor.rating)}15`,
-                        color: getRatingColor(vendor.rating)
+                        color: getRatingColor(vendor.rating),
                       }}
                     >
                       {vendor.rating}

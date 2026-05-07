@@ -53,7 +53,9 @@ export function newRowId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-export function createUserEntityAccessRow(partial?: Partial<UserEntityAccessRow>): UserEntityAccessRow {
+export function createUserEntityAccessRow(
+  partial?: Partial<UserEntityAccessRow>
+): UserEntityAccessRow {
   return {
     id: partial?.id ?? newRowId(),
     entityId: partial?.entityId ?? '',
@@ -67,7 +69,9 @@ export function createUserEntityAccessRow(partial?: Partial<UserEntityAccessRow>
   };
 }
 
-export function createUserRoleAssignmentRow(partial?: Partial<UserRoleAssignmentRow>): UserRoleAssignmentRow {
+export function createUserRoleAssignmentRow(
+  partial?: Partial<UserRoleAssignmentRow>
+): UserRoleAssignmentRow {
   return {
     id: partial?.id ?? newRowId(),
     roleId: partial?.roleId ?? '',
@@ -80,7 +84,9 @@ export function createUserRoleAssignmentRow(partial?: Partial<UserRoleAssignment
   };
 }
 
-export function deriveUserRolesFromEntityRows(rows: UserEntityAccessRow[]): UserRoleAssignmentRow[] {
+export function deriveUserRolesFromEntityRows(
+  rows: UserEntityAccessRow[]
+): UserRoleAssignmentRow[] {
   return rows
     .filter((r) => r.entityId.trim() && r.roleId.trim())
     .map((r) => ({
@@ -97,7 +103,7 @@ export function deriveUserRolesFromEntityRows(rows: UserEntityAccessRow[]): User
 
 function mergeAccessRowsWithLegacyRoles(
   accessInput: UserEntityAccessRow[],
-  rolesInput: UserRoleAssignmentRow[],
+  rolesInput: UserRoleAssignmentRow[]
 ): UserEntityAccessRow[] {
   const usedRoleRowIds = new Set<string>();
 
@@ -113,7 +119,7 @@ function mergeAccessRowsWithLegacyRoles(
         status: a.status === 'Inactive' ? 'Inactive' : 'Active',
         roleName: a.roleName,
         roleCode: a.roleCode,
-      }),
+      })
     );
 
   let access = normalizeAccess(accessInput.length ? accessInput : []);
@@ -131,7 +137,7 @@ function mergeAccessRowsWithLegacyRoles(
           roleName: r.roleName,
           roleCode: r.roleCode,
           isDefault: i === 0,
-        }),
+        })
       );
   }
 
@@ -141,9 +147,7 @@ function mergeAccessRowsWithLegacyRoles(
     if (!eid || row.roleId.trim()) {
       return row;
     }
-    const match = rolesInput.find(
-      (r) => r.entityId.trim() === eid && !usedRoleRowIds.has(r.id),
-    );
+    const match = rolesInput.find((r) => r.entityId.trim() === eid && !usedRoleRowIds.has(r.id));
     if (match) {
       usedRoleRowIds.add(match.id);
       return createUserEntityAccessRow({
@@ -174,7 +178,7 @@ function mergeAccessRowsWithLegacyRoles(
           roleName: r.roleName,
           roleCode: r.roleCode,
           isDefault: false,
-        }),
+        })
       );
     }
   }
@@ -191,7 +195,7 @@ function ensureSingleDefault(rows: UserEntityAccessRow[]): UserEntityAccessRow[]
   const defaults = rows.filter((row) => row.isDefault);
   if (defaults.length === 0 && withEntity.length === 1) {
     return rows.map((row) =>
-      row.id === withEntity[0].id ? { ...row, isDefault: true } : { ...row, isDefault: false },
+      row.id === withEntity[0].id ? { ...row, isDefault: true } : { ...row, isDefault: false }
     );
   }
   if (defaults.length === 0) {
@@ -279,7 +283,7 @@ export function getPrimaryEntityIdForUser(user: UserMasterRecord): string {
   const n = normalizeUserMasterRecord(user);
   if (n.defaultEntityId.trim()) return n.defaultEntityId.trim();
   const defRow = n.userEntityAccess.find(
-    (r) => r.isDefault && r.status !== 'Inactive' && r.entityId.trim(),
+    (r) => r.isDefault && r.status !== 'Inactive' && r.entityId.trim()
   );
   if (defRow) return defRow.entityId.trim();
   const first = n.userEntityAccess.find((r) => r.status !== 'Inactive' && r.entityId.trim());
@@ -295,7 +299,7 @@ export function getUserAccessibleEntityIds(user: UserMasterRecord): string[] {
     ...new Set(
       n.userEntityAccess
         .filter((r) => r.status !== 'Inactive' && r.entityId.trim())
-        .map((r) => r.entityId.trim()),
+        .map((r) => r.entityId.trim())
     ),
   ];
   const def = n.defaultEntityId.trim();

@@ -10,7 +10,10 @@ const border = 'var(--color-silver)';
 
 export function InviteBasicsReadonly({ basic }: { basic: VendorInviteBasics }) {
   return (
-    <section className="rounded-xl p-6" style={{ border: `1px solid ${border}`, backgroundColor: '#fff' }}>
+    <section
+      className="rounded-xl p-6"
+      style={{ border: `1px solid ${border}`, backgroundColor: '#fff' }}
+    >
       <h2 className="text-sm font-semibold mb-4" style={{ color: textMain }}>
         Invite (prefill from procurement)
       </h2>
@@ -76,13 +79,16 @@ export function InviteBasicsReadonly({ basic }: { basic: VendorInviteBasics }) {
 
 export function VendorMasterFormReadonly({ s }: { s: VendorSubmissionPayload }) {
   return (
-    <section className="rounded-xl p-6" style={{ border: `1px solid ${border}`, backgroundColor: '#fff' }}>
+    <section
+      className="rounded-xl p-6"
+      style={{ border: `1px solid ${border}`, backgroundColor: '#fff' }}
+    >
       <h2 className="text-sm font-semibold mb-1" style={{ color: textMain }}>
         Vendor master onboarding form
       </h2>
       <p className="text-xs mb-4" style={{ color: textMuted }}>
-        Same fields as the invitation link portal. On approval, these map to the Vendor Master record (name, GSTIN,
-        contact, address, bank).
+        Same fields as the invitation link portal. On approval, these map to the Vendor Master
+        record (name, GSTIN, contact, address, bank).
       </p>
       <dl className="text-sm grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>

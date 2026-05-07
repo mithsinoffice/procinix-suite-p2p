@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Search, Filter, ArrowRight, CheckCircle, Clock, XCircle,
-  AlertCircle, DollarSign, Eye, Calendar
+  Plus,
+  Search,
+  Filter,
+  ArrowRight,
+  CheckCircle,
+  Clock,
+  XCircle,
+  AlertCircle,
+  DollarSign,
+  Eye,
+  Calendar,
 } from 'lucide-react';
 import { useBudgetData, BudgetTransfer } from '../contexts/BudgetDataContext';
 
@@ -20,18 +29,21 @@ export function BudgetTransfers() {
   const [transferAmount, setTransferAmount] = useState<number>(0);
   const [transferReason, setTransferReason] = useState('');
 
-  const filteredTransfers = transfers.filter(t =>
-    (statusFilter === 'all' || t.status === statusFilter) &&
-    (t.transferNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     t.sourceBudgetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     t.targetBudgetName.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredTransfers = transfers.filter(
+    (t) =>
+      (statusFilter === 'all' || t.status === statusFilter) &&
+      (t.transferNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.sourceBudgetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.targetBudgetName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const stats = {
     totalTransfers: transfers.length,
-    pending: transfers.filter(t => t.status === 'Pending').length,
-    approved: transfers.filter(t => t.status === 'Approved' || t.status === 'Completed').length,
-    totalAmount: transfers.filter(t => t.status === 'Completed').reduce((sum, t) => sum + t.transferAmount, 0)
+    pending: transfers.filter((t) => t.status === 'Pending').length,
+    approved: transfers.filter((t) => t.status === 'Approved' || t.status === 'Completed').length,
+    totalAmount: transfers
+      .filter((t) => t.status === 'Completed')
+      .reduce((sum, t) => sum + t.transferAmount, 0),
   };
 
   const handleCreateTransfer = () => {
@@ -45,8 +57,8 @@ export function BudgetTransfers() {
       return;
     }
 
-    const source = budgets.find(b => b.id === sourceBudget);
-    const target = budgets.find(b => b.id === targetBudget);
+    const source = budgets.find((b) => b.id === sourceBudget);
+    const target = budgets.find((b) => b.id === targetBudget);
 
     if (!source || !target) return;
 
@@ -66,7 +78,7 @@ export function BudgetTransfers() {
       transferAmount,
       transferReason,
       requestedBy: source.budgetOwner,
-      status: 'Pending'
+      status: 'Pending',
     };
 
     addTransfer(newTransfer);
@@ -88,7 +100,9 @@ export function BudgetTransfers() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-[var(--color-ink)]">Budget Transfers</h1>
-              <p className="text-[var(--color-mercury-grey)] text-sm">Transfer budget allocations between departments, cost centres, or expense heads</p>
+              <p className="text-[var(--color-mercury-grey)] text-sm">
+                Transfer budget allocations between departments, cost centres, or expense heads
+              </p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
@@ -133,7 +147,9 @@ export function BudgetTransfers() {
               <span className="text-sm text-[var(--color-mercury-grey)]">Total Transferred</span>
               <DollarSign className="w-4 h-4 text-[var(--color-teal)]" />
             </div>
-            <div className="text-2xl text-[var(--color-ink)]">₹{(stats.totalAmount / 1000000).toFixed(1)}M</div>
+            <div className="text-2xl text-[var(--color-ink)]">
+              ₹{(stats.totalAmount / 1000000).toFixed(1)}M
+            </div>
           </div>
         </div>
 
@@ -173,39 +189,61 @@ export function BudgetTransfers() {
             <table className="w-full">
               <thead className="bg-[var(--color-cloud)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Transfer ID</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Source Budget</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Transfer ID
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Source Budget
+                  </th>
                   <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase w-16"></th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Target Budget</th>
-                  <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">Amount</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Reason</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Transfer Date</th>
-                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Status</th>
-                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Target Budget
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Amount
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Reason
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Transfer Date
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-silver)]">
-                {filteredTransfers.map(transfer => (
+                {filteredTransfers.map((transfer) => (
                   <tr key={transfer.id} className="hover:bg-[var(--color-cloud)]">
                     <td className="px-4 py-3">
                       <span className="text-[var(--color-teal)]">{transfer.transferNumber}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-[var(--color-ink)]">{transfer.sourceBudgetName}</div>
-                      <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{transfer.sourceBudget}</div>
+                      <div className="text-xs text-[var(--color-mercury-grey)] mt-1">
+                        {transfer.sourceBudget}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <ArrowRight className="w-5 h-5 text-[var(--color-teal)] mx-auto" />
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-[var(--color-ink)]">{transfer.targetBudgetName}</div>
-                      <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{transfer.targetBudget}</div>
+                      <div className="text-xs text-[var(--color-mercury-grey)] mt-1">
+                        {transfer.targetBudget}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-right text-[var(--color-ink)]">
                       INR {transfer.transferAmount.toLocaleString()}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-[var(--color-ink)] text-sm">{transfer.transferReason}</span>
+                      <span className="text-[var(--color-ink)] text-sm">
+                        {transfer.transferReason}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 text-[var(--color-ink)]">
@@ -214,12 +252,17 @@ export function BudgetTransfers() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        transfer.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                        transfer.status === 'Approved' ? 'bg-blue-100 text-blue-700' :
-                        transfer.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                        'bg-yellow-100 text-yellow-700'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded text-xs ${
+                          transfer.status === 'Completed'
+                            ? 'bg-green-100 text-green-700'
+                            : transfer.status === 'Approved'
+                              ? 'bg-blue-100 text-blue-700'
+                              : transfer.status === 'Rejected'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                        }`}
+                      >
                         {transfer.status}
                       </span>
                     </td>
@@ -241,30 +284,39 @@ export function BudgetTransfers() {
             <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
               <div className="px-6 py-4 border-b border-[var(--color-silver)]">
                 <h2 className="text-[var(--color-ink)]">Create Budget Transfer</h2>
-                <p className="text-sm text-[var(--color-mercury-grey)] mt-1">Transfer budget allocation between approved budgets</p>
+                <p className="text-sm text-[var(--color-mercury-grey)] mt-1">
+                  Transfer budget allocation between approved budgets
+                </p>
               </div>
 
               <div className="px-6 py-4 space-y-6">
                 {/* Source Budget */}
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Source Budget <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Source Budget <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <select
                     value={sourceBudget}
                     onChange={(e) => setSourceBudget(e.target.value)}
                     className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                   >
                     <option value="">Select source budget</option>
-                    {budgets.filter(b => b.status === 'Approved' && b.available > 0).map(budget => (
-                      <option key={budget.id} value={budget.id}>
-                        {budget.budgetNumber} - {budget.budgetName} (Available: INR {budget.available.toLocaleString()})
-                      </option>
-                    ))}
+                    {budgets
+                      .filter((b) => b.status === 'Approved' && b.available > 0)
+                      .map((budget) => (
+                        <option key={budget.id} value={budget.id}>
+                          {budget.budgetNumber} - {budget.budgetName} (Available: INR{' '}
+                          {budget.available.toLocaleString()})
+                        </option>
+                      ))}
                   </select>
                   {sourceBudget && (
                     <div className="mt-2 p-3 bg-[var(--color-cloud)] rounded-lg">
-                      <p className="text-sm text-[var(--color-mercury-grey)] mb-1">Available Balance</p>
+                      <p className="text-sm text-[var(--color-mercury-grey)] mb-1">
+                        Available Balance
+                      </p>
                       <p className="text-lg text-[var(--color-ink)]">
-                        INR {budgets.find(b => b.id === sourceBudget)?.available.toLocaleString()}
+                        INR {budgets.find((b) => b.id === sourceBudget)?.available.toLocaleString()}
                       </p>
                     </div>
                   )}
@@ -276,7 +328,7 @@ export function BudgetTransfers() {
                     <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                       <p className="text-xs text-blue-600 mb-1">FROM</p>
                       <p className="text-sm text-blue-900 truncate">
-                        {budgets.find(b => b.id === sourceBudget)?.budgetName}
+                        {budgets.find((b) => b.id === sourceBudget)?.budgetName}
                       </p>
                     </div>
                     <div className="flex flex-col items-center gap-2">
@@ -290,7 +342,7 @@ export function BudgetTransfers() {
                     <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                       <p className="text-xs text-green-600 mb-1">TO</p>
                       <p className="text-sm text-green-900 truncate">
-                        {budgets.find(b => b.id === targetBudget)?.budgetName}
+                        {budgets.find((b) => b.id === targetBudget)?.budgetName}
                       </p>
                     </div>
                   </div>
@@ -298,39 +350,49 @@ export function BudgetTransfers() {
 
                 {/* Target Budget */}
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Target Budget <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Target Budget <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <select
                     value={targetBudget}
                     onChange={(e) => setTargetBudget(e.target.value)}
                     className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                   >
                     <option value="">Select target budget</option>
-                    {budgets.filter(b => b.status === 'Approved' && b.id !== sourceBudget).map(budget => (
-                      <option key={budget.id} value={budget.id}>
-                        {budget.budgetNumber} - {budget.budgetName}
-                      </option>
-                    ))}
+                    {budgets
+                      .filter((b) => b.status === 'Approved' && b.id !== sourceBudget)
+                      .map((budget) => (
+                        <option key={budget.id} value={budget.id}>
+                          {budget.budgetNumber} - {budget.budgetName}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
                 {/* Transfer Amount */}
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Transfer Amount <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Transfer Amount <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <input
                     type="number"
                     value={transferAmount || ''}
                     onChange={(e) => setTransferAmount(Number(e.target.value))}
-                    max={budgets.find(b => b.id === sourceBudget)?.available || 0}
+                    max={budgets.find((b) => b.id === sourceBudget)?.available || 0}
                     className="w-full px-3 py-2 border border-[var(--color-silver)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                     placeholder="0"
                   />
                   {sourceBudget && transferAmount > 0 && (
-                    <p className={`text-sm mt-1 ${
-                      transferAmount <= (budgets.find(b => b.id === sourceBudget)?.available || 0)
-                        ? 'text-green-600'
-                        : 'text-red-600'
-                    }`}>
-                      {transferAmount <= (budgets.find(b => b.id === sourceBudget)?.available || 0)
+                    <p
+                      className={`text-sm mt-1 ${
+                        transferAmount <=
+                        (budgets.find((b) => b.id === sourceBudget)?.available || 0)
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}
+                    >
+                      {transferAmount <=
+                      (budgets.find((b) => b.id === sourceBudget)?.available || 0)
                         ? 'Transfer amount is valid'
                         : 'Transfer amount exceeds available budget'}
                     </p>
@@ -339,7 +401,9 @@ export function BudgetTransfers() {
 
                 {/* Transfer Reason */}
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Transfer Reason <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Transfer Reason <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <textarea
                     value={transferReason}
                     onChange={(e) => setTransferReason(e.target.value)}
@@ -359,7 +423,9 @@ export function BudgetTransfers() {
                         <li>• Transfer amount cannot exceed available budget in source</li>
                         <li>• Requires approval before execution</li>
                         <li>• Both source and target budgets will be updated upon approval</li>
-                        <li>• Transfer is permanent and cannot be reversed (new transfer required)</li>
+                        <li>
+                          • Transfer is permanent and cannot be reversed (new transfer required)
+                        </li>
                       </ul>
                     </div>
                   </div>
@@ -391,8 +457,13 @@ export function BudgetTransfers() {
             <div>
               <h4 className="text-blue-900 mb-2">Budget Transfer Process</h4>
               <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Budget transfers allow reallocation of approved budgets between dimensions</li>
-                <li>• Common transfer types: Department-to-Department, Cost Centre-to-Cost Centre, Expense Head-to-Expense Head</li>
+                <li>
+                  • Budget transfers allow reallocation of approved budgets between dimensions
+                </li>
+                <li>
+                  • Common transfer types: Department-to-Department, Cost Centre-to-Cost Centre,
+                  Expense Head-to-Expense Head
+                </li>
                 <li>• All transfers require approval workflow before execution</li>
                 <li>• Real-time balance updates ensure accuracy and prevent over-allocation</li>
                 <li>• Complete audit trail maintained for all transfers</li>

@@ -119,4 +119,3 @@ describe('determineGST', () => {
     expect(out.itcEligible).toBe(false);
   });
 });
-

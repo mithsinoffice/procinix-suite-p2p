@@ -155,7 +155,8 @@ const seedSKUs: SKU[] = [
     storageCondition: 'Ambient',
     catalogLink: 'https://subko.coffee/catalog/tshirt-classic',
     videoUrls: 'https://youtu.be/abc123',
-    productImages: 'https://cdn.subko.coffee/sku/tshirt-blk-m-1.jpg,https://cdn.subko.coffee/sku/tshirt-blk-m-2.jpg',
+    productImages:
+      'https://cdn.subko.coffee/sku/tshirt-blk-m-1.jpg,https://cdn.subko.coffee/sku/tshirt-blk-m-2.jpg',
     sampleLabelWarning: 'None',
     certification: 'None',
     hsnCode: '6109',
@@ -253,7 +254,8 @@ const seedSKUs: SKU[] = [
     storageCondition: 'Ambient',
     catalogLink: 'https://subko.coffee/catalog/ceramic-mug',
     videoUrls: '',
-    productImages: 'https://cdn.subko.coffee/sku/mug-white-1.jpg,https://cdn.subko.coffee/sku/mug-white-2.jpg',
+    productImages:
+      'https://cdn.subko.coffee/sku/mug-white-1.jpg,https://cdn.subko.coffee/sku/mug-white-2.jpg',
     sampleLabelWarning: 'Handle With Care',
     certification: 'None',
     hsnCode: '6912',
@@ -268,7 +270,10 @@ const seedSKUs: SKU[] = [
 export function SKUMaster() {
   const navigate = useNavigate();
   const { items, taxCodes } = useMasterData();
-  const [skus, setSKUs, isHydrating, persistSKUs] = useIncrementalMasterRecords<SKU>('sku_master', seedSKUs);
+  const [skus, setSKUs, isHydrating, persistSKUs] = useIncrementalMasterRecords<SKU>(
+    'sku_master',
+    seedSKUs
+  );
 
   const [showForm, setShowForm] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -372,8 +377,8 @@ export function SKUMaster() {
       (a.articleCode ?? a.internalSku ?? '').localeCompare(
         b.articleCode ?? b.internalSku ?? '',
         undefined,
-        { sensitivity: 'base' },
-      ),
+        { sensitivity: 'base' }
+      )
     );
   }, [skus]);
 
@@ -390,9 +395,11 @@ export function SKUMaster() {
         .join(' ')
         .toLowerCase();
       const matchesSearch = haystack.includes(searchTerm.toLowerCase());
-      const matchesCategory = categoryFilter.length === 0 || categoryFilter.includes(sku.category || '');
+      const matchesCategory =
+        categoryFilter.length === 0 || categoryFilter.includes(sku.category || '');
       const matchesStatus = statusFilter.length === 0 || statusFilter.includes(sku.status);
-      const matchesApproval = approvalFilter.length === 0 || approvalFilter.includes(sku.approvalStatus);
+      const matchesApproval =
+        approvalFilter.length === 0 || approvalFilter.includes(sku.approvalStatus);
       return matchesSearch && matchesCategory && matchesStatus && matchesApproval;
     });
   }, [sortedSKUs, searchTerm, categoryFilter, statusFilter, approvalFilter]);
@@ -466,7 +473,10 @@ export function SKUMaster() {
       return;
     }
 
-    if (!isEditMode && skus.some((s) => s.internalSku.trim().toLowerCase() === internalSku.trim().toLowerCase())) {
+    if (
+      !isEditMode &&
+      skus.some((s) => s.internalSku.trim().toLowerCase() === internalSku.trim().toLowerCase())
+    ) {
       alert(`Internal SKU ${internalSku} already exists.`);
       return;
     }
@@ -599,7 +609,9 @@ export function SKUMaster() {
   const handleDelete = (id: string) => {
     const sku = skus.find((s) => s.id === id);
     if (sku?.approvalStatus === 'Approved') {
-      alert('Cannot delete approved/live records. You can only modify them through the approval workflow.');
+      alert(
+        'Cannot delete approved/live records. You can only modify them through the approval workflow.'
+      );
       return;
     }
     setSKUs(skus.filter((s) => s.id !== id));
@@ -622,7 +634,11 @@ export function SKUMaster() {
       compare('Internal SKU', original.internalSku, sku.internalSku);
       compare('Article Code', original.articleCode, sku.articleCode);
       compare('Global Identifier', original.globalIdentifier, sku.globalIdentifier);
-      compare('Global Identifier Number', original.globalIdentifierNumber, sku.globalIdentifierNumber);
+      compare(
+        'Global Identifier Number',
+        original.globalIdentifierNumber,
+        sku.globalIdentifierNumber
+      );
       compare('Brand SKU', original.brandSku, sku.brandSku);
       compare('Brand', original.brand, sku.brand);
 
@@ -682,7 +698,12 @@ export function SKUMaster() {
 
   const handleApprove = async () => {
     if (currentReviewRecord) {
-      const nextRecords = await applyMasterApprovalAction('sku_master', skus, currentReviewRecord.id, 'approve');
+      const nextRecords = await applyMasterApprovalAction(
+        'sku_master',
+        skus,
+        currentReviewRecord.id,
+        'approve'
+      );
       setSKUs(nextRecords);
     }
     setShowApprovalModal(false);
@@ -691,7 +712,12 @@ export function SKUMaster() {
 
   const handleReject = async () => {
     if (currentReviewRecord) {
-      const nextRecords = await applyMasterApprovalAction('sku_master', skus, currentReviewRecord.id, 'reject');
+      const nextRecords = await applyMasterApprovalAction(
+        'sku_master',
+        skus,
+        currentReviewRecord.id,
+        'reject'
+      );
       setSKUs(nextRecords);
     }
     setShowApprovalModal(false);
@@ -702,7 +728,13 @@ export function SKUMaster() {
     if (currentReviewRecord) {
       const comments = window.prompt('Enter comments for the request:', '');
       if (comments === null) return;
-      const nextRecords = await applyMasterApprovalAction('sku_master', skus, currentReviewRecord.id, 'request_info', comments);
+      const nextRecords = await applyMasterApprovalAction(
+        'sku_master',
+        skus,
+        currentReviewRecord.id,
+        'request_info',
+        comments
+      );
       setSKUs(nextRecords);
     }
     setShowApprovalModal(false);
@@ -741,21 +773,32 @@ export function SKUMaster() {
     ];
     const filled = fields.filter((v) => String(v).trim().length > 0).length;
     return { filled, total: fields.length };
-  }, [internalSku, articleCode, productNameEn, brand, category, subCategory, hsnCode, taxRate, defaultMrp, status]);
+  }, [
+    internalSku,
+    articleCode,
+    productNameEn,
+    brand,
+    category,
+    subCategory,
+    hsnCode,
+    taxRate,
+    defaultMrp,
+    status,
+  ]);
 
   const handleSaveDraft = useCallback(() => {
     setSaveStatus('saving');
     handleSubmit('Draft');
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleSubmit]);
 
   useFormKeyboardSave(handleSaveDraft);
 
   if (showForm) {
     return (
-      <FormShell masterName="SKU Master"
+      <FormShell
+        masterName="SKU Master"
         title="SKU Master"
         subtitle="Define a sellable stock keeping unit with full product, classification, and compliance metadata"
         modeLabel={isEditMode ? 'Edit SKU' : 'Create SKU'}
@@ -777,25 +820,60 @@ export function SKUMaster() {
       >
         {/* 1. SKU Identification */}
         <FormSection title="SKU Identification" columns={3}>
-          <PxFormField label="Internal SKU" required filled={!!internalSku.trim()} hint="Your internal SKU code">
-            <input type="text" value={internalSku} onChange={(e) => setInternalSku(e.target.value)} placeholder="SKU-TSHIRT-BLK-M" className="px-input" />
+          <PxFormField
+            label="Internal SKU"
+            required
+            filled={!!internalSku.trim()}
+            hint="Your internal SKU code"
+          >
+            <input
+              type="text"
+              value={internalSku}
+              onChange={(e) => setInternalSku(e.target.value)}
+              placeholder="SKU-TSHIRT-BLK-M"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Article Code" required filled={!!articleCode.trim()}>
-            <input type="text" value={articleCode} onChange={(e) => setArticleCode(e.target.value)} placeholder="ART-10001" className="px-input" />
+            <input
+              type="text"
+              value={articleCode}
+              onChange={(e) => setArticleCode(e.target.value)}
+              placeholder="ART-10001"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Global Identifier" filled={!!globalIdentifier}>
-            <select value={globalIdentifier} onChange={(e) => setGlobalIdentifier(e.target.value)} className="px-select">
+            <select
+              value={globalIdentifier}
+              onChange={(e) => setGlobalIdentifier(e.target.value)}
+              className="px-select"
+            >
               <option value="">Select type</option>
               {GLOBAL_IDENTIFIER_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </PxFormField>
           <PxFormField label="Global Identifier Number" filled={!!globalIdentifierNumber.trim()}>
-            <input type="text" value={globalIdentifierNumber} onChange={(e) => setGlobalIdentifierNumber(e.target.value)} placeholder="8901234567890" className="px-input" />
+            <input
+              type="text"
+              value={globalIdentifierNumber}
+              onChange={(e) => setGlobalIdentifierNumber(e.target.value)}
+              placeholder="8901234567890"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Brand SKU" filled={!!brandSku.trim()}>
-            <input type="text" value={brandSku} onChange={(e) => setBrandSku(e.target.value)} placeholder="Brand's SKU reference" className="px-input" />
+            <input
+              type="text"
+              value={brandSku}
+              onChange={(e) => setBrandSku(e.target.value)}
+              placeholder="Brand's SKU reference"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Brand" filled={!!brand}>
             <input
@@ -847,120 +925,285 @@ export function SKUMaster() {
             </datalist>
           </PxFormField>
           <PxFormField label="Product Name (EN)" filled={!!productNameEn.trim()}>
-            <input type="text" value={productNameEn} onChange={(e) => setProductNameEn(e.target.value)} placeholder="Classic Crew Tee" className="px-input" />
+            <input
+              type="text"
+              value={productNameEn}
+              onChange={(e) => setProductNameEn(e.target.value)}
+              placeholder="Classic Crew Tee"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Product Name (Local)" filled={!!productNameLocal.trim()}>
-            <input type="text" value={productNameLocal} onChange={(e) => setProductNameLocal(e.target.value)} placeholder="स्थानीय भाषा में नाम" className="px-input" />
+            <input
+              type="text"
+              value={productNameLocal}
+              onChange={(e) => setProductNameLocal(e.target.value)}
+              placeholder="स्थानीय भाषा में नाम"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Description (EN)" filled={!!descriptionEn.trim()}>
-            <input type="text" value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} placeholder="Short product description" className="px-input" />
+            <input
+              type="text"
+              value={descriptionEn}
+              onChange={(e) => setDescriptionEn(e.target.value)}
+              placeholder="Short product description"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Description (Local)" filled={!!descriptionLocal.trim()}>
-            <input type="text" value={descriptionLocal} onChange={(e) => setDescriptionLocal(e.target.value)} placeholder="स्थानीय भाषा में विवरण" className="px-input" />
+            <input
+              type="text"
+              value={descriptionLocal}
+              onChange={(e) => setDescriptionLocal(e.target.value)}
+              placeholder="स्थानीय भाषा में विवरण"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Gender" filled={!!gender}>
-            <select value={gender} onChange={(e) => setGender(e.target.value)} className="px-select">
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="px-select"
+            >
               <option value="">Select gender</option>
               {GENDER_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </PxFormField>
           <PxFormField label="Age Group" filled={!!ageGroup}>
-            <select value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)} className="px-select">
+            <select
+              value={ageGroup}
+              onChange={(e) => setAgeGroup(e.target.value)}
+              className="px-select"
+            >
               <option value="">Select age group</option>
               {AGE_GROUP_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </PxFormField>
           {/* TODO: dropdown from material_master */}
           <PxFormField label="Material" filled={!!material.trim()}>
-            <input type="text" value={material} onChange={(e) => setMaterial(e.target.value)} placeholder="Cotton, Polyester..." className="px-input" />
+            <input
+              type="text"
+              value={material}
+              onChange={(e) => setMaterial(e.target.value)}
+              placeholder="Cotton, Polyester..."
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Care Instructions" filled={!!careInstructions}>
-            <select value={careInstructions} onChange={(e) => setCareInstructions(e.target.value)} className="px-select">
+            <select
+              value={careInstructions}
+              onChange={(e) => setCareInstructions(e.target.value)}
+              className="px-select"
+            >
               <option value="">Select instructions</option>
               {CARE_INSTRUCTION_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </PxFormField>
           <PxFormField label="Fit Type" filled={!!fitType}>
-            <select value={fitType} onChange={(e) => setFitType(e.target.value)} className="px-select">
+            <select
+              value={fitType}
+              onChange={(e) => setFitType(e.target.value)}
+              className="px-select"
+            >
               <option value="">Select fit</option>
               {FIT_TYPE_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </PxFormField>
           {/* TODO: dropdown from color_master */}
           <PxFormField label="Color" filled={!!color.trim()}>
-            <input type="text" value={color} onChange={(e) => setColor(e.target.value)} placeholder="Black" className="px-input" />
+            <input
+              type="text"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              placeholder="Black"
+              className="px-input"
+            />
           </PxFormField>
           {/* TODO: dropdown from size_master */}
           <PxFormField label="Size" filled={!!size.trim()}>
-            <input type="text" value={size} onChange={(e) => setSize(e.target.value)} placeholder="M" className="px-input" />
+            <input
+              type="text"
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+              placeholder="M"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Size System" filled={!!sizeSystem}>
-            <select value={sizeSystem} onChange={(e) => setSizeSystem(e.target.value)} className="px-select">
+            <select
+              value={sizeSystem}
+              onChange={(e) => setSizeSystem(e.target.value)}
+              className="px-select"
+            >
               <option value="">Select system</option>
               {SIZE_SYSTEM_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </PxFormField>
           <PxFormField label="Season" filled={!!season.trim()}>
-            <input type="text" value={season} onChange={(e) => setSeason(e.target.value)} placeholder="SS25, FW25" className="px-input" />
+            <input
+              type="text"
+              value={season}
+              onChange={(e) => setSeason(e.target.value)}
+              placeholder="SS25, FW25"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Collection" filled={!!collection.trim()}>
-            <input type="text" value={collection} onChange={(e) => setCollection(e.target.value)} placeholder="Essentials" className="px-input" />
+            <input
+              type="text"
+              value={collection}
+              onChange={(e) => setCollection(e.target.value)}
+              placeholder="Essentials"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Warranty" filled={!!warranty.trim()}>
-            <input type="text" value={warranty} onChange={(e) => setWarranty(e.target.value)} placeholder="12 months" className="px-input" />
+            <input
+              type="text"
+              value={warranty}
+              onChange={(e) => setWarranty(e.target.value)}
+              placeholder="12 months"
+              className="px-input"
+            />
           </PxFormField>
         </FormSection>
 
         {/* 3. Physical Attributes */}
         <FormSection title="Physical Attributes" columns={3}>
           <PxFormField label="Shelf Life" filled={!!shelfLife.trim()} hint="MM/yyyy format">
-            <input type="text" value={shelfLife} onChange={(e) => setShelfLife(e.target.value)} placeholder="12/2028" className="px-input" />
+            <input
+              type="text"
+              value={shelfLife}
+              onChange={(e) => setShelfLife(e.target.value)}
+              placeholder="12/2028"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Case Pack Qty" filled={!!casePackQty}>
-            <input type="number" value={casePackQty} onChange={(e) => setCasePackQty(e.target.value)} placeholder="24" className="px-input" />
+            <input
+              type="number"
+              value={casePackQty}
+              onChange={(e) => setCasePackQty(e.target.value)}
+              placeholder="24"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Product Length (cm)" filled={!!productLength}>
-            <input type="number" value={productLength} onChange={(e) => setProductLength(e.target.value)} placeholder="70" className="px-input" />
+            <input
+              type="number"
+              value={productLength}
+              onChange={(e) => setProductLength(e.target.value)}
+              placeholder="70"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Product Width (cm)" filled={!!productWidth}>
-            <input type="number" value={productWidth} onChange={(e) => setProductWidth(e.target.value)} placeholder="50" className="px-input" />
+            <input
+              type="number"
+              value={productWidth}
+              onChange={(e) => setProductWidth(e.target.value)}
+              placeholder="50"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Product Height (cm)" filled={!!productHeight}>
-            <input type="number" value={productHeight} onChange={(e) => setProductHeight(e.target.value)} placeholder="1" className="px-input" />
+            <input
+              type="number"
+              value={productHeight}
+              onChange={(e) => setProductHeight(e.target.value)}
+              placeholder="1"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Package Length (cm)" filled={!!packageLength}>
-            <input type="number" value={packageLength} onChange={(e) => setPackageLength(e.target.value)} placeholder="30" className="px-input" />
+            <input
+              type="number"
+              value={packageLength}
+              onChange={(e) => setPackageLength(e.target.value)}
+              placeholder="30"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Package Width (cm)" filled={!!packageWidth}>
-            <input type="number" value={packageWidth} onChange={(e) => setPackageWidth(e.target.value)} placeholder="25" className="px-input" />
+            <input
+              type="number"
+              value={packageWidth}
+              onChange={(e) => setPackageWidth(e.target.value)}
+              placeholder="25"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Package Height (cm)" filled={!!packageHeight}>
-            <input type="number" value={packageHeight} onChange={(e) => setPackageHeight(e.target.value)} placeholder="3" className="px-input" />
+            <input
+              type="number"
+              value={packageHeight}
+              onChange={(e) => setPackageHeight(e.target.value)}
+              placeholder="3"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Gross Weight (kg)" filled={!!grossWeight}>
-            <input type="number" step="0.01" value={grossWeight} onChange={(e) => setGrossWeight(e.target.value)} placeholder="0.25" className="px-input" />
+            <input
+              type="number"
+              step="0.01"
+              value={grossWeight}
+              onChange={(e) => setGrossWeight(e.target.value)}
+              placeholder="0.25"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Volumetric Weight (kg)" filled={!!volumetricWeight}>
-            <input type="number" step="0.01" value={volumetricWeight} onChange={(e) => setVolumetricWeight(e.target.value)} placeholder="0.45" className="px-input" />
+            <input
+              type="number"
+              step="0.01"
+              value={volumetricWeight}
+              onChange={(e) => setVolumetricWeight(e.target.value)}
+              placeholder="0.45"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Shipping Weight (kg)" filled={!!shippingWeight}>
-            <input type="number" step="0.01" value={shippingWeight} onChange={(e) => setShippingWeight(e.target.value)} placeholder="0.3" className="px-input" />
+            <input
+              type="number"
+              step="0.01"
+              value={shippingWeight}
+              onChange={(e) => setShippingWeight(e.target.value)}
+              placeholder="0.3"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Storage Condition" filled={!!storageCondition}>
-            <select value={storageCondition} onChange={(e) => setStorageCondition(e.target.value)} className="px-select">
+            <select
+              value={storageCondition}
+              onChange={(e) => setStorageCondition(e.target.value)}
+              className="px-select"
+            >
               <option value="">Select condition</option>
               {STORAGE_CONDITION_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </PxFormField>
@@ -969,31 +1212,66 @@ export function SKUMaster() {
         {/* 4. Catalog & Content */}
         <FormSection title="Catalog & Content" columns={3}>
           <PxFormField label="Catalog Link" filled={!!catalogLink.trim()}>
-            <input type="url" value={catalogLink} onChange={(e) => setCatalogLink(e.target.value)} placeholder="https://..." className="px-input" />
+            <input
+              type="url"
+              value={catalogLink}
+              onChange={(e) => setCatalogLink(e.target.value)}
+              placeholder="https://..."
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Video URLs" filled={!!videoUrls.trim()} hint="Comma-separated">
-            <input type="text" value={videoUrls} onChange={(e) => setVideoUrls(e.target.value)} placeholder="https://youtu.be/...,https://..." className="px-input" />
+            <input
+              type="text"
+              value={videoUrls}
+              onChange={(e) => setVideoUrls(e.target.value)}
+              placeholder="https://youtu.be/...,https://..."
+              className="px-input"
+            />
           </PxFormField>
-          <PxFormField label="Product Images" filled={!!productImages.trim()} hint="Comma-separated URLs" colSpan={3}>
-            <input type="text" value={productImages} onChange={(e) => setProductImages(e.target.value)} placeholder="https://cdn.../img1.jpg, https://cdn.../img2.jpg" className="px-input" />
+          <PxFormField
+            label="Product Images"
+            filled={!!productImages.trim()}
+            hint="Comma-separated URLs"
+            colSpan={3}
+          >
+            <input
+              type="text"
+              value={productImages}
+              onChange={(e) => setProductImages(e.target.value)}
+              placeholder="https://cdn.../img1.jpg, https://cdn.../img2.jpg"
+              className="px-input"
+            />
           </PxFormField>
         </FormSection>
 
         {/* 5. Compliance */}
         <FormSection title="Compliance" columns={3}>
           <PxFormField label="Sample Label Warning" filled={!!sampleLabelWarning}>
-            <select value={sampleLabelWarning} onChange={(e) => setSampleLabelWarning(e.target.value)} className="px-select">
+            <select
+              value={sampleLabelWarning}
+              onChange={(e) => setSampleLabelWarning(e.target.value)}
+              className="px-select"
+            >
               <option value="">Select warning</option>
               {SAMPLE_LABEL_WARNING_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </PxFormField>
           <PxFormField label="Certification" filled={!!certification}>
-            <select value={certification} onChange={(e) => setCertification(e.target.value)} className="px-select">
+            <select
+              value={certification}
+              onChange={(e) => setCertification(e.target.value)}
+              className="px-select"
+            >
               <option value="">Select certification</option>
               {CERTIFICATION_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </PxFormField>
@@ -1013,21 +1291,45 @@ export function SKUMaster() {
             </datalist>
           </PxFormField>
           <PxFormField label="Tax Rate (%)" filled={!!taxRate}>
-            <input type="number" step="0.01" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} placeholder="12" className="px-input" />
+            <input
+              type="number"
+              step="0.01"
+              value={taxRate}
+              onChange={(e) => setTaxRate(e.target.value)}
+              placeholder="12"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Tax Type" filled={!!taxType}>
-            <select value={taxType} onChange={(e) => setTaxType(e.target.value)} className="px-select">
+            <select
+              value={taxType}
+              onChange={(e) => setTaxType(e.target.value)}
+              className="px-select"
+            >
               <option value="">Select tax type</option>
               {TAX_TYPE_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
               ))}
             </select>
           </PxFormField>
           <PxFormField label="Default MRP" filled={!!defaultMrp}>
-            <input type="number" step="0.01" value={defaultMrp} onChange={(e) => setDefaultMrp(e.target.value)} placeholder="799" className="px-input" />
+            <input
+              type="number"
+              step="0.01"
+              value={defaultMrp}
+              onChange={(e) => setDefaultMrp(e.target.value)}
+              placeholder="799"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Status" required filled={!!status}>
-            <select value={status} onChange={(e) => setStatus(e.target.value as 'Active' | 'Inactive')} className="px-select">
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as 'Active' | 'Inactive')}
+              className="px-select"
+            >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
@@ -1078,9 +1380,24 @@ export function SKUMaster() {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         filters={[
-          { key: 'category', label: 'Category', options: [...new Set(sortedSKUs.map((s) => s.category || '').filter(Boolean))], selected: categoryFilter },
-          { key: 'status', label: 'Status', options: ['Active', 'Inactive'], selected: statusFilter },
-          { key: 'approval', label: 'Approval', options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'], selected: approvalFilter },
+          {
+            key: 'category',
+            label: 'Category',
+            options: [...new Set(sortedSKUs.map((s) => s.category || '').filter(Boolean))],
+            selected: categoryFilter,
+          },
+          {
+            key: 'status',
+            label: 'Status',
+            options: ['Active', 'Inactive'],
+            selected: statusFilter,
+          },
+          {
+            key: 'approval',
+            label: 'Approval',
+            options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'],
+            selected: approvalFilter,
+          },
         ]}
         onFilterChange={(key, values) => {
           if (key === 'category') setCategoryFilter(values);
@@ -1140,12 +1457,38 @@ export function SKUMaster() {
       />
 
       {/* Table */}
-      <div className="rounded-[24px] overflow-hidden bg-white" style={{ border: '1px solid var(--color-fog)', boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)' }}>
+      <div
+        className="rounded-[24px] overflow-hidden bg-white"
+        style={{
+          border: '1px solid var(--color-fog)',
+          boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)',
+        }}
+      >
         <div className="overflow-x-auto">
           <div style={{ minWidth: '1320px' }}>
-            <div className="grid gap-4 px-6 py-4" style={{ gridTemplateColumns: '1.2fr 1.4fr 1.8fr 1.1fr 1.2fr 0.9fr 1.2fr 0.9fr', background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)', borderBottom: '1px solid #E4EDF2' }}>
-              {['Article Code', 'Internal SKU', 'Product Name (EN)', 'Brand', 'Category', 'Status', 'Approval', 'Action'].map((column) => (
-                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
+            <div
+              className="grid gap-4 px-6 py-4"
+              style={{
+                gridTemplateColumns: '1.2fr 1.4fr 1.8fr 1.1fr 1.2fr 0.9fr 1.2fr 0.9fr',
+                background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)',
+                borderBottom: '1px solid #E4EDF2',
+              }}
+            >
+              {[
+                'Article Code',
+                'Internal SKU',
+                'Product Name (EN)',
+                'Brand',
+                'Category',
+                'Status',
+                'Approval',
+                'Action',
+              ].map((column) => (
+                <div
+                  key={column}
+                  className="text-xs uppercase tracking-[0.18em]"
+                  style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}
+                >
                   {column}
                 </div>
               ))}
@@ -1162,16 +1505,21 @@ export function SKUMaster() {
                     backgroundColor: '#FFFFFF',
                   }}
                 >
-                  <div style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{sku.articleCode}</div>
+                  <div style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
+                    {sku.articleCode}
+                  </div>
                   <div style={{ color: 'var(--color-ink)' }}>{sku.internalSku}</div>
-                  <div style={{ color: 'var(--color-mercury-grey)' }}>{sku.productNameEn || '-'}</div>
+                  <div style={{ color: 'var(--color-mercury-grey)' }}>
+                    {sku.productNameEn || '-'}
+                  </div>
                   <div style={{ color: 'var(--color-mercury-grey)' }}>{sku.brand || '-'}</div>
                   <div style={{ color: 'var(--color-mercury-grey)' }}>{sku.category || '-'}</div>
                   <div>
                     <span
                       className="px-3 py-1.5 rounded-full text-xs"
                       style={{
-                        backgroundColor: sku.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA',
+                        backgroundColor:
+                          sku.status === 'Active' ? 'var(--color-teal-tint)' : '#FFE8EA',
                         color: sku.status === 'Active' ? 'var(--color-teal)' : 'var(--color-error)',
                         fontWeight: 700,
                       }}
@@ -1180,24 +1528,54 @@ export function SKUMaster() {
                     </span>
                   </div>
                   <div>
-                    <span className="px-3 py-1.5 rounded-full text-xs" style={{ ...getStatusBadgeStyle(sku.approvalStatus), fontWeight: 700 }}>
+                    <span
+                      className="px-3 py-1.5 rounded-full text-xs"
+                      style={{ ...getStatusBadgeStyle(sku.approvalStatus), fontWeight: 700 }}
+                    >
                       {sku.approvalStatus}
                     </span>
                   </div>
                   <div className="flex items-center justify-end gap-2">
                     {sku.approvalStatus === 'Pending Approval' && (
-                      <PremiumActionButton label="Review SKU" icon={<Eye className="w-4 h-4" />} tone="teal" onClick={() => handleReview(sku)} />
+                      <PremiumActionButton
+                        label="Review SKU"
+                        icon={<Eye className="w-4 h-4" />}
+                        tone="teal"
+                        onClick={() => handleReview(sku)}
+                      />
                     )}
-                    <PremiumActionButton label="Edit SKU" icon={<Edit className="w-4 h-4" />} tone="violet" onClick={() => handleEdit(sku)} />
-                    <PremiumActionButton label="Open SKU" icon={<ArrowUpRight className="w-4 h-4" />} tone="blue" onClick={() => handleEdit(sku)} />
-                    <PremiumActionButton label="Delete SKU" icon={<Trash2 className="w-4 h-4" />} tone="amber" onClick={() => handleDelete(sku.id)} />
+                    <PremiumActionButton
+                      label="Edit SKU"
+                      icon={<Edit className="w-4 h-4" />}
+                      tone="violet"
+                      onClick={() => handleEdit(sku)}
+                    />
+                    <PremiumActionButton
+                      label="Open SKU"
+                      icon={<ArrowUpRight className="w-4 h-4" />}
+                      tone="blue"
+                      onClick={() => handleEdit(sku)}
+                    />
+                    <PremiumActionButton
+                      label="Delete SKU"
+                      icon={<Trash2 className="w-4 h-4" />}
+                      tone="amber"
+                      onClick={() => handleDelete(sku.id)}
+                    />
                   </div>
                 </div>
               ))}
               {filteredSKUs.length === 0 && (
                 <div className="px-8 py-16 text-center">
-                  <p className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>No SKUs match the current filters</p>
-                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Clear one or more filters to bring the full register back.</p>
+                  <p
+                    className="text-base mb-1"
+                    style={{ color: 'var(--color-ink)', fontWeight: 700 }}
+                  >
+                    No SKUs match the current filters
+                  </p>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Clear one or more filters to bring the full register back.
+                  </p>
                 </div>
               )}
             </div>

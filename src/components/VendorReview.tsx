@@ -34,15 +34,7 @@ function statusStyle(st: VendorInvitationStatus): { bg: string; color: string } 
   }
 }
 
-function Kpi({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: string;
-}) {
+function Kpi({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div
       className="rounded-lg px-4 py-3 flex flex-col justify-center min-w-[120px]"
@@ -78,7 +70,8 @@ export function VendorReview() {
   const queue = useMemo(() => {
     const rows = pendingOnly ? submitted.filter((inv) => isPendingBuyerReview(inv)) : submitted;
     return [...rows].sort(
-      (a, b) => new Date(submissionSubmittedAt(b)).getTime() - new Date(submissionSubmittedAt(a)).getTime()
+      (a, b) =>
+        new Date(submissionSubmittedAt(b)).getTime() - new Date(submissionSubmittedAt(a)).getTime()
     );
   }, [submitted, pendingOnly]);
 
@@ -89,9 +82,10 @@ export function VendorReview() {
           Vendor Review
         </h1>
         <p className="text-sm mt-1 max-w-3xl" style={{ color: textMuted }}>
-          All onboarding forms submitted by vendors through the <strong style={{ color: textMain }}>invitation link</strong>
-          . The same form collects the vendor master fields (identity, GSTIN, address, bank) used when you approve and
-          create the vendor master record.
+          All onboarding forms submitted by vendors through the{' '}
+          <strong style={{ color: textMain }}>invitation link</strong>. The same form collects the
+          vendor master fields (identity, GSTIN, address, bank) used when you approve and create the
+          vendor master record.
         </p>
       </div>
 
@@ -134,19 +128,34 @@ export function VendorReview() {
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead>
               <tr style={{ borderBottom: `1px solid ${border}`, backgroundColor: surface }}>
-                <th className="py-3 px-4 font-semibold uppercase text-xs tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold uppercase text-xs tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Invitation
                 </th>
-                <th className="py-3 px-4 font-semibold uppercase text-xs tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold uppercase text-xs tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Legal name
                 </th>
-                <th className="py-3 px-4 font-semibold uppercase text-xs tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold uppercase text-xs tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Email
                 </th>
-                <th className="py-3 px-4 font-semibold uppercase text-xs tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold uppercase text-xs tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Submitted
                 </th>
-                <th className="py-3 px-4 font-semibold uppercase text-xs tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold uppercase text-xs tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Status
                 </th>
                 <th className="w-12 px-2" aria-hidden />

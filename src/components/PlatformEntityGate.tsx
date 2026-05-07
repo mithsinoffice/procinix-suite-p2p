@@ -8,9 +8,7 @@ import { Building2 } from 'lucide-react';
  */
 export function PlatformEntityGate() {
   const { user, confirmPlatformEntity } = useAuth();
-  const [entityId, setEntityId] = useState(
-    () => user?.platformEntities?.[0]?.id ?? '',
-  );
+  const [entityId, setEntityId] = useState(() => user?.platformEntities?.[0]?.id ?? '');
 
   if (!user?.platformEntities?.length) {
     return null;
@@ -37,8 +35,8 @@ export function PlatformEntityGate() {
           </h1>
         </div>
         <p className="text-sm mb-6" style={{ color: 'var(--color-mercury-grey)' }}>
-          Tenant: <strong>{user.tenantName || user.tenantCode || user.tenantId}</strong>. Select the legal entity
-          this session applies to.
+          Tenant: <strong>{user.tenantName || user.tenantCode || user.tenantId}</strong>. Select the
+          legal entity this session applies to.
         </p>
         <label className="block text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
           Entity

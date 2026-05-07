@@ -57,7 +57,9 @@ function n(value?: number): number {
 
 export function buildJournalEntries(input: BuildJournalInput): BuildJournalResult {
   const entries: JournalEntry[] = [];
-  const vendorGroup = [input.vendor?.groupCode, input.vendor?.groupName].filter(Boolean).join(' · ');
+  const vendorGroup = [input.vendor?.groupCode, input.vendor?.groupName]
+    .filter(Boolean)
+    .join(' · ');
   let seq = 1;
 
   for (const [lineIndex, line] of input.lines.entries()) {
@@ -67,8 +69,7 @@ export function buildJournalEntries(input: BuildJournalInput): BuildJournalResul
     const sgst = n(line.sgst);
     const tdsAmount = n(line.tdsAmount);
     const gstTotal = igst + cgst + sgst;
-    const netVendor =
-      taxable + (line.isRcm ? 0 : gstTotal) - tdsAmount;
+    const netVendor = taxable + (line.isRcm ? 0 : gstTotal) - tdsAmount;
     const label = line.description || `Line ${lineIndex + 1}`;
 
     entries.push({
@@ -207,4 +208,3 @@ export function buildJournalEntries(input: BuildJournalInput): BuildJournalResul
     balanced,
   };
 }
-

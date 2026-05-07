@@ -14,10 +14,44 @@ const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 // Valid Indian state/UT codes as of 2025.
 // 01-38 are assigned states/UTs; 97 = other territory.
 const VALID_STATE_CODES = new Set([
-  '01', '02', '03', '04', '05', '06', '07', '08', '09', '10',
-  '11', '12', '13', '14', '15', '16', '17', '18', '19', '20',
-  '21', '22', '23', '24', '25', '26', '27', '28', '29', '30',
-  '31', '32', '33', '34', '35', '36', '37', '38',
+  '01',
+  '02',
+  '03',
+  '04',
+  '05',
+  '06',
+  '07',
+  '08',
+  '09',
+  '10',
+  '11',
+  '12',
+  '13',
+  '14',
+  '15',
+  '16',
+  '17',
+  '18',
+  '19',
+  '20',
+  '21',
+  '22',
+  '23',
+  '24',
+  '25',
+  '26',
+  '27',
+  '28',
+  '29',
+  '30',
+  '31',
+  '32',
+  '33',
+  '34',
+  '35',
+  '36',
+  '37',
+  '38',
   '97',
 ]);
 
@@ -41,7 +75,7 @@ function computeCheckDigit(gstin14) {
   for (let i = 0; i < 14; i++) {
     const charValue = CHAR_SET.indexOf(gstin14[i]);
     if (charValue < 0) return null;
-    const factor = (i % 2 === 0) ? 1 : 2;
+    const factor = i % 2 === 0 ? 1 : 2;
     const product = charValue * factor;
     total += Math.floor(product / 36) + (product % 36);
   }
@@ -69,7 +103,10 @@ export function validateGstinFormat(gstin) {
   }
 
   if (!GSTIN_REGEX.test(normalized)) {
-    return { valid: false, error: 'GSTIN format invalid: expected [2-digit state][PAN][entity][Z][check]' };
+    return {
+      valid: false,
+      error: 'GSTIN format invalid: expected [2-digit state][PAN][entity][Z][check]',
+    };
   }
 
   const stateCode = normalized.substring(0, 2);
@@ -87,7 +124,10 @@ export function validateGstinFormat(gstin) {
     return { valid: false, error: 'Checksum computation failed — invalid characters' };
   }
   if (normalized[14] !== expectedCheck) {
-    return { valid: false, error: `Checksum mismatch: expected ${expectedCheck}, got ${normalized[14]}` };
+    return {
+      valid: false,
+      error: `Checksum mismatch: expected ${expectedCheck}, got ${normalized[14]}`,
+    };
   }
 
   return {
@@ -142,14 +182,24 @@ export function extractStateCodeFromGstin(gstin) {
  * @param {object} opts.db - Database query interface { query(sql, params) }
  * @returns {Promise<{ok: boolean, checks: Array<{severity: 'block'|'warn', code: string, detail: string}>}>}
  */
-export async function validateGstinMatch({ supplierGstin, vendorId, recipientGstin, entityId, db }) {
+export async function validateGstinMatch({
+  supplierGstin,
+  vendorId,
+  recipientGstin,
+  entityId,
+  db,
+}) {
   const checks = [];
 
   // --- Supplier GSTIN checks ---
   if (supplierGstin) {
     const formatResult = validateGstinFormat(supplierGstin);
     if (!formatResult.valid) {
-      checks.push({ severity: 'block', code: 'invalid_gstin_format', detail: `Supplier GSTIN: ${formatResult.error}` });
+      checks.push({
+        severity: 'block',
+        code: 'invalid_gstin_format',
+        detail: `Supplier GSTIN: ${formatResult.error}`,
+      });
       return { ok: false, checks };
     }
 
@@ -208,7 +258,11 @@ export async function validateGstinMatch({ supplierGstin, vendorId, recipientGst
   if (recipientGstin && entityId) {
     const formatResult = validateGstinFormat(recipientGstin);
     if (!formatResult.valid) {
-      checks.push({ severity: 'block', code: 'invalid_gstin_format', detail: `Recipient GSTIN: ${formatResult.error}` });
+      checks.push({
+        severity: 'block',
+        code: 'invalid_gstin_format',
+        detail: `Recipient GSTIN: ${formatResult.error}`,
+      });
       return { ok: checks.every((c) => c.severity !== 'block') ? true : false, checks };
     }
 

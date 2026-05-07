@@ -1,9 +1,9 @@
 import type { MasterFieldDef, ParsedSheet, ColumnMapping } from './bulkUploadTypes';
 
 export interface FieldSuggestion {
-  header: string;      // raw Excel column header
-  confidence: number;  // 0-1
-  reason: string;      // human-readable explanation
+  header: string; // raw Excel column header
+  confidence: number; // 0-1
+  reason: string; // human-readable explanation
 }
 
 /* ------------------------------------------------------------------ */
@@ -65,7 +65,7 @@ function fractionMatching(values: string[], predicate: (v: string) => boolean): 
 
 function scoreNameSimilarity(
   field: MasterFieldDef,
-  rawHeader: string,
+  rawHeader: string
 ): { score: number; reason: string } {
   let best = 0;
   let bestAlias = '';
@@ -83,15 +83,13 @@ function scoreNameSimilarity(
     bestAlias = field.label;
   }
   const reason =
-    best > 0
-      ? `Column name '${rawHeader}' partially matches alias '${bestAlias}'`
-      : '';
+    best > 0 ? `Column name '${rawHeader}' partially matches alias '${bestAlias}'` : '';
   return { score: best, reason };
 }
 
 function scoreTypeMatch(
   field: MasterFieldDef,
-  samples: string[],
+  samples: string[]
 ): { score: number; reason: string } {
   if (samples.length === 0) return { score: 0, reason: '' };
 
@@ -150,7 +148,7 @@ function scoreTypeMatch(
 
 function scoreEnumOverlap(
   field: MasterFieldDef,
-  samples: string[],
+  samples: string[]
 ): { score: number; reason: string } {
   if (!field.enumValues || field.enumValues.length === 0 || samples.length === 0) {
     return { score: 0, reason: '' };
@@ -167,16 +165,14 @@ function scoreEnumOverlap(
   }
   const score = unique.size > 0 ? matched / unique.size : 0;
   const reason =
-    score > 0
-      ? `Values '${matchedValues.slice(0, 3).join(', ')}' match enum options`
-      : '';
+    score > 0 ? `Values '${matchedValues.slice(0, 3).join(', ')}' match enum options` : '';
   return { score, reason };
 }
 
 function scoreUniqueness(
   field: MasterFieldDef,
   schema: { primaryCodeField: string },
-  samples: string[],
+  samples: string[]
 ): { score: number; reason: string } {
   if (field.key !== schema.primaryCodeField || samples.length === 0) {
     return { score: 0, reason: '' };
@@ -199,7 +195,7 @@ export function suggestMappings(
   fields: MasterFieldDef[],
   sheet: ParsedSheet,
   currentMapping: ColumnMapping,
-  primaryCodeField?: string,
+  primaryCodeField?: string
 ): Map<string, FieldSuggestion[]> {
   const result = new Map<string, FieldSuggestion[]>();
 
@@ -234,8 +230,7 @@ export function suggestMappings(
       const enumOv = scoreEnumOverlap(field, samples);
       const uniq = scoreUniqueness(field, schemaInfo, samples);
 
-      const combined =
-        0.4 * name.score + 0.3 * type.score + 0.2 * enumOv.score + 0.1 * uniq.score;
+      const combined = 0.4 * name.score + 0.3 * type.score + 0.2 * enumOv.score + 0.1 * uniq.score;
 
       if (combined < 0.3) continue;
 

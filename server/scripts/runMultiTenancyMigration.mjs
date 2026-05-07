@@ -15,7 +15,10 @@ import { fileURLToPath } from 'node:url';
 import mysql from 'mysql2/promise';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MIGRATION_SQL = join(__dirname, '../../sql/mysql/migrations/20260421_multi_tenant_entity.sql');
+const MIGRATION_SQL = join(
+  __dirname,
+  '../../sql/mysql/migrations/20260421_multi_tenant_entity.sql'
+);
 
 const ALTERED_OR_NEW = [
   'tenants (new)',
@@ -29,7 +32,10 @@ const ALTERED_OR_NEW = [
   'invoices',
 ];
 
-const SKIPPED = ['users (not in schema — use `user_master`.`user_master`)', 'grn (no table in this codebase)'];
+const SKIPPED = [
+  'users (not in schema — use `user_master`.`user_master`)',
+  'grn (no table in this codebase)',
+];
 
 function buildSslConfig() {
   const sslMode = (process.env.MYSQL_SSL_MODE ?? 'required').toLowerCase();
@@ -67,7 +73,9 @@ async function main() {
   console.log('\nSQL file:', MIGRATION_SQL);
 
   if (process.env.MIGRATE_DRY_RUN === '1') {
-    console.log('\nMIGRATE_DRY_RUN=1 — not connecting. Backward compatible: additive DDL/DML only, no DROP.');
+    console.log(
+      '\nMIGRATE_DRY_RUN=1 — not connecting. Backward compatible: additive DDL/DML only, no DROP.'
+    );
     return;
   }
 
@@ -103,7 +111,10 @@ async function main() {
       )
     );
     reports.push(
-      await countRows(conn, `SELECT COUNT(*) AS n FROM vendors WHERE tenant_id = 'tenant-default-001'`)
+      await countRows(
+        conn,
+        `SELECT COUNT(*) AS n FROM vendors WHERE tenant_id = 'tenant-default-001'`
+      )
     );
     reports.push(
       await countRows(
@@ -112,7 +123,10 @@ async function main() {
       )
     );
     reports.push(
-      await countRows(conn, `SELECT COUNT(*) AS n FROM invoices WHERE tenant_id = 'tenant-default-001'`)
+      await countRows(
+        conn,
+        `SELECT COUNT(*) AS n FROM invoices WHERE tenant_id = 'tenant-default-001'`
+      )
     );
     reports.push(await countRows(conn, 'SELECT COUNT(*) AS n FROM user_entity_access'));
     reports.push(await countRows(conn, 'SELECT COUNT(*) AS n FROM tenants'));
@@ -134,7 +148,9 @@ async function main() {
       console.log(`  ${label}: ${row && 'n' in row ? row.n : 'n/a'}`);
     });
 
-    console.log('\nBackward compatible: existing columns unchanged; new columns nullable until app enforces filters.');
+    console.log(
+      '\nBackward compatible: existing columns unchanged; new columns nullable until app enforces filters.'
+    );
     console.log('Default IDs: tenant_id=tenant-default-001, entity_id=entity-default-001');
   } catch (err) {
     console.error('\nMigration error:', err.message || err);

@@ -1,8 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  ArrowLeft, CheckCircle, XCircle, MessageSquare,
-  FileText, Building2, Calendar, DollarSign, Package
+import {
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+  MessageSquare,
+  FileText,
+  Building2,
+  Calendar,
+  DollarSign,
+  Package,
 } from 'lucide-react';
 import { AIAssurancePanel } from './AIAssurancePanel';
 
@@ -35,7 +42,7 @@ export function InvoiceApprovalScreenV2() {
     currency: 'INR',
     submittedBy: 'John Doe',
     submittedDate: '2024-12-11 11:00 AM',
-    agingDays: 2
+    agingDays: 2,
   };
 
   const handleApprove = () => {
@@ -66,22 +73,32 @@ export function InvoiceApprovalScreenV2() {
   };
 
   return (
-    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="flex flex-col">
+    <div
+      style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}
+      className="flex flex-col"
+    >
       {/* Sticky Action Bar */}
-      <div className="sticky top-0 z-10 bg-white shadow-sm" style={{ borderBottom: '2px solid var(--color-silver)' }}>
+      <div
+        className="sticky top-0 z-10 bg-white shadow-sm"
+        style={{ borderBottom: '2px solid var(--color-silver)' }}
+      >
         <div className="px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button 
+              <button
                 onClick={() => navigate('/ap/invoices-for-approval')}
-                className="p-2 rounded-lg transition-colors hover:bg-gray-100" 
+                className="p-2 rounded-lg transition-colors hover:bg-gray-100"
                 style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl" style={{ color: 'var(--color-ink)' }}>Invoice Approval</h1>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.invoiceNumber}</p>
+                <h1 className="text-2xl" style={{ color: 'var(--color-ink)' }}>
+                  Invoice Approval
+                </h1>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                  {invoice.invoiceNumber}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -119,12 +136,22 @@ export function InvoiceApprovalScreenV2() {
         {/* Invoice Details */}
         <div className="flex-1 p-8 overflow-y-auto">
           {/* Invoice Header */}
-          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: 'var(--color-silver)' }}>
-            <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Invoice Details</h2>
-            
+          <div
+            className="bg-white rounded-xl border-2 p-6 mb-6"
+            style={{ borderColor: 'var(--color-silver)' }}
+          >
+            <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>
+              Invoice Details
+            </h2>
+
             <div className="grid grid-cols-3 gap-6">
               <div>
-                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Number</label>
+                <label
+                  className="text-sm mb-1 block"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Invoice Number
+                </label>
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[var(--color-teal)]" />
                   <span style={{ color: 'var(--color-ink)' }}>{invoice.invoiceNumber}</span>
@@ -132,18 +159,30 @@ export function InvoiceApprovalScreenV2() {
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</label>
+                <label
+                  className="text-sm mb-1 block"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Vendor
+                </label>
                 <div className="flex items-center gap-2">
                   <Building2 className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   <div>
                     <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorName}</p>
-                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.vendorCode}</p>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                      {invoice.vendorCode}
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Date</label>
+                <label
+                  className="text-sm mb-1 block"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Invoice Date
+                </label>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   <span style={{ color: 'var(--color-ink)' }}>{invoice.invoiceDate}</span>
@@ -151,7 +190,12 @@ export function InvoiceApprovalScreenV2() {
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>PO Number</label>
+                <label
+                  className="text-sm mb-1 block"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  PO Number
+                </label>
                 <div className="flex items-center gap-2">
                   <Package className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   <span style={{ color: 'var(--color-ink)' }}>{invoice.poNumber}</span>
@@ -159,7 +203,12 @@ export function InvoiceApprovalScreenV2() {
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>GRN Number</label>
+                <label
+                  className="text-sm mb-1 block"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  GRN Number
+                </label>
                 <div className="flex items-center gap-2">
                   <Package className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   <span style={{ color: 'var(--color-ink)' }}>{invoice.grnNumber}</span>
@@ -167,37 +216,67 @@ export function InvoiceApprovalScreenV2() {
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Payment Terms</label>
+                <label
+                  className="text-sm mb-1 block"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Payment Terms
+                </label>
                 <span style={{ color: 'var(--color-ink)' }}>{invoice.paymentTerms}</span>
               </div>
             </div>
           </div>
 
           {/* Amount Details */}
-          <div className="bg-white rounded-xl border-2 p-6 mb-6" style={{ borderColor: 'var(--color-silver)' }}>
-            <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Amount Breakdown</h2>
-            
+          <div
+            className="bg-white rounded-xl border-2 p-6 mb-6"
+            style={{ borderColor: 'var(--color-silver)' }}
+          >
+            <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>
+              Amount Breakdown
+            </h2>
+
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <div
+                className="flex justify-between items-center p-3 rounded-lg"
+                style={{ backgroundColor: 'var(--color-cloud)' }}
+              >
                 <span style={{ color: 'var(--color-mercury-grey)' }}>Invoice Amount</span>
-                <span className="text-lg" style={{ color: 'var(--color-ink)' }}>₹{invoice.invoiceAmount.toLocaleString('en-IN')}</span>
+                <span className="text-lg" style={{ color: 'var(--color-ink)' }}>
+                  ₹{invoice.invoiceAmount.toLocaleString('en-IN')}
+                </span>
               </div>
-              
-              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+
+              <div
+                className="flex justify-between items-center p-3 rounded-lg"
+                style={{ backgroundColor: 'var(--color-cloud)' }}
+              >
                 <span style={{ color: 'var(--color-mercury-grey)' }}>GST</span>
-                <span className="text-lg" style={{ color: 'var(--color-ink)' }}>₹{invoice.gstAmount.toLocaleString('en-IN')}</span>
+                <span className="text-lg" style={{ color: 'var(--color-ink)' }}>
+                  ₹{invoice.gstAmount.toLocaleString('en-IN')}
+                </span>
               </div>
-              
-              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+
+              <div
+                className="flex justify-between items-center p-3 rounded-lg"
+                style={{ backgroundColor: 'var(--color-cloud)' }}
+              >
                 <span style={{ color: 'var(--color-mercury-grey)' }}>TDS (Deducted)</span>
-                <span className="text-lg" style={{ color: 'var(--color-error-dark)' }}>-₹{invoice.tdsAmount.toLocaleString('en-IN')}</span>
+                <span className="text-lg" style={{ color: 'var(--color-error-dark)' }}>
+                  -₹{invoice.tdsAmount.toLocaleString('en-IN')}
+                </span>
               </div>
-              
+
               <div className="border-t-2 pt-3" style={{ borderColor: 'var(--color-silver)' }}>
-                <div className="flex justify-between items-center p-4 rounded-lg" style={{ backgroundColor: 'var(--color-teal)10' }}>
+                <div
+                  className="flex justify-between items-center p-4 rounded-lg"
+                  style={{ backgroundColor: 'var(--color-teal)10' }}
+                >
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-6 h-6 text-[var(--color-teal)]" />
-                    <span className="text-lg" style={{ color: 'var(--color-ink)' }}>Net Payable</span>
+                    <span className="text-lg" style={{ color: 'var(--color-ink)' }}>
+                      Net Payable
+                    </span>
                   </div>
                   <span className="text-2xl" style={{ color: 'var(--color-teal)' }}>
                     ₹{invoice.netPayable.toLocaleString('en-IN')}
@@ -208,8 +287,13 @@ export function InvoiceApprovalScreenV2() {
           </div>
 
           {/* Approver Comments */}
-          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
-            <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Approver Comments</h2>
+          <div
+            className="bg-white rounded-xl border-2 p-6"
+            style={{ borderColor: 'var(--color-silver)' }}
+          >
+            <h2 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>
+              Approver Comments
+            </h2>
             <textarea
               value={comments}
               onChange={(e) => setComments(e.target.value)}
@@ -221,7 +305,7 @@ export function InvoiceApprovalScreenV2() {
         </div>
 
         {/* AI Assurance Panel */}
-        <AIAssurancePanel 
+        <AIAssurancePanel
           invoiceId={id || 'INV-001'}
           invoiceData={{
             ...invoice,
@@ -259,7 +343,7 @@ export function InvoiceApprovalScreenV2() {
             duplicateInvoiceDate: null,
             duplicateInvoiceAmount: null,
             createdBy: invoice.submittedBy,
-            createdDate: invoice.submittedDate
+            createdDate: invoice.submittedDate,
           }}
           onActionTaken={(action, insight) => {
             console.log('Action taken:', action, insight);
@@ -271,7 +355,9 @@ export function InvoiceApprovalScreenV2() {
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Reject Invoice</h3>
+            <h3 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>
+              Reject Invoice
+            </h3>
             <p className="mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
               Please provide a reason for rejecting this invoice:
             </p>
@@ -306,7 +392,9 @@ export function InvoiceApprovalScreenV2() {
       {showSendBackModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>Send Back Invoice</h3>
+            <h3 className="text-xl mb-4" style={{ color: 'var(--color-ink)' }}>
+              Send Back Invoice
+            </h3>
             <p className="mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
               Provide comments for the submitter:
             </p>

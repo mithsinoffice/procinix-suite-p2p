@@ -19,7 +19,10 @@ import { fileURLToPath } from 'node:url';
 import mysql from 'mysql2/promise';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MIGRATION_SQL = join(__dirname, '../../sql/mysql/migrations/20260424_ws1a_2a_baseline_schema.sql');
+const MIGRATION_SQL = join(
+  __dirname,
+  '../../sql/mysql/migrations/20260424_ws1a_2a_baseline_schema.sql'
+);
 
 const BASELINE_TABLES = [
   'vendors',
@@ -93,9 +96,13 @@ async function main() {
       console.log(`  ${table}: ${existingSet.has(table) ? 'EXISTS' : 'MISSING'}`);
     }
     if (missing.length === 0) {
-      console.log(`\nSummary: ${BASELINE_TABLES.length}/${BASELINE_TABLES.length} tables already exist — SQL batch will be pure no-op.`);
+      console.log(
+        `\nSummary: ${BASELINE_TABLES.length}/${BASELINE_TABLES.length} tables already exist — SQL batch will be pure no-op.`
+      );
     } else {
-      console.log(`\nSummary: ${existingSet.size}/${BASELINE_TABLES.length} tables exist. Will CREATE: ${missing.join(', ')}.`);
+      console.log(
+        `\nSummary: ${existingSet.size}/${BASELINE_TABLES.length} tables exist. Will CREATE: ${missing.join(', ')}.`
+      );
     }
 
     if (process.env.MIGRATE_DRY_RUN === '1') {

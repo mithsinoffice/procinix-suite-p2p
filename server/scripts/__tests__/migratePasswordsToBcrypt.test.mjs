@@ -70,9 +70,7 @@ describe('migratePasswordsToBcrypt', () => {
   });
 
   it('skips row that already has passwordHash', async () => {
-    vi.mocked(query).mockResolvedValueOnce([
-      makeRow(3, { passwordHash: '$2b$12$existing_hash' }),
-    ]);
+    vi.mocked(query).mockResolvedValueOnce([makeRow(3, { passwordHash: '$2b$12$existing_hash' })]);
 
     const { migrated, skipped } = await run({ dryRun: false });
 

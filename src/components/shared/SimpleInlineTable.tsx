@@ -69,11 +69,17 @@ export function SimpleInlineTable({
 }: SimpleInlineTableProps) {
   if (rows.length === 0) {
     return (
-      <div style={{
-        padding: '24px 16px', textAlign: 'center', fontSize: 13,
-        color: 'var(--color-mercury-grey)',
-        border: '1px dashed var(--color-silver)', borderRadius: 8, backgroundColor: '#FAFBFC',
-      }}>
+      <div
+        style={{
+          padding: '24px 16px',
+          textAlign: 'center',
+          fontSize: 13,
+          color: 'var(--color-mercury-grey)',
+          border: '1px dashed var(--color-silver)',
+          borderRadius: 8,
+          backgroundColor: '#FAFBFC',
+        }}
+      >
         {emptyMessage}
       </div>
     );
@@ -124,7 +130,9 @@ export function SimpleInlineTable({
                 if (c.type === 'readonly') {
                   return (
                     <td key={c.key} style={tdStyle}>
-                      <span style={{ color: 'var(--color-mercury-grey)' }}>{String(value || '—')}</span>
+                      <span style={{ color: 'var(--color-mercury-grey)' }}>
+                        {String(value || '—')}
+                      </span>
                     </td>
                   );
                 }
@@ -138,7 +146,9 @@ export function SimpleInlineTable({
                       >
                         <option value="">{c.placeholder || 'Select...'}</option>
                         {c.options?.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
                         ))}
                       </select>
                     </td>
@@ -151,7 +161,12 @@ export function SimpleInlineTable({
                         type="checkbox"
                         checked={Boolean(value)}
                         onChange={(e) => onRowChange(idx, c.key, e.target.checked)}
-                        style={{ accentColor: 'var(--color-teal)', cursor: 'pointer', width: 16, height: 16 }}
+                        style={{
+                          accentColor: 'var(--color-teal)',
+                          cursor: 'pointer',
+                          width: 16,
+                          height: 16,
+                        }}
                       />
                     </td>
                   );
@@ -169,9 +184,7 @@ export function SimpleInlineTable({
                 );
               })}
               {renderRowActions && (
-                <td style={{ ...cellStyle, textAlign: 'left' }}>
-                  {renderRowActions(row, idx)}
-                </td>
+                <td style={{ ...cellStyle, textAlign: 'left' }}>{renderRowActions(row, idx)}</td>
               )}
               {onRemoveRow && (
                 <td style={{ ...cellStyle, textAlign: 'center' }}>
@@ -179,12 +192,22 @@ export function SimpleInlineTable({
                     type="button"
                     onClick={() => onRemoveRow(idx)}
                     style={{
-                      background: 'transparent', border: 'none', cursor: 'pointer',
-                      padding: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 4,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       color: 'var(--color-mercury-grey)',
                     }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#DC2626'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-mercury-grey)'; }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.color = '#DC2626';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.color =
+                        'var(--color-mercury-grey)';
+                    }}
                     title="Remove row"
                   >
                     <Trash2 style={{ width: 16, height: 16 }} />
@@ -205,13 +228,24 @@ export function AddRowButton({ label, onClick }: { label: string; onClick: () =>
       type="button"
       onClick={onClick}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-        border: '1px solid #9FE8EE', backgroundColor: '#FFFFFF',
-        color: '#007D87', cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '7px 14px',
+        borderRadius: 8,
+        fontSize: 12,
+        fontWeight: 600,
+        border: '1px solid #9FE8EE',
+        backgroundColor: '#FFFFFF',
+        color: '#007D87',
+        cursor: 'pointer',
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#E6FBFD'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#FFFFFF'; }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#E6FBFD';
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#FFFFFF';
+      }}
     >
       <span style={{ fontSize: 14, lineHeight: 1 }}>+</span> {label}
     </button>

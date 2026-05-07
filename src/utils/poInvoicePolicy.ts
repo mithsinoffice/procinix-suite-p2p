@@ -26,4 +26,3 @@ export function deriveApprovalMatrix(
   }
   return [policy.l1Approver, policy.l2Approver, policy.cfoApprover];
 }
-

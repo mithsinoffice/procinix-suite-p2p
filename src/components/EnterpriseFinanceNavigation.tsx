@@ -12,18 +12,17 @@ import {
 } from 'lucide-react';
 import { useFinanceRBAC } from '../contexts/FinanceRBACContext';
 import { useAuth } from '../contexts/AuthContext';
-import { financeNavigationConfig, globalNavigationConfig, FinanceNavModule } from '../config/financeNavigationConfig';
+import {
+  financeNavigationConfig,
+  globalNavigationConfig,
+  FinanceNavModule,
+} from '../config/financeNavigationConfig';
 
 export function EnterpriseFinanceNavigation() {
   const location = useLocation();
   const { user } = useAuth();
-  const { 
-    currentRole, 
-    currentCompany, 
-    availableCompanies,
-    switchCompany,
-    hasAnyPermission,
-  } = useFinanceRBAC();
+  const { currentRole, currentCompany, availableCompanies, switchCompany, hasAnyPermission } =
+    useFinanceRBAC();
 
   // Only one pillar can be expanded at a time
   const [expandedPillar, setExpandedPillar] = useState<string>('AP');
@@ -51,8 +50,8 @@ export function EnterpriseFinanceNavigation() {
     }
 
     // Check if user has CREATE permission
-    const hasCreate = module.requiredPerm.some(perm => 
-      perm.includes('.CREATE') && hasAnyPermission([perm])
+    const hasCreate = module.requiredPerm.some(
+      (perm) => perm.includes('.CREATE') && hasAnyPermission([perm])
     );
 
     return !hasCreate; // View-only if no CREATE permission
@@ -79,7 +78,7 @@ export function EnterpriseFinanceNavigation() {
             style={{
               backgroundColor: isModuleExpanded ? '#3a4a52' : 'transparent',
               color: '#B8C5CE',
-              justifyContent: 'flex-start'
+              justifyContent: 'flex-start',
             }}
             onMouseEnter={(e) => {
               if (!isModuleExpanded) {
@@ -92,10 +91,7 @@ export function EnterpriseFinanceNavigation() {
               }
             }}
           >
-            <module.icon 
-              className="w-4.5 h-4.5 flex-shrink-0" 
-              style={{ strokeWidth: 2 }} 
-            />
+            <module.icon className="w-4.5 h-4.5 flex-shrink-0" style={{ strokeWidth: 2 }} />
             {!isCollapsed && (
               <>
                 <span className="text-sm flex-1" style={{ fontWeight: '400' }}>
@@ -109,7 +105,7 @@ export function EnterpriseFinanceNavigation() {
               </>
             )}
           </button>
-          
+
           {/* Submodules */}
           {isModuleExpanded && !isCollapsed && (
             <div className="pl-8">
@@ -117,9 +113,9 @@ export function EnterpriseFinanceNavigation() {
                 if (!hasAnyPermission(submodule.requiredPerm)) {
                   return null;
                 }
-                
+
                 const isSubActive = isActiveRoute(submodule.route);
-                
+
                 return (
                   <Link
                     key={submodule.key}
@@ -127,10 +123,12 @@ export function EnterpriseFinanceNavigation() {
                     className="flex items-center gap-3 px-4 py-2 transition-all duration-200 group"
                     style={{
                       backgroundColor: isSubActive ? 'var(--color-teal)20' : 'transparent',
-                      borderLeft: isSubActive ? '2px solid var(--color-teal)' : '2px solid transparent',
+                      borderLeft: isSubActive
+                        ? '2px solid var(--color-teal)'
+                        : '2px solid transparent',
                       marginLeft: '0',
                       paddingLeft: isSubActive ? '14px' : '16px',
-                      color: isSubActive ? 'var(--color-teal)' : '#B8C5CE'
+                      color: isSubActive ? 'var(--color-teal)' : '#B8C5CE',
                     }}
                     onMouseEnter={(e) => {
                       if (!isSubActive) {
@@ -143,14 +141,8 @@ export function EnterpriseFinanceNavigation() {
                       }
                     }}
                   >
-                    <submodule.icon 
-                      className="w-4 h-4 flex-shrink-0" 
-                      style={{ strokeWidth: 2 }} 
-                    />
-                    <span 
-                      className="text-sm"
-                      style={{ fontWeight: isSubActive ? '600' : '400' }}
-                    >
+                    <submodule.icon className="w-4 h-4 flex-shrink-0" style={{ strokeWidth: 2 }} />
+                    <span className="text-sm" style={{ fontWeight: isSubActive ? '600' : '400' }}>
                       {submodule.label}
                     </span>
                   </Link>
@@ -174,7 +166,7 @@ export function EnterpriseFinanceNavigation() {
           marginLeft: '0',
           paddingLeft: isActive ? '13px' : '16px',
           justifyContent: isCollapsed ? 'center' : 'flex-start',
-          color: isActive ? 'var(--color-teal)' : '#B8C5CE'
+          color: isActive ? 'var(--color-teal)' : '#B8C5CE',
         }}
         onMouseEnter={(e) => {
           if (!isActive) {
@@ -188,26 +180,26 @@ export function EnterpriseFinanceNavigation() {
         }}
         title={isCollapsed ? module.label : ''}
       >
-        <module.icon 
-          className="w-4.5 h-4.5 flex-shrink-0" 
-          style={{ 
-            strokeWidth: 2
-          }} 
+        <module.icon
+          className="w-4.5 h-4.5 flex-shrink-0"
+          style={{
+            strokeWidth: 2,
+          }}
         />
         {!isCollapsed && (
           <>
-            <span 
+            <span
               className="text-sm flex-1"
-              style={{ 
-                fontWeight: isActive ? '600' : '400'
+              style={{
+                fontWeight: isActive ? '600' : '400',
               }}
             >
               {module.label}
             </span>
             {isViewOnly && (
-              <Eye 
-                className="w-3.5 h-3.5" 
-                style={{ color: 'var(--color-slate)' }} 
+              <Eye
+                className="w-3.5 h-3.5"
+                style={{ color: 'var(--color-slate)' }}
                 aria-label="View Only Access"
               />
             )}
@@ -218,18 +210,24 @@ export function EnterpriseFinanceNavigation() {
   };
 
   return (
-    <div 
+    <div
       className="flex flex-col h-full transition-all duration-300"
-      style={{ 
+      style={{
         width: isCollapsed ? '64px' : '280px',
         backgroundColor: '#2A3A42',
-        borderRight: '1px solid #1a2832'
+        borderRight: '1px solid #1a2832',
       }}
     >
       {/* Collapse Toggle */}
-      <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #3a4a52' }}>
+      <div
+        className="px-4 py-3 flex items-center justify-between"
+        style={{ borderBottom: '1px solid #3a4a52' }}
+      >
         {!isCollapsed && (
-          <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
+          <span
+            className="text-xs uppercase tracking-wider"
+            style={{ color: 'var(--color-slate)', fontWeight: '600' }}
+          >
             Navigation
           </span>
         )}
@@ -237,15 +235,11 @@ export function EnterpriseFinanceNavigation() {
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-1.5 rounded-lg transition-colors"
           style={{ color: 'var(--color-slate)' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a4a52'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#3a4a52')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           title={isCollapsed ? 'Expand' : 'Collapse'}
         >
-          {isCollapsed ? (
-            <PanelLeft className="w-4 h-4" />
-          ) : (
-            <PanelLeftClose className="w-4 h-4" />
-          )}
+          {isCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
         </button>
       </div>
 
@@ -256,7 +250,7 @@ export function EnterpriseFinanceNavigation() {
           const isExpanded = expandedPillar === pillar.key;
 
           // Filter accessible modules
-          const accessibleModules = pillar.modules.filter(module => 
+          const accessibleModules = pillar.modules.filter((module) =>
             hasAnyPermission(module.requiredPerm)
           );
 
@@ -274,7 +268,7 @@ export function EnterpriseFinanceNavigation() {
                 style={{
                   backgroundColor: isExpanded ? '#3a4a52' : 'transparent',
                   color: isExpanded ? '#FFFFFF' : 'var(--color-slate)',
-                  justifyContent: isCollapsed ? 'center' : 'space-between'
+                  justifyContent: isCollapsed ? 'center' : 'space-between',
                 }}
                 onMouseEnter={(e) => {
                   if (!isExpanded) e.currentTarget.style.backgroundColor = '#3a4a52';
@@ -285,26 +279,32 @@ export function EnterpriseFinanceNavigation() {
                 title={isCollapsed ? pillar.label : ''}
               >
                 <div className="flex items-center gap-3">
-                  <PillarIcon className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--color-teal)' }} />
+                  <PillarIcon
+                    className="w-5 h-5 flex-shrink-0"
+                    style={{ color: 'var(--color-teal)' }}
+                  />
                   {!isCollapsed && (
-                    <span style={{ fontWeight: '600', fontSize: '14px' }}>
-                      {pillar.label}
-                    </span>
+                    <span style={{ fontWeight: '600', fontSize: '14px' }}>{pillar.label}</span>
                   )}
                 </div>
-                {!isCollapsed && (
-                  isExpanded ? (
-                    <ChevronDown className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }} />
+                {!isCollapsed &&
+                  (isExpanded ? (
+                    <ChevronDown
+                      className="w-4 h-4"
+                      style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }}
+                    />
                   ) : (
-                    <ChevronRight className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }} />
-                  )
-                )}
+                    <ChevronRight
+                      className="w-4 h-4"
+                      style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }}
+                    />
+                  ))}
               </button>
 
               {/* Pillar Content */}
               {isExpanded && (
                 <div className="py-2">
-                  {accessibleModules.map(module => renderModule(module))}
+                  {accessibleModules.map((module) => renderModule(module))}
                 </div>
               )}
             </div>
@@ -316,12 +316,15 @@ export function EnterpriseFinanceNavigation() {
       <div className="p-4" style={{ borderTop: '1px solid #3a4a52' }}>
         {!isCollapsed && (
           <div className="mb-2 px-2">
-            <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
+            <span
+              className="text-xs uppercase tracking-wider"
+              style={{ color: 'var(--color-slate)', fontWeight: '600' }}
+            >
               Global
             </span>
           </div>
         )}
-        {globalNavigationConfig.map(section => {
+        {globalNavigationConfig.map((section) => {
           // Hide if no permission
           if (!hasAnyPermission(section.requiredPerm)) {
             return null;
@@ -337,7 +340,7 @@ export function EnterpriseFinanceNavigation() {
               style={{
                 backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
                 color: isActive ? 'var(--color-teal)' : '#B8C5CE',
-                justifyContent: isCollapsed ? 'center' : 'flex-start'
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) e.currentTarget.style.backgroundColor = '#3a4a52';
@@ -354,12 +357,12 @@ export function EnterpriseFinanceNavigation() {
                     {section.label}
                   </span>
                   {section.badge && section.badge > 0 && (
-                    <span 
+                    <span
                       className="px-2 py-0.5 rounded-full text-xs"
-                      style={{ 
+                      style={{
                         backgroundColor: '#EF4444',
                         color: '#FFFFFF',
-                        fontWeight: '600'
+                        fontWeight: '600',
                       }}
                     >
                       {section.badge}
