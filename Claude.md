@@ -140,6 +140,7 @@ No integration tests, no E2E tests, no component tests.
 7. Type errors are not allowed in any file you touch — fix them even if pre-existing.
 8. Every new server feature needs at least one vitest test in the matching `__tests__` folder.
 9. Multi-tenant: any new AP endpoint must require `X-Tenant-Id` and scope queries by `tenant_id`.
+10. Auth state lives in `sessionStorage` under `'procinix.session.token'`. After any auth-related code change, do a hard reload (Cmd+Shift+R) and clear sessionStorage in DevTools to test fresh login. Stale tokens from previous sessions can mask real bugs.
 
 ## Open decisions (need human answer)
 - Password migration: **bcrypt** or argon2? Default to bcrypt unless told otherwise.
@@ -199,3 +200,4 @@ After login, DevTools console: `[AuthContext] post-merge user: { tenantId: 'tena
 - 2026-05-07 — Tier-0 quick wins: B6 (xlsx pinned to npm ^0.18.5), F2 (react-router/dom pinned to 7.13.0, clsx + tailwind-merge unpinned from *), F6 (54 stale src/*.md files → docs/legacy/), W6 (port 5173 ref removed from CORS comment → 3000), B3 (prod API_SECRET_KEY guard added to validateEnv + 4 new tests). Tests: 318 passing.
 - 2026-05-07 — B2+B1 done: 5 users migrated to bcrypt; POST /api/auth/login + sessions table live; first route module at server/routes/auth.mjs (B4 starts organically). Old client-side login still works in parallel until F1.
 - 2026-05-07 — F1 done: client-side password compare removed; AuthContext uses POST /api/auth/login + session token in sessionStorage; GET /api/auth/me for rehydration; POST /api/auth/logout revokes session; fetchContext/getUserById/revokeSession added to loginService; isAuthenticated always attempts session lookup even when API_SECRET_KEY unset. Files: server/services/auth/loginService.mjs, server/routes/auth.mjs, server/__tests__/loginRoute.test.mjs, server/services/auth/__tests__/loginService.test.mjs, src/lib/mysql/client.ts, src/contexts/AuthContext.tsx, server/index.mjs. Tests: 359 passing.
+- 2026-05-07 — F1 verified working in browser. Login flow: POST /auth/login → token in sessionStorage → /auth/me rehydrates → /auth/logout revokes. Plaintext password issue closed end-to-end.
