@@ -49,7 +49,7 @@ import { triggerWorkflow } from './services/invoiceIngestion/workflowTrigger.mjs
 import { mapLegacyToLifecycle, mapProcessingStatusToLifecycle, LIFECYCLE_STATES } from './services/invoices/lifecycleMapping.mjs';
 import { assertValidTransition } from './services/invoices/lifecycleTransitions.mjs';
 import { processMatch } from './services/agents/matchAgent.mjs';
-import { processInvoiceWithAgents } from './services/agents/orchestrator.mjs';
+import { processInvoiceWithAgents, startAgentRetryScheduler, stopAgentRetryScheduler, resetAndRequeueInvoice } from './services/agents/orchestrator.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import { verifyPAN, verifyPANComprehensive, verifyGSTIN, verifyBankAccount, verifyMSME } from './services/kyc/panVerification.mjs';
 import { getForceClosurePreview, forceclosePO } from './services/po/forceClosure.mjs';
@@ -67,6 +67,17 @@ import {
   startApprovalSyncLoop,
   triggerApprovalSync,
 } from './services/approvals/approvalService.mjs';
+import {
+  listPayableInvoices,
+  listPaymentBatches,
+  getPaymentBatchDetail,
+  createPaymentBatch,
+  submitPaymentBatch,
+  approvePaymentBatch,
+  rejectPaymentBatch,
+  executePaymentBatch,
+} from './services/payments/paymentBatches.mjs';
+import { getPaymentsDashboardPayload } from './services/payments/paymentsDashboard.mjs';
 import {
   assertSuperAdminRequest,
   buildPlatformContext,
@@ -278,7 +289,7 @@ const MASTER_WORKFLOW_TARGETS = new Set([
 function sendJson(res, statusCode, payload) {
   const headers = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Email',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Email, X-Tenant-Id, X-Entity-Id, X-User-Name, X-User-Id',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   };
   if (res._corsOrigin) {
@@ -295,6 +306,23 @@ function getRequestUserId(req) {
     return explicitUser.trim();
   }
   return '1';
+}
+
+function readApTenantId(req, url, body = {}) {
+  const h = req.headers['x-tenant-id'] ?? req.headers['X-Tenant-Id'];
+  if (h && String(h).trim()) return String(h).trim();
+  if (body?.tenantId && String(body.tenantId).trim()) return String(body.tenantId).trim();
+  const q = url?.searchParams?.get?.('tenantId');
+  if (q && String(q).trim()) return String(q).trim();
+  return '';
+}
+
+function readActorEmail(req) {
+  return String(req.headers['x-user-email'] ?? req.headers['X-User-Email'] ?? '').trim();
+}
+
+function readActorName(req) {
+  return String(req.headers['x-user-name'] ?? req.headers['X-User-Name'] ?? '').trim();
 }
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -867,7 +895,7 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'OPTIONS') {
     const headers = {
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Email',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-User-Email, X-Tenant-Id, X-Entity-Id, X-User-Name, X-User-Id',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Max-Age': '86400',
     };
@@ -2436,6 +2464,126 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true, data: { ...updated, line_items: updatedLines } });
     }
 
+    // ── AP Payment batches (payable list → proposal → batch → approve → execute → payments) ──
+    if (req.method === 'GET' && pathname === '/api/ap/payable-invoices') {
+      const tenantId = readApTenantId(req, url);
+      const entityId = url.searchParams.get('entityId') || String(req.headers['x-entity-id'] ?? '').trim() || null;
+      if (!tenantId) {
+        return sendJson(res, 400, { success: false, error: 'tenant_required' });
+      }
+      try {
+        const data = await listPayableInvoices({ tenantId, entityId });
+        return sendJson(res, 200, { success: true, data });
+      } catch (e) {
+        return sendJson(res, e.statusCode || 500, { success: false, error: e.message });
+      }
+    }
+
+    if (req.method === 'GET' && pathname === '/api/ap/payments-dashboard') {
+      const tenantId = readApTenantId(req, url);
+      const entityId = url.searchParams.get('entityId') || String(req.headers['x-entity-id'] ?? '').trim() || null;
+      if (!tenantId) {
+        return sendJson(res, 400, { success: false, error: 'tenant_required' });
+      }
+      try {
+        const data = await getPaymentsDashboardPayload({ tenantId, entityId });
+        return sendJson(res, 200, { success: true, data });
+      } catch (e) {
+        return sendJson(res, e.statusCode || 500, { success: false, error: e.message });
+      }
+    }
+
+    if (req.method === 'GET' && pathname === '/api/ap/payment-batches') {
+      const tenantId = readApTenantId(req, url);
+      if (!tenantId) {
+        return sendJson(res, 400, { success: false, error: 'tenant_required' });
+      }
+      try {
+        const data = await listPaymentBatches({ tenantId });
+        return sendJson(res, 200, { success: true, data });
+      } catch (e) {
+        return sendJson(res, e.statusCode || 500, { success: false, error: e.message });
+      }
+    }
+
+    const paymentBatchDetailRe = /^\/api\/ap\/payment-batches\/([^/]+)$/;
+    if (req.method === 'GET' && paymentBatchDetailRe.test(pathname)) {
+      const tenantId = readApTenantId(req, url);
+      const batchId = pathname.match(paymentBatchDetailRe)[1];
+      if (!tenantId) {
+        return sendJson(res, 400, { success: false, error: 'tenant_required' });
+      }
+      try {
+        const data = await getPaymentBatchDetail({ tenantId, batchId });
+        return sendJson(res, 200, { success: true, data });
+      } catch (e) {
+        return sendJson(res, e.statusCode || 500, { success: false, error: e.message });
+      }
+    }
+
+    if (req.method === 'POST' && pathname === '/api/ap/payment-batches') {
+      const body = await readJsonBody(req);
+      const tenantId = readApTenantId(req, url, body);
+      if (!tenantId) {
+        return sendJson(res, 400, { success: false, error: 'tenant_required' });
+      }
+      try {
+        const result = await createPaymentBatch({
+          tenantId,
+          entityId: body.entityId || null,
+          invoiceIds: Array.isArray(body.invoiceIds) ? body.invoiceIds.map(String) : [],
+          amountsByInvoiceId: body.amounts && typeof body.amounts === 'object' ? body.amounts : null,
+          createdByEmail: readActorEmail(req) || body.createdByEmail || null,
+          createdByName: readActorName(req) || body.createdByName || null,
+        });
+        return sendJson(res, 201, { success: true, data: result });
+      } catch (e) {
+        return sendJson(res, e.statusCode || 500, { success: false, error: e.message, invoiceIds: e.invoiceIds });
+      }
+    }
+
+    const paymentBatchActionRe = /^\/api\/ap\/payment-batches\/([^/]+)\/(submit|approve|reject|execute)$/;
+    if (req.method === 'POST' && paymentBatchActionRe.test(pathname)) {
+      const [, batchId, action] = pathname.match(paymentBatchActionRe);
+      const body = await readJsonBody(req);
+      const tenantId = readApTenantId(req, url, body);
+      if (!tenantId) {
+        return sendJson(res, 400, { success: false, error: 'tenant_required' });
+      }
+      try {
+        if (action === 'submit') {
+          await submitPaymentBatch({ tenantId, batchId, actorEmail: readActorEmail(req) });
+          return sendJson(res, 200, { success: true });
+        }
+        if (action === 'approve') {
+          await approvePaymentBatch({
+            tenantId,
+            batchId,
+            actorEmail: readActorEmail(req),
+            comments: body.comments || null,
+            paymentDate: body.paymentDate || null,
+            paymentMode: body.paymentMode || null,
+          });
+          return sendJson(res, 200, { success: true });
+        }
+        if (action === 'reject') {
+          await rejectPaymentBatch({
+            tenantId,
+            batchId,
+            actorEmail: readActorEmail(req),
+            comments: body.comments || 'Rejected',
+          });
+          return sendJson(res, 200, { success: true });
+        }
+        if (action === 'execute') {
+          await executePaymentBatch({ tenantId, batchId, actorEmail: readActorEmail(req) });
+          return sendJson(res, 200, { success: true });
+        }
+      } catch (e) {
+        return sendJson(res, e.statusCode || 500, { success: false, error: e.message });
+      }
+    }
+
     // ── Enhanced invoice listing ─────────────────────────
     // GET /api/invoices — WS-1a columns + payment progress + filters + pagination
     //
@@ -2859,6 +3007,13 @@ const server = http.createServer(async (req, res) => {
       if (logs.length === 0) return sendJson(res, 404, { success: false, error: 'Log not found' });
       await query('UPDATE invoice_ingestion_log SET status = ?, error_message = NULL WHERE id = ?', ['received', logId]);
       return sendJson(res, 200, { success: true, message: 'Queued for reprocessing' });
+    }
+
+    if (req.method === 'POST' && pathname.match(/^\/api\/invoice-ingestion\/agent-retry\/([^/]+)$/)) {
+      const invoiceId = pathname.match(/^\/api\/invoice-ingestion\/agent-retry\/([^/]+)$/)[1];
+      const result = await resetAndRequeueInvoice(invoiceId);
+      if (result === null) return sendJson(res, 404, { success: false, error: 'Invoice not found' });
+      return sendJson(res, 200, { success: true, data: result });
     }
 
     if (req.method === 'POST' && pathname === '/api/invoice-ingestion/manual-upload') {
@@ -3870,6 +4025,7 @@ server.listen(port, host, async () => {
 
   checkGeminiKey();
   startEmailPoller(processInvoiceWithAgents);
+  startAgentRetryScheduler();
   startApprovalSyncLoop(
     {
       execute: async (sql, params = []) => [await query(sql, params)],
@@ -3932,6 +4088,7 @@ server.listen(port, host, async () => {
 
 async function gracefulShutdown(signal) {
   console.log(`\n${signal} received — shutting down gracefully…`);
+  stopAgentRetryScheduler();
   server.close(() => {
     console.log('HTTP server closed');
   });

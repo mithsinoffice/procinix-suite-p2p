@@ -1,18 +1,22 @@
-# Procinix S2P — Claude Code Context
+# Procinix S2P — Claude Code Context (rolling memory)
 
-## Stack
-- **Frontend:** React 18 + TypeScript + Vite 6 (SWC), port 3000 in dev
-- **Backend:** Node.js ESM `http.createServer` (no Express), `server/index.mjs`, port 8787
-- **DB:** Azure MySQL 8 via `mysql2/promise`; credentials in `.env.mysql.local`
-- **AI:** Google Gemini (OCR), Anthropic Claude (agent reasoning)
-- **Email:** `imapflow` IMAP polling + `nodemailer` SMTP
+## Project context (locked-in facts)
+- **Name:** procinix-p2p-automation-erp — P2P/S2P ERP for Indian mid-market AP automation
+- **Stack:** React 18 + Vite 6 + TS frontend, Node ESM raw `http.createServer`, Azure MySQL, Gemini OCR, Anthropic Claude agents, IMAP/SMTP, node-cron
+- **Server entry:** `server/index.mjs` (4 092+ lines, all routes inline — **DO NOT add more inline routes**; new routes go into `server/routes/<domain>.mjs` once we start the split)
+- **Frontend API client invariant:** paths passed to `mysqlApiRequest()` start with `/<route>` NOT `/api/<route>`. `VITE_API_BASE_URL` already ends with `/api`
+- **Multi-tenant:** every AP endpoint requires `X-Tenant-Id` header. `tenantId` comes from `AuthContext` after login
+- **Dev ports:** Vite on `:3000` (per `vite.config.ts`). API server on `:8787`. Any doc that says 5173 is wrong
+- **`npm install` requires internet** — `xlsx` loaded from `cdn.sheetjs.com` (tracked issue, B6)
+- **Tests:** `npm test` (vitest run, no watch). 13 test files, 297 tests
+- **Login today is INSECURE:** `AuthContext.tsx` fetches all users + plaintext passwords to the browser and compares client-side. To be replaced with `POST /api/auth/login` + bcrypt
 
 ## Commands
 ```bash
 npm run dev               # API server + Vite (concurrently, recommended)
 npm run server:mysql      # API server only
 npm run dev:web           # Vite only
-npm test                  # vitest run (unit tests only)
+npm test                  # vitest run (all unit tests)
 npm run typecheck         # tsc --noEmit (frontend only)
 npm run build             # Vite prod build → build/
 npm run start             # Prod: serve API + static from build/
@@ -25,6 +29,7 @@ npm run migrate:tenant-schema  # Apply multi-tenancy migration
 | `server/index.mjs` | 4 092-line monolith — all API routes as inline if/else |
 | `server/mysql.mjs` | MySQL connection pool + `query`, `withTransaction`, `connExecute` helpers |
 | `server/masterStorage.mjs` | Registry of 30+ master table names → DB/table mapping |
+| `server/services/agents/orchestrator.mjs` | Agent pipeline: intake → extraction → vendor → dup → match → tax → coding → routing + retry scheduler |
 | `src/lib/mysql/client.ts` | `mysqlApiRequest(path)` — the frontend API client |
 | `src/lib/mysql/documentStore.ts` | `ensureDomainDocument('domain', fallback)` — JSON blob store |
 | `src/lib/paymentsApi.ts` | Payments dashboard + batch API helpers |
@@ -32,19 +37,10 @@ npm run migrate:tenant-schema  # Apply multi-tenancy migration
 | `src/contexts/APDataContext.tsx` | Invoice list fetched from `/api/invoices` |
 | `src/App.tsx` | React Router route tree |
 | `sql/mysql/init.sql` | Base schema (item_master + erp_master_* tables) |
-| `sql/mysql/migrations/` | 13 date-prefixed migration SQL files |
-
-## URL Construction Rule — CRITICAL
-`VITE_API_BASE_URL` already ends with `/api` (e.g. `http://127.0.0.1:8787/api`).
-**Every path passed to `mysqlApiRequest(path)` must start with `/<route>` — NEVER `/api/<route>`.**
-`/api/<route>` → resolves to `…/api/api/<route>` → HTTP 404.
-
-Vite dev proxy: `/api/*` → `http://localhost:8787` (path preserved). Bare `fetch('/api/foo')` calls work in dev but bypass `mysqlApiRequest` (no auth headers).
+| `sql/mysql/migrations/` | 14 date-prefixed migration SQL files |
 
 ## API Auth
-All endpoints require `Authorization: Bearer <API_SECRET_KEY>`.
-If `API_SECRET_KEY` is unset, auth is **disabled** (dev convenience, footgun in prod).
-AP endpoints additionally require `X-Tenant-Id` header.
+All endpoints require `Authorization: Bearer <API_SECRET_KEY>`. If `API_SECRET_KEY` unset, auth is **disabled** (dev footgun — see B3). AP endpoints additionally require `X-Tenant-Id` header.
 
 ## Data Sources
 | Source | What lives there |
@@ -53,12 +49,16 @@ AP endpoints additionally require `X-Tenant-Id` header.
 | **Domain doc** | PR, PO, GRN, Advances, Debit Notes, Budget (JSON blobs in `domain_documents`) |
 | **Mock/hardcoded** | `EntityTransactionData.tsx`, `DemoVendorDataset.ts` (demo only) |
 
-## Server Route Pattern
-```javascript
-// No framework — inline pathname matching
-if (req.method === 'GET' && pathname === '/api/invoices') { ... }
-if (pathname.match(/^\/api\/invoices\/([^/]+)$/)) { ... }
-```
+## Agent pipeline (orchestrator.mjs)
+8 sequential steps: intake → extraction → vendorIdentity → duplicateFraud → match → taxCompliance → coding → workflowRouting.
+
+Steps 3-8 each wrapped in try/catch (`makeStepRunner`): one failing step uses a safe fallback and continues — does **not** abort the pipeline. Failures are recorded to `invoice_exceptions` (type `AGENT_FAILURE`).
+
+Retry mechanism: `agent_retry_queue` table (CREATE TABLE IF NOT EXISTS). On failure, `scheduleRetry()` upserts a row. `startAgentRetryScheduler()` (started at server boot) calls `processRetryQueue()` every 30 s. Max `MAX_AGENT_RETRIES = 3` attempts with backoff (30 s, 2 min, 10 min). On exhaustion: invoice → `processing_status='agent_failed'`, alert email to `ALERTS_EMAIL || MAIL_FROM`.
+
+Manual retry: `POST /api/invoice-ingestion/agent-retry/:invoiceId` → calls `resetAndRequeueInvoice(invoiceId)`.
+
+Structured metrics: each agent run emits `JSON.stringify({ event: 'agent_run', invoice_id, agent, duration_ms, status, attempt, ts })` to stdout.
 
 ## AP Endpoints (require `X-Tenant-Id`)
 ```
@@ -68,14 +68,8 @@ GET  /api/ap/payable-invoices         invoices ready for payment
 GET  /api/ap/payment-batches          batch list
 POST /api/ap/payment-batches          create batch
 POST /api/ap/payment-batches/:id/submit|approve|reject|execute
+POST /api/invoice-ingestion/agent-retry/:invoiceId    manual agent retry
 ```
-
-## Master Data Pattern
-```
-GET  /api/masters/:masterKey          fetch all records
-PUT  /api/masters/:masterKey          bulk replace
-```
-30+ masters defined in `server/masterStorage.mjs`. Each master has its own MySQL database (e.g. `user_master.user_master`).
 
 ## Module → Component Map
 | Module/Page | Component |
@@ -90,16 +84,12 @@ PUT  /api/masters/:masterKey          bulk replace
 
 ## Tests
 ```
-src/utils/__tests__/          4 unit tests (GST, TDS, journal entries, BOE)
-server/services/invoices/__tests__/  7 unit tests (lifecycle, GST, TDS, vendor ledger)
-server/services/agents/__tests__/   1 unit test (matchAgent — DB mocked)
+src/utils/__tests__/                        4 tests (GST, TDS, journal entries, BOE)
+server/services/invoices/__tests__/         7 tests (lifecycle, GST, TDS, vendor ledger)
+server/services/agents/__tests__/           2 test files: matchAgent + orchestratorRetry (12 tests)
+Total: 13 test files, 297 tests
 ```
 No integration tests, no E2E tests, no component tests.
-
-## Missing Endpoints (not yet built)
-- GET/POST `/api/purchase-orders` (PO data currently in domain_documents)
-- GET/POST `/api/purchase-requisitions`
-- GET/POST `/api/grns`
 
 ## DB State (single-tenant, May 2026)
 - **Tenants:** `tenant-default-001` (all live data) + orphan `4755d4d4-…` (PTPL, no users)
@@ -107,19 +97,88 @@ No integration tests, no E2E tests, no component tests.
 - **Users:** 5 active on `tenant-default-001`. Login: `mithilesh@procinix.ai` / `Demo@123`
 - All 10 invoices on `tenant-default-001 / entity-default-001`
 
-## Known Security Issues
-- **Plaintext passwords** stored in `user_master.payload.password`; compared client-side in `loginFromMasters`. Must hash before production.
-- `loginFromMasters` (AuthContext.tsx:599) downloads all user records to the browser for comparison.
+## Known issues — prioritized fix queue
 
-## Known Remaining Issues
+### Tier 0 (do first)
+- **B3:** refuse to boot in `NODE_ENV=production` without `API_SECRET_KEY`
+- **B6:** pin `xlsx` to a versioned npm package (no CDN URL)
+- **F2:** pin `react-router` and `react-router-dom` (currently `"*"`)
+- **F6:** move stale `.md` files out of `src/` into `docs/`
+- **W6:** reconcile port mismatch (Vite is 3000, not 5173)
+
+### Tier 1 (auth overhaul, in this order)
+- **B2:** bcrypt-hash existing passwords in `user_master` (migration)
+- **B1:** build `POST /api/auth/login` server-side
+- **F1:** replace client-side password compare with `/api/auth/login` call
+
+### Tier 2 (ingestion robustness)
+- ~~**INV-5:** crash-safe agent pipeline (try/catch, retries, alerts)~~ ✅ Done 2026-05-07
+- **INV-6:** validate API keys (`GOOGLE_AI_API_KEY`, `ANTHROPIC_API_KEY`) at startup with clear log
+- **INV-1, INV-2:** fix TS errors + replace bare `fetch` in `InvoiceFormPO.tsx` and `NonPOInvoiceForm.tsx`
+
+### Tier 3 (architecture)
+- **B4:** split 4 092-line `server/index.mjs` by domain
+- **B5:** real DB migration runner with `schema_migrations` table
+- **F4:** fix 7 TS errors then enable `strict` + `noImplicitAny`
+- **F3:** migrate remaining bare `fetch` calls (`EntityMaster.tsx`, `pages/Approvals.tsx`)
+
+### Tier 4 (quality gates)
+- **W2:** GitHub Actions CI (typecheck + test + build on PR)
+- **W3:** ESLint + Prettier baseline
+- **W4:** Husky + lint-staged pre-commit
+- **W1:** integration tests for payment batches, approvals, invoice ingestion
+
+## Working conventions (MUST follow)
+1. Before starting any change, read `CLAUDE.md` and `DISCOVERY.md` first. Use them as ground truth.
+2. After completing any change, append a one-line entry to the **Change log** section below (date + what + file paths).
+3. After completing any change, update the "Known issues" queue: cross out completed items, add newly discovered issues.
+4. **Never add new inline routes to `server/index.mjs`** — create `server/routes/<domain>.mjs`.
+5. **Never use raw `fetch()` in frontend code** — always `mysqlApiRequest` from `src/lib/mysql/client.ts`.
+6. Never store new secrets in code or commit `.env` files. Update `.env.example` when adding env vars.
+7. Type errors are not allowed in any file you touch — fix them even if pre-existing.
+8. Every new server feature needs at least one vitest test in the matching `__tests__` folder.
+9. Multi-tenant: any new AP endpoint must require `X-Tenant-Id` and scope queries by `tenant_id`.
+
+## Open decisions (need human answer)
+- Password migration: **bcrypt** or argon2? Default to bcrypt unless told otherwise.
+- Migration runner: build minimal in-house or adopt a library? Default to minimal in-house (single-file, MySQL-native).
+- Should AR module (`src/components/ar/`) be removed or kept as stubs?
+- Vite port: confirm 3000 is the locked choice.
+- Super-admin scope: Procinix-only or customer admins too?
+
+## Required env vars
+```
+MYSQL_HOST, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD
+API_SECRET_KEY              (empty = auth disabled — see B3)
+VITE_API_BASE_URL           (= http://127.0.0.1:8787/api locally)
+GOOGLE_AI_API_KEY           (Gemini OCR)
+ANTHROPIC_API_KEY           (Claude agents)
+AP_EMAIL_HOST/USER/PASSWORD (IMAP invoice polling)
+SUPER_ADMIN_EMAILS          (super-admin console access)
+ALERTS_EMAIL                (agent failure alert recipient — falls back to MAIL_FROM)
+```
+
+## Deployment
+- **Railway:** `railway.json` — `npm install && npm run build` → `NODE_ENV=production node server/index.mjs`
+- **Heroku-compatible:** `Procfile` — `web: NODE_ENV=production node server/index.mjs`
+- **Health check:** `GET /health` → `{ ok: true, uptime: N }`
+
+## macOS dev note
+On first `npm install`, macOS Gatekeeper may block native binaries (rollup, esbuild). Fix:
+```bash
+xattr -dr com.apple.quarantine node_modules/
+```
+
+## Known remaining issues (pre-existing)
 - 7 pre-existing TS errors: `InvoiceFormPO.tsx` (3), `NonPOInvoiceForm.tsx` (1), `VendorGroupMaster.tsx` (3)
 - Bare `fetch('/api/...')` in `EntityMaster.tsx`, `InvoiceFormPO.tsx:222`, `pages/Approvals.tsx` — dev-only via Vite proxy, bypass `mysqlApiRequest`
 - Orphan tenant/entity rows (PTPL/Opptra) — harmless until multi-tenant testing needed
+- **CRITICAL:** Plaintext passwords in `user_master.payload.password`; compared client-side in `loginFromMasters`. Migrate before production.
 
-## loginFromMasters Guardrail (May 2026)
+## loginFromMasters guardrail (May 2026)
 `AuthContext.tsx:606-613` requires `record.status === 'Active'` before matching. Prevents stale "Pending Approval" duplicates from blocking real login.
 
-## How to Verify Payments Dashboard
+## How to verify payments dashboard
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" \
   -H "X-Tenant-Id: tenant-default-001" \
@@ -128,18 +187,9 @@ curl -s -o /dev/null -w "%{http_code}\n" \
 ```
 After login, DevTools console: `[AuthContext] post-merge user: { tenantId: 'tenant-default-001', ... }`
 
-## Required Env Vars
-```
-MYSQL_HOST, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD
-API_SECRET_KEY              (empty = auth disabled)
-VITE_API_BASE_URL           (= http://127.0.0.1:8787/api locally)
-GOOGLE_AI_API_KEY           (Gemini OCR)
-ANTHROPIC_API_KEY           (Claude agents)
-AP_EMAIL_HOST/USER/PASSWORD (IMAP invoice polling)
-SUPER_ADMIN_EMAILS          (super-admin console access)
-```
-
-## Deployment
-- **Railway:** `railway.json` — `npm install && npm run build` → `NODE_ENV=production node server/index.mjs`
-- **Heroku-compatible:** `Procfile` — `web: NODE_ENV=production node server/index.mjs`
-- **Health check:** `GET /health` → `{ ok: true, uptime: N }`
+## Change log
+- 2026-05-07 — added DISCOVERY.md (full codebase discovery, 15 sections)
+- 2026-05-07 — updated CLAUDE.md to rolling memory format with issue queue + conventions
+- 2026-05-07 — INV-5: crash-safe agent pipeline with per-step try/catch, bounded retry, SMTP alert, manual retry endpoint, structured metrics. Files: `server/services/agents/orchestrator.mjs`, `server/services/agents/__tests__/orchestratorRetry.test.mjs`, `sql/mysql/migrations/20260507_agent_retry_queue.sql`, `server/index.mjs` (import + route + startup), `.env.example` (ALERTS_EMAIL)
+- 2026-05-07 — macOS quarantine fix: `xattr -dr com.apple.quarantine node_modules/` clears Gatekeeper blocks on native .node binaries after npm install
+- 2026-05-07 — INV-5 done: agent pipeline crash-safe, retry queue, alerts, manual retry endpoint. Tests: 297 passing.
