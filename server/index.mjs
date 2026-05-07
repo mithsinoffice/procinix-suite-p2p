@@ -51,6 +51,8 @@ import { assertValidTransition } from './services/invoices/lifecycleTransitions.
 import { processMatch } from './services/agents/matchAgent.mjs';
 import { processInvoiceWithAgents, startAgentRetryScheduler, stopAgentRetryScheduler, resetAndRequeueInvoice } from './services/agents/orchestrator.mjs';
 import { checkAndExitIfInvalid } from './services/startup/validateEnv.mjs';
+import { authenticateUser, createSession, lookupSession, ensureSessionsTable } from './services/auth/loginService.mjs';
+import { handleAuthRoute } from './routes/auth.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import { verifyPAN, verifyPANComprehensive, verifyGSTIN, verifyBankAccount, verifyMSME } from './services/kyc/panVerification.mjs';
 import { getForceClosurePreview, forceclosePO } from './services/po/forceClosure.mjs';
@@ -226,9 +228,9 @@ function getAllowedOrigin(req) {
 
 // --- Auth ---
 const API_KEY = process.env.API_SECRET_KEY || '';
-const PUBLIC_PATHS = new Set(['/health', '/api/mysql/health']);
+const PUBLIC_PATHS = new Set(['/health', '/api/mysql/health', '/api/auth/login']);
 
-function isAuthenticated(req, pathname) {
+async function isAuthenticated(req, pathname) {
   if (PUBLIC_PATHS.has(pathname)) {
     return true;
   }
@@ -248,17 +250,25 @@ function isAuthenticated(req, pathname) {
     return false;
   }
 
-  // Timing-safe comparison to prevent timing attacks
+  // Service-to-service: timing-safe API key comparison
   try {
     const expected = Buffer.from(API_KEY, 'utf8');
     const received = Buffer.from(token, 'utf8');
-    if (expected.length !== received.length) {
-      return false;
+    if (expected.length === received.length && timingSafeEqual(expected, received)) {
+      return true;
     }
-    return timingSafeEqual(expected, received);
   } catch {
-    return false;
+    // fall through to session check
   }
+
+  // User session: look up SHA-256(token) in sessions table
+  const session = await lookupSession(token).catch(() => null);
+  if (session) {
+    req.user = session;
+    return true;
+  }
+
+  return false;
 }
 const MASTER_WORKFLOW_TARGETS = new Set([
   'Category Master',
@@ -912,11 +922,14 @@ const server = http.createServer(async (req, res) => {
   const pathname = url.pathname;
 
   // Auth gate
-  if (!isAuthenticated(req, pathname)) {
+  if (!await isAuthenticated(req, pathname)) {
     return sendJson(res, 401, { ok: false, error: 'Unauthorized' });
   }
 
   try {
+    // Auth routes (POST /api/auth/login — also in PUBLIC_PATHS, handled here for consistency)
+    if (await handleAuthRoute(req, res, pathname, sendJson)) return;
+
     if (req.method === 'POST' && pathname === '/api/auth/platform-context') {
       const body = await readJsonBody(req);
       const out = await buildPlatformContext(body);
@@ -4025,6 +4038,9 @@ server.listen(port, host, async () => {
   onSettingsChange('AP_EMAIL_', () => { restartEmailPoller(); });
   onSettingsChange('AP_POLL_INTERVAL_MINUTES', () => { restartEmailPoller(); });
 
+  await ensureSessionsTable().catch((err) =>
+    console.warn('[startup] sessions table check failed (non-fatal):', err.message),
+  );
   checkGeminiKey();
   startEmailPoller(processInvoiceWithAgents);
   startAgentRetryScheduler();

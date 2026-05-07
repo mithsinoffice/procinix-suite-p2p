@@ -8,7 +8,7 @@
 - **Multi-tenant:** every AP endpoint requires `X-Tenant-Id` header. `tenantId` comes from `AuthContext` after login
 - **Dev ports:** Vite on `:3000` (per `vite.config.ts`). API server on `:8787`. Any doc that says 5173 is wrong
 - **`xlsx`** pinned to npm registry `^0.18.5` (CDN URL removed in Tier-0 B6 pass)
-- **Tests:** `npm test` (vitest run, no watch). 14 test files, 318 tests
+- **Tests:** `npm test` (vitest run, no watch). 17 test files, 343 tests
 - **Login today is INSECURE:** `AuthContext.tsx` fetches all users + plaintext passwords to the browser and compares client-side. To be replaced with `POST /api/auth/login` + bcrypt
 
 ## Commands
@@ -33,6 +33,8 @@ npm run migrate:tenant-schema  # Apply multi-tenancy migration
 | `src/lib/mysql/client.ts` | `mysqlApiRequest(path)` — the frontend API client |
 | `src/lib/mysql/documentStore.ts` | `ensureDomainDocument('domain', fallback)` — JSON blob store |
 | `src/lib/paymentsApi.ts` | Payments dashboard + batch API helpers |
+| `server/routes/auth.mjs` | First domain route module — `POST /api/auth/login` |
+| `server/services/auth/loginService.mjs` | `authenticateUser`, `createSession`, `lookupSession` |
 | `src/contexts/AuthContext.tsx` | Login, tenantId, `useAuth()` hook |
 | `src/contexts/APDataContext.tsx` | Invoice list fetched from `/api/invoices` |
 | `src/App.tsx` | React Router route tree |
@@ -107,8 +109,8 @@ No integration tests, no E2E tests, no component tests.
 - **W6:** reconcile port mismatch (Vite is 3000, not 5173)
 
 ### Tier 1 (auth overhaul, in this order)
-- **B2:** bcrypt-hash existing passwords in `user_master` (migration)
-- **B1:** build `POST /api/auth/login` server-side
+- ~~**B2:** bcrypt-hash existing passwords in `user_master` (migration)~~ ✅ Done 2026-05-07
+- ~~**B1:** build `POST /api/auth/login` server-side~~ ✅ Done 2026-05-07
 - **F1:** replace client-side password compare with `/api/auth/login` call
 
 ### Tier 2 (ingestion robustness)
@@ -195,3 +197,4 @@ After login, DevTools console: `[AuthContext] post-merge user: { tenantId: 'tena
 - 2026-05-07 — INV-5 done: agent pipeline crash-safe, retry queue, alerts, manual retry endpoint. Tests: 297 passing.
 - 2026-05-07 — INV-6 done: startup env validation; prod refuses to boot on missing API keys. Tests: 314 passing.
 - 2026-05-07 — Tier-0 quick wins: B6 (xlsx pinned to npm ^0.18.5), F2 (react-router/dom pinned to 7.13.0, clsx + tailwind-merge unpinned from *), F6 (54 stale src/*.md files → docs/legacy/), W6 (port 5173 ref removed from CORS comment → 3000), B3 (prod API_SECRET_KEY guard added to validateEnv + 4 new tests). Tests: 318 passing.
+- 2026-05-07 — B2+B1 done: 5 users migrated to bcrypt; POST /api/auth/login + sessions table live; first route module at server/routes/auth.mjs (B4 starts organically). Old client-side login still works in parallel until F1.
