@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DollarSign,
@@ -13,92 +13,112 @@ import {
   ArrowRight,
   Eye,
   Zap,
+  RefreshCw,
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchPayableInvoices } from '../lib/paymentsApi';
+import type { ProposalInvoice } from '../data/paymentProposalData';
 
-interface ApprovedInvoice {
+type DisplayPriority = 'High' | 'Medium' | 'Low';
+
+interface DisplayInvoice {
   id: string;
   invoiceNumber: string;
   vendorName: string;
   vendorCode: string;
-  poNumber: string;
-  approvedDate: string;
-  netPayable: number;
+  invoiceDate: string;
   dueDate: string;
   daysUntilDue: number;
-  aiPriority: 'High' | 'Medium' | 'Low';
-  msmeVendor: boolean;
-  advanceAdjustment?: number;
-  paymentMethod: string;
+  netPayable: number;
+  currency: string;
+  aging: number;
+  priority: DisplayPriority;
+  paymentMode: string;
+  lifecycleState: string;
+}
+
+function mapPriority(apiPriority: ProposalInvoice['priority']): DisplayPriority {
+  if (apiPriority === 'critical' || apiPriority === 'high') return 'High';
+  if (apiPriority === 'low') return 'Low';
+  return 'Medium';
+}
+
+function computeDaysUntilDue(dueDate: string | null | undefined): number {
+  if (!dueDate) return 0;
+  const due = new Date(dueDate);
+  const today = new Date();
+  due.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+function adapt(row: ProposalInvoice): DisplayInvoice {
+  return {
+    id: row.id,
+    invoiceNumber: row.invoiceNo || row.id,
+    vendorName: row.vendor || '—',
+    vendorCode: row.vendorCode || '—',
+    invoiceDate: row.invoiceDate || '',
+    dueDate: row.dueDate || '',
+    daysUntilDue: computeDaysUntilDue(row.dueDate),
+    netPayable: Number(row.amount) || 0,
+    currency: row.currency || 'INR',
+    aging: Number(row.aging) || 0,
+    priority: mapPriority(row.priority),
+    paymentMode: row.paymentMode || 'NEFT',
+    lifecycleState: row.lifecycleState || row.status || '',
+  };
+}
+
+function formatCurrency(value: number, currency: string): string {
+  const sym = currency === 'INR' ? '₹' : currency === 'USD' ? '$' : `${currency} `;
+  return `${sym}${Math.round(value).toLocaleString('en-IN')}`;
 }
 
 export function ReadyForPayment() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const tenantId = user?.tenantId ?? null;
+  const entityId = user?.currentPlatformEntityId ?? null;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string>('All');
   const [showFilters, setShowFilters] = useState(false);
+  const [invoices, setInvoices] = useState<DisplayInvoice[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  // Mock data
-  const [invoices] = useState<ApprovedInvoice[]>([
-    {
-      id: 'INV-002',
-      invoiceNumber: 'INV-2024-00124',
-      vendorName: 'ABC Manufacturing Ltd',
-      vendorCode: 'VEN-1002',
-      poNumber: 'PO-2024-002',
-      approvedDate: '2024-12-12',
-      netPayable: 385000,
-      dueDate: '2025-01-07',
-      daysUntilDue: 26,
-      aiPriority: 'Medium',
-      msmeVendor: false,
-      paymentMethod: 'NEFT',
-    },
-    {
-      id: 'INV-005',
-      invoiceNumber: 'INV-2024-00127',
-      vendorName: 'Tech Solutions Pvt Ltd',
-      vendorCode: 'VEN-1001',
-      poNumber: 'PO-2024-005',
-      approvedDate: '2024-12-13',
-      netPayable: 200000,
-      dueDate: '2025-01-12',
-      daysUntilDue: 31,
-      aiPriority: 'Low',
-      msmeVendor: true,
-      advanceAdjustment: 50000,
-      paymentMethod: 'RTGS',
-    },
-    {
-      id: 'INV-006',
-      invoiceNumber: 'INV-2024-00128',
-      vendorName: 'Global Suppliers Co',
-      vendorCode: 'VEN-1004',
-      poNumber: 'PO-2024-006',
-      approvedDate: '2024-12-11',
-      netPayable: 495000,
-      dueDate: '2024-12-18',
-      daysUntilDue: 5,
-      aiPriority: 'High',
-      msmeVendor: true,
-      paymentMethod: 'RTGS',
-    },
-    {
-      id: 'INV-007',
-      invoiceNumber: 'INV-2024-00129',
-      vendorName: 'XYZ Services Inc',
-      vendorCode: 'VEN-1003',
-      poNumber: 'PO-2024-007',
-      approvedDate: '2024-12-14',
-      netPayable: 91800,
-      dueDate: '2025-01-13',
-      daysUntilDue: 32,
-      aiPriority: 'Low',
-      msmeVendor: false,
-      paymentMethod: 'NEFT',
-    },
-  ]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!tenantId) {
+        if (!cancelled) {
+          setInvoices([]);
+          setError(null);
+        }
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const rows = await fetchPayableInvoices(tenantId, entityId ?? undefined);
+        if (!cancelled) setInvoices(rows.map(adapt));
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Failed to load payable invoices');
+          setInvoices([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, entityId, reloadKey]);
 
-  const getPriorityStyle = (priority: ApprovedInvoice['aiPriority']) => {
+  const getPriorityStyle = (priority: DisplayPriority) => {
     const styles = {
       High: { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' },
       Medium: { bg: '#FEF3C7', color: '#D97706' },
@@ -107,23 +127,26 @@ export function ReadyForPayment() {
     return styles[priority];
   };
 
-  const filteredInvoices = invoices
-    .filter((inv) => {
-      const matchesSearch =
-        inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inv.vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inv.poNumber.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredInvoices = useMemo(
+    () =>
+      invoices
+        .filter((inv) => {
+          const q = searchTerm.trim().toLowerCase();
+          const matchesSearch =
+            !q ||
+            inv.invoiceNumber.toLowerCase().includes(q) ||
+            inv.vendorName.toLowerCase().includes(q) ||
+            inv.vendorCode.toLowerCase().includes(q);
+          const matchesPriority = priorityFilter === 'All' || inv.priority === priorityFilter;
+          return matchesSearch && matchesPriority;
+        })
+        .sort((a, b) => a.daysUntilDue - b.daysUntilDue),
+    [invoices, searchTerm, priorityFilter]
+  );
 
-      const matchesPriority = priorityFilter === 'All' || inv.aiPriority === priorityFilter;
-
-      return matchesSearch && matchesPriority;
-    })
-    .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
-
-  // Stats
   const totalPayable = invoices.reduce((sum, inv) => sum + inv.netPayable, 0);
   const dueSoon = invoices.filter((i) => i.daysUntilDue <= 7).length;
-  const msmeCount = invoices.filter((i) => i.msmeVendor).length;
+  const overdueCount = invoices.filter((i) => i.daysUntilDue < 0).length;
 
   const stats = [
     {
@@ -135,7 +158,10 @@ export function ReadyForPayment() {
     },
     {
       label: 'Total Payable',
-      value: `₹${(totalPayable / 100000).toFixed(1)}L`,
+      value:
+        totalPayable >= 100000
+          ? `₹${(totalPayable / 100000).toFixed(1)}L`
+          : `₹${Math.round(totalPayable).toLocaleString('en-IN')}`,
       icon: DollarSign,
       color: 'var(--color-teal)',
       bg: 'var(--color-teal)10',
@@ -148,23 +174,38 @@ export function ReadyForPayment() {
       bg: '#FEF3C7',
     },
     {
-      label: 'MSME Vendors',
-      value: msmeCount,
+      label: 'Overdue',
+      value: overdueCount,
       icon: TrendingUp,
-      color: '#007D87',
-      bg: '#EDE9FE',
+      color: 'var(--color-error-dark)',
+      bg: 'var(--color-error-light)',
     },
   ];
 
   return (
     <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="p-8">
-      <div className="mb-6">
-        <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
-          Ready for Payment
-        </h1>
-        <p style={{ color: 'var(--color-mercury-grey)' }}>
-          Approved invoices queued for payment processing
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
+            Ready for Payment
+          </h1>
+          <p style={{ color: 'var(--color-mercury-grey)' }}>
+            Approved invoices queued for payment processing
+          </p>
+        </div>
+        <button
+          onClick={() => setReloadKey((k) => k + 1)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-colors"
+          style={{
+            borderColor: 'var(--color-silver)',
+            backgroundColor: 'white',
+            color: 'var(--color-mercury-grey)',
+          }}
+          disabled={loading}
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
       </div>
 
       {/* Stats */}
@@ -202,21 +243,21 @@ export function ReadyForPayment() {
           <Zap className="w-5 h-5 flex-shrink-0 mt-0.5 text-[var(--color-teal)]" />
           <div className="flex-1">
             <h3 className="mb-1" style={{ color: 'var(--color-teal)' }}>
-              Automatic Payment Queue
+              Approved invoices, awaiting payment
             </h3>
             <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-              These approved invoices have been automatically transferred to the Payments module.
-              Visit the Payments Dashboard to create payment batches and process payments.
+              These invoices have cleared approval and are ready to be batched. Open the Payment
+              Proposal to group them into a payment batch and submit for execution.
             </p>
           </div>
           <button
-            onClick={() => navigate('/ap/payments')}
+            onClick={() => navigate('/ap/payment-proposal')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
             style={{ backgroundColor: 'var(--color-teal)' }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
           >
-            Go to Payments
+            Build Payment Batch
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -236,7 +277,7 @@ export function ReadyForPayment() {
               />
               <input
                 type="text"
-                placeholder="Search by invoice number, vendor, or PO..."
+                placeholder="Search by invoice number, vendor, or code..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 rounded-lg border-2"
@@ -267,7 +308,7 @@ export function ReadyForPayment() {
                   className="block text-sm mb-1"
                   style={{ color: 'var(--color-mercury-grey)' }}
                 >
-                  AI Priority
+                  Priority
                 </label>
                 <select
                   value={priorityFilter}
@@ -285,6 +326,18 @@ export function ReadyForPayment() {
           )}
         </div>
       </div>
+
+      {error && (
+        <div
+          className="bg-white rounded-xl border-2 p-4 mb-4"
+          style={{
+            borderColor: 'var(--color-error-dark)',
+            backgroundColor: 'var(--color-error-light)',
+          }}
+        >
+          <p style={{ color: 'var(--color-error-dark)' }}>Failed to load: {error}</p>
+        </div>
+      )}
 
       {/* Table */}
       <div
@@ -311,7 +364,7 @@ export function ReadyForPayment() {
                   className="text-left px-6 py-4 text-sm"
                   style={{ color: 'var(--color-mercury-grey)' }}
                 >
-                  PO Number
+                  Invoice Date
                 </th>
                 <th
                   className="text-left px-6 py-4 text-sm"
@@ -323,13 +376,13 @@ export function ReadyForPayment() {
                   className="text-right px-6 py-4 text-sm"
                   style={{ color: 'var(--color-mercury-grey)' }}
                 >
-                  Net Payable
+                  Outstanding
                 </th>
                 <th
                   className="text-center px-6 py-4 text-sm"
                   style={{ color: 'var(--color-mercury-grey)' }}
                 >
-                  AI Priority
+                  Priority
                 </th>
                 <th
                   className="text-left px-6 py-4 text-sm"
@@ -347,8 +400,17 @@ export function ReadyForPayment() {
             </thead>
             <tbody>
               {filteredInvoices.map((invoice) => {
-                const priorityStyle = getPriorityStyle(invoice.aiPriority);
-                const isDueSoon = invoice.daysUntilDue <= 7;
+                const priorityStyle = getPriorityStyle(invoice.priority);
+                const isOverdue = invoice.daysUntilDue < 0;
+                const isDueSoon = invoice.daysUntilDue >= 0 && invoice.daysUntilDue <= 7;
+                const dueColor = isOverdue
+                  ? 'var(--color-error-dark)'
+                  : isDueSoon
+                    ? '#D97706'
+                    : 'var(--color-ink)';
+                const dueLabel = isOverdue
+                  ? `${Math.abs(invoice.daysUntilDue)}d overdue`
+                  : `${invoice.daysUntilDue}d`;
 
                 return (
                   <tr
@@ -362,7 +424,7 @@ export function ReadyForPayment() {
                         <div>
                           <p style={{ color: 'var(--color-ink)' }}>{invoice.invoiceNumber}</p>
                           <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                            Approved: {invoice.approvedDate}
+                            {invoice.lifecycleState || 'Approved'}
                           </p>
                         </div>
                       </div>
@@ -375,90 +437,53 @@ export function ReadyForPayment() {
                         />
                         <div>
                           <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorName}</p>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                              {invoice.vendorCode}
-                            </p>
-                            {invoice.msmeVendor && (
-                              <span
-                                className="text-xs px-2 py-0.5 rounded"
-                                style={{ backgroundColor: '#EDE9FE', color: '#007D87' }}
-                              >
-                                MSME
-                              </span>
-                            )}
-                          </div>
+                          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                            {invoice.vendorCode}
+                          </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
-                      {invoice.poNumber}
+                      {invoice.invoiceDate || '—'}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <Calendar
-                          className="w-4 h-4"
-                          style={{
-                            color: isDueSoon
-                              ? 'var(--color-error-dark)'
-                              : 'var(--color-mercury-grey)',
-                          }}
-                        />
+                        <Calendar className="w-4 h-4" style={{ color: dueColor }} />
                         <div>
-                          <p
-                            style={{
-                              color: isDueSoon ? 'var(--color-error-dark)' : 'var(--color-ink)',
-                            }}
-                          >
-                            {invoice.dueDate}
-                          </p>
-                          <p
-                            className="text-xs"
-                            style={{
-                              color: isDueSoon
-                                ? 'var(--color-error-dark)'
-                                : 'var(--color-mercury-grey)',
-                            }}
-                          >
-                            {invoice.daysUntilDue} days
+                          <p style={{ color: dueColor }}>{invoice.dueDate || '—'}</p>
+                          <p className="text-xs" style={{ color: dueColor }}>
+                            {dueLabel}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div>
-                        <p style={{ color: 'var(--color-ink)' }}>
-                          ₹{invoice.netPayable.toLocaleString('en-IN')}
-                        </p>
-                        {invoice.advanceAdjustment && (
-                          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                            Advance: ₹{invoice.advanceAdjustment.toLocaleString('en-IN')}
-                          </p>
-                        )}
-                      </div>
+                      <p style={{ color: 'var(--color-ink)' }}>
+                        {formatCurrency(invoice.netPayable, invoice.currency)}
+                      </p>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span
                         className="inline-block px-3 py-1 rounded-full text-sm"
                         style={{ backgroundColor: priorityStyle.bg, color: priorityStyle.color }}
                       >
-                        {invoice.aiPriority}
+                        {invoice.priority}
                       </span>
                     </td>
                     <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
-                      {invoice.paymentMethod}
+                      {invoice.paymentMode}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => navigate(`/ap/invoice-workflow/${invoice.id}`)}
+                          onClick={() => navigate(`/invoices/${invoice.id}`)}
                           className="p-2 rounded-lg hover:bg-[var(--color-silver)] transition-colors"
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                         </button>
                         <button
-                          onClick={() => navigate('/ap/payments')}
+                          onClick={() => navigate('/ap/payment-proposal')}
                           className="flex items-center gap-1 px-3 py-1 rounded-lg text-sm text-white transition-colors"
                           style={{ backgroundColor: 'var(--color-teal)' }}
                           onMouseEnter={(e) =>
@@ -480,13 +505,27 @@ export function ReadyForPayment() {
           </table>
         </div>
 
-        {filteredInvoices.length === 0 && (
+        {!loading && filteredInvoices.length === 0 && (
           <div className="text-center py-12">
             <CheckCircle
               className="w-12 h-12 mx-auto mb-3"
               style={{ color: 'var(--color-silver)' }}
             />
-            <p style={{ color: 'var(--color-mercury-grey)' }}>No invoices ready for payment</p>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>
+              {invoices.length === 0
+                ? 'No invoices ready for payment'
+                : 'No invoices match the current filters'}
+            </p>
+          </div>
+        )}
+
+        {loading && (
+          <div className="text-center py-12">
+            <RefreshCw
+              className="w-8 h-8 mx-auto mb-3 animate-spin"
+              style={{ color: 'var(--color-teal)' }}
+            />
+            <p style={{ color: 'var(--color-mercury-grey)' }}>Loading approved invoices…</p>
           </div>
         )}
       </div>

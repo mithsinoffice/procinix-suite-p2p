@@ -372,6 +372,8 @@ export function PaymentsDashboard() {
               </span>
             </button>
             <button
+              type="button"
+              onClick={() => navigate('/ap/ready-for-payment')}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
                 backgroundColor: 'var(--color-teal)',
@@ -381,7 +383,7 @@ export function PaymentsDashboard() {
             >
               <CreditCard className="w-4 h-4" />
               <span className="text-sm" style={{ fontWeight: '600' }}>
-                Process Payments
+                Ready for Payment
               </span>
             </button>
           </div>

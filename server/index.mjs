@@ -3994,7 +3994,25 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       const vendorId = randomUUID();
       const tenantId = req.headers['x-tenant-id'] || null;
-      const vendorCode = body.vendor_code || `V-${Date.now().toString(36).toUpperCase()}`;
+      // Always auto-generate vendor_code — never trust client input.
+      // Sequential format V0001..N scoped by tenant; falls back to a
+      // timestamp-based unique code if the lookup fails.
+      let vendorCode;
+      try {
+        const maxRows = await query(
+          `SELECT vendor_code FROM p2p_schema_mt.vendors
+             WHERE tenant_id ${tenantId ? '= ?' : 'IS NULL'}
+               AND vendor_code REGEXP '^V[0-9]+$'
+             ORDER BY CAST(SUBSTRING(vendor_code, 2) AS UNSIGNED) DESC
+             LIMIT 1`,
+          tenantId ? [tenantId] : []
+        );
+        const last = maxRows?.[0]?.vendor_code;
+        const nextNum = last ? parseInt(String(last).slice(1), 10) + 1 : 1;
+        vendorCode = `V${String(nextNum).padStart(4, '0')}`;
+      } catch {
+        vendorCode = `V-${Date.now().toString(36).toUpperCase()}`;
+      }
       const vendorStatus = body.status || 'draft';
       // Drift fix 1: persist client_erp_vendor_code
       await query(
@@ -4161,7 +4179,10 @@ const server = http.createServer(async (req, res) => {
           ]
         );
       }
-      return sendJson(res, 200, { success: true, data: { id: vendorId } });
+      return sendJson(res, 200, {
+        success: true,
+        data: { id: vendorId, vendor_code: vendorCode },
+      });
     }
 
     if (req.method === 'PUT' && pathname.match(/^\/api\/vendors\/[^/]+$/)) {

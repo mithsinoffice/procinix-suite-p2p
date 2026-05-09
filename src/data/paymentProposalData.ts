@@ -18,6 +18,9 @@ export interface ProposalInvoice {
   };
   category: string;
   isStatutory: boolean;
+  lifecycleState?: string;
+  paymentTotal?: number;
+  paymentCount?: number;
 }
 
 export const mockProposalInvoices: ProposalInvoice[] = [

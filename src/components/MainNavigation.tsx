@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -17,6 +17,8 @@ import {
   Sparkles,
   Upload,
   Shield,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { isSuperAdminUser } from '../utils/superAdmin';
@@ -96,6 +98,29 @@ export function MainNavigation() {
   const { user } = useAuth();
   const showSuperAdminNav = isSuperAdminUser(user);
 
+  const [expanded, setExpanded] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const item of navigationItems) {
+      if (
+        item.children?.some((child) =>
+          isPathActive(location.pathname, child.route, child.activePrefixes)
+        )
+      ) {
+        initial.add(item.label);
+      }
+    }
+    return initial;
+  });
+
+  const toggleGroup = (label: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  };
+
   const getUserInitials = (name?: string) => {
     if (!name) {
       return 'GU';
@@ -173,49 +198,73 @@ export function MainNavigation() {
           {navigationItems.map((item) => {
             if (item.children?.length) {
               const Icon = item.icon;
+              const isOpen = expanded.has(item.label);
+              const hasActiveChild = item.children.some((child) =>
+                isPathActive(location.pathname, child.route, child.activePrefixes)
+              );
               return (
                 <div key={item.label} className="space-y-1">
-                  <div
-                    className="flex items-center gap-3 px-4 py-2"
-                    style={{ color: 'var(--color-slate)' }}
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(item.label)}
+                    aria-expanded={isOpen}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-sm"
+                    style={{
+                      backgroundColor: 'transparent',
+                      color: hasActiveChild ? '#FFFFFF' : '#C7D0D8',
+                      fontWeight: hasActiveChild ? 600 : 400,
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#2A3E48';
+                      e.currentTarget.style.color = '#FFFFFF';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = hasActiveChild ? '#FFFFFF' : '#C7D0D8';
+                    }}
                   >
                     <Icon className="w-5 h-5 flex-shrink-0" style={{ strokeWidth: 2 }} />
-                    <span className="text-xs font-semibold uppercase tracking-wide">
-                      {item.label}
-                    </span>
-                  </div>
-                  {item.children.map((child) => {
-                    const isActive = isPathActive(
-                      location.pathname,
-                      child.route,
-                      child.activePrefixes
-                    );
-                    return (
-                      <Link
-                        key={child.route}
-                        to={child.route}
-                        className={linkClass(isActive)}
-                        style={{
-                          ...linkStyle(isActive),
-                          paddingLeft: '2.25rem',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.backgroundColor = '#2A3E48';
-                            e.currentTarget.style.color = '#FFFFFF';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = '#C7D0D8';
-                          }
-                        }}
-                      >
-                        <span>{child.label}</span>
-                      </Link>
-                    );
-                  })}
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {isOpen ? (
+                      <ChevronDown className="w-4 h-4 flex-shrink-0" style={{ strokeWidth: 2 }} />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ strokeWidth: 2 }} />
+                    )}
+                  </button>
+                  {isOpen &&
+                    item.children.map((child) => {
+                      const isActive = isPathActive(
+                        location.pathname,
+                        child.route,
+                        child.activePrefixes
+                      );
+                      return (
+                        <Link
+                          key={child.route}
+                          to={child.route}
+                          className={linkClass(isActive)}
+                          style={{
+                            ...linkStyle(isActive),
+                            paddingLeft: '2.25rem',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.backgroundColor = '#2A3E48';
+                              e.currentTarget.style.color = '#FFFFFF';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                              e.currentTarget.style.color = '#C7D0D8';
+                            }
+                          }}
+                        >
+                          <span>{child.label}</span>
+                        </Link>
+                      );
+                    })}
                 </div>
               );
             }
