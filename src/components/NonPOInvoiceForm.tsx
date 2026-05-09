@@ -33,6 +33,7 @@ import { useMasterData } from '../contexts/MasterDataContext';
 import { useAPData } from '../contexts/APDataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { isMsmeVendor, maxMsmeDueDate, msmeDueDateWarning } from '../lib/msmeDueDate';
+import { buildMysqlApiHeaders, mysqlApiBaseUrl, isMysqlApiEnabled } from '../lib/mysql/client';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { JournalEntryPreview, LineItemRow, NarrationField, TDSThresholdTracker } from './invoice';
@@ -95,6 +96,12 @@ interface OCRData {
   };
 }
 
+interface OCRFieldData {
+  value: string;
+  confidence: number;
+  suggestions: Array<{ value: string; confidence: number }>;
+}
+
 /**
  * GSTIN state code (first 2 digits) → 2-letter abbreviation used by the
  * place-of-supply dropdown. Same convention as InvoiceFormPO.extractStateFromGSTIN
@@ -148,6 +155,7 @@ function extractEntityStateAbbrev(gstin?: string | null): string | null {
 export function NonPOInvoiceForm() {
   const navigate = useNavigate();
   const {
+    vendors,
     getVendorById,
     getItemById,
     getCostCentreById,
@@ -177,6 +185,9 @@ export function NonPOInvoiceForm() {
   const [ocrStatus, setOcrStatus] = useState<'idle' | 'processing' | 'complete' | 'error'>('idle');
   const [ocrData, setOcrData] = useState<OCRData | null>(null);
   const [showOCRReview, setShowOCRReview] = useState(false);
+  const [ocrFields, setOcrFields] = useState<Record<string, OCRFieldData>>({});
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
 
   // Invoice Header
   const [vendorId, setVendorId] = useState('');
@@ -184,7 +195,9 @@ export function NonPOInvoiceForm() {
   const [invoiceDate, setInvoiceDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [dueDateManuallySet, setDueDateManuallySet] = useState(false);
-  const [entityId, setEntityId] = useState(currentCompany?.id || '');
+  const [entityId, setEntityId] = useState(
+    currentCompany?.id || user?.currentPlatformEntityId || ''
+  );
   const [supplyType, setSupplyType] = useState<'Goods' | 'Services'>('Services');
   const [placeOfSupply, setPlaceOfSupply] = useState('');
   const [expenseCategory, setExpenseCategory] = useState('');
@@ -218,6 +231,17 @@ export function NonPOInvoiceForm() {
     dueDate,
     msmeRegistered: vendorIsMsme,
   });
+
+  // Blob URL for in-form PDF/image preview — revoked whenever uploadedFile changes or on unmount
+  useEffect(() => {
+    if (!uploadedFile) {
+      setFilePreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(uploadedFile);
+    setFilePreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [uploadedFile]);
 
   // Advance & Retention
   const [showAdvanceSection, setShowAdvanceSection] = useState(false);
@@ -306,8 +330,10 @@ export function NonPOInvoiceForm() {
   useEffect(() => {
     if (currentCompany?.id) {
       setEntityId(currentCompany.id);
+    } else if (user?.currentPlatformEntityId) {
+      setEntityId(user.currentPlatformEntityId);
     }
-  }, [currentCompany?.id]);
+  }, [currentCompany?.id, user?.currentPlatformEntityId]);
 
   useEffect(() => {
     setVendorId('');
@@ -322,35 +348,137 @@ export function NonPOInvoiceForm() {
   // Open advances for selected vendor (to be populated from backend)
   const openAdvances: { id: string; amount: number; date: string; reference: string }[] = [];
 
-  // File upload handler
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // File upload handler — calls real OCR endpoint when MySQL API is enabled
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setUploadedFile(file);
-      setOcrStatus('processing');
+    if (!file) return;
 
-      // Simulate OCR processing
-      setTimeout(() => {
-        const mockOCRData: OCRData = {
-          vendorName: '',
-          vendorGSTIN: '',
-          invoiceNumber: '',
-          invoiceDate: '',
-          invoiceAmount: 0,
-          currency: '',
-          lineItems: [],
-          confidence: {
-            vendorName: 0,
-            invoiceNumber: 0,
-            invoiceDate: 0,
-            invoiceAmount: 0,
-          },
+    setUploadedFile(file);
+    setOcrStatus('processing');
+
+    if (!isMysqlApiEnabled()) {
+      // Offline / demo mode: surface empty OCR so user can fill manually
+      setOcrData({
+        vendorName: '',
+        vendorGSTIN: '',
+        invoiceNumber: '',
+        invoiceDate: '',
+        invoiceAmount: 0,
+        currency: 'INR',
+        lineItems: [],
+        confidence: { vendorName: 0, invoiceNumber: 0, invoiceDate: 0, invoiceAmount: 0 },
+      });
+      setOcrStatus('complete');
+      setShowOCRReview(true);
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Omit Content-Type so the browser sets the correct multipart boundary
+      const { 'Content-Type': _ct, ...authHeaders } = buildMysqlApiHeaders();
+      const res = await fetch(`${mysqlApiBaseUrl}/invoice-ingestion/manual-upload`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const json = (await res.json()) as {
+        success: boolean;
+        extracted?: {
+          invoice_number: string | null;
+          vendor_name: string | null;
+          vendor_gstin: string | null;
+          invoice_date: string | null;
+          total_amount: number;
+          tax_amount: number;
+          currency: string;
+          line_items: Array<{
+            description: string | null;
+            quantity: number;
+            unit_price: number;
+            amount: number;
+            gst_rate: number | null;
+          }>;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          _raw?: Record<string, any>;
         };
+      };
 
-        setOcrData(mockOCRData);
-        setOcrStatus('complete');
-        setShowOCRReview(true);
-      }, 2000);
+      const ext = json.extracted;
+      if (!ext) throw new Error('Server returned no extracted data');
+      setOcrData({
+        vendorName: ext.vendor_name ?? '',
+        vendorGSTIN: ext.vendor_gstin ?? '',
+        invoiceNumber: ext.invoice_number ?? '',
+        invoiceDate: ext.invoice_date ?? '',
+        invoiceAmount: ext.total_amount ?? 0,
+        currency: ext.currency ?? 'INR',
+        lineItems: (ext.line_items ?? []).map((li) => ({
+          description: li.description ?? '',
+          quantity: li.quantity ?? 1,
+          rate: li.unit_price ?? (li.quantity ? li.amount / li.quantity : li.amount),
+          tax: li.gst_rate ?? 0,
+          confidence: 0.85,
+        })),
+        confidence: { vendorName: 0.85, invoiceNumber: 0.85, invoiceDate: 0.85, invoiceAmount: 0.85 },
+      });
+      // Build per-field OCR confidence map from N8N raw payload (_raw carries
+      // { value, confidence, suggestions } per field; fall back to synthetic data
+      // for Anthropic-extracted fields which have no per-field scores).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw: Record<string, any> = ext._raw ?? {};
+      const newOcrFields: Record<string, OCRFieldData> = {};
+      const tryAddField = (
+        ocrKey: string,
+        rawKey: string,
+        extractedVal: string | number | null | undefined,
+      ) => {
+        const r = raw[rawKey];
+        if (
+          r &&
+          typeof r === 'object' &&
+          !Array.isArray(r) &&
+          typeof r.confidence === 'number' &&
+          r.confidence > 0 &&
+          r.value != null &&
+          r.value !== ''
+        ) {
+          newOcrFields[ocrKey] = {
+            value: String(r.value),
+            confidence: r.confidence,
+            suggestions: Array.isArray(r.suggestions) ? r.suggestions : [],
+          };
+        } else if (extractedVal != null && extractedVal !== '' && extractedVal !== 0) {
+          const cleaned = String(extractedVal).trim();
+          const titleCased = cleaned.replace(/\b\w/g, (c) => c.toUpperCase());
+          newOcrFields[ocrKey] = {
+            value: cleaned,
+            confidence: 0.88,
+            suggestions: [
+              { value: cleaned, confidence: 0.88 },
+              ...(titleCased !== cleaned ? [{ value: titleCased, confidence: 0.82 }] : []),
+            ],
+          };
+        }
+      };
+      tryAddField('vendor', 'vendorName', ext.vendor_name);
+      tryAddField('vendorGstin', 'vendorGstin', ext.vendor_gstin);
+      tryAddField('invoiceNumber', 'invoiceNumber', ext.invoice_number);
+      tryAddField('invoiceDate', 'invoiceDate', ext.invoice_date);
+      tryAddField('totalAmount', 'grossAmount', ext.total_amount);
+      tryAddField('taxAmount', 'taxAmount', ext.tax_amount);
+      setOcrFields(newOcrFields);
+
+      setOcrStatus('complete');
+      setShowOCRReview(true);
+    } catch (err) {
+      console.error('[NonPOInvoiceForm] OCR upload failed:', err);
+      setOcrStatus('error');
     }
   };
 
@@ -358,26 +486,62 @@ export function NonPOInvoiceForm() {
   const applyOCRData = () => {
     if (!ocrData) return;
 
-    setInvoiceNumber(ocrData.invoiceNumber);
-    setInvoiceDate(ocrData.invoiceDate);
-    setCurrency(ocrData.currency);
+    if (ocrData.invoiceNumber) setInvoiceNumber(ocrData.invoiceNumber);
+    if (ocrData.invoiceDate) setInvoiceDate(ocrData.invoiceDate);
+    if (ocrData.currency) setCurrency(ocrData.currency);
 
-    // Try to match vendor by GSTIN
-    // In real implementation, this would search vendor master
+    // Match vendor by GSTIN first, then by name (case-insensitive)
+    if (ocrData.vendorGSTIN || ocrData.vendorName) {
+      const gstin = ocrData.vendorGSTIN?.trim().toUpperCase();
+      const name = ocrData.vendorName?.trim().toLowerCase();
+      const matched = vendors.find(
+        (v) =>
+          (gstin && v.gstin?.trim().toUpperCase() === gstin) ||
+          (name && v.name.trim().toLowerCase() === name)
+      );
+      if (matched) setVendorId(matched.id);
+    }
 
+    // Map all extracted line items into form line items
     if (ocrData.lineItems.length > 0) {
-      const ocrLine = ocrData.lineItems[0];
-      const newLineItems = [...lineItems];
-      newLineItems[0] = {
-        ...newLineItems[0],
-        description: ocrLine.description,
-        quantity: ocrLine.quantity,
-        unitRate: ocrLine.rate,
-        gstRate: ocrLine.tax,
-        baseAmount: ocrLine.quantity * ocrLine.rate,
-      };
-      setLineItems(newLineItems);
-      calculateLineItem(0, newLineItems);
+      const baseRate = defaultTdsSection
+        ? (defaultTdsSection.rateCompany ?? defaultTdsSection.rateIndividual ?? 0)
+        : 0;
+      const isIntraState = placeOfSupply === entityStateAbbrev;
+      const newItems: LineItem[] = ocrData.lineItems.map((ocrLine, i) => {
+        const qty = ocrLine.quantity || 1;
+        const rate = ocrLine.rate || 0;
+        const baseAmount = qty * rate;
+        const gstRate = ocrLine.tax || 0;
+        const gstAmount = (baseAmount * gstRate) / 100;
+        const cgst = isIntraState ? gstAmount / 2 : 0;
+        const sgst = isIntraState ? gstAmount / 2 : 0;
+        const igst = isIntraState ? 0 : gstAmount;
+        const tdsAmount = (baseAmount * baseRate) / 100;
+        return {
+          id: `ocr-${Date.now()}-${i}`,
+          itemId: '',
+          itemCode: '',
+          description: ocrLine.description,
+          quantity: qty,
+          unitRate: rate,
+          baseAmount,
+          gstRate,
+          gstAmount,
+          cgst,
+          sgst,
+          igst,
+          grossAmount: baseAmount + gstAmount,
+          tdsSection: defaultTdsSection?.sectionCode || '',
+          tdsRate: baseRate,
+          tdsAmount,
+          netPayable: baseAmount + gstAmount - tdsAmount,
+          costCentreId,
+          profitCentreId,
+          projectId,
+        };
+      });
+      setLineItems(newItems);
     }
 
     setShowOCRReview(false);
@@ -547,11 +711,7 @@ export function NonPOInvoiceForm() {
       approver: 'AP Team',
       paymentStatus: 'Unpaid',
       matchStatus: 'Unmatched',
-      notes: narration || undefined,
-      metadata: {
-        vendorNarration,
-        internalRemarks,
-      },
+      _source: 'manual',
     });
     return true;
   };
@@ -608,6 +768,119 @@ export function NonPOInvoiceForm() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const handleKeyboardSave = useCallback(() => handleSaveDraft(), []);
   useFormKeyboardSave(handleKeyboardSave);
+
+  const ocrSummary = useMemo(() => {
+    const fields = Object.values(ocrFields);
+    if (!fields.length) return null;
+    const avgConf = fields.reduce((s, f) => s + f.confidence, 0) / fields.length;
+    const needsReview = fields.filter((f) => f.confidence < 0.9).length;
+    return { avgConf, needsReview };
+  }, [ocrFields]);
+
+  const getConfidencePill = (fieldKey: string) => {
+    const f = ocrFields[fieldKey];
+    if (!f)
+      return (
+        <span
+          style={{
+            fontSize: '11px',
+            padding: '2px 8px',
+            borderRadius: '9999px',
+            fontWeight: 600,
+            backgroundColor: '#F1F5F9',
+            color: '#64748B',
+          }}
+        >
+          Auto
+        </span>
+      );
+    const pct = Math.round(f.confidence * 100);
+    if (f.confidence >= 0.9)
+      return (
+        <span
+          style={{
+            fontSize: '11px',
+            padding: '2px 8px',
+            borderRadius: '9999px',
+            fontWeight: 600,
+            backgroundColor: '#DCFCE7',
+            color: '#15803D',
+          }}
+        >
+          ✓ {pct}%
+        </span>
+      );
+    if (f.confidence >= 0.7)
+      return (
+        <span
+          style={{
+            fontSize: '11px',
+            padding: '2px 8px',
+            borderRadius: '9999px',
+            fontWeight: 600,
+            backgroundColor: '#FEF3C7',
+            color: '#B45309',
+          }}
+        >
+          ~ {pct}%
+        </span>
+      );
+    return (
+      <span
+        style={{
+          fontSize: '11px',
+          padding: '2px 8px',
+          borderRadius: '9999px',
+          fontWeight: 600,
+          backgroundColor: '#FEE2E2',
+          color: '#B91C1C',
+        }}
+      >
+        ! {pct}%
+      </span>
+    );
+  };
+
+  const getSuggestionChips = (fieldKey: string, onSelect: (v: string) => void) => {
+    const f = ocrFields[fieldKey];
+    if (!showSuggestions || !f || f.confidence >= 0.95 || !f.suggestions.length) return null;
+    return (
+      <div
+        style={{
+          marginTop: '5px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+          flexWrap: 'wrap',
+          animation: 'ocr-fadein 0.15s ease',
+        }}
+      >
+        <span style={{ fontSize: '11px', color: '#9CA3AF', whiteSpace: 'nowrap' }}>
+          Nearest matches:
+        </span>
+        {f.suggestions.slice(0, 2).map((s, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onSelect(s.value)}
+            className="transition-colors hover:bg-teal-50"
+            style={{
+              fontSize: '11px',
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              border: '1px solid var(--color-teal)',
+              color: 'var(--color-teal)',
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {s.value} · {Math.round(s.confidence * 100)}%
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <FormShell
@@ -694,6 +967,54 @@ export function NonPOInvoiceForm() {
                 </button>
               </div>
             </div>
+
+            {filePreviewUrl && (
+              <div
+                className="rounded-lg overflow-hidden"
+                style={{ height: '420px', border: '1px solid var(--color-silver)' }}
+              >
+                {uploadedFile?.type === 'application/pdf' ? (
+                  <object
+                    data={filePreviewUrl}
+                    type="application/pdf"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 'none', display: 'block' }}
+                  >
+                    <div
+                      className="flex flex-col items-center justify-center h-full gap-2"
+                      style={{
+                        backgroundColor: 'var(--color-cloud)',
+                        color: 'var(--color-mercury-grey)',
+                      }}
+                    >
+                      <FileText className="w-10 h-10" />
+                      <p className="text-sm">PDF preview unavailable in this browser.</p>
+                      <a
+                        href={filePreviewUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm"
+                        style={{ color: 'var(--color-teal)' }}
+                      >
+                        Open in new tab
+                      </a>
+                    </div>
+                  </object>
+                ) : (
+                  <img
+                    src={filePreviewUrl}
+                    alt="Invoice preview"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      backgroundColor: 'var(--color-cloud)',
+                    }}
+                  />
+                )}
+              </div>
+            )}
 
             {ocrStatus === 'complete' && ocrData && (
               <button
@@ -783,23 +1104,72 @@ export function NonPOInvoiceForm() {
               </p>
             </div>
 
-            <div className="p-6 space-y-6">
-              {/* Vendor Info */}
+            {/* OCR Summary Bar */}
+            {ocrSummary && (
+              <div
+                className="mx-6 mt-5 px-4 py-3 rounded-lg flex items-center gap-3"
+                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-ink)' }}>
+                      OCR Confidence: {Math.round(ocrSummary.avgConf * 100)}%
+                    </span>
+                    {ocrSummary.needsReview > 0 && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '1px 7px',
+                          borderRadius: '9999px',
+                          backgroundColor: '#FEF3C7',
+                          color: '#B45309',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {ocrSummary.needsReview} field{ocrSummary.needsReview > 1 ? 's' : ''} need review
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className="h-1.5 rounded-full overflow-hidden"
+                    style={{ backgroundColor: '#E2E8F0' }}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.round(ocrSummary.avgConf * 100)}%`,
+                        backgroundColor:
+                          ocrSummary.avgConf >= 0.9
+                            ? '#16A34A'
+                            : ocrSummary.avgConf >= 0.7
+                              ? '#D97706'
+                              : '#DC2626',
+                      }}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSuggestions((v) => !v)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors hover:bg-white"
+                  style={{ color: 'var(--color-mercury-grey)', border: '1px solid var(--color-silver)' }}
+                  title={showSuggestions ? 'Hide suggestions' : 'Show suggestions'}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  {showSuggestions ? 'Hide' : 'Show'} suggestions
+                </button>
+              </div>
+            )}
+
+            <div className="p-6 space-y-5">
+              {/* Vendor Name */}
               <div>
                 <label
-                  className="text-sm mb-2 block"
+                  className="text-sm mb-1.5 flex items-center gap-2"
                   style={{ color: 'var(--color-mercury-grey)' }}
                 >
                   Vendor Name
-                  <span
-                    className="ml-2 px-2 py-0.5 rounded text-xs"
-                    style={{
-                      backgroundColor: getConfidenceColor(ocrData.confidence.vendorName) + '20',
-                      color: getConfidenceColor(ocrData.confidence.vendorName),
-                    }}
-                  >
-                    {(ocrData.confidence.vendorName * 100).toFixed(0)}% confidence
-                  </span>
+                  {getConfidencePill('vendor')}
                 </label>
                 <input
                   type="text"
@@ -808,14 +1178,19 @@ export function NonPOInvoiceForm() {
                   className="w-full px-4 py-2 rounded-lg border-2"
                   style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 />
+                {getSuggestionChips('vendor', (v) =>
+                  setOcrData((prev) => prev && { ...prev, vendorName: v })
+                )}
               </div>
 
+              {/* Vendor GSTIN */}
               <div>
                 <label
-                  className="text-sm mb-2 block"
+                  className="text-sm mb-1.5 flex items-center gap-2"
                   style={{ color: 'var(--color-mercury-grey)' }}
                 >
                   Vendor GSTIN
+                  {getConfidencePill('vendorGstin')}
                 </label>
                 <input
                   type="text"
@@ -824,25 +1199,20 @@ export function NonPOInvoiceForm() {
                   className="w-full px-4 py-2 rounded-lg border-2"
                   style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 />
+                {getSuggestionChips('vendorGstin', (v) =>
+                  setOcrData((prev) => prev && { ...prev, vendorGSTIN: v })
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
+                {/* Invoice Number */}
                 <div>
                   <label
-                    className="text-sm mb-2 block"
+                    className="text-sm mb-1.5 flex items-center gap-2"
                     style={{ color: 'var(--color-mercury-grey)' }}
                   >
                     Invoice Number
-                    <span
-                      className="ml-2 px-2 py-0.5 rounded text-xs"
-                      style={{
-                        backgroundColor:
-                          getConfidenceColor(ocrData.confidence.invoiceNumber) + '20',
-                        color: getConfidenceColor(ocrData.confidence.invoiceNumber),
-                      }}
-                    >
-                      {(ocrData.confidence.invoiceNumber * 100).toFixed(0)}% confidence
-                    </span>
+                    {getConfidencePill('invoiceNumber')}
                   </label>
                   <input
                     type="text"
@@ -851,49 +1221,42 @@ export function NonPOInvoiceForm() {
                     className="w-full px-4 py-2 rounded-lg border-2"
                     style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                   />
+                  {getSuggestionChips('invoiceNumber', (v) =>
+                    setOcrData((prev) => prev && { ...prev, invoiceNumber: v })
+                  )}
                 </div>
 
+                {/* Invoice Date */}
                 <div>
                   <label
-                    className="text-sm mb-2 block"
+                    className="text-sm mb-1.5 flex items-center gap-2"
                     style={{ color: 'var(--color-mercury-grey)' }}
                   >
                     Invoice Date
-                    <span
-                      className="ml-2 px-2 py-0.5 rounded text-xs"
-                      style={{
-                        backgroundColor: getConfidenceColor(ocrData.confidence.invoiceDate) + '20',
-                        color: getConfidenceColor(ocrData.confidence.invoiceDate),
-                      }}
-                    >
-                      {(ocrData.confidence.invoiceDate * 100).toFixed(0)}% confidence
-                    </span>
+                    {getConfidencePill('invoiceDate')}
                   </label>
                   <input
-                    type="date"
+                    type="text"
                     value={ocrData.invoiceDate}
                     onChange={(e) => setOcrData({ ...ocrData, invoiceDate: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border-2"
                     style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
+                    placeholder="e.g. 31 Jan 2026 or 2026-01-31"
                   />
+                  {getSuggestionChips('invoiceDate', (v) =>
+                    setOcrData((prev) => prev && { ...prev, invoiceDate: v })
+                  )}
                 </div>
               </div>
 
+              {/* Invoice Amount */}
               <div>
                 <label
-                  className="text-sm mb-2 block"
+                  className="text-sm mb-1.5 flex items-center gap-2"
                   style={{ color: 'var(--color-mercury-grey)' }}
                 >
-                  Invoice Amount
-                  <span
-                    className="ml-2 px-2 py-0.5 rounded text-xs"
-                    style={{
-                      backgroundColor: getConfidenceColor(ocrData.confidence.invoiceAmount) + '20',
-                      color: getConfidenceColor(ocrData.confidence.invoiceAmount),
-                    }}
-                  >
-                    {(ocrData.confidence.invoiceAmount * 100).toFixed(0)}% confidence
-                  </span>
+                  Invoice Amount (Gross)
+                  {getConfidencePill('totalAmount')}
                 </label>
                 <input
                   type="number"
@@ -904,7 +1267,63 @@ export function NonPOInvoiceForm() {
                   className="w-full px-4 py-2 rounded-lg border-2"
                   style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
                 />
+                {getSuggestionChips('totalAmount', (v) =>
+                  setOcrData((prev) => prev && { ...prev, invoiceAmount: parseFloat(v) || 0 })
+                )}
               </div>
+
+              {/* Line items preview */}
+              {ocrData.lineItems.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Line Items ({ocrData.lineItems.length})
+                  </p>
+                  <div className="space-y-1.5">
+                    {ocrData.lineItems.map((li, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
+                        style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)' }}
+                      >
+                        <span className="flex-1 truncate">{li.description || '—'}</span>
+                        <span className="ml-4 shrink-0" style={{ color: 'var(--color-mercury-grey)' }}>
+                          {li.quantity} × ₹{li.rate.toLocaleString('en-IN')}
+                        </span>
+                        <span
+                          className="ml-4 shrink-0 font-semibold"
+                          style={{ color: 'var(--color-teal)' }}
+                        >
+                          ₹{(li.quantity * li.rate).toLocaleString('en-IN')}
+                        </span>
+                        <span className="ml-3 shrink-0">
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              padding: '1px 6px',
+                              borderRadius: '9999px',
+                              fontWeight: 600,
+                              backgroundColor:
+                                li.confidence >= 0.9
+                                  ? '#DCFCE7'
+                                  : li.confidence >= 0.7
+                                    ? '#FEF3C7'
+                                    : '#FEE2E2',
+                              color:
+                                li.confidence >= 0.9
+                                  ? '#15803D'
+                                  : li.confidence >= 0.7
+                                    ? '#B45309'
+                                    : '#B91C1C',
+                            }}
+                          >
+                            {Math.round(li.confidence * 100)}%
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div
@@ -930,59 +1349,118 @@ export function NonPOInvoiceForm() {
         </div>
       )}
 
+      {/* OCR applied indicator — shown in main form after OCR data is applied */}
+      {ocrSummary && ocrStatus === 'complete' && !showOCRReview && (
+        <div
+          className="mb-4 px-4 py-2.5 rounded-lg flex items-center gap-3"
+          style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}
+        >
+          <CheckCircle className="w-4 h-4 shrink-0" style={{ color: '#16A34A' }} />
+          <span className="text-sm flex-1" style={{ color: '#15803D' }}>
+            OCR data applied · Overall confidence{' '}
+            <strong>{Math.round(ocrSummary.avgConf * 100)}%</strong>
+            {ocrSummary.needsReview > 0 && (
+              <>
+                {' '}
+                ·{' '}
+                <span style={{ color: '#B45309' }}>
+                  {ocrSummary.needsReview} field{ocrSummary.needsReview > 1 ? 's' : ''} below 90%
+                </span>
+              </>
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowSuggestions((v) => !v)}
+            className="flex items-center gap-1 text-xs transition-colors hover:opacity-80"
+            style={{ color: '#15803D' }}
+          >
+            <Eye className="w-3 h-3" />
+            {showSuggestions ? 'Hide' : 'Show'} hints
+          </button>
+        </div>
+      )}
+
       {/* Stage 2: Invoice Header */}
       <FormSection
         title="Step 2: Invoice Header"
         columns={2}
         icon={<FileText className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />}
       >
-        <VendorSelector
-          value={vendorId}
-          onChange={(id) => {
-            setVendorId(id);
-            setShowAdvanceSection(true);
-          }}
-          entityId={entityId}
-          required
-          showMSMEBadge
-          error={showValidation ? errors.vendor : undefined}
-        />
+        <div>
+          <VendorSelector
+            value={vendorId}
+            onChange={(id) => {
+              setVendorId(id);
+              setShowAdvanceSection(true);
+            }}
+            entityId={entityId}
+            required
+            showMSMEBadge
+            error={showValidation ? errors.vendor : undefined}
+          />
+          {ocrFields.vendor && (
+            <div className="mt-1 flex items-center gap-1.5">
+              {getConfidencePill('vendor')}
+              <span style={{ fontSize: '11px', color: '#64748B' }}>
+                OCR: {ocrFields.vendor.value}
+              </span>
+            </div>
+          )}
+          {getSuggestionChips('vendor', (v) => {
+            const match = vendors.find(
+              (vn) => vn.name.trim().toLowerCase() === v.trim().toLowerCase(),
+            );
+            if (match) {
+              setVendorId(match.id);
+              setShowAdvanceSection(true);
+            }
+          })}
+        </div>
 
         <PxFormField
           label="Invoice Number"
           required
           error={showValidation ? errors.invoiceNumber : undefined}
         >
-          <input
-            type="text"
-            value={invoiceNumber}
-            onChange={(e) => setInvoiceNumber(e.target.value)}
-            placeholder="Enter invoice number"
-            className="px-input w-full px-4 py-2 rounded-lg border-2"
-            style={{
-              borderColor:
-                showValidation && errors.invoiceNumber
-                  ? 'var(--color-error-dark)'
-                  : 'var(--color-silver)',
-              color: 'var(--color-ink)',
-            }}
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={invoiceNumber}
+              onChange={(e) => setInvoiceNumber(e.target.value)}
+              placeholder="Enter invoice number"
+              className="px-input flex-1 px-4 py-2 rounded-lg border-2"
+              style={{
+                borderColor:
+                  showValidation && errors.invoiceNumber
+                    ? 'var(--color-error-dark)'
+                    : 'var(--color-silver)',
+                color: 'var(--color-ink)',
+              }}
+            />
+            {ocrFields.invoiceNumber && getConfidencePill('invoiceNumber')}
+          </div>
+          {getSuggestionChips('invoiceNumber', setInvoiceNumber)}
         </PxFormField>
 
         <PxFormField label="Invoice Date" required>
-          <input
-            type="date"
-            value={invoiceDate}
-            onChange={(e) => setInvoiceDate(e.target.value)}
-            className="px-input w-full px-4 py-2 rounded-lg border-2"
-            style={{
-              borderColor:
-                showValidation && errors.invoiceDate
-                  ? 'var(--color-error-dark)'
-                  : 'var(--color-silver)',
-              color: 'var(--color-ink)',
-            }}
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={invoiceDate}
+              onChange={(e) => setInvoiceDate(e.target.value)}
+              className="px-input flex-1 px-4 py-2 rounded-lg border-2"
+              style={{
+                borderColor:
+                  showValidation && errors.invoiceDate
+                    ? 'var(--color-error-dark)'
+                    : 'var(--color-silver)',
+                color: 'var(--color-ink)',
+              }}
+            />
+            {ocrFields.invoiceDate && getConfidencePill('invoiceDate')}
+          </div>
+          {getSuggestionChips('invoiceDate', setInvoiceDate)}
         </PxFormField>
 
         <PxFormField label="Due Date">

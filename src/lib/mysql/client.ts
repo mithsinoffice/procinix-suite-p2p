@@ -20,6 +20,19 @@ export function buildMysqlApiHeaders(): Record<string, string> {
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
+  if (typeof sessionStorage !== 'undefined') {
+    try {
+      const raw = sessionStorage.getItem(SESSION_USER_KEY);
+      if (raw) {
+        const u = JSON.parse(raw) as { tenantId?: string };
+        if (u?.tenantId) {
+          headers['X-Tenant-Id'] = u.tenantId;
+        }
+      }
+    } catch {
+      // ignore malformed session user
+    }
+  }
   return headers;
 }
 

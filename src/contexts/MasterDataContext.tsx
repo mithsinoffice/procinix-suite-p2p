@@ -1,13 +1,5 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import {
-  SUBKO_VENDORS,
-  SUBKO_ITEMS,
-  SUBKO_UOM,
-  SUBKO_DEPARTMENTS,
-  SUBKO_COST_CENTRES,
-  SUBKO_DEBIT_NOTE_REASONS,
-} from './SubkoMasterData';
-import {
   MULTI_ENTITY_VENDORS,
   MULTI_ENTITY_BANKS,
   MULTI_ENTITY_COST_CENTRES,
@@ -404,115 +396,50 @@ export interface ExchangeRateMaster {
 // In production, this would come from API/Database
 // ============================================================================
 
-const VENDOR_MASTER_DATA: VendorMaster[] = [
-  ...SUBKO_VENDORS,
-  ...MULTI_ENTITY_VENDORS,
-  ...DEMO_VENDOR_DATASET,
-];
+const VENDOR_MASTER_DATA: VendorMaster[] = [...MULTI_ENTITY_VENDORS, ...DEMO_VENDOR_DATASET];
 
-const ITEM_MASTER_DATA: ItemMaster[] = SUBKO_ITEMS;
+const ITEM_MASTER_DATA: ItemMaster[] = [];
 
 const ENTITY_MASTER_DATA: EntityMaster[] = [
-  // MULTI-ENTITY EXTENSION - New Entities Added
   {
-    id: 'ENT-SUBKO-IN',
-    code: 'SUBKO-IN',
-    name: 'Subko Coffee Pvt Ltd – India',
-    legalName: 'Subko Coffee Private Limited',
-    pan: 'AABCS1234D',
-    gstin: '29AABCS1234D1Z5',
+    id: 'entity-ptpl-001',
+    code: 'PTPL',
+    name: 'Procinix Technologies Private Limited',
+    legalName: 'Procinix Technologies Private Limited',
+    pan: 'AABCP1234Q',
+    gstin: '27AABCP1234Q1Z5',
     entityType: 'Company',
-    address: '45 Lavelle Road, Ashok Nagar',
-    city: 'Bangalore',
-    state: 'Karnataka',
-    stateCode: 'KA',
-    pincode: '560001',
-    isActive: true,
-    country: 'India',
-    currency: 'INR',
-    taxRegime: 'GST',
-  },
-  {
-    id: 'ENT-SUBKO-UAE',
-    code: 'SUBKO-UAE',
-    name: 'Subko Coffee – Dubai',
-    legalName: 'Subko Coffee LLC',
-    pan: '',
-    gstin: '',
-    entityType: 'Company',
-    address: 'Dubai Investment Park, Building 3',
-    city: 'Dubai',
-    state: 'Dubai',
-    stateCode: 'DXB',
-    pincode: '00000',
-    isActive: true,
-    country: 'UAE',
-    currency: 'AED',
-    taxRegime: 'VAT',
-    vatRegistrationNumber: '100123456700003',
-    taxIdentificationNumber: '100123456700003',
-  },
-  {
-    id: 'ENT-PROCINIX-IN',
-    code: 'PROC-IN',
-    name: 'Procinix Ltd – India',
-    legalName: 'Procinix Solutions Private Limited',
-    pan: 'AABCP5678E',
-    gstin: '27AABCP5678E1Z9',
-    entityType: 'Company',
-    address: '301 Maker Chambers V, Nariman Point',
+    address: 'A 1302 Sunteck City Avenue 1 Goregaon West Mumbai 400104',
     city: 'Mumbai',
     state: 'Maharashtra',
-    stateCode: 'MH',
-    pincode: '400021',
+    stateCode: '27',
+    pincode: '400104',
     isActive: true,
     country: 'India',
     currency: 'INR',
     taxRegime: 'GST',
   },
-  // EXISTING ENTITIES - MARKED INACTIVE (DEMO DATA)
   {
-    id: 'ENT-001',
-    code: 'ENT-BLR',
-    name: 'Bangalore Office',
-    legalName: 'ABC Private Limited - Bangalore',
-    pan: 'AAAAA1234A',
-    gstin: '29AAAAA1234A1Z1',
-    entityType: 'Branch',
-    address: '100 MG Road',
-    city: 'Bangalore',
-    state: 'Karnataka',
-    stateCode: 'KA',
-    pincode: '560001',
-    isActive: false, // DEMO DATA - EXCLUDED
-    country: 'India',
-    currency: 'INR',
-    taxRegime: 'GST',
-  },
-  {
-    id: 'ENT-002',
-    code: 'ENT-MUM',
-    name: 'Mumbai Office',
-    legalName: 'ABC Private Limited - Mumbai',
-    pan: 'AAAAA1234A',
-    gstin: '27AAAAA1234A1Z2',
-    entityType: 'Branch',
-    address: '200 Nariman Point',
+    id: 'entity-mtpl-001',
+    code: 'MTPL',
+    name: 'Mensbrand Technologies Private Limited',
+    legalName: 'Mensbrand Technologies Private Limited',
+    pan: 'AABCM5678Q',
+    gstin: '27AABCM5678Q1Z3',
+    entityType: 'Company',
+    address: 'Mumbai Maharashtra',
     city: 'Mumbai',
     state: 'Maharashtra',
-    stateCode: 'MH',
-    pincode: '400021',
-    isActive: false, // DEMO DATA - EXCLUDED
+    stateCode: '27',
+    pincode: '400001',
+    isActive: true,
     country: 'India',
     currency: 'INR',
     taxRegime: 'GST',
   },
 ];
 
-const COST_CENTRE_MASTER_DATA: CostCentreMaster[] = [
-  ...SUBKO_COST_CENTRES,
-  ...MULTI_ENTITY_COST_CENTRES,
-];
+const COST_CENTRE_MASTER_DATA: CostCentreMaster[] = [...MULTI_ENTITY_COST_CENTRES];
 
 const PROFIT_CENTRE_MASTER_DATA: ProfitCentreMaster[] = [
   {
@@ -707,14 +634,18 @@ const BANK_MASTER_DATA: BankMaster[] = [
   },
 ];
 
-const UOM_MASTER_DATA: UOMMaster[] = SUBKO_UOM;
-
-const DEPARTMENT_MASTER_DATA: DepartmentMaster[] = [
-  ...SUBKO_DEPARTMENTS,
-  ...MULTI_ENTITY_DEPARTMENTS,
+const UOM_MASTER_DATA: UOMMaster[] = [
+  { id: 'UOM-001', code: 'KG', name: 'Kilogram', description: 'Unit of weight measurement', isActive: true },
+  { id: 'UOM-002', code: 'LITRE', name: 'Litre', description: 'Unit of volume measurement', isActive: true },
+  { id: 'UOM-003', code: 'NOS', name: 'Numbers', description: 'Count of items', isActive: true },
+  { id: 'UOM-004', code: 'HOUR', name: 'Hour', description: 'Unit of time for services', isActive: true },
+  { id: 'UOM-005', code: 'MT', name: 'Metric Ton', description: '1000 kilograms', isActive: true },
+  { id: 'UOM-006', code: 'PKT', name: 'Packet', description: 'Standard packet', isActive: true },
 ];
 
-const DEBIT_NOTE_REASON_MASTER_DATA: DebitNoteReasonMaster[] = SUBKO_DEBIT_NOTE_REASONS;
+const DEPARTMENT_MASTER_DATA: DepartmentMaster[] = [...MULTI_ENTITY_DEPARTMENTS];
+
+const DEBIT_NOTE_REASON_MASTER_DATA: DebitNoteReasonMaster[] = [];
 const VENDOR_GROUP_MASTER_DATA: VendorGroupMaster[] = [
   { code: 'VG001', name: 'Tata Group', relationshipType: 'Associate' },
   { code: 'VG002', name: 'Reliance Group', relationshipType: 'Related party' },

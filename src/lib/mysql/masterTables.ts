@@ -1,7 +1,7 @@
 import { ensureDomainDocument } from './documentStore';
 import { mysqlApiRequest } from './client';
 
-const STORAGE_PREFIX = 'procinix-subko-erp:relational-master';
+const STORAGE_PREFIX = 'procinix-s2p:relational-master';
 const relationalMasterMemoryCache = new Map<string, unknown[]>();
 const relationalMasterInFlight = new Map<string, Promise<unknown[]>>();
 
@@ -36,6 +36,7 @@ const MASTER_KEYS = [
   'tds_section_master',
   'location_master',
   'gl_code_master',
+  'vendor_group_master',
 ] as const;
 
 export type MasterKey = (typeof MASTER_KEYS)[number];

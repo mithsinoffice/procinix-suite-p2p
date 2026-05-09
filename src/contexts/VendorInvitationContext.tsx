@@ -18,7 +18,7 @@ import type {
 } from '../types/vendorInvitation';
 
 /** Legacy localStorage key (pre–MySQL document sync); migrated into `vendor_invitations` domain */
-const LEGACY_STORAGE_KEY = 'procinix-subko:vendor-invitations';
+const LEGACY_STORAGE_KEY = 'procinix-s2p:vendor-invitations';
 
 export type VendorInvitationsDocument = { invitations: VendorInvitation[] };
 

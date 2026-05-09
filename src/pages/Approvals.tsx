@@ -52,7 +52,10 @@ type ScrutinizerInsight = {
 };
 
 function authHeaders(userId?: string): Record<string, string> {
-  const key = localStorage.getItem('token') || import.meta.env.VITE_API_SECRET_KEY || '';
+  const key =
+    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('procinix.session.token')) ||
+    import.meta.env.VITE_API_SECRET_KEY ||
+    '';
   return {
     'Content-Type': 'application/json',
     ...(key ? { Authorization: `Bearer ${key}` } : {}),

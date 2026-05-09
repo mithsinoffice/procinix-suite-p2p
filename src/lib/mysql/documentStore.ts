@@ -21,7 +21,7 @@ interface EnsureDomainDocumentOptions {
   seedIfMissing?: boolean;
 }
 
-const STORAGE_PREFIX = 'procinix-subko-erp';
+const STORAGE_PREFIX = 'procinix-s2p';
 
 function getStorageKey(domain: DocumentDomain) {
   return `${STORAGE_PREFIX}:${domain}`;

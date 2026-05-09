@@ -33,6 +33,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAPData } from '../contexts/APDataContext';
+import { mysqlApiRequest } from '../lib/mysql/client';
 import { POInvoiceExceptionModal, ExceptionRequestData } from './POInvoiceExceptionModal';
 import { isMsmeVendor, maxMsmeDueDate, msmeDueDateWarning } from '../lib/msmeDueDate';
 import { AIInsightsPanel, AIInsight, AIAction } from './AIInsightsPanel';
@@ -86,6 +87,7 @@ interface OCRData {
 
 interface LineItem {
   id: string;
+  selected?: boolean;
   itemName: string;
   itemCode: string;
   itemDescription: string;
@@ -283,9 +285,9 @@ export function InvoiceFormPO() {
 
     const fetchAIInvoice = async () => {
       try {
-        const res = await fetch(`/api/invoices/${state.dbId}`);
-        if (!res.ok) return;
-        const json = await res.json();
+        const json = await mysqlApiRequest<{ success: boolean; data: any }>(
+          `/invoices/${state.dbId}`
+        );
         if (!json.success) return;
         const inv = json.data;
 
@@ -994,16 +996,12 @@ export function InvoiceFormPO() {
 
   const checkDuplicateInvoice = async () => {
     const vendor = getVendorByCode(vendorCode || selectedVendor);
-    if (!vendor || !invoiceNumber) return true;
+    const vendorId = (vendor as { id?: string } | null | undefined)?.id;
+    if (!vendor || !vendorId || !invoiceNumber) return true;
     try {
-      const response = await fetch(
-        `/api/invoices?vendorId=${encodeURIComponent(vendor.id || '')}&invoiceNo=${encodeURIComponent(invoiceNumber)}`,
-        {
-          headers: authHeaders(),
-        }
+      const json = await mysqlApiRequest<{ success: boolean; data: any[] }>(
+        `/invoices?vendorId=${encodeURIComponent(vendorId)}&invoiceNo=${encodeURIComponent(invoiceNumber)}`
       );
-      if (!response.ok) return true;
-      const json = await response.json();
       const matches = Array.isArray(json?.data) ? json.data : [];
       if (matches.length === 0) return true;
       const confirmProceed = window.confirm(
@@ -1716,7 +1714,7 @@ export function InvoiceFormPO() {
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <EntityCurrencyBadge entityId="ENT-SUBKO-IN" variant="compact" />
+                <EntityCurrencyBadge entityId="entity-ptpl-001" variant="compact" />
                 <div
                   className="px-4 py-2 rounded-lg"
                   style={{

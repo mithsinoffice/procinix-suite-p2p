@@ -22,10 +22,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { isSuperAdminUser } from '../utils/superAdmin';
 import procinixLogo from '../assets/Procinix Logo PNG V1.png';
 
-/**
- * SUBKO COFFEE — flat nav with Vendor Management sub-menus
- */
-
 interface NavChild {
   label: string;
   route: string;
@@ -95,7 +91,7 @@ const navigationItems: NavItem[] = [
   { label: 'Workflow Engine', route: '/workflow-engine', icon: GitBranch },
 ];
 
-export function SubkoCoffeeNavigation() {
+export function MainNavigation() {
   const location = useLocation();
   const { user } = useAuth();
   const showSuperAdminNav = isSuperAdminUser(user);

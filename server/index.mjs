@@ -100,6 +100,7 @@ import {
   ensureSessionsTable,
 } from './services/auth/loginService.mjs';
 import { handleAuthRoute } from './routes/auth.mjs';
+import { handleInvoiceRoute } from './routes/invoices.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import {
   verifyPAN,
@@ -1039,6 +1040,7 @@ const server = http.createServer(async (req, res) => {
   try {
     // Auth routes (POST /api/auth/login — also in PUBLIC_PATHS, handled here for consistency)
     if (await handleAuthRoute(req, res, pathname, sendJson)) return;
+    if (await handleInvoiceRoute(req, res, pathname, sendJson)) return;
 
     if (req.method === 'POST' && pathname === '/api/auth/platform-context') {
       const body = await readJsonBody(req);
@@ -2712,6 +2714,10 @@ const server = http.createServer(async (req, res) => {
       if (rows.length === 0)
         return sendJson(res, 404, { success: false, error: 'Invoice not found' });
       const invoice = rows[0];
+      const requestTenantId = readApTenantId(req, url);
+      if (requestTenantId && String(invoice.tenant_id) !== String(requestTenantId)) {
+        return sendJson(res, 403, { success: false, error: 'tenant_mismatch' });
+      }
       invoice.metadata =
         typeof invoice.metadata === 'string' ? JSON.parse(invoice.metadata) : invoice.metadata;
       invoice.bank_details =
@@ -2722,7 +2728,14 @@ const server = http.createServer(async (req, res) => {
         'SELECT * FROM invoice_line_items WHERE invoice_id = ? ORDER BY line_number',
         [invoiceId]
       );
-      return sendJson(res, 200, { success: true, data: { ...invoice, line_items: lineItems } });
+      const payments = await query(
+        "SELECT id, payment_date, amount, currency, payment_method, status, reference, notes FROM payments WHERE invoice_id = ? AND status = 'confirmed' ORDER BY payment_date DESC",
+        [invoiceId]
+      );
+      return sendJson(res, 200, {
+        success: true,
+        data: { ...invoice, line_items: lineItems, payments },
+      });
     }
 
     if (
@@ -2822,6 +2835,8 @@ const server = http.createServer(async (req, res) => {
             bank_details = CAST(? AS JSON),
             notes = ?,
             status = ?${resolvedLifecycle ? ', lifecycle_state = ?' : ''},
+            ${invoicePatch.validated_by != null ? 'validated_by = ?,' : ''}
+            ${invoicePatch.validated_at != null ? 'validated_at = ?,' : ''}
             metadata = CAST(? AS JSON),
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
@@ -2849,6 +2864,8 @@ const server = http.createServer(async (req, res) => {
           invoicePatch.notes ?? null,
           patchStatus,
           ...(resolvedLifecycle ? [resolvedLifecycle] : []),
+          ...(invoicePatch.validated_by != null ? [invoicePatch.validated_by] : []),
+          ...(invoicePatch.validated_at != null ? [invoicePatch.validated_at] : []),
           JSON.stringify(nextMetadata),
           invoiceId,
         ]
@@ -3062,6 +3079,7 @@ const server = http.createServer(async (req, res) => {
     //     supplier_gstin, place_of_supply, payment_total, payment_count,
     //     payment_outstanding, payment_progress_pct }
     if (req.method === 'GET' && pathname === '/api/invoices') {
+      const tenantId = readApTenantId(req, url);
       const source = url.searchParams.get('source');
       const status = url.searchParams.get('status');
       const vendorId = url.searchParams.get('vendorId');
@@ -3113,6 +3131,11 @@ const server = http.createServer(async (req, res) => {
 
       const conditions = [];
       const params = [];
+
+      if (tenantId) {
+        conditions.push('i.tenant_id = ?');
+        params.push(tenantId);
+      }
 
       if (source) {
         conditions.push('i.source = ?');
@@ -3970,12 +3993,15 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && pathname === '/api/vendors') {
       const body = await readJsonBody(req);
       const vendorId = randomUUID();
+      const tenantId = req.headers['x-tenant-id'] || null;
+      const vendorCode = body.vendor_code || `V-${Date.now().toString(36).toUpperCase()}`;
+      const vendorStatus = body.status || 'draft';
       // Drift fix 1: persist client_erp_vendor_code
       await query(
-        'INSERT INTO p2p_schema_mt.vendors (id, vendor_code, client_erp_vendor_code, vendor_legal_name, vendor_trade_name, vendor_group_name, vendor_group_code, vendor_type, address_line, city, state, pin_code, country, status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        'INSERT INTO p2p_schema_mt.vendors (id, vendor_code, client_erp_vendor_code, vendor_legal_name, vendor_trade_name, vendor_group_name, vendor_group_code, vendor_type, address_line, city, state, pin_code, country, status, tenant_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [
           vendorId,
-          body.vendor_code || `V-${Date.now().toString(36).toUpperCase()}`,
+          vendorCode,
           body.client_erp_vendor_code || null,
           body.vendor_legal_name,
           body.vendor_trade_name || null,
@@ -3987,9 +4013,24 @@ const server = http.createServer(async (req, res) => {
           body.state || null,
           body.pin_code || null,
           body.country || 'India',
-          body.status || 'draft',
+          vendorStatus,
+          tenantId,
         ]
       );
+      // Mirror to governance table so the approval dashboard can see pending vendors
+      if (vendorStatus === 'pending_approval') {
+        await query(
+          'INSERT INTO `vendor_master`.`vendor_master` (id, record_code, record_name, status, approval_status, payload) VALUES (?,?,?,?,?,?)',
+          [
+            vendorId,
+            vendorCode,
+            body.vendor_legal_name,
+            'Draft',
+            'Pending Approval',
+            JSON.stringify({ ...body, id: vendorId, vendor_code: vendorCode }),
+          ]
+        );
+      }
       for (const s of body.spocs || []) {
         await query(
           'INSERT INTO p2p_schema_mt.vendor_spocs (id, vendor_id, spoc_name, designation, email, phone, is_primary, location_label, city, state, pin_code) VALUES (?,?,?,?,?,?,?,?,?,?,?)',

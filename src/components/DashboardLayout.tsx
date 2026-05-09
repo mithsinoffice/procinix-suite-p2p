@@ -1,6 +1,6 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Header } from './Header';
-import { SubkoCoffeeNavigation } from './SubkoCoffeeNavigation';
+import { MainNavigation } from './MainNavigation';
 import { ChatBot } from './ChatBot';
 import { PlatformEntityGate } from './PlatformEntityGate';
 import { useEffect, useRef } from 'react';
@@ -26,8 +26,8 @@ export function DashboardLayout() {
   return (
     <div className="flex h-screen" style={{ backgroundColor: 'var(--color-cloud)' }}>
       {user?.mustSelectPlatformEntity ? <PlatformEntityGate /> : null}
-      {/* Subko Coffee Flat Navigation */}
-      <SubkoCoffeeNavigation />
+      {/* Procinix Flat Navigation */}
+      <MainNavigation />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">

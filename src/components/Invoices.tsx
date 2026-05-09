@@ -21,8 +21,40 @@ import {
   Search,
   Receipt,
   BadgeCheck,
+  Mail,
+  ClipboardList,
 } from 'lucide-react';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
+
+function invoiceDisplayRef(invoice: Invoice): string {
+  if (invoice.invoiceNumber) return invoice.invoiceNumber;
+  if (invoice.vendorName) {
+    const initials = invoice.vendorName
+      .split(/\s+/)
+      .map((w) => w[0] ?? '')
+      .join('')
+      .toUpperCase()
+      .slice(0, 4);
+    const month = invoice.invoiceDate
+      ? new Date(invoice.invoiceDate).toLocaleDateString('en-IN', {
+          month: 'short',
+          year: 'numeric',
+        })
+      : '';
+    return month ? `${initials} · ${month}` : initials;
+  }
+  if (invoice.invoiceAmount > 0) {
+    const amount = `₹${Math.round(invoice.invoiceAmount).toLocaleString('en-IN')}`;
+    const month = invoice.invoiceDate
+      ? new Date(invoice.invoiceDate).toLocaleDateString('en-IN', {
+          month: 'short',
+          year: 'numeric',
+        })
+      : '';
+    return month ? `${amount} · ${month}` : amount;
+  }
+  return 'AI-Extracted';
+}
 
 interface Invoice {
   id: string;
@@ -195,30 +227,14 @@ export function Invoices() {
   };
 
   const getInvoiceNavigationTarget = (invoice: Invoice) => {
-    if (invoice._source === 'ai_ingestion' && invoice._dbId) {
-      if (invoice._hasPO) {
-        return {
-          path: `/invoices/edit/${invoice.id}`,
-          state: { fromAI: true, dbId: invoice._dbId },
-        };
-      }
-      return {
-        path: '/invoices/create-direct',
-        state: { fromAI: true, dbId: invoice._dbId },
-      };
+    const dbId = invoice._dbId || invoice.id;
+    if (dbId) {
+      return { path: `/invoices/${dbId}`, state: undefined };
     }
-
-    if (invoice.invoiceType === 'Non-PO' || invoice.invoiceType === 'Expense') {
-      return {
-        path: '/invoices/create-direct',
-        state: { invoiceId: invoice.id },
-      };
+    if (invoice.invoiceType === 'PO') {
+      return { path: '/invoices/create-po', state: { invoiceId: invoice.id } };
     }
-
-    return {
-      path: `/invoices/edit/${invoice.id}`,
-      state: undefined,
-    };
+    return { path: '/invoices/create-direct', state: { invoiceId: invoice.id } };
   };
 
   return (
@@ -234,9 +250,23 @@ export function Invoices() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/invoices/ai-ingestion')}
+            className="flex items-center gap-2 px-5 py-3 rounded-lg transition-colors"
+            style={{
+              backgroundColor: 'white',
+              border: '1.5px solid var(--color-silver)',
+              color: 'var(--color-ink)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FBFD')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+          >
+            <ClipboardList className="w-5 h-5" style={{ color: '#007D87' }} />
+            Validation Workbench
+          </button>
+          <button
+            onClick={() => navigate('/invoices/ai-capture')}
             className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
             style={{ backgroundColor: '#007D87' }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#007D87')}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#006870')}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#007D87')}
           >
             <Sparkles className="w-5 h-5" />
@@ -466,11 +496,12 @@ export function Invoices() {
         </div>
 
         <div className="overflow-x-auto">
-          <div style={{ minWidth: '1680px' }}>
+          <div style={{ minWidth: '1820px' }}>
             <div
               className="grid gap-4 px-6 py-4"
               style={{
-                gridTemplateColumns: '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
+                gridTemplateColumns:
+                  '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
                 borderBottom: '1px solid #E8F0F4',
               }}
             >
@@ -523,6 +554,7 @@ export function Invoices() {
               <div />
               <div />
               <div />
+              <div />
               <div className="flex items-start">
                 <PremiumFilterMenu
                   label="Status"
@@ -559,7 +591,8 @@ export function Invoices() {
             <div
               className="grid gap-4 px-6 py-4"
               style={{
-                gridTemplateColumns: '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
+                gridTemplateColumns:
+                  '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
                 background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)',
                 borderBottom: '1px solid #E4EDF2',
               }}
@@ -568,6 +601,7 @@ export function Invoices() {
                 'Invoice',
                 'Vendor',
                 'Type',
+                'Source',
                 'PO Number',
                 'Amount',
                 'Invoice Date',
@@ -595,7 +629,8 @@ export function Invoices() {
                   type="button"
                   className="w-full grid gap-4 px-6 py-4 text-left transition-colors"
                   style={{
-                    gridTemplateColumns: '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
+                    gridTemplateColumns:
+                    '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
                     borderBottom:
                       index === filteredInvoices.length - 1 ? 'none' : '1px solid #EDF3F7',
                     backgroundColor: '#FFFFFF',
@@ -626,7 +661,7 @@ export function Invoices() {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
-                            {invoice.invoiceNumber}
+                            {invoiceDisplayRef(invoice)}
                           </span>
                           {invoice._source === 'ai_ingestion' && (
                             <span
@@ -663,6 +698,56 @@ export function Invoices() {
                     >
                       {invoice.invoiceType}
                     </span>
+                  </div>
+                  <div>
+                    {invoice._source === 'email_ingestion' ? (
+                      <span
+                        className="px-2.5 py-1 rounded-full text-xs inline-flex items-center gap-1"
+                        style={{
+                          backgroundColor: '#CCFBF1',
+                          color: '#0F766E',
+                          fontWeight: '600',
+                        }}
+                      >
+                        <Mail className="w-3 h-3" />
+                        Email
+                      </span>
+                    ) : invoice._source === 'ai_ingestion' ? (
+                      <span
+                        className="px-2.5 py-1 rounded-full text-xs inline-flex items-center gap-1"
+                        style={{
+                          backgroundColor: '#EDE9FE',
+                          color: '#6D28D9',
+                          fontWeight: '600',
+                        }}
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        AI OCR
+                      </span>
+                    ) : invoice._source === 'api' ? (
+                      <span
+                        className="px-2.5 py-1 rounded-full text-xs inline-flex items-center gap-1"
+                        style={{
+                          backgroundColor: '#DBEAFE',
+                          color: '#1D4ED8',
+                          fontWeight: '600',
+                        }}
+                      >
+                        API
+                      </span>
+                    ) : (
+                      <span
+                        className="px-2.5 py-1 rounded-full text-xs inline-flex items-center gap-1"
+                        style={{
+                          backgroundColor: '#F1F5F9',
+                          color: '#475569',
+                          fontWeight: '600',
+                        }}
+                      >
+                        <PencilLine className="w-3 h-3" />
+                        Manual
+                      </span>
+                    )}
                   </div>
                   <div style={{ color: 'var(--color-ink)' }}>{invoice.poNumber || '-'}</div>
                   <div style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
@@ -720,15 +805,17 @@ export function Invoices() {
                       <span style={{ color: 'var(--color-slate)' }}>-</span>
                     )}
                   </div>
-                  <div className="flex items-center justify-end gap-2">
+                  <div
+                    className="flex items-center justify-end gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <PremiumActionButton
                       label="View invoice"
                       icon={<Eye className="w-4 h-4" />}
                       tone="teal"
-                      onClick={() => {
-                        const target = getInvoiceNavigationTarget(invoice);
-                        navigate(target.path, { state: target.state });
-                      }}
+                      onClick={() =>
+                        navigate(`/invoices/${invoice._dbId || invoice.id}`)
+                      }
                     />
                     {invoice.status === 'Draft' && (
                       <PremiumActionButton

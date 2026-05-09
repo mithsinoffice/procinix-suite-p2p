@@ -251,16 +251,22 @@ function buildUserFromApi(apiUser: ApiUser): User {
     code: e.code ?? e.id,
   }));
 
-  const mustSelect = platformEntities.length > 1;
   const defaultPlatformEntity = apiUser.entities?.find((e) => e.isDefault) ?? apiUser.entities?.[0];
-  const currentPlatformEntityId = mustSelect ? undefined : defaultPlatformEntity?.id;
+  const currentPlatformEntityId = defaultPlatformEntity?.id;
+  // Gate only when there are multiple entities AND none is marked as default
+  const mustSelect = platformEntities.length > 1 && !apiUser.entities?.some((e) => e.isDefault);
 
   const authEntities: Entity[] =
     platformEntities.length > 0
       ? platformEntities.map((e) => ({ id: e.id, name: e.name, code: e.code }))
       : mockEntities;
 
-  const currentEntity = authEntities[0] ?? mockEntities[0];
+  const currentEntity =
+    (defaultPlatformEntity
+      ? authEntities.find((e) => e.id === defaultPlatformEntity.id)
+      : undefined) ??
+    authEntities[0] ??
+    mockEntities[0];
 
   return {
     id: apiUser.id,
@@ -407,6 +413,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const result = await mysqlApiRequest<{ user: ApiUser }>('/auth/me');
       const refreshed = buildUserFromApi(result.user);
+      // Never let a refresh silently drop tenantId — server may return null during a brief
+      // race between session INSERT and immediate /auth/me lookup after login.
+      if (!refreshed.tenantId && user.tenantId) {
+        refreshed.tenantId = user.tenantId;
+      }
       if (user.currentEntity) {
         const match = refreshed.availableEntities.find((e) => e.id === user.currentEntity.id);
         refreshed.currentEntity = match ?? refreshed.currentEntity;

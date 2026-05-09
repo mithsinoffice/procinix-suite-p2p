@@ -44,7 +44,10 @@ interface InvoiceException {
 const API_BASE = '/api/invoice-ingestion';
 
 function getAuthHeaders(): Record<string, string> {
-  const key = localStorage.getItem('apiSecretKey');
+  const key =
+    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('procinix.session.token')) ||
+    import.meta.env.VITE_API_SECRET_KEY ||
+    '';
   return key ? { Authorization: `Bearer ${key}` } : {};
 }
 

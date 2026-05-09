@@ -28,7 +28,10 @@ const API = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || '';
 
 /* ─── API helpers ───────────────────────────────────────────────── */
 function authHeaders(): Record<string, string> {
-  const key = localStorage.getItem('apiSecretKey');
+  const key =
+    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('procinix.session.token')) ||
+    import.meta.env.VITE_API_SECRET_KEY ||
+    '';
   return key ? { Authorization: `Bearer ${key}` } : {};
 }
 
@@ -38,8 +41,17 @@ const normalizeScore = (s: any): number => {
   return n > 1 ? Math.round(n) : Math.round(n * 100);
 };
 
-const getLane = (score: number): 'green' | 'amber' | 'red' =>
-  score >= 80 ? 'green' : score >= 50 ? 'amber' : 'red';
+const getLane = (inv: any): 'green' | 'amber' | 'red' => {
+  const ls = (inv.lifecycle_state || '').toLowerCase();
+  if (ls === 'processed' || ls === 'queued for payment') return 'green';
+  if (inv.touchless) return 'green';
+  const score = normalizeScore(inv.readiness_score ?? inv.touchless_score);
+  if (ls === 'exception hold') return 'red';
+  if (ls === 'rejected') return 'red';
+  if (score < 70) return 'red';
+  if (score >= 70 && ls === 'ingested') return 'amber';
+  return score >= 80 ? 'green' : score >= 50 ? 'amber' : 'red';
+};
 
 const getNextAction = (invoice: any) => {
   const score = normalizeScore(invoice.readiness_score);
@@ -154,8 +166,13 @@ export function APValidationWorkbench() {
   const filtered = useMemo(() => {
     let list = [...invoices];
     if (activeTab !== 'all') {
-      if (activeTab === 'pending') list = list.filter((i) => i.status === 'pending_approval');
-      else list = list.filter((i) => (i.lane || 'red') === activeTab);
+      if (activeTab === 'pending') {
+        list = list.filter(
+          (i) => i.lifecycle_state === 'Under Verification' || i.status === 'pending_approval'
+        );
+      } else {
+        list = list.filter((i) => getLane(i) === activeTab);
+      }
     }
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
@@ -253,24 +270,44 @@ export function APValidationWorkbench() {
         },
       });
     } else if (action.action === 'approve') {
-      handleRevalidate(invoice.id);
+      handleSubmitForApproval(invoice);
     } else if (action.action === 'review') {
       openReview(invoice.id);
     }
   };
 
-  const openReview = async (invoiceId: string) => {
+  const openReview = (invoiceId: string) => {
     if (!invoiceId) {
       setToast('Unable to open invoice detail.');
       return;
     }
-    navigate('/invoices/create-direct', {
-      state: {
-        fromAI: true,
-        dbId: invoiceId,
-        fromWorkbench: true,
-      },
-    });
+    navigate(`/invoices/${invoiceId}`);
+  };
+
+  const handleSubmitForApproval = async (inv: any) => {
+    const invoiceId = inv.id;
+    if (!invoiceId) return;
+    const tenantId =
+      JSON.parse(sessionStorage.getItem('procinix.session.user') ?? '{}')?.tenantId ||
+      'tenant-default-001';
+    const validatedBy =
+      JSON.parse(sessionStorage.getItem('procinix.session.user') ?? '{}')?.email || null;
+    try {
+      const res = await fetch(`${API}/api/invoices/${invoiceId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': tenantId, ...authHeaders() },
+        body: JSON.stringify({ validated_by: validatedBy }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setToast(data.error || 'Submit failed.');
+        return;
+      }
+      await Promise.all([fetchInvoices(), fetchStats()]);
+      setToast('Invoice submitted for approval.');
+    } catch {
+      setToast('Submit failed. Check server connection.');
+    }
   };
 
   const updateReviewField = (field: string, value: any) => {
@@ -567,7 +604,7 @@ export function APValidationWorkbench() {
               AP Validation Workbench
             </h1>
             <p style={{ fontSize: 12, color: '#9CA3AF', margin: '2px 0 0', fontWeight: 400 }}>
-              Subko Coffee Roasters &middot; Last synced{' '}
+              Procinix Technologies Pvt Ltd &middot; Last synced{' '}
               {stats.last_poll_time
                 ? new Date(stats.last_poll_time).toLocaleTimeString('en-IN', {
                     hour: '2-digit',
@@ -916,7 +953,7 @@ export function APValidationWorkbench() {
                   <tbody>
                     {filtered.map((inv) => {
                       const score = normalizeScore(inv.readiness_score);
-                      const lane = inv.lane || getLane(score);
+                      const lane = getLane(inv);
                       const nextAction = getNextAction(inv);
                       const exTag = getExceptionTag(inv);
                       const isExpanded = expandedRow === inv.id;
@@ -1252,6 +1289,7 @@ export function APValidationWorkbench() {
                                     })
                                   }
                                   onRevalidate={() => handleRevalidate(inv.id)}
+                                  onSubmitForApproval={() => handleSubmitForApproval(inv)}
                                   revalidating={revalidating === inv.id}
                                 />
                               </td>
@@ -1451,16 +1489,24 @@ function ExpandedRowDetail({
   invoice,
   onCreateVendor,
   onRevalidate,
+  onSubmitForApproval,
   revalidating,
 }: {
   invoice: any;
   onCreateVendor: () => void;
   onRevalidate: () => void;
+  onSubmitForApproval: () => void;
   revalidating: boolean;
 }) {
-  const score = normalizeScore(invoice.readiness_score);
+  const score = normalizeScore(invoice.readiness_score ?? invoice.touchless_score);
   const exceptions = invoice.exceptions || [];
   const unresolvedExceptions = exceptions.filter((e: any) => !e.resolved);
+  const failReasons: string[] =
+    Array.isArray(invoice.touchless_fail_reasons)
+      ? invoice.touchless_fail_reasons
+      : typeof invoice.touchless_fail_reasons === 'string'
+        ? JSON.parse(invoice.touchless_fail_reasons || '[]')
+        : [];
 
   return (
     <div
@@ -1506,9 +1552,9 @@ function ExpandedRowDetail({
               letterSpacing: '0.05em',
             }}
           >
-            Exceptions ({unresolvedExceptions.length})
+            Routing Flags ({unresolvedExceptions.length + failReasons.length})
           </h4>
-          {unresolvedExceptions.length === 0 ? (
+          {unresolvedExceptions.length === 0 && failReasons.length === 0 ? (
             <div
               style={{
                 display: 'flex',
@@ -1526,7 +1572,26 @@ function ExpandedRowDetail({
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {unresolvedExceptions.slice(0, 4).map((ex: any, idx: number) => (
+              {failReasons.map((reason: string, idx: number) => (
+                <div
+                  key={`fr-${idx}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 12px',
+                    backgroundColor: '#FFF7ED',
+                    borderRadius: 8,
+                    border: '1px solid #FED7AA',
+                  }}
+                >
+                  <AlertCircle
+                    style={{ width: 13, height: 13, color: '#C2410C', flexShrink: 0 }}
+                  />
+                  <span style={{ fontSize: 12, color: '#9A3412' }}>{reason}</span>
+                </div>
+              ))}
+              {unresolvedExceptions.slice(0, 4 - failReasons.length).map((ex: any, idx: number) => (
                 <div
                   key={idx}
                   style={{
@@ -1571,6 +1636,29 @@ function ExpandedRowDetail({
             Quick Actions
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {(invoice.lifecycle_state === 'Ingested' ||
+              invoice.lifecycle_state === 'Exception Hold' ||
+              !invoice.lifecycle_state) && (
+              <button
+                onClick={onSubmitForApproval}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  border: 'none',
+                  backgroundColor: 'var(--color-teal, #007D87)',
+                  color: '#FFFFFF',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <CheckCircle style={{ width: 14, height: 14 }} />
+                Submit for Approval
+              </button>
+            )}
             <button
               onClick={onRevalidate}
               disabled={revalidating}

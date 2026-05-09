@@ -63,7 +63,11 @@ export function CreateVendorSlideOver({
 
       // Revalidate the invoice
       try {
-        const key = localStorage.getItem('apiSecretKey');
+        const key =
+          (typeof sessionStorage !== 'undefined' &&
+            sessionStorage.getItem('procinix.session.token')) ||
+          import.meta.env.VITE_API_SECRET_KEY ||
+          '';
         await fetch(`${API}/api/invoice-ingestion/revalidate/${invoiceId}`, {
           method: 'POST',
           headers: {
