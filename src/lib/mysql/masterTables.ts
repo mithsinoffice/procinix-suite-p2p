@@ -38,6 +38,10 @@ const MASTER_KEYS = [
   'gl_code_master',
   'vendor_group_master',
   'designation_master',
+  'asset_category_master',
+  'depreciation_method_master',
+  'service_type_master',
+  'expense_category_master',
 ] as const;
 
 export type MasterKey = (typeof MASTER_KEYS)[number];

@@ -191,6 +191,30 @@ export const MASTER_STORAGE = {
     auditTable: 'designation_master_audit',
     legacyTable: 'erp_master_designations',
   },
+  asset_category_master: {
+    database: 'asset_category_master',
+    table: 'asset_category_master',
+    auditTable: 'asset_category_master_audit',
+    legacyTable: 'erp_master_asset_categories',
+  },
+  depreciation_method_master: {
+    database: 'depreciation_method_master',
+    table: 'depreciation_method_master',
+    auditTable: 'depreciation_method_master_audit',
+    legacyTable: 'erp_master_depreciation_methods',
+  },
+  service_type_master: {
+    database: 'service_type_master',
+    table: 'service_type_master',
+    auditTable: 'service_type_master_audit',
+    legacyTable: 'erp_master_service_types',
+  },
+  expense_category_master: {
+    database: 'expense_category_master',
+    table: 'expense_category_master',
+    auditTable: 'expense_category_master_audit',
+    legacyTable: 'erp_master_expense_categories',
+  },
 };
 
 export function getMasterStorage(masterKey) {

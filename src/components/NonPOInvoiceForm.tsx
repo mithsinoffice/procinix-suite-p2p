@@ -214,7 +214,14 @@ export function NonPOInvoiceForm() {
     getTDSSectionByCode,
     currentCompany,
     entities,
+    expenseCategories: expenseCategoryRecords,
   } = useMasterData();
+  const expenseCategoryOptions =
+    expenseCategoryRecords && expenseCategoryRecords.length > 0
+      ? expenseCategoryRecords.map((r) =>
+          String(r.recordName ?? r.name ?? r.recordCode ?? r.code ?? '')
+        )
+      : ['Professional Services', 'Consulting', 'Marketing', 'Travel', 'Maintenance', 'Utilities'];
   const { addInvoice } = useAPData();
   const { user } = useAuth();
 
@@ -1642,12 +1649,11 @@ export function NonPOInvoiceForm() {
             }}
           >
             <option value="">Select category</option>
-            <option value="Professional Services">Professional Services</option>
-            <option value="Consulting">Consulting</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Travel">Travel</option>
-            <option value="Maintenance">Maintenance</option>
-            <option value="Utilities">Utilities</option>
+            {expenseCategoryOptions.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
           </select>
         </PxFormField>
 

@@ -39,8 +39,15 @@ export function ServicePRForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addPurchaseRequest } = useProcurementData();
-  const { vendors, entities, departments, costCentres, accountCodes, currentCompany } =
-    useMasterData();
+  const {
+    vendors,
+    entities,
+    departments,
+    costCentres,
+    accountCodes,
+    currentCompany,
+    serviceTypes: serviceTypeRecords,
+  } = useMasterData();
   const [serviceType, setServiceType] = useState('');
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [totalValue, setTotalValue] = useState(0);
@@ -56,18 +63,23 @@ export function ServicePRForm() {
   const [contractEndDate, setContractEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [serviceDescription, setServiceDescription] = useState('');
 
-  const serviceTypes = [
-    'Professional Consulting',
-    'IT Services & Development',
-    'AMC - Hardware',
-    'AMC - Software',
-    'Training & Development',
-    'Audit & Compliance',
-    'Marketing & Branding',
-    'Facility Management',
-    'Security Services',
-    'Legal Services',
-  ];
+  const serviceTypes =
+    serviceTypeRecords && serviceTypeRecords.length > 0
+      ? serviceTypeRecords.map((r) =>
+          String(r.recordName ?? r.name ?? r.recordCode ?? r.code ?? '')
+        )
+      : [
+          'Professional Consulting',
+          'IT Services & Development',
+          'AMC - Hardware',
+          'AMC - Software',
+          'Training & Development',
+          'Audit & Compliance',
+          'Marketing & Branding',
+          'Facility Management',
+          'Security Services',
+          'Legal Services',
+        ];
 
   const activeVendors = vendors.filter((vendor) => vendor.status === 'Active');
   const activeCostCentres = costCentres.filter((costCentre) => costCentre.isActive);

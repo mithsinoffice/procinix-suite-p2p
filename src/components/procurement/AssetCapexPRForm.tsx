@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Building2,
   Plus,
@@ -39,22 +39,55 @@ export function AssetCapexPRForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addPurchaseRequest } = useProcurementData();
-  const { vendors, entities, costCentres, currentCompany } = useMasterData();
+  const {
+    vendors,
+    entities,
+    costCentres,
+    currentCompany,
+    assetCategories: assetCategoryRecords,
+    depreciationMethods: depreciationMethodRecords,
+  } = useMasterData();
   const [assets, setAssets] = useState<AssetItem[]>([]);
   const [selectedEntity, setSelectedEntity] = useState(
     currentCompany?.name || entities[0]?.name || ''
   );
-  const [budgetYear, setBudgetYear] = useState('FY 2024-25');
+
+  // Indian fiscal year runs Apr–Mar. Compute current + next 2 FYs from today.
+  const fyOptions = useMemo(() => {
+    const now = new Date();
+    const startYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    return [0, 1, 2].map((offset) => {
+      const s = startYear + offset;
+      return `FY ${s}-${String((s + 1) % 100).padStart(2, '0')}`;
+    });
+  }, []);
+  const [budgetYear, setBudgetYear] = useState(fyOptions[0]);
   const [businessJustification, setBusinessJustification] = useState('');
 
-  const assetCategories = [
-    'Machinery & Equipment',
-    'Vehicles',
-    'IT Hardware',
-    'Infrastructure',
-    'Furniture & Fixtures',
-  ];
-  const depreciationMethods = ['Straight Line', 'Written Down Value', 'Double Declining Balance'];
+  const assetCategories = useMemo(
+    () =>
+      assetCategoryRecords && assetCategoryRecords.length > 0
+        ? assetCategoryRecords.map((r) =>
+            String(r.recordName ?? r.name ?? r.recordCode ?? r.code ?? '')
+          )
+        : [
+            'Machinery & Equipment',
+            'Vehicles',
+            'IT Hardware',
+            'Infrastructure',
+            'Furniture & Fixtures',
+          ],
+    [assetCategoryRecords]
+  );
+  const depreciationMethods = useMemo(
+    () =>
+      depreciationMethodRecords && depreciationMethodRecords.length > 0
+        ? depreciationMethodRecords.map((r) =>
+            String(r.recordName ?? r.name ?? r.recordCode ?? r.code ?? '')
+          )
+        : ['Straight Line', 'Written Down Value', 'Double Declining Balance'],
+    [depreciationMethodRecords]
+  );
   const activeVendors = vendors
     .filter((vendor) => vendor.status === 'Active')
     .map((vendor) => vendor.name);
@@ -222,8 +255,11 @@ export function AssetCapexPRForm() {
                       color: 'var(--color-ink)',
                     }}
                   >
-                    <option>FY 2024-25</option>
-                    <option>FY 2025-26</option>
+                    {fyOptions.map((fy) => (
+                      <option key={fy} value={fy}>
+                        {fy}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="col-span-2">
@@ -625,7 +661,7 @@ export function AssetCapexPRForm() {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                      FY 2024-25 CAPEX Budget
+                      {budgetYear} CAPEX Budget
                     </span>
                     <span
                       className="text-sm"
