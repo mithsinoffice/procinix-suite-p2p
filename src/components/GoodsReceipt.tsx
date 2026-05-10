@@ -13,6 +13,17 @@ import {
 } from 'lucide-react';
 import { useAPData } from '../contexts/APDataContext';
 import { FormSection, PxFormField } from './ui/form-primitives';
+import {
+  listingHeader,
+  listingTitle,
+  listingSubtitle,
+  listingPrimaryBtn,
+  listingPage,
+  listingTable,
+  listingThead,
+  listingTh,
+  listingTd,
+} from './ui/listingStyles';
 
 interface GRN {
   id: string;
@@ -259,124 +270,88 @@ export function GoodsReceipt() {
   };
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div style={listingPage}>
+      <div style={listingHeader}>
         <div>
-          <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>
-            Goods Receipt (GRN)
-          </h1>
-          <p style={{ color: 'var(--color-mercury-grey)' }}>
-            Record vendor deliveries and manage location allocations
-          </p>
+          <h1 style={listingTitle}>Goods Receipt (GRN)</h1>
+          <p style={listingSubtitle}>Record vendor deliveries and manage location allocations</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: 'var(--color-teal)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
-        >
-          <Plus className="w-5 h-5" />
+        <button onClick={() => setShowCreateModal(true)} style={listingPrimaryBtn}>
+          <Plus size={13} />
           Create GRN from PO
         </button>
       </div>
 
-      {/* Search */}
       <div
-        className="bg-white rounded-lg p-6 mb-6"
-        style={{ border: '1px solid var(--color-silver)' }}
+        style={{
+          padding: '8px 20px',
+          background: 'var(--color-background-secondary)',
+          borderBottom: '1px solid var(--color-fog)',
+          display: 'flex',
+          gap: 8,
+        }}
       >
-        <div className="flex gap-4">
-          <div className="flex-1 relative">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5"
-              style={{ color: 'var(--color-mercury-grey)' }}
-            />
-            <input
-              type="text"
-              placeholder="Search by GRN number, PO number, or vendor..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg"
-              style={{
-                border: '1px solid var(--color-silver)',
-                backgroundColor: 'var(--color-cloud)',
-                color: 'var(--color-ink)',
-              }}
-            />
-          </div>
-          <button
-            className="flex items-center gap-2 px-4 py-2 rounded-lg"
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search
+            size={13}
             style={{
-              border: '1px solid var(--color-silver)',
-              color: 'var(--color-ink)',
-              backgroundColor: 'white',
+              position: 'absolute',
+              left: 8,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--color-mercury-grey)',
             }}
-          >
-            <Filter className="w-5 h-5" />
-            Filter
-          </button>
+          />
+          <input
+            type="text"
+            placeholder="Search by GRN number, PO number, or vendor..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              height: 28,
+              padding: '0 10px 0 26px',
+              borderRadius: 'var(--border-radius-md)',
+              border: '1px solid var(--color-silver)',
+              background: '#FFFFFF',
+              fontSize: 12,
+              color: 'var(--color-ink)',
+              outline: 'none',
+            }}
+          />
         </div>
+        <button
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            height: 28,
+            padding: '0 10px',
+            borderRadius: 'var(--border-radius-md)',
+            border: '1px solid var(--color-silver)',
+            background: '#FFFFFF',
+            color: 'var(--color-ink)',
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          <Filter size={13} /> Filter
+        </button>
       </div>
 
-      {/* Table */}
-      <div
-        className="bg-white rounded-lg overflow-hidden"
-        style={{ border: '1px solid var(--color-silver)' }}
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
+      <div style={{ background: '#FFFFFF' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={listingTable}>
+            <thead style={listingThead}>
               <tr>
-                <th
-                  className="text-left px-6 py-4 text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  GRN Number
-                </th>
-                <th
-                  className="text-left px-6 py-4 text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  PO Number
-                </th>
-                <th
-                  className="text-left px-6 py-4 text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Vendor
-                </th>
-                <th
-                  className="text-left px-6 py-4 text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Receipt Date
-                </th>
-                <th
-                  className="text-right px-6 py-4 text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Qty Received
-                </th>
-                <th
-                  className="text-right px-6 py-4 text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Amount
-                </th>
-                <th
-                  className="text-left px-6 py-4 text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Allocation Status
-                </th>
-                <th
-                  className="text-left px-6 py-4 text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Actions
-                </th>
+                <th style={listingTh}>GRN Number</th>
+                <th style={listingTh}>PO Number</th>
+                <th style={listingTh}>Vendor</th>
+                <th style={listingTh}>Receipt Date</th>
+                <th style={{ ...listingTh, textAlign: 'right' }}>Qty Received</th>
+                <th style={{ ...listingTh, textAlign: 'right' }}>Amount</th>
+                <th style={listingTh}>Allocation Status</th>
+                <th style={listingTh}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -387,28 +362,24 @@ export function GoodsReceipt() {
                     borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)',
                   }}
                 >
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
+                  <td style={listingTd}>
                     <div className="flex items-center gap-2">
                       <Package className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                       {grn.grnNumber}
                     </div>
                   </td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                  <td style={{ ...listingTd, color: 'var(--color-mercury-grey)' }}>
                     {grn.poNumber}
                   </td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
-                    {grn.vendor}
-                  </td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                  <td style={listingTd}>{grn.vendor}</td>
+                  <td style={{ ...listingTd, color: 'var(--color-mercury-grey)' }}>
                     {new Date(grn.receiptDate).toLocaleDateString('en-IN')}
                   </td>
-                  <td className="px-6 py-4 text-right" style={{ color: 'var(--color-ink)' }}>
-                    {grn.qtyReceived}
-                  </td>
-                  <td className="px-6 py-4 text-right" style={{ color: 'var(--color-ink)' }}>
+                  <td style={{ ...listingTd, textAlign: 'right' }}>{grn.qtyReceived}</td>
+                  <td style={{ ...listingTd, textAlign: 'right' }}>
                     ₹{grn.amount.toLocaleString('en-IN')}
                   </td>
-                  <td className="px-6 py-4">
+                  <td style={listingTd}>
                     <span
                       className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm"
                       style={{
@@ -426,7 +397,7 @@ export function GoodsReceipt() {
                       {grn.allocationStatus}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td style={listingTd}>
                     <button
                       onClick={() => handleViewAllocations(grn)}
                       className="px-3 py-1 rounded text-sm transition-colors"

@@ -15,6 +15,25 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useProcurementData } from '../../contexts/ProcurementDataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import {
+  listingHeader,
+  listingTitle,
+  listingSubtitle,
+  listingPrimaryBtn,
+  metricStrip,
+  metricCard,
+  metricLabel,
+  metricValue,
+  metricValueWarning,
+  metricValueSuccess,
+  listingPage,
+  listingTable,
+  listingThead,
+  listingTh,
+  listingTd,
+  listingTdPrimary,
+  rowHover,
+} from '../ui/listingStyles';
 
 export function MyPRs() {
   const navigate = useNavigate();
@@ -102,118 +121,88 @@ export function MyPRs() {
   };
 
   return (
-    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl mb-2" style={{ color: 'var(--color-ink)', margin: 0 }}>
-              My Purchase Requisitions
-            </h1>
-            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
-              View and manage your PR requests
-            </p>
-          </div>
-          <button
-            className="px-4 py-2 rounded-lg text-white"
-            style={{ backgroundColor: 'var(--color-teal)' }}
-            onClick={() => navigate('/procurement/pr/create')}
-          >
-            <FileText className="w-4 h-4 inline mr-2" />
-            Create New PR
-          </button>
+    <div style={listingPage}>
+      <div style={listingHeader}>
+        <div>
+          <h1 style={listingTitle}>My Purchase Requisitions</h1>
+          <p style={listingSubtitle}>View and manage your PR requests</p>
         </div>
+        <button style={listingPrimaryBtn} onClick={() => navigate('/procurement/pr/create')}>
+          <FileText size={13} />
+          Create New PR
+        </button>
+      </div>
 
-        <div className="relative">
+      <div
+        style={{
+          padding: '8px 20px',
+          background: 'var(--color-background-secondary)',
+          borderBottom: '1px solid var(--color-fog)',
+          display: 'flex',
+          gap: 8,
+        }}
+      >
+        <div style={{ position: 'relative', flex: 1 }}>
           <Search
-            className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2"
-            style={{ color: 'var(--color-mercury-grey)' }}
+            size={13}
+            style={{
+              position: 'absolute',
+              left: 8,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--color-mercury-grey)',
+            }}
           />
           <input
             type="text"
             placeholder="Search by PR ID, department, or entity..."
-            className="w-full pl-10 pr-4 py-2 rounded-lg text-sm"
             style={{
+              width: '100%',
+              height: 28,
+              padding: '0 10px 0 26px',
+              borderRadius: 'var(--border-radius-md)',
               border: '1px solid var(--color-silver)',
-              backgroundColor: '#FFFFFF',
+              background: '#FFFFFF',
+              fontSize: 12,
               color: 'var(--color-ink)',
+              outline: 'none',
             }}
           />
         </div>
       </div>
 
-      <div className="p-8">
-        <div className="grid grid-cols-5 gap-6 mb-8">
-          <div
-            className="bg-white p-6 rounded-lg"
-            style={{ border: '1px solid var(--color-silver)' }}
-          >
-            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-              Total PRs
-            </p>
-            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
-              {stats.total}
-            </p>
-          </div>
-          <div
-            className="bg-white p-6 rounded-lg"
-            style={{ border: '1px solid var(--color-silver)' }}
-          >
-            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-              Draft
-            </p>
-            <p
-              className="text-2xl"
-              style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
-            >
-              {stats.draft}
-            </p>
-          </div>
-          <div
-            className="bg-white p-6 rounded-lg"
-            style={{ border: '1px solid var(--color-silver)' }}
-          >
-            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-              In Review
-            </p>
-            <p
-              className="text-2xl"
-              style={{ color: 'var(--color-warning-dark)', fontWeight: '600' }}
-            >
-              {stats.inReview}
-            </p>
-          </div>
-          <div
-            className="bg-white p-6 rounded-lg"
-            style={{ border: '1px solid var(--color-silver)' }}
-          >
-            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-              Approved
-            </p>
-            <p
-              className="text-2xl"
-              style={{ color: 'var(--color-success-dark)', fontWeight: '600' }}
-            >
-              {stats.approved}
-            </p>
-          </div>
-          <div
-            className="bg-white p-6 rounded-lg"
-            style={{ border: '1px solid var(--color-silver)' }}
-          >
-            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-              Total Value
-            </p>
-            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
-              {formatCurrency(stats.totalValue)}
-            </p>
-          </div>
+      <div style={metricStrip}>
+        <div style={metricCard}>
+          <div style={metricLabel}>Total PRs</div>
+          <div style={metricValue}>{stats.total}</div>
         </div>
+        <div style={metricCard}>
+          <div style={metricLabel}>Draft</div>
+          <div style={{ ...metricValue, color: 'var(--color-mercury-grey)' }}>{stats.draft}</div>
+        </div>
+        <div style={metricCard}>
+          <div style={metricLabel}>In Review</div>
+          <div style={metricValueWarning}>{stats.inReview}</div>
+        </div>
+        <div style={metricCard}>
+          <div style={metricLabel}>Approved</div>
+          <div style={metricValueSuccess}>{stats.approved}</div>
+        </div>
+        <div style={metricCard}>
+          <div style={metricLabel}>Total Value</div>
+          <div style={metricValue}>{formatCurrency(stats.totalValue)}</div>
+        </div>
+      </div>
 
+      <div style={{ padding: '0 20px 20px' }}>
         <div
-          className="bg-white rounded-lg mb-6"
-          style={{ border: '1px solid var(--color-silver)' }}
+          style={{
+            background: '#FFFFFF',
+            marginTop: 12,
+            borderBottom: '1px solid var(--color-fog)',
+          }}
         >
-          <div className="flex items-center gap-4 p-4">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 0' }}>
             {['all', 'draft', 'pending', 'approved', 'cancelled'].map((tab) => (
               <button
                 key={tab}
@@ -257,63 +246,18 @@ export function MyPRs() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
+            <table style={listingTable}>
+              <thead style={listingThead}>
                 <tr>
-                  <th
-                    className="px-6 py-3 text-left text-xs"
-                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
-                  >
-                    PR ID
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs"
-                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
-                  >
-                    Type
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs"
-                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
-                  >
-                    Entity
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs"
-                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
-                  >
-                    Department
-                  </th>
-                  <th
-                    className="px-6 py-3 text-right text-xs"
-                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
-                  >
-                    Amount
-                  </th>
-                  <th
-                    className="px-6 py-3 text-center text-xs"
-                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
-                  >
-                    Status
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs"
-                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
-                  >
-                    Need-by Date
-                  </th>
-                  <th
-                    className="px-6 py-3 text-left text-xs"
-                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
-                  >
-                    Next Approver
-                  </th>
-                  <th
-                    className="px-6 py-3 text-center text-xs"
-                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
-                  >
-                    Actions
-                  </th>
+                  <th style={listingTh}>PR ID</th>
+                  <th style={listingTh}>Type</th>
+                  <th style={listingTh}>Entity</th>
+                  <th style={listingTh}>Department</th>
+                  <th style={{ ...listingTh, textAlign: 'right' }}>Amount</th>
+                  <th style={{ ...listingTh, textAlign: 'center' }}>Status</th>
+                  <th style={listingTh}>Need-by Date</th>
+                  <th style={listingTh}>Next Approver</th>
+                  <th style={{ ...listingTh, textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y" style={{ borderColor: 'var(--color-silver)' }}>
@@ -324,7 +268,7 @@ export function MyPRs() {
 
                   return (
                     <tr key={pr.id}>
-                      <td className="px-6 py-4">
+                      <td style={listingTd}>
                         <div>
                           <p
                             className="text-sm mb-1"
@@ -342,7 +286,7 @@ export function MyPRs() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td style={listingTd}>
                         <span className="px-2 py-1 rounded text-xs inline-block" style={typeStyle}>
                           {pr.type}
                         </span>
@@ -362,7 +306,7 @@ export function MyPRs() {
                       >
                         {formatCurrency(pr.amount)}
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td style={{ ...listingTd, textAlign: 'center' }}>
                         <div className="flex items-center justify-center gap-1.5">
                           <StatusIcon className="w-4 h-4" style={{ color: statusStyle.color }} />
                           <span
@@ -385,7 +329,7 @@ export function MyPRs() {
                       >
                         {pr.approver}
                       </td>
-                      <td className="px-6 py-4">
+                      <td style={listingTd}>
                         <div className="flex items-center justify-center gap-2">
                           <button className="p-1 rounded hover:bg-gray-100">
                             <Eye className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />

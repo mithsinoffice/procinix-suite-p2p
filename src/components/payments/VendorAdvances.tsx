@@ -17,6 +17,13 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { mysqlApiRequest } from '../../lib/mysql/client';
 import { formatINR, formatINRCompact } from '../../lib/formatCurrency';
+import {
+  listingHeader,
+  listingTitle,
+  listingSubtitle,
+  listingPrimaryBtn,
+  listingPage,
+} from '../ui/listingStyles';
 import type {
   AdvanceStatus,
   AdvanceSummary,
@@ -770,29 +777,29 @@ export function VendorAdvances() {
   };
 
   return (
-    <div className="p-8 bg-cloud min-h-screen">
-      <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
+    <div style={listingPage}>
+      <div style={listingHeader}>
         <div>
-          <h1 className="text-3xl font-semibold text-ink mb-1">Vendor advances</h1>
-          <p className="text-mercury-grey">
-            Upfront payments to vendors before goods or services are delivered. Approved advances
-            flow into the Payment queue.
+          <h1 style={listingTitle}>Vendor advances</h1>
+          <p style={listingSubtitle}>
+            Upfront payments to vendors. Approved advances flow into the Payment queue.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', gap: 8 }}>
           <button
             type="button"
             onClick={refresh}
-            className="px-4 py-2 border-2 border-silver bg-white rounded-lg text-mercury-grey text-sm flex items-center gap-2"
+            style={{
+              ...listingPrimaryBtn,
+              background: '#FFFFFF',
+              color: 'var(--color-mercury-grey)',
+              border: '1px solid var(--color-silver)',
+            }}
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="px-4 py-2 bg-teal hover:bg-teal-dark text-white rounded-lg text-sm font-medium flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> New advance
+          <button type="button" onClick={openCreate} style={listingPrimaryBtn}>
+            <Plus size={13} /> New advance
           </button>
         </div>
       </div>

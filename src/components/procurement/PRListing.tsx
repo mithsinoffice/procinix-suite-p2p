@@ -19,6 +19,19 @@ import { useProcurementData } from '../../contexts/ProcurementDataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from '../ui/premium-register';
 import { AuditTrailDrawer } from './AuditTrailDrawer';
+import {
+  listingHeader,
+  listingTitle,
+  listingSubtitle,
+  listingPrimaryBtn,
+  metricStrip,
+  metricCard,
+  metricLabel,
+  metricValue,
+  metricValueWarning,
+  metricValueSuccess,
+  listingPage,
+} from '../ui/listingStyles';
 
 type PRType = 'Catalogue' | 'Regular' | 'Service' | 'Kit/Bundle' | 'Asset/CAPEX' | 'Blanket';
 type AIRiskLevel = 'Low' | 'Medium' | 'High';
@@ -181,78 +194,115 @@ export function PRListing() {
   };
 
   return (
-    <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl mb-2" style={{ color: 'var(--color-ink)', margin: 0 }}>
-              Purchase Requisitions
-            </h1>
-            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
-              {selectedTab === 'my-prs'
-                ? 'View and manage your PR requests'
-                : 'View team PR requests'}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {filteredPRs.filter((pr) => pr.status === 'Approved' && !pr.linkedPO).length > 0 && (
-              <button
-                className="px-4 py-2 rounded-lg text-sm border"
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderColor: 'var(--color-teal)',
-                  color: 'var(--color-teal)',
-                }}
-                onClick={handleBulkConvertToPO}
-              >
-                <Package className="w-4 h-4 inline mr-2" />
-                Convert{' '}
-                {filteredPRs.filter((pr) => pr.status === 'Approved' && !pr.linkedPO).length} PRs to
-                PO
-              </button>
-            )}
-            <button
-              className="px-4 py-2 rounded-lg text-white"
-              style={{ backgroundColor: 'var(--color-teal)' }}
-              onClick={() => navigate('/procurement/pr/create')}
-            >
-              <FileText className="w-4 h-4 inline mr-2" />
-              Create New PR
-            </button>
-          </div>
+    <div style={listingPage}>
+      <div style={listingHeader}>
+        <div>
+          <h1 style={listingTitle}>Purchase Requisitions</h1>
+          <p style={listingSubtitle}>
+            {selectedTab === 'my-prs'
+              ? 'View and manage your PR requests'
+              : 'View team PR requests'}
+          </p>
         </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {filteredPRs.filter((pr) => pr.status === 'Approved' && !pr.linkedPO).length > 0 && (
+            <button
+              style={{
+                ...listingPrimaryBtn,
+                background: '#FFFFFF',
+                color: 'var(--color-teal)',
+                border: '1px solid var(--color-teal)',
+              }}
+              onClick={handleBulkConvertToPO}
+            >
+              <Package size={13} />
+              Convert {
+                filteredPRs.filter((pr) => pr.status === 'Approved' && !pr.linkedPO).length
+              }{' '}
+              PRs to PO
+            </button>
+          )}
+          <button style={listingPrimaryBtn} onClick={() => navigate('/procurement/pr/create')}>
+            <FileText size={13} />
+            Create New PR
+          </button>
+        </div>
+      </div>
 
-        {/* Search Bar */}
-        <div className="relative">
+      <div
+        style={{
+          padding: '8px 20px',
+          background: 'var(--color-background-secondary)',
+          borderBottom: '1px solid var(--color-fog)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <div style={{ position: 'relative', flex: 1 }}>
           <Search
-            className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2"
-            style={{ color: 'var(--color-mercury-grey)' }}
+            size={13}
+            style={{
+              position: 'absolute',
+              left: 8,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--color-mercury-grey)',
+            }}
           />
           <input
             type="text"
             placeholder="Search by PR ID, requestor, department, or entity..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg text-sm"
             style={{
+              width: '100%',
+              height: 28,
+              padding: '0 10px 0 26px',
+              borderRadius: 'var(--border-radius-md)',
               border: '1px solid var(--color-silver)',
-              backgroundColor: '#FFFFFF',
+              background: '#FFFFFF',
+              fontSize: 12,
               color: 'var(--color-ink)',
+              outline: 'none',
             }}
           />
         </div>
       </div>
 
-      <div className="p-8">
-        {/* Tabs */}
-        <div
-          className="bg-white rounded-lg mb-6"
-          style={{ border: '1px solid var(--color-silver)' }}
-        >
+      <div style={metricStrip}>
+        <div style={metricCard}>
+          <div style={metricLabel}>Total PRs</div>
+          <div style={metricValue}>{stats.total}</div>
+        </div>
+        <div style={metricCard}>
+          <div style={metricLabel}>Draft</div>
+          <div style={{ ...metricValue, color: 'var(--color-mercury-grey)' }}>{stats.draft}</div>
+        </div>
+        <div style={metricCard}>
+          <div style={metricLabel}>Pending</div>
+          <div style={metricValueWarning}>{stats.pending}</div>
+        </div>
+        <div style={metricCard}>
+          <div style={metricLabel}>Approved</div>
+          <div style={metricValueSuccess}>{stats.approved}</div>
+        </div>
+        <div style={metricCard}>
+          <div style={metricLabel}>Total Value</div>
+          <div style={metricValue}>{formatCurrency(stats.totalValue)}</div>
+        </div>
+      </div>
+
+      <div style={{ padding: '0 20px 20px' }}>
+        <div style={{ background: '#FFFFFF', marginTop: 12 }}>
           <div
-            className="flex items-center gap-4 p-4"
-            style={{ borderBottom: '1px solid var(--color-silver)' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '8px 0',
+              borderBottom: '1px solid var(--color-fog)',
+            }}
           >
             <button
               onClick={() => setSelectedTab('my-prs')}
@@ -290,131 +340,44 @@ export function PRListing() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-5 gap-6 mb-8">
+        <div style={{ background: '#FFFFFF', marginTop: 12 }}>
           <div
-            className="bg-white p-6 rounded-lg"
-            style={{ border: '1px solid var(--color-silver)' }}
+            style={{
+              padding: '8px 0',
+              borderBottom: '1px solid var(--color-fog)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
           >
-            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-              Total PRs
-            </p>
-            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
-              {stats.total}
-            </p>
-          </div>
-          <div
-            className="bg-white p-6 rounded-lg"
-            style={{ border: '1px solid var(--color-silver)' }}
-          >
-            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-              Draft
-            </p>
-            <p
-              className="text-2xl"
-              style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
-            >
-              {stats.draft}
-            </p>
-          </div>
-          <div
-            className="bg-white p-6 rounded-lg"
-            style={{ border: '1px solid var(--color-silver)' }}
-          >
-            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-              Pending
-            </p>
-            <p
-              className="text-2xl"
-              style={{ color: 'var(--color-warning-dark)', fontWeight: '600' }}
-            >
-              {stats.pending}
-            </p>
-          </div>
-          <div
-            className="bg-white p-6 rounded-lg"
-            style={{ border: '1px solid var(--color-silver)' }}
-          >
-            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-              Approved
-            </p>
-            <p
-              className="text-2xl"
-              style={{ color: 'var(--color-success-dark)', fontWeight: '600' }}
-            >
-              {stats.approved}
-            </p>
-          </div>
-          <div
-            className="bg-white p-6 rounded-lg"
-            style={{ border: '1px solid var(--color-silver)' }}
-          >
-            <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-              Total Value
-            </p>
-            <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
-              {formatCurrency(stats.totalValue)}
-            </p>
-          </div>
-        </div>
-
-        <div
-          className="rounded-[28px] overflow-hidden"
-          style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid var(--color-fog)',
-            boxShadow: '0 24px 52px rgba(15, 23, 42, 0.07)',
-          }}
-        >
-          <div className="p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                  style={{
-                    background: 'linear-gradient(135deg, #E7F4FF 0%, #D7EBFF 100%)',
-                    boxShadow: '0 14px 30px rgba(37, 99, 235, 0.12)',
-                  }}
-                >
-                  <ClipboardList className="w-6 h-6" style={{ color: '#2563EB' }} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span
-                      className="px-3 py-1 rounded-full text-xs"
-                      style={{ backgroundColor: '#EEF7FF', color: '#2563EB', fontWeight: 700 }}
-                    >
-                      PR Register
-                    </span>
-                    <span
-                      className="px-3 py-1 rounded-full text-xs"
-                      style={{ backgroundColor: '#E8FFF2', color: '#0F9D69', fontWeight: 700 }}
-                    >
-                      {filteredPRs.length} Visible
-                    </span>
-                  </div>
-                  <h3
-                    className="text-base"
-                    style={{ color: 'var(--color-ink)', margin: 0, fontWeight: '600' }}
-                  >
-                    {selectedTab === 'my-prs'
-                      ? 'My Purchase Requisitions'
-                      : 'Team Purchase Requisitions'}
-                  </h3>
-                </div>
-              </div>
-              <button
-                className="px-3 py-1.5 rounded-lg text-sm"
-                style={{
-                  backgroundColor: 'var(--color-cloud)',
-                  border: '1px solid var(--color-silver)',
-                  color: 'var(--color-mercury-grey)',
-                }}
-              >
-                <Download className="w-4 h-4 inline mr-2" />
-                Export
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <ClipboardList size={14} style={{ color: '#2563EB' }} />
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-ink)' }}>
+                {selectedTab === 'my-prs'
+                  ? 'My Purchase Requisitions'
+                  : 'Team Purchase Requisitions'}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--color-mercury-grey)' }}>
+                · {filteredPRs.length} visible
+              </span>
             </div>
+            <button
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                height: 28,
+                padding: '0 10px',
+                borderRadius: 'var(--border-radius-md)',
+                border: '1px solid var(--color-silver)',
+                background: '#FFFFFF',
+                color: 'var(--color-mercury-grey)',
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              <Download size={13} /> Export
+            </button>
           </div>
 
           <div className="overflow-x-auto">

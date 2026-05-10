@@ -18,6 +18,18 @@ import {
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
 import { useAPData, type DebitNote } from '../contexts/APDataContext';
 import { mysqlApiRequest } from '../lib/mysql/client';
+import {
+  listingHeader,
+  listingTitle,
+  listingSubtitle,
+  listingPrimaryBtn,
+  metricStrip,
+  metricCard,
+  metricLabel,
+  metricValue,
+  metricValueWarning,
+  listingPage,
+} from './ui/listingStyles';
 
 export function DebitNotes() {
   const navigate = useNavigate();
@@ -110,95 +122,38 @@ export function DebitNotes() {
   };
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div style={listingPage}>
+      <div style={listingHeader}>
         <div>
-          <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
-            Debit Notes
-          </h1>
-          <p style={{ color: 'var(--color-mercury-grey)' }}>
-            Manage vendor debit notes for commercial adjustments
-          </p>
+          <h1 style={listingTitle}>Debit Notes</h1>
+          <p style={listingSubtitle}>Manage vendor debit notes for commercial adjustments</p>
         </div>
-        <button
-          onClick={handleCreate}
-          className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: 'var(--color-teal)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
-        >
-          <Plus className="w-5 h-5" />
+        <button onClick={handleCreate} style={listingPrimaryBtn}>
+          <Plus size={13} />
           Create Debit Note
         </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
-        <div
-          className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid var(--color-silver)' }}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
-              <FileText className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
-            </div>
-            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-              Total Debit Notes
-            </span>
-          </div>
-          <div className="text-2xl" style={{ color: 'var(--color-ink)' }}>
-            {debitNotes.length}
-          </div>
+      <div style={metricStrip}>
+        <div style={metricCard}>
+          <div style={metricLabel}>Total Debit Notes</div>
+          <div style={metricValue}>{debitNotes.length}</div>
         </div>
-
-        <div
-          className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid var(--color-silver)' }}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
-              <DollarSign className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
-            </div>
-            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-              Total Debit Amount
-            </span>
-          </div>
-          <div className="text-2xl" style={{ color: 'var(--color-ink)' }}>
+        <div style={metricCard}>
+          <div style={metricLabel}>Total Debit Amount</div>
+          <div style={metricValue}>
             ₹{debitNotes.reduce((sum, dn) => sum + dn.debitAmount, 0).toLocaleString('en-IN')}
           </div>
         </div>
-
-        <div
-          className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid var(--color-silver)' }}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
-              <AlertCircle className="w-5 h-5" style={{ color: '#F59E0B' }} />
-            </div>
-            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-              Draft
-            </span>
-          </div>
-          <div className="text-2xl" style={{ color: 'var(--color-ink)' }}>
+        <div style={metricCard}>
+          <div style={metricLabel}>Draft</div>
+          <div style={{ ...metricValue, color: 'var(--color-mercury-grey)' }}>
             {debitNotes.filter((dn) => dn.status === 'Draft').length}
           </div>
         </div>
-
-        <div
-          className="bg-white p-6 rounded-lg"
-          style={{ border: '1px solid var(--color-silver)' }}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
-              <AlertCircle className="w-5 h-5" style={{ color: '#D97706' }} />
-            </div>
-            <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-              Pending Approval
-            </span>
-          </div>
-          <div className="text-2xl" style={{ color: 'var(--color-ink)' }}>
+        <div style={metricCard}>
+          <div style={metricLabel}>Pending Approval</div>
+          <div style={metricValueWarning}>
             {debitNotes.filter((dn) => dn.status === 'Pending Approval').length}
           </div>
         </div>

@@ -8,6 +8,15 @@ import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecord
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { mysqlApiBaseUrl } from '../lib/mysql/client';
 import type { EntityScopeMapping } from '../lib/masters/entityMapping';
+import {
+  listingPrimaryBtn,
+  listingTable,
+  listingThead,
+  listingTh,
+  listingTd,
+  listingTdPrimary,
+  rowHover,
+} from './ui/listingStyles';
 
 const VENDOR_API = (mysqlApiBaseUrl?.replace(/\/api$/, '') || '') + '/api/vendors';
 
@@ -330,15 +339,17 @@ export function VendorMaster() {
       masterName="Vendor Master"
       description="Manage vendor records with approval workflow"
     >
-      <div className="flex items-center justify-end mb-8">
-        <button
-          onClick={handleAdd}
-          className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: 'var(--color-teal)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
-        >
-          <Plus className="w-5 h-5" />
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          padding: '8px 20px',
+          background: 'var(--color-background-secondary)',
+          borderBottom: '1px solid var(--color-fog)',
+        }}
+      >
+        <button onClick={handleAdd} style={listingPrimaryBtn}>
+          <Plus size={13} />
           Add Vendor
         </button>
       </div>
@@ -413,59 +424,19 @@ export function VendorMaster() {
         ]}
       />
 
-      <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
+      <div style={{ background: '#FFFFFF' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={listingTable}>
+            <thead style={listingThead}>
               <tr>
-                <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Vendor Code
-                </th>
-                <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Legal Name
-                </th>
-                <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Type
-                </th>
-                <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  GSTIN
-                </th>
-                <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  City
-                </th>
-                <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Status
-                </th>
-                <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Approval
-                </th>
-                <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
-                >
-                  Actions
-                </th>
+                <th style={listingTh}>Vendor Code</th>
+                <th style={listingTh}>Legal Name</th>
+                <th style={listingTh}>Type</th>
+                <th style={listingTh}>GSTIN</th>
+                <th style={listingTh}>City</th>
+                <th style={listingTh}>Status</th>
+                <th style={listingTh}>Approval</th>
+                <th style={listingTh}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -474,25 +445,24 @@ export function VendorMaster() {
                   key={vendor.id}
                   style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}
                 >
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
-                    {vendor.vendorCode}
-                  </td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
-                    {vendor.legalName}
-                  </td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                  <td style={listingTd}>{vendor.vendorCode}</td>
+                  <td style={listingTd}>{vendor.legalName}</td>
+                  <td style={{ ...listingTd, color: 'var(--color-mercury-grey)' }}>
                     {vendor.vendorType}
                   </td>
                   <td
-                    className="px-6 py-4 font-mono text-sm"
-                    style={{ color: 'var(--color-mercury-grey)' }}
+                    style={{
+                      ...listingTd,
+                      color: 'var(--color-mercury-grey)',
+                      fontFamily: 'monospace',
+                    }}
                   >
                     {vendor.gstin || '—'}
                   </td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                  <td style={{ ...listingTd, color: 'var(--color-mercury-grey)' }}>
                     {vendor.city}
                   </td>
-                  <td className="px-6 py-4">
+                  <td style={listingTd}>
                     <span
                       className="px-3 py-1 rounded-full text-sm"
                       style={{
@@ -505,7 +475,7 @@ export function VendorMaster() {
                       {vendor.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td style={listingTd}>
                     <span
                       className="px-3 py-1 rounded-full text-sm"
                       style={getStatusBadgeStyle(vendor.approvalStatus)}
@@ -513,7 +483,7 @@ export function VendorMaster() {
                       {vendor.approvalStatus}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td style={listingTd}>
                     <div className="flex items-center gap-2">
                       {vendor.approvalStatus === 'Pending Approval' && (
                         <button

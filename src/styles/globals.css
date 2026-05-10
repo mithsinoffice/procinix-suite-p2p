@@ -24,6 +24,11 @@
   --color-fog: #d7e3ea;
   --color-slate: #9aa6af;
 
+  /* ── listing-page Option B tokens (2026-05-10) ─────────── */
+  --color-background-secondary: var(--color-cloud);
+  --border-radius-md: 6px;
+  --border-radius-sm: 4px;
+
   /* ── shadcn/ui design tokens ───────────────────────────── */
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
@@ -865,6 +870,11 @@ html {
 }
 .ocr-score-learning {
   background: #f0edff;
+}
+
+/* Option B listing row hover (used by ui/listingStyles.ts consumers) */
+.listing-row-hover:hover {
+  background: var(--color-background-secondary);
 }
 
 @media (max-width: 1280px) {

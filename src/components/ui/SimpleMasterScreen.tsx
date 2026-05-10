@@ -4,6 +4,22 @@ import { useIncrementalMasterRecords } from '../../hooks/useIncrementalMasterRec
 import type { MasterKey } from '../../lib/mysql/masterTables';
 import { MasterListToolbar, type ExportColumn } from './MasterListToolbar';
 import { MasterPageShell } from './MasterPageShell';
+import {
+  listingTable,
+  listingThead,
+  listingTh,
+  listingTd,
+  listingTdPrimary,
+  badgeBase,
+  badgeApproved,
+  badgePending,
+  badgeRejected,
+  badgeDraft,
+  badgeViaUpload,
+  tableWrapper,
+  rowHover,
+  listingPrimaryBtn,
+} from './listingStyles';
 
 export interface SimpleMasterField {
   /** Path in the record (e.g. "level" or "payload.approvalLimit"). */
@@ -141,24 +157,18 @@ export function SimpleMasterScreen({
         filteredCount={filtered.length}
       />
 
-      <div
-        style={{
-          background: '#FFFFFF',
-          border: '1px solid var(--color-fog)',
-          borderRadius: 16,
-          marginTop: 16,
-        }}
-      >
+      <div style={{ background: '#FFFFFF' }}>
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '16px 20px',
+            padding: '8px 20px',
             borderBottom: '1px solid var(--color-fog)',
+            background: 'var(--color-background-secondary)',
           }}
         >
-          <span style={{ fontSize: 14, color: 'var(--color-ink)', fontWeight: 600 }}>
+          <span style={{ fontSize: 11, color: 'var(--color-mercury-grey)' }}>
             {filtered.length} record{filtered.length === 1 ? '' : 's'}
           </span>
           <button
@@ -167,39 +177,26 @@ export function SimpleMasterScreen({
               setEditing({ status: 'Active', approvalStatus: 'Approved', payload: {} });
               setDrawerOpen(true);
             }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'var(--color-teal)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '8px 14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            style={listingPrimaryBtn}
           >
-            <Plus size={16} /> Add Record
+            <Plus size={14} /> Add Record
           </button>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr
-                style={{ background: '#F8FBFD', color: 'var(--color-mercury-grey)', fontSize: 11 }}
-              >
-                <th style={th}>Code</th>
-                <th style={th}>Name</th>
+        <div style={tableWrapper}>
+          <table style={listingTable}>
+            <thead style={listingThead}>
+              <tr>
+                <th style={listingTh}>Code</th>
+                <th style={listingTh}>Name</th>
                 {extraFields.map((f) => (
-                  <th key={f.key} style={th}>
+                  <th key={f.key} style={listingTh}>
                     {f.label}
                   </th>
                 ))}
-                <th style={th}>Status</th>
-                <th style={th}>Approval</th>
-                <th style={{ ...th, textAlign: 'right' }}>Actions</th>
+                <th style={listingTh}>Status</th>
+                <th style={listingTh}>Approval</th>
+                <th style={{ ...listingTh, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -211,6 +208,7 @@ export function SimpleMasterScreen({
                       padding: 24,
                       textAlign: 'center',
                       color: 'var(--color-mercury-grey)',
+                      fontSize: 12,
                     }}
                   >
                     No records yet. Click <strong>Add Record</strong> to create one.
@@ -218,42 +216,31 @@ export function SimpleMasterScreen({
                 </tr>
               )}
               {filtered.map((r) => (
-                <tr key={r.id ?? r.recordCode} style={{ borderTop: '1px solid var(--color-fog)' }}>
-                  <td style={td}>{String(r.recordCode ?? r.code ?? '')}</td>
-                  <td style={{ ...td, fontWeight: 600 }}>{String(r.recordName ?? r.name ?? '')}</td>
+                <tr key={r.id ?? r.recordCode} className={rowHover}>
+                  <td style={listingTd}>{String(r.recordCode ?? r.code ?? '')}</td>
+                  <td style={listingTdPrimary}>{String(r.recordName ?? r.name ?? '')}</td>
                   {extraFields.map((f) => {
                     const v = resolveValue(r, f);
                     return (
-                      <td key={f.key} style={td}>
+                      <td key={f.key} style={listingTd}>
                         {f.format ? f.format(v) : v == null ? '—' : String(v)}
                       </td>
                     );
                   })}
-                  <td style={td}>
+                  <td style={listingTd}>
                     <StatusBadge status={String(r.status ?? '')} />
                   </td>
-                  <td style={td}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <td style={listingTd}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <ApprovalBadge approval={String(r.approvalStatus ?? '')} />
                       {(r.upload_source === 'bulk_upload' || r.uploadSource === 'bulk_upload') && (
-                        <span
-                          title="Imported via bulk upload"
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 600,
-                            color: '#475569',
-                            backgroundColor: '#E2E8F0',
-                            border: '1px solid #CBD5E1',
-                            borderRadius: 4,
-                            padding: '1px 6px',
-                          }}
-                        >
+                        <span title="Imported via bulk upload" style={badgeViaUpload}>
                           Via Upload
                         </span>
                       )}
                     </div>
                   </td>
-                  <td style={{ ...td, textAlign: 'right' }}>
+                  <td style={{ ...listingTd, textAlign: 'right' }}>
                     <button
                       type="button"
                       onClick={() => {
@@ -263,7 +250,7 @@ export function SimpleMasterScreen({
                       title="Edit"
                       style={iconBtn}
                     >
-                      <Edit size={14} />
+                      <Edit size={13} />
                     </button>
                     <button
                       type="button"
@@ -271,7 +258,7 @@ export function SimpleMasterScreen({
                       title="Delete"
                       style={{ ...iconBtn, color: '#D14343' }}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </td>
                 </tr>
@@ -297,75 +284,27 @@ export function SimpleMasterScreen({
   );
 }
 
-const th: React.CSSProperties = {
-  padding: '10px 14px',
-  textAlign: 'left',
-  fontWeight: 700,
-  letterSpacing: 0.4,
-  textTransform: 'uppercase',
-};
-const td: React.CSSProperties = {
-  padding: '10px 14px',
-  color: 'var(--color-ink)',
-  verticalAlign: 'middle',
-};
 const iconBtn: React.CSSProperties = {
   background: 'transparent',
   border: 'none',
   cursor: 'pointer',
-  padding: 6,
-  marginLeft: 4,
-  borderRadius: 6,
+  padding: 4,
+  marginLeft: 2,
+  borderRadius: 4,
 };
 
 function StatusBadge({ status }: { status: string }) {
   const isActive = status.toLowerCase() === 'active';
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        padding: '3px 10px',
-        borderRadius: 999,
-        background: isActive ? '#E7F8EC' : '#F4F7FB',
-        color: isActive ? '#0F8A5F' : '#516173',
-        fontSize: 11,
-        fontWeight: 700,
-      }}
-    >
-      {status || '—'}
-    </span>
-  );
+  return <span style={isActive ? badgeApproved : badgeDraft}>{status || '—'}</span>;
 }
 
 function ApprovalBadge({ approval }: { approval: string }) {
   const a = approval.toLowerCase();
-  let bg = '#F4F7FB';
-  let fg = '#516173';
-  if (a === 'approved') {
-    bg = '#E7F8EC';
-    fg = '#0F8A5F';
-  } else if (a.includes('pending')) {
-    bg = '#FFF7E8';
-    fg = '#A36A00';
-  } else if (a === 'rejected') {
-    bg = '#FFEBEE';
-    fg = '#C62828';
-  }
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        padding: '3px 10px',
-        borderRadius: 999,
-        background: bg,
-        color: fg,
-        fontSize: 11,
-        fontWeight: 700,
-      }}
-    >
-      {approval || '—'}
-    </span>
-  );
+  let style: React.CSSProperties = badgeDraft;
+  if (a === 'approved') style = badgeApproved;
+  else if (a.includes('pending')) style = badgePending;
+  else if (a === 'rejected') style = badgeRejected;
+  return <span style={style}>{approval || '—'}</span>;
 }
 
 interface DrawerProps {

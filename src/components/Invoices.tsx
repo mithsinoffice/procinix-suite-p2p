@@ -25,6 +25,24 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
+import {
+  listingHeader,
+  listingTitle,
+  listingSubtitle,
+  listingPrimaryBtn,
+  metricStrip,
+  metricCard,
+  metricLabel,
+  metricValue,
+  metricValueWarning,
+  metricValueDanger,
+  listingPage,
+  listingTable,
+  listingThead,
+  listingTh,
+  listingTd,
+  rowHover,
+} from './ui/listingStyles';
 
 function invoiceDisplayRef(invoice: Invoice): string {
   if (invoice.invoiceNumber) return invoice.invoiceNumber;
@@ -238,55 +256,41 @@ export function Invoices() {
   };
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div style={listingPage}>
+      <div style={listingHeader}>
         <div>
-          <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
-            Invoices
-          </h1>
-          <p style={{ color: 'var(--color-mercury-grey)' }}>Manage and track supplier invoices</p>
+          <h1 style={listingTitle}>Invoices</h1>
+          <p style={listingSubtitle}>Manage and track supplier invoices</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={() => navigate('/invoices/ai-ingestion')}
-            className="flex items-center gap-2 px-5 py-3 rounded-lg transition-colors"
             style={{
-              backgroundColor: 'white',
-              border: '1.5px solid var(--color-silver)',
+              ...listingPrimaryBtn,
+              background: '#FFFFFF',
               color: 'var(--color-ink)',
+              border: '1px solid var(--color-silver)',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FBFD')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
           >
-            <ClipboardList className="w-5 h-5" style={{ color: '#007D87' }} />
+            <ClipboardList size={13} style={{ color: '#007D87' }} />
             Validation Workbench
           </button>
           <button
             onClick={() => navigate('/invoices/ai-capture')}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-            style={{ backgroundColor: '#007D87' }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#006870')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#007D87')}
+            style={{ ...listingPrimaryBtn, background: '#007D87' }}
           >
-            <Sparkles className="w-5 h-5" />
+            <Sparkles size={13} />
             AI Invoice Capture
           </button>
 
-          {/* Split-button CTA for Create Invoice */}
-          <div className="relative">
+          <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowCreateDropdown(!showCreateDropdown)}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
-              style={{ backgroundColor: 'var(--color-teal)' }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
-              }
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
+              style={listingPrimaryBtn}
             >
-              <Plus className="w-5 h-5" />
+              <Plus size={13} />
               Create Invoice
-              <ChevronDown className="w-4 h-4 ml-1" />
+              <ChevronDown size={13} />
             </button>
 
             {/* Dropdown Menu */}
@@ -347,106 +351,26 @@ export function Invoices() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div
-          className="bg-white rounded-lg p-6"
-          style={{ border: '2px solid var(--color-silver)' }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                Total Invoices
-              </p>
-              <p className="text-3xl" style={{ color: 'var(--color-ink)' }}>
-                {totalInvoices}
-              </p>
-            </div>
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: 'var(--color-cloud)' }}
-            >
-              <FileText className="w-6 h-6" style={{ color: 'var(--color-mercury-grey)' }} />
-            </div>
-          </div>
+      <div style={metricStrip}>
+        <div style={metricCard}>
+          <div style={metricLabel}>Total Invoices</div>
+          <div style={metricValue}>{totalInvoices}</div>
         </div>
-
-        <div
-          className="bg-white rounded-lg p-6"
-          style={{ border: '2px solid var(--color-silver)' }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                Pending Approval
-              </p>
-              <p className="text-3xl" style={{ color: '#F59E0B' }}>
-                {pendingApproval}
-              </p>
-            </div>
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: '#FEF3C7' }}
-            >
-              <Clock className="w-6 h-6" style={{ color: '#F59E0B' }} />
-            </div>
-          </div>
+        <div style={metricCard}>
+          <div style={metricLabel}>Pending Approval</div>
+          <div style={metricValueWarning}>{pendingApproval}</div>
         </div>
-
-        <div
-          className="bg-white rounded-lg p-6"
-          style={{ border: '2px solid var(--color-silver)' }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                Total Amount
-              </p>
-              <p className="text-2xl" style={{ color: 'var(--color-ink)' }}>
-                ₹{totalAmount.toLocaleString('en-IN')}
-              </p>
-            </div>
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: 'var(--color-teal)10' }}
-            >
-              <DollarSign className="w-6 h-6" style={{ color: 'var(--color-teal)' }} />
-            </div>
-          </div>
+        <div style={metricCard}>
+          <div style={metricLabel}>Total Amount</div>
+          <div style={metricValue}>₹{totalAmount.toLocaleString('en-IN')}</div>
         </div>
-
-        <div
-          className="bg-white rounded-lg p-6"
-          style={{ border: '2px solid var(--color-silver)' }}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                Unpaid Amount
-              </p>
-              <p className="text-2xl" style={{ color: '#EF4444' }}>
-                ₹{unpaidAmount.toLocaleString('en-IN')}
-              </p>
-            </div>
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: 'var(--color-error-light)' }}
-            >
-              <AlertCircle className="w-6 h-6" style={{ color: '#EF4444' }} />
-            </div>
-          </div>
+        <div style={metricCard}>
+          <div style={metricLabel}>Unpaid Amount</div>
+          <div style={metricValueDanger}>₹{unpaidAmount.toLocaleString('en-IN')}</div>
         </div>
       </div>
 
-      {/* Register */}
-      <div
-        className="rounded-[28px] overflow-hidden"
-        style={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid var(--color-fog)',
-          boxShadow: '0 24px 52px rgba(15, 23, 42, 0.07)',
-        }}
-      >
+      <div style={{ background: '#FFFFFF', padding: '0 20px 20px' }}>
         <div
           className="flex items-center justify-between gap-4 px-6 py-4"
           style={{ borderBottom: '1px solid #E8F0F4' }}

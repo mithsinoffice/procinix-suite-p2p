@@ -89,23 +89,19 @@ export function MasterListToolbar({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
-        width: '100%',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid var(--color-silver)',
-        borderRadius: 12,
-        padding: '12px 16px',
-        marginBottom: 16,
+        gap: 8,
+        padding: '8px 20px',
+        background: 'var(--color-background-secondary)',
+        borderBottom: '1px solid var(--color-fog)',
         flexWrap: 'wrap',
       }}
     >
-      {/* Search input */}
       <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
         <Search
-          className="w-4 h-4"
+          size={13}
           style={{
             position: 'absolute',
-            left: 12,
+            left: 8,
             top: '50%',
             transform: 'translateY(-50%)',
             color: 'var(--color-mercury-grey)',
@@ -117,21 +113,18 @@ export function MasterListToolbar({
           placeholder={`Search ${masterName}...`}
           style={{
             width: '100%',
-            paddingLeft: 36,
-            paddingRight: 12,
-            paddingTop: 8,
-            paddingBottom: 8,
-            borderRadius: 8,
-            border: '1px solid var(--color-fog, #E8F0F4)',
-            backgroundColor: '#F8FBFD',
-            fontSize: 13,
+            height: 28,
+            padding: '0 10px 0 26px',
+            borderRadius: 'var(--border-radius-md)',
+            border: '1px solid var(--color-silver)',
+            background: '#FFFFFF',
+            fontSize: 12,
             color: 'var(--color-ink)',
             outline: 'none',
           }}
         />
       </div>
 
-      {/* Filter pills */}
       {filters.map((filter) => (
         <div key={filter.key} style={{ flexShrink: 0 }}>
           <PremiumFilterMenu
@@ -145,7 +138,6 @@ export function MasterListToolbar({
         </div>
       ))}
 
-      {/* Clear filters */}
       {hasActiveFilters && (
         <button
           type="button"
@@ -153,72 +145,49 @@ export function MasterListToolbar({
             onSearchChange('');
             filters.forEach((f) => onFilterChange(f.key, []));
           }}
-          style={{
-            flexShrink: 0,
-            padding: '6px 12px',
-            borderRadius: 8,
-            border: '1px solid #FED7D7',
-            backgroundColor: '#FFF5F5',
-            color: '#C53030',
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
+          style={toolbarMiniButton('#FFF5F5', '#FED7D7', '#C53030')}
         >
           Clear
         </button>
       )}
 
-      {/* Spacer */}
       <div style={{ flex: '0 0 1px' }} />
 
-      {/* Download Excel */}
       <button
         type="button"
         onClick={handleDownload}
         title="Download Excel"
-        style={{
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '6px 12px',
-          borderRadius: 8,
-          border: '1px solid var(--color-fog, #E8F0F4)',
-          backgroundColor: 'transparent',
-          color: 'var(--color-teal)',
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: 'pointer',
-        }}
+        style={toolbarMiniButton('#FFFFFF', 'var(--color-silver)', 'var(--color-teal)')}
       >
-        <Download className="w-4 h-4" />
-        Download
+        <Download size={13} /> Download
       </button>
 
-      {/* Upload Excel */}
       <button
         type="button"
         onClick={handleUpload}
         title="Bulk Upload"
-        style={{
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '6px 12px',
-          borderRadius: 8,
-          border: '1px solid var(--color-fog, #E8F0F4)',
-          backgroundColor: 'transparent',
-          color: 'var(--color-teal)',
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: 'pointer',
-        }}
+        style={toolbarMiniButton('#FFFFFF', 'var(--color-silver)', 'var(--color-teal)')}
       >
-        <Upload className="w-4 h-4" />
-        Upload
+        <Upload size={13} /> Upload
       </button>
     </div>
   );
+}
+
+function toolbarMiniButton(bg: string, border: string, color: string): React.CSSProperties {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    height: 28,
+    padding: '0 10px',
+    borderRadius: 'var(--border-radius-md)',
+    border: `1px solid ${border}`,
+    background: bg,
+    color,
+    fontSize: 12,
+    fontWeight: 500,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  };
 }

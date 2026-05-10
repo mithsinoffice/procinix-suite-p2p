@@ -17,6 +17,18 @@ import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/
 import { useAPData, PurchaseOrder } from '../contexts/APDataContext';
 import { useProcurementData } from '../contexts/ProcurementDataContext';
 import { AuditTrailDrawer } from './procurement/AuditTrailDrawer';
+import {
+  listingHeader,
+  listingTitle,
+  listingSubtitle,
+  listingPrimaryBtn,
+  metricStrip,
+  metricCard,
+  metricLabel,
+  metricValue,
+  metricValueSuccess,
+  listingPage,
+} from './ui/listingStyles';
 
 const statusTone = (status: PurchaseOrder['status']) => {
   switch (status) {
@@ -74,68 +86,20 @@ export function PurchaseOrders() {
     searchTerm.trim().length > 0 || statusFilter.length > 0 || departmentFilter.length > 0;
 
   return (
-    <div
-      className="p-8"
-      style={{
-        background:
-          'linear-gradient(180deg, #EEF6FB 0%, var(--color-cloud) 42%, var(--color-cloud) 100%)',
-        minHeight: '100vh',
-      }}
-    >
-      <div className="flex items-start justify-between gap-6 mb-8">
+    <div style={listingPage}>
+      <div style={listingHeader}>
         <div>
-          <div className="flex items-center gap-3 mb-3">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, #E8F3FF 0%, #D8EAFE 100%)',
-                boxShadow: '0 14px 30px rgba(37, 99, 235, 0.14)',
-              }}
-            >
-              <ClipboardList className="w-6 h-6" style={{ color: '#2563EB' }} />
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className="px-3 py-1 rounded-full text-xs"
-                style={{ backgroundColor: '#EEF7FF', color: '#2563EB', fontWeight: 700 }}
-              >
-                PO Register
-              </span>
-              <span
-                className="px-3 py-1 rounded-full text-xs"
-                style={{ backgroundColor: '#E8FFF2', color: '#0F9D69', fontWeight: 700 }}
-              >
-                {filteredOrders.length} Visible
-              </span>
-            </div>
-          </div>
-          <h1 className="text-3xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
-            Purchase Orders
-          </h1>
-          <p style={{ color: 'var(--color-mercury-grey)', maxWidth: '820px' }}>
-            Review purchase orders, receiving status, department ownership, and act from one premium
-            operational register.
+          <h1 style={listingTitle}>Purchase Orders</h1>
+          <p style={listingSubtitle}>
+            {filteredOrders.length} visible · receiving status, ownership & actions
           </p>
         </div>
 
         <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => setShowCreateMenu(!showCreateMenu)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white transition-colors"
-            style={{
-              backgroundColor: 'var(--color-teal)',
-              boxShadow: '0 10px 22px rgba(0, 169, 183, 0.18)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--color-teal)';
-            }}
-          >
-            <Plus className="w-5 h-5" />
+          <button onClick={() => setShowCreateMenu(!showCreateMenu)} style={listingPrimaryBtn}>
+            <Plus size={13} />
             Create PO
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown size={13} />
           </button>
 
           {showCreateMenu && (
@@ -221,66 +185,22 @@ export function PurchaseOrders() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div
-          className="rounded-2xl p-5"
-          style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid var(--color-fog)',
-            boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)',
-          }}
-        >
-          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
-            Total Orders
-          </p>
-          <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
-            {stats.total}
-          </p>
+      <div style={metricStrip}>
+        <div style={metricCard}>
+          <div style={metricLabel}>Total Orders</div>
+          <div style={metricValue}>{stats.total}</div>
         </div>
-        <div
-          className="rounded-2xl p-5"
-          style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid var(--color-fog)',
-            boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)',
-          }}
-        >
-          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
-            Issued
-          </p>
-          <p className="text-2xl" style={{ color: 'var(--color-teal)', fontWeight: 700 }}>
-            {stats.issued}
-          </p>
+        <div style={metricCard}>
+          <div style={metricLabel}>Issued</div>
+          <div style={{ ...metricValue, color: 'var(--color-teal)' }}>{stats.issued}</div>
         </div>
-        <div
-          className="rounded-2xl p-5"
-          style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid var(--color-fog)',
-            boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)',
-          }}
-        >
-          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
-            Fully Received
-          </p>
-          <p className="text-2xl" style={{ color: '#0F9D69', fontWeight: 700 }}>
-            {stats.received}
-          </p>
+        <div style={metricCard}>
+          <div style={metricLabel}>Fully Received</div>
+          <div style={metricValueSuccess}>{stats.received}</div>
         </div>
-        <div
-          className="rounded-2xl p-5"
-          style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid var(--color-fog)',
-            boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)',
-          }}
-        >
-          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
-            Total Value
-          </p>
-          <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
-            ₹{stats.totalValue.toLocaleString('en-IN')}
-          </p>
+        <div style={metricCard}>
+          <div style={metricLabel}>Total Value</div>
+          <div style={metricValue}>₹{stats.totalValue.toLocaleString('en-IN')}</div>
         </div>
       </div>
 
