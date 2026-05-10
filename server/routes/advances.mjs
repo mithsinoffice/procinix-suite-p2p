@@ -213,12 +213,7 @@ function validateCreateOrUpdate(body, { partial = false } = {}) {
     }
   }
   // Travel exempted from supporting-doc requirement (common policy assumption).
-  if (
-    body.advanceType &&
-    body.advanceType !== 'travel' &&
-    !partial &&
-    !body.supportingDocUrl
-  ) {
+  if (body.advanceType && body.advanceType !== 'travel' && !partial && !body.supportingDocUrl) {
     errors.push('supportingDocUrl required when advanceType != travel');
   }
   return errors;
@@ -407,10 +402,10 @@ export async function handleAdvancesRoute(req, res, pathname, sendJson) {
       sendJson(res, 400, { success: false, error: errors[0], errors });
       return true;
     }
-    const cur = await query(
-      'SELECT status FROM vendor_advances WHERE id = ? AND tenant_id = ?',
-      [id, tenantId]
-    );
+    const cur = await query('SELECT status FROM vendor_advances WHERE id = ? AND tenant_id = ?', [
+      id,
+      tenantId,
+    ]);
     if (!cur.length) {
       sendJson(res, 404, { success: false, error: 'not_found' });
       return true;
@@ -464,10 +459,10 @@ export async function handleAdvancesRoute(req, res, pathname, sendJson) {
       return true;
     }
     const id = deleteMatch[1];
-    const cur = await query(
-      'SELECT status FROM vendor_advances WHERE id = ? AND tenant_id = ?',
-      [id, tenantId]
-    );
+    const cur = await query('SELECT status FROM vendor_advances WHERE id = ? AND tenant_id = ?', [
+      id,
+      tenantId,
+    ]);
     if (!cur.length) {
       sendJson(res, 404, { success: false, error: 'not_found' });
       return true;
@@ -490,10 +485,10 @@ export async function handleAdvancesRoute(req, res, pathname, sendJson) {
       return true;
     }
     const id = submitMatch[1];
-    const cur = await query(
-      'SELECT status FROM vendor_advances WHERE id = ? AND tenant_id = ?',
-      [id, tenantId]
-    );
+    const cur = await query('SELECT status FROM vendor_advances WHERE id = ? AND tenant_id = ?', [
+      id,
+      tenantId,
+    ]);
     if (!cur.length) {
       sendJson(res, 404, { success: false, error: 'not_found' });
       return true;
@@ -502,10 +497,7 @@ export async function handleAdvancesRoute(req, res, pathname, sendJson) {
       sendJson(res, 400, { success: false, error: 'invalid_status_transition' });
       return true;
     }
-    await query(
-      "UPDATE vendor_advances SET status = 'pending_approval' WHERE id = ?",
-      [id]
-    );
+    await query("UPDATE vendor_advances SET status = 'pending_approval' WHERE id = ?", [id]);
     sendJson(res, 200, { success: true, data: { id, status: 'pending_approval' } });
     return true;
   }
@@ -523,10 +515,10 @@ export async function handleAdvancesRoute(req, res, pathname, sendJson) {
       return true;
     }
     const id = approveMatch[1];
-    const cur = await query(
-      'SELECT status FROM vendor_advances WHERE id = ? AND tenant_id = ?',
-      [id, tenantId]
-    );
+    const cur = await query('SELECT status FROM vendor_advances WHERE id = ? AND tenant_id = ?', [
+      id,
+      tenantId,
+    ]);
     if (!cur.length) {
       sendJson(res, 404, { success: false, error: 'not_found' });
       return true;
@@ -652,10 +644,9 @@ export async function handleAdvancesRoute(req, res, pathname, sendJson) {
     );
     if (hasHigh) {
       try {
-        await query(
-          "UPDATE invoices SET lifecycle_state = 'Exception Hold' WHERE id = ?",
-          [invoiceId]
-        );
+        await query("UPDATE invoices SET lifecycle_state = 'Exception Hold' WHERE id = ?", [
+          invoiceId,
+        ]);
       } catch {
         /* tolerate */
       }

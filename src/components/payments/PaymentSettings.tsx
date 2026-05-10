@@ -194,9 +194,8 @@ export function PaymentSettings() {
   const [toast, setToast] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [availableRoles, setAvailableRoles] = useState<
-    { key: string; label: string; description?: string }[]
-  >(FALLBACK_ROLE_OPTIONS);
+  const [availableRoles, setAvailableRoles] =
+    useState<{ key: string; label: string; description?: string }[]>(FALLBACK_ROLE_OPTIONS);
   const [rolesLoading, setRolesLoading] = useState(true);
   const dirty = !shallowEqual(loaded, form);
 

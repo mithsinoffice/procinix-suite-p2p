@@ -99,9 +99,7 @@ function urgencyChipClass(iso: string): string {
 
 function isOverdueSettlement(adv: VendorAdvance): boolean {
   return (
-    adv.status === 'paid' &&
-    !!adv.settlementDueDate &&
-    daysFromToday(adv.settlementDueDate) < 0
+    adv.status === 'paid' && !!adv.settlementDueDate && daysFromToday(adv.settlementDueDate) < 0
   );
 }
 
@@ -210,8 +208,7 @@ function AdvanceDrawer({
     }
   }, [form.requiredByDate]);
 
-  const editable =
-    isCreate || (advance != null && advance.status === 'draft');
+  const editable = isCreate || (advance != null && advance.status === 'draft');
   const showApproval = !isCreate && advance?.status === 'pending_approval';
   const showSettlement = !isCreate && advance?.status === 'paid';
   const dualApprovalWarning = form.amount > dualApprovalThreshold;
@@ -223,10 +220,7 @@ function AdvanceDrawer({
     if (form.amount <= 0) return 'Amount must be greater than zero';
     if (!form.requiredByDate || form.requiredByDate < todayIso())
       return 'Required-by date must be on or after today';
-    if (
-      form.settlementDueDate &&
-      form.settlementDueDate <= form.requiredByDate
-    )
+    if (form.settlementDueDate && form.settlementDueDate <= form.requiredByDate)
       return 'Settlement due date must be after required-by date';
     if (form.purpose.trim().length < 10) return 'Purpose must be at least 10 characters';
     if (form.advanceType !== 'travel' && !form.supportingDocUrl)
@@ -335,7 +329,9 @@ function AdvanceDrawer({
                 {advance.status.replace('_', ' ')}
               </span>
               {advance.invoiceId && (
-                <span className="text-xs text-mercury-grey">Invoice: {advance.invoiceId.slice(0, 8)}</span>
+                <span className="text-xs text-mercury-grey">
+                  Invoice: {advance.invoiceId.slice(0, 8)}
+                </span>
               )}
             </div>
           )}
@@ -349,7 +345,8 @@ function AdvanceDrawer({
                 value={form.vendorName}
                 onChange={(e) => {
                   update('vendorName', e.target.value);
-                  if (!form.vendorId) update('vendorId', e.target.value.toLowerCase().replace(/\s+/g, '-'));
+                  if (!form.vendorId)
+                    update('vendorId', e.target.value.toLowerCase().replace(/\s+/g, '-'));
                 }}
                 disabled={!editable}
                 placeholder="Vendor name"
@@ -447,9 +444,7 @@ function AdvanceDrawer({
             <div>
               <label className="block text-mercury-grey text-xs mb-1">
                 Supporting document URL{' '}
-                {form.advanceType !== 'travel' && (
-                  <span className="text-red-600">*</span>
-                )}
+                {form.advanceType !== 'travel' && <span className="text-red-600">*</span>}
               </label>
               <input
                 type="text"
@@ -538,9 +533,7 @@ function AdvanceDrawer({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-mercury-grey text-xs mb-1">
-                    Settled amount
-                  </label>
+                  <label className="block text-mercury-grey text-xs mb-1">Settled amount</label>
                   <input
                     type="number"
                     value={settledAmount}
@@ -631,7 +624,9 @@ function SummaryStrip({
       <div className="bg-white rounded-xl border-2 border-silver p-4">
         <div className="text-sm text-mercury-grey mb-1">Total advances</div>
         <div className="text-2xl font-semibold text-ink">{totalCount}</div>
-        <div className="text-xs text-mercury-grey">{formatINRCompact(summary?.totalAmount ?? 0)}</div>
+        <div className="text-xs text-mercury-grey">
+          {formatINRCompact(summary?.totalAmount ?? 0)}
+        </div>
       </div>
       <div className="bg-white rounded-xl border-2 border-amber-200 p-4">
         <div className="text-sm text-amber-700 mb-1">Pending approval</div>
@@ -684,9 +679,7 @@ export function VendorAdvances() {
       try {
         const [list, sum] = await Promise.all([
           mysqlApiRequest<{ success: boolean; data: VendorAdvance[] }>('/ap/advances'),
-          mysqlApiRequest<{ success: boolean; data: AdvanceSummary }>(
-            '/ap/advances/summary'
-          ),
+          mysqlApiRequest<{ success: boolean; data: AdvanceSummary }>('/ap/advances/summary'),
         ]);
         if (cancelled) return;
         setAdvances(list.data || []);
@@ -889,7 +882,9 @@ export function VendorAdvances() {
                 >
                   {shortDate(adv.requiredByDate)}
                 </span>
-                <span className={`text-xs ${overdue ? 'text-red-600 font-semibold' : 'text-mercury-grey'}`}>
+                <span
+                  className={`text-xs ${overdue ? 'text-red-600 font-semibold' : 'text-mercury-grey'}`}
+                >
                   {shortDate(adv.settlementDueDate)}
                   {overdue && (
                     <span className="ml-1 inline-flex items-center gap-0.5">

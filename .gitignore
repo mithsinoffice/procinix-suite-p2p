@@ -13,6 +13,7 @@ uploads/
 .idea/
 *.tsbuildinfo
 coverage/
+.claude/
 
 !.env.example
 !.env.mysql.example
