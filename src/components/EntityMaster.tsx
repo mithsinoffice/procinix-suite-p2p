@@ -247,7 +247,6 @@ export function EntityMaster() {
     const found = entities.find((e) => e.id === approvalsParams.recordId);
     if (!found) return;
     handleEdit(found);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isApproverReview, approvalsParams.recordId, entities.length]);
 
   const filteredEntities = useMemo(() => {

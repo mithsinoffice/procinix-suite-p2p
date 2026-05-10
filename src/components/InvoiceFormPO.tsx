@@ -1224,12 +1224,13 @@ export function InvoiceFormPO() {
           setLineItems(updatedItems);
         }
         break;
-      case 'use-master-gstin':
+      case 'use-master-gstin': {
         const vendor = getVendorByCode(selectedVendor);
         if (vendor) {
           setVendorGSTNumber(vendor.gstin);
         }
         break;
+      }
       case 'set-msme-priority':
         alert('MSME payment priority flag set');
         break;

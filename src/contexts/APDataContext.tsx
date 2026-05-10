@@ -26,6 +26,11 @@ export interface Invoice {
   approver?: string;
   paymentStatus: 'Unpaid' | 'Partially Paid' | 'Paid';
   matchStatus?: '3-Way Matched' | 'Partially Matched' | 'Unmatched';
+  // Optional metadata used by ingestion / list flows. Declared optional so
+  // existing call sites that omit them remain valid.
+  _source?: string;
+  _dbId?: string;
+  _hasPO?: boolean;
 }
 
 export interface PurchaseOrder {

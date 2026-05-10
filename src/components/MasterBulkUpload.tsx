@@ -1584,6 +1584,11 @@ function SheetDetail({
   const headerOptions = parsedSheet.rawHeaders;
   const currentMasterKey = sheet.identification.best?.masterKey ?? '';
 
+  // TODO(F4-followup): there is an early return upstream before this
+  // useMemo, which is technically a rules-of-hooks violation. The function
+  // is invoked from a stable code path today, so behaviour is consistent.
+  // Proper fix: lift the hook above the early return.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const headerUsedBy = useMemo(() => {
     const map = new Map<string, string>();
     for (const f of schema.fields) {

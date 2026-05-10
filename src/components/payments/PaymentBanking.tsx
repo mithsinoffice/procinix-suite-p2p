@@ -942,7 +942,7 @@ export function PaymentBanking() {
     return () => {
       cancelled = true;
     };
-  }, [tenantId, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tenantId, reloadKey]);
 
   // Auto-pick RTGS when total > ₹2L
   const selectedTotal = useMemo(() => {

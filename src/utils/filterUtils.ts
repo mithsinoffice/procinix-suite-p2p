@@ -108,8 +108,10 @@ function evaluateCondition(
         const fieldDate = new Date(fieldValue);
         return fieldDate >= new Date(value) && fieldDate <= new Date(value2);
       }
-      const fieldNum = parseFloat(fieldValue);
-      return fieldNum >= parseFloat(value) && fieldNum <= parseFloat(value2);
+      {
+        const fieldNum = parseFloat(fieldValue);
+        return fieldNum >= parseFloat(value) && fieldNum <= parseFloat(value2);
+      }
 
     case 'isEmpty':
       return fieldStr === '' || fieldStr === 'null' || fieldStr === 'undefined';
