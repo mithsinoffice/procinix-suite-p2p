@@ -233,7 +233,25 @@ export function SimpleMasterScreen({
                     <StatusBadge status={String(r.status ?? '')} />
                   </td>
                   <td style={td}>
-                    <ApprovalBadge approval={String(r.approvalStatus ?? '')} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <ApprovalBadge approval={String(r.approvalStatus ?? '')} />
+                      {(r.upload_source === 'bulk_upload' || r.uploadSource === 'bulk_upload') && (
+                        <span
+                          title="Imported via bulk upload"
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 600,
+                            color: '#475569',
+                            backgroundColor: '#E2E8F0',
+                            border: '1px solid #CBD5E1',
+                            borderRadius: 4,
+                            padding: '1px 6px',
+                          }}
+                        >
+                          Via Upload
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td style={{ ...td, textAlign: 'right' }}>
                     <button

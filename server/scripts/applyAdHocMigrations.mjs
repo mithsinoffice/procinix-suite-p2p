@@ -28,6 +28,10 @@ const MIGRATIONS = [
   'sql/mysql/migrations/20260510_debit_notes.sql',
   // Item master seeds (25 generic mid-market items).
   'sql/mysql/migrations/20260510_item_master_seeds.sql',
+  // Move ITM-PTPL-* uploads that landed in product_master → item_master.
+  'sql/mysql/migrations/20260510_migrate_product_to_item_master.sql',
+  // Add upload_source col + backfill ITM-PTPL approval + align vg audit.
+  'sql/mysql/migrations/20260510_upload_source_and_audit_fix.sql',
 ];
 
 const IGNORABLE_ERRORS = new Set([

@@ -420,9 +420,13 @@ export function MasterBulkUpload() {
           schema.masterKey,
           []
         );
+        // Bulk-upload rows go in pre-approved (an authorised admin uploaded
+        // them via the validated UI). The `upload_source` marker drives the
+        // "Via Upload" chip in master list screens.
         const incoming = validRows.map((r) => ({
           ...r.record,
-          approvalStatus: 'Pending Approval',
+          approvalStatus: 'Approved',
+          upload_source: 'bulk_upload',
         }));
         const merged = [...existing, ...incoming];
         const ok = await saveRelationalMasterRecords(schema.masterKey, merged);
@@ -497,7 +501,8 @@ export function MasterBulkUpload() {
             );
             const incoming = validRows.map((r) => ({
               ...r.record,
-              approvalStatus: 'Pending Approval',
+              approvalStatus: 'Approved',
+              upload_source: 'bulk_upload',
             }));
             const merged = [...existing, ...incoming];
             const ok = await saveRelationalMasterRecords(schema.masterKey, merged);

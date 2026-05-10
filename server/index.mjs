@@ -489,6 +489,7 @@ function mapItemRow(row) {
     reorderLevel: row.reorder_level,
     maxOrderQty: row.max_order_qty,
     approvalStatus: row.approval_status,
+    uploadSource: row.upload_source ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -527,7 +528,7 @@ function mapGenericMasterRow(row) {
 
 function inferRecordCode(record) {
   if (!record) return null;
-  return (
+  const explicit =
     record.code ??
     record.categoryCode ??
     record.colorCode ??
@@ -544,31 +545,50 @@ function inferRecordCode(record) {
     record.employeeId ??
     record.skuCode ??
     record.productCode ??
+    record.itemCode ??
     record.fromCurrency ??
-    null
-  );
+    null;
+  if (explicit) return explicit;
+
+  // Generic fallback: any *Code property with a non-empty string value.
+  // Catches new masters whose primary key field isn't yet in the explicit
+  // list above (e.g. a future "designation_master" with `designationCode`).
+  for (const key of Object.keys(record)) {
+    if (!/Code$/.test(key) || key === 'recordCode') continue;
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return null;
 }
 
 function inferRecordName(record) {
   if (!record) return null;
-  return (
+  const explicit =
     record.name ??
     record.categoryName ??
     record.colorName ??
     record.countryName ??
     record.stateName ??
     record.deptName ??
-    record.description ??
     record.sizeName ??
     record.costCentreName ??
     record.profitCentreName ??
     record.empName ??
     record.roleName ??
     record.productName ??
+    record.itemName ??
     record.legalName ??
+    record.description ??
     record.fromCurrency ??
-    null
-  );
+    null;
+  if (explicit) return explicit;
+
+  for (const key of Object.keys(record)) {
+    if (!/Name$/.test(key) || key === 'recordName') continue;
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return null;
 }
 
 function inferStatus(record) {
@@ -627,6 +647,37 @@ function resolveNextApprovalStatus(previousRecord, incomingRecord) {
   return incomingApprovalStatus ?? previousApprovalStatus ?? null;
 }
 
+// Per-table cache: does this master's underlying table have a `tenant_id`
+// column? Some canonical erp_master_* tables predate multi-tenancy and only
+// have it inside payload JSON; others (item_master, user_master, vendor_master,
+// vendor_group_master, etc.) carry a real column. Detected lazily via
+// INFORMATION_SCHEMA on first PUT, then cached for the process lifetime.
+const tableHasTenantColumnCache = new Map();
+async function tableHasTenantColumn(qualifiedTableName) {
+  if (tableHasTenantColumnCache.has(qualifiedTableName)) {
+    return tableHasTenantColumnCache.get(qualifiedTableName);
+  }
+  const match = qualifiedTableName.match(/^`?([^`.]+)`?\.`?([^`.]+)`?$/);
+  if (!match) {
+    tableHasTenantColumnCache.set(qualifiedTableName, false);
+    return false;
+  }
+  const [, schemaName, tableName] = match;
+  try {
+    const rows = await query(
+      `SELECT COUNT(*) AS c FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = 'tenant_id'`,
+      [schemaName, tableName]
+    );
+    const has = Number(rows?.[0]?.c ?? 0) > 0;
+    tableHasTenantColumnCache.set(qualifiedTableName, has);
+    return has;
+  } catch {
+    tableHasTenantColumnCache.set(qualifiedTableName, false);
+    return false;
+  }
+}
+
 const auditTableConfigCache = new Map();
 
 async function getAuditTableConfig(masterKey) {
@@ -680,7 +731,33 @@ async function getAuditTableConfig(masterKey) {
 
     const versionNoColumn = cols.has('version_no') ? 'version_no' : null;
 
-    const cfg = { auditTableName, recordIdColumn, changedAtColumn, versionNoColumn };
+    // Action-type column varies: 'action_type' (modern) vs 'action' (legacy).
+    // Same for old_values vs before_payload / new_values vs after_payload.
+    const actionTypeColumn = cols.has('action_type')
+      ? 'action_type'
+      : cols.has('action')
+        ? 'action'
+        : null;
+    const oldValuesColumn = cols.has('old_values')
+      ? 'old_values'
+      : cols.has('before_payload')
+        ? 'before_payload'
+        : null;
+    const newValuesColumn = cols.has('new_values')
+      ? 'new_values'
+      : cols.has('after_payload')
+        ? 'after_payload'
+        : null;
+
+    const cfg = {
+      auditTableName,
+      recordIdColumn,
+      changedAtColumn,
+      versionNoColumn,
+      actionTypeColumn,
+      oldValuesColumn,
+      newValuesColumn,
+    };
     auditTableConfigCache.set(masterKey, cfg);
     return cfg;
   } catch {
@@ -723,12 +800,16 @@ async function appendMasterVersion(
     nextVersionNo = Number(vr?.[0]?.nextVersionNo || 1);
   }
 
+  const actionCol = cfg.actionTypeColumn || 'action_type';
+  const oldCol = cfg.oldValuesColumn || 'old_values';
+  const newCol = cfg.newValuesColumn || 'new_values';
+
   const insertColumns = [
     'id',
     cfg.recordIdColumn,
-    'action_type',
-    'old_values',
-    'new_values',
+    actionCol,
+    oldCol,
+    newCol,
     ...(cfg.versionNoColumn ? [cfg.versionNoColumn] : []),
     ...(cfg.changedAtColumn ? [cfg.changedAtColumn] : []),
   ];
@@ -1692,6 +1773,138 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       const records = Array.isArray(body.records) ? body.records : [];
       const purgeAbsent = body.purgeAbsent === true;
+      const tenantId = String(req.headers['x-tenant-id'] || '').trim() || null;
+
+      // ── item_master special case ─────────────────────────────────────────
+      // item_master.item_master uses a flat schema (item_code/item_name/uom/
+      // hsn_code/gst_rate/...) instead of the canonical record_code/payload
+      // shape. Mirror the GET special-case at /api/masters/item_master.
+      const isBulkUploadSource = (record) =>
+        String(record?.upload_source ?? '').toLowerCase() === 'bulk_upload';
+
+      if (masterKey === 'item_master') {
+        const existingRows = await query(`SELECT * FROM ${tableName}`);
+        const existingById = new Map(existingRows.map((row) => [String(row.id), mapItemRow(row)]));
+
+        const seenIds = new Set();
+        let writes = 0;
+        for (const record of records) {
+          const id = String(record?.id ?? randomUUID());
+          const previous = existingById.get(id) ?? null;
+          const merged = { ...(previous ?? {}), ...record };
+          const itemCode = String(merged.itemCode ?? merged.item_code ?? merged.code ?? '').trim();
+          const itemName = String(merged.itemName ?? merged.item_name ?? merged.name ?? '').trim();
+          if (!itemCode || !itemName) continue; // skip malformed rows
+          const itemStatus = String(merged.itemStatus ?? merged.status ?? 'Active');
+          // Bulk-upload rows are auto-approved (an authorised admin uploaded
+          // them via the validated UI; no per-row approval gate needed).
+          const fromBulkUpload = isBulkUploadSource(merged);
+          const approvalStatus = fromBulkUpload
+            ? 'Approved'
+            : String(merged.approvalStatus ?? merged.approval_status ?? 'Draft');
+          const uploadSource = fromBulkUpload ? 'bulk_upload' : (merged.upload_source ?? null);
+          const hsnSacCode = merged.hsnSacCode ?? merged.hsnCode ?? merged.hsn_code ?? '';
+          const sacCode = merged.sacCode ?? merged.sac_code ?? '';
+          const gstRate =
+            merged.gstRate ??
+            merged.taxRate ??
+            merged.gst_rate ??
+            (typeof merged.taxRate === 'number' ? String(merged.taxRate) : '');
+
+          await query(
+            `
+              INSERT INTO ${tableName} (
+                id, item_code, item_name, item_alias, item_status,
+                item_description, uom, item_group_master, procurement_category,
+                entity_name, expenditure_type, gl_account_code,
+                gl_account_description, nature, rcm_applicable, hsn_code,
+                sac_code, gst_rate, default_itc_eligibility, po_required,
+                reorder_level, max_order_qty, approval_status, tenant_id,
+                upload_source
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ON DUPLICATE KEY UPDATE
+                item_name = VALUES(item_name),
+                item_alias = VALUES(item_alias),
+                item_status = VALUES(item_status),
+                item_description = VALUES(item_description),
+                uom = VALUES(uom),
+                item_group_master = VALUES(item_group_master),
+                procurement_category = VALUES(procurement_category),
+                entity_name = VALUES(entity_name),
+                expenditure_type = VALUES(expenditure_type),
+                gl_account_code = VALUES(gl_account_code),
+                gl_account_description = VALUES(gl_account_description),
+                nature = VALUES(nature),
+                rcm_applicable = VALUES(rcm_applicable),
+                hsn_code = VALUES(hsn_code),
+                sac_code = VALUES(sac_code),
+                gst_rate = VALUES(gst_rate),
+                default_itc_eligibility = VALUES(default_itc_eligibility),
+                po_required = VALUES(po_required),
+                reorder_level = VALUES(reorder_level),
+                max_order_qty = VALUES(max_order_qty),
+                approval_status = VALUES(approval_status),
+                tenant_id = COALESCE(VALUES(tenant_id), tenant_id),
+                upload_source = COALESCE(VALUES(upload_source), upload_source),
+                updated_at = CURRENT_TIMESTAMP
+            `,
+            [
+              id,
+              itemCode,
+              itemName,
+              merged.itemAlias ?? '',
+              itemStatus,
+              merged.itemDescription ?? merged.description ?? '',
+              merged.uom ?? '',
+              merged.itemGroupMaster ?? merged.itemGroup ?? '',
+              merged.procurementCategory ?? merged.category ?? '',
+              merged.entityName ?? '',
+              merged.expenditureType ?? '',
+              merged.glAccountCode ?? '',
+              merged.glAccountDescription ?? '',
+              merged.nature ?? 'Product',
+              merged.rcmApplicable ?? 'No',
+              hsnSacCode,
+              sacCode,
+              gstRate ? String(gstRate) : '',
+              merged.defaultITCEligibility ?? '',
+              merged.poRequired ?? 'No',
+              merged.reorderLevel ?? '',
+              merged.maxOrderQty ?? '',
+              approvalStatus,
+              tenantId,
+              uploadSource,
+            ]
+          );
+
+          await appendMasterVersion(
+            'item_master',
+            id,
+            previous ?? {},
+            { ...merged, id },
+            previous ? 'UPDATE' : 'CREATE'
+          );
+
+          seenIds.add(id);
+          writes += 1;
+        }
+
+        let deletedCount = 0;
+        if (purgeAbsent) {
+          for (const id of existingById.keys()) {
+            if (seenIds.has(id)) continue;
+            await query(`DELETE FROM ${tableName} WHERE id = ?`, [id]);
+            await appendMasterVersion('item_master', id, existingById.get(id), {}, 'DELETE');
+            deletedCount += 1;
+          }
+        }
+
+        return sendJson(res, 200, { success: true, count: writes, deletedCount });
+      }
+
+      // ── canonical (record_code/record_name/payload) tables ───────────────
+      const hasTenantColumn = await tableHasTenantColumn(tableName);
+
       const existingRows = await query(
         `
           SELECT id, record_code, record_name, status, approval_status, payload
@@ -1707,7 +1920,9 @@ const server = http.createServer(async (req, res) => {
       for (const record of records) {
         const id = String(record?.id ?? randomUUID());
         const previous = existingById.get(id) ?? null;
-        const nextApprovalStatus = resolveNextApprovalStatus(previous, record);
+        const fromBulkUpload = isBulkUploadSource(record);
+        const computedApproval = resolveNextApprovalStatus(previous, record);
+        const nextApprovalStatus = fromBulkUpload ? 'Approved' : computedApproval;
         const nextStatus = inferStatus(record) ?? inferStatus(previous ?? {}) ?? null;
         const payload = {
           ...(previous ?? {}),
@@ -1717,35 +1932,74 @@ const server = http.createServer(async (req, res) => {
             ? { status: nextStatus, isActive: String(nextStatus).toLowerCase() !== 'inactive' }
             : {}),
           ...(nextApprovalStatus ? { approvalStatus: nextApprovalStatus } : {}),
+          // Tenant scoping — payload always carries tenant_id when supplied;
+          // for tables that have a tenant_id column we ALSO write it there.
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+          // Mark records that came in via the validated bulk-upload UI so the
+          // master list screens can show a "Via Upload" chip.
+          ...(fromBulkUpload ? { upload_source: 'bulk_upload' } : {}),
         };
 
-        await query(
-          `
-            INSERT INTO ${tableName} (
+        if (hasTenantColumn) {
+          await query(
+            `
+              INSERT INTO ${tableName} (
+                id,
+                record_code,
+                record_name,
+                status,
+                approval_status,
+                payload,
+                tenant_id
+              ) VALUES (?, ?, ?, ?, ?, CAST(? AS JSON), ?)
+              ON DUPLICATE KEY UPDATE
+                record_code = VALUES(record_code),
+                record_name = VALUES(record_name),
+                status = VALUES(status),
+                approval_status = VALUES(approval_status),
+                payload = VALUES(payload),
+                tenant_id = COALESCE(VALUES(tenant_id), tenant_id),
+                updated_at = CURRENT_TIMESTAMP
+            `,
+            [
               id,
-              record_code,
-              record_name,
-              status,
-              approval_status,
-              payload
-            ) VALUES (?, ?, ?, ?, ?, CAST(? AS JSON))
-            ON DUPLICATE KEY UPDATE
-              record_code = VALUES(record_code),
-              record_name = VALUES(record_name),
-              status = VALUES(status),
-              approval_status = VALUES(approval_status),
-              payload = VALUES(payload),
-              updated_at = CURRENT_TIMESTAMP
-          `,
-          [
-            id,
-            inferRecordCode(payload),
-            inferRecordName(payload),
-            nextStatus,
-            nextApprovalStatus,
-            JSON.stringify(payload),
-          ]
-        );
+              inferRecordCode(payload),
+              inferRecordName(payload),
+              nextStatus,
+              nextApprovalStatus,
+              JSON.stringify(payload),
+              tenantId,
+            ]
+          );
+        } else {
+          await query(
+            `
+              INSERT INTO ${tableName} (
+                id,
+                record_code,
+                record_name,
+                status,
+                approval_status,
+                payload
+              ) VALUES (?, ?, ?, ?, ?, CAST(? AS JSON))
+              ON DUPLICATE KEY UPDATE
+                record_code = VALUES(record_code),
+                record_name = VALUES(record_name),
+                status = VALUES(status),
+                approval_status = VALUES(approval_status),
+                payload = VALUES(payload),
+                updated_at = CURRENT_TIMESTAMP
+            `,
+            [
+              id,
+              inferRecordCode(payload),
+              inferRecordName(payload),
+              nextStatus,
+              nextApprovalStatus,
+              JSON.stringify(payload),
+            ]
+          );
+        }
 
         await appendMasterVersion(
           masterKey,

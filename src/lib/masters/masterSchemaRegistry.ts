@@ -364,8 +364,12 @@ const vendor_payment_terms_master: MasterSchema = {
   ],
 };
 
-const product_master: MasterSchema = {
-  masterKey: 'product_master',
+// Renamed from `product_master` → `item_master` (2026-05-10): the bulk-upload
+// "Item Master" sheet must land in the `item_master.item_master` table that
+// /api/items reads, not the legacy `product_master.product_master` canonical
+// table. The variable name follows the new masterKey for grep-ability.
+const item_master: MasterSchema = {
+  masterKey: 'item_master',
   displayName: 'Item Master',
   description:
     'Product and service catalog with classification, pricing, tax, and physical attributes.',
@@ -1217,7 +1221,7 @@ const contract_master: MasterSchema = {
   description: 'Vendor contracts with product, rate, currency and validity window.',
   headerSignature: ['contract id', 'contract start date', 'rate per unit'],
   primaryCodeField: 'contractId',
-  prerequisites: ['vendor_master', 'product_master'],
+  prerequisites: ['vendor_master', 'item_master'],
   prerequisiteNote:
     'Contracts reference Vendors and Products — both masters must be populated before contracts can be uploaded.',
   fields: [
@@ -1242,7 +1246,7 @@ const contract_master: MasterSchema = {
       required: true,
       type: 'string',
       aliases: ['product', 'product id', 'product code', 'productid', 'item code'],
-      foreignKey: { refMaster: 'product_master', refField: 'productCode', strict: false },
+      foreignKey: { refMaster: 'item_master', refField: 'itemCode', strict: false },
     },
     {
       key: 'contractStartDate',
@@ -1818,7 +1822,7 @@ const sku_master: MasterSchema = {
     'Stock keeping units with identification, classification, physical attributes, catalog content and compliance data.',
   headerSignature: ['internal sku', 'article code', 'product name', 'hsn code'],
   primaryCodeField: 'articleCode',
-  prerequisites: ['product_master', 'color_master', 'size_master', 'uom_master'],
+  prerequisites: ['item_master', 'color_master', 'size_master', 'uom_master'],
   prerequisiteNote:
     'SKUs reference Product, Color, Size, and UOM — these should be populated first for FK resolution.',
   fields: [
@@ -2497,7 +2501,7 @@ export const masterSchemaRegistry: MasterSchemaRegistry = {
   size_master,
   item_category_master,
   vendor_payment_terms_master,
-  product_master,
+  item_master,
   sku_master,
   uom_master,
   debit_note_reason_master,
