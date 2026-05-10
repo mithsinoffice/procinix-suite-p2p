@@ -32,11 +32,15 @@ function normaliseRole(role: string | null | undefined) {
 const ALL_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const;
 type Day = (typeof ALL_DAYS)[number];
 
-const ROLE_OPTIONS: { key: string; label: string }[] = [
+// Static fallback used while the API call is in flight or if Access Master
+// is empty/unreachable. Server endpoint /ap/payment-settings/available-roles
+// returns the same shape, populated from roles_master.roles_master.
+const FALLBACK_ROLE_OPTIONS: { key: string; label: string; description?: string }[] = [
   { key: 'admin', label: 'Admin' },
   { key: 'cfo', label: 'CFO' },
   { key: 'payment_approver', label: 'Payment Approver' },
   { key: 'finance_manager', label: 'Finance Manager' },
+  { key: 'finance_executive', label: 'Finance Executive' },
 ];
 
 function shallowEqual(a: PaymentSettings | null, b: PaymentSettings | null): boolean {
@@ -190,7 +194,39 @@ export function PaymentSettings() {
   const [toast, setToast] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [availableRoles, setAvailableRoles] = useState<
+    { key: string; label: string; description?: string }[]
+  >(FALLBACK_ROLE_OPTIONS);
+  const [rolesLoading, setRolesLoading] = useState(true);
   const dirty = !shallowEqual(loaded, form);
+
+  // Fetch available roles from Access Master once on mount. Falls back
+  // silently to FALLBACK_ROLE_OPTIONS on any failure (no error UI shown).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!tenantId) {
+        setRolesLoading(false);
+        return;
+      }
+      try {
+        const res = await mysqlApiRequest<{
+          success: boolean;
+          data: { key: string; label: string; description?: string }[];
+        }>('/ap/payment-settings/available-roles');
+        if (!cancelled && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setAvailableRoles(res.data);
+        }
+      } catch {
+        // silent — keep the fallback list already in state
+      } finally {
+        if (!cancelled) setRolesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   // Initial fetch
   useEffect(() => {
@@ -556,24 +592,32 @@ export function PaymentSettings() {
             </div>
           )}
           <div className="grid grid-cols-2 gap-2">
-            {ROLE_OPTIONS.map((r) => {
-              const checked = roleState.has(r.key);
-              return (
-                <label
-                  key={r.key}
-                  className="flex items-center gap-2 p-2 border-2 border-silver rounded-lg cursor-pointer hover:bg-cloud"
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleRole(r.key)}
-                    disabled={disabled}
+            {rolesLoading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-10 bg-cloud animate-pulse rounded-lg border-2 border-silver"
                   />
-                  <span className="text-sm text-ink">{r.label}</span>
-                  <span className="text-xs text-mercury-grey ml-auto">{r.key}</span>
-                </label>
-              );
-            })}
+                ))
+              : availableRoles.map((r) => {
+                  const checked = roleState.has(r.key);
+                  return (
+                    <label
+                      key={r.key}
+                      className="flex items-center gap-2 p-2 border-2 border-silver rounded-lg cursor-pointer hover:bg-cloud"
+                      title={r.description ?? ''}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleRole(r.key)}
+                        disabled={disabled}
+                      />
+                      <span className="text-sm text-ink">{r.label}</span>
+                      <span className="text-xs text-mercury-grey ml-auto">{r.key}</span>
+                    </label>
+                  );
+                })}
           </div>
         </div>
       </Card>

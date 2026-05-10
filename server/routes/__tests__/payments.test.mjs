@@ -14,6 +14,7 @@ import {
   evaluateRiskFlags,
   FLAG_CONFIG,
   isApprover,
+  isPaymentApprover,
   normaliseRole,
 } from '../payments.mjs';
 
@@ -154,8 +155,12 @@ describe('handlePaymentsRoute — clear-flags', () => {
     expect(handled).toBe(true);
     expect(ctx.responses[0].status).toBe(200);
     expect(ctx.responses[0].payload.data.clearedBy).toBe('approver@example.com');
-    // Two UPDATEs: clear flags, release hold
-    expect(vi.mocked(query)).toHaveBeenCalledTimes(2);
+    // Verify both UPDATEs happened (clear flags + release hold). We don't
+    // assert exact call count because isPaymentApprover now reads settings
+    // first, which adds DB calls upstream.
+    const calls = vi.mocked(query).mock.calls.map((c) => String(c[0]));
+    expect(calls.some((sql) => /UPDATE invoice_risk_flags/.test(sql))).toBe(true);
+    expect(calls.some((sql) => /lifecycle_state = 'Queued for Payment'/.test(sql))).toBe(true);
   });
 });
 
@@ -761,6 +766,97 @@ describe('evaluateRiskFlags — live settings overrides', () => {
       },
     });
     expect(flagsLoose.some((f) => f.flagId === 'amount_anomaly')).toBe(false);
+  });
+});
+
+// ── Access Master role integration ──────────────────────────────────────────
+
+describe('GET /api/ap/payment-settings/available-roles', () => {
+  it('returns array with key + label objects (fallback when table empty)', async () => {
+    // First lint: SELECT against roles_master returns empty → fallback list.
+    vi.mocked(query).mockResolvedValueOnce([]);
+    const ctx = makeReqRes('GET', '/api/ap/payment-settings/available-roles', {
+      headers: { 'x-tenant-id': 'tenant-default-001' },
+    });
+    const handled = await handlePaymentsRoute(ctx.req, ctx.res, ctx.pathname, ctx.sendJson);
+    expect(handled).toBe(true);
+    expect(ctx.responses[0].status).toBe(200);
+    const roles = ctx.responses[0].payload.data;
+    expect(Array.isArray(roles)).toBe(true);
+    expect(roles.length).toBeGreaterThanOrEqual(4);
+    expect(roles[0]).toHaveProperty('key');
+    expect(roles[0]).toHaveProperty('label');
+    const keys = roles.map((r) => r.key);
+    expect(keys).toContain('payment_approver');
+    expect(keys).toContain('admin');
+  });
+});
+
+describe('isPaymentApprover (live config)', () => {
+  it('returns true when role is in settings.payment_approver_roles', async () => {
+    // getSettings flow: select empty, insert ignore, select → row with custom roles.
+    vi.mocked(query)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce({ affectedRows: 1 })
+      .mockResolvedValueOnce([
+        {
+          tenant_id: 'tenant-default-001',
+          payment_approver_roles: 'finance_manager,cfo,admin',
+        },
+      ]);
+    const req = {
+      headers: { 'x-user-role': 'finance_manager' },
+    };
+    const ok = await isPaymentApprover(req, 'tenant-default-001');
+    expect(ok).toBe(true);
+  });
+
+  it('returns false when role is NOT in approver list', async () => {
+    vi.mocked(query)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce({ affectedRows: 1 })
+      .mockResolvedValueOnce([
+        {
+          tenant_id: 'tenant-default-001',
+          payment_approver_roles: 'cfo,admin',
+        },
+      ]);
+    const req = {
+      headers: { 'x-user-role': 'finance_executive' },
+    };
+    const ok = await isPaymentApprover(req, 'tenant-default-001');
+    expect(ok).toBe(false);
+  });
+});
+
+describe('clear-flags — live role config end-to-end', () => {
+  it('succeeds when actor role is in settings.payment_approver_roles even if not in default list', async () => {
+    // First three calls = getSettings (select empty, insert, select with custom roles).
+    // Subsequent calls = the actual flag-clear UPDATEs.
+    vi.mocked(query)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce({ affectedRows: 1 })
+      .mockResolvedValueOnce([
+        {
+          tenant_id: 'tenant-default-001',
+          payment_approver_roles: 'finance_manager,admin',
+        },
+      ])
+      .mockResolvedValue({ affectedRows: 1 });
+    const ctx = makeReqRes('POST', '/api/ap/payment-queue/inv-9/clear-flags', {
+      headers: {
+        'x-tenant-id': 'tenant-default-001',
+        'x-user-role': 'finance_manager',
+        'x-user-email': 'fm@example.com',
+      },
+      body: { clearanceNote: 'reviewed' },
+    });
+    const handled = await handlePaymentsRoute(ctx.req, ctx.res, ctx.pathname, ctx.sendJson);
+    expect(handled).toBe(true);
+    // finance_manager isn't in DEFAULT_APPROVER_ROLES, but is in the settings
+    // list, so the request should succeed (200) — proving live config works.
+    expect(ctx.responses[0].status).toBe(200);
+    expect(ctx.responses[0].payload.data.clearedBy).toBe('fm@example.com');
   });
 });
 

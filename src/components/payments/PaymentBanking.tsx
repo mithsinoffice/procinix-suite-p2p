@@ -867,7 +867,36 @@ type SecondaryTab = 'batches' | 'accounts';
 export function PaymentBanking() {
   const { user } = useAuth();
   const tenantId = user?.tenantId ?? null;
-  const isApprover = APPROVER_ROLES.has(normaliseRole(user?.role));
+  // Live approver-roles list from /ap/payment-settings. Falls back to the
+  // static APPROVER_ROLES set on first paint / fetch failure.
+  const [liveApproverRoles, setLiveApproverRoles] = useState<Set<string>>(APPROVER_ROLES);
+  const isApprover = liveApproverRoles.has(normaliseRole(user?.role));
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!tenantId) return;
+      try {
+        const res = await mysqlApiRequest<{
+          success: boolean;
+          data: { paymentApproverRoles?: string };
+        }>('/ap/payment-settings');
+        if (cancelled) return;
+        if (res.success && res.data?.paymentApproverRoles) {
+          const roles = res.data.paymentApproverRoles
+            .split(',')
+            .map((r) => r.trim().toLowerCase().replace(/\s+/g, '_'))
+            .filter(Boolean);
+          if (roles.length > 0) setLiveApproverRoles(new Set(roles));
+        }
+      } catch {
+        /* keep defaults */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>('batches');
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
