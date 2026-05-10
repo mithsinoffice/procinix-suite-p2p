@@ -185,6 +185,12 @@ export const MASTER_STORAGE = {
     auditTable: 'vendor_group_master_audit',
     legacyTable: 'erp_master_vendor_groups',
   },
+  designation_master: {
+    database: 'designation_master',
+    table: 'designation_master',
+    auditTable: 'designation_master_audit',
+    legacyTable: 'erp_master_designations',
+  },
 };
 
 export function getMasterStorage(masterKey) {

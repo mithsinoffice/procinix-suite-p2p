@@ -18,10 +18,12 @@ import mysql from 'mysql2/promise';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '../..');
 
-const MIGRATIONS = [
-  'sql/mysql/migrations/20260510_vendor_group_master.sql',
-  'sql/mysql/migrations/20260510_master_seeds.sql',
-];
+// One-shot list — only migrations that haven't been fully applied. Once they
+// land, drop them from this list (or delete the script) since this repo lacks
+// a proper schema_migrations runner (B5 in queue). Migrations are idempotent
+// (CREATE TABLE IF NOT EXISTS / INSERT IGNORE / WHERE NOT EXISTS) so running
+// them once more is safe but wasteful.
+const MIGRATIONS = ['sql/mysql/migrations/20260510_org_master_seeds.sql'];
 
 const IGNORABLE_ERRORS = new Set([
   'ER_DUP_KEYNAME',

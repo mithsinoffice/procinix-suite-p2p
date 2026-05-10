@@ -37,6 +37,7 @@ const MASTER_KEYS = [
   'location_master',
   'gl_code_master',
   'vendor_group_master',
+  'designation_master',
 ] as const;
 
 export type MasterKey = (typeof MASTER_KEYS)[number];

@@ -382,6 +382,20 @@ export interface LocationMaster {
   state?: string;
 }
 
+export interface DesignationMaster {
+  id: string;
+  code: string;
+  recordCode?: string;
+  name: string;
+  recordName?: string;
+  level?: number;
+  grade?: string;
+  approvalLimit?: number;
+  status?: string;
+  isActive?: boolean;
+  approvalStatus?: string;
+}
+
 // ============================================================================
 // MULTI-CURRENCY SUPPORT - ADDITIVE ONLY (NO TRANSACTION IMPACT)
 // ============================================================================
@@ -973,6 +987,9 @@ interface MasterDataContextType {
   // Locations
   locations: LocationMaster[];
 
+  // Designations
+  designations: DesignationMaster[];
+
   // TDS Sections
   tdsSections: TDSSectionMasterRecord[];
   getTDSSectionByCode: (sectionCode: string) => TDSSectionMasterRecord | undefined;
@@ -1011,6 +1028,7 @@ interface MasterDataDocument {
   debitNoteReasons: DebitNoteReasonMaster[];
   vendorGroups: VendorGroupMaster[];
   locations: LocationMaster[];
+  designations: DesignationMaster[];
   tdsSections: TDSSectionMasterRecord[];
   currencies: CurrencyMaster[];
   exchangeRates: ExchangeRateMaster[];
@@ -1050,6 +1068,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     debitNoteReasons: DEBIT_NOTE_REASON_MASTER_DATA,
     vendorGroups: VENDOR_GROUP_MASTER_DATA,
     locations: [] as LocationMaster[],
+    designations: [] as DesignationMaster[],
     tdsSections: TDS_SECTION_MASTER_DATA,
     currencies: CURRENCY_MASTER_DATA,
     exchangeRates: EXCHANGE_RATE_MASTER_DATA,
@@ -1076,6 +1095,9 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     defaultDocument.vendorGroups
   );
   const [locations, setLocations] = useState<LocationMaster[]>(defaultDocument.locations);
+  const [designations, setDesignations] = useState<DesignationMaster[]>(
+    defaultDocument.designations
+  );
   const [tdsSections, setTdsSections] = useState<TDSSectionMasterRecord[]>(
     defaultDocument.tdsSections
   );
@@ -1106,6 +1128,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           exchangeRatesData,
           vendorGroupsData,
           locationsData,
+          designationsData,
           document,
           itemsResponse,
         ] = await Promise.all([
@@ -1132,6 +1155,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           ensureRelationalMasterRecords<LocationMaster>(
             'location_master',
             defaultDocument.locations
+          ),
+          ensureRelationalMasterRecords<DesignationMaster>(
+            'designation_master',
+            defaultDocument.designations
           ),
           ensureDomainDocument('master_data', defaultDocument),
           mysqlApiRequest<{ success: boolean; data: MysqlItemRow[] }>('/items').catch(() => ({
@@ -1186,6 +1213,11 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
             ? locationsData
             : (document.locations ?? defaultDocument.locations)
         );
+        setDesignations(
+          designationsData && designationsData.length > 0
+            ? designationsData
+            : (document.designations ?? defaultDocument.designations)
+        );
         setTdsSections(tdsSectionsData ?? defaultDocument.tdsSections);
         setCurrencies(currenciesData ?? defaultDocument.currencies);
         setExchangeRates(exchangeRatesData ?? defaultDocument.exchangeRates);
@@ -1211,6 +1243,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       setDebitNoteReasons(document.debitNoteReasons ?? defaultDocument.debitNoteReasons);
       setVendorGroups(document.vendorGroups ?? defaultDocument.vendorGroups);
       setLocations(document.locations ?? defaultDocument.locations);
+      setDesignations(document.designations ?? defaultDocument.designations);
       setTdsSections(document.tdsSections ?? defaultDocument.tdsSections);
       setCurrencies(document.currencies ?? defaultDocument.currencies);
       setExchangeRates(document.exchangeRates ?? defaultDocument.exchangeRates);
@@ -1248,6 +1281,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
         debitNoteReasons,
         vendorGroups,
         locations,
+        designations,
         tdsSections,
         currencies,
         exchangeRates,
@@ -1269,6 +1303,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       debitNoteReasons,
       vendorGroups,
       locations,
+      designations,
       tdsSections,
       currencies,
       exchangeRates,
@@ -1281,6 +1316,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     debitNoteReasons,
     vendorGroups,
     locations,
+    designations,
     departments,
     entities,
     exchangeRates,
@@ -1500,6 +1536,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     getActiveDebitNoteReasons,
     vendorGroups,
     locations,
+    designations,
     tdsSections,
     getTDSSectionByCode,
     getActiveTDSSections,
