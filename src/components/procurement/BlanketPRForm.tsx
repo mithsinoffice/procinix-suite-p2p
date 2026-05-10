@@ -33,7 +33,7 @@ export function BlanketPRForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addPurchaseRequest } = useProcurementData();
-  const { items: itemMasters, vendors, entities, currentCompany } = useMasterData();
+  const { items: itemMasters, vendors, entities, currentCompany, locations } = useMasterData();
   const [item, setItem] = useState({
     itemCode: '',
     itemName: '',
@@ -53,14 +53,14 @@ export function BlanketPRForm() {
   const activeVendors = vendors
     .filter((vendor) => vendor.status === 'Active')
     .map((vendor) => vendor.name);
-  const locations = entities.filter((entity) => entity.isActive).map((entity) => entity.name);
+  // locations from location_master are already available via useMasterData()
 
   const handleAddRelease = () => {
     const newRelease: ReleaseSchedule = {
       id: `REL-${Date.now()}`,
       releaseDate: '',
       quantity: 0,
-      deliveryLocation: locations[0] || '',
+      deliveryLocation: locations[0]?.name || '',
       notes: '',
     };
     setReleases([...releases, newRelease]);
@@ -93,7 +93,7 @@ export function BlanketPRForm() {
       department: 'Operations',
       costCentre: item.itemCode || '',
       needByDate: validTo || createdDate,
-      deliveryLocation: releases[0]?.deliveryLocation || locations[0] || '',
+      deliveryLocation: releases[0]?.deliveryLocation || locations[0]?.name || '',
       totalAmount: totalValue,
       currency: 'INR',
       status,
@@ -477,7 +477,9 @@ export function BlanketPRForm() {
                             }}
                           >
                             {locations.map((l) => (
-                              <option key={l}>{l}</option>
+                              <option key={l.id} value={l.name}>
+                                {l.name}
+                              </option>
                             ))}
                           </select>
                         </div>

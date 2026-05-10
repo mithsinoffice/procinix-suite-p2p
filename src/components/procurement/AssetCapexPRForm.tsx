@@ -44,6 +44,7 @@ export function AssetCapexPRForm() {
     entities,
     costCentres,
     currentCompany,
+    locations,
     assetCategories: assetCategoryRecords,
     depreciationMethods: depreciationMethodRecords,
   } = useMasterData();
@@ -91,7 +92,7 @@ export function AssetCapexPRForm() {
   const activeVendors = vendors
     .filter((vendor) => vendor.status === 'Active')
     .map((vendor) => vendor.name);
-  const locations = entities.filter((entity) => entity.isActive).map((entity) => entity.name);
+  // locations from location_master are already available via useMasterData()
 
   const handleAddAsset = () => {
     const newAsset: AssetItem = {
@@ -102,7 +103,7 @@ export function AssetCapexPRForm() {
       quantity: 1,
       unitPrice: 0,
       vendor: activeVendors[0] || '',
-      location: locations[0] || '',
+      location: locations[0]?.name || '',
       usefulLife: 5,
       depreciationMethod: depreciationMethods[0],
       budgetYear: '2024-25',
@@ -504,7 +505,9 @@ export function AssetCapexPRForm() {
                             }}
                           >
                             {locations.map((l) => (
-                              <option key={l}>{l}</option>
+                              <option key={l.id} value={l.name}>
+                                {l.name}
+                              </option>
                             ))}
                           </select>
                         </div>

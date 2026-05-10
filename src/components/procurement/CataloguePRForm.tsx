@@ -17,7 +17,8 @@ export function CataloguePRForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addPurchaseRequest } = useProcurementData();
-  const { items, vendors, entities, departments, costCentres, currentCompany } = useMasterData();
+  const { items, vendors, entities, departments, costCentres, currentCompany, locations } =
+    useMasterData();
   const [cart, setCart] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEntity, setSelectedEntity] = useState(
@@ -312,11 +313,11 @@ export function CataloguePRForm() {
                       color: 'var(--color-ink)',
                     }}
                   >
-                    {entities
-                      .filter((entity) => entity.isActive)
-                      .map((entity) => (
-                        <option key={entity.id} value={entity.name}>
-                          {entity.name}
+                    {locations
+                      .filter((location) => location.isActive !== false)
+                      .map((location) => (
+                        <option key={location.id} value={location.name}>
+                          {location.name}
                         </option>
                       ))}
                   </select>

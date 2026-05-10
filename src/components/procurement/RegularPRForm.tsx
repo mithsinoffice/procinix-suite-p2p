@@ -49,8 +49,16 @@ export function RegularPRForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addPurchaseRequest } = useProcurementData();
-  const { entities, departments, items, vendors, costCentres, accountCodes, currentCompany } =
-    useMasterData();
+  const {
+    entities,
+    departments,
+    items,
+    vendors,
+    costCentres,
+    accountCodes,
+    currentCompany,
+    locations,
+  } = useMasterData();
   const [lineItems, setLineItems] = useState<PRLineItem[]>([]);
   const [showItemSearch, setShowItemSearch] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState(
@@ -276,11 +284,11 @@ export function RegularPRForm() {
                 onChange={(e) => setDeliveryLocation(e.target.value)}
                 className="px-select"
               >
-                {entities
-                  .filter((entity) => entity.isActive)
-                  .map((entity) => (
-                    <option key={entity.id} value={entity.name}>
-                      {entity.name}
+                {locations
+                  .filter((location) => location.isActive !== false)
+                  .map((location) => (
+                    <option key={location.id} value={location.name}>
+                      {location.name}
                     </option>
                   ))}
               </select>
