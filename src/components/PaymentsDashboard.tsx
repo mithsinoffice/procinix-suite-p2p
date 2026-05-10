@@ -49,6 +49,8 @@ import {
 } from '../data/paymentsData';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchPaymentsDashboard } from '../lib/paymentsApi';
+import { mysqlApiRequest } from '../lib/mysql/client';
+import type { PaymentQueueFlagsSummary } from '../types/payments';
 
 export function PaymentsDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month'>('week');
@@ -60,6 +62,25 @@ export function PaymentsDashboard() {
   const [dashLoading, setDashLoading] = useState(false);
   const [dashError, setDashError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [flagsSummary, setFlagsSummary] = useState<PaymentQueueFlagsSummary | null>(null);
+
+  useEffect(() => {
+    if (!user?.tenantId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await mysqlApiRequest<{ success: boolean; data: PaymentQueueFlagsSummary }>(
+          '/ap/payment-queue/flags/summary'
+        );
+        if (!cancelled && res.success) setFlagsSummary(res.data);
+      } catch {
+        // silent — banner just won't render
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.tenantId]);
 
   const loadDashboard = useCallback(async () => {
     if (!user?.tenantId) {
@@ -373,7 +394,7 @@ export function PaymentsDashboard() {
             </button>
             <button
               type="button"
-              onClick={() => navigate('/ap/ready-for-payment')}
+              onClick={() => navigate('/ap/payments/queue')}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
                 backgroundColor: 'var(--color-teal)',
@@ -412,6 +433,32 @@ export function PaymentsDashboard() {
 
       {/* KPI Strip */}
       <div className="px-8 py-6">
+        {/* Flagged & held banner — links to Payment Queue filtered to flagged */}
+        {flagsSummary && flagsSummary.count > 0 && (
+          <button
+            type="button"
+            onClick={() => navigate('/ap/payments/queue')}
+            className="w-full mb-4 p-4 rounded-lg border-2 border-red-200 bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-between text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <span className="text-xl">🚩</span>
+              </div>
+              <div>
+                <div className="font-semibold text-red-700">
+                  {flagsSummary.count} flagged invoice{flagsSummary.count > 1 ? 's' : ''} held — ₹
+                  {Math.round(flagsSummary.totalValue).toLocaleString('en-IN')}
+                </div>
+                <div className="text-sm text-red-600/80">
+                  {flagsSummary.highCount} high · {flagsSummary.mediumCount} medium ·{' '}
+                  {flagsSummary.lowCount} low — review in Payment queue
+                </div>
+              </div>
+            </div>
+            <span className="text-sm font-medium text-red-700">Review now →</span>
+          </button>
+        )}
+
         {/* AI Suggested Batch Banner */}
         <div
           className="mb-6 p-5 rounded-lg cursor-pointer transition-all"

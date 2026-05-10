@@ -1,3 +1,6 @@
+// DEPRECATED 2026-05-10 — replaced by /ap/payments/queue (PaymentQueue.tsx).
+// The /ap/ready-for-payment route now redirects to /ap/payments/queue.
+// Safe to delete after one release cycle.
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {

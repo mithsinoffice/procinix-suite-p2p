@@ -76,7 +76,8 @@ import { MyInvoices } from './components/MyInvoices';
 import { InvoiceWorkflowView } from './components/InvoiceWorkflowView';
 import { InvoicesForApproval } from './components/InvoicesForApproval';
 import { InvoiceApprovalScreenV2 } from './components/InvoiceApprovalScreenV2';
-import { ReadyForPayment } from './components/ReadyForPayment';
+// ReadyForPayment is deprecated (replaced by /ap/payments/queue) — see
+// src/components/ReadyForPayment.tsx for the deprecation notice.
 import { NonPOInvoiceForm } from './components/NonPOInvoiceForm';
 import { NonPOInvoiceApprovalScreen } from './components/NonPOInvoiceApprovalScreen';
 
@@ -238,6 +239,9 @@ const AgentLogs = lazy(() =>
   import('./components/agents/AgentLogs').then((m) => ({ default: m.AgentLogs }))
 );
 const MyApprovalsPage = lazy(() => import('./pages/Approvals'));
+const InvoiceDetail = lazy(() =>
+  import('./pages/InvoiceDetail').then((m) => ({ default: m.InvoiceDetail }))
+);
 const PaymentMethodMaster = lazy(() =>
   import('./components/PaymentMethodMaster').then((m) => ({ default: m.PaymentMethodMaster }))
 );
@@ -307,6 +311,32 @@ const WorkflowReport = lazy(() =>
 );
 const PaymentsDashboard = lazy(() =>
   import('./components/PaymentsDashboard').then((module) => ({ default: module.PaymentsDashboard }))
+);
+const PaymentsLayout = lazy(() =>
+  import('./components/payments/PaymentsLayout').then((module) => ({
+    default: module.PaymentsLayout,
+  }))
+);
+const PaymentQueue = lazy(() =>
+  import('./components/payments/PaymentQueue').then((module) => ({ default: module.PaymentQueue }))
+);
+const PaymentForecast = lazy(() =>
+  import('./components/payments/PaymentForecast').then((module) => ({
+    default: module.PaymentForecast,
+  }))
+);
+const PaymentBanking = lazy(() =>
+  import('./components/payments/PaymentBanking').then((module) => ({
+    default: module.PaymentBanking,
+  }))
+);
+const PaymentSettings = lazy(() =>
+  import('./components/payments/PaymentSettings').then((module) => ({
+    default: module.PaymentSettings,
+  }))
+);
+const ComingSoon = lazy(() =>
+  import('./components/ComingSoon').then((module) => ({ default: module.ComingSoon }))
 );
 const PaymentProposal = lazy(() =>
   import('./components/PaymentProposal').then((module) => ({ default: module.PaymentProposal }))
@@ -662,6 +692,7 @@ function App() {
                                   element={<AgentConfigEngine />}
                                 />
                                 <Route path="invoices/edit/:id" element={<InvoiceFormPO />} />
+                                <Route path="invoices/:id" element={<InvoiceDetail />} />
 
                                 {/* Approvals */}
                                 <Route path="approval-dashboard" element={<MyApprovalsPage />} />
@@ -718,7 +749,13 @@ function App() {
 
                                 {/* Payments */}
                                 <Route path="payments-dashboard" element={<PaymentsDashboard />} />
-                                <Route path="ap/payments" element={<PaymentsDashboard />} />
+                                <Route path="ap/payments" element={<PaymentsLayout />}>
+                                  <Route index element={<PaymentsDashboard />} />
+                                  <Route path="queue" element={<PaymentQueue />} />
+                                  <Route path="forecast" element={<PaymentForecast />} />
+                                  <Route path="banking" element={<PaymentBanking />} />
+                                  <Route path="settings" element={<PaymentSettings />} />
+                                </Route>
                                 <Route path="ap/payment-proposal" element={<PaymentProposal />} />
                                 <Route path="ap/payment-batches" element={<PaymentBatches />} />
                                 <Route
@@ -868,7 +905,11 @@ function App() {
                                   path="ap/invoice-approval/:id"
                                   element={<InvoiceApprovalScreenV2 />}
                                 />
-                                <Route path="ap/ready-for-payment" element={<ReadyForPayment />} />
+                                {/* /ap/ready-for-payment removed 2026-05-10 — replaced by /ap/payments/queue */}
+                                <Route
+                                  path="ap/ready-for-payment"
+                                  element={<Navigate to="/ap/payments/queue" replace />}
+                                />
                                 <Route path="ap/dashboard" element={<APDashboard />} />
                                 <Route path="ap/reports" element={<APReports />} />
                                 <Route

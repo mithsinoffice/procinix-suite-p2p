@@ -278,7 +278,7 @@ export const financeNavigationConfig: { pillars: FinanceNavPillar[] } = {
             {
               key: 'READY_FOR_PAYMENT',
               label: 'Ready for Payment',
-              route: '/ap/ready-for-payment',
+              route: '/ap/payments/queue',
               icon: ArrowRightCircle,
               requiredPerm: ['AP_INVOICE.VIEW', 'PAYMENT.VIEW'],
             },
