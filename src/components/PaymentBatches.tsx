@@ -13,27 +13,27 @@ import {
   AlertTriangle,
   FileText,
 } from 'lucide-react';
-import { mockPaymentBatches, type PaymentBatchListRow } from '../data/paymentBatchData';
+import type { PaymentBatchListRow } from '../data/paymentBatchData';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchPaymentBatches } from '../lib/paymentsApi';
 
 export function PaymentBatches() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [batches, setBatches] = useState<PaymentBatchListRow[]>(mockPaymentBatches);
+  const [batches, setBatches] = useState<PaymentBatchListRow[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
   const loadBatches = useCallback(async () => {
     if (!user?.tenantId) {
-      setBatches(mockPaymentBatches);
+      setBatches([]);
       return;
     }
     setListLoading(true);
     try {
       const rows = await fetchPaymentBatches(user.tenantId);
-      setBatches(rows.length ? rows : []);
+      setBatches(rows);
     } catch {
       setBatches([]);
     } finally {

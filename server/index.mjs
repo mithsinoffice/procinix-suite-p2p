@@ -3102,11 +3102,16 @@ const server = http.createServer(async (req, res) => {
       pathname.startsWith('/api/invoices/') &&
       !pathname.includes('ingestion')
     ) {
-      const invoiceId = pathname.replace('/api/invoices/', '');
-      const rows = await query('SELECT * FROM invoices WHERE id = ? LIMIT 1', [invoiceId]);
+      const lookupId = pathname.replace('/api/invoices/', '');
+      // Accept either UUID or invoice_number — old bookmarks / blob ids work.
+      const rows = await query(
+        'SELECT * FROM invoices WHERE (id = ? OR invoice_number = ?) LIMIT 1',
+        [lookupId, lookupId]
+      );
       if (rows.length === 0)
         return sendJson(res, 404, { success: false, error: 'Invoice not found' });
       const invoice = rows[0];
+      const invoiceId = invoice.id;
       const requestTenantId = readApTenantId(req, url);
       if (requestTenantId && String(invoice.tenant_id) !== String(requestTenantId)) {
         return sendJson(res, 403, { success: false, error: 'tenant_mismatch' });
@@ -3121,8 +3126,19 @@ const server = http.createServer(async (req, res) => {
         'SELECT * FROM invoice_line_items WHERE invoice_id = ? ORDER BY line_number',
         [invoiceId]
       );
+      // Pre-existing schema drift: payments.{currency,payment_method,reference}
+      // never existed — table has payment_mode + utr. Project the result to the
+      // legacy column names the frontend expects so detail still renders.
       const payments = await query(
-        "SELECT id, payment_date, amount, currency, payment_method, status, reference, notes FROM payments WHERE invoice_id = ? AND status = 'confirmed' ORDER BY payment_date DESC",
+        `SELECT id, payment_date, amount,
+                'INR' AS currency,
+                payment_mode AS payment_method,
+                status,
+                utr AS reference,
+                notes
+         FROM payments
+         WHERE invoice_id = ? AND status = 'confirmed'
+         ORDER BY payment_date DESC`,
         [invoiceId]
       );
       return sendJson(res, 200, {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -12,8 +12,11 @@ import {
   Package,
   Receipt,
   Eye,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
-import { useAPData } from '../contexts/APDataContext';
+import { mysqlApiRequest } from '../lib/mysql/client';
+import type { DebitNote } from '../contexts/APDataContext';
 
 interface AccountingEntry {
   accountCode: string;
@@ -25,56 +28,87 @@ interface AccountingEntry {
 export function DebitNoteDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { getDebitNoteById } = useAPData();
   const [showAccountingPreview, setShowAccountingPreview] = useState(false);
 
-  const debitNote = getDebitNoteById(id || '') ?? {
-    id: id || 'DN-001',
-    debitNoteNumber: 'DN-2024-001',
-    debitNoteDate: '2024-12-15',
-    vendorId: 'VEN-SUBKO-001',
-    vendorName: 'ABC Coffee Suppliers',
-    vendorCode: 'VEN-2001',
-    vendorAPAccount: '2100-001',
-    referenceType: 'Invoice',
-    referenceNumber: 'INV-2024-001',
-    referenceId: 'INV-001',
-    reasonId: 'DNR-001',
-    reasonName: 'Short Supply',
-    debitAmount: 15000,
-    currency: 'INR',
-    status: 'Issued' as const,
-    lineItems: [
-      {
-        id: 'line-1',
-        itemCode: 'ITEM-1001',
-        itemName: 'Arabica Coffee Beans - Premium Grade',
-        referenceQty: 100,
-        invoicedQty: 100,
-        debitQty: 10,
-        uom: 'KG',
-        rate: 1200,
-        debitAmount: 12000,
-        expenseGL: '5100-001', // Coffee Materials Expense
-      },
-      {
-        id: 'line-2',
-        itemCode: 'ITEM-1002',
-        itemName: 'Robusta Coffee Beans - Grade A',
-        referenceQty: 50,
-        invoicedQty: 50,
-        debitQty: 5,
-        uom: 'KG',
-        rate: 600,
-        debitAmount: 3000,
-        expenseGL: '5100-002', // Coffee Materials Expense
-      },
-    ],
-    createdBy: 'Priya Sharma',
-    createdDate: '2024-12-15T09:30:00',
-    issuedBy: 'Rajesh Kumar',
-    issuedDate: '2024-12-15T10:45:00',
-  };
+  // Real data via /api/ap/debit-notes/:id (server accepts UUID or
+  // debit_note_number). No mock fallback — show loading/error states.
+  const [debitNote, setDebitNote] = useState<DebitNote | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    let alive = true;
+    setLoading(true);
+    setLoadError(null);
+    mysqlApiRequest<{ success: boolean; data: DebitNote }>(`/ap/debit-notes/${id}`)
+      .then((res) => {
+        if (!alive) return;
+        if (res?.success && res.data) setDebitNote(res.data);
+        else setLoadError('Debit note not found');
+      })
+      .catch((err: unknown) => {
+        if (!alive) return;
+        setLoadError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  if (loading || !debitNote) {
+    return (
+      <div style={{ padding: 24 }}>
+        {loading && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              color: 'var(--color-mercury-grey)',
+              fontSize: 13,
+            }}
+          >
+            <RefreshCw size={14} className="animate-spin" /> Loading debit note…
+          </div>
+        )}
+        {!loading && loadError && (
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 8,
+              background: '#FFEBEE',
+              color: '#C62828',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 13,
+            }}
+          >
+            <AlertCircle size={16} />
+            {loadError}
+            <button
+              onClick={() => navigate('/ap/debit-notes')}
+              style={{
+                marginLeft: 'auto',
+                padding: '4px 10px',
+                border: '1px solid #C62828',
+                borderRadius: 6,
+                background: '#FFFFFF',
+                color: '#C62828',
+                cursor: 'pointer',
+              }}
+            >
+              Back to listing
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const getStatusConfig = (status: string) => {
     switch (status) {

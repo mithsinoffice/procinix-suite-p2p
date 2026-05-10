@@ -12,6 +12,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useAPData } from '../contexts/APDataContext';
+import { useProcurementData } from '../contexts/ProcurementDataContext';
 import { FormSection, PxFormField } from './ui/form-primitives';
 import {
   listingHeader,
@@ -99,7 +100,8 @@ const getAllocationStatusColor = (status: GRN['allocationStatus']) => {
 };
 
 export function GoodsReceipt() {
-  const { grns: persistedGrns, purchaseOrders, addGRN } = useAPData();
+  const { purchaseOrders, addGRN } = useAPData();
+  const { grns: relationalGrns, pos: relationalPOs } = useProcurementData();
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedPO, setSelectedPO] = useState<POItem | null>(null);
@@ -111,25 +113,45 @@ export function GoodsReceipt() {
   const [showAllocationModal, setShowAllocationModal] = useState(false);
   const [selectedGRN, setSelectedGRN] = useState<GRN | null>(null);
 
-  const grns: GRN[] = persistedGrns.map((grn) => ({
-    id: grn.id,
-    grnNumber: grn.grnNumber,
-    poNumber: grn.poNumber,
-    vendor: grn.vendor,
-    receiptDate: grn.receiptDate,
-    amount: grn.amount,
-    qtyReceived: grn.qtyReceived,
-    poQty: grn.poQty,
-    status: grn.status,
-    allocationStatus: grn.allocationStatus,
-    allocations: grn.lineItems?.map((lineItem) => ({
-      id: lineItem.id,
-      location: lineItem.itemDescription || 'Allocated Location',
-      allocatedQty: lineItem.qtyReceived,
-      acceptedQty: lineItem.qtyAccepted,
-      status: lineItem.qtyAccepted > 0 ? 'Accepted' : 'Pending Acceptance',
-    })),
-  }));
+  // Source of truth: relational GRNs from /api/procurement/grns via
+  // ProcurementDataContext. The APData blob path is no longer read.
+  const grns: GRN[] = relationalGrns.map((g) => {
+    const po = relationalPOs.find((p) => p.id === g.poId);
+    const totalReceivedQty = (g.items || []).reduce(
+      (sum, li) => sum + Number(li.qtyReceived || 0),
+      0
+    );
+    const totalAcceptedQty = (g.items || []).reduce(
+      (sum, li) => sum + Number(li.qtyAccepted || 0),
+      0
+    );
+    const totalAmount = (g.items || []).reduce((sum, li) => sum + Number(li.lineAmount || 0), 0);
+    const allAccepted = totalAcceptedQty > 0 && totalAcceptedQty >= totalReceivedQty;
+    const partialAccepted = totalAcceptedQty > 0 && totalAcceptedQty < totalReceivedQty;
+    return {
+      id: g.id, // relational UUID
+      grnNumber: g.grnRef,
+      poNumber: po?.poRef ?? '',
+      vendor: po?.vendorName ?? '',
+      receiptDate: g.receiptDate ?? '',
+      amount: totalAmount,
+      qtyReceived: totalReceivedQty,
+      poQty: totalReceivedQty,
+      status: g.status === 'confirmed' ? 'Complete' : 'Pending',
+      allocationStatus: allAccepted
+        ? 'Accepted'
+        : partialAccepted
+          ? 'Partially Allocated'
+          : 'Not Allocated',
+      allocations: (g.items || []).map((li) => ({
+        id: li.id,
+        location: '',
+        allocatedQty: Number(li.qtyReceived || 0),
+        acceptedQty: Number(li.qtyAccepted || 0),
+        status: Number(li.qtyAccepted || 0) > 0 ? 'Accepted' : 'Pending Acceptance',
+      })),
+    };
+  });
 
   const availablePOItems: POItem[] = purchaseOrders.flatMap((po) =>
     po.lineItems

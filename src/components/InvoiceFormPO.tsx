@@ -1057,7 +1057,7 @@ export function InvoiceFormPO() {
     return due;
   };
 
-  const persistInvoice = (status: 'Draft' | 'Pending Approval') => {
+  const persistInvoice = async (status: 'Draft' | 'Pending Approval'): Promise<boolean> => {
     const resolvedVendorCode = vendorCode || selectedVendor;
     const vendor = getVendorByCode(resolvedVendorCode);
     if (!vendor || !invoiceNumber || !invoiceDate) {
@@ -1065,22 +1065,59 @@ export function InvoiceFormPO() {
       return false;
     }
 
-    addInvoice({
-      id: `PO-INV-${Date.now()}`,
-      invoiceNumber,
-      invoiceDate,
-      vendorName: vendor.name,
-      vendorCode: vendor.code,
-      invoiceType: 'PO',
-      poNumber: selectedPO || undefined,
-      totalAmount: calculateTotals().netPayable,
-      currency: invoiceCurrency,
-      status,
-      approver: 'AP Team',
-      paymentStatus: 'Unpaid',
-      matchStatus: selectedGRNs.length > 0 ? '3-Way Matched' : 'Partially Matched',
-    });
-    return true;
+    // Persist to relational p2p_schema_mt.invoices via POST /api/invoices.
+    // Blob fallback removed — see FIX-spec 2026-05-10 (modules-batch).
+    const totals = calculateTotals();
+    const lifecycleState = status === 'Draft' ? 'Ingested' : 'Under Verification';
+    try {
+      const res = await mysqlApiRequest<{ success: boolean; data: { id: string } }>('/invoices', {
+        method: 'POST',
+        body: JSON.stringify({
+          invoice_number: invoiceNumber,
+          invoice_date: invoiceDate,
+          vendor_id: vendor.code,
+          vendor_name: vendor.name,
+          vendor_code: vendor.code,
+          invoice_type: 'po',
+          po_number: selectedPO || null,
+          total_amount: totals.netPayable,
+          currency: invoiceCurrency,
+          entity_id: currentCompany?.id ?? '',
+          status: status === 'Draft' ? 'draft' : 'pending_approval',
+          lifecycle_state: lifecycleState,
+        }),
+      });
+      if (!res?.success) {
+        alert('Failed to save invoice.');
+        return false;
+      }
+      // Also push into local APData state so the listing refreshes immediately;
+      // the next mount-time API fetch reconciles authoritatively.
+      addInvoice({
+        id: res.data.id,
+        invoiceNumber,
+        invoiceDate,
+        vendorName: vendor.name,
+        vendorCode: vendor.code,
+        invoiceType: 'PO',
+        poNumber: selectedPO || undefined,
+        totalAmount: totals.netPayable,
+        currency: invoiceCurrency,
+        status,
+        approver: 'AP Team',
+        paymentStatus: 'Unpaid',
+        matchStatus: selectedGRNs.length > 0 ? '3-Way Matched' : 'Partially Matched',
+      });
+      return true;
+    } catch (err) {
+      const apiErr = err as { message?: string; details?: string[] };
+      alert(
+        apiErr?.details?.length
+          ? apiErr.details.join('\n')
+          : apiErr?.message || 'Failed to save invoice.'
+      );
+      return false;
+    }
   };
 
   const handleSubmit = async () => {
@@ -1112,13 +1149,13 @@ export function InvoiceFormPO() {
       return;
     }
 
-    if (persistInvoice('Pending Approval')) {
+    if (await persistInvoice('Pending Approval')) {
       navigate('/invoices');
     }
   };
 
-  const handleSaveDraft = () => {
-    persistInvoice('Draft');
+  const handleSaveDraft = async () => {
+    await persistInvoice('Draft');
   };
 
   const handleCancel = () => {

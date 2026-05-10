@@ -164,18 +164,21 @@ async function handleList(req, res, sendJson, url, tenantId) {
 }
 
 async function handleDetail(req, res, sendJson, tenantId, id) {
-  const head = await query(`SELECT * FROM debit_notes WHERE id = ? AND tenant_id = ? LIMIT 1`, [
-    id,
-    tenantId,
-  ]);
+  // Accept either UUID or debit_note_number ref. Same belt-and-suspenders
+  // pattern as PR/PO/GRN/SRN.
+  const head = await query(
+    `SELECT * FROM debit_notes WHERE (id = ? OR debit_note_number = ?) AND tenant_id = ? LIMIT 1`,
+    [id, id, tenantId]
+  );
   if (!head.length) {
     sendJson(res, 404, { success: false, error: 'debit_note_not_found' });
     return;
   }
+  const realId = head[0].id;
   const items = await query(
     `SELECT * FROM debit_note_items WHERE debit_note_id = ? AND tenant_id = ?
        ORDER BY line_number`,
-    [id, tenantId]
+    [realId, tenantId]
   );
   sendJson(res, 200, { success: true, data: adaptHeader(head[0], items) });
 }

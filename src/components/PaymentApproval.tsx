@@ -24,7 +24,7 @@ import {
   Info,
   Banknote,
 } from 'lucide-react';
-import { mockPaymentBatches, type PaymentBatch } from '../data/paymentBatchData';
+import type { PaymentBatch } from '../data/paymentBatchData';
 import { useAuth } from '../contexts/AuthContext';
 import {
   approvePaymentBatchApi,
@@ -50,9 +50,8 @@ export function PaymentApproval() {
     async (opts?: { silent?: boolean }) => {
       if (!id) return;
       if (!user?.tenantId) {
-        const fallback = mockPaymentBatches.find((b) => b.id === id) || mockPaymentBatches[0];
-        setBatch(fallback);
-        setLoadError(null);
+        setLoadError('Session expired. Please log in again.');
+        setBatch(null);
         setLoading(false);
         return;
       }
@@ -62,7 +61,7 @@ export function PaymentApproval() {
         const data = await fetchPaymentBatchDetail(user.tenantId, id);
         setBatch(data);
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : 'Failed to load batch');
+        setLoadError(e instanceof Error ? e.message : 'Payment batch not found');
         setBatch(null);
       } finally {
         if (!opts?.silent) setLoading(false);

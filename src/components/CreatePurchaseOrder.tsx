@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowLeft, Plus, Trash2, Search, Calendar, FileText } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { POPreview } from './POPreview';
-import { useProcurementData } from '../contexts/ProcurementDataContext';
+import { useProcurementData, createPOApi } from '../contexts/ProcurementDataContext';
+import { useMasterData } from '../contexts/MasterDataContext';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
@@ -38,7 +39,76 @@ interface PaymentMilestone {
 export function CreatePurchaseOrder() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { prs } = useProcurementData();
+  const { prs, refresh } = useProcurementData();
+  const { currentCompany, entities } = useMasterData();
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmitPO = async () => {
+    setSubmitError(null);
+    if (lineItems.length === 0) {
+      setSubmitError('Add at least one line item before submitting.');
+      return;
+    }
+    if (linkedPRs.length === 0) {
+      setSubmitError('Pick at least one approved PR to convert.');
+      return;
+    }
+    // Resolve entity slug (AuthContext-aligned) + GSTIN + vendor (from source PR).
+    const entityRecord =
+      entities.find((e) => e.id === currentCompany?.id || e.name === currentCompany?.name) ??
+      entities[0];
+    const sourcePR = prs.find((p) => linkedPRs.includes(p.id));
+    const firstLine = sourcePR?.lineItems?.[0];
+    const vendorId = firstLine?.vendorId || '';
+    const vendorName = firstLine?.vendorName || '';
+    if (!vendorId || !vendorName) {
+      setSubmitError(
+        'Vendor missing on the source PR line items. Pick a vendor on the PR before converting.'
+      );
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const created = await createPOApi({
+        entityId: currentCompany?.id ?? entityRecord?.id ?? '',
+        entityCode: entityRecord?.code ?? currentCompany?.code ?? '',
+        vendorId,
+        vendorName,
+        vendorGstin: entityRecord?.gstin ?? null,
+        poType: poType === 'Service PO' ? 'service' : 'regular',
+        paymentTerms: '',
+        prIds: linkedPRs,
+        lineItems: lineItems.map((li, idx) => ({
+          lineNumber: idx + 1,
+          itemType: 'material',
+          itemCode: li.sku || '',
+          itemDescription: li.productName || '',
+          quantity: Number(li.qty) || 0,
+          unit: 'Each',
+          unitPrice: Number(li.rate) || 0,
+          gstRate: 18,
+          shipToLocation: li.shipToLocation || '',
+          deliveryDate: li.deliveryDate || null,
+        })),
+      } as unknown as Parameters<typeof createPOApi>[0]);
+      if (created) {
+        await refresh();
+        navigate('/purchase-orders');
+      } else {
+        setSubmitError('Failed to create PO. Please retry.');
+      }
+    } catch (err) {
+      const apiErr = err as { message?: string; details?: string[] };
+      setSubmitError(
+        apiErr?.details?.length
+          ? apiErr.details.join(' · ')
+          : apiErr?.message || 'Failed to create PO.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
   const [poType, setPoType] = useState('Catalogue PO');
   const [advanceRequired, setAdvanceRequired] = useState('No');
   const [taxInclusive, setTaxInclusive] = useState('Exclusive');
@@ -260,8 +330,8 @@ export function CreatePurchaseOrder() {
       variant="transaction"
       onBack={() => navigate('/purchase-orders')}
       onSaveDraft={handleSaveDraft}
-      onSubmit={() => alert('PO submitted for approval')}
-      submitLabel="Submit PO for Approval"
+      onSubmit={() => void handleSubmitPO()}
+      submitLabel={submitting ? 'Saving…' : 'Submit PO for Approval'}
       draftLabel="Save Draft"
       saveStatus={saveStatus}
       completeness={completeness}
@@ -294,6 +364,21 @@ export function CreatePurchaseOrder() {
         </>
       }
     >
+      {submitError && (
+        <div
+          role="alert"
+          style={{
+            margin: '0 0 12px 0',
+            padding: '10px 14px',
+            borderRadius: 6,
+            background: '#FFEBEE',
+            color: '#C62828',
+            fontSize: 13,
+          }}
+        >
+          {submitError}
+        </div>
+      )}
       {/* PR-Based Mode Indicator */}
       {mode === 'from-pr' && linkedPRs.length > 0 && sourcePRData && (
         <div

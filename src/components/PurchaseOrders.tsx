@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
-import { useAPData, PurchaseOrder } from '../contexts/APDataContext';
+import type { PurchaseOrder } from '../contexts/APDataContext';
 import { useProcurementData } from '../contexts/ProcurementDataContext';
 import { AuditTrailDrawer } from './procurement/AuditTrailDrawer';
 import {
@@ -49,13 +49,39 @@ const statusTone = (status: PurchaseOrder['status']) => {
 
 export function PurchaseOrders() {
   const navigate = useNavigate();
-  const { purchaseOrders } = useAPData();
   const { pos: relationalPOs } = useProcurementData();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [departmentFilter, setDepartmentFilter] = useState<string[]>([]);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [auditTarget, setAuditTarget] = useState<{ id: string; ref: string } | null>(null);
+
+  // Relational PO records adapted to the existing PurchaseOrder display shape.
+  // Source of truth is /api/procurement/pos (via ProcurementDataContext); the
+  // AP blob is no longer read for this listing.
+  const STATUS_TO_LEGACY: Record<string, PurchaseOrder['status']> = {
+    draft: 'Draft',
+    issued: 'Issued',
+    partially_received: 'Partially Received',
+    fully_received: 'Fully Received',
+    closed: 'Closed / Cancelled',
+    cancelled: 'Closed / Cancelled',
+  };
+  const purchaseOrders: PurchaseOrder[] = relationalPOs.map((po) => ({
+    id: po.id, // relational UUID (used for navigation)
+    poNumber: po.poRef,
+    vendor: po.vendorName,
+    vendorCode: po.vendorId,
+    vendorGSTIN: po.vendorGstin ?? '',
+    date: (po.issuedAt || po.createdAt || '').split('T')[0] || '',
+    amount: Number(po.totalWithGst ?? po.totalAmount ?? 0),
+    openAmount: Number(po.totalWithGst ?? po.totalAmount ?? 0),
+    status: STATUS_TO_LEGACY[po.status] ?? 'Draft',
+    department: '—',
+    type: po.poType === 'service' ? 'Services' : 'Goods',
+    currency: 'INR',
+    lineItems: [],
+  }));
 
   const filteredOrders = useMemo(
     () =>
@@ -72,7 +98,7 @@ export function PurchaseOrders() {
           departmentFilter.length === 0 || departmentFilter.includes(order.department);
         return matchesSearch && matchesStatus && matchesDepartment;
       }),
-    [departmentFilter, searchTerm, statusFilter]
+    [departmentFilter, searchTerm, statusFilter, purchaseOrders]
   );
 
   const stats = {

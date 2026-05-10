@@ -27,6 +27,8 @@ import { CreatePurchaseOrder } from './components/CreatePurchaseOrder';
 import { PRSelectionPage } from './components/PRSelectionPage';
 import { POUpdate } from './components/POUpdate';
 import { GoodsReceipt } from './components/GoodsReceipt';
+import { SRNListing } from './components/procurement/SRNListing';
+import { SRNForm } from './components/procurement/SRNForm';
 
 // Vendors (legacy imports kept for reference; routes now use VendorMaster)
 import { Vendors } from './components/Vendors';
@@ -520,6 +522,8 @@ function App() {
                                 />
                                 <Route path="purchase-orders/update/:id" element={<POUpdate />} />
                                 <Route path="goods-receipt" element={<GoodsReceipt />} />
+                                <Route path="procurement/srn" element={<SRNListing />} />
+                                <Route path="procurement/srn/create" element={<SRNForm />} />
 
                                 {/* Vendor Management */}
                                 <Route path="vendor-management" element={<VendorManagement />}>

@@ -33,7 +33,12 @@ import { useMasterData } from '../contexts/MasterDataContext';
 import { useAPData } from '../contexts/APDataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { isMsmeVendor, maxMsmeDueDate, msmeDueDateWarning } from '../lib/msmeDueDate';
-import { buildMysqlApiHeaders, mysqlApiBaseUrl, isMysqlApiEnabled } from '../lib/mysql/client';
+import {
+  buildMysqlApiHeaders,
+  mysqlApiBaseUrl,
+  isMysqlApiEnabled,
+  mysqlApiRequest,
+} from '../lib/mysql/client';
 import { ensureRelationalMasterRecords } from '../lib/mysql/masterTables';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
@@ -782,40 +787,72 @@ export function NonPOInvoiceForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const persistInvoice = (status: 'Draft' | 'Pending Approval') => {
+  const persistInvoice = async (status: 'Draft' | 'Pending Approval'): Promise<boolean> => {
     const vendor = vendorId ? getVendorById(vendorId) : undefined;
     if (!vendor || !invoiceNumber || !invoiceDate) {
       alert('Vendor, invoice number, and invoice date are required.');
       return false;
     }
 
-    addInvoice({
-      id: `NPO-${Date.now()}`,
-      invoiceNumber,
-      invoiceDate,
-      vendorName: vendor.name,
-      vendorCode: vendor.code,
-      invoiceType: 'Non-PO',
-      totalAmount: finalNetPayable,
-      currency,
-      status,
-      approver: 'AP Team',
-      paymentStatus: 'Unpaid',
-      matchStatus: 'Unmatched',
-      _source: 'manual',
-    });
-    return true;
+    // Persist to relational p2p_schema_mt.invoices via POST /api/invoices.
+    const lifecycleState = status === 'Draft' ? 'Ingested' : 'Under Verification';
+    try {
+      const res = await mysqlApiRequest<{ success: boolean; data: { id: string } }>('/invoices', {
+        method: 'POST',
+        body: JSON.stringify({
+          invoice_number: invoiceNumber,
+          invoice_date: invoiceDate,
+          vendor_id: vendor.id,
+          vendor_name: vendor.name,
+          vendor_code: vendor.code,
+          invoice_type: 'non_po',
+          total_amount: finalNetPayable,
+          currency,
+          entity_id: currentCompany?.id ?? '',
+          status: status === 'Draft' ? 'draft' : 'pending_approval',
+          lifecycle_state: lifecycleState,
+        }),
+      });
+      if (!res?.success) {
+        alert('Failed to save invoice.');
+        return false;
+      }
+      addInvoice({
+        id: res.data.id,
+        invoiceNumber,
+        invoiceDate,
+        vendorName: vendor.name,
+        vendorCode: vendor.code,
+        invoiceType: 'Non-PO',
+        totalAmount: finalNetPayable,
+        currency,
+        status,
+        approver: 'AP Team',
+        paymentStatus: 'Unpaid',
+        matchStatus: 'Unmatched',
+        _source: 'manual',
+      });
+      return true;
+    } catch (err) {
+      const apiErr = err as { message?: string; details?: string[] };
+      alert(
+        apiErr?.details?.length
+          ? apiErr.details.join('\n')
+          : apiErr?.message || 'Failed to save invoice.'
+      );
+      return false;
+    }
   };
 
   // Save draft
-  const handleSaveDraft = () => {
-    if (persistInvoice('Draft')) {
+  const handleSaveDraft = async () => {
+    if (await persistInvoice('Draft')) {
       navigate('/ap/my-invoices');
     }
   };
 
   // Submit for approval
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setShowValidation(true);
     if (validateForm()) {
       const tdsErrors = validateTDSRules(lineItems);
@@ -823,7 +860,7 @@ export function NonPOInvoiceForm() {
         alert(`TDS threshold validation failed:\n${tdsErrors.join('\n')}`);
         return;
       }
-      if (persistInvoice('Pending Approval')) {
+      if (await persistInvoice('Pending Approval')) {
         navigate('/ap/my-invoices');
       }
     } else {

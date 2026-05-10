@@ -1075,17 +1075,19 @@ async function handleListPOs(req, res, sendJson, url, tenantId) {
 }
 
 async function handleGetPO(req, res, sendJson, tenantId, poId) {
+  // Accept either UUID or po_ref. Same belt-and-suspenders pattern as PR.
   const headers = await query(
-    `SELECT * FROM purchase_orders_proc WHERE id = ? AND tenant_id = ? LIMIT 1`,
-    [poId, tenantId]
+    `SELECT * FROM purchase_orders_proc WHERE (id = ? OR po_ref = ?) AND tenant_id = ? LIMIT 1`,
+    [poId, poId, tenantId]
   );
   if (!headers.length) {
     sendJson(res, 404, { success: false, error: 'po_not_found' });
     return;
   }
+  const realId = headers[0].id;
   const items = await query(
     `SELECT * FROM purchase_order_items WHERE po_id = ? AND tenant_id = ? ORDER BY line_number`,
-    [poId, tenantId]
+    [realId, tenantId]
   );
   sendJson(res, 200, { success: true, data: adaptPO(headers[0], items) });
 }
@@ -1499,16 +1501,17 @@ async function handleListGRNs(req, res, sendJson, url, tenantId) {
 
 async function handleGetGRN(req, res, sendJson, tenantId, grnId) {
   const head = await query(
-    `SELECT * FROM goods_receipt_notes WHERE id = ? AND tenant_id = ? LIMIT 1`,
-    [grnId, tenantId]
+    `SELECT * FROM goods_receipt_notes WHERE (id = ? OR grn_ref = ?) AND tenant_id = ? LIMIT 1`,
+    [grnId, grnId, tenantId]
   );
   if (!head.length) {
     sendJson(res, 404, { success: false, error: 'grn_not_found' });
     return;
   }
+  const realId = head[0].id;
   const items = await query(
     `SELECT * FROM grn_items WHERE grn_id = ? AND tenant_id = ? ORDER BY line_number`,
-    [grnId, tenantId]
+    [realId, tenantId]
   );
   sendJson(res, 200, { success: true, data: adaptGRN(head[0], items) });
 }
@@ -1733,16 +1736,17 @@ async function handleListSRNs(req, res, sendJson, url, tenantId) {
 
 async function handleGetSRN(req, res, sendJson, tenantId, srnId) {
   const head = await query(
-    `SELECT * FROM service_receipt_notes WHERE id = ? AND tenant_id = ? LIMIT 1`,
-    [srnId, tenantId]
+    `SELECT * FROM service_receipt_notes WHERE (id = ? OR srn_ref = ?) AND tenant_id = ? LIMIT 1`,
+    [srnId, srnId, tenantId]
   );
   if (!head.length) {
     sendJson(res, 404, { success: false, error: 'srn_not_found' });
     return;
   }
+  const realId = head[0].id;
   const items = await query(
     `SELECT * FROM srn_items WHERE srn_id = ? AND tenant_id = ? ORDER BY line_number`,
-    [srnId, tenantId]
+    [realId, tenantId]
   );
   sendJson(res, 200, { success: true, data: adaptSRN(head[0], items) });
 }
