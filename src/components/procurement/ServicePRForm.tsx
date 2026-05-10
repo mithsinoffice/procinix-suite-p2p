@@ -40,7 +40,7 @@ export function ServicePRForm() {
   const { user } = useAuth();
   const { addPurchaseRequest } = useProcurementData();
   const {
-    vendors,
+    liveVendors,
     entities,
     departments,
     costCentres,
@@ -52,7 +52,7 @@ export function ServicePRForm() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [totalValue, setTotalValue] = useState(0);
   const [sowUploaded, setSowUploaded] = useState(false);
-  const [selectedVendorId, setSelectedVendorId] = useState(vendors[0]?.id || '');
+  const [selectedVendorId, setSelectedVendorId] = useState(liveVendors[0]?.id || '');
   const [selectedEntity, setSelectedEntity] = useState(
     currentCompany?.name || entities[0]?.name || ''
   );
@@ -81,7 +81,9 @@ export function ServicePRForm() {
           'Legal Services',
         ];
 
-  const activeVendors = vendors.filter((vendor) => vendor.status === 'Active');
+  const activeVendors = liveVendors.filter(
+    (vendor) => vendor.status === 'active' && vendor.vendorType !== 'entity'
+  );
   const activeCostCentres = costCentres.filter((costCentre) => costCentre.isActive);
   const glAccounts = accountCodes
     .filter((account) => account.isActive)

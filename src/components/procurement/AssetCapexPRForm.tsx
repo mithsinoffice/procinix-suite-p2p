@@ -40,7 +40,7 @@ export function AssetCapexPRForm() {
   const { user } = useAuth();
   const { addPurchaseRequest } = useProcurementData();
   const {
-    vendors,
+    liveVendors,
     entities,
     costCentres,
     currentCompany,
@@ -89,8 +89,8 @@ export function AssetCapexPRForm() {
         : ['Straight Line', 'Written Down Value', 'Double Declining Balance'],
     [depreciationMethodRecords]
   );
-  const activeVendors = vendors
-    .filter((vendor) => vendor.status === 'Active')
+  const activeVendors = liveVendors
+    .filter((vendor) => vendor.status === 'active' && vendor.vendorType !== 'entity')
     .map((vendor) => vendor.name);
   // locations from location_master are already available via useMasterData()
 

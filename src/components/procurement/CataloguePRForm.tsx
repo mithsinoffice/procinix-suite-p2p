@@ -17,7 +17,7 @@ export function CataloguePRForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addPurchaseRequest } = useProcurementData();
-  const { items, vendors, entities, departments, costCentres, currentCompany, locations } =
+  const { items, liveVendors, entities, departments, costCentres, currentCompany, locations } =
     useMasterData();
   const [cart, setCart] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,8 +34,9 @@ export function CataloguePRForm() {
   const [businessJustification, setBusinessJustification] = useState('');
 
   const activeVendors = useMemo(
-    () => vendors.filter((vendor) => vendor.status === 'Active'),
-    [vendors]
+    () =>
+      liveVendors.filter((vendor) => vendor.status === 'active' && vendor.vendorType !== 'entity'),
+    [liveVendors]
   );
 
   const catalogItems = useMemo(

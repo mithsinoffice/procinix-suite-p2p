@@ -86,6 +86,27 @@ export interface VendorMaster {
   effectiveTdsRate?: number; // Calculated based on 206AB or lower TDS
 }
 
+/**
+ * Operational vendor record from /api/vendors (p2p_schema_mt.vendors). This is
+ * the table seeded with the 12 real vendors (TCS, Infosys, Wipro, …). The
+ * governance VendorMaster shape above is for the vendor_master.vendor_master
+ * approval workflow, which is separate.
+ */
+export interface LiveVendor {
+  id: string;
+  code: string;
+  name: string;
+  legalName: string;
+  tradeName?: string;
+  vendorType?: string;
+  status: 'active' | 'inactive' | 'pending_approval' | 'draft' | string;
+  vendorGroupCode?: string;
+  vendorGroupName?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+}
+
 export interface BankAccountDetail {
   id: string;
   accountNumber: string;
@@ -1005,6 +1026,11 @@ interface MasterDataContextType {
   // Locations
   locations: LocationMaster[];
 
+  // Operational vendors (from /api/vendors, distinct from the governance
+  // vendor_master records exposed via `vendors`). Use this for transactional
+  // dropdowns (PR/PO/invoice).
+  liveVendors: LiveVendor[];
+
   // Designations
   designations: DesignationMaster[];
 
@@ -1060,6 +1086,20 @@ interface MasterDataDocument {
   tdsSections: TDSSectionMasterRecord[];
   currencies: CurrencyMaster[];
   exchangeRates: ExchangeRateMaster[];
+}
+
+interface RawVendorRow {
+  id: string;
+  vendor_code: string;
+  vendor_legal_name: string | null;
+  vendor_trade_name: string | null;
+  vendor_type: string | null;
+  vendor_group_code: string | null;
+  vendor_group_name: string | null;
+  status: string;
+  city: string | null;
+  state: string | null;
+  country: string | null;
 }
 
 interface MysqlItemRow {
@@ -1127,6 +1167,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     defaultDocument.vendorGroups
   );
   const [locations, setLocations] = useState<LocationMaster[]>(defaultDocument.locations);
+  const [liveVendors, setLiveVendors] = useState<LiveVendor[]>([]);
   const [designations, setDesignations] = useState<DesignationMaster[]>(
     defaultDocument.designations
   );
@@ -1179,6 +1220,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           expenseCategoriesData,
           document,
           itemsResponse,
+          liveVendorsResponse,
         ] = await Promise.all([
           ensureRelationalMasterRecords('vendor_master', defaultDocument.vendors),
           ensureRelationalMasterRecords('entity_master', defaultDocument.entities),
@@ -1229,6 +1271,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
             success: false,
             data: [],
           })),
+          mysqlApiRequest<{ success: boolean; data: RawVendorRow[] }>('/vendors').catch(() => ({
+            success: false,
+            data: [],
+          })),
         ]);
 
         if (!isMounted) {
@@ -1272,10 +1318,43 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
             ? vendorGroupsData
             : (document.vendorGroups ?? defaultDocument.vendorGroups)
         );
+        // Normalize locations: API returns recordCode/recordName but the
+        // LocationMaster type also declares top-level `code`/`name` (consumers
+        // bind to `location.name` in dropdown labels). Backfill from the
+        // canonical fields when missing.
+        const normalizeLocation = (loc: LocationMaster): LocationMaster => ({
+          ...loc,
+          code: loc.code ?? loc.recordCode ?? '',
+          name: loc.name ?? loc.recordName ?? '',
+        });
         setLocations(
           locationsData && locationsData.length > 0
-            ? locationsData
-            : (document.locations ?? defaultDocument.locations)
+            ? locationsData.map(normalizeLocation)
+            : (document.locations ?? defaultDocument.locations).map(normalizeLocation)
+        );
+
+        // Operational vendors from p2p_schema_mt.vendors (TCS, Infosys, …).
+        // Filter out anything labelled as an entity for defence in depth.
+        const rawLiveVendors = Array.isArray(liveVendorsResponse?.data)
+          ? liveVendorsResponse.data
+          : [];
+        setLiveVendors(
+          rawLiveVendors
+            .filter((row) => row && row.vendor_type !== 'entity')
+            .map((row) => ({
+              id: String(row.id),
+              code: row.vendor_code,
+              name: row.vendor_trade_name || row.vendor_legal_name || row.vendor_code,
+              legalName: row.vendor_legal_name || row.vendor_trade_name || row.vendor_code,
+              tradeName: row.vendor_trade_name ?? undefined,
+              vendorType: row.vendor_type ?? undefined,
+              status: (row.status ?? '').toLowerCase(),
+              vendorGroupCode: row.vendor_group_code ?? undefined,
+              vendorGroupName: row.vendor_group_name ?? undefined,
+              city: row.city ?? undefined,
+              state: row.state ?? undefined,
+              country: row.country ?? undefined,
+            }))
         );
         setDesignations(
           designationsData && designationsData.length > 0
@@ -1632,6 +1711,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     getActiveDebitNoteReasons,
     vendorGroups,
     locations,
+    liveVendors,
     designations,
     assetCategories,
     depreciationMethods,

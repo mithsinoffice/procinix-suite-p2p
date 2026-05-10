@@ -33,7 +33,7 @@ export function BlanketPRForm() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addPurchaseRequest } = useProcurementData();
-  const { items: itemMasters, vendors, entities, currentCompany, locations } = useMasterData();
+  const { items: itemMasters, liveVendors, entities, currentCompany, locations } = useMasterData();
   const [item, setItem] = useState({
     itemCode: '',
     itemName: '',
@@ -50,8 +50,8 @@ export function BlanketPRForm() {
   );
 
   const activeItems = itemMasters.filter((masterItem) => masterItem.status === 'Active');
-  const activeVendors = vendors
-    .filter((vendor) => vendor.status === 'Active')
+  const activeVendors = liveVendors
+    .filter((vendor) => vendor.status === 'active' && vendor.vendorType !== 'entity')
     .map((vendor) => vendor.name);
   // locations from location_master are already available via useMasterData()
 

@@ -53,7 +53,7 @@ export function RegularPRForm() {
     entities,
     departments,
     items,
-    vendors,
+    liveVendors: contextLiveVendors,
     costCentres,
     accountCodes,
     currentCompany,
@@ -65,9 +65,7 @@ export function RegularPRForm() {
     currentCompany?.name || entities[0]?.name || 'India HQ'
   );
   const [selectedDepartment, setSelectedDepartment] = useState(departments[0]?.name || 'IT');
-  const [deliveryLocation, setDeliveryLocation] = useState(
-    currentCompany?.name || entities[0]?.name || 'Mumbai Office'
-  );
+  const [deliveryLocation, setDeliveryLocation] = useState(locations[0]?.name || '');
   const [needByDate, setNeedByDate] = useState(new Date().toISOString().split('T')[0]);
   const [businessJustification, setBusinessJustification] = useState('');
 
@@ -81,8 +79,8 @@ export function RegularPRForm() {
     lastPrice: item.standardPrice || 0,
   }));
 
-  const liveVendors = vendors
-    .filter((vendor) => vendor.status === 'Active')
+  const availableVendors = contextLiveVendors
+    .filter((vendor) => vendor.status === 'active' && vendor.vendorType !== 'entity')
     .map((vendor) => ({
       vendorCode: vendor.code,
       vendorName: vendor.name,
@@ -458,7 +456,7 @@ export function RegularPRForm() {
                               className="px-select-compact"
                               value={item.vendorCode}
                               onChange={(e) => {
-                                const selectedVendor = liveVendors.find(
+                                const selectedVendor = availableVendors.find(
                                   (v) => v.vendorCode === e.target.value
                                 );
                                 if (selectedVendor) {
@@ -470,7 +468,7 @@ export function RegularPRForm() {
                               }}
                             >
                               <option value="">Select Vendor</option>
-                              {liveVendors.map((v) => (
+                              {availableVendors.map((v) => (
                                 <option key={v.vendorCode} value={v.vendorCode}>
                                   {v.vendorName}
                                 </option>
