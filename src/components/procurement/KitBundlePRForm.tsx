@@ -19,6 +19,7 @@ import {
   type PurchaseRequestStatus,
 } from '../../contexts/ProcurementDataContext';
 import { useMasterData } from '../../contexts/MasterDataContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * KIT/BUNDLE PR FORM
@@ -51,6 +52,7 @@ interface KitBundle {
 
 export function KitBundlePRForm() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { addPurchaseRequest } = useProcurementData();
   const { entities, departments, locations } = useMasterData();
   const activeEntities = entities.filter((entity) => entity.isActive);
@@ -66,7 +68,7 @@ export function KitBundlePRForm() {
         }));
   const [selectedEntity, setSelectedEntity] = useState<string>(activeEntities[0]?.name ?? '');
   const [selectedDepartment, setSelectedDepartment] = useState<string>(
-    activeDepartments[0]?.name ?? ''
+    user?.department || activeDepartments[0]?.name || ''
   );
   const [selectedLocation, setSelectedLocation] = useState<string>(activeLocations[0]?.name ?? '');
   const [bundles, setBundles] = useState<KitBundle[]>([]);

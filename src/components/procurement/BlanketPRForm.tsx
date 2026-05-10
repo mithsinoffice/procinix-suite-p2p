@@ -90,7 +90,7 @@ export function BlanketPRForm() {
       type: 'Blanket',
       entity: selectedEntity,
       requestor: user?.name || 'Current User',
-      department: 'Operations',
+      department: user?.department || 'Operations',
       costCentre: item.itemCode || '',
       needByDate: validTo || createdDate,
       deliveryLocation: releases[0]?.deliveryLocation || locations[0]?.name || '',

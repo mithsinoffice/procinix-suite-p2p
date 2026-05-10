@@ -11,6 +11,7 @@ interface ApiUser {
   email: string;
   name: string;
   role: string | null;
+  department?: string | null;
   tenantId: string | null;
   defaultEntityId: string | null;
   tenantName?: string | null;
@@ -273,6 +274,7 @@ function buildUserFromApi(apiUser: ApiUser): User {
     name: apiUser.name || apiUser.email,
     email: apiUser.email,
     role: normalized,
+    department: apiUser.department ?? undefined,
     availableEntities: authEntities,
     currentEntity,
     tenantId: apiUser.tenantId ?? undefined,

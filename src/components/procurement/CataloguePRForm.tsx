@@ -24,7 +24,9 @@ export function CataloguePRForm() {
   const [selectedEntity, setSelectedEntity] = useState(
     currentCompany?.name || entities[0]?.name || ''
   );
-  const [selectedDepartment, setSelectedDepartment] = useState(departments[0]?.name || '');
+  const [selectedDepartment, setSelectedDepartment] = useState(
+    user?.department || departments[0]?.name || ''
+  );
   const [needByDate, setNeedByDate] = useState(new Date().toISOString().split('T')[0]);
   const [priority, setPriority] = useState('Normal');
   const [deliveryLocation, setDeliveryLocation] = useState(

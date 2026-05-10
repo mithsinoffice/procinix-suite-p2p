@@ -132,7 +132,7 @@ export function AssetCapexPRForm() {
       type: 'Asset/CAPEX',
       entity: selectedEntity,
       requestor: user?.name || 'Current User',
-      department: 'Operations',
+      department: user?.department || 'Operations',
       costCentre: costCentres.find((costCentre) => costCentre.isActive)?.code || '',
       needByDate: createdDate,
       deliveryLocation: assets[0]?.location || 'Mumbai Factory',

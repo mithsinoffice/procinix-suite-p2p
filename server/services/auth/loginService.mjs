@@ -50,6 +50,8 @@ function buildSafeUser(row, payload) {
     email: String(payload.email ?? '').trim(),
     name: String(payload.name ?? payload.employeeName ?? '').trim(),
     role: payload.role ?? payload.roleName ?? roleFromAssignments ?? null,
+    department:
+      payload.departmentName ?? payload.department ?? payload.deptName ?? payload.dept_name ?? null,
     tenantId: row.tenant_id ? String(row.tenant_id) : null,
     defaultEntityId: row.default_entity_id ? String(row.default_entity_id) : null,
   };

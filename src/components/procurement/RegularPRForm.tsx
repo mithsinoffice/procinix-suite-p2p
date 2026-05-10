@@ -64,7 +64,9 @@ export function RegularPRForm() {
   const [selectedEntity, setSelectedEntity] = useState(
     currentCompany?.name || entities[0]?.name || 'India HQ'
   );
-  const [selectedDepartment, setSelectedDepartment] = useState(departments[0]?.name || 'IT');
+  const [selectedDepartment, setSelectedDepartment] = useState(
+    user?.department || departments[0]?.name || ''
+  );
   const [deliveryLocation, setDeliveryLocation] = useState(locations[0]?.name || '');
   const [needByDate, setNeedByDate] = useState(new Date().toISOString().split('T')[0]);
   const [businessJustification, setBusinessJustification] = useState('');

@@ -26,6 +26,8 @@ const REPO_ROOT = resolve(__dirname, '../..');
 const MIGRATIONS = [
   // Sprint 2: debit notes relational tables.
   'sql/mysql/migrations/20260510_debit_notes.sql',
+  // Item master seeds (25 generic mid-market items).
+  'sql/mysql/migrations/20260510_item_master_seeds.sql',
 ];
 
 const IGNORABLE_ERRORS = new Set([
