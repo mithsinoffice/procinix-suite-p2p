@@ -500,8 +500,7 @@ export function Invoices() {
             <div
               className="grid gap-4 px-6 py-4"
               style={{
-                gridTemplateColumns:
-                  '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
+                gridTemplateColumns: '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
                 borderBottom: '1px solid #E8F0F4',
               }}
             >
@@ -591,8 +590,7 @@ export function Invoices() {
             <div
               className="grid gap-4 px-6 py-4"
               style={{
-                gridTemplateColumns:
-                  '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
+                gridTemplateColumns: '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
                 background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)',
                 borderBottom: '1px solid #E4EDF2',
               }}
@@ -630,7 +628,7 @@ export function Invoices() {
                   className="w-full grid gap-4 px-6 py-4 text-left transition-colors"
                   style={{
                     gridTemplateColumns:
-                    '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
+                      '2.3fr 1.8fr 1fr 1fr 1fr 1fr 1fr 1fr 1.2fr 1.2fr 1.2fr 0.9fr',
                     borderBottom:
                       index === filteredInvoices.length - 1 ? 'none' : '1px solid #EDF3F7',
                     backgroundColor: '#FFFFFF',
@@ -813,9 +811,7 @@ export function Invoices() {
                       label="View invoice"
                       icon={<Eye className="w-4 h-4" />}
                       tone="teal"
-                      onClick={() =>
-                        navigate(`/invoices/${invoice._dbId || invoice.id}`)
-                      }
+                      onClick={() => navigate(`/invoices/${invoice._dbId || invoice.id}`)}
                     />
                     {invoice.status === 'Draft' && (
                       <PremiumActionButton

@@ -690,7 +690,9 @@ function BatchDetailCard({
             disabled={busy === 'initiate'}
             className="px-4 py-2 bg-teal hover:bg-teal-dark text-white rounded-lg text-sm font-medium disabled:opacity-50"
           >
-            {busy === 'initiate' ? 'Sending to bank…' : (
+            {busy === 'initiate' ? (
+              'Sending to bank…'
+            ) : (
               <>
                 <Send className="inline w-4 h-4 mr-1" />
                 Initiate payment

@@ -238,13 +238,7 @@ function MsmeCallout({
   );
 }
 
-function ForecastChart({
-  data,
-  loading,
-}: {
-  data: ForecastChartPoint[];
-  loading: boolean;
-}) {
+function ForecastChart({ data, loading }: { data: ForecastChartPoint[]; loading: boolean }) {
   if (loading) {
     return (
       <div className="h-[280px] flex items-end gap-2 px-4 animate-pulse">
@@ -274,10 +268,7 @@ function ForecastChart({
       <ResponsiveContainer width="100%" height={280} debounce={1}>
         <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-          <XAxis
-            dataKey="label"
-            style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }}
-          />
+          <XAxis dataKey="label" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
           <YAxis
             style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }}
             tickFormatter={(v) => formatINRCompact(Number(v))}
@@ -361,7 +352,8 @@ function TableSection({
     return copy;
   }, [rows, sortBy]);
 
-  const showMsmeCol = groupBy === 'vendor' || groupBy === 'msme_critical' || groupBy === 'department';
+  const showMsmeCol =
+    groupBy === 'vendor' || groupBy === 'msme_critical' || groupBy === 'department';
   const supportsExpand = groupBy !== 'due_date';
   const groupLabel = GROUP_BY_OPTIONS.find((o) => o.key === groupBy)?.label ?? '';
 
@@ -728,10 +720,7 @@ export function PaymentForecast() {
       </div>
 
       {/* MSME callout */}
-      <MsmeCallout
-        msmeOutflow={meta?.msmeOutflow ?? 0}
-        vendorBreakdown={msmeVendorBreakdown}
-      />
+      <MsmeCallout msmeOutflow={meta?.msmeOutflow ?? 0} vendorBreakdown={msmeVendorBreakdown} />
 
       {/* Error banner */}
       {error && (

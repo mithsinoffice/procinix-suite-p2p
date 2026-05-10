@@ -1,7 +1,5 @@
 module.exports = {
-  safelist: [
-    { pattern: /bg-px-|text-px-|border-px-/ }
-  ],
+  safelist: [{ pattern: /bg-px-|text-px-|border-px-/ }],
   theme: {
     extend: {
       colors: {
@@ -15,7 +13,7 @@ module.exports = {
         'px-success': '#00C796',
         'px-warning': '#FFC75E',
         'px-error': '#FF4E5B',
-      }
-    }
-  }
-}
+      },
+    },
+  },
+};

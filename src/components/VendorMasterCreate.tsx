@@ -1163,7 +1163,11 @@ export function VendorMasterCreate() {
               placeholder="(assigned on save)"
               readOnly
               tabIndex={-1}
-              style={{ ...inputStyle, backgroundColor: 'var(--color-cloud)', cursor: 'not-allowed' }}
+              style={{
+                ...inputStyle,
+                backgroundColor: 'var(--color-cloud)',
+                cursor: 'not-allowed',
+              }}
             />
           </PxFormField>
           <PxFormField label="Client ERP Vendor Code" hint="Update after ERP integration">

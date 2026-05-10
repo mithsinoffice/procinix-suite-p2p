@@ -425,7 +425,12 @@ export function NonPOInvoiceForm() {
           tax: li.gst_rate ?? 0,
           confidence: 0.85,
         })),
-        confidence: { vendorName: 0.85, invoiceNumber: 0.85, invoiceDate: 0.85, invoiceAmount: 0.85 },
+        confidence: {
+          vendorName: 0.85,
+          invoiceNumber: 0.85,
+          invoiceDate: 0.85,
+          invoiceAmount: 0.85,
+        },
       });
       // Build per-field OCR confidence map from N8N raw payload (_raw carries
       // { value, confidence, suggestions } per field; fall back to synthetic data
@@ -436,7 +441,7 @@ export function NonPOInvoiceForm() {
       const tryAddField = (
         ocrKey: string,
         rawKey: string,
-        extractedVal: string | number | null | undefined,
+        extractedVal: string | number | null | undefined
       ) => {
         const r = raw[rawKey];
         if (
@@ -1108,7 +1113,10 @@ export function NonPOInvoiceForm() {
             {ocrSummary && (
               <div
                 className="mx-6 mt-5 px-4 py-3 rounded-lg flex items-center gap-3"
-                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
+                style={{
+                  backgroundColor: 'var(--color-cloud)',
+                  border: '1px solid var(--color-silver)',
+                }}
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1.5">
@@ -1126,7 +1134,8 @@ export function NonPOInvoiceForm() {
                           fontWeight: 600,
                         }}
                       >
-                        {ocrSummary.needsReview} field{ocrSummary.needsReview > 1 ? 's' : ''} need review
+                        {ocrSummary.needsReview} field{ocrSummary.needsReview > 1 ? 's' : ''} need
+                        review
                       </span>
                     )}
                   </div>
@@ -1152,7 +1161,10 @@ export function NonPOInvoiceForm() {
                   type="button"
                   onClick={() => setShowSuggestions((v) => !v)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors hover:bg-white"
-                  style={{ color: 'var(--color-mercury-grey)', border: '1px solid var(--color-silver)' }}
+                  style={{
+                    color: 'var(--color-mercury-grey)',
+                    border: '1px solid var(--color-silver)',
+                  }}
                   title={showSuggestions ? 'Hide suggestions' : 'Show suggestions'}
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -1275,7 +1287,10 @@ export function NonPOInvoiceForm() {
               {/* Line items preview */}
               {ocrData.lineItems.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                  <p
+                    className="text-sm font-medium mb-2"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
                     Line Items ({ocrData.lineItems.length})
                   </p>
                   <div className="space-y-1.5">
@@ -1286,7 +1301,10 @@ export function NonPOInvoiceForm() {
                         style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)' }}
                       >
                         <span className="flex-1 truncate">{li.description || '—'}</span>
-                        <span className="ml-4 shrink-0" style={{ color: 'var(--color-mercury-grey)' }}>
+                        <span
+                          className="ml-4 shrink-0"
+                          style={{ color: 'var(--color-mercury-grey)' }}
+                        >
                           {li.quantity} × ₹{li.rate.toLocaleString('en-IN')}
                         </span>
                         <span
@@ -1409,7 +1427,7 @@ export function NonPOInvoiceForm() {
           )}
           {getSuggestionChips('vendor', (v) => {
             const match = vendors.find(
-              (vn) => vn.name.trim().toLowerCase() === v.trim().toLowerCase(),
+              (vn) => vn.name.trim().toLowerCase() === v.trim().toLowerCase()
             );
             if (match) {
               setVendorId(match.id);

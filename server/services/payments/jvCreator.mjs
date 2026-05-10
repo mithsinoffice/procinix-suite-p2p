@@ -84,16 +84,7 @@ export async function createPaymentJV(batch, items, tenantId) {
           `INSERT INTO journal_entries
              (id, tenant_id, jv_ref, line_number, entry_type, gl_code, amount, narration, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-          [
-            randomUUID(),
-            tenantId,
-            jvRef,
-            e.lineNumber,
-            e.type,
-            e.glCode,
-            e.amount,
-            e.narration,
-          ]
+          [randomUUID(), tenantId, jvRef, e.lineNumber, e.type, e.glCode, e.amount, e.narration]
         );
       } catch {
         // tolerate column mismatches across schemas
@@ -106,12 +97,7 @@ export async function createPaymentJV(batch, items, tenantId) {
         `INSERT INTO invoice_audit_log
            (id, tenant_id, invoice_id, action, change_type, new_value, actor_source, created_at)
          VALUES (?, ?, ?, 'jv_created', 'JV_CREATED', ?, 'system', NOW())`,
-        [
-          randomUUID(),
-          tenantId,
-          items[0].invoice_id || '',
-          JSON.stringify({ jvRef, entries }),
-        ]
+        [randomUUID(), tenantId, items[0].invoice_id || '', JSON.stringify({ jvRef, entries })]
       );
     } catch {
       // best-effort — don't block the batch flow

@@ -66,9 +66,7 @@ const NUMERIC_COLUMNS = new Set([
   'msme_warning_days',
 ]);
 
-const CAMEL_TO_COLUMN = Object.fromEntries(
-  Object.entries(COLUMN_TO_CAMEL).map(([k, v]) => [v, k])
-);
+const CAMEL_TO_COLUMN = Object.fromEntries(Object.entries(COLUMN_TO_CAMEL).map(([k, v]) => [v, k]));
 
 const VALID_PAYMENT_MODES = new Set(['NEFT', 'RTGS', 'IMPS', 'UPI']);
 const VALID_PAYOUT_FORMATS = new Set(['HDFC_BULK', 'ICICI_BULK', 'GENERIC_CSV']);
@@ -102,21 +100,19 @@ function adaptRow(row) {
 export async function getSettings(tenantId) {
   if (!tenantId) return getDefaultSettings();
   try {
-    const rows = await query(
-      'SELECT * FROM payment_settings WHERE tenant_id = ? LIMIT 1',
-      [tenantId]
-    );
+    const rows = await query('SELECT * FROM payment_settings WHERE tenant_id = ? LIMIT 1', [
+      tenantId,
+    ]);
     if (rows.length > 0) return adaptRow(rows[0]);
     // No row yet — try to seed one.
     try {
-      await query(
-        'INSERT IGNORE INTO payment_settings (id, tenant_id) VALUES (?, ?)',
-        [randomUUID(), tenantId]
-      );
-      const after = await query(
-        'SELECT * FROM payment_settings WHERE tenant_id = ? LIMIT 1',
-        [tenantId]
-      );
+      await query('INSERT IGNORE INTO payment_settings (id, tenant_id) VALUES (?, ?)', [
+        randomUUID(),
+        tenantId,
+      ]);
+      const after = await query('SELECT * FROM payment_settings WHERE tenant_id = ? LIMIT 1', [
+        tenantId,
+      ]);
       if (after.length > 0) return adaptRow(after[0]);
     } catch {
       /* ignore seed failure — fall through to defaults */
@@ -170,10 +166,7 @@ export async function updateSettings(tenantId, patch) {
     return getSettings(tenantId);
   }
   params.push(tenantId);
-  await query(
-    `UPDATE payment_settings SET ${sets.join(', ')} WHERE tenant_id = ?`,
-    params
-  );
+  await query(`UPDATE payment_settings SET ${sets.join(', ')} WHERE tenant_id = ?`, params);
   return getSettings(tenantId);
 }
 

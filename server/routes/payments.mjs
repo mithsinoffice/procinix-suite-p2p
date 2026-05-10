@@ -300,7 +300,9 @@ function evaluateRiskFlags(ctx) {
 
   // 9. round_number
   if (amount >= cfg.roundNumberMin && amount % cfg.roundNumberDivisor === 0) {
-    flags.push(buildFlag('round_number', `Amount is a round multiple of ${cfg.roundNumberDivisor}`));
+    flags.push(
+      buildFlag('round_number', `Amount is a round multiple of ${cfg.roundNumberDivisor}`)
+    );
   }
 
   // 10. inv_splitting — many invoices same vendor in short window
@@ -671,8 +673,7 @@ async function buildPaymentQueue({ tenantId, entityId, status, search, page = 1,
     const vendorBank = enrichment.vendorBankById.get(String(inv.vendor_id));
     const audit = enrichment.auditByInvoice.get(String(inv.id)) || [];
     const recentVendorInvoices = enrichment.recentByVendor.get(String(inv.vendor_id)) || [];
-    const lastApprovalAt =
-      audit.length > 0 ? audit[audit.length - 1].created_at : null;
+    const lastApprovalAt = audit.length > 0 ? audit[audit.length - 1].created_at : null;
 
     const flagCtx = {
       invoice: inv,
@@ -682,8 +683,11 @@ async function buildPaymentQueue({ tenantId, entityId, status, search, page = 1,
       vendorAvgAmount: enrichment.avgByVendor.get(String(inv.vendor_id)) ?? 0,
       recentVendorInvoices,
       hasMatchingGrn: inv.po_number ? enrichment.grnPoSet.has(String(inv.po_number)) : true,
-      approvalCount: audit.filter((a) => String(a.action || '').toLowerCase().includes('approve'))
-        .length,
+      approvalCount: audit.filter((a) =>
+        String(a.action || '')
+          .toLowerCase()
+          .includes('approve')
+      ).length,
       lastApprovalAt,
       settings,
     };
@@ -755,8 +759,11 @@ async function buildSingleQueueItem(invoiceId, tenantId) {
     vendorAvgAmount: enrichment.avgByVendor.get(String(inv.vendor_id)) ?? 0,
     recentVendorInvoices,
     hasMatchingGrn: inv.po_number ? enrichment.grnPoSet.has(String(inv.po_number)) : true,
-    approvalCount: audit.filter((a) => String(a.action || '').toLowerCase().includes('approve'))
-      .length,
+    approvalCount: audit.filter((a) =>
+      String(a.action || '')
+        .toLowerCase()
+        .includes('approve')
+    ).length,
     lastApprovalAt,
     settings,
   });
@@ -872,7 +879,10 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
       }
     }
     if (!BANK_NAMES.has(String(body.bankName).toUpperCase())) {
-      sendJson(res, 400, { success: false, error: `bankName must be one of ${[...BANK_NAMES].join(', ')}` });
+      sendJson(res, 400, {
+        success: false,
+        error: `bankName must be one of ${[...BANK_NAMES].join(', ')}`,
+      });
       return true;
     }
     const integrationMode = INTEGRATION_MODES.has(body.integrationMode)
@@ -932,7 +942,10 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
     }
     if (body.integrationMode !== undefined) {
       if (!INTEGRATION_MODES.has(body.integrationMode)) {
-        sendJson(res, 400, { success: false, error: 'integrationMode must be connected or manual' });
+        sendJson(res, 400, {
+          success: false,
+          error: 'integrationMode must be connected or manual',
+        });
         return true;
       }
       sets.push('integration_mode = ?');
@@ -994,10 +1007,10 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
       return true;
     }
     const accountId = fetchBalanceMatch[1];
-    const rows = await query(
-      'SELECT * FROM bank_accounts WHERE id = ? AND tenant_id = ? LIMIT 1',
-      [accountId, tenantId]
-    );
+    const rows = await query('SELECT * FROM bank_accounts WHERE id = ? AND tenant_id = ? LIMIT 1', [
+      accountId,
+      tenantId,
+    ]);
     if (!rows.length) {
       sendJson(res, 404, { success: false, error: 'not_found' });
       return true;
@@ -1009,10 +1022,10 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
     }
     // Stub — real bank API integration is a future sprint.
     const mockBalance = Math.round(5_000_000 + Math.random() * 5_000_000);
-    await query(
-      'UPDATE bank_accounts SET last_balance = ?, last_balance_at = NOW() WHERE id = ?',
-      [mockBalance, accountId]
-    );
+    await query('UPDATE bank_accounts SET last_balance = ?, last_balance_at = NOW() WHERE id = ?', [
+      mockBalance,
+      accountId,
+    ]);
     sendJson(res, 200, {
       success: true,
       data: { lastBalance: mockBalance, lastBalanceAt: new Date().toISOString(), mockMode: true },
@@ -1120,10 +1133,9 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
       sendJson(res, 400, { success: false, error: 'invalid_status_transition' });
       return true;
     }
-    await query(
-      "UPDATE bank_payment_batches SET status = 'pending_approval' WHERE id = ?",
-      [batchId]
-    );
+    await query("UPDATE bank_payment_batches SET status = 'pending_approval' WHERE id = ?", [
+      batchId,
+    ]);
     sendJson(res, 200, { success: true, data: { id: batchId, status: 'pending_approval' } });
     return true;
   }
@@ -1184,9 +1196,7 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
   }
 
   // POST /api/ap/banking/batches/:id/generate-file
-  const generateFileMatch = pathname.match(
-    /^\/api\/ap\/banking\/batches\/([^/]+)\/generate-file$/
-  );
+  const generateFileMatch = pathname.match(/^\/api\/ap\/banking\/batches\/([^/]+)\/generate-file$/);
   if (req.method === 'POST' && generateFileMatch) {
     const tenantId = readTenant(req, url);
     if (!tenantId) {
@@ -1251,9 +1261,7 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
   }
 
   // GET /api/ap/banking/batches/:id/download-file  (streams file)
-  const downloadFileMatch = pathname.match(
-    /^\/api\/ap\/banking\/batches\/([^/]+)\/download-file$/
-  );
+  const downloadFileMatch = pathname.match(/^\/api\/ap\/banking\/batches\/([^/]+)\/download-file$/);
   if (req.method === 'GET' && downloadFileMatch) {
     const tenantId = readTenant(req, url);
     if (!tenantId) {
@@ -1706,7 +1714,8 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
       [invoiceId]
     );
     const paid = Number(paidRow[0]?.paid) || 0;
-    const finalStatus = paid >= total ? 'Paid' : newStatus === 'paid' ? 'Paid' : 'Queued for Payment';
+    const finalStatus =
+      paid >= total ? 'Paid' : newStatus === 'paid' ? 'Paid' : 'Queued for Payment';
     await query('UPDATE invoices SET lifecycle_state = ?, updated_at = NOW() WHERE id = ?', [
       finalStatus,
       invoiceId,
@@ -1838,8 +1847,7 @@ function buildPaymentQueueItemFromForecastRow(row) {
     id: String(row.id),
     name: row.vendor_name || row.vendor_legal_name || '—',
     ref: row.invoice_number || String(row.id),
-    type:
-      String(row.invoice_type || '').toLowerCase() === 'advance' ? 'advance' : 'invoice',
+    type: String(row.invoice_type || '').toLowerCase() === 'advance' ? 'advance' : 'invoice',
     amount: total,
     paidAmt: paid,
     invoiceDate: row.invoice_date ? String(row.invoice_date).slice(0, 10) : '',
@@ -1862,8 +1870,7 @@ function buildPaymentQueueItemFromForecastRow(row) {
             : 'queued',
     isMSME: row.is_msme === 1,
     isCritical:
-      row.is_statutory === 1 ||
-      String(row.approval_priority || '').toLowerCase() === 'critical',
+      row.is_statutory === 1 || String(row.approval_priority || '').toLowerCase() === 'critical',
     critTag:
       row.is_statutory === 1
         ? 'statutory'
@@ -1910,7 +1917,14 @@ function aggregateForecastTable(items, groupBy) {
       key = it.priority;
       label = key.charAt(0).toUpperCase() + key.slice(1);
     } else if (groupBy === 'msme_critical') {
-      key = it.isMSME && it.isCritical ? 'msme_critical' : it.isMSME ? 'msme' : it.isCritical ? 'critical' : 'standard';
+      key =
+        it.isMSME && it.isCritical
+          ? 'msme_critical'
+          : it.isMSME
+            ? 'msme'
+            : it.isCritical
+              ? 'critical'
+              : 'standard';
       label =
         key === 'msme_critical'
           ? 'MSME + Critical'
@@ -1992,14 +2006,7 @@ function buildForecastChart(items, fromDate, toDate) {
   return [...buckets.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-async function buildForecast({
-  tenantId,
-  entityId,
-  fromDate,
-  toDate,
-  groupBy,
-  status,
-}) {
+async function buildForecast({ tenantId, entityId, fromDate, toDate, groupBy, status }) {
   const params = [tenantId];
   let entityClause = '';
   if (entityId) {
@@ -2052,10 +2059,7 @@ async function buildForecast({
     filtered = filtered.filter((i) => i.status === status);
   }
 
-  const totalOutflow = filtered.reduce(
-    (s, i) => s + Math.max(0, i.amount - i.paidAmt),
-    0
-  );
+  const totalOutflow = filtered.reduce((s, i) => s + Math.max(0, i.amount - i.paidAmt), 0);
   const msmeOutflow = filtered
     .filter((i) => i.isMSME)
     .reduce((s, i) => s + Math.max(0, i.amount - i.paidAmt), 0);

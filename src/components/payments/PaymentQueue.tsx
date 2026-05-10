@@ -22,12 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { mysqlApiRequest } from '../../lib/mysql/client';
-import type {
-  FlagSeverity,
-  PaymentQueueItem,
-  PaymentStatus,
-  RiskFlag,
-} from '../../types/payments';
+import type { FlagSeverity, PaymentQueueItem, PaymentStatus, RiskFlag } from '../../types/payments';
 
 // ============================================================================
 // Helpers
@@ -170,13 +165,7 @@ function QueueMetrics({
 // ============================================================================
 
 type DemoRole = 'payment_approver' | 'finance_executive' | 'cfo';
-function RoleToggle({
-  value,
-  onChange,
-}: {
-  value: DemoRole;
-  onChange: (next: DemoRole) => void;
-}) {
+function RoleToggle({ value, onChange }: { value: DemoRole; onChange: (next: DemoRole) => void }) {
   const opts: { key: DemoRole; label: string }[] = [
     { key: 'payment_approver', label: 'Payment approver' },
     { key: 'finance_executive', label: 'Finance executive' },
@@ -205,7 +194,15 @@ function RoleToggle({
 // Filter pills + sort
 // ============================================================================
 
-type FilterKey = 'all' | 'flagged' | 'critical' | 'msme' | 'overdue' | 'partial' | 'onhold' | 'paid';
+type FilterKey =
+  | 'all'
+  | 'flagged'
+  | 'critical'
+  | 'msme'
+  | 'overdue'
+  | 'partial'
+  | 'onhold'
+  | 'paid';
 
 const FILTERS: { key: FilterKey; label: string; icon?: string }[] = [
   { key: 'all', label: 'All' },

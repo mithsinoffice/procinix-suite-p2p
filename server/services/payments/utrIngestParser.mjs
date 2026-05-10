@@ -14,7 +14,9 @@
 const SUCCESS_STATUSES = new Set(['SUCCESS', 'PROCESSED', 'COMPLETED', 'EXECUTED', 'OK']);
 
 function normaliseStatus(raw) {
-  const s = String(raw || '').trim().toUpperCase();
+  const s = String(raw || '')
+    .trim()
+    .toUpperCase();
   return SUCCESS_STATUSES.has(s) ? 'confirmed' : 'failed';
 }
 

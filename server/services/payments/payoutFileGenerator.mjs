@@ -37,7 +37,9 @@ function sanitiseCsvField(v) {
 
 function sanitisePipeField(v) {
   // HDFC bulk format does not allow the `|` character or newlines in fields.
-  return String(v ?? '').replace(/\|/g, '/').replace(/[\r\n]+/g, ' ');
+  return String(v ?? '')
+    .replace(/\|/g, '/')
+    .replace(/[\r\n]+/g, ' ');
 }
 
 function buildHdfc(batch, items) {

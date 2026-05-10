@@ -194,7 +194,9 @@ export async function extractInvoiceDataN8N(
   // Derive totals from line items when the header fields are absent.
   const derivedLineTotal = line_items.reduce((sum, li) => sum + (li.amount || 0), 0);
   const resolvedTotal = Number(header.total_amount) || derivedLineTotal;
-  const resolvedSubtotal = Number(header.subtotal) || (Number(header.tax_amount) ? resolvedTotal - Number(header.tax_amount) : derivedLineTotal);
+  const resolvedSubtotal =
+    Number(header.subtotal) ||
+    (Number(header.tax_amount) ? resolvedTotal - Number(header.tax_amount) : derivedLineTotal);
 
   const result = {
     invoice_number: header.invoice_number || null,

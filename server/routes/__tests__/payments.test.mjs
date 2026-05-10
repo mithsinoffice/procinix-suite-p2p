@@ -183,9 +183,9 @@ describe('handlePaymentsRoute — due-date', () => {
     expect(ctx.responses[0].status).toBe(200);
     expect(ctx.responses[0].payload.data.newDue).toBe('2026-06-01');
     // The audit-log INSERT call (3rd) should reference invoice_audit_log
-    const auditCall = vi.mocked(query).mock.calls.find((c) =>
-      String(c[0]).includes('invoice_audit_log')
-    );
+    const auditCall = vi
+      .mocked(query)
+      .mock.calls.find((c) => String(c[0]).includes('invoice_audit_log'));
     expect(auditCall).toBeTruthy();
     expect(auditCall[1]).toEqual(
       expect.arrayContaining(['2026-05-15', '2026-06-01', 'vendor requested extension'])
@@ -209,13 +209,7 @@ describe('handlePaymentsRoute — due-date', () => {
 describe('handlePaymentsRoute — payment-forecast', () => {
   const TENANT = 'tenant-default-001';
 
-  function forecastRequest({
-    from,
-    to,
-    groupBy,
-    status,
-    rows,
-  } = {}) {
+  function forecastRequest({ from, to, groupBy, status, rows } = {}) {
     if (rows !== undefined) {
       vi.mocked(query).mockResolvedValueOnce(rows);
     }
@@ -338,9 +332,7 @@ describe('handlePaymentsRoute — payment-forecast', () => {
     const sqlText = String(sqlCall[0]);
     expect(sqlText).toMatch(/lifecycle_state IN/);
     const params = sqlCall[1];
-    expect(params).toEqual(
-      expect.arrayContaining(['Queued for Payment', 'Exception Hold'])
-    );
+    expect(params).toEqual(expect.arrayContaining(['Queued for Payment', 'Exception Hold']));
     expect(params).not.toEqual(expect.arrayContaining(['Paid']));
     expect(params).not.toEqual(expect.arrayContaining(['Rejected']));
   });
@@ -445,12 +437,11 @@ describe('generatePayoutFile — ICICI', () => {
 
 describe('parseUTRFile — HDFC pipe-delimited', () => {
   it('maps CLIENT_REF → utr and normalises SUCCESS to confirmed', async () => {
-    const content =
-      [
-        'CLIENT_REF|UTR_NUMBER|STATUS|AMOUNT|TXNDATE|REMARKS',
-        'PTPL-20260509-001|UTR2026050900012345|SUCCESS|87500.00|09/05/2026|OK',
-        'PTPL-20260509-002|UTR2026050900067890|FAILED|25000.00|09/05/2026|insufficient funds',
-      ].join('\n');
+    const content = [
+      'CLIENT_REF|UTR_NUMBER|STATUS|AMOUNT|TXNDATE|REMARKS',
+      'PTPL-20260509-001|UTR2026050900012345|SUCCESS|87500.00|09/05/2026|OK',
+      'PTPL-20260509-002|UTR2026050900067890|FAILED|25000.00|09/05/2026|insufficient funds',
+    ].join('\n');
     const rows = await parseUTRFile(content, 'auto');
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({
@@ -465,12 +456,11 @@ describe('parseUTRFile — HDFC pipe-delimited', () => {
 
 describe('parseUTRFile — ICICI comma-delimited', () => {
   it('parses CSV with same normalisation', async () => {
-    const content =
-      [
-        'Unique Reference No,UTR,Status,Amount,Date,Remarks',
-        'PTPL-20260509-001,UTR2026050900099999,PROCESSED,12000.00,09/05/2026,ok',
-        'PTPL-20260509-002,UTR2026050900088888,Pending,5000.00,09/05/2026,under review',
-      ].join('\n');
+    const content = [
+      'Unique Reference No,UTR,Status,Amount,Date,Remarks',
+      'PTPL-20260509-001,UTR2026050900099999,PROCESSED,12000.00,09/05/2026,ok',
+      'PTPL-20260509-002,UTR2026050900088888,Pending,5000.00,09/05/2026,under review',
+    ].join('\n');
     const rows = await parseUTRFile(content, 'auto');
     expect(rows).toHaveLength(2);
     expect(rows[0].status).toBe('confirmed');
@@ -778,9 +768,7 @@ describe('createPaymentJV', () => {
   it('emits one DR (AP GL) and one CR (Bank GL) per item', async () => {
     // tableExists query → 0 rows (no journal_entries table)
     // audit-log INSERT
-    vi.mocked(query)
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce({ affectedRows: 1 });
+    vi.mocked(query).mockResolvedValueOnce([]).mockResolvedValueOnce({ affectedRows: 1 });
     const result = await createPaymentJV(
       { batch_ref: 'BATCH-X', payment_date: new Date('2026-05-09T00:00:00Z') },
       [

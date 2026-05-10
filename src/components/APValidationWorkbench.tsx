@@ -1501,12 +1501,11 @@ function ExpandedRowDetail({
   const score = normalizeScore(invoice.readiness_score ?? invoice.touchless_score);
   const exceptions = invoice.exceptions || [];
   const unresolvedExceptions = exceptions.filter((e: any) => !e.resolved);
-  const failReasons: string[] =
-    Array.isArray(invoice.touchless_fail_reasons)
-      ? invoice.touchless_fail_reasons
-      : typeof invoice.touchless_fail_reasons === 'string'
-        ? JSON.parse(invoice.touchless_fail_reasons || '[]')
-        : [];
+  const failReasons: string[] = Array.isArray(invoice.touchless_fail_reasons)
+    ? invoice.touchless_fail_reasons
+    : typeof invoice.touchless_fail_reasons === 'string'
+      ? JSON.parse(invoice.touchless_fail_reasons || '[]')
+      : [];
 
   return (
     <div
@@ -1585,9 +1584,7 @@ function ExpandedRowDetail({
                     border: '1px solid #FED7AA',
                   }}
                 >
-                  <AlertCircle
-                    style={{ width: 13, height: 13, color: '#C2410C', flexShrink: 0 }}
-                  />
+                  <AlertCircle style={{ width: 13, height: 13, color: '#C2410C', flexShrink: 0 }} />
                   <span style={{ fontSize: 12, color: '#9A3412' }}>{reason}</span>
                 </div>
               ))}

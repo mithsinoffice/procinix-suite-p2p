@@ -19,3 +19,6 @@ package-lock.json
 .env.*
 !.env.example
 !.env.mysql.example
+
+# Claude Code harness state (worktrees, local settings)
+.claude/

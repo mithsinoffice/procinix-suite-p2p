@@ -62,7 +62,12 @@ function joinDays(set: Set<Day>): string {
 }
 
 function parseRoles(s: string): Set<string> {
-  return new Set(s.split(',').map((r) => r.trim().toLowerCase()).filter(Boolean));
+  return new Set(
+    s
+      .split(',')
+      .map((r) => r.trim().toLowerCase())
+      .filter(Boolean)
+  );
 }
 function joinRoles(set: Set<string>): string {
   return [...set].join(',');
@@ -485,10 +490,7 @@ export function PaymentSettings() {
       </Card>
 
       {/* Card 3 — Payment defaults */}
-      <Card
-        title="Payment defaults"
-        icon={<Banknote className="w-4 h-4" />}
-      >
+      <Card title="Payment defaults" icon={<Banknote className="w-4 h-4" />}>
         <div className="space-y-5">
           <div>
             <label className="block text-sm text-ink font-medium mb-2">Default payment mode</label>
@@ -632,9 +634,7 @@ export function PaymentSettings() {
               <AlertTriangle className="w-3 h-3" /> Unsaved changes
             </span>
           )}
-          {toast && (
-            <span className="text-xs text-green-700 font-medium">{toast}</span>
-          )}
+          {toast && <span className="text-xs text-green-700 font-medium">{toast}</span>}
         </div>
         <div className="flex items-center gap-3">
           {isAdmin && (

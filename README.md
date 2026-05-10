@@ -37,14 +37,14 @@ npm run start       # Start production server (serves API + static files)
 
 See `.env.example` for the full list. Key variables:
 
-| Variable | Description |
-|---|---|
-| `MYSQL_HOST` | Azure MySQL server hostname |
-| `MYSQL_DATABASE` | Database name (e.g., `p2p_schema_mt`) |
-| `API_SECRET_KEY` | Bearer token for API authentication |
-| `ANTHROPIC_API_KEY` | Claude API key for AI invoice processing |
-| `GOOGLE_AI_API_KEY` | Gemini API key for OCR extraction |
-| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins |
+| Variable               | Description                              |
+| ---------------------- | ---------------------------------------- |
+| `MYSQL_HOST`           | Azure MySQL server hostname              |
+| `MYSQL_DATABASE`       | Database name (e.g., `p2p_schema_mt`)    |
+| `API_SECRET_KEY`       | Bearer token for API authentication      |
+| `ANTHROPIC_API_KEY`    | Claude API key for AI invoice processing |
+| `GOOGLE_AI_API_KEY`    | Gemini API key for OCR extraction        |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins          |
 
 ## Deployment
 

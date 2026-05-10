@@ -635,10 +635,28 @@ const BANK_MASTER_DATA: BankMaster[] = [
 ];
 
 const UOM_MASTER_DATA: UOMMaster[] = [
-  { id: 'UOM-001', code: 'KG', name: 'Kilogram', description: 'Unit of weight measurement', isActive: true },
-  { id: 'UOM-002', code: 'LITRE', name: 'Litre', description: 'Unit of volume measurement', isActive: true },
+  {
+    id: 'UOM-001',
+    code: 'KG',
+    name: 'Kilogram',
+    description: 'Unit of weight measurement',
+    isActive: true,
+  },
+  {
+    id: 'UOM-002',
+    code: 'LITRE',
+    name: 'Litre',
+    description: 'Unit of volume measurement',
+    isActive: true,
+  },
   { id: 'UOM-003', code: 'NOS', name: 'Numbers', description: 'Count of items', isActive: true },
-  { id: 'UOM-004', code: 'HOUR', name: 'Hour', description: 'Unit of time for services', isActive: true },
+  {
+    id: 'UOM-004',
+    code: 'HOUR',
+    name: 'Hour',
+    description: 'Unit of time for services',
+    isActive: true,
+  },
   { id: 'UOM-005', code: 'MT', name: 'Metric Ton', description: '1000 kilograms', isActive: true },
   { id: 'UOM-006', code: 'PKT', name: 'Packet', description: 'Standard packet', isActive: true },
 ];
