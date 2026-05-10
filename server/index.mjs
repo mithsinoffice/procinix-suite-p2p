@@ -104,6 +104,7 @@ import { handleInvoiceRoute } from './routes/invoices.mjs';
 import { handlePaymentsRoute } from './routes/payments.mjs';
 import { handleAdvancesRoute } from './routes/advances.mjs';
 import { handleProcurementRoute } from './routes/procurement.mjs';
+import { handleDebitNotesRoute } from './routes/debit-notes.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import {
   verifyPAN,
@@ -1047,6 +1048,7 @@ const server = http.createServer(async (req, res) => {
     if (await handlePaymentsRoute(req, res, pathname, sendJson)) return;
     if (await handleAdvancesRoute(req, res, pathname, sendJson)) return;
     if (await handleProcurementRoute(req, res, pathname, sendJson)) return;
+    if (await handleDebitNotesRoute(req, res, pathname, sendJson)) return;
 
     if (req.method === 'POST' && pathname === '/api/auth/platform-context') {
       const body = await readJsonBody(req);
@@ -1518,6 +1520,109 @@ const server = http.createServer(async (req, res) => {
       );
 
       return sendJson(res, 200, { success: true, data: rows.map(mapItemRow) });
+    }
+
+    // ── Budget endpoints (derived from `budget_data` domain document) ──────
+    // These give the BudgetDataContext a real API surface without requiring
+    // a relational budget schema. Aggregations are computed inline from the
+    // JSON blob; the context still reads the full document directly as a
+    // fallback when these endpoints fail.
+    if (req.method === 'GET' && pathname === '/api/budget/summary') {
+      try {
+        const blobRows = await query(
+          "SELECT payload FROM domain_documents WHERE domain_name = 'budget_data' LIMIT 1"
+        );
+        const payload = blobRows[0]?.payload
+          ? typeof blobRows[0].payload === 'string'
+            ? JSON.parse(blobRows[0].payload)
+            : blobRows[0].payload
+          : { budgets: [] };
+        const budgets = Array.isArray(payload.budgets) ? payload.budgets : [];
+        const summary = budgets.reduce(
+          (acc, b) => {
+            acc.totalBudget += Number(b.totalAmount) || 0;
+            acc.committed += Number(b.committed) || 0;
+            acc.actual += Number(b.actual) || 0;
+            acc.available += Number(b.available) || 0;
+            acc.byStatus[b.status] = (acc.byStatus[b.status] || 0) + 1;
+            return acc;
+          },
+          {
+            totalBudget: 0,
+            committed: 0,
+            actual: 0,
+            available: 0,
+            count: budgets.length,
+            byStatus: {},
+          }
+        );
+        summary.utilizationPercent =
+          summary.totalBudget > 0
+            ? Number(((summary.actual / summary.totalBudget) * 100).toFixed(2))
+            : 0;
+        return sendJson(res, 200, { success: true, data: summary });
+      } catch (err) {
+        return sendJson(res, 500, { success: false, error: err.message });
+      }
+    }
+
+    if (req.method === 'GET' && pathname === '/api/budget/departments') {
+      try {
+        const blobRows = await query(
+          "SELECT payload FROM domain_documents WHERE domain_name = 'budget_data' LIMIT 1"
+        );
+        const payload = blobRows[0]?.payload
+          ? typeof blobRows[0].payload === 'string'
+            ? JSON.parse(blobRows[0].payload)
+            : blobRows[0].payload
+          : { budgets: [] };
+        const budgets = Array.isArray(payload.budgets) ? payload.budgets : [];
+        const byDept = new Map();
+        for (const b of budgets) {
+          const dept = b.dimensions?.department || 'Unallocated';
+          const cur = byDept.get(dept) || {
+            department: dept,
+            budget: 0,
+            committed: 0,
+            actual: 0,
+            count: 0,
+          };
+          cur.budget += Number(b.totalAmount) || 0;
+          cur.committed += Number(b.committed) || 0;
+          cur.actual += Number(b.actual) || 0;
+          cur.count += 1;
+          byDept.set(dept, cur);
+        }
+        const departments = [...byDept.values()].map((d) => ({
+          ...d,
+          available: d.budget - d.committed - d.actual,
+          utilizationPercent: d.budget > 0 ? Number(((d.actual / d.budget) * 100).toFixed(2)) : 0,
+        }));
+        return sendJson(res, 200, { success: true, data: { departments } });
+      } catch (err) {
+        return sendJson(res, 500, { success: false, error: err.message });
+      }
+    }
+
+    // ── Portal users — reads from the same domain_documents blob the
+    // PortalUsersContext currently writes to, so the context can switch to
+    // mysqlApiRequest while we still incubate the relational portal_users
+    // table.
+    if (req.method === 'GET' && pathname === '/api/portal-users') {
+      try {
+        const blobRows = await query(
+          "SELECT payload FROM domain_documents WHERE domain_name = 'portal_users' LIMIT 1"
+        );
+        const payload = blobRows[0]?.payload
+          ? typeof blobRows[0].payload === 'string'
+            ? JSON.parse(blobRows[0].payload)
+            : blobRows[0].payload
+          : { users: [] };
+        const users = Array.isArray(payload.users) ? payload.users : [];
+        return sendJson(res, 200, { success: true, data: users });
+      } catch (err) {
+        return sendJson(res, 500, { success: false, error: err.message });
+      }
     }
 
     if (req.method === 'GET' && pathname.startsWith('/api/masters/')) {

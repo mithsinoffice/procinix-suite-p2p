@@ -1,8 +1,13 @@
 /**
- * PURCHASE REQUEST (PR) TRANSACTION DATA
+ * @deprecated 2026-05-10 — superseded by ProcurementDataContext (relational
+ * PR/PO/GRN/SRN backend). Use `useProcurementData().prs` instead.
  *
- * Mock data for purchase requests with line items.
- * PRs can be converted to POs through the "Create PO from PR" flow.
+ * Last 2 consumers (CreatePurchaseOrder.tsx, PRSelectionPage.tsx) were
+ * migrated in Sprint 2. This file is kept for one release cycle as a safety
+ * net; safe to hard-delete after a release.
+ *
+ * PURCHASE REQUEST (PR) TRANSACTION DATA — mock-only. Do not add new
+ * consumers.
  */
 
 export interface PRLineItem {

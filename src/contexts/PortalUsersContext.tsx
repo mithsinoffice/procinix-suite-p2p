@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
+import { mysqlApiRequest } from '../lib/mysql/client';
 import type { PortalUser, PortalUserStatus } from '../types/portalUser';
 
 export type PortalUsersDocument = { users: PortalUser[] };
@@ -65,6 +66,21 @@ export function PortalUsersProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let alive = true;
     void (async () => {
+      // Primary: API endpoint (reads from the same domain_documents blob the
+      // saveDomainDocument writes to, but goes through the server boundary).
+      // Fallback: direct blob read so dev offline still works.
+      try {
+        const res = await mysqlApiRequest<{ success: boolean; data: PortalUser[] }>(
+          '/portal-users'
+        );
+        if (alive && res?.success && Array.isArray(res.data)) {
+          setUsers(res.data);
+          setHydrated(true);
+          return;
+        }
+      } catch {
+        // fall through to blob fallback
+      }
       const fallback: PortalUsersDocument = { users: [] };
       const doc = await ensureDomainDocument<PortalUsersDocument>('portal_users', fallback);
       if (!alive) return;
