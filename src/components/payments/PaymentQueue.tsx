@@ -93,10 +93,6 @@ function FlagIcon({ name, className }: { name: string; className?: string }) {
 }
 
 // ============================================================================
-// Status / due-date pill helpers
-// ============================================================================
-
-// ============================================================================
 // Queue metrics card row
 // ============================================================================
 
@@ -131,36 +127,6 @@ function QueueMetrics({
           <div style={metricLabel}>{c.label}</div>
           <div style={{ ...metricValue, color: c.tone }}>{c.value}</div>
         </div>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================================
-// Role toggle (demo)
-// ============================================================================
-
-type DemoRole = 'payment_approver' | 'finance_executive' | 'cfo';
-function RoleToggle({ value, onChange }: { value: DemoRole; onChange: (next: DemoRole) => void }) {
-  const opts: { key: DemoRole; label: string }[] = [
-    { key: 'payment_approver', label: 'Payment approver' },
-    { key: 'finance_executive', label: 'Finance executive' },
-    { key: 'cfo', label: 'CFO' },
-  ];
-  return (
-    <div className="inline-flex items-center bg-white border-2 border-silver rounded-lg p-1">
-      {opts.map((o) => (
-        <button
-          key={o.key}
-          type="button"
-          onClick={() => onChange(o.key)}
-          className={[
-            'px-3 py-1 text-xs rounded-md transition-colors',
-            value === o.key ? 'bg-teal text-white' : 'text-mercury-grey hover:text-ink',
-          ].join(' ')}
-        >
-          {o.label}
-        </button>
       ))}
     </div>
   );
@@ -266,7 +232,16 @@ function SortSelect({ value, onChange }: { value: SortKey; onChange: (k: SortKey
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as SortKey)}
-      className="px-3 py-1.5 rounded-lg border-2 border-silver bg-white text-sm text-ink"
+      style={{
+        height: 32,
+        padding: '0 12px',
+        borderRadius: 'var(--border-radius-md)',
+        border: '0.5px solid var(--color-border-tertiary)',
+        background: '#FFFFFF',
+        color: 'var(--color-text-primary)',
+        fontSize: 12,
+        cursor: 'pointer',
+      }}
     >
       <option value="priority">Sort: Priority</option>
       <option value="due">Sort: Due date</option>
@@ -320,32 +295,9 @@ function FlaggedAlert({
 
 function FlagBadge({ flags }: { flags: RiskFlag[] }) {
   if (flags.length === 0) return null;
-  const high = flags.filter((f) => f.severity === 'high').length;
   return (
-    <span
-      style={{
-        ...badgeBase,
-        background: '#FCEBEB',
-        color: '#A32D2D',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-      }}
-    >
-      🚩 {flags.length} flag{flags.length > 1 ? 's' : ''}
-      {high > 0 && (
-        <span
-          style={{
-            background: '#A32D2D',
-            color: '#FFFFFF',
-            fontSize: 10,
-            padding: '0 6px',
-            borderRadius: 20,
-          }}
-        >
-          {high} high
-        </span>
-      )}
+    <span style={{ ...badgeBase, background: '#FCEBEB', color: '#791F1F' }}>
+      {flags.length} flag{flags.length > 1 ? 's' : ''}
     </span>
   );
 }
@@ -360,9 +312,17 @@ function ageDotForDue(dueIso: string, status: PaymentStatus): { color: string; l
   if (!dueIso) return { color: '#9AA3AD', label: '—' };
   if (status === 'paid') return { color: '#0F6E56', label: 'Paid' };
   const d = daysFromToday(dueIso);
-  if (d < 0) return { color: '#A32D2D', label: `${Math.abs(d)}d overdue` };
-  if (d <= 7) return { color: '#BA7517', label: `in ${d}d` };
-  return { color: '#0F6E56', label: `in ${d}d` };
+  // Dot colour communicates urgency; label shows magnitude only.
+  if (d < 0) return { color: '#A32D2D', label: `${Math.abs(d)}d` };
+  if (d <= 7) return { color: '#BA7517', label: `${d}d` };
+  return { color: '#9AA3AD', label: `${d}d` };
+}
+
+function formatDueShort(iso: string): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
 function QueueHeaderRow() {
@@ -483,7 +443,7 @@ function QueueRow({
           fontWeight: overdue ? 500 : 400,
         }}
       >
-        {item.due || '—'}
+        {formatDueShort(item.due)}
       </div>
       {/* Age */}
       <div
@@ -1147,19 +1107,10 @@ export function PaymentQueue() {
   const tenantId = user?.tenantId ?? null;
   const entityId = user?.currentPlatformEntityId ?? null;
 
-  const [demoRole, setDemoRole] = useState<DemoRole>(() => {
-    const r = normaliseRole(user?.role);
-    if (APPROVER_ROLES.has(r)) return 'payment_approver';
-    return 'finance_executive';
-  });
   // Live approver-roles list from /ap/payment-settings (settings.payment_approver_roles).
   // Falls back to the static APPROVER_ROLES set on first paint / fetch failure.
   const [liveApproverRoles, setLiveApproverRoles] = useState<Set<string>>(APPROVER_ROLES);
-  const isDev = import.meta.env.DEV;
-  // In DEV the toggle drives isApprover so approvers can preview both views.
-  // In PROD we always defer to the authenticated user's role.
-  const effectiveRole = isDev ? demoRole : normaliseRole(user?.role);
-  const isApprover = liveApproverRoles.has(effectiveRole);
+  const isApprover = liveApproverRoles.has(normaliseRole(user?.role));
 
   const [items, setItems] = useState<PaymentQueueItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1410,21 +1361,8 @@ export function PaymentQueue() {
           <p style={listingSubtitle}>Invoices and advances ready for payment.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {/* Demo-only role toggle. In production isApprover is derived from
-              the authenticated user's role; the toggle is a dev convenience. */}
-          {isDev && <RoleToggle value={demoRole} onChange={setDemoRole} />}
-          <button
-            type="button"
-            onClick={refresh}
-            disabled={loading}
-            style={{
-              ...listingPrimaryBtn,
-              background: '#FFFFFF',
-              color: 'var(--color-ink)',
-              border: '1px solid var(--color-silver)',
-            }}
-          >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+          <button type="button" onClick={refresh} disabled={loading} style={rowActionBtn}>
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
           <button type="button" style={listingPrimaryBtn} onClick={() => alert('Coming soon')}>
@@ -1540,7 +1478,7 @@ export function PaymentQueue() {
               {s.label && (
                 <div
                   style={{
-                    padding: '8px 24px',
+                    padding: '6px 24px',
                     background: 'var(--color-background-secondary)',
                     borderBottom: '0.5px solid var(--color-border-tertiary)',
                     fontSize: 11,
