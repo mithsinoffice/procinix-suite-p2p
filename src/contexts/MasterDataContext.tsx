@@ -1430,10 +1430,16 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     }
 
     if (isMysqlApiEnabled()) {
-      saveRelationalMasterRecords('vendor_master', vendors);
-      saveRelationalMasterRecords('account_code_master', accountCodes);
-      saveRelationalMasterRecords('bank_master', banks);
-      saveRelationalMasterRecords('tds_section_master', tdsSections);
+      const swallow = (key: string) => (err: unknown) =>
+        console.warn(`Background master save failed for ${key}:`, err);
+      saveRelationalMasterRecords('vendor_master', vendors).catch(swallow('vendor_master'));
+      saveRelationalMasterRecords('account_code_master', accountCodes).catch(
+        swallow('account_code_master')
+      );
+      saveRelationalMasterRecords('bank_master', banks).catch(swallow('bank_master'));
+      saveRelationalMasterRecords('tds_section_master', tdsSections).catch(
+        swallow('tds_section_master')
+      );
       saveDomainDocument('master_data', {
         vendors,
         items,

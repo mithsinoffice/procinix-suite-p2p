@@ -460,7 +460,8 @@ export function MasterBulkUpload() {
           });
         }
       } catch (err) {
-        showToast({ type: 'error', message: `Upload failed: ${String(err)}` });
+        const detail = err instanceof Error ? err.message : String(err);
+        showToast({ type: 'error', message: `Upload failed: ${detail}` });
       } finally {
         setGlobalBusy(false);
       }

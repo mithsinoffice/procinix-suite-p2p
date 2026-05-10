@@ -526,6 +526,7 @@ function mapGenericMasterRow(row) {
 }
 
 function inferRecordCode(record) {
+  if (!record) return null;
   return (
     record.code ??
     record.categoryCode ??
@@ -549,6 +550,7 @@ function inferRecordCode(record) {
 }
 
 function inferRecordName(record) {
+  if (!record) return null;
   return (
     record.name ??
     record.categoryName ??
@@ -570,6 +572,7 @@ function inferRecordName(record) {
 }
 
 function inferStatus(record) {
+  if (!record) return null;
   if (typeof record.status === 'string') {
     return record.status;
   }
@@ -582,6 +585,7 @@ function inferStatus(record) {
 }
 
 function inferApprovalStatus(record) {
+  if (!record) return null;
   return typeof record.approvalStatus === 'string' ? record.approvalStatus : null;
 }
 
@@ -5447,7 +5451,16 @@ Return ONLY valid JSON. No markdown wrapping.`;
     if (statusCode >= 500) {
       console.error('[API Error]', req.method, req.url, error);
     }
-    return sendJson(res, statusCode, { ok: false, error: clientMessage });
+
+    // In non-prod, surface the underlying error so the UI/devtools can display
+    // it. Production keeps the generic message to avoid leaking internals.
+    const body = { ok: false, error: clientMessage };
+    if (!IS_PRODUCTION && statusCode >= 500 && error?.message) {
+      body.error = error.message;
+      if (error.code) body.code = error.code;
+      if (error.sqlMessage) body.sqlMessage = error.sqlMessage;
+    }
+    return sendJson(res, statusCode, body);
   }
 });
 

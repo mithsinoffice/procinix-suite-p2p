@@ -297,7 +297,9 @@ export async function saveRelationalMasterRecords<T>(
     }
     return true;
   } catch (error) {
+    // Re-throw so callers (and their try/catch toasts) see the real error.
+    // Local cache is already updated above so reads stay consistent.
     console.warn(`MySQL master save failed for ${masterKey}. Local copy retained.`, error);
-    return false;
+    throw error instanceof Error ? error : new Error(`MySQL master save failed for ${masterKey}`);
   }
 }

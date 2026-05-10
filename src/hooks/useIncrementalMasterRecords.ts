@@ -66,10 +66,10 @@ export function useIncrementalMasterRecords<T>(
       return;
     }
 
-    void saveRelationalMasterRecords(
+    saveRelationalMasterRecords(
       masterKey as Parameters<typeof saveRelationalMasterRecords<T>>[0],
       records
-    );
+    ).catch((err) => console.warn(`Background master save failed for ${masterKey}:`, err));
   }, [records, isHydrating, masterKey]);
 
   const persistNow = async (nextRecords?: T[]) => {
@@ -77,10 +77,15 @@ export function useIncrementalMasterRecords<T>(
       return false;
     }
 
-    return saveRelationalMasterRecords(
-      masterKey as Parameters<typeof saveRelationalMasterRecords<T>>[0],
-      nextRecords ?? records
-    );
+    try {
+      return await saveRelationalMasterRecords(
+        masterKey as Parameters<typeof saveRelationalMasterRecords<T>>[0],
+        nextRecords ?? records
+      );
+    } catch (err) {
+      console.warn(`Master save failed for ${masterKey}:`, err);
+      return false;
+    }
   };
 
   return [records, setRecords, isHydrating, persistNow];
