@@ -38,7 +38,12 @@ import {
 } from '../ui/listingStyles';
 import type { FlagSeverity, PaymentQueueItem, PaymentStatus, RiskFlag } from '../../types/payments';
 
-const COLUMNS = '1.8fr 1fr 0.8fr 0.8fr 0.7fr 0.8fr 0.9fr';
+// 7 columns: Payee/Ref | Type | Amount | Due | Age | Risk | Actions
+// Amount given slightly more room than Due to comfortably hold ₹X,XX,XXX
+// without truncation. minmax(0, …) prevents grid items from bleeding into
+// neighbours when content exceeds the track size.
+const COLUMNS =
+  'minmax(0, 1.8fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.7fr) minmax(0, 0.8fr) minmax(0, 1fr)';
 
 // ============================================================================
 // Helpers
@@ -333,7 +338,7 @@ function QueueHeaderRow() {
         gridTemplateColumns: COLUMNS,
         alignItems: 'center',
         background: 'var(--color-background-secondary)',
-        borderBottom: '0.5px solid var(--color-fog)',
+        borderBottom: '0.5px solid var(--color-border-tertiary)',
       }}
     >
       <div style={listingTh}>Payee / Ref</div>
@@ -378,7 +383,7 @@ function QueueRow({
       className="listing-row-hover"
     >
       {/* Payee / ref */}
-      <div style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0, overflow: 'hidden' }}>
         <div
           style={{
             fontSize: 13,
@@ -406,7 +411,7 @@ function QueueRow({
         </div>
       </div>
       {/* Type */}
-      <div>
+      <div style={{ minWidth: 0, overflow: 'hidden' }}>
         <span style={{ ...badgeBase, background: tBadge.bg, color: tBadge.fg }}>
           {tBadge.label}
           {item.isMSME && item.msmeRemaining !== null ? ` ${item.msmeRemaining}d` : ''}
@@ -415,13 +420,23 @@ function QueueRow({
       {/* Amount */}
       <div
         style={{
+          minWidth: 0,
+          overflow: 'hidden',
           textAlign: 'right',
           fontSize: 13,
           fontWeight: 500,
           color: 'var(--color-text-primary)',
         }}
       >
-        {fmtINR(item.amount)}
+        <div
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {fmtINR(item.amount)}
+        </div>
         {item.paidAmt > 0 && item.paidAmt < item.amount && (
           <div
             style={{
@@ -429,6 +444,9 @@ function QueueRow({
               color: 'var(--color-text-secondary)',
               fontWeight: 400,
               marginTop: 2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
             Paid {fmtINR(item.paidAmt)}
@@ -438,6 +456,10 @@ function QueueRow({
       {/* Due date */}
       <div
         style={{
+          minWidth: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
           fontSize: 12,
           color: overdue ? '#A32D2D' : 'var(--color-text-primary)',
           fontWeight: overdue ? 500 : 400,
@@ -448,11 +470,14 @@ function QueueRow({
       {/* Age */}
       <div
         style={{
+          minWidth: 0,
+          overflow: 'hidden',
           fontSize: 12,
           color: 'var(--color-text-primary)',
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
+          whiteSpace: 'nowrap',
         }}
       >
         <span
@@ -462,12 +487,13 @@ function QueueRow({
             borderRadius: 6,
             background: age.color,
             display: 'inline-block',
+            flexShrink: 0,
           }}
         />
         {age.label}
       </div>
       {/* Risk flags */}
-      <div>
+      <div style={{ minWidth: 0, overflow: 'hidden' }}>
         {isFlagged ? (
           <FlagBadge flags={item.flags} />
         ) : (
@@ -477,6 +503,8 @@ function QueueRow({
       {/* Actions */}
       <div
         style={{
+          minWidth: 0,
+          overflow: 'hidden',
           display: 'flex',
           gap: 6,
           justifyContent: 'flex-end',

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { ClipboardList, BarChart3, TrendingUp, Landmark, Settings as Cog } from 'lucide-react';
 
@@ -9,34 +10,66 @@ const TABS = [
   { key: 'settings', label: 'Settings', icon: Cog, path: '/ap/payments/settings' },
 ] as const;
 
+const tabBar: CSSProperties = {
+  background: 'var(--color-background-primary, #FFFFFF)',
+  borderBottom: '0.5px solid var(--color-border-tertiary)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: '0 24px',
+  overflowX: 'auto',
+};
+
+const tabBase: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: '10px 16px',
+  fontSize: 13,
+  fontWeight: 500,
+  borderBottom: '2px solid transparent',
+  marginBottom: -1,
+  textDecoration: 'none',
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+  background: 'transparent',
+};
+
+const tabInactive: CSSProperties = {
+  ...tabBase,
+  color: 'var(--color-text-secondary)',
+};
+
+const tabActive: CSSProperties = {
+  ...tabBase,
+  color: '#0F6E56',
+  borderBottomColor: '#1D9E75',
+};
+
 export function PaymentsLayout() {
   return (
-    <div className="min-h-screen bg-cloud">
-      <div className="bg-white border-b-2 border-silver">
-        <nav className="flex items-center gap-1 px-6 pt-3" aria-label="Payments tabs">
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <NavLink
-                key={tab.key}
-                to={tab.path}
-                end={'end' in tab ? tab.end : false}
-                className={({ isActive }) =>
-                  [
-                    'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-[2px] transition-colors',
-                    isActive
-                      ? 'border-teal text-teal'
-                      : 'border-transparent text-mercury-grey hover:text-ink hover:border-silver',
-                  ].join(' ')
-                }
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
-      </div>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'var(--color-background-primary, #FFFFFF)',
+      }}
+    >
+      <nav style={tabBar} aria-label="Payments tabs">
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <NavLink
+              key={tab.key}
+              to={tab.path}
+              end={'end' in tab ? tab.end : false}
+              style={({ isActive }) => (isActive ? tabActive : tabInactive)}
+            >
+              <Icon size={14} />
+              <span>{tab.label}</span>
+            </NavLink>
+          );
+        })}
+      </nav>
       <Outlet />
     </div>
   );
