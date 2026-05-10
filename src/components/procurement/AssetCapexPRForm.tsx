@@ -15,6 +15,7 @@ import {
 } from '../../contexts/ProcurementDataContext';
 import { useMasterData } from '../../contexts/MasterDataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { BudgetComingSoon } from './BudgetComingSoon';
 
 /**
  * ASSET/CAPEX PR FORM
@@ -122,22 +123,26 @@ export function AssetCapexPRForm() {
   const totalValue = assets.reduce((sum, a) => sum + a.quantity * a.unitPrice, 0);
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
 
-  const submitPurchaseRequest = (status: PurchaseRequestStatus) => {
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const submitPurchaseRequest = async (status: PurchaseRequestStatus) => {
     const timestamp = Date.now();
     const createdDate = new Date().toISOString().split('T')[0];
     const entityRecord =
-      entities.find((e) => e.id === currentCompany?.id || e.name === selectedEntity) || entities[0];
+      entities.find((e) => e.id === currentCompany?.id || e.name === currentCompany?.name) ??
+      entities[0];
 
-    addPurchaseRequest({
+    setSubmitError(null);
+    const result = await addPurchaseRequest({
       id: `asset-${timestamp}`,
       prNumber: `PR-${timestamp}`,
       type: 'Asset/CAPEX',
       entity: selectedEntity,
-      entityId: entityRecord?.id || currentCompany?.id || '',
-      entityCode: entityRecord?.code || currentCompany?.code || '',
-      entityGstin: entityRecord?.gstin || '',
+      entityId: currentCompany?.id ?? entityRecord?.id ?? '',
+      entityCode: entityRecord?.code ?? currentCompany?.code ?? '',
+      entityGstin: entityRecord?.gstin ?? '',
       requestor: user?.name || 'Current User',
-      requesterId: user?.id || '',
+      requesterId: user?.id ?? '',
       department: user?.department || 'Operations',
       costCentre: costCentres.find((costCentre) => costCentre.isActive)?.code || '',
       needByDate: createdDate,
@@ -159,7 +164,11 @@ export function AssetCapexPRForm() {
       })),
     });
 
-    navigate('/procurement/pr/my-prs');
+    if (result.success) {
+      navigate('/procurement/pr/listing');
+    } else {
+      setSubmitError('Failed to save PR. Please try again.');
+    }
   };
 
   return (
@@ -182,6 +191,11 @@ export function AssetCapexPRForm() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {submitError && (
+              <span role="alert" style={{ color: '#C62828', fontSize: 12, fontWeight: 500 }}>
+                {submitError}
+              </span>
+            )}
             <button
               className="px-4 py-2 rounded-lg"
               style={{
@@ -656,66 +670,7 @@ export function AssetCapexPRForm() {
               </ul>
             </div>
 
-            {totalValue > 0 && (
-              <div
-                className="bg-white p-6 rounded-lg"
-                style={{ border: '1px solid var(--color-silver)' }}
-              >
-                <h3
-                  className="text-base mb-4"
-                  style={{ color: 'var(--color-ink)', fontWeight: '600' }}
-                >
-                  CAPEX Budget Check
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                      {budgetYear} CAPEX Budget
-                    </span>
-                    <span
-                      className="text-sm"
-                      style={{ color: 'var(--color-ink)', fontWeight: '600' }}
-                    >
-                      ₹5.00 Cr
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                      PR Amount
-                    </span>
-                    <span className="text-sm" style={{ color: '#7B1FA2', fontWeight: '600' }}>
-                      {formatCurrency(totalValue)}
-                    </span>
-                  </div>
-                  <div
-                    className="flex justify-between pt-3"
-                    style={{ borderTop: '1px solid var(--color-silver)' }}
-                  >
-                    <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                      Remaining
-                    </span>
-                    <span
-                      className="text-sm"
-                      style={{ color: 'var(--color-success-dark)', fontWeight: '600' }}
-                    >
-                      {formatCurrency(50000000 - totalValue)}
-                    </span>
-                  </div>
-                  <div
-                    className="flex items-center gap-2 p-3 rounded-lg"
-                    style={{ backgroundColor: 'var(--color-success-light)' }}
-                  >
-                    <CheckCircle
-                      className="w-4 h-4"
-                      style={{ color: 'var(--color-success-dark)' }}
-                    />
-                    <span className="text-sm" style={{ color: 'var(--color-success-dark)' }}>
-                      Within Budget
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+            <BudgetComingSoon />
           </div>
         </div>
       </div>

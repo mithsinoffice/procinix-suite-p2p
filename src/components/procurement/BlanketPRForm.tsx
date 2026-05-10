@@ -15,6 +15,7 @@ import {
 } from '../../contexts/ProcurementDataContext';
 import { useMasterData } from '../../contexts/MasterDataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { BudgetComingSoon } from './BudgetComingSoon';
 
 /**
  * BLANKET PR FORM
@@ -80,22 +81,26 @@ export function BlanketPRForm() {
 
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
 
-  const submitPurchaseRequest = (status: PurchaseRequestStatus) => {
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const submitPurchaseRequest = async (status: PurchaseRequestStatus) => {
     const timestamp = Date.now();
     const createdDate = new Date().toISOString().split('T')[0];
     const entityRecord =
-      entities.find((e) => e.id === currentCompany?.id || e.name === selectedEntity) || entities[0];
+      entities.find((e) => e.id === currentCompany?.id || e.name === currentCompany?.name) ??
+      entities[0];
 
-    addPurchaseRequest({
+    setSubmitError(null);
+    const result = await addPurchaseRequest({
       id: `blanket-${timestamp}`,
       prNumber: `PR-${timestamp}`,
       type: 'Blanket',
       entity: selectedEntity,
-      entityId: entityRecord?.id || currentCompany?.id || '',
-      entityCode: entityRecord?.code || currentCompany?.code || '',
-      entityGstin: entityRecord?.gstin || '',
+      entityId: currentCompany?.id ?? entityRecord?.id ?? '',
+      entityCode: entityRecord?.code ?? currentCompany?.code ?? '',
+      entityGstin: entityRecord?.gstin ?? '',
       requestor: user?.name || 'Current User',
-      requesterId: user?.id || '',
+      requesterId: user?.id ?? '',
       department: user?.department || 'Operations',
       costCentre: item.itemCode || '',
       needByDate: validTo || createdDate,
@@ -114,7 +119,11 @@ export function BlanketPRForm() {
       lineItems: releases as unknown as Array<Record<string, unknown>>,
     });
 
-    navigate('/procurement/pr/my-prs');
+    if (result.success) {
+      navigate('/procurement/pr/listing');
+    } else {
+      setSubmitError('Failed to save PR. Please try again.');
+    }
   };
 
   return (
@@ -137,6 +146,11 @@ export function BlanketPRForm() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {submitError && (
+              <span role="alert" style={{ color: '#C62828', fontSize: 12, fontWeight: 500 }}>
+                {submitError}
+              </span>
+            )}
             <button
               className="px-4 py-2 rounded-lg"
               style={{
@@ -566,6 +580,7 @@ export function BlanketPRForm() {
 
           {/* Right Panel */}
           <div className="space-y-6">
+            <BudgetComingSoon />
             <div
               className="bg-white p-6 rounded-lg"
               style={{ border: '1px solid var(--color-silver)' }}

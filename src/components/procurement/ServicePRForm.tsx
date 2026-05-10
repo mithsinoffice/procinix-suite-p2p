@@ -19,6 +19,7 @@ import { useMasterData } from '../../contexts/MasterDataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from '../ui/form-primitives';
 import { useFormKeyboardSave } from '../../hooks/useFormKeyboardSave';
+import { BudgetComingSoon } from './BudgetComingSoon';
 
 /**
  * SERVICE PR FORM
@@ -142,6 +143,7 @@ export function ServicePRForm() {
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const completeness = useMemo(() => {
     const fields = [
       serviceType,
@@ -164,22 +166,24 @@ export function ServicePRForm() {
     serviceDescription,
   ]);
 
-  const submitPurchaseRequest = (status: PurchaseRequestStatus) => {
+  const submitPurchaseRequest = async (status: PurchaseRequestStatus) => {
     const timestamp = Date.now();
     const createdDate = new Date().toISOString().split('T')[0];
     const entityRecord =
-      entities.find((e) => e.id === currentCompany?.id || e.name === selectedEntity) || entities[0];
+      entities.find((e) => e.id === currentCompany?.id || e.name === currentCompany?.name) ??
+      entities[0];
 
-    addPurchaseRequest({
+    setSubmitError(null);
+    const result = await addPurchaseRequest({
       id: `service-${timestamp}`,
       prNumber: `PR-${timestamp}`,
       type: 'Service',
       entity: selectedEntity,
-      entityId: entityRecord?.id || currentCompany?.id || '',
-      entityCode: entityRecord?.code || currentCompany?.code || '',
-      entityGstin: entityRecord?.gstin || '',
+      entityId: currentCompany?.id ?? entityRecord?.id ?? '',
+      entityCode: entityRecord?.code ?? currentCompany?.code ?? '',
+      entityGstin: entityRecord?.gstin ?? '',
       requestor: user?.name || 'Current User',
-      requesterId: user?.id || '',
+      requesterId: user?.id ?? '',
       department: selectedDepartment,
       costCentre: activeCostCentres[0]?.code || '',
       needByDate: contractStartDate,
@@ -204,14 +208,19 @@ export function ServicePRForm() {
       })),
     });
 
-    navigate('/procurement/pr/my-prs');
+    if (result.success) {
+      navigate('/procurement/pr/listing');
+    } else {
+      setSubmitError('Failed to save PR. Please try again.');
+    }
   };
 
   const handleSaveDraft = useCallback(() => {
     setSaveStatus('saving');
-    submitPurchaseRequest('Draft');
-    setSaveStatus('saved');
-    setTimeout(() => setSaveStatus('idle'), 3000);
+    void submitPurchaseRequest('Draft').finally(() => {
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    });
   }, []);
 
   useFormKeyboardSave(handleSaveDraft);
@@ -229,6 +238,21 @@ export function ServicePRForm() {
       saveStatus={saveStatus}
       completeness={completeness}
     >
+      {submitError && (
+        <div
+          role="alert"
+          style={{
+            margin: '0 0 12px 0',
+            padding: '10px 14px',
+            borderRadius: 6,
+            background: '#FFEBEE',
+            color: '#C62828',
+            fontSize: 13,
+          }}
+        >
+          {submitError}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-6">
         {/* Main Form - Left 2 Columns */}
         <div className="col-span-2 space-y-6">
@@ -767,67 +791,7 @@ export function ServicePRForm() {
             </div>
           </div>
 
-          {/* Budget Check */}
-          {totalValue > 0 && (
-            <div
-              className="bg-white p-6 rounded-lg"
-              style={{ border: '1px solid var(--color-silver)' }}
-            >
-              <h3
-                className="text-base mb-4"
-                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
-              >
-                Budget Check
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                    Services Budget
-                  </span>
-                  <span
-                    className="text-sm"
-                    style={{ color: 'var(--color-ink)', fontWeight: '600' }}
-                  >
-                    ₹50,00,000
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                    Contract Value (incl. GST)
-                  </span>
-                  <span
-                    className="text-sm"
-                    style={{ color: 'var(--color-teal)', fontWeight: '600' }}
-                  >
-                    {formatCurrency(totalValue * 1.18)}
-                  </span>
-                </div>
-                <div
-                  className="flex items-center justify-between pt-3"
-                  style={{ borderTop: '1px solid var(--color-silver)' }}
-                >
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                    Remaining
-                  </span>
-                  <span
-                    className="text-sm"
-                    style={{ color: 'var(--color-success-dark)', fontWeight: '600' }}
-                  >
-                    {formatCurrency(5000000 - totalValue * 1.18)}
-                  </span>
-                </div>
-                <div
-                  className="flex items-center gap-2 p-3 rounded-lg"
-                  style={{ backgroundColor: 'var(--color-success-light)' }}
-                >
-                  <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success-dark)' }} />
-                  <span className="text-sm" style={{ color: 'var(--color-success-dark)' }}>
-                    Within Budget
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+          <BudgetComingSoon />
         </div>
       </div>
     </FormShell>

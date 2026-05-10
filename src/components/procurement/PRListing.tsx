@@ -4,12 +4,9 @@ import {
   Search,
   Eye,
   Edit,
-  Copy,
   Clock,
   Download,
   RefreshCw,
-  Package,
-  ArrowUpRight,
   ClipboardList,
   History,
 } from 'lucide-react';
@@ -37,10 +34,16 @@ type PRType = 'Catalogue' | 'Regular' | 'Service' | 'Kit/Bundle' | 'Asset/CAPEX'
 type AIRiskLevel = 'Low' | 'Medium' | 'High';
 
 interface PurchaseRequisition {
+  /** Relational UUID — used for navigation and API calls. */
   id: string;
+  /** Human ref (PR-PTPL-2026-0007) — used for display. */
+  prRef: string;
+  /** Alias of prRef kept so any consumer that asks for `displayId` works. */
+  displayId: string;
   prType: PRType;
   entity: string;
   requestor: string;
+  requesterId: string;
   department: string;
   costCentre: string;
   needByDate: string;
@@ -73,26 +76,40 @@ export function PRListing() {
   });
   const [dateRange, setDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
 
-  const persistedPRs: PurchaseRequisition[] = purchaseRequests.map((request) => ({
-    id: request.prNumber,
-    prType: request.type,
-    entity: request.entity,
-    requestor: request.requestor,
-    department: request.department,
-    costCentre: request.costCentre,
-    needByDate: request.needByDate,
-    totalAmount: request.totalAmount,
-    status: (request.status === 'Submitted' ? 'Pending Approval' : request.status) as PRStatus,
-    nextApprover: request.nextApprover,
-    aiRiskLevel: request.aiRiskLevel,
-    createdDate: request.createdDate,
-    vendor: request.vendor,
-    linkedPO: request.linkedPO,
-    itemCount: request.itemCount,
-  }));
+  const persistedPRs: PurchaseRequisition[] = purchaseRequests.map((request) => {
+    // Resolve the relational UUID for navigation. Listing legacy `request.id`
+    // is the fake form-side `regular-${ts}` token; the relational rows have a
+    // proper UUID we can look up via prRef. Fall back to `request.id` only
+    // for blob-only rows (none expected after FIX 4).
+    const rel = relationalPRs.find((r) => r.prRef === request.prNumber || r.id === request.id);
+    return {
+      id: rel?.id ?? request.id,
+      prRef: request.prNumber,
+      displayId: request.prNumber,
+      prType: request.type,
+      entity: request.entity,
+      requestor: request.requestor,
+      requesterId: rel?.requesterId ?? '',
+      department: request.department,
+      costCentre: request.costCentre,
+      needByDate: request.needByDate,
+      totalAmount: request.totalAmount,
+      status: (request.status === 'Submitted' ? 'Pending Approval' : request.status) as PRStatus,
+      nextApprover: request.nextApprover,
+      aiRiskLevel: request.aiRiskLevel,
+      createdDate: request.createdDate,
+      vendor: request.vendor,
+      linkedPO: request.linkedPO,
+      itemCount: request.itemCount,
+    };
+  });
 
-  const myPRs = persistedPRs.filter((request) => !user?.name || request.requestor === user.name);
-  const teamPRs = persistedPRs.filter((request) => !user?.name || request.requestor !== user.name);
+  const myPRs = persistedPRs.filter(
+    (r) => r.requestor === user?.name || (user?.id != null && r.requesterId === user.id)
+  );
+  const teamPRs = persistedPRs.filter(
+    (r) => r.requestor !== user?.name && (user?.id == null || r.requesterId !== user.id)
+  );
   const currentPRs = selectedTab === 'my-prs' ? myPRs : teamPRs;
 
   const formatCurrency = (amount: number) => `₹${(amount / 100000).toFixed(2)} L`;
@@ -132,7 +149,7 @@ export function PRListing() {
     () =>
       currentPRs.filter((pr) => {
         const matchesSearch =
-          pr.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          pr.prRef.toLowerCase().includes(searchTerm.toLowerCase()) ||
           pr.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
           pr.entity.toLowerCase().includes(searchTerm.toLowerCase()) ||
           pr.requestor.toLowerCase().includes(searchTerm.toLowerCase());
@@ -183,15 +200,8 @@ export function PRListing() {
     selectedRiskLevels.length > 0 ||
     Boolean(amountRange.min || amountRange.max || dateRange.from || dateRange.to);
 
-  const handleConvertToPO = (prId: string) => {
-    navigate(`/purchase-orders/create-from-prs?prIds=${prId}`);
-  };
-
-  const handleBulkConvertToPO = () => {
-    const approvedPRs = filteredPRs.filter((pr) => pr.status === 'Approved' && !pr.linkedPO);
-    const prIds = approvedPRs.map((pr) => pr.id).join(',');
-    navigate(`/purchase-orders/create-from-prs?prIds=${prIds}`);
-  };
+  // Convert-to-PO removed from the listing per FIX 7. PO creation lives in
+  // POCreationHub now — the listing is read-only for PR data.
 
   return (
     <div style={listingPage}>
@@ -205,23 +215,6 @@ export function PRListing() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {filteredPRs.filter((pr) => pr.status === 'Approved' && !pr.linkedPO).length > 0 && (
-            <button
-              style={{
-                ...listingPrimaryBtn,
-                background: '#FFFFFF',
-                color: 'var(--color-teal)',
-                border: '1px solid var(--color-teal)',
-              }}
-              onClick={handleBulkConvertToPO}
-            >
-              <Package size={13} />
-              Convert {
-                filteredPRs.filter((pr) => pr.status === 'Approved' && !pr.linkedPO).length
-              }{' '}
-              PRs to PO
-            </button>
-          )}
           <button style={listingPrimaryBtn} onClick={() => navigate('/procurement/pr/create')}>
             <FileText size={13} />
             Create New PR
@@ -549,7 +542,7 @@ export function PRListing() {
                           className="text-sm mb-1"
                           style={{ color: 'var(--color-ink)', fontWeight: '600', margin: 0 }}
                         >
-                          {pr.id}
+                          {pr.prRef}
                         </p>
                         {pr.linkedPO && (
                           <p
@@ -627,41 +620,10 @@ export function PRListing() {
                         tone="slate"
                         onClick={() => {
                           const rel = relationalPRs.find(
-                            (r) => r.prRef === pr.id || r.id === pr.id
+                            (r) => r.id === pr.id || r.prRef === pr.prRef
                           );
-                          setAuditTarget({ id: rel?.id ?? pr.id, ref: pr.id });
+                          setAuditTarget({ id: rel?.id ?? pr.id, ref: pr.prRef });
                         }}
-                      />
-                      {pr.status === 'Pending Approval' && selectedTab === 'my-prs' && (
-                        <button
-                          className="px-2 py-1 rounded text-xs"
-                          style={{
-                            backgroundColor: 'var(--color-error-light)',
-                            color: 'var(--color-error-dark)',
-                          }}
-                        >
-                          Withdraw
-                        </button>
-                      )}
-                      {pr.status === 'Approved' && !pr.linkedPO && (
-                        <button
-                          className="px-2 py-1 rounded text-xs text-white"
-                          style={{ backgroundColor: 'var(--color-teal)' }}
-                          onClick={() => handleConvertToPO(pr.id)}
-                        >
-                          Convert to PO
-                        </button>
-                      )}
-                      <PremiumActionButton
-                        label="Duplicate PR"
-                        icon={<Copy className="w-4 h-4" />}
-                        tone="slate"
-                      />
-                      <PremiumActionButton
-                        label="Open PR"
-                        icon={<ArrowUpRight className="w-4 h-4" />}
-                        tone="blue"
-                        onClick={() => navigate(`/procurement/pr/detail/${pr.id}`)}
                       />
                     </div>
                   </div>

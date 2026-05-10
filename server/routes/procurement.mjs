@@ -639,17 +639,21 @@ async function handlePRSummary(req, res, sendJson, tenantId) {
 }
 
 async function handleGetPR(req, res, sendJson, tenantId, prId) {
+  // Accept either the UUID primary key OR the human-readable pr_ref
+  // (e.g. PR-PTPL-2026-0007). Listing pages historically navigated with the
+  // ref; new code uses the UUID. Belt-and-suspenders so old links never 404.
   const headers = await query(
-    `SELECT * FROM purchase_requests WHERE id = ? AND tenant_id = ? LIMIT 1`,
-    [prId, tenantId]
+    `SELECT * FROM purchase_requests WHERE (id = ? OR pr_ref = ?) AND tenant_id = ? LIMIT 1`,
+    [prId, prId, tenantId]
   );
   if (!headers.length) {
     sendJson(res, 404, { success: false, error: 'pr_not_found' });
     return;
   }
+  const realId = headers[0].id;
   const items = await query(
     `SELECT * FROM purchase_request_items WHERE pr_id = ? AND tenant_id = ? ORDER BY line_number`,
-    [prId, tenantId]
+    [realId, tenantId]
   );
   sendJson(res, 200, { success: true, data: adaptPR(headers[0], items) });
 }

@@ -7,7 +7,8 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
+// (Blob document store imports removed — relational is the only PR/PO store
+// after FIX 3/4. All reads/writes go through /api/procurement.)
 import { mysqlApiRequest } from '../lib/mysql/client';
 import type {
   GoodsReceiptNote,
@@ -295,7 +296,9 @@ interface ProcurementDataContextType {
   // Backward-compat (legacy) shape used by existing forms/listings
   purchaseRequests: PurchaseRequestTransaction[];
   isHydrating: boolean;
-  addPurchaseRequest: (request: PurchaseRequestTransaction) => Promise<void> | void;
+  addPurchaseRequest: (
+    request: PurchaseRequestTransaction
+  ) => Promise<{ success: boolean; pr?: PurchaseRequest }>;
   updatePurchaseRequestStatus: (
     id: string,
     status: PurchaseRequestStatus,
@@ -317,9 +320,12 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
   const [pos, setPos] = useState<PurchaseOrder[]>([]);
   const [grns, setGrns] = useState<GoodsReceiptNote[]>([]);
   const [srns, setSrns] = useState<ServiceReceiptNote[]>([]);
-  const [legacyFallback, setLegacyFallback] = useState<PurchaseRequestTransaction[]>([]);
   const [isHydrating, setIsHydrating] = useState(true);
+  // Kept for now so the existing `setUsingFallback(false)` calls compile, but
+  // never set to true — see FIX 4 (no blob fallback on empty/failed API).
   const [usingFallback, setUsingFallback] = useState(false);
+  // Empty fallback array — relational is the source of truth.
+  const legacyFallback: PurchaseRequestTransaction[] = [];
 
   const refresh = useCallback(async () => {
     try {
@@ -329,39 +335,19 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
         fetchGRNs(),
         fetchSRNs(),
       ]);
-      // Empty result from API → check whether we should fall back to blob
-      if (apiPRs.length === 0 && apiPOs.length === 0) {
-        const blob = await ensureDomainDocument('procurement_data', defaultProcurementData, {
-          seedIfMissing: false,
-        });
-        if (blob.purchaseRequests && blob.purchaseRequests.length > 0) {
-          setLegacyFallback(blob.purchaseRequests);
-          setUsingFallback(true);
-          setPrs([]);
-          setPos([]);
-          setGrns([]);
-          setSrns([]);
-          return;
-        }
-      }
+      // Empty arrays are a valid state (user has no PRs yet) — never fall
+      // back to blob just because the relational result is empty. Only a
+      // genuine network/throw error triggers fallback (catch block below).
       setUsingFallback(false);
-      setLegacyFallback([]);
       setPrs(apiPRs);
       setPos(apiPOs);
       setGrns(apiGRNs);
       setSrns(apiSRNs);
     } catch (err) {
-      // API call failed entirely — fall back to blob
-      console.warn('[ProcurementDataContext] API failed, using blob fallback:', err);
-      try {
-        const blob = await ensureDomainDocument('procurement_data', defaultProcurementData, {
-          seedIfMissing: false,
-        });
-        setLegacyFallback(blob.purchaseRequests || []);
-        setUsingFallback(true);
-      } catch {
-        setLegacyFallback([]);
-      }
+      // Genuine network failure — keep current relational state, do NOT
+      // switch to blob. The user sees the last-known data instead of stale
+      // blob rows that drift apart from the DB.
+      console.error('[ProcurementDataContext] Procurement API unavailable', err);
     }
   }, []);
 
@@ -382,16 +368,16 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
     return prs.map(mapRelationalToLegacy);
   }, [prs, legacyFallback, usingFallback]);
 
-  // Legacy add — maps Title-case to relational + posts to API. Falls back to
-  // blob save (the original behaviour) only when the API write fails so
-  // existing forms keep working in offline/dev modes.
+  // Relational PR create. Returns explicit success/failure so forms can show
+  // an error toast instead of silently navigating away. NO blob fallback —
+  // relational is the only store; if the API rejects, the form keeps the
+  // user's input on screen and shows the error.
   const addPurchaseRequest = useCallback(
-    async (request: PurchaseRequestTransaction) => {
+    async (
+      request: PurchaseRequestTransaction
+    ): Promise<{ success: boolean; pr?: PurchaseRequest }> => {
       const relPRType = PR_TYPE_FROM_LEGACY[request.type];
       const relStatus = PR_STATUS_FROM_LEGACY[request.status];
-      // Server expects line items shaped per `purchase_request_items`. Forms
-      // pass loose Record<string, unknown> rows — adapt the common field names
-      // (itemCode/itemName/quantity/uom/vendor/unitPrice/gstRate/...).
       const adaptLineItems = (rows: Array<Record<string, unknown>> = []) =>
         rows.map((li) => {
           const r = li as Record<string, unknown>;
@@ -417,8 +403,6 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
         const created = await createPRApi({
           entityId: request.entityId || request.entity,
           entityCode: request.entityCode || request.entity,
-          // entityGstin is consumed by server GST calc but isn't on the
-          // PurchaseRequest type — tunneled via the unknown-record cast below.
           ...(request.entityGstin ? { entityGstin: request.entityGstin } : {}),
           prType: relPRType,
           requesterId: request.requesterId || request.requestor,
@@ -433,26 +417,18 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
           lineItems: adaptLineItems(request.lineItems),
         } as unknown as Partial<PurchaseRequest> & { lineItems?: unknown[] });
         if (created) {
-          // If the legacy form submitted an "approval" status, fire the submit transition too
           if (relStatus !== 'draft') {
             await transitionPRApi(created.id, 'submit');
           }
-          // Successful relational write — clear any sticky fallback flag so
-          // the listing returns to relational data on next render.
           setUsingFallback(false);
           await refresh();
-          return;
+          return { success: true, pr: created };
         }
+        return { success: false };
       } catch (err) {
-        console.warn('[ProcurementDataContext] createPRApi failed, persisting to blob:', err);
+        console.error('[ProcurementDataContext] createPRApi failed:', err);
+        return { success: false };
       }
-      // Blob fallback — preserves the original behaviour
-      setLegacyFallback((current) => {
-        const next = [request, ...current];
-        saveDomainDocument('procurement_data', { purchaseRequests: next });
-        return next;
-      });
-      setUsingFallback(true);
     },
     [refresh]
   );
@@ -487,16 +463,9 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
             return;
           }
         } catch (err) {
-          console.warn('[ProcurementDataContext] transitionPRApi failed, falling back:', err);
+          console.error('[ProcurementDataContext] transitionPRApi failed:', err);
         }
       }
-
-      // Blob fallback — update legacy state in place
-      setLegacyFallback((current) => {
-        const next = current.map((r) => (r.id === id ? { ...r, ...updates, status } : r));
-        saveDomainDocument('procurement_data', { purchaseRequests: next });
-        return next;
-      });
     },
     [prs, refresh]
   );

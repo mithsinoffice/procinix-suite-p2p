@@ -20,6 +20,7 @@ import { useMasterData } from '../../contexts/MasterDataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from '../ui/form-primitives';
 import { useFormKeyboardSave } from '../../hooks/useFormKeyboardSave';
+import { BudgetComingSoon } from './BudgetComingSoon';
 
 /**
  * REGULAR PR FORM
@@ -175,6 +176,7 @@ export function RegularPRForm() {
     .size;
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const completeness = useMemo(() => {
     const fields = [
       selectedEntity,
@@ -187,34 +189,26 @@ export function RegularPRForm() {
     return Math.round((filled / fields.length) * 100);
   }, [selectedEntity, selectedDepartment, deliveryLocation, needByDate, businessJustification]);
 
-  const handleSaveDraft = useCallback(() => {
-    setSaveStatus('saving');
-    submitPurchaseRequest('Draft');
-    setSaveStatus('saved');
-    setTimeout(() => setSaveStatus('idle'), 3000);
-  }, []);
-
-  useFormKeyboardSave(handleSaveDraft);
-
-  const submitPurchaseRequest = (status: PurchaseRequestStatus) => {
+  const submitPurchaseRequest = async (status: PurchaseRequestStatus) => {
     const timestamp = Date.now();
     const createdDate = new Date().toISOString().split('T')[0];
-    // Resolve the relational entity record so the API receives the proper
-    // entityId (UUID) and entityCode (e.g. PTPL) instead of the display name —
-    // required for the server to generate a sequential pr_ref via nextDocRef.
+    // Prefer the AuthContext slug (entity-ptpl-001) over the entity_master
+    // UUID so seed data and new rows share the same id space.
     const entityRecord =
-      entities.find((e) => e.id === currentCompany?.id || e.name === selectedEntity) || entities[0];
+      entities.find((e) => e.id === currentCompany?.id || e.name === currentCompany?.name) ??
+      entities[0];
 
-    addPurchaseRequest({
+    setSubmitError(null);
+    const result = await addPurchaseRequest({
       id: `regular-${timestamp}`,
       prNumber: `PR-${timestamp}`,
       type: 'Regular',
       entity: selectedEntity,
-      entityId: entityRecord?.id || currentCompany?.id || '',
-      entityCode: entityRecord?.code || currentCompany?.code || '',
-      entityGstin: entityRecord?.gstin || '',
+      entityId: currentCompany?.id ?? entityRecord?.id ?? '',
+      entityCode: entityRecord?.code ?? currentCompany?.code ?? '',
+      entityGstin: entityRecord?.gstin ?? '',
       requestor: user?.name || 'Current User',
-      requesterId: user?.id || '',
+      requesterId: user?.id ?? '',
       department: selectedDepartment,
       costCentre: lineItems[0]?.costCentre || liveCostCentres[0] || '',
       needByDate,
@@ -236,8 +230,22 @@ export function RegularPRForm() {
       })),
     });
 
-    navigate('/procurement/pr/my-prs');
+    if (result.success) {
+      navigate('/procurement/pr/listing');
+    } else {
+      setSubmitError('Failed to save PR. Please try again.');
+    }
   };
+
+  const handleSaveDraft = useCallback(() => {
+    setSaveStatus('saving');
+    void submitPurchaseRequest('Draft').finally(() => {
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    });
+  }, []);
+
+  useFormKeyboardSave(handleSaveDraft);
 
   return (
     <FormShell
@@ -252,6 +260,21 @@ export function RegularPRForm() {
       saveStatus={saveStatus}
       completeness={completeness}
     >
+      {submitError && (
+        <div
+          role="alert"
+          style={{
+            margin: '0 0 12px 0',
+            padding: '10px 14px',
+            borderRadius: 6,
+            background: '#FFEBEE',
+            color: '#C62828',
+            fontSize: 13,
+          }}
+        >
+          {submitError}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-6">
         {/* Main Form - Left 2 Columns */}
         <div className="col-span-2 space-y-6">
@@ -793,67 +816,7 @@ export function RegularPRForm() {
             </div>
           )}
 
-          {/* Budget Check */}
-          {lineItems.length > 0 && (
-            <div
-              className="bg-white p-6 rounded-lg"
-              style={{ border: '1px solid var(--color-silver)' }}
-            >
-              <h3
-                className="text-base mb-4"
-                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
-              >
-                Budget Check
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                    Department Budget
-                  </span>
-                  <span
-                    className="text-sm"
-                    style={{ color: 'var(--color-ink)', fontWeight: '600' }}
-                  >
-                    ₹15,00,000
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                    PR Amount
-                  </span>
-                  <span
-                    className="text-sm"
-                    style={{ color: 'var(--color-teal)', fontWeight: '600' }}
-                  >
-                    {formatCurrency(grandTotal.total)}
-                  </span>
-                </div>
-                <div
-                  className="flex items-center justify-between pt-3"
-                  style={{ borderTop: '1px solid var(--color-silver)' }}
-                >
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                    Remaining Budget
-                  </span>
-                  <span
-                    className="text-sm"
-                    style={{ color: 'var(--color-success-dark)', fontWeight: '600' }}
-                  >
-                    {formatCurrency(1500000 - grandTotal.total)}
-                  </span>
-                </div>
-                <div
-                  className="flex items-center gap-2 p-3 rounded-lg"
-                  style={{ backgroundColor: 'var(--color-success-light)' }}
-                >
-                  <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success-dark)' }} />
-                  <span className="text-sm" style={{ color: 'var(--color-success-dark)' }}>
-                    Within Budget
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+          <BudgetComingSoon />
         </div>
       </div>
     </FormShell>

@@ -13,7 +13,7 @@ import {
   FileInput,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useProcurementData } from '../../contexts/ProcurementDataContext';
+import { useProcurementData, transitionPRApi } from '../../contexts/ProcurementDataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   listingHeader,
@@ -38,29 +38,33 @@ import {
 export function MyPRs() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { purchaseRequests } = useProcurementData();
+  const { purchaseRequests, prs: relationalPRs, refresh } = useProcurementData();
   const [selectedTab, setSelectedTab] = useState('all');
 
   const formatCurrency = (amount: number) => `₹${(amount / 100000).toFixed(2)} L`;
 
-  const persistedPRs = purchaseRequests.map((request) => ({
-    id: request.prNumber,
-    type: request.type,
-    entity: request.entity,
-    department: request.department,
-    amount: request.totalAmount,
-    status: request.status === 'Pending Approval' ? 'Submitted' : request.status,
-    needByDate: request.needByDate,
-    approver: request.nextApprover,
-    createdDate: request.createdDate,
-    poLinked: request.linkedPO ?? null,
-  }));
+  const persistedPRs = purchaseRequests.map((request) => {
+    // Resolve the relational UUID for navigation; prRef stays as the human ref.
+    const rel = relationalPRs.find((r) => r.prRef === request.prNumber || r.id === request.id);
+    return {
+      id: rel?.id ?? request.id, // UUID for navigation
+      prRef: request.prNumber, // human display
+      requestor: request.requestor,
+      requesterId: rel?.requesterId ?? '',
+      type: request.type,
+      entity: request.entity,
+      department: request.department,
+      amount: request.totalAmount,
+      status: request.status === 'Pending Approval' ? 'Submitted' : request.status,
+      needByDate: request.needByDate,
+      approver: request.nextApprover,
+      createdDate: request.createdDate,
+      poLinked: request.linkedPO ?? null,
+    };
+  });
 
   const myPRs = persistedPRs.filter(
-    (request) =>
-      !user?.name ||
-      request.approver === user.name ||
-      purchaseRequests.find((entry) => entry.prNumber === request.id)?.requestor === user.name
+    (r) => r.requestor === user?.name || (user?.id != null && r.requesterId === user.id)
   );
   const visiblePRs = myPRs.filter((pr) => {
     if (selectedTab === 'all') return true;
@@ -268,94 +272,112 @@ export function MyPRs() {
 
                   return (
                     <tr key={pr.id}>
-                      <td style={listingTd}>
+                      <td style={listingTdPrimary}>
                         <div>
-                          <p
-                            className="text-sm mb-1"
-                            style={{ color: 'var(--color-ink)', fontWeight: '600', margin: 0 }}
-                          >
-                            {pr.id}
-                          </p>
+                          {pr.prRef}
                           {pr.poLinked && (
-                            <p
-                              className="text-xs"
-                              style={{ color: 'var(--color-teal)', margin: 0 }}
-                            >
+                            <div style={{ fontSize: 10, color: 'var(--color-teal)', marginTop: 2 }}>
                               → {pr.poLinked}
-                            </p>
+                            </div>
                           )}
                         </div>
                       </td>
                       <td style={listingTd}>
-                        <span className="px-2 py-1 rounded text-xs inline-block" style={typeStyle}>
+                        <span
+                          style={{
+                            ...typeStyle,
+                            padding: '2px 8px',
+                            borderRadius: 999,
+                            fontSize: 10,
+                            fontWeight: 600,
+                          }}
+                        >
                           {pr.type}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--color-ink)' }}>
-                        {pr.entity}
-                      </td>
-                      <td
-                        className="px-6 py-4 text-sm"
-                        style={{ color: 'var(--color-mercury-grey)' }}
-                      >
+                      <td style={listingTd}>{pr.entity}</td>
+                      <td style={{ ...listingTd, color: 'var(--color-mercury-grey)' }}>
                         {pr.department}
                       </td>
-                      <td
-                        className="px-6 py-4 text-sm text-right"
-                        style={{ color: 'var(--color-ink)', fontWeight: '600' }}
-                      >
+                      <td style={{ ...listingTd, textAlign: 'right', fontWeight: 500 }}>
                         {formatCurrency(pr.amount)}
                       </td>
                       <td style={{ ...listingTd, textAlign: 'center' }}>
-                        <div className="flex items-center justify-center gap-1.5">
-                          <StatusIcon className="w-4 h-4" style={{ color: statusStyle.color }} />
-                          <span
-                            className="text-xs"
-                            style={{ color: statusStyle.color, fontWeight: '600' }}
-                          >
-                            {pr.status}
-                          </span>
-                        </div>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            color: statusStyle.color,
+                            fontWeight: 600,
+                            fontSize: 11,
+                          }}
+                        >
+                          <StatusIcon className="w-3 h-3" />
+                          {pr.status}
+                        </span>
                       </td>
-                      <td
-                        className="px-6 py-4 text-sm"
-                        style={{ color: 'var(--color-mercury-grey)' }}
-                      >
+                      <td style={{ ...listingTd, color: 'var(--color-mercury-grey)' }}>
                         {pr.needByDate}
                       </td>
-                      <td
-                        className="px-6 py-4 text-sm"
-                        style={{ color: 'var(--color-mercury-grey)' }}
-                      >
+                      <td style={{ ...listingTd, color: 'var(--color-mercury-grey)' }}>
                         {pr.approver}
                       </td>
-                      <td style={listingTd}>
-                        <div className="flex items-center justify-center gap-2">
-                          <button className="p-1 rounded hover:bg-gray-100">
+                      <td style={{ ...listingTd, textAlign: 'center' }}>
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            className="p-1 rounded hover:bg-gray-100"
+                            title="View PR"
+                            onClick={() => navigate(`/procurement/pr/detail/${pr.id}`)}
+                          >
                             <Eye className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                           </button>
                           {pr.status === 'Draft' && (
-                            <button className="p-1 rounded hover:bg-gray-100">
+                            <button
+                              className="p-1 rounded hover:bg-gray-100"
+                              title="Edit PR"
+                              onClick={() => navigate(`/procurement/pr/edit/${pr.id}`)}
+                            >
                               <Edit
                                 className="w-4 h-4"
                                 style={{ color: 'var(--color-mercury-grey)' }}
                               />
                             </button>
                           )}
-                          {pr.status === 'Approved' && !pr.poLinked && (
-                            <button
-                              className="px-2 py-1 rounded text-xs text-white"
-                              style={{ backgroundColor: 'var(--color-teal)' }}
-                            >
-                              Convert to PO
-                            </button>
-                          )}
-                          <button className="p-1 rounded hover:bg-gray-100">
+                          <button
+                            className="p-1 rounded hover:bg-gray-100"
+                            title="Duplicate as new draft"
+                            onClick={() => navigate('/procurement/pr/create/regular')}
+                          >
                             <Copy
                               className="w-4 h-4"
                               style={{ color: 'var(--color-mercury-grey)' }}
                             />
                           </button>
+                          {(pr.status === 'Submitted' || pr.status === 'In Review') && (
+                            <button
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: 999,
+                                fontSize: 10,
+                                fontWeight: 600,
+                                background: '#FFEBEE',
+                                color: '#C62828',
+                                border: '1px solid #FECACA',
+                                cursor: 'pointer',
+                              }}
+                              title="Withdraw PR"
+                              onClick={async () => {
+                                if (!window.confirm(`Withdraw ${pr.prRef}? This cancels the PR.`))
+                                  return;
+                                const res = await transitionPRApi(pr.id, 'cancel');
+                                if (res) await refresh();
+                                else window.alert('Failed to withdraw PR. Please try again.');
+                              }}
+                            >
+                              Withdraw
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

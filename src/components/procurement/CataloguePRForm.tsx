@@ -7,6 +7,7 @@ import {
 } from '../../contexts/ProcurementDataContext';
 import { useMasterData } from '../../contexts/MasterDataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { BudgetComingSoon } from './BudgetComingSoon';
 
 /**
  * CATALOGUE PR FORM
@@ -20,6 +21,7 @@ export function CataloguePRForm() {
   const { items, liveVendors, entities, departments, costCentres, currentCompany, locations } =
     useMasterData();
   const [cart, setCart] = useState<any[]>([]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEntity, setSelectedEntity] = useState(
     currentCompany?.name || entities[0]?.name || ''
@@ -98,23 +100,25 @@ export function CataloguePRForm() {
       item.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const submitPurchaseRequest = (status: PurchaseRequestStatus) => {
+  const submitPurchaseRequest = async (status: PurchaseRequestStatus) => {
     const timestamp = Date.now();
     const createdDate = new Date().toISOString().split('T')[0];
     const vendors = Array.from(new Set(cart.map((item) => item.vendor)));
     const entityRecord =
-      entities.find((e) => e.id === currentCompany?.id || e.name === selectedEntity) || entities[0];
+      entities.find((e) => e.id === currentCompany?.id || e.name === currentCompany?.name) ??
+      entities[0];
 
-    addPurchaseRequest({
+    setSubmitError(null);
+    const result = await addPurchaseRequest({
       id: `catalogue-${timestamp}`,
       prNumber: `PR-${timestamp}`,
       type: 'Catalogue',
       entity: selectedEntity,
-      entityId: entityRecord?.id || currentCompany?.id || '',
-      entityCode: entityRecord?.code || currentCompany?.code || '',
-      entityGstin: entityRecord?.gstin || '',
+      entityId: currentCompany?.id ?? entityRecord?.id ?? '',
+      entityCode: entityRecord?.code ?? currentCompany?.code ?? '',
+      entityGstin: entityRecord?.gstin ?? '',
       requestor: user?.name || 'Current User',
-      requesterId: user?.id || '',
+      requesterId: user?.id ?? '',
       department: selectedDepartment,
       costCentre: selectedCostCentre,
       needByDate,
@@ -137,7 +141,11 @@ export function CataloguePRForm() {
       })),
     });
 
-    navigate('/procurement/pr/my-prs');
+    if (result.success) {
+      navigate('/procurement/pr/listing');
+    } else {
+      setSubmitError('Failed to save PR. Please try again.');
+    }
   };
 
   return (
@@ -168,6 +176,11 @@ export function CataloguePRForm() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {submitError && (
+              <span role="alert" style={{ color: '#C62828', fontSize: 12, fontWeight: 500 }}>
+                {submitError}
+              </span>
+            )}
             <button
               className="px-4 py-2 rounded-lg"
               style={{
@@ -645,29 +658,7 @@ export function CataloguePRForm() {
               </div>
             )}
 
-            {/* Policy Check */}
-            <div
-              className="p-4 rounded-lg"
-              style={{ backgroundColor: 'var(--color-success-light)', border: '1px solid #81C784' }}
-            >
-              <div className="flex items-start gap-2">
-                <CheckCircle
-                  className="w-4 h-4 mt-0.5"
-                  style={{ color: 'var(--color-success-dark)' }}
-                />
-                <div>
-                  <p
-                    className="text-xs mb-1"
-                    style={{ color: 'var(--color-success-dark)', fontWeight: '600' }}
-                  >
-                    Policy Check: Passed
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                    Budget available, approval route confirmed
-                  </p>
-                </div>
-              </div>
-            </div>
+            <BudgetComingSoon />
           </div>
         </div>
       </div>
