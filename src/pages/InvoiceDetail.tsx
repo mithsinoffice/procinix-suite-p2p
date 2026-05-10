@@ -365,6 +365,28 @@ export function InvoiceDetail() {
     }
   };
 
+  const handleQueueForPayment = async () => {
+    if (!invoice || !id) return;
+    setActionBusy(true);
+    try {
+      const res = await mysqlApiRequest<{ success: boolean; error?: string; message?: string }>(
+        `/invoices/${id}/queue-for-payment`,
+        { method: 'POST' }
+      );
+      if (!res?.success) {
+        setToast(res?.message || res?.error || 'Queue failed');
+        return;
+      }
+      setInvoice((prev) => (prev ? { ...prev, lifecycle_state: 'Queued for Payment' } : prev));
+      setToast('Sent to payment queue');
+    } catch (err) {
+      const apiErr = err as { message?: string };
+      setToast(apiErr?.message || 'Queue failed — check server');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
   if (loading) return <LoadingSkeleton />;
 
   if (error || !invoice) {
@@ -538,10 +560,27 @@ export function InvoiceDetail() {
               </>
             )}
 
-            {/* Add to Payment Batch — shown when Processed */}
-            {(lc === 'Processed' || lc === 'Queued for Payment') && (
+            {/* Send to Payment Queue — only when Processed (not yet queued) */}
+            {lc === 'Processed' && (
               <button
-                onClick={() => navigate('/payments')}
+                disabled={actionBusy}
+                onClick={handleQueueForPayment}
+                className="flex items-center gap-1.5 text-sm font-semibold rounded-xl px-4 py-2 hover:opacity-80 transition-opacity"
+                style={{
+                  background: '#185FA5',
+                  color: '#fff',
+                  opacity: actionBusy ? 0.6 : 1,
+                }}
+              >
+                <CreditCard className="w-4 h-4" />
+                Send to Payment Queue
+              </button>
+            )}
+
+            {/* Add to Payment Batch — once already queued */}
+            {lc === 'Queued for Payment' && (
+              <button
+                onClick={() => navigate('/ap/payments/queue')}
                 className="flex items-center gap-1.5 text-sm font-semibold rounded-xl px-4 py-2 hover:opacity-80 transition-opacity"
                 style={{
                   background: 'linear-gradient(135deg, var(--color-teal) 0%, #006E78 100%)',
@@ -549,7 +588,7 @@ export function InvoiceDetail() {
                 }}
               >
                 <CreditCard className="w-4 h-4" />
-                Add to Payment Batch
+                Open Payment Queue
               </button>
             )}
 

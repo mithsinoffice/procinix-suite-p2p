@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAPData } from '../contexts/APDataContext';
 import { useMasterData } from '../contexts/MasterDataContext';
-import { mysqlApiBaseUrl, buildMysqlApiHeaders } from '../lib/mysql/client';
+import { mysqlApiBaseUrl, buildMysqlApiHeaders, mysqlApiRequest } from '../lib/mysql/client';
 import {
   ArrowLeft,
   Save,
@@ -62,7 +62,12 @@ interface Exception {
 export function AIInvoiceCapture() {
   const navigate = useNavigate();
   const { addInvoice } = useAPData();
-  const { getActiveVendors, getVendorByCode } = useMasterData();
+  const {
+    getActiveVendors,
+    getVendorByCode,
+    currentCompany,
+    liveVendors: relationalVendors,
+  } = useMasterData();
   const activeVendors = getActiveVendors();
   const primaryVendor = activeVendors[0];
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -404,7 +409,7 @@ export function AIInvoiceCapture() {
     setExceptions(exceptions.filter((_, i) => i !== index));
   };
 
-  const persistInvoice = (status: 'Draft' | 'Pending Approval') => {
+  const persistInvoice = async (status: 'Draft' | 'Pending Approval'): Promise<boolean> => {
     if (
       !extractedData.vendorCode.value ||
       !extractedData.invoiceNumber.value ||
@@ -415,35 +420,79 @@ export function AIInvoiceCapture() {
     }
 
     const resolvedVendor = getVendorByCode(String(extractedData.vendorCode.value));
+    const vendorName = resolvedVendor?.name || String(extractedData.vendorName.value);
+    const vendorCode = resolvedVendor?.code || String(extractedData.vendorCode.value);
+    const relVendor = relationalVendors?.find(
+      (v) => v.code === vendorCode || v.name === vendorName
+    );
+    const vendorUuid = relVendor?.id ?? vendorCode;
 
-    addInvoice({
-      id: `AI-INV-${Date.now()}`,
-      invoiceNumber: String(extractedData.invoiceNumber.value),
-      invoiceDate: String(extractedData.invoiceDate.value),
-      vendorName: resolvedVendor?.name || String(extractedData.vendorName.value),
-      vendorCode: resolvedVendor?.code || String(extractedData.vendorCode.value),
-      invoiceType: extractedData.poNumber.value ? 'PO' : 'Non-PO',
-      poNumber: extractedData.poNumber.value ? String(extractedData.poNumber.value) : undefined,
-      totalAmount: calculateTotal(),
-      currency: resolvedVendor?.currency || String(extractedData.currency.value || 'INR'),
-      status,
-      dueDate: extractedData.dueDate.value ? String(extractedData.dueDate.value) : undefined,
-      approver: 'AP Team',
-      paymentStatus: 'Unpaid',
-      matchStatus: extractedData.poNumber.value
-        ? matchType === '3-way'
-          ? '3-Way Matched'
-          : 'Partially Matched'
-        : 'Unmatched',
-    });
-    return true;
+    const poNumberStr = extractedData.poNumber.value ? String(extractedData.poNumber.value) : null;
+    const total = calculateTotal();
+    const lifecycleState = status === 'Draft' ? 'Ingested' : 'Under Verification';
+
+    try {
+      const res = await mysqlApiRequest<{ success: boolean; data: { id: string } }>('/invoices', {
+        method: 'POST',
+        body: JSON.stringify({
+          invoice_number: String(extractedData.invoiceNumber.value),
+          invoice_date: String(extractedData.invoiceDate.value),
+          due_date: extractedData.dueDate.value ? String(extractedData.dueDate.value) : null,
+          vendor_id: vendorUuid,
+          vendor_name: vendorName,
+          vendor_code: vendorCode,
+          invoice_type: poNumberStr ? 'po' : 'non_po',
+          po_number: poNumberStr,
+          total_amount: total,
+          currency: resolvedVendor?.currency || String(extractedData.currency.value || 'INR'),
+          entity_id: currentCompany?.id ?? '',
+          source: 'manual_upload',
+          status: status === 'Draft' ? 'draft' : 'pending_approval',
+          lifecycle_state: lifecycleState,
+        }),
+      });
+      if (!res?.success) {
+        alert('Failed to save invoice.');
+        return false;
+      }
+      // Mirror to local state so the listing reflects the new row immediately.
+      addInvoice({
+        id: res.data.id,
+        invoiceNumber: String(extractedData.invoiceNumber.value),
+        invoiceDate: String(extractedData.invoiceDate.value),
+        vendorName,
+        vendorCode,
+        invoiceType: poNumberStr ? 'PO' : 'Non-PO',
+        poNumber: poNumberStr ?? undefined,
+        totalAmount: total,
+        currency: resolvedVendor?.currency || String(extractedData.currency.value || 'INR'),
+        status,
+        dueDate: extractedData.dueDate.value ? String(extractedData.dueDate.value) : undefined,
+        approver: 'AP Team',
+        paymentStatus: 'Unpaid',
+        matchStatus: poNumberStr
+          ? matchType === '3-way'
+            ? '3-Way Matched'
+            : 'Partially Matched'
+          : 'Unmatched',
+      });
+      return true;
+    } catch (err) {
+      const apiErr = err as { message?: string; details?: string[] };
+      alert(
+        apiErr?.details?.length
+          ? apiErr.details.join('\n')
+          : apiErr?.message || 'Failed to save invoice.'
+      );
+      return false;
+    }
   };
 
-  const handleSaveDraft = () => {
-    persistInvoice('Draft');
+  const handleSaveDraft = async () => {
+    await persistInvoice('Draft');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (exceptions.length > 0) {
       const criticalExceptions = exceptions.filter((e) => e.severity === 'critical');
       if (criticalExceptions.length > 0) {
@@ -451,7 +500,7 @@ export function AIInvoiceCapture() {
         return;
       }
     }
-    if (persistInvoice('Pending Approval')) {
+    if (await persistInvoice('Pending Approval')) {
       navigate('/invoices');
     }
   };

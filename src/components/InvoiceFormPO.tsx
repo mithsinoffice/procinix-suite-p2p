@@ -197,6 +197,7 @@ export function InvoiceFormPO() {
     getTDSSectionByCode,
     currencies: liveCurrencies,
     currentCompany,
+    liveVendors: relationalVendors,
   } = useMasterData();
   const currencyOptions =
     liveCurrencies && liveCurrencies.length > 0
@@ -1070,12 +1071,20 @@ export function InvoiceFormPO() {
     const totals = calculateTotals();
     const lifecycleState = status === 'Draft' ? 'Ingested' : 'Under Verification';
     try {
+      // Resolve relational vendor UUID — AP Vendor type only carries `code`,
+      // not `id`. Look the real UUID up in MasterDataContext.liveVendors
+      // (sourced from /api/vendors) so the POST writes the proper FK.
+      const relVendor = relationalVendors?.find(
+        (v) => v.code === vendor.code || v.name === vendor.name
+      );
+      const vendorUuid = relVendor?.id ?? vendor.code;
+
       const res = await mysqlApiRequest<{ success: boolean; data: { id: string } }>('/invoices', {
         method: 'POST',
         body: JSON.stringify({
           invoice_number: invoiceNumber,
           invoice_date: invoiceDate,
-          vendor_id: vendor.code,
+          vendor_id: vendorUuid,
           vendor_name: vendor.name,
           vendor_code: vendor.code,
           invoice_type: 'po',

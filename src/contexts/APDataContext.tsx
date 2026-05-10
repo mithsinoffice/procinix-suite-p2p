@@ -1087,8 +1087,11 @@ export function APDataProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Blob fallback removed for invoices — relational is the only store.
+      // When the API hasn't returned anything we leave invoices as [] (the
+      // initial state) rather than seeding the listing with stale blob data.
       if (isMounted && !invoicesLoaded) {
-        setInvoices(document.invoices ?? defaultDocument.invoices);
+        setInvoices([]);
       }
 
       if (isMounted) setIsHydrating(false);
@@ -1106,6 +1109,9 @@ export function APDataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // `invoices` removed from the blob payload — relational is the only
+    // source after FIX 9. Other domains are still written to ap_data until
+    // their own relational migration ships.
     saveDomainDocument('ap_data', {
       vendors,
       purchaseOrders,
@@ -1113,7 +1119,6 @@ export function APDataProvider({ children }: { children: ReactNode }) {
       advances,
       advanceRequests,
       advanceUtilizations,
-      invoices,
       debitNotes,
     });
   }, [
@@ -1122,7 +1127,6 @@ export function APDataProvider({ children }: { children: ReactNode }) {
     advanceUtilizations,
     debitNotes,
     grns,
-    invoices,
     isHydrating,
     purchaseOrders,
     vendors,

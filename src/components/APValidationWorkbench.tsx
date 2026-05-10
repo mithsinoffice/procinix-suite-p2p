@@ -22,6 +22,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { CreateVendorSlideOver } from './CreateVendorSlideOver';
+import { mysqlApiRequest } from '../lib/mysql/client';
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 const API = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || '';
@@ -61,7 +62,8 @@ const getNextAction = (invoice: any) => {
   if (vendorStatus.includes('not_found') || vendorStatus.includes('unmatched'))
     return { label: '+ Create vendor', bg: '#185FA5', action: 'create_vendor' };
   if (score < 30) return { label: '\u2191 Re-upload PDF', bg: '#7F77DD', action: 'reupload' };
-  if (!invoice.matched_po_id) return { label: '\u21CC Link PO', bg: '#007D87', action: 'link_po' };
+  if (!(invoice.po_id || invoice.po_number || invoice.poNumber))
+    return { label: '\u21CC Link PO', bg: '#007D87', action: 'link_po' };
   return { label: '\uD83D\uDC41 Review data', bg: '#185FA5', action: 'review' };
 };
 
@@ -69,7 +71,7 @@ const getExceptionTag = (invoice: any) => {
   const vendorStatus = invoice.vendor_match_status || '';
   if (vendorStatus.includes('not_found') || vendorStatus.includes('unmatched'))
     return { label: '! Vendor missing', bg: '#FEE2E2', color: '#DC2626', border: '#FECACA' };
-  if (!invoice.matched_po_id && invoice.total_amount > 0)
+  if (!(invoice.po_id || invoice.po_number || invoice.poNumber) && invoice.total_amount > 0)
     return { label: '\u26A0 No PO', bg: '#FFF8EC', color: '#9A6800', border: '#FFE4A0' };
   const score = normalizeScore(invoice.readiness_score);
   if (score < 30)
@@ -128,11 +130,10 @@ export function APValidationWorkbench() {
   /* ── data fetching ──────────────────────────────────────────── */
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/invoice-ingestion/workbench-stats`, {
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      });
-      const data = await res.json();
-      if (data.success) setStats(data.data);
+      const data = await mysqlApiRequest<{ success: boolean; data: typeof stats }>(
+        '/invoice-ingestion/workbench-stats'
+      );
+      if (data?.success) setStats(data.data);
     } catch {
       /* silent */
     }
@@ -140,11 +141,10 @@ export function APValidationWorkbench() {
 
   const fetchInvoices = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/invoices`, {
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      });
-      const data = await res.json();
-      if (data.success) setInvoices(Array.isArray(data.data) ? data.data : []);
+      const data = await mysqlApiRequest<{ success: boolean; data: unknown[] }>(
+        '/invoices?limit=500'
+      );
+      if (data?.success) setInvoices(Array.isArray(data.data) ? data.data : []);
     } catch {
       /* silent */
     }
@@ -211,10 +211,7 @@ export function APValidationWorkbench() {
   const handlePull = async () => {
     setPulling(true);
     try {
-      await fetch(`${API}/api/invoice-ingestion/trigger`, {
-        method: 'POST',
-        headers: authHeaders(),
-      });
+      await mysqlApiRequest('/invoice-ingestion/trigger', { method: 'POST' });
       await Promise.all([fetchInvoices(), fetchStats()]);
       setToast('Inbox scanned. New invoices pulled.');
     } catch {
@@ -246,10 +243,7 @@ export function APValidationWorkbench() {
   const handleRevalidate = async (invoiceId: string) => {
     setRevalidating(invoiceId);
     try {
-      await fetch(`${API}/api/invoice-ingestion/revalidate/${invoiceId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      });
+      await mysqlApiRequest(`/invoice-ingestion/revalidate/${invoiceId}`, { method: 'POST' });
       await Promise.all([fetchInvoices(), fetchStats()]);
     } finally {
       setRevalidating(null);
@@ -293,20 +287,23 @@ export function APValidationWorkbench() {
     const validatedBy =
       JSON.parse(sessionStorage.getItem('procinix.session.user') ?? '{}')?.email || null;
     try {
-      const res = await fetch(`${API}/api/invoices/${invoiceId}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': tenantId, ...authHeaders() },
-        body: JSON.stringify({ validated_by: validatedBy }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        setToast(data.error || 'Submit failed.');
+      const data = await mysqlApiRequest<{ success: boolean; error?: string }>(
+        `/invoices/${invoiceId}/submit`,
+        {
+          method: 'POST',
+          headers: { 'X-Tenant-Id': tenantId },
+          body: JSON.stringify({ validated_by: validatedBy }),
+        }
+      );
+      if (!data?.success) {
+        setToast(data?.error || 'Submit failed.');
         return;
       }
       await Promise.all([fetchInvoices(), fetchStats()]);
       setToast('Invoice submitted for approval.');
-    } catch {
-      setToast('Submit failed. Check server connection.');
+    } catch (err) {
+      const apiErr = err as { message?: string };
+      setToast(apiErr?.message || 'Submit failed. Check server connection.');
     }
   };
 
@@ -430,26 +427,23 @@ export function APValidationWorkbench() {
         gst_rate: line.gst_rate === '' || line.gst_rate == null ? null : Number(line.gst_rate),
       }));
 
-      const res = await fetch(`${API}/api/invoices/${reviewInvoice.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ invoice: invoicePayload, line_items: lineItems }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        setToast(data.error || 'Failed to save corrections.');
+      const data = await mysqlApiRequest<{ success: boolean; data?: any; error?: string }>(
+        `/invoices/${reviewInvoice.id}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ invoice: invoicePayload, line_items: lineItems }),
+        }
+      );
+      if (!data?.success) {
+        setToast(data?.error || 'Failed to save corrections.');
         return;
       }
 
       if (Object.keys(changedFields).length > 0) {
-        await fetch(`${API}/api/ap/invoices/${reviewInvoice.id}/correct`, {
+        await mysqlApiRequest(`/ap/invoices/${reviewInvoice.id}/correct`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({
-            corrections: {
-              ...changedFields,
-              _learn_from_correction: learnFromCorrection,
-            },
+            corrections: { ...changedFields, _learn_from_correction: learnFromCorrection },
             comments: correctionReason,
           }),
         });
@@ -1533,7 +1527,10 @@ function ExpandedRowDetail({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <DetailField label="GSTIN" value={invoice.vendor_gstin || '-'} />
             <DetailField label="PO Number" value={invoice.po_number || 'None'} />
-            <DetailField label="PO Matched" value={invoice.matched_po_id ? 'Yes' : 'No'} />
+            <DetailField
+              label="PO Matched"
+              value={invoice.po_id || invoice.po_number || invoice.poNumber ? 'Yes' : 'No'}
+            />
             <DetailField label="Currency" value={invoice.currency || 'INR'} />
             <DetailField label="Source" value={(invoice.source || 'manual').replace(/_/g, ' ')} />
           </div>

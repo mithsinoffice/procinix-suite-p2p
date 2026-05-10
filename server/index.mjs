@@ -3784,25 +3784,36 @@ const server = http.createServer(async (req, res) => {
     // ── Workbench Stats API ───────────────────────────────
     if (req.method === 'GET' && pathname === '/api/invoice-ingestion/workbench-stats') {
       try {
-        const [invoices] = await query('SELECT COUNT(*) as total FROM p2p_schema_mt.invoices');
-        const [green] = await query(
-          "SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'green'"
+        const tenantId = readApTenantId(req, url) || 'tenant-default-001';
+        // Single-pass aggregation — lanes + pending + STP rate in one query
+        // so the four lanes always reflect the same row snapshot.
+        const [agg] = await query(
+          `SELECT
+             COUNT(CASE WHEN lane = 'green' THEN 1 END) AS green,
+             COUNT(CASE WHEN lane = 'amber' THEN 1 END) AS amber,
+             COUNT(CASE WHEN lane = 'red' OR lane IS NULL THEN 1 END) AS red,
+             COUNT(CASE WHEN lifecycle_state = 'Under Verification' THEN 1 END) AS pending,
+             COUNT(*) AS total
+           FROM p2p_schema_mt.invoices
+           WHERE tenant_id = ?`,
+          [tenantId]
         );
-        const [amber] = await query(
-          "SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'amber'"
-        );
-        const [red] = await query(
-          "SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE lane = 'red' OR lane IS NULL"
-        );
-        const [pending] = await query(
-          "SELECT COUNT(*) as cnt FROM p2p_schema_mt.invoices WHERE status = 'pending_approval' OR lifecycle_state = ?",
-          [LIFECYCLE_STATES.UNDER_VERIFICATION]
-        );
-        const [avgScore] = await query(
-          'SELECT AVG(readiness_score) as avg FROM p2p_schema_mt.invoices'
-        );
-        const total = invoices.total || 0;
-        const greenCount = green.cnt || 0;
+        // readiness_score column may not exist on every deployment — guard separately
+        let avgScore = { avg: 0 };
+        try {
+          const [row] = await query(
+            'SELECT AVG(readiness_score) AS avg FROM p2p_schema_mt.invoices WHERE tenant_id = ?',
+            [tenantId]
+          );
+          if (row) avgScore = row;
+        } catch {
+          /* readiness_score column not present — skip */
+        }
+        const total = Number(agg.total) || 0;
+        const greenCount = Number(agg.green) || 0;
+        const amberCount = Number(agg.amber) || 0;
+        const redCount = Number(agg.red) || 0;
+        const pendingCount = Number(agg.pending) || 0;
         const stpRate = total > 0 ? Math.round((greenCount / total) * 100) : 0;
 
         let exceptionsByType = { vendor: 0, ocr: 0, data: 0, po: 0 };
@@ -3840,9 +3851,9 @@ const server = http.createServer(async (req, res) => {
             exceptions_by_type: exceptionsByType,
             lane_counts: {
               green: greenCount,
-              amber: amber.cnt || 0,
-              red: red.cnt || 0,
-              pending: pending.cnt || 0,
+              amber: amberCount,
+              red: redCount,
+              pending: pendingCount,
             },
             last_poll_time: new Date().toISOString(),
           },
