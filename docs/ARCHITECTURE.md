@@ -1,0 +1,417 @@
+# Procinix S2P — Architecture
+
+**Status:** Living document. Last updated 2026-05-10.
+Companion to `CLAUDE.md` (rolling memory). This file is the structural map;
+`CLAUDE.md` is the change log + open-decisions queue.
+
+---
+
+## 1. Stack
+
+| Layer      | Choice                                                                                                    |
+| ---------- | --------------------------------------------------------------------------------------------------------- |
+| Frontend   | React 18 + Vite 6 + TypeScript (strict-pending), TailwindCSS, Radix primitives, Recharts                  |
+| API server | Node ESM, raw `http.createServer` (no Express/Hono on hot path)                                           |
+| Database   | Azure MySQL (mysql2 connection pool)                                                                      |
+| OCR        | Gemini (Google AI) primary, n8n webhook secondary, Anthropic Claude fallback                              |
+| Agents     | Anthropic Claude — orchestrator pipeline of 8 specialized agents (intake → routing)                       |
+| Mail       | IMAP polling (`imapflow`) + SMTP (`nodemailer`)                                                           |
+| Schedulers | `node-cron` for periodic jobs; bespoke retry-queue scheduler for agent failures                           |
+| Auth       | bcrypt-hashed passwords, session-token cookies (sessionStorage), `Bearer` API key in Authorization header |
+| CI         | GitHub Actions: lint → format:check → typecheck → test → build (linux/x64 runner)                         |
+
+**Dev ports:** Vite `:3000`, API `:8787`. Don't trust any doc that says 5173.
+
+---
+
+## 2. Repository layout
+
+```
+procinix-s2p/
+├── server/                       # Node ESM API
+│   ├── index.mjs                 # 4 092-line monolith (B4 in queue)
+│   ├── mysql.mjs                 # query/withTransaction/connExecute helpers
+│   ├── masterStorage.mjs         # registry of 30+ master tables → DB/table mapping
+│   ├── routes/                   # Domain route files — DO NOT add to index.mjs
+│   │   ├── auth.mjs              # /api/auth/login, /me, /logout
+│   │   ├── invoices.mjs          # workbench submit/approve/reject
+│   │   ├── payments.mjs          # queue, dashboard, forecast, banking, settings
+│   │   ├── advances.mjs          # vendor advances lifecycle
+│   │   └── procurement.mjs       # PR / PO / GRN / SRN (this PR)
+│   ├── services/
+│   │   ├── agents/               # 8-step pipeline + orchestrator + retry queue
+│   │   │   ├── orchestrator.mjs  # processInvoiceWithAgents + reprocessAgentPipeline
+│   │   │   ├── intakeAgent.mjs
+│   │   │   ├── extractionAgent.mjs
+│   │   │   ├── vendorIdentityAgent.mjs
+│   │   │   ├── duplicateFraudAgent.mjs
+│   │   │   ├── matchAgent.mjs    # exact + fuzzy PO + recurring + 3-way (procurement)
+│   │   │   ├── taxComplianceAgent.mjs
+│   │   │   ├── codingAgent.mjs
+│   │   │   └── workflowRoutingAgent.mjs
+│   │   ├── auth/                 # loginService (authenticateUser/createSession/...)
+│   │   ├── invoices/             # lifecycleMapping, lifecycleTransitions, ledger
+│   │   ├── invoiceIngestion/     # touchlessEngine, n8nOCR, invoiceCreator
+│   │   ├── payments/             # paymentSettings, paymentBatches, paymentsDashboard,
+│   │   │                         # payoutFileGenerator, utrIngestParser, jvCreator
+│   │   ├── kyc/                  # PAN/GSTIN/BankAccount/MSME verification
+│   │   ├── settings/, po/, startup/, tenant/, approvals/
+│   │   └── ...
+│   └── scripts/                  # one-off migrations (bcrypt rehash, tenant schema)
+├── src/                          # React frontend
+│   ├── App.tsx                   # React Router v7 route tree
+│   ├── contexts/                 # AuthContext, APDataContext, ProcurementDataContext, ...
+│   ├── components/
+│   │   ├── payments/             # PaymentQueue/Banking/Forecast/Settings/VendorAdvances/Layout
+│   │   ├── procurement/          # PR forms (Regular/Catalogue/Service/Kit/Asset/Blanket),
+│   │   │                         # PRListing, PRtoPOConversion(Enhanced), AuditTrailDrawer
+│   │   ├── PurchaseOrders.tsx    # PO listing (legacy APData-backed; relational drawer wired)
+│   │   ├── GoodsReceipt.tsx
+│   │   ├── PaymentsDashboard.tsx, Invoices.tsx, ...
+│   │   └── ui/                   # primitives (premium-register, form-primitives, ...)
+│   ├── lib/
+│   │   ├── mysql/client.ts       # mysqlApiRequest — frontend API client
+│   │   ├── mysql/documentStore.ts # ensureDomainDocument JSON blob store
+│   │   ├── paymentsApi.ts, formatCurrency.ts, msmeDueDate.ts
+│   ├── pages/                    # Approvals.tsx, InvoiceDetail.tsx, ...
+│   ├── types/                    # payments.ts, procurement.ts, vendorGovernance.ts, ...
+│   └── utils/
+├── sql/mysql/
+│   ├── init.sql                  # base schema (item_master + erp_master_*)
+│   └── migrations/               # 22 date-prefixed SQL files (see §6)
+├── docs/                         # this file + multi-tenancy spec + ws1a docs + legacy/
+└── .github/workflows/ci.yml      # CI pipeline
+```
+
+---
+
+## 3. Backend: API server (`server/index.mjs`)
+
+The 4 092-line monolith is the single Node entry point. Inside, request handling
+proceeds in this order:
+
+1. CORS / OPTIONS preflight
+2. **Public-path allowlist** (login, health, password-reset)
+3. Auth gate — `Authorization: Bearer <API_SECRET_KEY>` (B3: refuses to boot in
+   `NODE_ENV=production` without `API_SECRET_KEY`)
+4. Domain route delegation (in order — first to return `true` wins):
+   ```js
+   handleAuthRoute; // server/routes/auth.mjs
+   handleInvoiceRoute; // server/routes/invoices.mjs
+   handlePaymentsRoute; // server/routes/payments.mjs
+   handleAdvancesRoute; // server/routes/advances.mjs
+   handleProcurementRoute; // server/routes/procurement.mjs   ← latest
+   ```
+5. Inline `if/else` branches for everything else (invoices, vendors, masters,
+   approvals, KYC, banking, dashboards, …) — **B4 backlog: continue extracting
+   to `server/routes/<domain>.mjs`**.
+
+### Convention: never add new inline routes to `server/index.mjs`
+
+New endpoints go into a new or existing `server/routes/<domain>.mjs` file
+exposing a single `handleXxxRoute(req, res, pathname, sendJson)` function that
+returns `true` when handled. Pattern is shared by all 5 route files.
+
+### Multi-tenancy
+
+Every AP / procurement endpoint requires `X-Tenant-Id` header (read by
+`readTenant(req, url)` helper, also accepts `?tenantId=` query). Queries are
+scoped by `tenant_id` column. No cross-tenant fallback.
+
+---
+
+## 4. Frontend: contexts and routing
+
+### React Router (v7.13.0)
+
+The route tree lives in `src/App.tsx`. Routes are lazy-imported by component.
+Key clusters:
+
+```
+/auth/login                       → LoginScreen
+/dashboard                        → DashboardsHub
+/invoices                         → Invoices
+/invoices/:id                     → InvoiceDetail (lazy)
+/ap/payments/queue                → PaymentQueue (under PaymentsLayout)
+/ap/payments/forecast             → PaymentForecast
+/ap/payments/banking              → PaymentBanking
+/ap/payments/settings             → PaymentSettings
+/ap/vendor-advances               → VendorAdvances
+/procurement/pr/listing           → PRListing
+/procurement/pr/create            → PRTypeSelection
+/procurement/pr/create/regular    → RegularPRForm
+/procurement/pr/detail/:id        → PRDetailView
+/purchase-orders                  → PurchaseOrders
+/purchase-orders/create-from-prs  → PRtoPOConversionEnhanced
+/goods-receipts                   → GoodsReceipt
+/masters/*                        → master CRUD UIs
+```
+
+### Contexts
+
+| Context                                                | Owns                                                           | Storage                                                               |
+| ------------------------------------------------------ | -------------------------------------------------------------- | --------------------------------------------------------------------- |
+| AuthContext                                            | session-token, current user, tenant, entity                    | `sessionStorage['procinix.session.token' \| 'procinix.session.user']` |
+| APDataContext                                          | invoices, vendors (live + mock), purchase orders (legacy)      | API + mock blends                                                     |
+| MasterDataContext                                      | 30+ master tables (entities, departments, items, etc.)         | API + localStorage cache                                              |
+| ProcurementDataContext                                 | **PR / PO / GRN / SRN** (this PR — relational + blob fallback) | `mysqlApiRequest('/procurement/...')` + `domain_documents` fallback   |
+| BudgetDataContext                                      | budgets, GL accounts, cost centres                             | mock data + localStorage                                              |
+| RBACContext, FinanceRBACContext, PermissionRBACContext | role/permission gates                                          | hardcoded role matrices                                               |
+| PortalUsersContext                                     | vendor-portal user management                                  | API                                                                   |
+
+### Frontend API client invariant
+
+Paths passed to `mysqlApiRequest()` start with `/<route>` **NOT**
+`/api/<route>`. `VITE_API_BASE_URL` already ends with `/api`.
+
+```ts
+// ✅ correct
+await mysqlApiRequest('/procurement/prs', { headers: tenantHeaders() });
+
+// ❌ wrong — double /api prefix
+await mysqlApiRequest('/api/procurement/prs', ...);
+```
+
+---
+
+## 5. Agent pipeline (`server/services/agents/orchestrator.mjs`)
+
+Email → invoice processing flows through 8 sequential agents:
+
+```
+1. intakeAgent           ─ parse email, dedupe by content hash, create document
+2. extractionAgent       ─ Gemini OCR + line-item extraction
+3. vendorIdentityAgent   ─ match against vendor_master / governance
+4. duplicateFraudAgent   ─ duplicate invoice check + fraud signals
+5. matchAgent            ─ exact PO → fuzzy PO → recurring pattern;
+                            now runs procurement 3-way match (this PR)
+6. taxComplianceAgent    ─ GST arithmetic + GST type validation
+7. codingAgent           ─ GL/cost-centre coding suggestions
+8. workflowRoutingAgent  ─ touchless / 1-touch / manual lane decision
+```
+
+**Crash-safe (INV-5):** Steps 3–8 each wrapped in `makeStepRunner` (try/catch
+with safe-fallback). Failures persist to `invoice_exceptions` (type
+`AGENT_FAILURE`), schedule retries via `agent_retry_queue` (30 s / 2 min / 10 min
+backoff, max 3 attempts), then mark `processing_status='agent_failed'` + alert
+email.
+
+**Structured metrics:** every agent run emits
+`JSON.stringify({ event: 'agent_run', invoice_id, agent, duration_ms, status, attempt, ts })`
+to stdout.
+
+**3-way match wiring:** `matchAgent.mjs::DEFAULT_FETCHERS.getThreeWayMatch`
+looks up the procurement `purchase_orders_proc` row by `po_ref` matching the
+legacy PO's `po_number`, then calls `evaluatePOMatch(poId, tenantId)`. Returns
+null gracefully when no procurement counterpart exists.
+
+---
+
+## 6. Database schema
+
+**22 migrations** under `sql/mysql/migrations/`, run in date order. Idempotent.
+There's no schema-migrations runner yet (B5 in queue) — they're applied manually
+via the Azure MySQL workbench.
+
+### Domain table groups
+
+| Domain                    | Key tables                                                                                                                                                                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tenancy                   | `tenants`, `entities`, `tenant_registry`, `user_entity_access`                                                                                                                                                                           |
+| Auth                      | `user_master.user_master`, `sessions`                                                                                                                                                                                                    |
+| Master data               | `erp_master_entities/vendors/departments/.../categories`, `master_records`, `vendor_master.vendor_master`, `roles_master.roles_master`, `entity_master.entity_master`, …                                                                 |
+| Invoices                  | `invoices`, `invoice_line_items`, `invoice_exceptions`, `invoice_audit_log`, `invoice_ingestion_log`, `invoice_risk_flags` (12-rule evaluator)                                                                                           |
+| Agents                    | `ap_invoice_documents`, `ap_invoice_match_results`, `ap_invoice_agent_decisions`, `ap_invoice_explainability_logs`, `agent_retry_queue`, `ocr_field_corrections`, `ocr_learning_patterns`                                                |
+| Payments                  | `payment_batches` (PaymentProposal flow), `bank_payment_batches` + `bank_payment_batch_items` (Banking tab), `bank_accounts`, `payment_settings`                                                                                         |
+| Vendor advances           | `vendor_advances`, `advance_ref_sequence`                                                                                                                                                                                                |
+| **Procurement** (this PR) | `doc_ref_sequences`, `purchase_requests` + `purchase_request_items`, `purchase_orders_proc` + `purchase_order_items`, `po_pr_links`, `goods_receipt_notes` + `grn_items`, `service_receipt_notes` + `srn_items`, `procurement_audit_log` |
+| Legacy                    | `purchase_orders` (old PO table, still referenced by `matchAgent` for invoice → PO matching; the procurement subsystem uses the suffixed `purchase_orders_proc` to avoid collision)                                                      |
+
+### Procurement subsystem — table relationships
+
+```
+doc_ref_sequences  (UNIQUE (tenant_id, entity_code, doc_type, year))
+                  │ feeds collision-safe ref generation (PR-PTPL-2026-0001)
+                  ▼
+purchase_requests  ──┬─ purchase_request_items  (FK pr_id)
+       ▲             │
+       │             │
+       │ (po_pr_links: many-to-many)
+       │             │
+       ▼             ▼
+purchase_orders_proc ──┬─ purchase_order_items  (FK po_id, optional pr_item_id)
+                       │     ├─ qty_received  (rolled up from grn_items)
+                       │     └─ amount_consumed (rolled up from srn_items)
+                       │     └─ match_status (set by evaluatePOMatch)
+                       ▼
+                goods_receipt_notes  ── grn_items  (FK po_item_id)
+                service_receipt_notes ── srn_items (FK po_item_id)
+
+procurement_audit_log  (INDEX (doc_type, doc_id))
+                  ▲
+                  │ every state change writes one row
+```
+
+### Procurement endpoints (route file: `server/routes/procurement.mjs`)
+
+```
+PRs:   GET  /api/procurement/prs                  ?status= &search=
+       GET  /api/procurement/prs/summary
+       POST /api/procurement/prs                  create
+       GET  /api/procurement/prs/:id
+       PUT  /api/procurement/prs/:id              draft only
+       POST /api/procurement/prs/:id/submit       draft → pending_approval
+       POST /api/procurement/prs/:id/approve      approver gate (isPaymentApprover)
+       POST /api/procurement/prs/:id/reject
+       POST /api/procurement/prs/:id/cancel
+       GET  /api/procurement/prs/:id/audit
+
+POs:   GET  /api/procurement/pos
+       POST /api/procurement/pos                  create from prIds[]
+       GET  /api/procurement/pos/:id
+       PUT  /api/procurement/pos/:id              draft only
+       POST /api/procurement/pos/:id/issue
+       POST /api/procurement/pos/:id/close
+       POST /api/procurement/pos/:id/cancel
+       GET  /api/procurement/pos/:id/audit
+       GET  /api/procurement/pos/:id/match-status  3-way line-level
+
+GRNs:  GET  /api/procurement/grns
+       POST /api/procurement/grns                 over-receipt guarded
+       GET  /api/procurement/grns/:id
+       POST /api/procurement/grns/:id/confirm     rolls up qty_received
+       GET  /api/procurement/grns/:id/audit
+
+SRNs:  GET  /api/procurement/srns
+       POST /api/procurement/srns                 over-consumption guarded
+       GET  /api/procurement/srns/:id
+       POST /api/procurement/srns/:id/confirm
+       GET  /api/procurement/srns/:id/audit
+```
+
+### Procurement domain rules
+
+- **Doc ref:** `${docType}-${entityCode}-${YEAR}-NNNN` (e.g. `PR-PTPL-2026-0001`).
+  Generated atomically inside a `withTransaction` block via `INSERT … ON
+DUPLICATE KEY UPDATE` then `SELECT … FOR UPDATE` then `UPDATE`. Two concurrent
+  writers can't grab the same number.
+- **GST auto-calc:** `vendorState` = first 2 digits of `vendor_gstin`,
+  `entityState` = first 2 digits of `bill_to_gstin`. Same → `CGST_SGST`,
+  different → `IGST`, `gstRate=0` → `exempt`. Per line.
+- **PO creation guards:** all input PRs same tenant + status='approved' + same
+  vendor_id (across all line items). Mixed-vendor → 400 `mixed_vendors`.
+- **GRN over-receipt guard:** `SUM(qty_received for po_item) + new ≤
+po_item.quantity`. Else 400 `over_receipt`.
+- **SRN over-consumption guard:** `SUM(amount_consumed for po_item) + new ≤
+po_item.line_amount`. Else 400 `over_consumption`.
+- **Confirm rollup:** confirming a GRN/SRN updates
+  `purchase_order_items.qty_received` / `amount_consumed`, then promotes the
+  parent PO to `partially_received` (any line received) or `fully_received` (all
+  lines satisfied).
+- **3-way match** (`evaluatePOMatch(poId, tenantId)` — exported for agent use):
+  - material lines: matched if `SUM(grn_items.qty_accepted) ≥ poLine.quantity`
+  - service lines: matched if `SUM(srn_items.amount_consumed) ≥ poLine.line_amount`
+  - header matched only if every line matched
+  - updates per-line `match_status` (pending / matched / partial / exception)
+  - returns `null` when poId is null/empty (skip 3-way for non-PO invoices)
+- **Audit log:** every state change (created / updated / submitted / approved /
+  rejected / cancelled / issued / closed / confirmed) writes one row to
+  `procurement_audit_log`.
+
+---
+
+## 7. Auth flow
+
+```
+1. POST /api/auth/login (public path)
+     body: { email, password }
+     → bcrypt.compare against user_master.password_hash
+     → INSERT into sessions
+     → returns { token, user, tenant, defaultEntity, accessibleEntities }
+2. Client stores token in sessionStorage['procinix.session.token']
+3. Subsequent calls include `Authorization: Bearer <token>` (also accepts
+   API_SECRET_KEY for service-to-service)
+4. GET /api/auth/me — rehydrate on page reload
+5. POST /api/auth/logout — revoke session
+```
+
+`API_SECRET_KEY` empty in dev = auth disabled (B3 footgun, but
+prod-startup refuses).
+
+---
+
+## 8. Tooling
+
+| Concern     | What                                                                                                   |
+| ----------- | ------------------------------------------------------------------------------------------------------ |
+| Lint        | ESLint 9 flat config (`eslint.config.mjs`); F4 deferrals — see CLAUDE.md                               |
+| Format      | Prettier 3 + `.prettierignore` (excludes `.claude/`, `docs/legacy/`, `sql/`)                           |
+| Pre-commit  | Husky + lint-staged on `*.{ts,tsx,mjs,js,json,md,yml,css}`                                             |
+| Test runner | Vitest 4 (`npm test` = `vitest run`, no watch)                                                         |
+| TypeScript  | Strict-pending — F4 unblocks `strict` + `noImplicitAny` after the last 7 pre-existing errors are fixed |
+| CI          | GitHub Actions: install (`npm ci --legacy-peer-deps --ignore-scripts`) → lint → format:check →         |
+|             | typecheck (continue-on-error until F4) → test → build                                                  |
+| Build       | Vite production bundle to `build/` — chunked by lazy import boundary                                   |
+
+---
+
+## 9. Test inventory (21 files, **431 tests**)
+
+| File / Folder                                                         | Tests  | What it covers                                      |
+| --------------------------------------------------------------------- | ------ | --------------------------------------------------- |
+| `src/utils/__tests__/`                                                | 4      | GST, TDS, journal entries, BOE                      |
+| `server/services/invoices/__tests__/`                                 | 7      | Lifecycle, GST, TDS, vendor ledger                  |
+| `server/services/agents/__tests__/matchAgent.test.mjs`                | 28     | Match agent — fetchers, persistence, 3-way wiring   |
+| `server/services/agents/__tests__/orchestratorRetry.test.mjs`         | 12     | Retry queue + alert path                            |
+| `server/services/auth/__tests__/loginService.test.mjs`                | 21     | authenticateUser / createSession / lookupSession    |
+| `server/__tests__/loginRoute.test.mjs`                                | 24     | POST /api/auth/login + /me + /logout                |
+| `server/services/invoiceIngestion/__tests__/touchlessEngine.test.mjs` | 11     | 10-rule touchless routing                           |
+| `server/routes/__tests__/payments.test.mjs`                           | ~40+   | Risk flags, forecast, banking, settings, queue      |
+| `server/routes/__tests__/advances.test.mjs`                           | 11     | Vendor advances lifecycle + risk flags              |
+| **`server/routes/__tests__/procurement.test.mjs`** (this PR)          | **16** | PR/PO/GRN/SRN flows + GST + 3-way match + audit log |
+| ... and ~10 other suites                                              | rest   | KYC, settings, paymentBatches, etc.                 |
+
+No integration tests, no E2E, no component tests yet. **W1 in queue.**
+
+---
+
+## 10. Known issues — see CLAUDE.md "Known issues" queue
+
+The deferral queue is the source of truth. Highlights:
+
+- **B4** — split `server/index.mjs` by domain (in-progress; 5 routes extracted so far)
+- **B5** — real DB migration runner with `schema_migrations` table
+- **F3** — migrate remaining bare `fetch()` calls in `EntityMaster.tsx`,
+  `InvoiceFormPO.tsx`, `pages/Approvals.tsx`
+- **F4** — fix 7 TS errors then enable `strict` + `noImplicitAny`
+- **W1** — integration tests for payment batches, approvals, invoice ingestion
+- **Asset register wiring** for CAPEX PRs (deferred to next sprint)
+
+---
+
+## 11. Deployment
+
+- **Railway:** `railway.json` — `npm install && npm run build` →
+  `NODE_ENV=production node server/index.mjs`
+- **Heroku-compatible:** `Procfile` — same command
+- **Health check:** `GET /health` → `{ ok: true, uptime: N }`
+- Required env: `MYSQL_*`, `API_SECRET_KEY`, `VITE_API_BASE_URL`,
+  `GOOGLE_AI_API_KEY`, `ANTHROPIC_API_KEY`, `AP_EMAIL_*`, `SUPER_ADMIN_EMAILS`,
+  `ALERTS_EMAIL`. Server refuses to boot in production without
+  `API_SECRET_KEY` or AI keys (INV-6).
+
+---
+
+## 12. Conventions cheat-sheet
+
+1. Read `CLAUDE.md` and this file first.
+2. Append a one-line change-log entry to `CLAUDE.md` after every change.
+3. **Never** add inline routes to `server/index.mjs` — extract to
+   `server/routes/<domain>.mjs`.
+4. **Never** use raw `fetch()` in frontend — always `mysqlApiRequest`.
+5. Type errors not allowed in any touched file (fix even pre-existing).
+6. Every new server feature gets at least one vitest test.
+7. AP / procurement endpoints: require `X-Tenant-Id`, scope queries by
+   `tenant_id`.
+8. Run `npm run lint` and `npm run format:check` before pushing — Husky
+   handles staged files automatically.
