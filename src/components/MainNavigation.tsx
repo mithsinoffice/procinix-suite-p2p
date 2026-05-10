@@ -55,7 +55,7 @@ const navigationItems: NavItem[] = [
   { label: 'Intake (PR)', route: '/procurement/pr', icon: FileText },
   { label: 'Purchase Orders', route: '/procurement/po', icon: ShoppingCart },
   { label: 'GRN / SRN', route: '/procurement/grn', icon: Package },
-  { label: 'Vendor Advances', route: '/ap/advances', icon: DollarSign },
+  { label: 'Vendor Advances', route: '/ap/vendor-advances', icon: DollarSign },
   { label: 'Invoices', route: '/ap/invoices', icon: FileDown },
   { label: 'Debit Notes', route: '/ap/debit-notes', icon: FileMinus },
   { label: 'Payments', route: '/ap/payments', icon: Wallet },

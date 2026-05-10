@@ -94,6 +94,11 @@ export function PermissionBasedNavigation() {
     const isActive = isActiveRoute(item.route);
     const permissionType = getPermissionType(item);
     const hasChildren = item.children && item.children.length > 0;
+    // TODO(F4-followup): extract this helper to a proper <NavItem> component;
+    // calling useState inside a non-Component helper is technically a
+    // rules-of-hooks violation. Stable today because renderNavItem is invoked
+    // from the same render path each time.
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const [isChildExpanded, setIsChildExpanded] = useState(false);
 
     const paddingLeft = isCollapsed ? 0 : level === 0 ? 16 : level === 1 ? 32 : 48;

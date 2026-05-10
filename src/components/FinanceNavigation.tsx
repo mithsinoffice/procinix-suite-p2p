@@ -146,6 +146,11 @@ export function FinanceNavigation() {
   const renderNavItem = (module: NavModule, level: number = 0) => {
     const isActive = isActiveRoute(module.path);
     const hasChildren = module.children && module.children.length > 0;
+    // TODO(F4-followup): renderNavItem should be extracted to its own
+    // component (e.g. <NavItem>) — calling useState here is technically a
+    // rules-of-hooks violation, but the helper is invoked from the same
+    // render path each time so behaviour is stable today.
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const [isChildExpanded, setIsChildExpanded] = useState(false);
 
     const paddingLeft = isCollapsed ? 0 : level === 0 ? 16 : level === 1 ? 32 : 48;

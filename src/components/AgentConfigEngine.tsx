@@ -646,7 +646,8 @@ export function AgentConfigEngine() {
           onClick={() => {
             setExpandedJson((prev) => {
               const s = new Set(prev);
-              expanded ? s.delete(cfg.id) : s.add(cfg.id);
+              if (expanded) s.delete(cfg.id);
+              else s.add(cfg.id);
               return s;
             });
           }}

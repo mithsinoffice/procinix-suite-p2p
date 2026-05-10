@@ -32,7 +32,9 @@ import {
 // Approver role gating
 // ============================================================================
 
-const APPROVER_ROLES = new Set(['payment_approver', 'cfo', 'admin']);
+// Default approver roles — used as a fallback when payment_settings.payment_approver_roles
+// is empty or settings can't be loaded (e.g. unit tests).
+const DEFAULT_APPROVER_ROLES = new Set(['payment_approver', 'cfo', 'admin']);
 const ADMIN_ROLES = new Set(['admin']);
 
 function normaliseRole(role) {
@@ -51,12 +53,46 @@ function readActorEmail(req) {
   return String(req.user?.email || req.headers['x-user-email'] || '').trim();
 }
 
+/**
+ * Synchronous approver check using the static default list. Kept for
+ * backward-compatibility with tests + paths that don't have a tenantId
+ * available. Prefer `isPaymentApprover(req, tenantId)` for live config.
+ */
 function isApprover(req) {
-  return APPROVER_ROLES.has(readActorRole(req));
+  return DEFAULT_APPROVER_ROLES.has(readActorRole(req));
+}
+
+/**
+ * Live approver check — reads `payment_settings.payment_approver_roles`
+ * for the tenant. Falls back to the default list if settings aren't
+ * available or contain an empty list. Async because it may hit the DB.
+ */
+async function isPaymentApprover(req, tenantId) {
+  const role = readActorRole(req);
+  if (!role) return false;
+  if (!tenantId) return DEFAULT_APPROVER_ROLES.has(role);
+  try {
+    const settings = await getSettings(tenantId);
+    const roles = String(settings?.paymentApproverRoles || '')
+      .split(',')
+      .map((r) => normaliseRole(r))
+      .filter(Boolean);
+    if (roles.length === 0) return DEFAULT_APPROVER_ROLES.has(role);
+    return roles.includes(role);
+  } catch {
+    return DEFAULT_APPROVER_ROLES.has(role);
+  }
 }
 
 function isAdmin(req) {
-  return ADMIN_ROLES.has(readActorRole(req));
+  if (ADMIN_ROLES.has(readActorRole(req))) return true;
+  // SUPER_ADMIN_EMAILS env-var override — comma-separated list.
+  const envList = String(process.env.SUPER_ADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim())
+    .filter(Boolean);
+  const email = readActorEmail(req);
+  return Boolean(email) && envList.includes(email);
 }
 
 // ============================================================================
@@ -783,6 +819,56 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
   // Settings — tenant-level payment configuration
   // ──────────────────────────────────────────────────────────────────────
 
+  // GET /api/ap/payment-settings/available-roles
+  // Lists roles from the Access Master (roles_master.roles_master). Falls
+  // back to the default static list when the table is empty or unavailable.
+  // NOTE: declared BEFORE the generic /api/ap/payment-settings GET so the
+  // more-specific path matches first.
+  if (req.method === 'GET' && pathname === '/api/ap/payment-settings/available-roles') {
+    const tenantId = readTenant(req, url);
+    if (!tenantId) {
+      sendJson(res, 400, { success: false, error: 'tenant_required' });
+      return true;
+    }
+    const FALLBACK_ROLES = [
+      { key: 'admin', label: 'Admin' },
+      { key: 'cfo', label: 'CFO' },
+      { key: 'payment_approver', label: 'Payment Approver' },
+      { key: 'finance_manager', label: 'Finance Manager' },
+      { key: 'finance_executive', label: 'Finance Executive' },
+    ];
+    try {
+      const rows = await query(
+        `SELECT id, record_code, record_name, payload
+           FROM roles_master.roles_master
+           WHERE COALESCE(status, 'active') = 'active'
+           ORDER BY record_name ASC`
+      );
+      if (!rows || rows.length === 0) {
+        sendJson(res, 200, { success: true, data: FALLBACK_ROLES });
+        return true;
+      }
+      const data = rows.map((r) => {
+        let description;
+        try {
+          const payload = typeof r.payload === 'string' ? JSON.parse(r.payload) : r.payload;
+          description = payload?.description || undefined;
+        } catch {
+          description = undefined;
+        }
+        return {
+          key: normaliseRole(r.record_code || r.record_name || ''),
+          label: r.record_name || r.record_code || '',
+          ...(description ? { description } : {}),
+        };
+      });
+      sendJson(res, 200, { success: true, data });
+    } catch {
+      sendJson(res, 200, { success: true, data: FALLBACK_ROLES });
+    }
+    return true;
+  }
+
   // GET /api/ap/payment-settings
   if (req.method === 'GET' && pathname === '/api/ap/payment-settings') {
     const tenantId = readTenant(req, url);
@@ -1140,16 +1226,16 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
     return true;
   }
 
-  // POST /api/ap/banking/batches/:id/approve  (approver only)
+  // POST /api/ap/banking/batches/:id/approve  (approver only — live config)
   const batchApproveMatch = pathname.match(/^\/api\/ap\/banking\/batches\/([^/]+)\/approve$/);
   if (req.method === 'POST' && batchApproveMatch) {
-    if (!isApprover(req)) {
-      sendJson(res, 403, { success: false, error: 'approver_role_required' });
-      return true;
-    }
     const tenantId = readTenant(req, url);
     if (!tenantId) {
       sendJson(res, 400, { success: false, error: 'tenant_required' });
+      return true;
+    }
+    if (!(await isPaymentApprover(req, tenantId))) {
+      sendJson(res, 403, { success: false, error: 'approver_role_required' });
       return true;
     }
     const batchId = batchApproveMatch[1];
@@ -1173,16 +1259,16 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
     return true;
   }
 
-  // POST /api/ap/banking/batches/:id/reject
+  // POST /api/ap/banking/batches/:id/reject  (approver only — live config)
   const batchRejectMatch = pathname.match(/^\/api\/ap\/banking\/batches\/([^/]+)\/reject$/);
   if (req.method === 'POST' && batchRejectMatch) {
-    if (!isApprover(req)) {
-      sendJson(res, 403, { success: false, error: 'approver_role_required' });
-      return true;
-    }
     const tenantId = readTenant(req, url);
     if (!tenantId) {
       sendJson(res, 400, { success: false, error: 'tenant_required' });
+      return true;
+    }
+    if (!(await isPaymentApprover(req, tenantId))) {
+      sendJson(res, 403, { success: false, error: 'approver_role_required' });
       return true;
     }
     const batchId = batchRejectMatch[1];
@@ -1755,16 +1841,16 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
     return true;
   }
 
-  // POST /api/ap/payment-queue/:id/clear-flags  (approver-only)
+  // POST /api/ap/payment-queue/:id/clear-flags  (approver-only — live config)
   const clearMatch = pathname.match(/^\/api\/ap\/payment-queue\/([^/]+)\/clear-flags$/);
   if (req.method === 'POST' && clearMatch) {
-    if (!isApprover(req)) {
-      sendJson(res, 403, { success: false, error: 'approver_role_required' });
-      return true;
-    }
     const tenantId = readTenant(req, url);
     if (!tenantId) {
       sendJson(res, 400, { success: false, error: 'tenant_required' });
+      return true;
+    }
+    if (!(await isPaymentApprover(req, tenantId))) {
+      sendJson(res, 403, { success: false, error: 'approver_role_required' });
       return true;
     }
     const invoiceId = clearMatch[1];
@@ -2400,6 +2486,7 @@ export {
   FLAG_DEFS,
   FLAG_CONFIG,
   isApprover,
+  isPaymentApprover,
   isAdmin,
   normaliseRole,
   buildForecast,

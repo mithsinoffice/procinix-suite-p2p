@@ -990,7 +990,14 @@ export function PaymentQueue() {
     if (APPROVER_ROLES.has(r)) return 'payment_approver';
     return 'finance_executive';
   });
-  const isApprover = APPROVER_ROLES.has(demoRole);
+  // Live approver-roles list from /ap/payment-settings (settings.payment_approver_roles).
+  // Falls back to the static APPROVER_ROLES set on first paint / fetch failure.
+  const [liveApproverRoles, setLiveApproverRoles] = useState<Set<string>>(APPROVER_ROLES);
+  const isDev = import.meta.env.DEV;
+  // In DEV the toggle drives isApprover so approvers can preview both views.
+  // In PROD we always defer to the authenticated user's role.
+  const effectiveRole = isDev ? demoRole : normaliseRole(user?.role);
+  const isApprover = liveApproverRoles.has(effectiveRole);
 
   const [items, setItems] = useState<PaymentQueueItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1009,7 +1016,8 @@ export function PaymentQueue() {
 
   const refresh = useCallback(() => setReloadKey((k) => k + 1), []);
 
-  // Fetch tenant settings once for RTGS threshold + default mode in PayModal
+  // Fetch tenant settings once for RTGS threshold, default mode, and the
+  // live payment_approver_roles list used by isApprover.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -1017,12 +1025,23 @@ export function PaymentQueue() {
       try {
         const res = await mysqlApiRequest<{
           success: boolean;
-          data: { rtgsThreshold?: number; defaultPaymentMode?: PayPaymentMode };
+          data: {
+            rtgsThreshold?: number;
+            defaultPaymentMode?: PayPaymentMode;
+            paymentApproverRoles?: string;
+          };
         }>('/ap/payment-settings');
         if (cancelled) return;
         if (res.success) {
           if (typeof res.data.rtgsThreshold === 'number') setRtgsThreshold(res.data.rtgsThreshold);
           if (res.data.defaultPaymentMode) setDefaultMode(res.data.defaultPaymentMode);
+          if (res.data.paymentApproverRoles) {
+            const roles = res.data.paymentApproverRoles
+              .split(',')
+              .map((r) => r.trim().toLowerCase().replace(/\s+/g, '_'))
+              .filter(Boolean);
+            if (roles.length > 0) setLiveApproverRoles(new Set(roles));
+          }
         }
       } catch {
         /* keep defaults */
@@ -1217,7 +1236,9 @@ export function PaymentQueue() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <RoleToggle value={demoRole} onChange={setDemoRole} />
+          {/* Demo-only role toggle. In production isApprover is derived from
+              the authenticated user's role; the toggle is a dev convenience. */}
+          {isDev && <RoleToggle value={demoRole} onChange={setDemoRole} />}
           <button
             type="button"
             onClick={refresh}

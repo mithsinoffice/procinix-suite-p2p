@@ -102,6 +102,7 @@ import {
 import { handleAuthRoute } from './routes/auth.mjs';
 import { handleInvoiceRoute } from './routes/invoices.mjs';
 import { handlePaymentsRoute } from './routes/payments.mjs';
+import { handleAdvancesRoute } from './routes/advances.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import {
   verifyPAN,
@@ -1043,6 +1044,7 @@ const server = http.createServer(async (req, res) => {
     if (await handleAuthRoute(req, res, pathname, sendJson)) return;
     if (await handleInvoiceRoute(req, res, pathname, sendJson)) return;
     if (await handlePaymentsRoute(req, res, pathname, sendJson)) return;
+    if (await handleAdvancesRoute(req, res, pathname, sendJson)) return;
 
     if (req.method === 'POST' && pathname === '/api/auth/platform-context') {
       const body = await readJsonBody(req);

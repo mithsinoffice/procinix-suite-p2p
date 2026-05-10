@@ -404,7 +404,6 @@ export function NonPOInvoiceForm() {
             amount: number;
             gst_rate: number | null;
           }>;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           _raw?: Record<string, any>;
         };
       };
@@ -435,7 +434,6 @@ export function NonPOInvoiceForm() {
       // Build per-field OCR confidence map from N8N raw payload (_raw carries
       // { value, confidence, suggestions } per field; fall back to synthetic data
       // for Anthropic-extracted fields which have no per-field scores).
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const raw: Record<string, any> = ext._raw ?? {};
       const newOcrFields: Record<string, OCRFieldData> = {};
       const tryAddField = (
