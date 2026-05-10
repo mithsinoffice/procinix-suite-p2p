@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   FileText,
   Plus,
@@ -65,9 +65,31 @@ export function RegularPRForm() {
   const [selectedEntity, setSelectedEntity] = useState(
     currentCompany?.name || entities[0]?.name || 'India HQ'
   );
+  // Department default is set in two passes because both `user.department`
+  // (from AuthContext / /auth/me) and `departments` (from MasterDataContext)
+  // hydrate asynchronously after first render. Initial useState may see one
+  // or both as empty, so the effect below re-runs once they arrive and
+  // matches user.department against the live department list using exact
+  // string compare. Manual edits aren't overwritten — we only set the
+  // default when selectedDepartment is still empty.
   const [selectedDepartment, setSelectedDepartment] = useState(
     user?.department || departments[0]?.name || ''
   );
+  // User has interacted with the dropdown — block the auto-default effect.
+  const [departmentTouched, setDepartmentTouched] = useState(false);
+
+  useEffect(() => {
+    if (departmentTouched) return;
+    if (selectedDepartment) return;
+    if (!departments || departments.length === 0) return;
+    if (user?.department && departments.some((d) => d.name === user.department)) {
+      setSelectedDepartment(user.department);
+      return;
+    }
+    if (departments[0]?.name) {
+      setSelectedDepartment(departments[0].name);
+    }
+  }, [user, departments, selectedDepartment, departmentTouched]);
   const [deliveryLocation, setDeliveryLocation] = useState(locations[0]?.name || '');
   const [needByDate, setNeedByDate] = useState(new Date().toISOString().split('T')[0]);
   const [businessJustification, setBusinessJustification] = useState('');
@@ -330,7 +352,10 @@ export function RegularPRForm() {
             <PxFormField label="Department" required>
               <select
                 value={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
+                onChange={(e) => {
+                  setDepartmentTouched(true);
+                  setSelectedDepartment(e.target.value);
+                }}
                 className="px-select"
               >
                 {departments
