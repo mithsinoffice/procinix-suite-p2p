@@ -125,13 +125,19 @@ export function AssetCapexPRForm() {
   const submitPurchaseRequest = (status: PurchaseRequestStatus) => {
     const timestamp = Date.now();
     const createdDate = new Date().toISOString().split('T')[0];
+    const entityRecord =
+      entities.find((e) => e.id === currentCompany?.id || e.name === selectedEntity) || entities[0];
 
     addPurchaseRequest({
       id: `asset-${timestamp}`,
       prNumber: `PR-${timestamp}`,
       type: 'Asset/CAPEX',
       entity: selectedEntity,
+      entityId: entityRecord?.id || currentCompany?.id || '',
+      entityCode: entityRecord?.code || currentCompany?.code || '',
+      entityGstin: entityRecord?.gstin || '',
       requestor: user?.name || 'Current User',
+      requesterId: user?.id || '',
       department: user?.department || 'Operations',
       costCentre: costCentres.find((costCentre) => costCentre.isActive)?.code || '',
       needByDate: createdDate,

@@ -83,13 +83,19 @@ export function BlanketPRForm() {
   const submitPurchaseRequest = (status: PurchaseRequestStatus) => {
     const timestamp = Date.now();
     const createdDate = new Date().toISOString().split('T')[0];
+    const entityRecord =
+      entities.find((e) => e.id === currentCompany?.id || e.name === selectedEntity) || entities[0];
 
     addPurchaseRequest({
       id: `blanket-${timestamp}`,
       prNumber: `PR-${timestamp}`,
       type: 'Blanket',
       entity: selectedEntity,
+      entityId: entityRecord?.id || currentCompany?.id || '',
+      entityCode: entityRecord?.code || currentCompany?.code || '',
+      entityGstin: entityRecord?.gstin || '',
       requestor: user?.name || 'Current User',
+      requesterId: user?.id || '',
       department: user?.department || 'Operations',
       costCentre: item.itemCode || '',
       needByDate: validTo || createdDate,

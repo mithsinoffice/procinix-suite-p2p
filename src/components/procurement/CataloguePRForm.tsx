@@ -102,13 +102,19 @@ export function CataloguePRForm() {
     const timestamp = Date.now();
     const createdDate = new Date().toISOString().split('T')[0];
     const vendors = Array.from(new Set(cart.map((item) => item.vendor)));
+    const entityRecord =
+      entities.find((e) => e.id === currentCompany?.id || e.name === selectedEntity) || entities[0];
 
     addPurchaseRequest({
       id: `catalogue-${timestamp}`,
       prNumber: `PR-${timestamp}`,
       type: 'Catalogue',
       entity: selectedEntity,
+      entityId: entityRecord?.id || currentCompany?.id || '',
+      entityCode: entityRecord?.code || currentCompany?.code || '',
+      entityGstin: entityRecord?.gstin || '',
       requestor: user?.name || 'Current User',
+      requesterId: user?.id || '',
       department: selectedDepartment,
       costCentre: selectedCostCentre,
       needByDate,

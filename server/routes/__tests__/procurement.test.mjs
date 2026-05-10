@@ -71,6 +71,7 @@ describe('POST /api/procurement/prs (create)', () => {
     vi.mocked(query)
       .mockResolvedValueOnce({ affectedRows: 1 }) // INSERT ON DUPLICATE seq
       .mockResolvedValueOnce([{ last_seq: 0 }]) // SELECT FOR UPDATE
+      .mockResolvedValueOnce([]) // SELECT MAX(pr_ref) for seed reconcile
       .mockResolvedValueOnce({ affectedRows: 1 }) // UPDATE seq
       .mockResolvedValueOnce({ affectedRows: 1 }) // INSERT purchase_requests
       .mockResolvedValueOnce({ affectedRows: 1 }) // INSERT line item
@@ -288,6 +289,7 @@ describe('POST /api/procurement/pos (link rows)', () => {
       ]) // SELECT line items
       .mockResolvedValueOnce({ affectedRows: 1 }) // INSERT seq
       .mockResolvedValueOnce([{ last_seq: 0 }])
+      .mockResolvedValueOnce([]) // SELECT MAX(po_ref) for seed reconcile
       .mockResolvedValueOnce({ affectedRows: 1 }) // UPDATE seq
       .mockResolvedValueOnce({ affectedRows: 1 }) // INSERT po header
       .mockResolvedValueOnce({ affectedRows: 1 }) // INSERT po line
@@ -560,6 +562,7 @@ describe('nextDocRef', () => {
     vi.mocked(query)
       .mockResolvedValueOnce({ affectedRows: 1 })
       .mockResolvedValueOnce([{ last_seq: 0 }])
+      .mockResolvedValueOnce([]) // SELECT MAX(pr_ref) for seed reconcile
       .mockResolvedValueOnce({ affectedRows: 1 });
     const ref = await nextDocRef(TENANT, 'PTPL', 'PR');
     expect(ref).toMatch(/^PR-PTPL-\d{4}-\d{4}$/);

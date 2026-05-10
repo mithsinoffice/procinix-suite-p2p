@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -18,6 +18,8 @@ import {
   Download,
   Eye,
 } from 'lucide-react';
+import { fetchPR } from '../../contexts/ProcurementDataContext';
+import type { PurchaseRequest as RelationalPR } from '../../types/procurement';
 
 type AIInsightSeverity = 'Blocker' | 'Warning' | 'Info';
 
@@ -47,109 +49,113 @@ interface PRLineItem {
 }
 
 export function PRDetailView() {
-  const { prId } = useParams();
+  // Route is /procurement/pr/detail/:id (App.tsx:1047) — read `id`, not the
+  // legacy `prId` param name. The id may be either the relational UUID or the
+  // pr_ref (PR-PTPL-2026-NNNN); the server's GET handler accepts both via the
+  // generic adapter.
+  const { id: routeId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [selectedApprovalAction, setSelectedApprovalAction] = useState<string | null>(null);
   const [approvalComments, setApprovalComments] = useState('');
+  const [loadedPR, setLoadedPR] = useState<RelationalPR | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Mock PR Data
-  const prData = {
-    id: prId || 'PR-2024-002',
-    prType: 'Regular',
-    entity: 'India HQ',
-    requestor: 'Priya Sharma',
-    requestorEmail: 'priya.sharma@company.com',
-    department: 'Operations',
-    costCentre: 'CC-OPS-002',
-    project: 'Q1 Production Scale-up',
-    needByDate: '2024-12-25',
-    totalAmount: 1250000,
-    status: 'In Review',
-    nextApprover: 'Finance Head',
-    aiRiskLevel: 'Medium',
-    createdDate: '2024-12-12',
-    submittedDate: '2024-12-12',
-    justification:
-      'Raw material procurement required for Q1 2025 production schedule. Critical items for scaling up production capacity by 30%.',
-    attachments: ['Quote_RawMaterials_Q1.pdf', 'Vendor_Comparison.xlsx'],
-    approvalHistory: [
-      {
-        approver: 'Dept Manager',
-        action: 'Approved',
-        date: '2024-12-12',
-        comments: 'Approved as per production plan',
-      },
-      {
-        approver: 'Procurement Head',
-        action: 'Approved',
-        date: '2024-12-13',
-        comments: 'Vendor selection justified',
-      },
-    ],
-  };
+  useEffect(() => {
+    if (!routeId) return;
+    let alive = true;
+    setLoadError(null);
+    fetchPR(routeId)
+      .then((pr) => {
+        if (!alive) return;
+        if (pr) setLoadedPR(pr);
+        else setLoadError('PR not found');
+      })
+      .catch((err) => {
+        if (!alive) return;
+        setLoadError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [routeId]);
 
-  const lineItems: PRLineItem[] = [
-    {
-      id: '1',
-      itemCode: 'RM-001',
-      itemName: 'Steel Sheet Grade A',
-      description: '2mm thickness, 1200x2400mm',
-      quantity: 500,
-      uom: 'Sheets',
-      unitPrice: 1800,
-      totalPrice: 900000,
-      needByDate: '2024-12-25',
-      vendor: 'Acme Supplies',
-    },
-    {
-      id: '2',
-      itemCode: 'RM-002',
-      itemName: 'Aluminum Rod 10mm',
-      description: 'Industrial grade, 6m length',
-      quantity: 200,
-      uom: 'Rods',
-      unitPrice: 450,
-      totalPrice: 90000,
-      needByDate: '2024-12-25',
-      vendor: 'Acme Supplies',
-    },
-    {
-      id: '3',
-      itemCode: 'RM-003',
-      itemName: 'Copper Wire 4mm',
-      description: 'Pure copper, 100m coil',
-      quantity: 80,
-      uom: 'Coils',
-      unitPrice: 1250,
-      totalPrice: 100000,
-      needByDate: '2024-12-25',
-      vendor: 'Acme Supplies',
-    },
-    {
-      id: '4',
-      itemCode: 'RM-004',
-      itemName: 'Rubber Gasket Set',
-      description: 'Industrial sealing gaskets',
-      quantity: 1000,
-      uom: 'Sets',
-      unitPrice: 85,
-      totalPrice: 85000,
-      needByDate: '2024-12-25',
-      vendor: 'Acme Supplies',
-    },
-    {
-      id: '5',
-      itemCode: 'RM-005',
-      itemName: 'Lubricant Oil Industrial',
-      description: '20L container, high grade',
-      quantity: 50,
-      uom: 'Containers',
-      unitPrice: 1500,
-      totalPrice: 75000,
-      needByDate: '2024-12-25',
-      vendor: 'Acme Supplies',
-    },
-  ];
+  const fmtAmount = (n: number | null | undefined) => Number(n ?? 0);
+
+  // Real PR data (from /api/procurement/prs/:id) when available; falls back
+  // to a minimal placeholder while loading or if the API returned nothing.
+  const prData = loadedPR
+    ? {
+        id: loadedPR.prRef || loadedPR.id,
+        prType: loadedPR.prType,
+        entity: loadedPR.entityCode,
+        requestor: loadedPR.requesterName,
+        requestorEmail: '',
+        department: loadedPR.department,
+        costCentre: loadedPR.costCentre,
+        project: '',
+        needByDate: loadedPR.needByDate || '',
+        totalAmount: fmtAmount(loadedPR.totalAmount),
+        status: loadedPR.status,
+        nextApprover: '',
+        aiRiskLevel: 'Low' as const,
+        createdDate: loadedPR.createdAt?.split('T')[0] ?? '',
+        submittedDate: loadedPR.createdAt?.split('T')[0] ?? '',
+        justification: loadedPR.businessJustification || '',
+        attachments: [] as string[],
+        approvalHistory: loadedPR.approvedBy
+          ? [
+              {
+                approver: loadedPR.approvedBy,
+                action: 'Approved',
+                date: loadedPR.approvedAt?.split('T')[0] ?? '',
+                comments: '',
+              },
+            ]
+          : [],
+      }
+    : {
+        id: routeId || '',
+        prType: '',
+        entity: '',
+        requestor: '',
+        requestorEmail: '',
+        department: '',
+        costCentre: '',
+        project: '',
+        needByDate: '',
+        totalAmount: 0,
+        status: loadError ? 'Error' : 'Loading…',
+        nextApprover: '',
+        aiRiskLevel: 'Low' as const,
+        createdDate: '',
+        submittedDate: '',
+        justification: loadError ?? '',
+        attachments: [] as string[],
+        approvalHistory: [] as Array<{
+          approver: string;
+          action: string;
+          date: string;
+          comments: string;
+        }>,
+      };
+
+  const lineItems: PRLineItem[] = loadedPR
+    ? loadedPR.lineItems.map((li) => ({
+        id: li.id,
+        itemCode: li.itemCode || '',
+        itemName: li.itemDescription || li.itemCode || '',
+        description: li.itemDescription || '',
+        quantity: Number(li.quantity || 0),
+        uom: li.unit || '',
+        unitPrice: Number(li.unitPrice || 0),
+        totalPrice: Number(li.lineAmount || 0),
+        needByDate: li.deliveryDate || loadedPR.needByDate || '',
+        vendor: li.vendorName || '',
+      }))
+    : ([] as PRLineItem[]);
+
+  // (Mock line items removed — `lineItems` is now sourced from the API call
+  // above so the detail view always reflects the actual PR clicked.)
 
   // AI Insights
   const aiInsights: AIInsight[] = [

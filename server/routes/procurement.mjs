@@ -87,14 +87,27 @@ async function readJsonBody(req) {
 
 // ── Doc ref generator (collision-safe, per tenant/entity/year/doc-type) ─────
 
+// Map doc-type → underlying table + ref column for the seed-aware seed
+// initialisation in nextDocRef.
+const DOC_REF_TABLES = {
+  PR: { table: 'purchase_requests', refCol: 'pr_ref' },
+  PO: { table: 'purchase_orders_proc', refCol: 'po_ref' },
+  GRN: { table: 'goods_receipt_notes', refCol: 'grn_ref' },
+  SRN: { table: 'service_receipt_notes', refCol: 'srn_ref' },
+};
+
 /**
  * Returns the next ref string like `PR-PTPL-2026-0001`. Runs inside a
  * transaction with SELECT ... FOR UPDATE so two concurrent callers can't
- * grab the same number. Auto-creates the row on first use.
+ * grab the same number. Auto-creates the row on first use; if the underlying
+ * table already has refs (e.g. from SQL seed inserts that bypassed this
+ * function) the sequence is bootstrapped from the actual MAX so the first
+ * generated ref doesn't collide with seeded data.
  */
 export async function nextDocRef(tenantId, entityCode, docType) {
   const year = new Date().getUTCFullYear();
   return withTransaction(async (conn) => {
+    // Insert sentinel row (last_seq=0) if missing; left untouched if present.
     await connExecute(
       conn,
       `INSERT INTO doc_ref_sequences (id, tenant_id, entity_code, doc_type, year, last_seq)
@@ -108,8 +121,30 @@ export async function nextDocRef(tenantId, entityCode, docType) {
         FOR UPDATE`,
       [tenantId, entityCode, docType, year]
     );
-    const last = rows[0]?.last_seq ?? 0;
-    const seq = Number(last) + 1;
+    let last = Number(rows[0]?.last_seq ?? 0);
+
+    // Seed-aware: always reconcile the sequence with the actual table's MAX
+    // ref. Necessary because (a) seed SQL inserts bypass this function and
+    // (b) a previously failed POST may have advanced last_seq past 0 while
+    // leaving the seeded refs intact. Take whichever is higher.
+    const cfg = DOC_REF_TABLES[docType];
+    if (cfg) {
+      const prefix = `${docType}-${entityCode}-${year}-`;
+      const [maxRows] = await conn.execute(
+        `SELECT ${cfg.refCol} AS ref FROM ${cfg.table}
+          WHERE tenant_id = ? AND ${cfg.refCol} LIKE ?
+          ORDER BY ${cfg.refCol} DESC LIMIT 1`,
+        [tenantId, `${prefix}%`]
+      );
+      const refValue = maxRows[0]?.ref;
+      if (typeof refValue === 'string') {
+        const tail = refValue.slice(prefix.length);
+        const parsed = parseInt(tail, 10);
+        if (Number.isFinite(parsed) && parsed > last) last = parsed;
+      }
+    }
+
+    const seq = last + 1;
     await connExecute(
       conn,
       `UPDATE doc_ref_sequences SET last_seq = ?

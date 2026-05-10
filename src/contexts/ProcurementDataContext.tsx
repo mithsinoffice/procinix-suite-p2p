@@ -79,6 +79,13 @@ export interface PurchaseRequestTransaction {
   policyFlags: string[];
   agingDays?: number;
   lineItems?: Array<Record<string, unknown>>;
+  // Relational identifiers — when present the API POST uses these directly
+  // (so server's nextDocRef receives a real entityCode like 'PTPL' instead of
+  // the entity display name, and requester_id is the user UUID, not name).
+  entityId?: string;
+  entityCode?: string;
+  entityGstin?: string;
+  requesterId?: string;
   // Internal flag — true when this record came from the relational API
   _relationalId?: string;
 }
@@ -376,18 +383,45 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
   }, [prs, legacyFallback, usingFallback]);
 
   // Legacy add — maps Title-case to relational + posts to API. Falls back to
-  // blob save (the original behaviour) when the API write fails so existing
-  // forms keep working in offline/dev modes.
+  // blob save (the original behaviour) only when the API write fails so
+  // existing forms keep working in offline/dev modes.
   const addPurchaseRequest = useCallback(
     async (request: PurchaseRequestTransaction) => {
       const relPRType = PR_TYPE_FROM_LEGACY[request.type];
       const relStatus = PR_STATUS_FROM_LEGACY[request.status];
+      // Server expects line items shaped per `purchase_request_items`. Forms
+      // pass loose Record<string, unknown> rows — adapt the common field names
+      // (itemCode/itemName/quantity/uom/vendor/unitPrice/gstRate/...).
+      const adaptLineItems = (rows: Array<Record<string, unknown>> = []) =>
+        rows.map((li) => {
+          const r = li as Record<string, unknown>;
+          return {
+            itemType: (r.itemType as string) || 'material',
+            itemCode: (r.itemCode as string) || (r.code as string) || '',
+            itemName: (r.itemName as string) || (r.name as string) || '',
+            itemDescription: (r.description as string) ?? (r.itemDescription as string) ?? '',
+            vendorId: (r.vendorId as string) || (r.vendorCode as string) || '',
+            vendorName: (r.vendorName as string) || (r.vendor as string) || '',
+            vendorGstin: (r.vendorGstin as string) || '',
+            quantity: Number(r.quantity ?? r.qty ?? 0) || 0,
+            unit: (r.unit as string) || (r.uom as string) || '',
+            unitPrice: Number(r.unitPrice ?? r.rate ?? 0) || 0,
+            gstRate: Number(r.gstRate ?? r.gst ?? 0) || 0,
+            shipToLocation:
+              (r.shipToLocation as string) || (request.deliveryLocation as string) || '',
+            deliveryDate: (r.deliveryDate as string) || (request.needByDate as string) || '',
+          };
+        });
+
       try {
         const created = await createPRApi({
-          entityId: request.entity,
-          entityCode: request.entity,
+          entityId: request.entityId || request.entity,
+          entityCode: request.entityCode || request.entity,
+          // entityGstin is consumed by server GST calc but isn't on the
+          // PurchaseRequest type — tunneled via the unknown-record cast below.
+          ...(request.entityGstin ? { entityGstin: request.entityGstin } : {}),
           prType: relPRType,
-          requesterId: request.requestor,
+          requesterId: request.requesterId || request.requestor,
           requesterName: request.requestor,
           department: request.department,
           costCentre: request.costCentre,
@@ -396,13 +430,16 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
           businessJustification: request.justification,
           priority: 'medium',
           currency: request.currency,
-          lineItems: (request.lineItems || []) as unknown[],
-        } as Partial<PurchaseRequest> & { lineItems?: unknown[] });
+          lineItems: adaptLineItems(request.lineItems),
+        } as unknown as Partial<PurchaseRequest> & { lineItems?: unknown[] });
         if (created) {
           // If the legacy form submitted an "approval" status, fire the submit transition too
           if (relStatus !== 'draft') {
             await transitionPRApi(created.id, 'submit');
           }
+          // Successful relational write — clear any sticky fallback flag so
+          // the listing returns to relational data on next render.
+          setUsingFallback(false);
           await refresh();
           return;
         }

@@ -317,17 +317,24 @@ export function KitBundlePRForm() {
   const submitPurchaseRequest = (status: PurchaseRequestStatus) => {
     const timestamp = Date.now();
     const createdDate = new Date().toISOString().split('T')[0];
+    const entityRecord =
+      entities.find((e) => e.id === activeEntities[0]?.id || e.name === selectedEntity) ||
+      entities[0];
 
     addPurchaseRequest({
       id: `bundle-${timestamp}`,
       prNumber: `PR-${timestamp}`,
       type: 'Kit/Bundle',
-      entity: 'India HQ',
-      requestor: 'Current User',
-      department: 'IT',
+      entity: selectedEntity || entityRecord?.name || 'India HQ',
+      entityId: entityRecord?.id || '',
+      entityCode: entityRecord?.code || '',
+      entityGstin: entityRecord?.gstin || '',
+      requestor: user?.name || 'Current User',
+      requesterId: user?.id || '',
+      department: selectedDepartment || 'IT',
       costCentre: 'CC-IT-001',
       needByDate: createdDate,
-      deliveryLocation: 'Mumbai Office',
+      deliveryLocation: selectedLocation || 'Mumbai Office',
       totalAmount: grandTotal.total,
       currency: 'INR',
       status,

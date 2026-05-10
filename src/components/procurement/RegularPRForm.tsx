@@ -199,13 +199,22 @@ export function RegularPRForm() {
   const submitPurchaseRequest = (status: PurchaseRequestStatus) => {
     const timestamp = Date.now();
     const createdDate = new Date().toISOString().split('T')[0];
+    // Resolve the relational entity record so the API receives the proper
+    // entityId (UUID) and entityCode (e.g. PTPL) instead of the display name —
+    // required for the server to generate a sequential pr_ref via nextDocRef.
+    const entityRecord =
+      entities.find((e) => e.id === currentCompany?.id || e.name === selectedEntity) || entities[0];
 
     addPurchaseRequest({
       id: `regular-${timestamp}`,
       prNumber: `PR-${timestamp}`,
       type: 'Regular',
       entity: selectedEntity,
+      entityId: entityRecord?.id || currentCompany?.id || '',
+      entityCode: entityRecord?.code || currentCompany?.code || '',
+      entityGstin: entityRecord?.gstin || '',
       requestor: user?.name || 'Current User',
+      requesterId: user?.id || '',
       department: selectedDepartment,
       costCentre: lineItems[0]?.costCentre || liveCostCentres[0] || '',
       needByDate,
