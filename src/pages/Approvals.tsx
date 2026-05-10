@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { ApprovalItem, ApprovalKPIs, ModuleCounts } from '../types/approvals';
-import { ActionKPICard } from '../components/Approvals/ActionKPICard';
-import { ApprovalQueueItem } from '../components/Approvals/ApprovalQueueItem';
-import { ApprovalTabs } from '../components/Approvals/ApprovalTabs';
-import { ApprovalsLegend } from '../components/Approvals/ApprovalsLegend';
-import { MSMEAlertBanner } from '../components/Approvals/MSMEAlertBanner';
-import { PerformanceKPICard } from '../components/Approvals/PerformanceKPICard';
-import { UrgentSLABanner } from '../components/Approvals/UrgentSLABanner';
 
 type PendingMasterApprovalResponseItem = {
   masterKey: string;
@@ -63,14 +57,298 @@ function authHeaders(userId?: string): Record<string, string> {
   };
 }
 
+// ── Module → tab + badge config ─────────────────────────────────────────────
+const TABS = [
+  { key: 'all', label: 'All', modules: [] as string[] },
+  { key: 'ap_invoice', label: 'AP Invoices', modules: ['ap_invoice', 'non_po_invoice'] },
+  { key: 'purchase_order', label: 'Purchase Orders', modules: ['purchase_order'] },
+  { key: 'master_update', label: 'Master Updates', modules: ['master_update'] },
+  {
+    key: 'vendor_advance',
+    label: 'Vendor Advances',
+    modules: ['vendor_advance', 'vendor_onboarding'],
+  },
+  { key: 'payment', label: 'Payments', modules: ['payment'] },
+];
+
+const MODULE_BADGE: Record<string, { bg: string; fg: string; label: string }> = {
+  ap_invoice: { bg: '#EEEDFE', fg: '#3C3489', label: 'Invoice' },
+  non_po_invoice: { bg: '#EEEDFE', fg: '#3C3489', label: 'Invoice' },
+  purchase_order: { bg: '#E1F5EE', fg: '#085041', label: 'Purchase Order' },
+  master_update: { bg: '#E6F1FB', fg: '#0C447C', label: 'Master Update' },
+  vendor_advance: { bg: '#E1F5EE', fg: '#085041', label: 'Vendor Advance' },
+  vendor_onboarding: { bg: '#E1F5EE', fg: '#085041', label: 'Vendor Onboarding' },
+  payment: { bg: '#F1EFE8', fg: '#5F5E5A', label: 'Payment' },
+};
+
+function modulePill(module: string) {
+  return MODULE_BADGE[module] || { bg: '#F1EFE8', fg: '#5F5E5A', label: module };
+}
+
+function priorityBadge(item: ApprovalItem): { bg: string; fg: string; label: string } {
+  if (item.sla_info?.breached && item.sla_info.breach_in_hours > 0) {
+    return { bg: '#FCEBEB', fg: '#791F1F', label: 'Overdue' };
+  }
+  if (item.priority === 'critical' || item.priority === 'high') {
+    return { bg: '#FAEEDA', fg: '#633806', label: 'SLA risk' };
+  }
+  if (item.msme_info?.is_critical || item.msme_info?.is_warning) {
+    return { bg: '#FAEEDA', fg: '#633806', label: 'MSME' };
+  }
+  return { bg: '#EAF3DE', fg: '#27500A', label: 'Normal' };
+}
+
+function riskBadge(item: ApprovalItem): { bg: string; fg: string; label: string } {
+  if (item.sla_info?.breached || item.priority === 'critical') {
+    return { bg: '#FCEBEB', fg: '#791F1F', label: 'High' };
+  }
+  if (item.priority === 'high' || item.msme_info?.is_critical) {
+    return { bg: '#FAEEDA', fg: '#633806', label: 'Medium' };
+  }
+  return { bg: '#EAF3DE', fg: '#27500A', label: 'Low' };
+}
+
+function ageDot(hours: number): { color: string; label: string } {
+  if (hours > 48) return { color: '#A32D2D', label: `${Math.round(hours)}h` };
+  if (hours >= 24) return { color: '#BA7517', label: `${Math.round(hours)}h` };
+  return { color: '#27500A', label: `${Math.round(hours)}h` };
+}
+
+function MetricCard({
+  label,
+  value,
+  tone,
+  right,
+}: {
+  label: string;
+  value: number | string;
+  tone: string;
+  right?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        padding: '10px 16px',
+        borderRight: right ? '0.5px solid var(--color-fog)' : 'none',
+        background: '#FFFFFF',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          color: 'var(--color-mercury-grey)',
+          textTransform: 'uppercase',
+          letterSpacing: 0.4,
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 600, color: tone }}>{value}</div>
+    </div>
+  );
+}
+
+function BulkConfirmModal({
+  items,
+  highRiskCount,
+  busy,
+  onConfirm,
+  onCancel,
+}: {
+  items: ApprovalItem[];
+  highRiskCount: number;
+  busy: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const fmtINR = (amt: number | undefined, currency = 'INR') =>
+    amt == null
+      ? '—'
+      : new Intl.NumberFormat('en-IN', {
+          style: 'currency',
+          currency,
+          maximumFractionDigits: 0,
+        }).format(amt);
+  return (
+    <>
+      <div
+        onClick={onCancel}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.4)',
+          zIndex: 50,
+        }}
+        aria-hidden
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: '#FFFFFF',
+          borderRadius: 12,
+          padding: 24,
+          maxWidth: 480,
+          width: '92vw',
+          maxHeight: '80vh',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 51,
+          boxShadow: '0 12px 32px rgba(0,0,0,0.18)',
+        }}
+      >
+        <h3
+          style={{
+            fontSize: 16,
+            fontWeight: 500,
+            color: 'var(--color-ink)',
+            margin: 0,
+            marginBottom: 12,
+          }}
+        >
+          Approve {items.length} item{items.length === 1 ? '' : 's'}?
+        </h3>
+        {highRiskCount > 0 && (
+          <div
+            style={{
+              padding: '8px 12px',
+              background: '#FAEEDA',
+              border: '1px solid #E1B964',
+              borderRadius: 6,
+              fontSize: 11,
+              color: '#633806',
+              marginBottom: 12,
+            }}
+          >
+            ⚠ {highRiskCount} high-risk item{highRiskCount === 1 ? '' : 's'} included. Review before
+            approving.
+          </div>
+        )}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            border: '0.5px solid var(--color-fog)',
+            borderRadius: 6,
+            marginBottom: 16,
+          }}
+        >
+          {items.map((it) => {
+            const mod = modulePill(it.module);
+            return (
+              <div
+                key={it.id}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1.4fr 1fr 0.8fr',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 12px',
+                  borderBottom: '0.5px solid var(--color-fog)',
+                  fontSize: 11,
+                }}
+              >
+                <span
+                  style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    fontWeight: 500,
+                  }}
+                >
+                  {it.invoice_number || it.po_number || it.reference_id}
+                </span>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    padding: '1px 6px',
+                    borderRadius: 4,
+                    fontSize: 9,
+                    fontWeight: 600,
+                    background: mod.bg,
+                    color: mod.fg,
+                    width: 'fit-content',
+                  }}
+                >
+                  {mod.label}
+                </span>
+                <span style={{ textAlign: 'right', color: 'var(--color-ink)' }}>
+                  {fmtINR(it.display_amount, it.currency || 'INR')}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            style={{
+              height: 32,
+              padding: '0 14px',
+              background: '#FFFFFF',
+              color: 'var(--color-ink)',
+              border: '1px solid var(--color-silver)',
+              borderRadius: 6,
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            style={{
+              height: 32,
+              padding: '0 14px',
+              background: '#0F6E56',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: 'pointer',
+              opacity: busy ? 0.6 : 1,
+            }}
+          >
+            {busy ? 'Approving…' : 'Confirm approval'}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function detailRouteFor(item: ApprovalItem): string | null {
+  const ref = item.reference_id;
+  if (item.module === 'ap_invoice' || item.module === 'non_po_invoice') {
+    return `/invoices/${encodeURIComponent(ref)}`;
+  }
+  if (item.module === 'purchase_order') {
+    return `/purchase-orders`;
+  }
+  if (item.module === 'vendor_advance') {
+    return `/ap/vendor-advances`;
+  }
+  return null;
+}
+
 export default function MyApprovalsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [kpis, setKpis] = useState<ApprovalKPIs | null>(null);
   const [queue, setQueue] = useState<ApprovalItem[]>([]);
   const [moduleCounts, setModuleCounts] = useState<ModuleCounts | null>(null);
   const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [metricsLoading, setMetricsLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedApproval, setSelectedApproval] = useState<ApprovalItem | null>(null);
   const [selectedMasterRecord, setSelectedMasterRecord] =
@@ -79,6 +357,9 @@ export default function MyApprovalsPage() {
   const [panelRejecting, setPanelRejecting] = useState(false);
   const [panelRejectReason, setPanelRejectReason] = useState('');
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const fetchQueue = useCallback(async () => {
@@ -89,7 +370,10 @@ export default function MyApprovalsPage() {
         `/api/approvals/queue?module=${activeTab === 'all' ? '' : activeTab}`,
         { headers: authHeaders(userId) }
       );
-      setQueue(await queueRes.json());
+      const data = (await queueRes.json()) as ApprovalItem[];
+      setQueue(Array.isArray(data) ? data : []);
+      // Pre-check every row on every refresh — user can uncheck.
+      setSelectedIds(Array.isArray(data) ? data.map((d) => d.id) : []);
     } catch (error) {
       console.error('Failed to fetch approval queue', error);
     } finally {
@@ -98,7 +382,6 @@ export default function MyApprovalsPage() {
   }, [activeTab, user?.id]);
 
   const fetchMetrics = useCallback(async () => {
-    setMetricsLoading(true);
     try {
       const userId = user?.id;
       const [kpisRes, countsRes] = await Promise.all([
@@ -111,14 +394,8 @@ export default function MyApprovalsPage() {
       setModuleCounts(await countsRes.json());
     } catch (error) {
       console.error('Failed to fetch approval metrics', error);
-    } finally {
-      setMetricsLoading(false);
     }
   }, [user?.id]);
-
-  const fetchAll = useCallback(async () => {
-    await Promise.all([fetchQueue(), fetchMetrics()]);
-  }, [fetchMetrics, fetchQueue]);
 
   useEffect(() => {
     fetchQueue();
@@ -190,18 +467,27 @@ export default function MyApprovalsPage() {
 
   const handleBulkApprove = async () => {
     if (selectedIds.length === 0) return;
-    const res = await fetch('/api/approvals/bulk-approve', {
-      method: 'POST',
-      headers: authHeaders(user?.id),
-      body: JSON.stringify({ approval_ids: selectedIds }),
-    });
-    if (!res.ok) {
-      alert('Bulk approve failed');
-      return;
+    setBulkBusy(true);
+    try {
+      const res = await fetch('/api/approvals/bulk-approve', {
+        method: 'POST',
+        headers: authHeaders(user?.id),
+        body: JSON.stringify({ approval_ids: selectedIds }),
+      });
+      if (!res.ok) {
+        alert('Bulk approve failed');
+        return;
+      }
+      const approvedCount = selectedIds.length;
+      setQueue((q) => q.filter((item) => !selectedIds.includes(item.id)));
+      setSelectedIds([]);
+      setShowBulkConfirm(false);
+      setToast(`${approvedCount} item${approvedCount > 1 ? 's' : ''} approved`);
+      window.setTimeout(() => setToast(null), 3000);
+      await refreshAfterAction();
+    } finally {
+      setBulkBusy(false);
     }
-    setQueue((q) => q.filter((item) => !selectedIds.includes(item.id)));
-    setSelectedIds([]);
-    await refreshAfterAction();
   };
 
   const handleToggleSelect = useCallback((id: string, checked: boolean) => {
@@ -269,7 +555,16 @@ export default function MyApprovalsPage() {
     setPanelRejectReason('');
     setSelectedMasterRecord(null);
 
-    if (item.module !== 'master_update') return;
+    if (item.module !== 'master_update') {
+      const route = detailRouteFor(item);
+      if (route) {
+        navigate(route);
+        return;
+      }
+      // Fallback to inline drawer for unmapped modules
+      setSelectedApproval(item);
+      return;
+    }
 
     const parsed = parseMasterReference(item.reference_id);
     if (!parsed) return;
@@ -341,15 +636,6 @@ export default function MyApprovalsPage() {
     return map[moduleName] || moduleName;
   };
 
-  const msmeAlerts = useMemo(
-    () => queue.filter((item) => item.msme_info?.is_critical || item.msme_info?.is_warning),
-    [queue]
-  );
-  const slaBreaches = useMemo(() => queue.filter((item) => item.sla_info?.breached), [queue]);
-  const earliestMSMEDays =
-    msmeAlerts.length > 0
-      ? Math.min(...msmeAlerts.map((item) => item.msme_info?.days_remaining || 999))
-      : 0;
   const masterRecordEntries = useMemo(() => {
     if (!selectedMasterRecord?.record) return [];
     const hiddenFields = new Set([
@@ -439,186 +725,545 @@ export default function MyApprovalsPage() {
     return insights;
   }, [selectedMasterRecord, masterRecordByKey]);
 
+  // Tab counts (from moduleCounts when available, else fallback to queue groupings)
+  const tabCount = (key: string): number => {
+    if (key === 'all') return moduleCounts?.all ?? queue.length;
+    const tab = TABS.find((t) => t.key === key);
+    if (!tab) return 0;
+    return tab.modules.reduce((sum, m) => sum + (moduleCounts?.[m as keyof ModuleCounts] || 0), 0);
+  };
+
+  // Visible queue rows (scope by active tab, since the API may already scope it
+  // — this also keeps client-side filtering correct on the 'all' tab).
+  const visibleQueue = useMemo(() => {
+    if (activeTab === 'all') return queue;
+    const tab = TABS.find((t) => t.key === activeTab);
+    if (!tab) return queue;
+    return queue.filter((item) => tab.modules.includes(item.module));
+  }, [queue, activeTab]);
+
+  // Pending / urgent / msme / approved-today counts for metric strip
+  const pendingCount = visibleQueue.length;
+  const urgentCount = visibleQueue.filter((it) => it.sla_info?.breached).length;
+  const msmeCount = visibleQueue.filter(
+    (it) => it.msme_info?.is_critical || it.msme_info?.is_warning
+  ).length;
+  const approvedTodayCount = kpis?.approved_today ?? 0;
+
+  const selectedItems = useMemo(
+    () => visibleQueue.filter((it) => selectedIdSet.has(it.id)),
+    [visibleQueue, selectedIdSet]
+  );
+  const highRiskInBulk = selectedItems.filter(
+    (it) => it.sla_info?.breached || it.priority === 'critical'
+  ).length;
+
+  const fmtINR = (amt: number | undefined, currency = 'INR') =>
+    amt == null
+      ? '—'
+      : new Intl.NumberFormat('en-IN', {
+          style: 'currency',
+          currency,
+          maximumFractionDigits: 0,
+        }).format(amt);
+
   return (
-    <div className="min-h-screen bg-[var(--color-cloud)] p-5">
-      <div className="mb-3 flex items-start justify-between gap-3">
+    <div style={{ background: 'var(--color-background-primary, #FFFFFF)', minHeight: '100%' }}>
+      {/* Header — teal accent left border, title left + Bulk approve right */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '14px 20px',
+          background: '#FFFFFF',
+          borderBottom: '0.5px solid var(--color-fog)',
+          borderLeft: '3px solid #1D9E75',
+        }}
+      >
         <div>
-          <h1 className="text-[30px] font-semibold text-[var(--color-ink)]">My Approvals</h1>
-          <p className="text-sm text-[var(--color-mercury-grey)]">
-            Consolidated from AP Invoices, Purchase Orders, Payments, Vendor Onboarding & Masters
+          <h1
+            style={{
+              fontSize: 15,
+              fontWeight: 500,
+              margin: 0,
+              color: 'var(--color-ink)',
+              lineHeight: 1.3,
+            }}
+          >
+            My approvals
+          </h1>
+          <p
+            style={{
+              fontSize: 11,
+              color: 'var(--color-mercury-grey)',
+              margin: '2px 0 0 0',
+            }}
+          >
+            {pendingCount} item{pendingCount === 1 ? '' : 's'} awaiting your decision
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-[var(--color-teal-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-teal-dark)]">
-            YTD {new Date().getFullYear()} · As of {new Date().toLocaleDateString('en-IN')}
-          </span>
+        <div style={{ display: 'flex', gap: 8 }}>
           <button
             type="button"
-            className="rounded-md border border-[var(--color-silver)] bg-white px-3 py-1.5 text-sm"
             onClick={handleExport}
+            style={{
+              height: 28,
+              padding: '0 12px',
+              background: '#FFFFFF',
+              color: 'var(--color-ink)',
+              border: '1px solid var(--color-silver)',
+              borderRadius: 6,
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
           >
             Export
           </button>
           <button
             type="button"
-            className="rounded-md border border-[var(--color-silver)] bg-white px-3 py-1.5 text-sm disabled:opacity-50"
-            disabled={selectedIds.length === 0}
-            onClick={handleBulkApprove}
+            disabled={selectedIds.length === 0 || bulkBusy}
+            onClick={() => setShowBulkConfirm(true)}
+            style={{
+              height: 28,
+              padding: '0 12px',
+              background: '#0F6E56',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: selectedIds.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: selectedIds.length === 0 ? 0.5 : 1,
+            }}
           >
-            Bulk approve
+            Bulk approve{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
           </button>
         </div>
       </div>
 
-      {Boolean((kpis?.msme_pending_count || 0) > 0) && (
-        <MSMEAlertBanner
-          alertCount={kpis?.msme_pending_count || 0}
-          earliestDeadlineDays={earliestMSMEDays > 0 ? earliestMSMEDays : 15}
-          onApproveFirst={() => setActiveTab('ap_invoice')}
+      {/* Metric strip — 4 cards */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          background: '#FFFFFF',
+          borderBottom: '0.5px solid var(--color-fog)',
+        }}
+      >
+        <MetricCard
+          label="Pending"
+          value={pendingCount}
+          tone={pendingCount > 0 ? '#BA7517' : 'var(--color-ink)'}
+          right
         />
-      )}
-      <UrgentSLABanner breachedCount={slaBreaches.length} onReview={() => setActiveTab('all')} />
+        <MetricCard
+          label="Urgent / SLA"
+          value={urgentCount}
+          tone={urgentCount > 0 ? '#A32D2D' : 'var(--color-ink)'}
+          right
+        />
+        {msmeCount > 0 ? (
+          <MetricCard label="MSME exposure" value={msmeCount} tone="#BA7517" right />
+        ) : (
+          <MetricCard label="Approved today" value={approvedTodayCount} tone="#0F6E56" right />
+        )}
+        <MetricCard label="Approved today" value={approvedTodayCount} tone="#0F6E56" />
+      </div>
 
-      {kpis && (
-        <>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-mercury-grey)]">
-            My approval performance
-          </p>
-          <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-5">
-            <PerformanceKPICard
-              variant="total"
-              icon="✅"
-              label="Total approved YTD"
-              value={String(kpis.total_approvals_ytd)}
-              trend="+15% vs last year"
-              trendDirection="up"
-            />
-            <PerformanceKPICard
-              variant="on-time"
-              icon="🎯"
-              label="On-time approval rate"
-              value={`${kpis.on_time_rate}%`}
-              trend={`${kpis.on_time_count} of ${kpis.total_approvals_ytd} on time`}
-              trendDirection="up"
-            />
-            <PerformanceKPICard
-              variant="avg-time"
-              icon="⏱"
-              label="Avg time per approval"
-              value={`${kpis.avg_hours_per_approval}h`}
-              trend={`${kpis.faster_than_team_percent}% faster than team`}
-              trendDirection="up"
-            />
-            <PerformanceKPICard
-              variant="rejections"
-              icon="↩"
-              label="Total rejections YTD"
-              value={String(kpis.total_rejections)}
-              trend={`${kpis.rejection_rate}% rejection rate`}
-              trendDirection="down"
-            />
-            <PerformanceKPICard
-              variant="value"
-              icon="₹"
-              label="Total value approved"
-              value={new Intl.NumberFormat('en-IN', {
-                style: 'currency',
-                currency: 'INR',
-                maximumFractionDigits: 0,
-              }).format(kpis.total_value_approved)}
-              trend="+8% vs last year"
-              trendDirection="up"
-            />
+      {/* Filter tabs */}
+      <div
+        style={{
+          background: '#FFFFFF',
+          borderBottom: '0.5px solid var(--color-fog)',
+          padding: '0 20px',
+          display: 'flex',
+          gap: 4,
+          overflowX: 'auto',
+        }}
+      >
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.key;
+          const count = tabCount(tab.key);
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                height: 36,
+                padding: '0 12px',
+                background: isActive ? '#FFFFFF' : 'transparent',
+                color: isActive ? '#0F6E56' : 'var(--color-mercury-grey)',
+                border: 'none',
+                borderBottom: isActive ? '2px solid #0F6E56' : '2px solid transparent',
+                fontSize: 12,
+                fontWeight: isActive ? 500 : 400,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {tab.label}
+              {count > 0 && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    padding: '1px 6px',
+                    borderRadius: 10,
+                    background: '#E6F1FB',
+                    color: '#0C447C',
+                  }}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Bulk-approve bar */}
+      {selectedIds.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 20px',
+            background: '#E1F5EE',
+            borderBottom: '0.5px solid #5DCAA5',
+          }}
+        >
+          <span style={{ fontSize: 12, color: '#0F6E56', fontWeight: 500 }}>
+            {selectedIds.length} item{selectedIds.length > 1 ? 's' : ''} selected
+          </span>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setShowBulkConfirm(true)}
+              disabled={bulkBusy}
+              style={{
+                height: 26,
+                padding: '0 12px',
+                background: '#0F6E56',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Approve selected
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              style={{
+                background: 'transparent',
+                color: '#0F6E56',
+                border: 'none',
+                fontSize: 12,
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Clear selection
+            </button>
           </div>
-        </>
-      )}
-
-      {kpis && (
-        <>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-mercury-grey)]">
-            Action needed now
-          </p>
-          <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-4">
-            <ActionKPICard
-              variant="pending"
-              count={kpis.total_pending}
-              label="Pending approvals"
-              subtext="Awaiting your decision"
-              badge="Pending"
-              barPercent={kpis.total_pending ? (kpis.aging_count / kpis.total_pending) * 100 : 0}
-              chips={[
-                { label: 'AP invoices', count: moduleCounts?.ap_invoice || 0 },
-                { label: 'Masters', count: moduleCounts?.master_update || 0 },
-              ]}
-            />
-            <ActionKPICard
-              variant="urgent"
-              count={kpis.sla_breached_count}
-              label="Aging > 2 days"
-              subtext="SLA risk"
-              badge="Urgent"
-              barPercent={100}
-              chips={[{ label: 'SLA risk', count: kpis.aging_count }]}
-              onClick={() => setActiveTab('all')}
-            />
-            <ActionKPICard
-              variant="msme"
-              count={kpis.msme_pending_count}
-              label="MSME pending"
-              subtext="45-day legal exposure"
-              badge="MSME"
-              barPercent={
-                kpis.msme_pending_count
-                  ? (kpis.msme_deadline_alerts / kpis.msme_pending_count) * 100
-                  : 0
-              }
-              chips={[{ label: 'Alerts', count: kpis.msme_deadline_alerts }]}
-            />
-            <ActionKPICard
-              variant="aging"
-              count={kpis.aging_count}
-              label="Aging approvals"
-              subtext="Crossed escalation threshold"
-              badge="Aging"
-              barPercent={kpis.total_pending ? (kpis.aging_count / kpis.total_pending) * 100 : 0}
-              chips={[{ label: 'Pending', count: kpis.total_pending }]}
-            />
-          </div>
-        </>
-      )}
-
-      {moduleCounts ? (
-        <ApprovalTabs counts={moduleCounts} activeTab={activeTab} onChange={setActiveTab} />
-      ) : metricsLoading ? (
-        <div className="mb-3 rounded-lg border border-[var(--color-silver)] bg-white p-3 text-sm text-[var(--color-mercury-grey)]">
-          Loading approval counts...
         </div>
-      ) : null}
-      <ApprovalsLegend />
+      )}
 
-      <div className="space-y-3">
+      {/* Table */}
+      <div style={{ overflowX: 'auto' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '28px 0.7fr 1.8fr 1fr 0.8fr 0.6fr 0.7fr 1fr',
+            alignItems: 'center',
+            padding: '6px 20px',
+            background: 'var(--color-background-secondary)',
+            borderBottom: '0.5px solid var(--color-fog)',
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: 0.4,
+            textTransform: 'uppercase',
+            color: 'var(--color-mercury-grey)',
+          }}
+        >
+          <span />
+          <span>Priority</span>
+          <span>Document</span>
+          <span>Requestor / Vendor</span>
+          <span style={{ textAlign: 'right' }}>Amount</span>
+          <span>Age</span>
+          <span>Risk</span>
+          <span style={{ textAlign: 'right' }}>Actions</span>
+        </div>
         {loading ? (
-          <div className="rounded-lg border border-[var(--color-silver)] bg-white p-6 text-sm text-[var(--color-mercury-grey)]">
-            Loading approvals...
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-mercury-grey)' }}>
+            Loading approvals…
           </div>
-        ) : queue.length === 0 ? (
-          <div className="rounded-lg border border-[var(--color-silver)] bg-white p-6 text-sm text-[var(--color-mercury-grey)]">
+        ) : visibleQueue.length === 0 ? (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-mercury-grey)' }}>
             No pending approvals
           </div>
         ) : (
-          queue.map((item) => (
-            <ApprovalQueueItem
-              key={item.id}
-              item={item}
-              selected={selectedIdSet.has(item.id)}
-              onToggleSelect={handleToggleSelect}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onView={handleView}
-            />
-          ))
+          visibleQueue.map((item) => {
+            const checked = selectedIdSet.has(item.id);
+            const pBadge = priorityBadge(item);
+            const rBadge = riskBadge(item);
+            const ageInfo = ageDot(item.age_hours || 0);
+            const mod = modulePill(item.module);
+            return (
+              <div
+                key={item.id}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '28px 0.7fr 1.8fr 1fr 0.8fr 0.6fr 0.7fr 1fr',
+                  alignItems: 'center',
+                  padding: '10px 20px',
+                  borderBottom: '0.5px solid var(--color-fog)',
+                  fontSize: 12,
+                  background: '#FFFFFF',
+                }}
+                className="listing-row-hover"
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(e) => handleToggleSelect(item.id, e.target.checked)}
+                  style={{ accentColor: '#0F6E56' }}
+                  aria-label={`Select ${item.invoice_number || item.reference_id}`}
+                />
+                <span>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: 20,
+                      fontSize: 10,
+                      fontWeight: 600,
+                      background: pBadge.bg,
+                      color: pBadge.fg,
+                    }}
+                  >
+                    {pBadge.label}
+                  </span>
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: 'var(--color-ink)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {item.invoice_number || item.po_number || item.reference_id}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: 'var(--color-mercury-grey)',
+                      marginTop: 2,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        background: mod.bg,
+                        color: mod.fg,
+                        fontSize: 9,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {mod.label}
+                    </span>
+                    <span>{item.vendor_legal_name || item.entity_name || ''}</span>
+                  </div>
+                </div>
+                <div style={{ minWidth: 0, fontSize: 12, color: 'var(--color-ink)' }}>
+                  <div
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {item.submitted_by_name || '—'}
+                  </div>
+                  {item.entity_name && (
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: 'var(--color-mercury-grey)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {item.entity_name}
+                    </div>
+                  )}
+                </div>
+                <div
+                  style={{
+                    textAlign: 'right',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    color: 'var(--color-ink)',
+                  }}
+                >
+                  {item.display_amount != null
+                    ? fmtINR(item.display_amount, item.currency || 'INR')
+                    : '—'}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--color-ink)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: 6,
+                      background: ageInfo.color,
+                      display: 'inline-block',
+                    }}
+                  />
+                  {ageInfo.label}
+                </div>
+                <div>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: 20,
+                      fontSize: 10,
+                      fontWeight: 600,
+                      background: rBadge.bg,
+                      color: rBadge.fg,
+                    }}
+                  >
+                    {rBadge.label}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 4,
+                    justifyContent: 'flex-end',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <button
+                    type="button"
+                    disabled={actionBusyId === item.id}
+                    onClick={() => handleApprove(item.id)}
+                    style={{
+                      height: 26,
+                      padding: '0 10px',
+                      background: '#EAF3DE',
+                      color: '#27500A',
+                      border: '1px solid #97C459',
+                      borderRadius: 4,
+                      fontSize: 11,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {actionBusyId === item.id ? '…' : 'Approve'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionBusyId === item.id}
+                    onClick={() => {
+                      const reason = window.prompt('Reject reason') || '';
+                      if (reason.trim()) handleReject(item.id, reason.trim());
+                    }}
+                    style={{
+                      height: 26,
+                      padding: '0 10px',
+                      background: '#FCEBEB',
+                      color: '#791F1F',
+                      border: '1px solid #F09595',
+                      borderRadius: 4,
+                      fontSize: 11,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleView(item)}
+                    style={{
+                      height: 26,
+                      padding: '0 10px',
+                      background: '#FFFFFF',
+                      color: 'var(--color-ink)',
+                      border: '1px solid var(--color-silver)',
+                      borderRadius: 4,
+                      fontSize: 11,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    View
+                  </button>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
+
+      {/* Bulk approve confirmation modal */}
+      {showBulkConfirm && (
+        <BulkConfirmModal
+          items={selectedItems}
+          highRiskCount={highRiskInBulk}
+          busy={bulkBusy}
+          onConfirm={handleBulkApprove}
+          onCancel={() => setShowBulkConfirm(false)}
+        />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            padding: '10px 16px',
+            background: '#0F6E56',
+            color: '#FFFFFF',
+            borderRadius: 6,
+            fontSize: 12,
+            fontWeight: 500,
+            zIndex: 60,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          }}
+        >
+          {toast}
+        </div>
+      )}
 
       {selectedApproval && (
         <div

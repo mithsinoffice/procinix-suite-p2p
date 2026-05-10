@@ -22,7 +22,22 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { mysqlApiRequest } from '../../lib/mysql/client';
+import {
+  listingHeader,
+  listingTitle,
+  listingSubtitle,
+  listingPrimaryBtn,
+  listingPage,
+  metricStrip,
+  metricCard,
+  metricLabel,
+  metricValue,
+  listingTh,
+  listingTd,
+} from '../ui/listingStyles';
 import type { FlagSeverity, PaymentQueueItem, PaymentStatus, RiskFlag } from '../../types/payments';
+
+const COLUMNS = '1.8fr 1fr 0.8fr 0.8fr 0.7fr 0.8fr 0.9fr';
 
 // ============================================================================
 // Helpers
@@ -80,46 +95,6 @@ function FlagIcon({ name, className }: { name: string; className?: string }) {
 // Status / due-date pill helpers
 // ============================================================================
 
-function statusPillStyle(status: PaymentStatus): string {
-  switch (status) {
-    case 'paid':
-      return 'bg-green-50 text-green-700';
-    case 'partial':
-      return 'bg-amber-50 text-amber-700';
-    case 'flagged':
-      return 'bg-red-50 text-red-600';
-    case 'onhold':
-      return 'bg-orange-50 text-orange-700';
-    case 'processing':
-      return 'bg-blue-50 text-blue-700';
-    case 'pending':
-      return 'bg-slate-100 text-slate-700';
-    default:
-      return 'bg-slate-100 text-slate-700';
-  }
-}
-function dueChipStyle(dueIso: string, status: PaymentStatus) {
-  if (status === 'paid') return 'bg-green-50 text-green-700';
-  const d = daysFromToday(dueIso);
-  if (d < 0 || d === 0) return 'bg-red-50 text-red-600';
-  if (d <= 3) return 'bg-amber-50 text-amber-700';
-  return 'bg-slate-100 text-slate-700';
-}
-function dueChipLabel(dueIso: string) {
-  if (!dueIso) return '—';
-  const d = daysFromToday(dueIso);
-  if (d < 0) return `${Math.abs(d)}d overdue`;
-  if (d === 0) return 'Due today';
-  return `in ${d}d`;
-}
-
-const PRIORITY_BAR: Record<string, string> = {
-  critical: 'bg-red-500',
-  high: 'bg-orange-500',
-  medium: 'bg-amber-400',
-  low: 'bg-slate-300',
-};
-
 // ============================================================================
 // Queue metrics card row
 // ============================================================================
@@ -139,21 +114,21 @@ function QueueMetrics({
   flaggedCount,
 }: MetricsProps) {
   const cards = [
-    { label: 'Total value', value: compactINR(totalValue), tone: 'text-ink' },
+    { label: 'Total value', value: compactINR(totalValue), tone: 'var(--color-ink)' },
     {
       label: `Flagged & held (${flaggedCount})`,
       value: compactINR(flaggedValue),
-      tone: 'text-red-600',
+      tone: flaggedCount > 0 ? '#A32D2D' : 'var(--color-ink)',
     },
-    { label: 'Outstanding', value: compactINR(outstanding), tone: 'text-ink' },
-    { label: 'Paid this cycle', value: compactINR(paidThisCycle), tone: 'text-green-600' },
+    { label: 'Outstanding', value: compactINR(outstanding), tone: '#BA7517' },
+    { label: 'Paid this cycle', value: compactINR(paidThisCycle), tone: '#0F6E56' },
   ];
   return (
-    <div className="grid grid-cols-4 gap-4 mb-4">
+    <div style={metricStrip}>
       {cards.map((c) => (
-        <div key={c.label} className="bg-white rounded-xl border-2 border-silver p-4">
-          <div className="text-sm text-mercury-grey mb-1">{c.label}</div>
-          <div className={`text-2xl font-semibold ${c.tone}`}>{c.value}</div>
+        <div key={c.label} style={metricCard}>
+          <div style={metricLabel}>{c.label}</div>
+          <div style={{ ...metricValue, color: c.tone }}>{c.value}</div>
         </div>
       ))}
     </div>
@@ -334,74 +309,239 @@ function FlagBadge({ flags }: { flags: RiskFlag[] }) {
   );
 }
 
+function typeBadgeColors(type: string, isMSME: boolean): { bg: string; fg: string; label: string } {
+  if (isMSME) return { bg: '#FAEEDA', fg: '#633806', label: 'MSME' };
+  if (type === 'advance') return { bg: '#E1F5EE', fg: '#085041', label: 'Advance' };
+  return { bg: '#EEEDFE', fg: '#3C3489', label: 'Invoice' };
+}
+
+function ageDotForDue(dueIso: string, status: PaymentStatus): { color: string; label: string } {
+  if (!dueIso) return { color: '#9AA3AD', label: '—' };
+  if (status === 'paid') return { color: '#0F6E56', label: 'Paid' };
+  const d = daysFromToday(dueIso);
+  if (d < 0) return { color: '#A32D2D', label: `${Math.abs(d)}d overdue` };
+  if (d <= 7) return { color: '#BA7517', label: `in ${d}d` };
+  return { color: '#0F6E56', label: `in ${d}d` };
+}
+
+function QueueHeaderRow() {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: COLUMNS,
+        alignItems: 'center',
+        background: 'var(--color-background-secondary)',
+        borderBottom: '0.5px solid var(--color-fog)',
+      }}
+    >
+      <div style={listingTh}>Payee / Ref</div>
+      <div style={listingTh}>Type</div>
+      <div style={{ ...listingTh, textAlign: 'right' }}>Amount</div>
+      <div style={listingTh}>Due date</div>
+      <div style={listingTh}>Age</div>
+      <div style={listingTh}>Risk flags</div>
+      <div style={{ ...listingTh, textAlign: 'right' }}>Actions</div>
+    </div>
+  );
+}
+
 function QueueRow({
   item,
   onView,
+  onPay,
+  onHold,
 }: {
   item: PaymentQueueItem;
   onView: (item: PaymentQueueItem) => void;
+  onPay: (item: PaymentQueueItem) => void;
+  onHold: (item: PaymentQueueItem) => void;
 }) {
   const isFlagged = item.flags.length > 0 && !item.cleared;
+  const due = daysFromToday(item.due || '');
+  const overdue = item.due && due < 0 && item.status !== 'paid';
+  const tBadge = typeBadgeColors(item.type, item.isMSME);
+  const age = ageDotForDue(item.due, item.status);
   return (
-    <button
-      type="button"
-      onClick={() => onView(item)}
-      className={[
-        'w-full text-left grid grid-cols-[6px_3fr_1fr_1.4fr_1.2fr_1.4fr_36px] items-center gap-3 px-4 py-3 border-b border-silver transition-colors',
-        isFlagged
-          ? 'bg-red-50/40 hover:bg-red-50 border-l-[3px] border-l-red-500'
-          : 'hover:bg-cloud',
-      ].join(' ')}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: COLUMNS,
+        alignItems: 'center',
+        padding: '8px 20px',
+        borderBottom: '0.5px solid var(--color-fog)',
+        fontSize: 12,
+        background: isFlagged ? '#FFF6F6' : '#FFFFFF',
+        borderLeft: isFlagged ? '3px solid #A32D2D' : '3px solid transparent',
+      }}
+      className="listing-row-hover"
     >
-      <div className={`h-8 rounded-sm ${PRIORITY_BAR[item.priority]}`} />
-      <div className="min-w-0">
-        <div className="font-semibold text-ink truncate">{item.name}</div>
-        <div className="text-xs text-mercury-grey truncate flex items-center gap-2">
-          <span>{item.ref}</span>
-          {item.dept && <span className="text-slate-400">·</span>}
-          {item.dept && <span>{item.dept}</span>}
-          {item.isMSME && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
-              MSME{item.msmeRemaining !== null ? ` ${item.msmeRemaining}d` : ''}
-            </span>
-          )}
-          {item.critTag && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
-              {item.critTag.toUpperCase()}
-            </span>
-          )}
+      {/* Payee / ref */}
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 500,
+            color: 'var(--color-ink)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {item.name}
+        </div>
+        <div
+          style={{
+            fontSize: 10,
+            color: 'var(--color-mercury-grey)',
+            marginTop: 2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {item.ref}
+          {item.dept ? ` · ${item.dept}` : ''}
         </div>
       </div>
-      <div className="text-xs text-mercury-grey capitalize">{item.type}</div>
-      <div className="text-right">
-        <div className="font-semibold text-ink">{fmtINR(item.amount)}</div>
-        {item.paidAmt > 0 && item.paidAmt < item.amount && (
-          <div className="text-xs text-mercury-grey">Paid {fmtINR(item.paidAmt)}</div>
-        )}
-      </div>
+      {/* Type */}
       <div>
         <span
-          className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${dueChipStyle(
-            item.due,
-            item.status
-          )}`}
+          style={{
+            display: 'inline-block',
+            padding: '2px 8px',
+            borderRadius: 20,
+            fontSize: 10,
+            fontWeight: 600,
+            background: tBadge.bg,
+            color: tBadge.fg,
+          }}
         >
-          {dueChipLabel(item.due)}
+          {tBadge.label}
+          {item.isMSME && item.msmeRemaining !== null ? ` ${item.msmeRemaining}d` : ''}
         </span>
       </div>
-      <div className="flex items-center gap-2">
+      {/* Amount */}
+      <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 500, color: 'var(--color-ink)' }}>
+        {fmtINR(item.amount)}
+        {item.paidAmt > 0 && item.paidAmt < item.amount && (
+          <div style={{ fontSize: 10, color: 'var(--color-mercury-grey)', fontWeight: 400 }}>
+            Paid {fmtINR(item.paidAmt)}
+          </div>
+        )}
+      </div>
+      {/* Due date */}
+      <div
+        style={{
+          fontSize: 11,
+          color: overdue ? '#A32D2D' : 'var(--color-ink)',
+          fontWeight: overdue ? 500 : 400,
+        }}
+      >
+        {item.due || '—'}
+      </div>
+      {/* Age */}
+      <div
+        style={{
+          fontSize: 11,
+          color: 'var(--color-ink)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+        }}
+      >
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: 6,
+            background: age.color,
+            display: 'inline-block',
+          }}
+        />
+        {age.label}
+      </div>
+      {/* Risk flags */}
+      <div>
         {isFlagged ? (
           <FlagBadge flags={item.flags} />
         ) : (
-          <span
-            className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${statusPillStyle(item.status)}`}
-          >
-            {item.status}
-          </span>
+          <span style={{ color: 'var(--color-mercury-grey)', fontSize: 11 }}>—</span>
         )}
       </div>
-      <ChevronRight className="w-5 h-5 text-mercury-grey justify-self-end" />
-    </button>
+      {/* Actions */}
+      <div
+        style={{
+          display: 'flex',
+          gap: 4,
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+        }}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPay(item);
+          }}
+          disabled={isFlagged || item.status === 'paid'}
+          style={{
+            height: 26,
+            padding: '0 10px',
+            background: isFlagged || item.status === 'paid' ? '#F1EFE8' : '#0F6E56',
+            color: isFlagged || item.status === 'paid' ? '#9AA3AD' : '#FFFFFF',
+            border: 'none',
+            borderRadius: 4,
+            fontSize: 11,
+            fontWeight: 500,
+            cursor: isFlagged || item.status === 'paid' ? 'not-allowed' : 'pointer',
+          }}
+        >
+          Pay
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onHold(item);
+          }}
+          style={{
+            height: 26,
+            padding: '0 10px',
+            background: '#FFFFFF',
+            color: 'var(--color-ink)',
+            border: '1px solid var(--color-silver)',
+            borderRadius: 4,
+            fontSize: 11,
+            cursor: 'pointer',
+          }}
+        >
+          {item.status === 'onhold' ? 'Release' : 'Hold'}
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onView(item);
+          }}
+          aria-label="View details"
+          style={{
+            width: 26,
+            height: 26,
+            background: '#FFFFFF',
+            color: 'var(--color-mercury-grey)',
+            border: '1px solid var(--color-silver)',
+            borderRadius: 4,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1226,16 +1366,28 @@ export function PaymentQueue() {
     refresh();
   };
 
+  // Helper to open Pay/Hold modals from row buttons (set selected first then open modal).
+  const openPay = useCallback((it: PaymentQueueItem) => {
+    setSelected(it);
+    setShowPay(true);
+  }, []);
+  const openHold = useCallback(async (it: PaymentQueueItem) => {
+    try {
+      await mysqlApiRequest(`/ap/payment-queue/${it.id}/hold`, { method: 'POST' });
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Hold toggle failed');
+    }
+  }, []);
+
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+    <div style={listingPage}>
+      <div style={listingHeader}>
         <div>
-          <h1 className="text-3xl font-semibold text-ink mb-1">Payment queue</h1>
-          <p className="text-mercury-grey">
-            Approved invoices ready to pay, with risk-flag enforcement.
-          </p>
+          <h1 style={listingTitle}>Payment queue</h1>
+          <p style={listingSubtitle}>Invoices and advances ready for payment.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {/* Demo-only role toggle. In production isApprover is derived from
               the authenticated user's role; the toggle is a dev convenience. */}
           {isDev && <RoleToggle value={demoRole} onChange={setDemoRole} />}
@@ -1243,10 +1395,18 @@ export function PaymentQueue() {
             type="button"
             onClick={refresh}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 border-2 border-silver bg-white rounded-lg text-mercury-grey"
+            style={{
+              ...listingPrimaryBtn,
+              background: '#FFFFFF',
+              color: 'var(--color-ink)',
+              border: '1px solid var(--color-silver)',
+            }}
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             Refresh
+          </button>
+          <button type="button" style={listingPrimaryBtn} onClick={() => alert('Coming soon')}>
+            Create batch
           </button>
         </div>
       </div>
@@ -1286,30 +1446,77 @@ export function PaymentQueue() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border-2 border-silver overflow-hidden">
+      <div style={{ background: '#FFFFFF', borderTop: '0.5px solid var(--color-fog)' }}>
+        <QueueHeaderRow />
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-mercury-grey">
-            <RefreshCw className="w-8 h-8 animate-spin mb-3 text-teal" />
+          <div
+            style={{
+              padding: 32,
+              textAlign: 'center',
+              color: 'var(--color-mercury-grey)',
+              fontSize: 12,
+            }}
+          >
+            <RefreshCw
+              className="animate-spin"
+              size={20}
+              style={{ display: 'inline-block', marginRight: 8 }}
+            />
             Loading payment queue…
           </div>
         ) : sections.length === 0 || sections.every((s) => s.rows.length === 0) ? (
-          <div className="flex flex-col items-center justify-center py-16 text-mercury-grey">
-            <CheckCircle className="w-10 h-10 mb-3" />
-            <p>{items.length === 0 ? 'No invoices in queue' : 'No invoices match filters'}</p>
+          <div
+            style={{
+              padding: 32,
+              textAlign: 'center',
+              color: 'var(--color-mercury-grey)',
+              fontSize: 12,
+            }}
+          >
+            <CheckCircle size={24} style={{ display: 'inline-block', marginRight: 8 }} />
+            {items.length === 0 ? 'No invoices in queue' : 'No invoices match filters'}
           </div>
         ) : (
           sections.map((s) => (
             <div key={s.label}>
               {s.label && (
-                <div className="px-4 py-2 bg-cloud border-b border-silver text-xs font-bold uppercase text-mercury-grey flex items-center gap-2">
+                <div
+                  style={{
+                    padding: '6px 20px',
+                    background: 'var(--color-background-secondary)',
+                    borderBottom: '0.5px solid var(--color-fog)',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    letterSpacing: 0.4,
+                    textTransform: 'uppercase',
+                    color: 'var(--color-mercury-grey)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
                   <span>{s.label}</span>
-                  <span className="bg-white px-2 py-0.5 rounded-full text-mercury-grey">
+                  <span
+                    style={{
+                      background: '#FFFFFF',
+                      padding: '1px 6px',
+                      borderRadius: 10,
+                      color: 'var(--color-mercury-grey)',
+                      fontSize: 10,
+                    }}
+                  >
                     {s.rows.length}
                   </span>
                 </div>
               )}
               {s.rows.map((it) => (
-                <QueueRow key={it.id} item={it} onView={(item) => setSelected(item)} />
+                <QueueRow
+                  key={it.id}
+                  item={it}
+                  onView={(item) => setSelected(item)}
+                  onPay={openPay}
+                  onHold={openHold}
+                />
               ))}
             </div>
           ))

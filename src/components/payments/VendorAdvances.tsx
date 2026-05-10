@@ -23,7 +23,17 @@ import {
   listingSubtitle,
   listingPrimaryBtn,
   listingPage,
+  listingTh,
+  listingTd,
+  listingTdPrimary,
+  listingTdMuted,
+  metricStrip,
+  metricCard,
+  metricLabel,
+  metricValue,
 } from '../ui/listingStyles';
+
+const ADVANCE_COLUMNS = '1.2fr 2fr 0.8fr 0.9fr 0.9fr 0.9fr 0.9fr 0.8fr';
 import type {
   AdvanceStatus,
   AdvanceSummary,
@@ -627,30 +637,43 @@ function SummaryStrip({
   const queuedCount = summary?.byStatus.queued_for_payment ?? 0;
   const overdue = summary?.overdueSettlement ?? 0;
   return (
-    <div className="grid grid-cols-4 gap-4 mb-4">
-      <div className="bg-white rounded-xl border-2 border-silver p-4">
-        <div className="text-sm text-mercury-grey mb-1">Total advances</div>
-        <div className="text-2xl font-semibold text-ink">{totalCount}</div>
-        <div className="text-xs text-mercury-grey">
+    <div style={metricStrip}>
+      <div style={metricCard}>
+        <div style={metricLabel}>Total advances</div>
+        <div style={metricValue}>{totalCount}</div>
+        <div style={{ fontSize: 10, color: 'var(--color-mercury-grey)', marginTop: 2 }}>
           {formatINRCompact(summary?.totalAmount ?? 0)}
         </div>
       </div>
-      <div className="bg-white rounded-xl border-2 border-amber-200 p-4">
-        <div className="text-sm text-amber-700 mb-1">Pending approval</div>
-        <div className="text-2xl font-semibold text-amber-800">{pendingCount}</div>
+      <div style={metricCard}>
+        <div style={metricLabel}>Pending approval</div>
+        <div style={{ ...metricValue, color: pendingCount > 0 ? '#BA7517' : 'var(--color-ink)' }}>
+          {pendingCount}
+        </div>
       </div>
       <button
         type="button"
         onClick={onJumpToQueue}
-        className="bg-white rounded-xl border-2 border-blue-200 p-4 text-left hover:bg-blue-50 transition-colors"
+        style={{
+          ...metricCard,
+          textAlign: 'left',
+          cursor: 'pointer',
+          border: 'none',
+        }}
       >
-        <div className="text-sm text-blue-700 mb-1">Queued for payment</div>
-        <div className="text-2xl font-semibold text-blue-800">{queuedCount}</div>
-        <div className="text-xs text-blue-600 underline">Open Payment queue →</div>
+        <div style={metricLabel}>Queued for payment</div>
+        <div style={{ ...metricValue, color: queuedCount > 0 ? '#0F6E56' : 'var(--color-ink)' }}>
+          {queuedCount}
+        </div>
+        <div style={{ fontSize: 10, color: '#0F6E56', textDecoration: 'underline', marginTop: 2 }}>
+          Open Payment queue →
+        </div>
       </button>
-      <div className="bg-white rounded-xl border-2 border-red-200 p-4">
-        <div className="text-sm text-red-600 mb-1">Overdue settlement</div>
-        <div className="text-2xl font-semibold text-red-700">{overdue}</div>
+      <div style={metricCard}>
+        <div style={metricLabel}>Overdue settlement</div>
+        <div style={{ ...metricValue, color: overdue > 0 ? '#A32D2D' : 'var(--color-ink)' }}>
+          {overdue}
+        </div>
       </div>
     </div>
   );
@@ -840,72 +863,242 @@ export function VendorAdvances() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border-2 border-silver overflow-hidden">
-        <div className="grid grid-cols-[140px_2fr_1fr_120px_140px_140px_120px_36px] gap-3 px-4 py-2 bg-cloud border-b-2 border-silver text-xs uppercase font-semibold text-mercury-grey">
-          <span>Ref</span>
-          <span>Vendor / purpose</span>
-          <span>Type</span>
-          <span className="text-right">Amount</span>
-          <span>Required by</span>
-          <span>Settlement</span>
-          <span>Status</span>
-          <span />
+      <div style={{ background: '#FFFFFF', borderTop: '0.5px solid var(--color-fog)' }}>
+        {/* Header — identical grid template to body rows */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: ADVANCE_COLUMNS,
+            alignItems: 'center',
+            background: 'var(--color-background-secondary)',
+            borderBottom: '0.5px solid var(--color-fog)',
+          }}
+        >
+          <div style={listingTh}>Ref</div>
+          <div style={listingTh}>Vendor / Purpose</div>
+          <div style={listingTh}>Type</div>
+          <div style={{ ...listingTh, textAlign: 'right' }}>Amount</div>
+          <div style={listingTh}>Required by</div>
+          <div style={listingTh}>Settlement</div>
+          <div style={listingTh}>Status</div>
+          <div style={{ ...listingTh, textAlign: 'right' }}>Actions</div>
         </div>
         {loading ? (
-          <div className="py-12 text-center text-mercury-grey text-sm">
-            <RefreshCw className="w-6 h-6 mx-auto mb-2 animate-spin text-teal" />
+          <div
+            style={{
+              padding: 32,
+              textAlign: 'center',
+              color: 'var(--color-mercury-grey)',
+              fontSize: 12,
+            }}
+          >
+            <RefreshCw
+              size={20}
+              className="animate-spin"
+              style={{ display: 'inline-block', marginRight: 8 }}
+            />
             Loading advances…
           </div>
         ) : visible.length === 0 ? (
-          <div className="py-12 text-center text-mercury-grey text-sm">
-            <CheckCircle className="w-8 h-8 mx-auto mb-2" />
+          <div
+            style={{
+              padding: 32,
+              textAlign: 'center',
+              color: 'var(--color-mercury-grey)',
+              fontSize: 12,
+            }}
+          >
+            <CheckCircle size={20} style={{ display: 'inline-block', marginRight: 8 }} />
             {advances.length === 0 ? 'No advances yet' : 'No advances match filters'}
           </div>
         ) : (
           visible.map((adv) => {
             const overdue = isOverdueSettlement(adv);
+            const requiredOverdue = daysFromToday(adv.requiredByDate) < 0;
+            const nextStatusAction =
+              adv.status === 'draft'
+                ? { label: 'Submit', kind: 'primary' as const }
+                : adv.status === 'pending_approval' && isApprover
+                  ? { label: 'Approve', kind: 'primary' as const }
+                  : adv.status === 'approved'
+                    ? { label: 'Queue', kind: 'primary' as const }
+                    : adv.status === 'paid'
+                      ? { label: 'Settle', kind: 'primary' as const }
+                      : null;
             return (
-              <button
+              <div
                 key={adv.id}
-                type="button"
-                onClick={() => openExisting(adv)}
-                className="w-full grid grid-cols-[140px_2fr_1fr_120px_140px_140px_120px_36px] items-center gap-3 px-4 py-3 border-b border-silver hover:bg-cloud text-sm text-left"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: ADVANCE_COLUMNS,
+                  alignItems: 'center',
+                  borderBottom: '0.5px solid var(--color-fog)',
+                  background: '#FFFFFF',
+                }}
+                className="listing-row-hover"
               >
-                <span className="font-mono text-xs text-ink">{adv.advanceRef}</span>
-                <div className="min-w-0">
-                  <div className="text-ink font-medium truncate">{adv.vendorName}</div>
-                  <div className="text-xs text-mercury-grey truncate">{adv.purpose}</div>
-                  <div className="text-[10px] text-mercury-grey/70">
+                <div style={{ ...listingTdPrimary, fontFamily: 'monospace', fontSize: 11 }}>
+                  {adv.advanceRef}
+                </div>
+                <div style={{ ...listingTd, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: 'var(--color-ink)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {adv.vendorName}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: 'var(--color-mercury-grey)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {adv.purpose}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: 'var(--color-mercury-grey)',
+                      opacity: 0.8,
+                    }}
+                  >
                     {adv.requesterName}
                     {adv.department ? ` · ${adv.department}` : ''}
                   </div>
                 </div>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-cloud text-mercury-grey capitalize w-fit">
-                  {adv.advanceType}
-                </span>
-                <span className="text-right font-medium text-ink">{formatINR(adv.amount)}</span>
-                <span
-                  className={`inline-block px-2 py-1 rounded-full text-xs font-medium w-fit ${urgencyChipClass(adv.requiredByDate)}`}
+                <div style={listingTd}>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: 20,
+                      fontSize: 10,
+                      fontWeight: 600,
+                      background: '#E1F5EE',
+                      color: '#085041',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {adv.advanceType}
+                  </span>
+                </div>
+                <div style={{ ...listingTdPrimary, textAlign: 'right' }}>
+                  {formatINR(adv.amount)}
+                </div>
+                <div
+                  style={{
+                    ...listingTd,
+                    color: requiredOverdue ? '#A32D2D' : 'var(--color-ink)',
+                    fontWeight: requiredOverdue ? 500 : 400,
+                  }}
                 >
-                  {shortDate(adv.requiredByDate)}
-                </span>
-                <span
-                  className={`text-xs ${overdue ? 'text-red-600 font-semibold' : 'text-mercury-grey'}`}
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: 20,
+                      fontSize: 10,
+                      fontWeight: 600,
+                      ...(urgencyChipClass(adv.requiredByDate) === 'bg-red-50 text-red-600'
+                        ? { background: '#FCEBEB', color: '#791F1F' }
+                        : urgencyChipClass(adv.requiredByDate) === 'bg-amber-50 text-amber-700'
+                          ? { background: '#FAEEDA', color: '#633806' }
+                          : { background: '#F1EFE8', color: '#5F5E5A' }),
+                    }}
+                  >
+                    {shortDate(adv.requiredByDate)}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    ...(overdue ? listingTdPrimary : listingTdMuted),
+                    color: overdue ? '#A32D2D' : 'var(--color-mercury-grey)',
+                  }}
                 >
                   {shortDate(adv.settlementDueDate)}
                   {overdue && (
-                    <span className="ml-1 inline-flex items-center gap-0.5">
-                      <Clock className="w-3 h-3" /> overdue
+                    <span style={{ marginLeft: 6, fontSize: 10 }}>
+                      <Clock size={10} style={{ display: 'inline-block' }} /> overdue
                     </span>
                   )}
-                </span>
-                <span
-                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium w-fit ${STATUS_PILL[adv.status]}`}
+                </div>
+                <div style={listingTd}>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: 20,
+                      fontSize: 10,
+                      fontWeight: 600,
+                      ...(adv.status === 'rejected'
+                        ? { background: '#FCEBEB', color: '#791F1F' }
+                        : adv.status === 'pending_approval'
+                          ? { background: '#FAEEDA', color: '#633806' }
+                          : adv.status === 'approved' || adv.status === 'queued_for_payment'
+                            ? { background: '#E6F1FB', color: '#0C447C' }
+                            : adv.status === 'paid' || adv.status === 'settled'
+                              ? { background: '#EAF3DE', color: '#27500A' }
+                              : { background: '#F1EFE8', color: '#5F5E5A' }),
+                    }}
+                  >
+                    {adv.status.replace('_', ' ')}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    ...listingTd,
+                    display: 'flex',
+                    gap: 4,
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                  }}
                 >
-                  {adv.status.replace('_', ' ')}
-                </span>
-                <ChevronRight className="w-4 h-4 text-mercury-grey justify-self-end" />
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => openExisting(adv)}
+                    style={{
+                      height: 26,
+                      padding: '0 10px',
+                      background: '#FFFFFF',
+                      color: 'var(--color-ink)',
+                      border: '1px solid var(--color-silver)',
+                      borderRadius: 4,
+                      fontSize: 11,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    View
+                  </button>
+                  {nextStatusAction && (
+                    <button
+                      type="button"
+                      onClick={() => openExisting(adv)}
+                      style={{
+                        height: 26,
+                        padding: '0 10px',
+                        background: '#0F6E56',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: 4,
+                        fontSize: 11,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {nextStatusAction.label}
+                    </button>
+                  )}
+                </div>
+              </div>
             );
           })
         )}
