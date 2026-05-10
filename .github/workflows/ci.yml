@@ -19,7 +19,12 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        # `npm ci` fails on Linux because package-lock.json pins
+        # `@rollup/rollup-darwin-arm64` (the macOS dev's local arch). Falling
+        # through to `npm install` regenerates the lockfile platform-aware.
+        # Proper fix: move rollup platform packages out of `dependencies`
+        # into `optionalDependencies`. Tracked separately.
+        run: npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
       - name: Lint (errors only; warnings allowed)
         run: npm run lint -- --max-warnings=9999
