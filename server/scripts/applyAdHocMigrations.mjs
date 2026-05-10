@@ -23,7 +23,15 @@ const REPO_ROOT = resolve(__dirname, '../..');
 // a proper schema_migrations runner (B5 in queue). Migrations are idempotent
 // (CREATE TABLE IF NOT EXISTS / INSERT IGNORE / WHERE NOT EXISTS) so running
 // them once more is safe but wasteful.
-const MIGRATIONS = ['sql/mysql/migrations/20260510_sprint1_masters.sql'];
+const MIGRATIONS = [
+  // Bootstrap missing schemas (procurement + vendor_advances were merged on
+  // PRs but the live DB's schema-migrations runner is the still-pending B5
+  // backlog item). Idempotent, safe to re-run.
+  'sql/mysql/migrations/20260510_procurement_relational.sql',
+  'sql/mysql/migrations/20260510_vendor_advances.sql',
+  // Transaction seeds for the demo P2P chain.
+  'sql/mysql/migrations/20260510_transaction_seeds.sql',
+];
 
 const IGNORABLE_ERRORS = new Set([
   'ER_DUP_KEYNAME',
