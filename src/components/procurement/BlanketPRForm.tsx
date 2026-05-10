@@ -122,7 +122,10 @@ export function BlanketPRForm() {
     if (result.success) {
       navigate('/procurement/pr/listing');
     } else {
-      setSubmitError('Failed to save PR. Please try again.');
+      const msg = result.details?.length
+        ? result.details.join(' · ')
+        : (result.error ?? 'Failed to save PR. Please try again.');
+      setSubmitError(msg);
     }
   };
 

@@ -298,7 +298,7 @@ interface ProcurementDataContextType {
   isHydrating: boolean;
   addPurchaseRequest: (
     request: PurchaseRequestTransaction
-  ) => Promise<{ success: boolean; pr?: PurchaseRequest }>;
+  ) => Promise<{ success: boolean; pr?: PurchaseRequest; error?: string; details?: string[] }>;
   updatePurchaseRequestStatus: (
     id: string,
     status: PurchaseRequestStatus,
@@ -375,7 +375,7 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
   const addPurchaseRequest = useCallback(
     async (
       request: PurchaseRequestTransaction
-    ): Promise<{ success: boolean; pr?: PurchaseRequest }> => {
+    ): Promise<{ success: boolean; pr?: PurchaseRequest; error?: string; details?: string[] }> => {
       const relPRType = PR_TYPE_FROM_LEGACY[request.type];
       const relStatus = PR_STATUS_FROM_LEGACY[request.status];
       const adaptLineItems = (rows: Array<Record<string, unknown>> = []) =>
@@ -424,10 +424,15 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
           await refresh();
           return { success: true, pr: created };
         }
-        return { success: false };
+        return { success: false, error: 'createPRApi returned no data' };
       } catch (err) {
         console.error('[ProcurementDataContext] createPRApi failed:', err);
-        return { success: false };
+        const apiErr = err as { message?: string; details?: string[] };
+        return {
+          success: false,
+          error: apiErr?.message,
+          details: apiErr?.details ?? [],
+        };
       }
     },
     [refresh]

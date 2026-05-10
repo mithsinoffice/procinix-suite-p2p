@@ -67,12 +67,24 @@ export async function mysqlApiRequest<T>(path: string, init?: RequestInit): Prom
 
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(
+    const err: ApiRequestError = new Error(
       typeof payload?.error === 'string'
         ? payload.error
         : `MySQL API request failed with status ${response.status}`
     );
+    if (Array.isArray(payload?.details)) {
+      err.details = payload.details as string[];
+    }
+    err.status = response.status;
+    throw err;
   }
 
   return payload as T;
+}
+
+/** Thrown by mysqlApiRequest on non-2xx; carries the server's `details` array
+ *  (when present) so callers can show the validation error list verbatim. */
+export interface ApiRequestError extends Error {
+  details?: string[];
+  status?: number;
 }

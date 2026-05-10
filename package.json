@@ -86,6 +86,7 @@
   },
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --restart-tries 1 --restart-delay 1500 -n api,web -c blue,green \"npm run server:mysql:fresh\" \"wait-on -t 120000 tcp:127.0.0.1:8787 && npm run dev:web\"",
+    "dev:clean": "pkill -f vite; pkill -f 'node server'; sleep 1 && npm run dev",
     "dev:web": "vite",
     "dev:full": "npm run dev",
     "build": "vite build",
