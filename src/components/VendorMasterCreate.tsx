@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Building2, Users, MapPin, ShieldCheck, Landmark, Link2 } from 'lucide-react';
 import { FormShell, FormSection, PxFormField } from './ui/form-primitives';
 import { SimpleInlineTable, AddRowButton, type SimpleColumn } from './shared/SimpleInlineTable';
-import { mysqlApiBaseUrl } from '../lib/mysql/client';
+import { mysqlApiBaseUrl, mysqlApiRequest } from '../lib/mysql/client';
 import { useMasterData, type VendorMaster } from '../contexts/MasterDataContext';
 import {
   ensureRelationalMasterRecords,
@@ -314,6 +314,7 @@ const defaultVendor = {
   client_erp_vendor_code: '',
   vendor_legal_name: '',
   vendor_trade_name: '',
+  vendor_group_id: '',
   vendor_group_name: '',
   vendor_group_code: '',
   vendor_type: 'goods_supplier',
@@ -425,7 +426,7 @@ export function VendorMasterCreate() {
   const { vendorId } = useParams<{ vendorId?: string }>();
   const navigate = useNavigate();
   const isEdit = !!vendorId;
-  const { addVendor, updateVendor: updateVendorMaster } = useMasterData();
+  const { addVendor, updateVendor: updateVendorMaster, entities, vendorGroups } = useMasterData();
 
   /* ---- state ---- */
   const [vendor, setVendor] = useState({ ...defaultVendor });
@@ -572,16 +573,14 @@ export function VendorMasterCreate() {
     setMsmeLoading(true);
     setMsmeError('');
     try {
-      const res = await fetch(`${API}/api/kyc/verify-msme`, {
+      const data = await mysqlApiRequest<any>('/kyc/verify-msme', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           udyam_number: udyam,
           consent: 'Y',
           reason: 'Vendor onboarding KYC',
         }),
       });
-      const data = await res.json();
       if (data.success) {
         setMsmeResult({
           ...data.data,
@@ -616,9 +615,8 @@ export function VendorMasterCreate() {
       setBankVerifying((prev) => ({ ...prev, [idx]: true }));
       setBankErrors((prev) => ({ ...prev, [idx]: '' }));
       try {
-        const res = await fetch(`${API}/api/kyc/verify-bank`, {
+        const data = await mysqlApiRequest<any>('/kyc/verify-bank', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             account_number: row.account_number,
             ifsc: row.ifsc_code.toUpperCase(),
@@ -626,7 +624,6 @@ export function VendorMasterCreate() {
             reason: 'Vendor onboarding KYC',
           }),
         });
-        const data = await res.json();
         if (data.success) {
           setBankResults((prev) => ({
             ...prev,
@@ -664,8 +661,7 @@ export function VendorMasterCreate() {
   useEffect(() => {
     if (!vendorId) return;
     setLoading(true);
-    fetch(`${API}/api/vendors/${vendorId}`)
-      .then((r) => r.json())
+    mysqlApiRequest<any>(`/vendors/${vendorId}`)
       .then((res) => {
         if (!res.success) throw new Error(res.error || 'Failed to load vendor');
         const d = res.data;
@@ -674,6 +670,7 @@ export function VendorMasterCreate() {
           client_erp_vendor_code: d.client_erp_vendor_code || d.clientErpVendorCode || '',
           vendor_legal_name: d.vendor_legal_name || '',
           vendor_trade_name: d.vendor_trade_name || '',
+          vendor_group_id: d.vendor_group_id || '',
           vendor_group_name: d.vendor_group_name || '',
           vendor_group_code: d.vendor_group_code || '',
           vendor_type: d.vendor_type || 'goods_supplier',
@@ -721,24 +718,16 @@ export function VendorMasterCreate() {
       .finally(() => setLoading(false));
   }, [vendorId]);
 
-  /* ---- fetch entities for entity-mapping dropdown ---- */
+  /* ---- entities for entity-mapping dropdown (sourced from MasterDataContext) ---- */
   useEffect(() => {
-    fetch(`${API}/api/entities`)
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.success && Array.isArray(res.data)) {
-          setEntityOptions(
-            res.data.map((e: any) => ({
-              value: e.id,
-              label: `${e.name}${e.code ? ` (${e.code})` : ''}`,
-            }))
-          );
-        }
-      })
-      .catch(() => {
-        /* entities API unavailable — dropdown stays empty */
-      });
-  }, []);
+    if (!entities || entities.length === 0) return;
+    setEntityOptions(
+      entities.map((e) => ({
+        value: e.id,
+        label: `${e.name}${e.code ? ` (${e.code})` : ''}`,
+      }))
+    );
+  }, [entities]);
 
   // Build entity mapping columns with dynamic entity options
   const entityMappingColumns = useMemo<SimpleColumn[]>(
@@ -861,14 +850,11 @@ export function VendorMasterCreate() {
           entity_mappings: entityMappings,
         };
         try {
-          const url = isEdit ? `${API}/api/vendors/${vendorId}` : `${API}/api/vendors`;
-          const method = isEdit ? 'PUT' : 'POST';
-          const res = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
+          const path = isEdit ? `/vendors/${vendorId}` : '/vendors';
+          const data = await mysqlApiRequest<any>(path, {
+            method: isEdit ? 'PUT' : 'POST',
             body: JSON.stringify(apiPayload),
           });
-          const data = await res.json();
           if (data?.success && data?.data?.vendor_code) {
             serverAssignedCode = String(data.data.vendor_code);
           }
@@ -878,7 +864,7 @@ export function VendorMasterCreate() {
             data?.success &&
             data?.data?.id
           ) {
-            await fetch(`${API}/api/vendors/${data.data.id}/submit`, { method: 'POST' });
+            await mysqlApiRequest(`/vendors/${data.data.id}/submit`, { method: 'POST' });
           }
         } catch {
           // Network/API failure — fall back to client-generated code so the
@@ -1195,15 +1181,40 @@ export function VendorMasterCreate() {
             )}
           </PxFormField>
           <PxFormField label="Vendor Group">
-            {renderInput(
-              'vendor_group_name',
-              'Parent group name',
-              vendor.vendor_group_name,
-              updateVendor
-            )}
+            <select
+              value={vendor.vendor_group_id || ''}
+              onChange={(e) => {
+                const id = e.target.value;
+                const grp = vendorGroups.find((g) => g.id === id);
+                setVendor((prev) => ({
+                  ...prev,
+                  vendor_group_id: id,
+                  vendor_group_code: grp?.recordCode ?? grp?.code ?? '',
+                  vendor_group_name: grp?.recordName ?? grp?.name ?? grp?.group_name ?? '',
+                }));
+              }}
+              style={selectStyle}
+            >
+              <option value="">Select group…</option>
+              {vendorGroups.map((g) => {
+                const code = g.recordCode ?? g.code ?? '';
+                const name = g.recordName ?? g.name ?? g.group_name ?? code;
+                return (
+                  <option key={g.id ?? code ?? name} value={g.id ?? ''}>
+                    {code ? `${code} — ${name}` : name}
+                  </option>
+                );
+              })}
+            </select>
           </PxFormField>
           <PxFormField label="Group Code">
-            {renderInput('vendor_group_code', 'Group code', vendor.vendor_group_code, updateVendor)}
+            <input
+              type="text"
+              value={vendor.vendor_group_code}
+              readOnly
+              placeholder="(auto-filled from group)"
+              style={{ ...selectStyle, background: 'var(--color-cloud)' }}
+            />
           </PxFormField>
           <PxFormField label="Vendor Type" required>
             {renderSelect('vendor_type', vendor.vendor_type, VENDOR_TYPES, updateVendor)}
@@ -1346,19 +1357,17 @@ export function VendorMasterCreate() {
                       const pan = panCompliance.pan.toUpperCase();
                       const isCompany = pan.charAt(3) === 'C' || pan.charAt(3) === 'L';
                       const endpoint = isCompany
-                        ? '/api/kyc/verify-pan-comprehensive'
-                        : '/api/kyc/verify-pan';
+                        ? '/kyc/verify-pan-comprehensive'
+                        : '/kyc/verify-pan';
                       try {
-                        const res = await fetch(`${API}${endpoint}`, {
+                        const data = await mysqlApiRequest<any>(endpoint, {
                           method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                             pan,
                             consent: 'Y',
                             reason: 'Vendor onboarding KYC',
                           }),
                         });
-                        const data = await res.json();
                         if (data.success) {
                           setKycResult(data.data);
                           setKycVerified(true);
