@@ -199,9 +199,6 @@ export function RegularPRForm() {
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [submitError, setSubmitError] = useState<string | null>(null);
-  // Track which line-item rows are flagged for missing vendor so we can
-  // render an inline message and tinted border on each offending row.
-  const [missingVendorRows, setMissingVendorRows] = useState<Set<number>>(new Set());
   const completeness = useMemo(() => {
     const fields = [
       selectedEntity,
@@ -225,29 +222,12 @@ export function RegularPRForm() {
 
     setSubmitError(null);
 
-    // Client-side vendor validation — Regular PR requires every line item to
-    // carry a vendor (mirrored on the server, but checking here gives the
-    // user immediate per-row feedback instead of a round-trip 400). Only
-    // gate Pending Approval submits; drafts may legitimately have no vendor.
-    if (status !== 'Draft') {
-      const missing: string[] = [];
-      lineItems.forEach((li, idx) => {
-        if (!li.vendor && !li.vendorCode) {
-          missing.push(String(idx + 1));
-        }
-      });
-      if (lineItems.length === 0) {
-        setSubmitError('Add at least one line item before submitting.');
-        return;
-      }
-      if (missing.length > 0) {
-        setMissingVendorRows(new Set(missing.map((n) => Number(n) - 1)));
-        setSubmitError(
-          `Please select a vendor for line item${missing.length > 1 ? 's' : ''} ${missing.join(', ')}.`
-        );
-        return;
-      }
-      setMissingVendorRows(new Set());
+    // Vendor on a PR line item is OPTIONAL (preferred vendor only). The
+    // mandatory vendor selection happens at PO creation, not here. The only
+    // gate left is "at least one line item" — empty PR makes no sense.
+    if (status !== 'Draft' && lineItems.length === 0) {
+      setSubmitError('Add at least one line item before submitting.');
+      return;
     }
 
     const result = await addPurchaseRequest({
@@ -487,14 +467,10 @@ export function RegularPRForm() {
                     </tr>
                   </thead>
                   <tbody className="divide-y" style={{ borderColor: 'var(--color-silver)' }}>
-                    {lineItems.map((item, index) => {
+                    {lineItems.map((item) => {
                       const totals = calculateLineTotal(item);
-                      const vendorMissing = missingVendorRows.has(index);
                       return (
-                        <tr
-                          key={item.id}
-                          style={vendorMissing ? { boxShadow: 'inset 2px 0 0 #C62828' } : undefined}
-                        >
+                        <tr key={item.id}>
                           <td className="px-3 py-4">
                             <select
                               className="px-select-compact mb-2"
@@ -562,24 +538,13 @@ export function RegularPRForm() {
                                 }
                               }}
                             >
-                              <option value="">Select Vendor</option>
+                              <option value="">Preferred vendor (optional)</option>
                               {availableVendors.map((v) => (
                                 <option key={v.vendorCode} value={v.vendorCode}>
                                   {v.vendorName}
                                 </option>
                               ))}
                             </select>
-                            {vendorMissing && (
-                              <p
-                                style={{
-                                  color: '#C62828',
-                                  fontSize: 11,
-                                  marginTop: 4,
-                                }}
-                              >
-                                Please select a vendor for this line item
-                              </p>
-                            )}
                           </td>
                           <td className="px-3 py-4">
                             <input

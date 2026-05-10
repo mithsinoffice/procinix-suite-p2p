@@ -551,10 +551,10 @@ function validatePRPayload(body, { partial = false } = {}) {
       if (li.unitPrice != null && Number(li.unitPrice) < 0) {
         errors.push(`lineItems[${idx}].unitPrice must be >= 0`);
       }
-      // Regular PR vendor requirement: every line must have a vendor.
-      if (body.prType === 'regular' && !li.vendorId && !li.vendorName) {
-        errors.push(`lineItems[${idx}].vendor required for Regular PR`);
-      }
+      // Vendor on PR line items is informational — preferred vendor only.
+      // Mandatory selection happens at PO stage (handleCreatePO requires
+      // vendorId + vendorName at the header level). PRs can be raised
+      // without naming a vendor.
     });
   }
   return errors;

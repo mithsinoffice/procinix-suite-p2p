@@ -121,9 +121,38 @@ describe('POST /api/procurement/prs (create)', () => {
     expect(ctx.responses[0].payload.data.prRef).toMatch(/^PR-PTPL-\d{4}-\d{4}$/);
   });
 
-  // ── 2. PR create rejects line items with no vendor on Regular PR ─────────
+  // ── 2. PR create accepts Regular PR with no vendor (vendor optional) ────
+  // Vendor on PR line items is informational only — preferred vendor.
+  // The mandatory vendor selection happens at PO creation. See FIX-spec
+  // 2026-05-10 (vendor optional on PR line items).
 
-  it('2. rejects Regular PR line items missing a vendor (400)', async () => {
+  it('2. accepts Regular PR line items without a vendor (200)', async () => {
+    const year = new Date().getUTCFullYear();
+    vi.mocked(query)
+      .mockResolvedValueOnce({ affectedRows: 1 }) // INSERT seq
+      .mockResolvedValueOnce([{ last_seq: 0 }]) // SELECT FOR UPDATE
+      .mockResolvedValueOnce([]) // SELECT MAX(pr_ref) for seed reconcile
+      .mockResolvedValueOnce({ affectedRows: 1 }) // UPDATE seq
+      .mockResolvedValueOnce({ affectedRows: 1 }) // INSERT purchase_requests
+      .mockResolvedValueOnce({ affectedRows: 1 }) // INSERT line item
+      .mockResolvedValueOnce({ affectedRows: 1 }) // INSERT audit
+      .mockResolvedValueOnce([
+        {
+          id: 'pr2',
+          pr_ref: `PR-PTPL-${year}-0002`,
+          tenant_id: TENANT,
+          entity_id: ENTITY_ID,
+          entity_code: 'PTPL',
+          pr_type: 'regular',
+          requester_id: 'u1',
+          requester_name: 'Alice',
+          status: 'draft',
+          total_amount: 100,
+          total_gst: 18,
+        },
+      ]) // SELECT readback header
+      .mockResolvedValueOnce([]); // SELECT readback items
+
     const ctx = makeReqRes('POST', '/api/procurement/prs', {
       headers: { 'x-tenant-id': TENANT },
       body: {
@@ -140,15 +169,14 @@ describe('POST /api/procurement/prs (create)', () => {
             quantity: 1,
             unitPrice: 100,
             gstRate: 18,
-            // vendor missing
+            // vendor intentionally omitted — must NOT block creation
           },
         ],
       },
     });
     await handleProcurementRoute(ctx.req, ctx.res, ctx.pathname, ctx.sendJson);
-    expect(ctx.responses[0].status).toBe(400);
-    expect(ctx.responses[0].payload.error).toBe('validation_failed');
-    expect(ctx.responses[0].payload.details.join(';')).toMatch(/vendor required/);
+    expect(ctx.responses[0].status).toBe(200);
+    expect(ctx.responses[0].payload.success).toBe(true);
   });
 });
 
