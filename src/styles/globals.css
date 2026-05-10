@@ -29,6 +29,7 @@
   --border-radius-sm: 4px;
   --border-radius-md: 6px;
   --border-radius-lg: 12px;
+  --color-text-primary: var(--color-ink);
   --color-text-secondary: var(--color-mercury-grey);
   --color-text-tertiary: var(--color-slate);
   --color-border-tertiary: var(--color-fog);

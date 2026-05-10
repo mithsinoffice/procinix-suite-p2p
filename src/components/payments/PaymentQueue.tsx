@@ -33,7 +33,8 @@ import {
   metricLabel,
   metricValue,
   listingTh,
-  listingTd,
+  badgeBase,
+  rowActionBtn,
 } from '../ui/listingStyles';
 import type { FlagSeverity, PaymentQueueItem, PaymentStatus, RiskFlag } from '../../types/payments';
 
@@ -200,7 +201,7 @@ function FilterPills({
   onChange: (k: FilterKey) => void;
 }) {
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
       {FILTERS.map((f) => {
         const isActive = f.key === active;
         const isFlagged = f.key === 'flagged';
@@ -209,25 +210,46 @@ function FilterPills({
             key={f.key}
             type="button"
             onClick={() => onChange(f.key)}
-            className={[
-              'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border-2 transition-colors',
-              isActive
+            style={{
+              height: 32,
+              padding: '0 14px',
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 500,
+              border: '0.5px solid',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              ...(isActive
                 ? isFlagged
-                  ? 'bg-red-50 border-red-300 text-red-600'
-                  : 'bg-teal text-white border-teal'
-                : 'bg-white border-silver text-mercury-grey hover:text-ink',
-            ].join(' ')}
+                  ? { background: '#FCEBEB', color: '#A32D2D', borderColor: '#F4B5B5' }
+                  : { background: '#0F6E56', color: '#FFFFFF', borderColor: '#0F6E56' }
+                : {
+                    background: '#FFFFFF',
+                    color: 'var(--color-text-secondary)',
+                    borderColor: 'var(--color-border-tertiary)',
+                  }),
+            }}
           >
             <span>{f.label}</span>
             <span
-              className={[
-                'text-xs px-1.5 py-0.5 rounded-full font-semibold',
-                isActive
-                  ? 'bg-white/20 text-current'
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                padding: '2px 8px',
+                borderRadius: 20,
+                background: isActive
+                  ? 'rgba(255,255,255,0.2)'
                   : isFlagged
-                    ? 'bg-red-100 text-red-600'
-                    : 'bg-cloud text-mercury-grey',
-              ].join(' ')}
+                    ? '#FCEBEB'
+                    : 'var(--color-background-secondary)',
+                color: isActive
+                  ? 'currentColor'
+                  : isFlagged
+                    ? '#A32D2D'
+                    : 'var(--color-text-secondary)',
+              }}
             >
               {counts[f.key] ?? 0}
             </span>
@@ -300,10 +322,29 @@ function FlagBadge({ flags }: { flags: RiskFlag[] }) {
   if (flags.length === 0) return null;
   const high = flags.filter((f) => f.severity === 'high').length;
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-red-50 text-red-600">
+    <span
+      style={{
+        ...badgeBase,
+        background: '#FCEBEB',
+        color: '#A32D2D',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+      }}
+    >
       🚩 {flags.length} flag{flags.length > 1 ? 's' : ''}
       {high > 0 && (
-        <span className="bg-red-600 text-white text-[9px] px-1 rounded-full">{high} high</span>
+        <span
+          style={{
+            background: '#A32D2D',
+            color: '#FFFFFF',
+            fontSize: 10,
+            padding: '0 6px',
+            borderRadius: 20,
+          }}
+        >
+          {high} high
+        </span>
       )}
     </span>
   );
@@ -368,9 +409,9 @@ function QueueRow({
         display: 'grid',
         gridTemplateColumns: COLUMNS,
         alignItems: 'center',
-        padding: '8px 20px',
-        borderBottom: '0.5px solid var(--color-fog)',
-        fontSize: 12,
+        padding: '12px 24px',
+        minHeight: 52,
+        borderBottom: '0.5px solid var(--color-border-tertiary)',
         background: isFlagged ? '#FFF6F6' : '#FFFFFF',
         borderLeft: isFlagged ? '3px solid #A32D2D' : '3px solid transparent',
       }}
@@ -380,9 +421,9 @@ function QueueRow({
       <div style={{ minWidth: 0 }}>
         <div
           style={{
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 500,
-            color: 'var(--color-ink)',
+            color: 'var(--color-text-primary)',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -392,8 +433,8 @@ function QueueRow({
         </div>
         <div
           style={{
-            fontSize: 10,
-            color: 'var(--color-mercury-grey)',
+            fontSize: 12,
+            color: 'var(--color-text-secondary)',
             marginTop: 2,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -406,26 +447,30 @@ function QueueRow({
       </div>
       {/* Type */}
       <div>
-        <span
-          style={{
-            display: 'inline-block',
-            padding: '2px 8px',
-            borderRadius: 20,
-            fontSize: 10,
-            fontWeight: 600,
-            background: tBadge.bg,
-            color: tBadge.fg,
-          }}
-        >
+        <span style={{ ...badgeBase, background: tBadge.bg, color: tBadge.fg }}>
           {tBadge.label}
           {item.isMSME && item.msmeRemaining !== null ? ` ${item.msmeRemaining}d` : ''}
         </span>
       </div>
       {/* Amount */}
-      <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 500, color: 'var(--color-ink)' }}>
+      <div
+        style={{
+          textAlign: 'right',
+          fontSize: 13,
+          fontWeight: 500,
+          color: 'var(--color-text-primary)',
+        }}
+      >
         {fmtINR(item.amount)}
         {item.paidAmt > 0 && item.paidAmt < item.amount && (
-          <div style={{ fontSize: 10, color: 'var(--color-mercury-grey)', fontWeight: 400 }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: 'var(--color-text-secondary)',
+              fontWeight: 400,
+              marginTop: 2,
+            }}
+          >
             Paid {fmtINR(item.paidAmt)}
           </div>
         )}
@@ -433,8 +478,8 @@ function QueueRow({
       {/* Due date */}
       <div
         style={{
-          fontSize: 11,
-          color: overdue ? '#A32D2D' : 'var(--color-ink)',
+          fontSize: 12,
+          color: overdue ? '#A32D2D' : 'var(--color-text-primary)',
           fontWeight: overdue ? 500 : 400,
         }}
       >
@@ -443,8 +488,8 @@ function QueueRow({
       {/* Age */}
       <div
         style={{
-          fontSize: 11,
-          color: 'var(--color-ink)',
+          fontSize: 12,
+          color: 'var(--color-text-primary)',
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
@@ -466,14 +511,14 @@ function QueueRow({
         {isFlagged ? (
           <FlagBadge flags={item.flags} />
         ) : (
-          <span style={{ color: 'var(--color-mercury-grey)', fontSize: 11 }}>—</span>
+          <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>—</span>
         )}
       </div>
       {/* Actions */}
       <div
         style={{
           display: 'flex',
-          gap: 4,
+          gap: 6,
           justifyContent: 'flex-end',
           alignItems: 'center',
         }}
@@ -486,13 +531,10 @@ function QueueRow({
           }}
           disabled={isFlagged || item.status === 'paid'}
           style={{
-            height: 26,
-            padding: '0 10px',
+            ...rowActionBtn,
             background: isFlagged || item.status === 'paid' ? '#F1EFE8' : '#0F6E56',
             color: isFlagged || item.status === 'paid' ? '#9AA3AD' : '#FFFFFF',
-            border: 'none',
-            borderRadius: 4,
-            fontSize: 11,
+            borderColor: isFlagged || item.status === 'paid' ? '#F1EFE8' : '#0F6E56',
             fontWeight: 500,
             cursor: isFlagged || item.status === 'paid' ? 'not-allowed' : 'pointer',
           }}
@@ -505,16 +547,7 @@ function QueueRow({
             e.stopPropagation();
             onHold(item);
           }}
-          style={{
-            height: 26,
-            padding: '0 10px',
-            background: '#FFFFFF',
-            color: 'var(--color-ink)',
-            border: '1px solid var(--color-silver)',
-            borderRadius: 4,
-            fontSize: 11,
-            cursor: 'pointer',
-          }}
+          style={rowActionBtn}
         >
           {item.status === 'onhold' ? 'Release' : 'Hold'}
         </button>
@@ -525,18 +558,7 @@ function QueueRow({
             onView(item);
           }}
           aria-label="View details"
-          style={{
-            width: 26,
-            height: 26,
-            background: '#FFFFFF',
-            color: 'var(--color-mercury-grey)',
-            border: '1px solid var(--color-silver)',
-            borderRadius: 4,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          style={{ ...rowActionBtn, width: 30, padding: 0, justifyContent: 'center' }}
         >
           <ChevronRight size={14} />
         </button>
@@ -1425,28 +1447,64 @@ export function PaymentQueue() {
         onReview={() => setFilter('flagged')}
       />
 
-      <div className="bg-white rounded-xl border-2 border-silver mb-4 p-4 flex flex-wrap items-center gap-3">
+      <div
+        style={{
+          padding: '8px 24px',
+          background: 'var(--color-background-secondary)',
+          borderBottom: '0.5px solid var(--color-border-tertiary)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
         <FilterPills active={filter} counts={counts} onChange={setFilter} />
-        <div className="flex-1 min-w-[200px] relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mercury-grey" />
+        <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+          <Search
+            size={14}
+            style={{
+              position: 'absolute',
+              left: 12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--color-text-secondary)',
+            }}
+          />
           <input
             type="text"
             placeholder="Search payee, ref, GSTIN…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 border-2 border-silver rounded-lg text-sm"
+            style={{
+              width: '100%',
+              height: 32,
+              padding: '0 12px 0 32px',
+              border: '0.5px solid var(--color-border-tertiary)',
+              borderRadius: 'var(--border-radius-md)',
+              fontSize: 12,
+              background: '#FFFFFF',
+              color: 'var(--color-text-primary)',
+            }}
           />
         </div>
         <SortSelect value={sort} onChange={setSort} />
       </div>
 
       {error && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-4 text-red-700 text-sm">
+        <div
+          style={{
+            padding: '12px 24px',
+            background: '#FCEBEB',
+            borderBottom: '0.5px solid #F09595',
+            color: '#A32D2D',
+            fontSize: 12,
+          }}
+        >
           {error}
         </div>
       )}
 
-      <div style={{ background: '#FFFFFF', borderTop: '0.5px solid var(--color-fog)' }}>
+      <div style={{ background: '#FFFFFF' }}>
         <QueueHeaderRow />
         {loading ? (
           <div
@@ -1482,14 +1540,14 @@ export function PaymentQueue() {
               {s.label && (
                 <div
                   style={{
-                    padding: '6px 20px',
+                    padding: '8px 24px',
                     background: 'var(--color-background-secondary)',
-                    borderBottom: '0.5px solid var(--color-fog)',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    letterSpacing: 0.4,
+                    borderBottom: '0.5px solid var(--color-border-tertiary)',
+                    fontSize: 11,
+                    fontWeight: 500,
+                    letterSpacing: '0.05em',
                     textTransform: 'uppercase',
-                    color: 'var(--color-mercury-grey)',
+                    color: 'var(--color-text-secondary)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
@@ -1499,10 +1557,11 @@ export function PaymentQueue() {
                   <span
                     style={{
                       background: '#FFFFFF',
-                      padding: '1px 6px',
-                      borderRadius: 10,
-                      color: 'var(--color-mercury-grey)',
-                      fontSize: 10,
+                      padding: '2px 8px',
+                      borderRadius: 20,
+                      color: 'var(--color-text-secondary)',
+                      fontSize: 11,
+                      fontWeight: 500,
                     }}
                   >
                     {s.rows.length}

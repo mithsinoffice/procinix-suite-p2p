@@ -2,6 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { ApprovalItem, ApprovalKPIs, ModuleCounts } from '../types/approvals';
+import {
+  listingHeader,
+  listingTitle,
+  listingSubtitle,
+  listingPage,
+  metricStrip,
+  metricCard,
+  metricLabel,
+  metricValue,
+  listingTh,
+  badgeBase,
+  rowActionBtn,
+} from '../components/ui/listingStyles';
 
 type PendingMasterApprovalResponseItem = {
   masterKey: string;
@@ -118,7 +131,6 @@ function MetricCard({
   label,
   value,
   tone,
-  right,
 }: {
   label: string;
   value: number | string;
@@ -126,25 +138,9 @@ function MetricCard({
   right?: boolean;
 }) {
   return (
-    <div
-      style={{
-        padding: '10px 16px',
-        borderRight: right ? '0.5px solid var(--color-fog)' : 'none',
-        background: '#FFFFFF',
-      }}
-    >
-      <div
-        style={{
-          fontSize: 10,
-          color: 'var(--color-mercury-grey)',
-          textTransform: 'uppercase',
-          letterSpacing: 0.4,
-          marginBottom: 4,
-        }}
-      >
-        {label}
-      </div>
-      <div style={{ fontSize: 18, fontWeight: 600, color: tone }}>{value}</div>
+    <div style={metricCard}>
+      <div style={metricLabel}>{label}</div>
+      <div style={{ ...metricValue, color: tone }}>{value}</div>
     </div>
   );
 }
@@ -768,56 +764,17 @@ export default function MyApprovalsPage() {
         }).format(amt);
 
   return (
-    <div style={{ background: 'var(--color-background-primary, #FFFFFF)', minHeight: '100%' }}>
-      {/* Header — teal accent left border, title left + Bulk approve right */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '14px 20px',
-          background: '#FFFFFF',
-          borderBottom: '0.5px solid var(--color-fog)',
-          borderLeft: '3px solid #1D9E75',
-        }}
-      >
+    <div style={listingPage}>
+      {/* Header — teal accent left border + listingHeader tokens */}
+      <div style={{ ...listingHeader, borderLeft: '3px solid #1D9E75' }}>
         <div>
-          <h1
-            style={{
-              fontSize: 15,
-              fontWeight: 500,
-              margin: 0,
-              color: 'var(--color-ink)',
-              lineHeight: 1.3,
-            }}
-          >
-            My approvals
-          </h1>
-          <p
-            style={{
-              fontSize: 11,
-              color: 'var(--color-mercury-grey)',
-              margin: '2px 0 0 0',
-            }}
-          >
+          <h1 style={listingTitle}>My approvals</h1>
+          <p style={listingSubtitle}>
             {pendingCount} item{pendingCount === 1 ? '' : 's'} awaiting your decision
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            onClick={handleExport}
-            style={{
-              height: 28,
-              padding: '0 12px',
-              background: '#FFFFFF',
-              color: 'var(--color-ink)',
-              border: '1px solid var(--color-silver)',
-              borderRadius: 6,
-              fontSize: 12,
-              cursor: 'pointer',
-            }}
-          >
+          <button type="button" onClick={handleExport} style={rowActionBtn}>
             Export
           </button>
           <button
@@ -825,13 +782,10 @@ export default function MyApprovalsPage() {
             disabled={selectedIds.length === 0 || bulkBusy}
             onClick={() => setShowBulkConfirm(true)}
             style={{
-              height: 28,
-              padding: '0 12px',
+              ...rowActionBtn,
               background: '#0F6E56',
               color: '#FFFFFF',
-              border: 'none',
-              borderRadius: 6,
-              fontSize: 12,
+              borderColor: '#0F6E56',
               fontWeight: 500,
               cursor: selectedIds.length === 0 ? 'not-allowed' : 'pointer',
               opacity: selectedIds.length === 0 ? 0.5 : 1,
@@ -843,30 +797,21 @@ export default function MyApprovalsPage() {
       </div>
 
       {/* Metric strip — 4 cards */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          background: '#FFFFFF',
-          borderBottom: '0.5px solid var(--color-fog)',
-        }}
-      >
+      <div style={metricStrip}>
         <MetricCard
           label="Pending"
           value={pendingCount}
-          tone={pendingCount > 0 ? '#BA7517' : 'var(--color-ink)'}
-          right
+          tone={pendingCount > 0 ? '#BA7517' : 'var(--color-text-primary)'}
         />
         <MetricCard
           label="Urgent / SLA"
           value={urgentCount}
-          tone={urgentCount > 0 ? '#A32D2D' : 'var(--color-ink)'}
-          right
+          tone={urgentCount > 0 ? '#A32D2D' : 'var(--color-text-primary)'}
         />
         {msmeCount > 0 ? (
-          <MetricCard label="MSME exposure" value={msmeCount} tone="#BA7517" right />
+          <MetricCard label="MSME exposure" value={msmeCount} tone="#BA7517" />
         ) : (
-          <MetricCard label="Approved today" value={approvedTodayCount} tone="#0F6E56" right />
+          <MetricCard label="Approved today" value={approvedTodayCount} tone="#0F6E56" />
         )}
         <MetricCard label="Approved today" value={approvedTodayCount} tone="#0F6E56" />
       </div>
@@ -875,10 +820,10 @@ export default function MyApprovalsPage() {
       <div
         style={{
           background: '#FFFFFF',
-          borderBottom: '0.5px solid var(--color-fog)',
-          padding: '0 20px',
+          borderBottom: '0.5px solid var(--color-border-tertiary)',
+          padding: '0 24px',
           display: 'flex',
-          gap: 4,
+          gap: 6,
           overflowX: 'auto',
         }}
       >
@@ -891,10 +836,10 @@ export default function MyApprovalsPage() {
               type="button"
               onClick={() => setActiveTab(tab.key)}
               style={{
-                height: 36,
-                padding: '0 12px',
-                background: isActive ? '#FFFFFF' : 'transparent',
-                color: isActive ? '#0F6E56' : 'var(--color-mercury-grey)',
+                height: 40,
+                padding: '0 14px',
+                background: 'transparent',
+                color: isActive ? '#0F6E56' : 'var(--color-text-secondary)',
                 border: 'none',
                 borderBottom: isActive ? '2px solid #0F6E56' : '2px solid transparent',
                 fontSize: 12,
@@ -910,10 +855,10 @@ export default function MyApprovalsPage() {
               {count > 0 && (
                 <span
                   style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    padding: '1px 6px',
-                    borderRadius: 10,
+                    fontSize: 11,
+                    fontWeight: 500,
+                    padding: '2px 8px',
+                    borderRadius: 20,
                     background: '#E6F1FB',
                     color: '#0C447C',
                   }}
@@ -933,7 +878,7 @@ export default function MyApprovalsPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '10px 20px',
+            padding: '12px 24px',
             background: '#E1F5EE',
             borderBottom: '0.5px solid #5DCAA5',
           }}
@@ -947,15 +892,11 @@ export default function MyApprovalsPage() {
               onClick={() => setShowBulkConfirm(true)}
               disabled={bulkBusy}
               style={{
-                height: 26,
-                padding: '0 12px',
+                ...rowActionBtn,
                 background: '#0F6E56',
                 color: '#FFFFFF',
-                border: 'none',
-                borderRadius: 6,
-                fontSize: 12,
+                borderColor: '#0F6E56',
                 fontWeight: 500,
-                cursor: 'pointer',
               }}
             >
               Approve selected
@@ -983,26 +924,20 @@ export default function MyApprovalsPage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '28px 0.7fr 1.8fr 1fr 0.8fr 0.6fr 0.7fr 1fr',
+            gridTemplateColumns: '40px 0.8fr 1.8fr 1fr 0.9fr 0.7fr 0.7fr 1.1fr',
             alignItems: 'center',
-            padding: '6px 20px',
             background: 'var(--color-background-secondary)',
-            borderBottom: '0.5px solid var(--color-fog)',
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: 0.4,
-            textTransform: 'uppercase',
-            color: 'var(--color-mercury-grey)',
+            borderBottom: '0.5px solid var(--color-border-tertiary)',
           }}
         >
-          <span />
-          <span>Priority</span>
-          <span>Document</span>
-          <span>Requestor / Vendor</span>
-          <span style={{ textAlign: 'right' }}>Amount</span>
-          <span>Age</span>
-          <span>Risk</span>
-          <span style={{ textAlign: 'right' }}>Actions</span>
+          <div style={{ ...listingTh, padding: '8px 12px' }} />
+          <div style={listingTh}>Priority</div>
+          <div style={listingTh}>Document</div>
+          <div style={listingTh}>Requestor / Vendor</div>
+          <div style={{ ...listingTh, textAlign: 'right' }}>Amount</div>
+          <div style={listingTh}>Age</div>
+          <div style={listingTh}>Risk</div>
+          <div style={{ ...listingTh, textAlign: 'right' }}>Actions</div>
         </div>
         {loading ? (
           <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-mercury-grey)' }}>
@@ -1024,11 +959,11 @@ export default function MyApprovalsPage() {
                 key={item.id}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '28px 0.7fr 1.8fr 1fr 0.8fr 0.6fr 0.7fr 1fr',
+                  gridTemplateColumns: '40px 0.8fr 1.8fr 1fr 0.9fr 0.7fr 0.7fr 1.1fr',
                   alignItems: 'center',
-                  padding: '10px 20px',
-                  borderBottom: '0.5px solid var(--color-fog)',
-                  fontSize: 12,
+                  padding: '12px 24px',
+                  minHeight: 52,
+                  borderBottom: '0.5px solid var(--color-border-tertiary)',
                   background: '#FFFFFF',
                 }}
                 className="listing-row-hover"
@@ -1037,30 +972,20 @@ export default function MyApprovalsPage() {
                   type="checkbox"
                   checked={checked}
                   onChange={(e) => handleToggleSelect(item.id, e.target.checked)}
-                  style={{ accentColor: '#0F6E56' }}
+                  style={{ accentColor: '#0F6E56', width: 16, height: 16 }}
                   aria-label={`Select ${item.invoice_number || item.reference_id}`}
                 />
                 <span>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      padding: '2px 8px',
-                      borderRadius: 20,
-                      fontSize: 10,
-                      fontWeight: 600,
-                      background: pBadge.bg,
-                      color: pBadge.fg,
-                    }}
-                  >
+                  <span style={{ ...badgeBase, background: pBadge.bg, color: pBadge.fg }}>
                     {pBadge.label}
                   </span>
                 </span>
                 <div style={{ minWidth: 0 }}>
                   <div
                     style={{
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: 500,
-                      color: 'var(--color-ink)',
+                      color: 'var(--color-text-primary)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -1070,8 +995,8 @@ export default function MyApprovalsPage() {
                   </div>
                   <div
                     style={{
-                      fontSize: 10,
-                      color: 'var(--color-mercury-grey)',
+                      fontSize: 12,
+                      color: 'var(--color-text-secondary)',
                       marginTop: 2,
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1081,22 +1006,33 @@ export default function MyApprovalsPage() {
                     <span
                       style={{
                         display: 'inline-block',
-                        padding: '1px 6px',
+                        padding: '2px 8px',
                         borderRadius: 4,
                         background: mod.bg,
                         color: mod.fg,
-                        fontSize: 9,
-                        fontWeight: 600,
+                        fontSize: 10,
+                        fontWeight: 500,
                       }}
                     >
                       {mod.label}
                     </span>
-                    <span>{item.vendor_legal_name || item.entity_name || ''}</span>
+                    <span
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {item.vendor_legal_name || item.entity_name || ''}
+                    </span>
                   </div>
                 </div>
-                <div style={{ minWidth: 0, fontSize: 12, color: 'var(--color-ink)' }}>
+                <div style={{ minWidth: 0 }}>
                   <div
                     style={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: 'var(--color-text-primary)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -1107,8 +1043,9 @@ export default function MyApprovalsPage() {
                   {item.entity_name && (
                     <div
                       style={{
-                        fontSize: 10,
-                        color: 'var(--color-mercury-grey)',
+                        fontSize: 12,
+                        color: 'var(--color-text-secondary)',
+                        marginTop: 2,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -1121,9 +1058,9 @@ export default function MyApprovalsPage() {
                 <div
                   style={{
                     textAlign: 'right',
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: 500,
-                    color: 'var(--color-ink)',
+                    color: 'var(--color-text-primary)',
                   }}
                 >
                   {item.display_amount != null
@@ -1132,8 +1069,8 @@ export default function MyApprovalsPage() {
                 </div>
                 <div
                   style={{
-                    fontSize: 11,
-                    color: 'var(--color-ink)',
+                    fontSize: 12,
+                    color: 'var(--color-text-primary)',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
@@ -1151,24 +1088,14 @@ export default function MyApprovalsPage() {
                   {ageInfo.label}
                 </div>
                 <div>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      padding: '2px 8px',
-                      borderRadius: 20,
-                      fontSize: 10,
-                      fontWeight: 600,
-                      background: rBadge.bg,
-                      color: rBadge.fg,
-                    }}
-                  >
+                  <span style={{ ...badgeBase, background: rBadge.bg, color: rBadge.fg }}>
                     {rBadge.label}
                   </span>
                 </div>
                 <div
                   style={{
                     display: 'flex',
-                    gap: 4,
+                    gap: 6,
                     justifyContent: 'flex-end',
                     flexWrap: 'wrap',
                   }}
@@ -1178,14 +1105,10 @@ export default function MyApprovalsPage() {
                     disabled={actionBusyId === item.id}
                     onClick={() => handleApprove(item.id)}
                     style={{
-                      height: 26,
-                      padding: '0 10px',
+                      ...rowActionBtn,
                       background: '#EAF3DE',
                       color: '#27500A',
-                      border: '1px solid #97C459',
-                      borderRadius: 4,
-                      fontSize: 11,
-                      cursor: 'pointer',
+                      borderColor: '#97C459',
                     }}
                   >
                     {actionBusyId === item.id ? '…' : 'Approve'}
@@ -1198,32 +1121,15 @@ export default function MyApprovalsPage() {
                       if (reason.trim()) handleReject(item.id, reason.trim());
                     }}
                     style={{
-                      height: 26,
-                      padding: '0 10px',
+                      ...rowActionBtn,
                       background: '#FCEBEB',
                       color: '#791F1F',
-                      border: '1px solid #F09595',
-                      borderRadius: 4,
-                      fontSize: 11,
-                      cursor: 'pointer',
+                      borderColor: '#F09595',
                     }}
                   >
                     Reject
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleView(item)}
-                    style={{
-                      height: 26,
-                      padding: '0 10px',
-                      background: '#FFFFFF',
-                      color: 'var(--color-ink)',
-                      border: '1px solid var(--color-silver)',
-                      borderRadius: 4,
-                      fontSize: 11,
-                      cursor: 'pointer',
-                    }}
-                  >
+                  <button type="button" onClick={() => handleView(item)} style={rowActionBtn}>
                     View
                   </button>
                 </div>

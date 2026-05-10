@@ -31,6 +31,10 @@ import {
   metricCard,
   metricLabel,
   metricValue,
+  metricSubLabel,
+  badgeBase,
+  rowActionBtn,
+  formatStatusLabel,
 } from '../ui/listingStyles';
 
 const ADVANCE_COLUMNS = '1.2fr 2fr 0.8fr 0.9fr 0.9fr 0.9fr 0.9fr 0.8fr';
@@ -343,7 +347,7 @@ function AdvanceDrawer({
               <span
                 className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${STATUS_PILL[advance.status]}`}
               >
-                {advance.status.replace('_', ' ')}
+                {formatStatusLabel(advance.status)}
               </span>
               {advance.invoiceId && (
                 <span className="text-xs text-mercury-grey">
@@ -641,9 +645,7 @@ function SummaryStrip({
       <div style={metricCard}>
         <div style={metricLabel}>Total advances</div>
         <div style={metricValue}>{totalCount}</div>
-        <div style={{ fontSize: 10, color: 'var(--color-mercury-grey)', marginTop: 2 }}>
-          {formatINRCompact(summary?.totalAmount ?? 0)}
-        </div>
+        <div style={metricSubLabel}>{formatINRCompact(summary?.totalAmount ?? 0)}</div>
       </div>
       <div style={metricCard}>
         <div style={metricLabel}>Pending approval</div>
@@ -665,7 +667,7 @@ function SummaryStrip({
         <div style={{ ...metricValue, color: queuedCount > 0 ? '#0F6E56' : 'var(--color-ink)' }}>
           {queuedCount}
         </div>
-        <div style={{ fontSize: 10, color: '#0F6E56', textDecoration: 'underline', marginTop: 2 }}>
+        <div style={{ ...metricSubLabel, color: '#0F6E56', textDecoration: 'underline' }}>
           Open Payment queue →
         </div>
       </button>
@@ -809,28 +811,29 @@ export function VendorAdvances() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            onClick={refresh}
-            style={{
-              ...listingPrimaryBtn,
-              background: '#FFFFFF',
-              color: 'var(--color-mercury-grey)',
-              border: '1px solid var(--color-silver)',
-            }}
-          >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh
+          <button type="button" onClick={refresh} style={rowActionBtn}>
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
           <button type="button" onClick={openCreate} style={listingPrimaryBtn}>
-            <Plus size={13} /> New advance
+            <Plus size={14} /> New advance
           </button>
         </div>
       </div>
 
       <SummaryStrip summary={summary} onJumpToQueue={() => navigate('/ap/payments/queue')} />
 
-      <div className="bg-white rounded-xl border-2 border-silver mb-4 p-3 flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1 flex-wrap">
+      <div
+        style={{
+          padding: '8px 24px',
+          background: 'var(--color-background-secondary)',
+          borderBottom: '0.5px solid var(--color-border-tertiary)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           {FILTERS.map((f) => {
             const active = filter === f.key;
             return (
@@ -838,32 +841,63 @@ export function VendorAdvances() {
                 key={f.key}
                 type="button"
                 onClick={() => setFilter(f.key)}
-                className={[
-                  'px-3 py-1.5 text-xs rounded-full border-2',
-                  active
-                    ? 'bg-teal text-white border-teal'
-                    : 'bg-white border-silver text-mercury-grey hover:text-ink',
-                ].join(' ')}
+                style={{
+                  height: 32,
+                  padding: '0 14px',
+                  borderRadius: 20,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  border: '0.5px solid',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  ...(active
+                    ? { background: '#0F6E56', color: '#FFFFFF', borderColor: '#0F6E56' }
+                    : {
+                        background: '#FFFFFF',
+                        color: 'var(--color-text-secondary)',
+                        borderColor: 'var(--color-border-tertiary)',
+                      }),
+                }}
               >
                 {f.label}
-                <span className="ml-1.5 text-[10px] opacity-80">{counts[f.key]}</span>
+                <span style={{ fontSize: 11, opacity: 0.85 }}>{counts[f.key]}</span>
               </button>
             );
           })}
         </div>
-        <div className="flex-1 min-w-[200px] relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-mercury-grey" />
+        <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+          <Search
+            size={14}
+            style={{
+              position: 'absolute',
+              left: 12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--color-text-secondary)',
+            }}
+          />
           <input
             type="text"
             placeholder="Search vendor, ref, purpose…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 border-2 border-silver rounded-lg text-sm"
+            style={{
+              width: '100%',
+              height: 32,
+              padding: '0 12px 0 32px',
+              border: '0.5px solid var(--color-border-tertiary)',
+              borderRadius: 'var(--border-radius-md)',
+              fontSize: 12,
+              background: '#FFFFFF',
+              color: 'var(--color-text-primary)',
+            }}
           />
         </div>
       </div>
 
-      <div style={{ background: '#FFFFFF', borderTop: '0.5px solid var(--color-fog)' }}>
+      <div style={{ background: '#FFFFFF' }}>
         {/* Header — identical grid template to body rows */}
         <div
           style={{
@@ -917,14 +951,31 @@ export function VendorAdvances() {
             const requiredOverdue = daysFromToday(adv.requiredByDate) < 0;
             const nextStatusAction =
               adv.status === 'draft'
-                ? { label: 'Submit', kind: 'primary' as const }
+                ? { label: 'Submit' }
                 : adv.status === 'pending_approval' && isApprover
-                  ? { label: 'Approve', kind: 'primary' as const }
+                  ? { label: 'Approve' }
                   : adv.status === 'approved'
-                    ? { label: 'Queue', kind: 'primary' as const }
+                    ? { label: 'Queue' }
                     : adv.status === 'paid'
-                      ? { label: 'Settle', kind: 'primary' as const }
+                      ? { label: 'Settle' }
                       : null;
+            const urgency = urgencyChipClass(adv.requiredByDate);
+            const reqByBadge =
+              urgency === 'bg-red-50 text-red-600'
+                ? { background: '#FCEBEB', color: '#A32D2D' }
+                : urgency === 'bg-amber-50 text-amber-700'
+                  ? { background: '#FAEEDA', color: '#633806' }
+                  : { background: '#F1EFE8', color: '#5F5E5A' };
+            const statusBadge =
+              adv.status === 'rejected'
+                ? { background: '#FCEBEB', color: '#A32D2D' }
+                : adv.status === 'pending_approval'
+                  ? { background: '#FAEEDA', color: '#633806' }
+                  : adv.status === 'approved' || adv.status === 'queued_for_payment'
+                    ? { background: '#E6F1FB', color: '#0C447C' }
+                    : adv.status === 'paid' || adv.status === 'settled'
+                      ? { background: '#EAF3DE', color: '#27500A' }
+                      : { background: '#F1EFE8', color: '#5F5E5A' };
             return (
               <div
                 key={adv.id}
@@ -932,20 +983,27 @@ export function VendorAdvances() {
                   display: 'grid',
                   gridTemplateColumns: ADVANCE_COLUMNS,
                   alignItems: 'center',
-                  borderBottom: '0.5px solid var(--color-fog)',
+                  borderBottom: '0.5px solid var(--color-border-tertiary)',
                   background: '#FFFFFF',
+                  minHeight: 52,
                 }}
                 className="listing-row-hover"
               >
-                <div style={{ ...listingTdPrimary, fontFamily: 'monospace', fontSize: 11 }}>
+                <div
+                  style={{
+                    ...listingTdPrimary,
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                  }}
+                >
                   {adv.advanceRef}
                 </div>
                 <div style={{ ...listingTd, minWidth: 0 }}>
                   <div
                     style={{
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: 500,
-                      color: 'var(--color-ink)',
+                      color: 'var(--color-text-primary)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -955,8 +1013,9 @@ export function VendorAdvances() {
                   </div>
                   <div
                     style={{
-                      fontSize: 10,
-                      color: 'var(--color-mercury-grey)',
+                      fontSize: 12,
+                      color: 'var(--color-text-secondary)',
+                      marginTop: 2,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -966,9 +1025,9 @@ export function VendorAdvances() {
                   </div>
                   <div
                     style={{
-                      fontSize: 10,
-                      color: 'var(--color-mercury-grey)',
-                      opacity: 0.8,
+                      fontSize: 11,
+                      color: 'var(--color-text-secondary)',
+                      marginTop: 2,
                     }}
                   >
                     {adv.requesterName}
@@ -978,11 +1037,7 @@ export function VendorAdvances() {
                 <div style={listingTd}>
                   <span
                     style={{
-                      display: 'inline-block',
-                      padding: '2px 8px',
-                      borderRadius: 20,
-                      fontSize: 10,
-                      fontWeight: 600,
+                      ...badgeBase,
                       background: '#E1F5EE',
                       color: '#085041',
                       textTransform: 'capitalize',
@@ -997,85 +1052,42 @@ export function VendorAdvances() {
                 <div
                   style={{
                     ...listingTd,
-                    color: requiredOverdue ? '#A32D2D' : 'var(--color-ink)',
+                    color: requiredOverdue ? '#A32D2D' : 'var(--color-text-primary)',
                     fontWeight: requiredOverdue ? 500 : 400,
                   }}
                 >
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      padding: '2px 8px',
-                      borderRadius: 20,
-                      fontSize: 10,
-                      fontWeight: 600,
-                      ...(urgencyChipClass(adv.requiredByDate) === 'bg-red-50 text-red-600'
-                        ? { background: '#FCEBEB', color: '#791F1F' }
-                        : urgencyChipClass(adv.requiredByDate) === 'bg-amber-50 text-amber-700'
-                          ? { background: '#FAEEDA', color: '#633806' }
-                          : { background: '#F1EFE8', color: '#5F5E5A' }),
-                    }}
-                  >
+                  <span style={{ ...badgeBase, ...reqByBadge }}>
                     {shortDate(adv.requiredByDate)}
                   </span>
                 </div>
                 <div
                   style={{
                     ...(overdue ? listingTdPrimary : listingTdMuted),
-                    color: overdue ? '#A32D2D' : 'var(--color-mercury-grey)',
+                    color: overdue ? '#A32D2D' : 'var(--color-text-secondary)',
                   }}
                 >
                   {shortDate(adv.settlementDueDate)}
                   {overdue && (
-                    <span style={{ marginLeft: 6, fontSize: 10 }}>
-                      <Clock size={10} style={{ display: 'inline-block' }} /> overdue
+                    <span style={{ marginLeft: 6, fontSize: 11 }}>
+                      <Clock size={11} style={{ display: 'inline-block' }} /> overdue
                     </span>
                   )}
                 </div>
                 <div style={listingTd}>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      padding: '2px 8px',
-                      borderRadius: 20,
-                      fontSize: 10,
-                      fontWeight: 600,
-                      ...(adv.status === 'rejected'
-                        ? { background: '#FCEBEB', color: '#791F1F' }
-                        : adv.status === 'pending_approval'
-                          ? { background: '#FAEEDA', color: '#633806' }
-                          : adv.status === 'approved' || adv.status === 'queued_for_payment'
-                            ? { background: '#E6F1FB', color: '#0C447C' }
-                            : adv.status === 'paid' || adv.status === 'settled'
-                              ? { background: '#EAF3DE', color: '#27500A' }
-                              : { background: '#F1EFE8', color: '#5F5E5A' }),
-                    }}
-                  >
-                    {adv.status.replace('_', ' ')}
+                  <span style={{ ...badgeBase, ...statusBadge }}>
+                    {formatStatusLabel(adv.status)}
                   </span>
                 </div>
                 <div
                   style={{
                     ...listingTd,
                     display: 'flex',
-                    gap: 4,
+                    gap: 6,
                     justifyContent: 'flex-end',
                     alignItems: 'center',
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => openExisting(adv)}
-                    style={{
-                      height: 26,
-                      padding: '0 10px',
-                      background: '#FFFFFF',
-                      color: 'var(--color-ink)',
-                      border: '1px solid var(--color-silver)',
-                      borderRadius: 4,
-                      fontSize: 11,
-                      cursor: 'pointer',
-                    }}
-                  >
+                  <button type="button" onClick={() => openExisting(adv)} style={rowActionBtn}>
                     View
                   </button>
                   {nextStatusAction && (
@@ -1083,15 +1095,11 @@ export function VendorAdvances() {
                       type="button"
                       onClick={() => openExisting(adv)}
                       style={{
-                        height: 26,
-                        padding: '0 10px',
+                        ...rowActionBtn,
                         background: '#0F6E56',
                         color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: 4,
-                        fontSize: 11,
+                        borderColor: '#0F6E56',
                         fontWeight: 500,
-                        cursor: 'pointer',
                       }}
                     >
                       {nextStatusAction.label}
