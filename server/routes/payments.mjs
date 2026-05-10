@@ -851,8 +851,7 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
       const data = rows.map((r) => {
         let description;
         try {
-          const payload =
-            typeof r.payload === 'string' ? JSON.parse(r.payload) : r.payload;
+          const payload = typeof r.payload === 'string' ? JSON.parse(r.payload) : r.payload;
           description = payload?.description || undefined;
         } catch {
           description = undefined;

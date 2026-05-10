@@ -245,6 +245,72 @@ export interface BatchDetailResponse {
 // Settings
 // ============================================================================
 
+// ============================================================================
+// Vendor Advances
+// ============================================================================
+
+export type AdvanceType =
+  | 'travel'
+  | 'project'
+  | 'procurement'
+  | 'relocation'
+  | 'training'
+  | 'conference'
+  | 'other';
+
+export type AdvanceStatus =
+  | 'draft'
+  | 'pending_approval'
+  | 'approved'
+  | 'rejected'
+  | 'queued_for_payment'
+  | 'paid'
+  | 'settled'
+  | 'cancelled';
+
+export interface VendorAdvance {
+  id: string;
+  advanceRef: string;
+  tenantId: string;
+  entityId: string;
+  vendorId: string;
+  vendorName: string;
+  requesterId: string;
+  requesterName: string;
+  department: string;
+  costCentre: string;
+  purpose: string;
+  advanceType: AdvanceType;
+  amount: number;
+  currency: string;
+  requestedDate: string;
+  requiredByDate: string;
+  supportingDocUrl: string | null;
+  supportingDocName: string | null;
+  status: AdvanceStatus;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
+  settlementDueDate: string | null;
+  settledAmount: number;
+  settlementDocUrl: string | null;
+  settledAt: string | null;
+  invoiceId: string | null;
+  utr: string | null;
+  paidAt: string | null;
+  riskFlags: RiskFlag[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdvanceSummary {
+  total: number;
+  byStatus: Partial<Record<AdvanceStatus, number>>;
+  overdueSettlement: number;
+  totalAmount: number;
+  pendingAmount: number;
+}
+
 export interface PaymentSettings {
   flagBankChangedDays: number;
   flagDuplicateInvDays: number;

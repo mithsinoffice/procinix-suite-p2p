@@ -338,6 +338,11 @@ const PaymentSettings = lazy(() =>
 const ComingSoon = lazy(() =>
   import('./components/ComingSoon').then((module) => ({ default: module.ComingSoon }))
 );
+const VendorAdvances = lazy(() =>
+  import('./components/payments/VendorAdvances').then((module) => ({
+    default: module.VendorAdvances,
+  }))
+);
 const PaymentProposal = lazy(() =>
   import('./components/PaymentProposal').then((module) => ({ default: module.PaymentProposal }))
 );
@@ -785,6 +790,7 @@ function App() {
 
                                 {/* Advances */}
                                 <Route path="ap/advances" element={<AdvanceRequests />} />
+                                <Route path="ap/vendor-advances" element={<VendorAdvances />} />
                                 <Route path="ap/advance-requests" element={<AdvanceRequests />} />
                                 <Route path="ap/advances/hub" element={<AdvancesHub />} />
                                 <Route
