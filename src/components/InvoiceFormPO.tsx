@@ -195,8 +195,24 @@ export function InvoiceFormPO() {
     accountCodes: liveAccountCodes,
     getActiveTDSSections,
     getTDSSectionByCode,
+    currencies: liveCurrencies,
     currentCompany,
   } = useMasterData();
+  const currencyOptions =
+    liveCurrencies && liveCurrencies.length > 0
+      ? liveCurrencies.map((c) => ({
+          code: c.code ?? '',
+          name: c.name ?? '',
+          symbol: c.symbol ?? '',
+        }))
+      : [
+          { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+          { code: 'USD', name: 'US Dollar', symbol: '$' },
+          { code: 'EUR', name: 'Euro', symbol: '€' },
+          { code: 'GBP', name: 'British Pound', symbol: '£' },
+          { code: 'AED', name: 'UAE Dirham', symbol: 'AED' },
+          { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' },
+        ];
   const invoiceEntityId = currentCompany?.id ?? undefined;
 
   // OCR Upload Mode State
@@ -1879,10 +1895,12 @@ export function InvoiceFormPO() {
                     className="px-input pl-11"
                     required
                   >
-                    <option value="INR">INR - Indian Rupee (₹)</option>
-                    <option value="USD">USD - US Dollar ($)</option>
-                    <option value="EUR">EUR - Euro (€)</option>
-                    <option value="GBP">GBP - British Pound (£)</option>
+                    {currencyOptions.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.code} - {c.name}
+                        {c.symbol ? ` (${c.symbol})` : ''}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </PxFormField>

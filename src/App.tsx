@@ -275,6 +275,23 @@ const VendorPaymentTermsMaster = lazy(() =>
     default: module.VendorPaymentTermsMaster,
   }))
 );
+const DesignationMaster = lazy(() =>
+  import('./components/DesignationMaster').then((m) => ({ default: m.DesignationMaster }))
+);
+const AssetCategoryMaster = lazy(() =>
+  import('./components/AssetCategoryMaster').then((m) => ({ default: m.AssetCategoryMaster }))
+);
+const DepreciationMethodMaster = lazy(() =>
+  import('./components/DepreciationMethodMaster').then((m) => ({
+    default: m.DepreciationMethodMaster,
+  }))
+);
+const ServiceTypeMaster = lazy(() =>
+  import('./components/ServiceTypeMaster').then((m) => ({ default: m.ServiceTypeMaster }))
+);
+const ExpenseCategoryMaster = lazy(() =>
+  import('./components/ExpenseCategoryMaster').then((m) => ({ default: m.ExpenseCategoryMaster }))
+);
 const VendorMasterPage = lazy(() =>
   import('./components/VendorMaster').then((module) => ({ default: module.VendorMaster }))
 );
@@ -669,6 +686,26 @@ function App() {
                                 <Route
                                   path="masters/vendor-group-master"
                                   element={<VendorGroupMaster />}
+                                />
+                                <Route
+                                  path="masters/designation-master"
+                                  element={<DesignationMaster />}
+                                />
+                                <Route
+                                  path="masters/asset-category-master"
+                                  element={<AssetCategoryMaster />}
+                                />
+                                <Route
+                                  path="masters/depreciation-method-master"
+                                  element={<DepreciationMethodMaster />}
+                                />
+                                <Route
+                                  path="masters/service-type-master"
+                                  element={<ServiceTypeMaster />}
+                                />
+                                <Route
+                                  path="masters/expense-category-master"
+                                  element={<ExpenseCategoryMaster />}
                                 />
 
                                 {/* Invoices */}

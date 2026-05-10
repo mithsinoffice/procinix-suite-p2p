@@ -23,7 +23,7 @@ const REPO_ROOT = resolve(__dirname, '../..');
 // a proper schema_migrations runner (B5 in queue). Migrations are idempotent
 // (CREATE TABLE IF NOT EXISTS / INSERT IGNORE / WHERE NOT EXISTS) so running
 // them once more is safe but wasteful.
-const MIGRATIONS = ['sql/mysql/migrations/20260510_org_master_seeds.sql'];
+const MIGRATIONS = ['sql/mysql/migrations/20260510_sprint1_masters.sql'];
 
 const IGNORABLE_ERRORS = new Set([
   'ER_DUP_KEYNAME',

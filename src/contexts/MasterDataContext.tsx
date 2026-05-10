@@ -396,6 +396,24 @@ export interface DesignationMaster {
   approvalStatus?: string;
 }
 
+export interface SimpleCodeMaster {
+  id: string;
+  code: string;
+  recordCode?: string;
+  name: string;
+  recordName?: string;
+  status?: string;
+  isActive?: boolean;
+  approvalStatus?: string;
+  /** Master-specific extras land in payload — keep optional + permissive. */
+  [key: string]: unknown;
+}
+
+export type AssetCategoryMaster = SimpleCodeMaster;
+export type DepreciationMethodMaster = SimpleCodeMaster;
+export type ServiceTypeMaster = SimpleCodeMaster;
+export type ExpenseCategoryMaster = SimpleCodeMaster;
+
 // ============================================================================
 // MULTI-CURRENCY SUPPORT - ADDITIVE ONLY (NO TRANSACTION IMPACT)
 // ============================================================================
@@ -990,6 +1008,12 @@ interface MasterDataContextType {
   // Designations
   designations: DesignationMaster[];
 
+  // Sprint 1 dropdown masters
+  assetCategories: AssetCategoryMaster[];
+  depreciationMethods: DepreciationMethodMaster[];
+  serviceTypes: ServiceTypeMaster[];
+  expenseCategories: ExpenseCategoryMaster[];
+
   // TDS Sections
   tdsSections: TDSSectionMasterRecord[];
   getTDSSectionByCode: (sectionCode: string) => TDSSectionMasterRecord | undefined;
@@ -1029,6 +1053,10 @@ interface MasterDataDocument {
   vendorGroups: VendorGroupMaster[];
   locations: LocationMaster[];
   designations: DesignationMaster[];
+  assetCategories: AssetCategoryMaster[];
+  depreciationMethods: DepreciationMethodMaster[];
+  serviceTypes: ServiceTypeMaster[];
+  expenseCategories: ExpenseCategoryMaster[];
   tdsSections: TDSSectionMasterRecord[];
   currencies: CurrencyMaster[];
   exchangeRates: ExchangeRateMaster[];
@@ -1069,6 +1097,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     vendorGroups: VENDOR_GROUP_MASTER_DATA,
     locations: [] as LocationMaster[],
     designations: [] as DesignationMaster[],
+    assetCategories: [] as AssetCategoryMaster[],
+    depreciationMethods: [] as DepreciationMethodMaster[],
+    serviceTypes: [] as ServiceTypeMaster[],
+    expenseCategories: [] as ExpenseCategoryMaster[],
     tdsSections: TDS_SECTION_MASTER_DATA,
     currencies: CURRENCY_MASTER_DATA,
     exchangeRates: EXCHANGE_RATE_MASTER_DATA,
@@ -1097,6 +1129,18 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
   const [locations, setLocations] = useState<LocationMaster[]>(defaultDocument.locations);
   const [designations, setDesignations] = useState<DesignationMaster[]>(
     defaultDocument.designations
+  );
+  const [assetCategories, setAssetCategories] = useState<AssetCategoryMaster[]>(
+    defaultDocument.assetCategories
+  );
+  const [depreciationMethods, setDepreciationMethods] = useState<DepreciationMethodMaster[]>(
+    defaultDocument.depreciationMethods
+  );
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeMaster[]>(
+    defaultDocument.serviceTypes
+  );
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategoryMaster[]>(
+    defaultDocument.expenseCategories
   );
   const [tdsSections, setTdsSections] = useState<TDSSectionMasterRecord[]>(
     defaultDocument.tdsSections
@@ -1129,6 +1173,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           vendorGroupsData,
           locationsData,
           designationsData,
+          assetCategoriesData,
+          depreciationMethodsData,
+          serviceTypesData,
+          expenseCategoriesData,
           document,
           itemsResponse,
         ] = await Promise.all([
@@ -1159,6 +1207,22 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           ensureRelationalMasterRecords<DesignationMaster>(
             'designation_master',
             defaultDocument.designations
+          ),
+          ensureRelationalMasterRecords<AssetCategoryMaster>(
+            'asset_category_master',
+            defaultDocument.assetCategories
+          ),
+          ensureRelationalMasterRecords<DepreciationMethodMaster>(
+            'depreciation_method_master',
+            defaultDocument.depreciationMethods
+          ),
+          ensureRelationalMasterRecords<ServiceTypeMaster>(
+            'service_type_master',
+            defaultDocument.serviceTypes
+          ),
+          ensureRelationalMasterRecords<ExpenseCategoryMaster>(
+            'expense_category_master',
+            defaultDocument.expenseCategories
           ),
           ensureDomainDocument('master_data', defaultDocument),
           mysqlApiRequest<{ success: boolean; data: MysqlItemRow[] }>('/items').catch(() => ({
@@ -1218,6 +1282,26 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
             ? designationsData
             : (document.designations ?? defaultDocument.designations)
         );
+        setAssetCategories(
+          assetCategoriesData && assetCategoriesData.length > 0
+            ? assetCategoriesData
+            : (document.assetCategories ?? defaultDocument.assetCategories)
+        );
+        setDepreciationMethods(
+          depreciationMethodsData && depreciationMethodsData.length > 0
+            ? depreciationMethodsData
+            : (document.depreciationMethods ?? defaultDocument.depreciationMethods)
+        );
+        setServiceTypes(
+          serviceTypesData && serviceTypesData.length > 0
+            ? serviceTypesData
+            : (document.serviceTypes ?? defaultDocument.serviceTypes)
+        );
+        setExpenseCategories(
+          expenseCategoriesData && expenseCategoriesData.length > 0
+            ? expenseCategoriesData
+            : (document.expenseCategories ?? defaultDocument.expenseCategories)
+        );
         setTdsSections(tdsSectionsData ?? defaultDocument.tdsSections);
         setCurrencies(currenciesData ?? defaultDocument.currencies);
         setExchangeRates(exchangeRatesData ?? defaultDocument.exchangeRates);
@@ -1244,6 +1328,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       setVendorGroups(document.vendorGroups ?? defaultDocument.vendorGroups);
       setLocations(document.locations ?? defaultDocument.locations);
       setDesignations(document.designations ?? defaultDocument.designations);
+      setAssetCategories(document.assetCategories ?? defaultDocument.assetCategories);
+      setDepreciationMethods(document.depreciationMethods ?? defaultDocument.depreciationMethods);
+      setServiceTypes(document.serviceTypes ?? defaultDocument.serviceTypes);
+      setExpenseCategories(document.expenseCategories ?? defaultDocument.expenseCategories);
       setTdsSections(document.tdsSections ?? defaultDocument.tdsSections);
       setCurrencies(document.currencies ?? defaultDocument.currencies);
       setExchangeRates(document.exchangeRates ?? defaultDocument.exchangeRates);
@@ -1304,6 +1392,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       vendorGroups,
       locations,
       designations,
+      assetCategories,
+      depreciationMethods,
+      serviceTypes,
+      expenseCategories,
       tdsSections,
       currencies,
       exchangeRates,
@@ -1317,6 +1409,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     vendorGroups,
     locations,
     designations,
+    assetCategories,
+    depreciationMethods,
+    serviceTypes,
+    expenseCategories,
     departments,
     entities,
     exchangeRates,
@@ -1537,6 +1633,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     vendorGroups,
     locations,
     designations,
+    assetCategories,
+    depreciationMethods,
+    serviceTypes,
+    expenseCategories,
     tdsSections,
     getTDSSectionByCode,
     getActiveTDSSections,
