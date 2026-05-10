@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { query, withTransaction, connExecute } from '../../mysql.mjs';
+import { evaluatePOMatch } from '../../routes/procurement.mjs';
 
 const AGENT_NAME = 'MatchAgent';
 const AGENT_VERSION = '1.0.0';
@@ -80,7 +81,25 @@ export const DEFAULT_FETCHERS = Object.freeze({
   getPOFuzzy: (vendorName, amount, date, entityId) =>
     matchByFuzzyPO(vendorName, amount, date, entityId),
   getRecurringInvoices: (vendorName, amount) => checkRecurringPattern(vendorName, amount),
-  getGRNsForPO: (_poId) => Promise.resolve([]), // WS-1a stub; WS-1b swaps in relational read
+  // Procurement-relational 3-way match. Looks up the procurement PO by `po_ref`
+  // matching the legacy PO's `po_number`, then runs evaluatePOMatch (line-level
+  // GRN/SRN). Returns null when no procurement PO is found — caller treats as
+  // "skip 3-way" (graceful fallback for non-PO invoices and legacy POs without
+  // procurement counterparts).
+  getThreeWayMatch: async (poNumberOrRef, tenantId) => {
+    if (!poNumberOrRef || !tenantId) return null;
+    try {
+      const rows = await query(
+        `SELECT id FROM purchase_orders_proc WHERE po_ref = ? AND tenant_id = ? LIMIT 1`,
+        [poNumberOrRef, tenantId]
+      );
+      if (!rows.length) return null;
+      return await evaluatePOMatch(rows[0].id, tenantId);
+    } catch {
+      return null;
+    }
+  },
+  getGRNsForPO: (_poId) => Promise.resolve([]), // legacy stub; superseded by getThreeWayMatch
   getTolerances: (_tenantId, _vendorId) =>
     Promise.resolve({
       twoWayAmountPct: 0.05,
@@ -166,9 +185,23 @@ export async function processMatch(
   invoiceId,
   extractedData,
   entityId,
-  fetchers = DEFAULT_FETCHERS
+  fetchers = DEFAULT_FETCHERS,
+  tenantId = null
 ) {
   const startTime = Date.now();
+
+  // Resolve tenantId from invoice row when caller didn't pass it. Used for
+  // the procurement-relational 3-way match lookup. Non-fatal if missing —
+  // 3-way will simply be skipped.
+  let resolvedTenantId = tenantId;
+  if (!resolvedTenantId) {
+    try {
+      const inv = await query('SELECT tenant_id FROM invoices WHERE id = ? LIMIT 1', [invoiceId]);
+      resolvedTenantId = inv[0]?.tenant_id || null;
+    } catch {
+      resolvedTenantId = null;
+    }
+  }
 
   try {
     const poNumber = extractedData.po_number || null;
@@ -224,11 +257,27 @@ export async function processMatch(
         );
       }
 
-      // 2. 3-way PO+GRN check
-      const grns = await fetchers.getGRNsForPO(poId);
-      if (grns.length === 0) {
+      // 2. 3-way line-level GRN/SRN check (procurement-relational).
+      //    poNumber here is the legacy PO number, looked up by `po_ref`
+      //    in the procurement schema. Skipped gracefully when no
+      //    procurement counterpart exists (returns null).
+      let threeWay = null;
+      if (resolvedTenantId) {
+        threeWay = await fetchers.getThreeWayMatch(matchedPoNumber, resolvedTenantId);
+      }
+      if (threeWay) {
+        if (threeWay.headerMatched) {
+          explanationParts.push(
+            `3-way match: header matched (${threeWay.summary.matched}/${threeWay.summary.total} lines)`
+          );
+        } else {
+          explanationParts.push(
+            `3-way match: partial — ${threeWay.summary.matched}/${threeWay.summary.total} lines matched`
+          );
+        }
+      } else {
         explanationParts.push(
-          '3-way GRN verification not yet implemented — GRN records not checked'
+          '3-way verification skipped — no procurement PO found for this reference'
         );
       }
     }

@@ -23,6 +23,7 @@ function makeFetchers(overrides = {}) {
     getPOFuzzy: vi.fn().mockResolvedValue(null),
     getRecurringInvoices: vi.fn().mockResolvedValue(null),
     getGRNsForPO: vi.fn().mockResolvedValue([]),
+    getThreeWayMatch: vi.fn().mockResolvedValue(null),
     getTolerances: vi.fn().mockResolvedValue({}),
     getSnapshotValues: vi
       .fn()
@@ -47,7 +48,7 @@ describe('DEFAULT_FETCHERS', () => {
     expect(Object.isFrozen(DEFAULT_FETCHERS)).toBe(true);
   });
 
-  it('has all 6 fetcher keys', () => {
+  it('has all 7 fetcher keys (incl. getThreeWayMatch)', () => {
     const keys = Object.keys(DEFAULT_FETCHERS).sort();
     expect(keys).toEqual([
       'getGRNsForPO',
@@ -55,6 +56,7 @@ describe('DEFAULT_FETCHERS', () => {
       'getPOFuzzy',
       'getRecurringInvoices',
       'getSnapshotValues',
+      'getThreeWayMatch',
       'getTolerances',
     ]);
   });
@@ -95,7 +97,7 @@ describe('processMatch — orchestration via fetchers', () => {
     expect(fetchers.getPOExact).toHaveBeenCalledWith('PO-001', 'entity-1');
   });
 
-  it('on exact match, calls getGRNsForPO with the matched PO id', async () => {
+  it('on exact match, runs 3-way verification via getThreeWayMatch', async () => {
     const fetchers = makeFetchers({
       getPOExact: vi.fn().mockResolvedValue({
         id: 'po-123',
@@ -105,9 +107,15 @@ describe('processMatch — orchestration via fetchers', () => {
       }),
     });
 
-    const result = await processMatch('inv-1', baseExtractedData, 'entity-1', fetchers);
+    const result = await processMatch(
+      'inv-1',
+      baseExtractedData,
+      'entity-1',
+      fetchers,
+      'tenant-default-001'
+    );
 
-    expect(fetchers.getGRNsForPO).toHaveBeenCalledWith('po-123');
+    expect(fetchers.getThreeWayMatch).toHaveBeenCalledWith('PO-001', 'tenant-default-001');
     expect(result.matchType).toBe('2way_po');
     expect(result.matchConfidence).toBe(0.98);
   });
@@ -171,7 +179,7 @@ describe('processMatch — orchestration via fetchers', () => {
     expect(result.matchConfidence).toBe(0);
   });
 
-  it('GRN stub returning [] produces "not yet implemented" explanation', async () => {
+  it('skips 3-way verification when no procurement PO counterpart exists', async () => {
     const fetchers = makeFetchers({
       getPOExact: vi.fn().mockResolvedValue({
         id: 'po-123',
@@ -179,12 +187,20 @@ describe('processMatch — orchestration via fetchers', () => {
         vendor_name: 'Acme Corp',
         total_amount: 10000,
       }),
+      // Legacy fetcher kept for back-compat; 3-way path now uses getThreeWayMatch
       getGRNsForPO: vi.fn().mockResolvedValue([]),
+      getThreeWayMatch: vi.fn().mockResolvedValue(null),
     });
 
-    const result = await processMatch('inv-1', baseExtractedData, 'entity-1', fetchers);
+    const result = await processMatch(
+      'inv-1',
+      baseExtractedData,
+      'entity-1',
+      fetchers,
+      'tenant-default-001'
+    );
 
-    expect(result.explanation).toContain('GRN verification not yet implemented');
+    expect(result.explanation).toContain('3-way verification skipped');
   });
 
   it('exact match with vendor mismatch yields confidence 0.80', async () => {

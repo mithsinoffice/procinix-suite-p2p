@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Download,
   Eye,
+  History,
   Package,
   PencilLine,
   Plus,
@@ -14,6 +15,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
 import { useAPData, PurchaseOrder } from '../contexts/APDataContext';
+import { useProcurementData } from '../contexts/ProcurementDataContext';
+import { AuditTrailDrawer } from './procurement/AuditTrailDrawer';
 
 const statusTone = (status: PurchaseOrder['status']) => {
   switch (status) {
@@ -35,10 +38,12 @@ const statusTone = (status: PurchaseOrder['status']) => {
 export function PurchaseOrders() {
   const navigate = useNavigate();
   const { purchaseOrders } = useAPData();
+  const { pos: relationalPOs } = useProcurementData();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [departmentFilter, setDepartmentFilter] = useState<string[]>([]);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const [auditTarget, setAuditTarget] = useState<{ id: string; ref: string } | null>(null);
 
   const filteredOrders = useMemo(
     () =>
@@ -464,19 +469,35 @@ export function PurchaseOrders() {
                       onClick={() => navigate(`/purchase-orders/update/${order.id}`)}
                     />
                     <PremiumActionButton
+                      label={order.status === 'Draft' ? 'Edit PO' : 'Edit disabled — non-draft'}
+                      icon={<PencilLine className="w-4 h-4" />}
+                      tone="slate"
+                      onClick={
+                        order.status === 'Draft'
+                          ? () => navigate(`/purchase-orders/update/${order.id}`)
+                          : undefined
+                      }
+                    />
+                    <PremiumActionButton
+                      label="Audit trail"
+                      icon={<History className="w-4 h-4" />}
+                      tone="amber"
+                      onClick={() => {
+                        const rel = relationalPOs.find(
+                          (p) => p.poRef === order.poNumber || p.id === order.id
+                        );
+                        setAuditTarget({
+                          id: rel?.id ?? order.id,
+                          ref: rel?.poRef ?? order.poNumber,
+                        });
+                      }}
+                    />
+                    <PremiumActionButton
                       label="Update milestones"
                       icon={<Calendar className="w-4 h-4" />}
                       tone="violet"
                       onClick={() => navigate(`/purchase-orders/update/${order.id}`)}
                     />
-                    {order.status === 'Draft' && (
-                      <PremiumActionButton
-                        label="Edit PO"
-                        icon={<PencilLine className="w-4 h-4" />}
-                        tone="slate"
-                        onClick={() => navigate(`/purchase-orders/update/${order.id}`)}
-                      />
-                    )}
                     <PremiumActionButton
                       label="Open PO"
                       icon={<ArrowUpRight className="w-4 h-4" />}
@@ -525,6 +546,15 @@ export function PurchaseOrders() {
           </div>
         </div>
       </div>
+      {auditTarget && (
+        <AuditTrailDrawer
+          open
+          onClose={() => setAuditTarget(null)}
+          docType="PO"
+          docId={auditTarget.id}
+          docRef={auditTarget.ref}
+        />
+      )}
     </div>
   );
 }

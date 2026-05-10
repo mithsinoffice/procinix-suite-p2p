@@ -11,12 +11,14 @@ import {
   Package,
   ArrowUpRight,
   ClipboardList,
+  History,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getStatusStyle, type PRStatus } from '../../utils/statusUtils';
 import { useProcurementData } from '../../contexts/ProcurementDataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from '../ui/premium-register';
+import { AuditTrailDrawer } from './AuditTrailDrawer';
 
 type PRType = 'Catalogue' | 'Regular' | 'Service' | 'Kit/Bundle' | 'Asset/CAPEX' | 'Blanket';
 type AIRiskLevel = 'Low' | 'Medium' | 'High';
@@ -42,9 +44,10 @@ interface PurchaseRequisition {
 export function PRListing() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { purchaseRequests } = useProcurementData();
+  const { purchaseRequests, prs: relationalPRs } = useProcurementData();
   const [selectedTab, setSelectedTab] = useState<'my-prs' | 'team-prs'>('my-prs');
   const [searchTerm, setSearchTerm] = useState('');
+  const [auditTarget, setAuditTarget] = useState<{ id: string; ref: string } | null>(null);
 
   // Filter states
   const [selectedPRTypes, setSelectedPRTypes] = useState<PRType[]>([]);
@@ -645,13 +648,27 @@ export function PRListing() {
                         tone="teal"
                         onClick={() => navigate(`/procurement/pr/detail/${pr.id}`)}
                       />
-                      {pr.status === 'Draft' && (
-                        <PremiumActionButton
-                          label="Edit PR"
-                          icon={<Edit className="w-4 h-4" />}
-                          tone="violet"
-                        />
-                      )}
+                      <PremiumActionButton
+                        label={pr.status === 'Draft' ? 'Edit PR' : 'Edit disabled — non-draft'}
+                        icon={<Edit className="w-4 h-4" />}
+                        tone="violet"
+                        onClick={
+                          pr.status === 'Draft'
+                            ? () => navigate(`/procurement/pr/edit/${pr.id}`)
+                            : undefined
+                        }
+                      />
+                      <PremiumActionButton
+                        label="Audit trail"
+                        icon={<History className="w-4 h-4" />}
+                        tone="slate"
+                        onClick={() => {
+                          const rel = relationalPRs.find(
+                            (r) => r.prRef === pr.id || r.id === pr.id
+                          );
+                          setAuditTarget({ id: rel?.id ?? pr.id, ref: pr.id });
+                        }}
+                      />
                       {pr.status === 'Pending Approval' && selectedTab === 'my-prs' && (
                         <button
                           className="px-2 py-1 rounded text-xs"
@@ -691,6 +708,15 @@ export function PRListing() {
           </div>
         </div>
       </div>
+      {auditTarget && (
+        <AuditTrailDrawer
+          open
+          onClose={() => setAuditTarget(null)}
+          docType="PR"
+          docId={auditTarget.id}
+          docRef={auditTarget.ref}
+        />
+      )}
     </div>
   );
 }
