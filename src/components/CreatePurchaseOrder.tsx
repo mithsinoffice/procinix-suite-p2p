@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowLeft, Plus, Trash2, Search, Calendar, FileText } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { POPreview } from './POPreview';
-import { getPRById, PRLineItem } from '../contexts/PurchaseRequestData';
+import { useProcurementData } from '../contexts/ProcurementDataContext';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 
@@ -38,6 +38,7 @@ interface PaymentMilestone {
 export function CreatePurchaseOrder() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { prs } = useProcurementData();
   const [poType, setPoType] = useState('Catalogue PO');
   const [advanceRequired, setAdvanceRequired] = useState('No');
   const [taxInclusive, setTaxInclusive] = useState('Exclusive');
@@ -216,25 +217,25 @@ export function CreatePurchaseOrder() {
   }, []);
   useFormKeyboardSave(handleSaveDraft);
 
-  // PR-based mode logic
+  // PR-based mode logic — sourced from ProcurementDataContext.prs (relational)
   useEffect(() => {
     if (mode === 'from-pr' && prIds.length > 0) {
-      // Load PR data and populate line items
-      const prObjects = prIds.map((id) => getPRById(id)).filter(Boolean);
+      const prObjects = prIds
+        .map((id) => prs.find((p) => p.id === id || p.prRef === id))
+        .filter(Boolean);
 
       if (prObjects.length > 0) {
-        // Populate line items from PR data
-        const prLineItems: LineItem[] = prObjects.flatMap((pr: any) =>
-          pr.lineItems.map((item: PRLineItem) => ({
-            id: `pr-${pr.id}-${item.id}`,
-            sku: item.productId || '',
+        const prLineItems: LineItem[] = prObjects.flatMap((pr) =>
+          (pr?.lineItems ?? []).map((item) => ({
+            id: `pr-${pr?.id}-${item.id}`,
+            sku: item.itemCode || '',
             productName: item.itemDescription,
             qty: item.quantity,
             rate: item.unitPrice,
-            total: item.amount,
-            deliveryDate: '',
-            shipToLocation: item.department || '',
-            costCentre: item.costCentre || '',
+            total: item.lineAmount,
+            deliveryDate: item.deliveryDate || '',
+            shipToLocation: item.shipToLocation || '',
+            costCentre: '',
             profitCentre: '',
           }))
         );
@@ -242,10 +243,11 @@ export function CreatePurchaseOrder() {
         setLineItems(prLineItems);
         setLinkedPRs(prIds);
 
-        // Set source PR data for display
+        // Set source PR data for display. The relational PR shape doesn't
+        // carry a header-level vendor — derive it from the first line item.
         setSourcePRData({
-          prNumber: prObjects.map((pr: any) => pr.prNumber).join(', '),
-          vendorName: prObjects[0].vendorName,
+          prNumber: prObjects.map((pr) => pr?.prRef ?? '').join(', '),
+          vendorName: prObjects[0]?.lineItems?.[0]?.vendorName ?? '',
         });
       }
     }

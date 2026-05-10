@@ -1,17 +1,39 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckSquare, Square, AlertCircle } from 'lucide-react';
 import { useMasterData } from '../contexts/MasterDataContext';
-import { getApprovedPRs, PurchaseRequestTransaction } from '../contexts/PurchaseRequestData';
+import { useProcurementData } from '../contexts/ProcurementDataContext';
 
 export function PRSelectionPage() {
   const navigate = useNavigate();
   const { currentCompany } = useMasterData();
+  const { prs } = useProcurementData();
   const [selectedPRs, setSelectedPRs] = useState<Set<string>>(new Set());
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  // Get approved PRs for current entity
-  const availablePRs = currentCompany ? getApprovedPRs(currentCompany.id) : [];
+  // Adapt the relational `prs` (from ProcurementDataContext) into the shape
+  // this page renders. Header vendor is taken from the first line item — the
+  // procurement schema doesn't carry a header-level vendor, so we project it.
+  const availablePRs = useMemo(() => {
+    if (!currentCompany) return [];
+    return prs
+      .filter((pr) => pr.status === 'approved' && pr.entityId === currentCompany.id)
+      .map((pr) => {
+        const firstLine = pr.lineItems?.[0];
+        return {
+          id: pr.id,
+          prNumber: pr.prRef,
+          entityId: pr.entityId,
+          departmentName: pr.department || '',
+          vendorId: firstLine?.vendorId ?? '',
+          vendorName: firstLine?.vendorName ?? 'Multiple / TBD',
+          lineItems: pr.lineItems ?? [],
+          totalAmount: pr.totalAmount,
+          currency: pr.currency,
+          status: 'Approved' as const,
+        };
+      });
+  }, [prs, currentCompany]);
 
   // Toggle PR selection
   const togglePRSelection = (prId: string) => {

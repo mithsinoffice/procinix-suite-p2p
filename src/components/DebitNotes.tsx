@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -16,14 +16,41 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
-import { useAPData } from '../contexts/APDataContext';
+import { useAPData, type DebitNote } from '../contexts/APDataContext';
+import { mysqlApiRequest } from '../lib/mysql/client';
 
 export function DebitNotes() {
   const navigate = useNavigate();
-  const { debitNotes } = useAPData();
+  const { debitNotes: blobDebitNotes } = useAPData();
+  const [apiDebitNotes, setApiDebitNotes] = useState<DebitNote[] | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [referenceFilter, setReferenceFilter] = useState<string[]>([]);
+
+  // Primary path: live `/api/ap/debit-notes`. Falls back to APDataContext blob
+  // (mock + domain_documents) when the API is unreachable or returns nothing,
+  // so the dashboard never goes empty during dev.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await mysqlApiRequest<{ success: boolean; data: DebitNote[] }>(
+          '/ap/debit-notes'
+        );
+        if (!cancelled && res?.success) {
+          setApiDebitNotes(Array.isArray(res.data) ? res.data : []);
+        }
+      } catch {
+        if (!cancelled) setApiDebitNotes(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const debitNotes: DebitNote[] =
+    apiDebitNotes && apiDebitNotes.length > 0 ? apiDebitNotes : blobDebitNotes;
 
   const getStatusConfig = (status: string) => {
     switch (status) {

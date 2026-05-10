@@ -1,5 +1,28 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
+import { mysqlApiRequest } from '../lib/mysql/client';
+
+// Aggregates surfaced by `/api/budget/summary` and `/api/budget/departments`.
+// The full collections (budgets/revisions/transfers/scenarios/policies) still
+// hydrate from the JSON blob — those don't have a relational source yet.
+export interface BudgetSummary {
+  totalBudget: number;
+  committed: number;
+  actual: number;
+  available: number;
+  count: number;
+  byStatus: Record<string, number>;
+  utilizationPercent: number;
+}
+export interface DepartmentBudget {
+  department: string;
+  budget: number;
+  committed: number;
+  actual: number;
+  available: number;
+  count: number;
+  utilizationPercent: number;
+}
 
 // Budget Types
 export type BudgetType = 'Original' | 'Interim' | 'Revised' | 'Forecast';
@@ -139,6 +162,10 @@ interface BudgetDataContextType {
   transfers: BudgetTransfer[];
   scenarios: BudgetScenario[];
   policies: BudgetPolicy[];
+  /** API-derived aggregates from /api/budget/summary (null until loaded). */
+  apiSummary: BudgetSummary | null;
+  /** API-derived department breakdown from /api/budget/departments. */
+  apiDepartments: DepartmentBudget[];
   isHydrating: boolean;
   addBudget: (budget: Budget) => void;
   updateBudget: (id: string, updates: Partial<Budget>) => void;
@@ -269,12 +296,18 @@ export function BudgetDataProvider({ children }: { children: ReactNode }) {
   const [transfers, setTransfers] = useState<BudgetTransfer[]>(defaultDocument.transfers);
   const [scenarios, setScenarios] = useState<BudgetScenario[]>(defaultDocument.scenarios);
   const [policies, setPolicies] = useState<BudgetPolicy[]>(defaultDocument.policies);
+  const [apiSummary, setApiSummary] = useState<BudgetSummary | null>(null);
+  const [apiDepartments, setApiDepartments] = useState<DepartmentBudget[]>([]);
   const [isHydrating, setIsHydrating] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
     const hydrate = async () => {
+      // Full collections still load from the JSON blob — no relational source
+      // for these yet. The /api/budget/{summary,departments} endpoints below
+      // give the dashboard a real API surface; if either fails, derive from
+      // the same blob so the UI never breaks.
       const document = await ensureDomainDocument('budget_data', defaultDocument);
       if (!isMounted) {
         return;
@@ -285,6 +318,25 @@ export function BudgetDataProvider({ children }: { children: ReactNode }) {
       setTransfers(document.transfers ?? defaultDocument.transfers);
       setScenarios(document.scenarios ?? defaultDocument.scenarios);
       setPolicies(document.policies ?? defaultDocument.policies);
+
+      try {
+        const [summaryRes, deptRes] = await Promise.all([
+          mysqlApiRequest<{ success: boolean; data: BudgetSummary }>('/budget/summary').catch(
+            () => null
+          ),
+          mysqlApiRequest<{ success: boolean; data: { departments: DepartmentBudget[] } }>(
+            '/budget/departments'
+          ).catch(() => null),
+        ]);
+        if (isMounted) {
+          if (summaryRes?.success) setApiSummary(summaryRes.data);
+          if (deptRes?.success) setApiDepartments(deptRes.data.departments ?? []);
+        }
+      } catch {
+        // API unavailable — leave aggregates empty; the dashboard can derive
+        // from `budgets[]` directly until the endpoints respond.
+      }
+
       setIsHydrating(false);
     };
 
@@ -349,6 +401,8 @@ export function BudgetDataProvider({ children }: { children: ReactNode }) {
         transfers,
         scenarios,
         policies,
+        apiSummary,
+        apiDepartments,
         isHydrating,
         addBudget,
         updateBudget,
