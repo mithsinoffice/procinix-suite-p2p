@@ -179,6 +179,12 @@ export const MASTER_STORAGE = {
     auditTable: 'gl_code_master_audit',
     legacyTable: 'erp_master_gl_codes',
   },
+  vendor_group_master: {
+    database: 'vendor_group_master',
+    table: 'vendor_group_master',
+    auditTable: 'vendor_group_master_audit',
+    legacyTable: 'erp_master_vendor_groups',
+  },
 };
 
 export function getMasterStorage(masterKey) {

@@ -350,10 +350,36 @@ export interface TDSSectionMasterRecord {
 }
 
 export interface VendorGroupMaster {
+  id?: string;
   code: string;
+  recordCode?: string;
   name: string;
+  recordName?: string;
+  group_name?: string;
+  groupType?: string;
+  group_type?: string;
+  industry?: string;
+  headquarters?: string;
+  website?: string;
+  status?: string;
+  isActive?: boolean;
+  approvalStatus?: string;
   relationshipType?: 'Third party' | 'Related party' | 'Associate' | 'JV';
   entities?: Array<{ id: string; name: string }>;
+}
+
+export interface LocationMaster {
+  id: string;
+  code: string;
+  recordCode?: string;
+  name: string;
+  recordName?: string;
+  status?: string;
+  isActive?: boolean;
+  approvalStatus?: string;
+  type?: string;
+  city?: string;
+  state?: string;
 }
 
 // ============================================================================
@@ -944,6 +970,9 @@ interface MasterDataContextType {
   // Vendor Groups
   vendorGroups: VendorGroupMaster[];
 
+  // Locations
+  locations: LocationMaster[];
+
   // TDS Sections
   tdsSections: TDSSectionMasterRecord[];
   getTDSSectionByCode: (sectionCode: string) => TDSSectionMasterRecord | undefined;
@@ -981,6 +1010,7 @@ interface MasterDataDocument {
   departments: DepartmentMaster[];
   debitNoteReasons: DebitNoteReasonMaster[];
   vendorGroups: VendorGroupMaster[];
+  locations: LocationMaster[];
   tdsSections: TDSSectionMasterRecord[];
   currencies: CurrencyMaster[];
   exchangeRates: ExchangeRateMaster[];
@@ -1019,6 +1049,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     departments: DEPARTMENT_MASTER_DATA,
     debitNoteReasons: DEBIT_NOTE_REASON_MASTER_DATA,
     vendorGroups: VENDOR_GROUP_MASTER_DATA,
+    locations: [] as LocationMaster[],
     tdsSections: TDS_SECTION_MASTER_DATA,
     currencies: CURRENCY_MASTER_DATA,
     exchangeRates: EXCHANGE_RATE_MASTER_DATA,
@@ -1044,6 +1075,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
   const [vendorGroups, setVendorGroups] = useState<VendorGroupMaster[]>(
     defaultDocument.vendorGroups
   );
+  const [locations, setLocations] = useState<LocationMaster[]>(defaultDocument.locations);
   const [tdsSections, setTdsSections] = useState<TDSSectionMasterRecord[]>(
     defaultDocument.tdsSections
   );
@@ -1072,6 +1104,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           tdsSectionsData,
           currenciesData,
           exchangeRatesData,
+          vendorGroupsData,
+          locationsData,
           document,
           itemsResponse,
         ] = await Promise.all([
@@ -1091,6 +1125,14 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           ensureRelationalMasterRecords('tds_section_master', defaultDocument.tdsSections),
           ensureRelationalMasterRecords('currency_master', defaultDocument.currencies),
           ensureRelationalMasterRecords('exchange_rate_master', defaultDocument.exchangeRates),
+          ensureRelationalMasterRecords<VendorGroupMaster>(
+            'vendor_group_master',
+            defaultDocument.vendorGroups
+          ),
+          ensureRelationalMasterRecords<LocationMaster>(
+            'location_master',
+            defaultDocument.locations
+          ),
           ensureDomainDocument('master_data', defaultDocument),
           mysqlApiRequest<{ success: boolean; data: MysqlItemRow[] }>('/items').catch(() => ({
             success: false,
@@ -1133,7 +1175,17 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
         setUoms(uomsData ?? defaultDocument.uoms);
         setDepartments(departmentsData ?? defaultDocument.departments);
         setDebitNoteReasons(debitNoteReasonsData ?? defaultDocument.debitNoteReasons);
-        setVendorGroups(document.vendorGroups ?? defaultDocument.vendorGroups);
+        // Prefer relational data; fall back to blob, then to seed.
+        setVendorGroups(
+          vendorGroupsData && vendorGroupsData.length > 0
+            ? vendorGroupsData
+            : (document.vendorGroups ?? defaultDocument.vendorGroups)
+        );
+        setLocations(
+          locationsData && locationsData.length > 0
+            ? locationsData
+            : (document.locations ?? defaultDocument.locations)
+        );
         setTdsSections(tdsSectionsData ?? defaultDocument.tdsSections);
         setCurrencies(currenciesData ?? defaultDocument.currencies);
         setExchangeRates(exchangeRatesData ?? defaultDocument.exchangeRates);
@@ -1158,6 +1210,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       setDepartments(document.departments ?? defaultDocument.departments);
       setDebitNoteReasons(document.debitNoteReasons ?? defaultDocument.debitNoteReasons);
       setVendorGroups(document.vendorGroups ?? defaultDocument.vendorGroups);
+      setLocations(document.locations ?? defaultDocument.locations);
       setTdsSections(document.tdsSections ?? defaultDocument.tdsSections);
       setCurrencies(document.currencies ?? defaultDocument.currencies);
       setExchangeRates(document.exchangeRates ?? defaultDocument.exchangeRates);
@@ -1194,6 +1247,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
         departments,
         debitNoteReasons,
         vendorGroups,
+        locations,
         tdsSections,
         currencies,
         exchangeRates,
@@ -1214,6 +1268,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       departments,
       debitNoteReasons,
       vendorGroups,
+      locations,
       tdsSections,
       currencies,
       exchangeRates,
@@ -1225,6 +1280,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     currencies,
     debitNoteReasons,
     vendorGroups,
+    locations,
     departments,
     entities,
     exchangeRates,
@@ -1443,6 +1499,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     getDebitNoteReasonById,
     getActiveDebitNoteReasons,
     vendorGroups,
+    locations,
     tdsSections,
     getTDSSectionByCode,
     getActiveTDSSections,

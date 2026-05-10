@@ -18,6 +18,7 @@ import {
   useProcurementData,
   type PurchaseRequestStatus,
 } from '../../contexts/ProcurementDataContext';
+import { useMasterData } from '../../contexts/MasterDataContext';
 
 /**
  * KIT/BUNDLE PR FORM
@@ -51,6 +52,23 @@ interface KitBundle {
 export function KitBundlePRForm() {
   const navigate = useNavigate();
   const { addPurchaseRequest } = useProcurementData();
+  const { entities, departments, locations } = useMasterData();
+  const activeEntities = entities.filter((entity) => entity.isActive);
+  const activeDepartments = departments.filter((department) => department.isActive);
+  // location_master falls back to entity names when empty.
+  const activeLocations =
+    locations.length > 0
+      ? locations.filter((location) => location.isActive !== false)
+      : activeEntities.map((entity) => ({
+          id: entity.id,
+          code: entity.code ?? entity.id,
+          name: entity.name,
+        }));
+  const [selectedEntity, setSelectedEntity] = useState<string>(activeEntities[0]?.name ?? '');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>(
+    activeDepartments[0]?.name ?? ''
+  );
+  const [selectedLocation, setSelectedLocation] = useState<string>(activeLocations[0]?.name ?? '');
   const [bundles, setBundles] = useState<KitBundle[]>([]);
   const [showBundleSearch, setShowBundleSearch] = useState(false);
   const [selectedBundle, setSelectedBundle] = useState<KitBundle | null>(null);
@@ -391,6 +409,8 @@ export function KitBundlePRForm() {
                     Entity <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <select
+                    value={selectedEntity}
+                    onChange={(e) => setSelectedEntity(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg text-sm"
                     style={{
                       border: '1px solid var(--color-silver)',
@@ -398,9 +418,11 @@ export function KitBundlePRForm() {
                       color: 'var(--color-ink)',
                     }}
                   >
-                    <option>India HQ</option>
-                    <option>India Manufacturing</option>
-                    <option>India Sales Office</option>
+                    {activeEntities.map((entity) => (
+                      <option key={entity.id} value={entity.name}>
+                        {entity.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -411,6 +433,8 @@ export function KitBundlePRForm() {
                     Department <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <select
+                    value={selectedDepartment}
+                    onChange={(e) => setSelectedDepartment(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg text-sm"
                     style={{
                       border: '1px solid var(--color-silver)',
@@ -418,10 +442,11 @@ export function KitBundlePRForm() {
                       color: 'var(--color-ink)',
                     }}
                   >
-                    <option>IT</option>
-                    <option>Finance</option>
-                    <option>Operations</option>
-                    <option>HR</option>
+                    {activeDepartments.map((department) => (
+                      <option key={department.id} value={department.name}>
+                        {department.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -432,6 +457,8 @@ export function KitBundlePRForm() {
                     Delivery Location <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
                   <select
+                    value={selectedLocation}
+                    onChange={(e) => setSelectedLocation(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg text-sm"
                     style={{
                       border: '1px solid var(--color-silver)',
@@ -439,9 +466,11 @@ export function KitBundlePRForm() {
                       color: 'var(--color-ink)',
                     }}
                   >
-                    <option>Mumbai Office</option>
-                    <option>Bangalore DC</option>
-                    <option>Delhi Warehouse</option>
+                    {activeLocations.map((location) => (
+                      <option key={location.id} value={location.name}>
+                        {location.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>

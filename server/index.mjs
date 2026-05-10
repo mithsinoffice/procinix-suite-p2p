@@ -1530,6 +1530,30 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
+      // item_master has a non-erp_master_* schema (item_code/item_name/uom/
+      // hsn_code/gst_rate/...) — projecting the canonical record_code/
+      // record_name/payload shape inline keeps `/api/masters/item_master`
+      // compatible with every generic master consumer without breaking the
+      // dedicated `/api/items` endpoint above.
+      if (masterKey === 'item_master') {
+        const rows = await query(
+          `SELECT * FROM ${tableName} ORDER BY updated_at DESC, created_at DESC`
+        );
+        const records = rows.map((row) => {
+          const item = mapItemRow(row);
+          return mergeCanonicalMasterRecord({
+            id: item.id,
+            record_code: item.itemCode ?? null,
+            record_name: item.itemName ?? null,
+            status: item.itemStatus ?? null,
+            approval_status: item.approvalStatus ?? null,
+            payload: item,
+            updated_at: item.updatedAt ?? null,
+          });
+        });
+        return sendJson(res, 200, { success: true, data: records });
+      }
+
       const rows = await query(
         `
           SELECT id, record_code, record_name, status, approval_status, payload, updated_at
@@ -4022,13 +4046,14 @@ const server = http.createServer(async (req, res) => {
       const vendorStatus = body.status || 'draft';
       // Drift fix 1: persist client_erp_vendor_code
       await query(
-        'INSERT INTO p2p_schema_mt.vendors (id, vendor_code, client_erp_vendor_code, vendor_legal_name, vendor_trade_name, vendor_group_name, vendor_group_code, vendor_type, address_line, city, state, pin_code, country, status, tenant_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        'INSERT INTO p2p_schema_mt.vendors (id, vendor_code, client_erp_vendor_code, vendor_legal_name, vendor_trade_name, vendor_group_id, vendor_group_name, vendor_group_code, vendor_type, address_line, city, state, pin_code, country, status, tenant_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [
           vendorId,
           vendorCode,
           body.client_erp_vendor_code || null,
           body.vendor_legal_name,
           body.vendor_trade_name || null,
+          body.vendor_group_id || null,
           body.vendor_group_name || null,
           body.vendor_group_code || null,
           body.vendor_type || 'goods_supplier',
@@ -4196,10 +4221,11 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req);
       // Drift fix 1: persist client_erp_vendor_code
       await query(
-        'UPDATE p2p_schema_mt.vendors SET vendor_legal_name=?, vendor_trade_name=?, vendor_group_name=?, vendor_group_code=?, vendor_type=?, address_line=?, city=?, state=?, pin_code=?, country=?, status=?, client_erp_vendor_code=? WHERE id=?',
+        'UPDATE p2p_schema_mt.vendors SET vendor_legal_name=?, vendor_trade_name=?, vendor_group_id=?, vendor_group_name=?, vendor_group_code=?, vendor_type=?, address_line=?, city=?, state=?, pin_code=?, country=?, status=?, client_erp_vendor_code=? WHERE id=?',
         [
           body.vendor_legal_name,
           body.vendor_trade_name || null,
+          body.vendor_group_id || null,
           body.vendor_group_name || null,
           body.vendor_group_code || null,
           body.vendor_type,

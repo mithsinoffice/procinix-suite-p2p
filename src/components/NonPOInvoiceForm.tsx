@@ -34,9 +34,59 @@ import { useAPData } from '../contexts/APDataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { isMsmeVendor, maxMsmeDueDate, msmeDueDateWarning } from '../lib/msmeDueDate';
 import { buildMysqlApiHeaders, mysqlApiBaseUrl, isMysqlApiEnabled } from '../lib/mysql/client';
+import { ensureRelationalMasterRecords } from '../lib/mysql/masterTables';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { JournalEntryPreview, LineItemRow, NarrationField, TDSThresholdTracker } from './invoice';
+
+// India's 36 GST place-of-supply codes (compliance-defined enum). Codes are
+// the GST state codes — first 2 digits of any GSTIN must match this list.
+const INDIA_GST_STATES: ReadonlyArray<{ code: string; name: string }> = [
+  { code: '01', name: 'Jammu & Kashmir' },
+  { code: '02', name: 'Himachal Pradesh' },
+  { code: '03', name: 'Punjab' },
+  { code: '04', name: 'Chandigarh' },
+  { code: '05', name: 'Uttarakhand' },
+  { code: '06', name: 'Haryana' },
+  { code: '07', name: 'Delhi' },
+  { code: '08', name: 'Rajasthan' },
+  { code: '09', name: 'Uttar Pradesh' },
+  { code: '10', name: 'Bihar' },
+  { code: '11', name: 'Sikkim' },
+  { code: '12', name: 'Arunachal Pradesh' },
+  { code: '13', name: 'Nagaland' },
+  { code: '14', name: 'Manipur' },
+  { code: '15', name: 'Mizoram' },
+  { code: '16', name: 'Tripura' },
+  { code: '17', name: 'Meghalaya' },
+  { code: '18', name: 'Assam' },
+  { code: '19', name: 'West Bengal' },
+  { code: '20', name: 'Jharkhand' },
+  { code: '21', name: 'Odisha' },
+  { code: '22', name: 'Chhattisgarh' },
+  { code: '23', name: 'Madhya Pradesh' },
+  { code: '24', name: 'Gujarat' },
+  { code: '25', name: 'Daman & Diu' },
+  { code: '26', name: 'Dadra & Nagar Haveli' },
+  { code: '27', name: 'Maharashtra' },
+  { code: '28', name: 'Andhra Pradesh' },
+  { code: '29', name: 'Karnataka' },
+  { code: '30', name: 'Goa' },
+  { code: '31', name: 'Lakshadweep' },
+  { code: '32', name: 'Kerala' },
+  { code: '33', name: 'Tamil Nadu' },
+  { code: '34', name: 'Puducherry' },
+  { code: '35', name: 'Andaman & Nicobar' },
+  { code: '36', name: 'Telangana' },
+  { code: '37', name: 'Andhra Pradesh (New)' },
+];
+
+const FALLBACK_PAYMENT_TERMS: ReadonlyArray<{ code: string; name: string }> = [
+  { code: 'Net 30 Days', name: 'Net 30 Days' },
+  { code: 'Net 45 Days', name: 'Net 45 Days' },
+  { code: 'Net 60 Days', name: 'Net 60 Days' },
+  { code: 'Immediate', name: 'Immediate' },
+];
 
 /**
  * NON-PO INVOICE CREATION FORM
@@ -186,6 +236,37 @@ export function NonPOInvoiceForm() {
   const [ocrData, setOcrData] = useState<OCRData | null>(null);
   const [showOCRReview, setShowOCRReview] = useState(false);
   const [ocrFields, setOcrFields] = useState<Record<string, OCRFieldData>>({});
+  const [paymentTermsOptions, setPaymentTermsOptions] =
+    useState<ReadonlyArray<{ code: string; name: string }>>(FALLBACK_PAYMENT_TERMS);
+
+  // Hydrate Payment Terms from vendor_payment_terms_master; fall back to the
+  // hardcoded 4-option list if the master returns empty / errors.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const records = await ensureRelationalMasterRecords<{
+          recordCode?: string;
+          code?: string;
+          recordName?: string;
+          name?: string;
+        }>('vendor_payment_terms_master', []);
+        if (cancelled) return;
+        const mapped = records
+          .map((r) => ({
+            code: String(r.recordCode ?? r.code ?? r.recordName ?? r.name ?? '').trim(),
+            name: String(r.recordName ?? r.name ?? r.recordCode ?? r.code ?? '').trim(),
+          }))
+          .filter((r) => r.code && r.name);
+        setPaymentTermsOptions(mapped.length > 0 ? mapped : FALLBACK_PAYMENT_TERMS);
+      } catch {
+        if (!cancelled) setPaymentTermsOptions(FALLBACK_PAYMENT_TERMS);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
 
@@ -1534,10 +1615,12 @@ export function NonPOInvoiceForm() {
             className="px-input w-full px-4 py-2 rounded-lg border-2"
             style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
           >
-            <option value="KA">Karnataka</option>
-            <option value="MH">Maharashtra</option>
-            <option value="TN">Tamil Nadu</option>
-            <option value="DL">Delhi</option>
+            <option value="">Select state / UT</option>
+            {INDIA_GST_STATES.map((s) => (
+              <option key={s.code} value={s.code}>
+                {s.code} - {s.name}
+              </option>
+            ))}
           </select>
         </PxFormField>
 
@@ -1603,10 +1686,11 @@ export function NonPOInvoiceForm() {
             className="px-input w-full px-4 py-2 rounded-lg border-2"
             style={{ borderColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
           >
-            <option value="Net 30 Days">Net 30 Days</option>
-            <option value="Net 45 Days">Net 45 Days</option>
-            <option value="Net 60 Days">Net 60 Days</option>
-            <option value="Immediate">Immediate</option>
+            {paymentTermsOptions.map((term) => (
+              <option key={term.code} value={term.code}>
+                {term.name}
+              </option>
+            ))}
           </select>
         </PxFormField>
 
