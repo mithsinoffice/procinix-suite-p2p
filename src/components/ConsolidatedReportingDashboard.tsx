@@ -1,18 +1,18 @@
 /**
  * CONSOLIDATED REPORTING DASHBOARD - VIEW-ONLY
- * 
+ *
  * Multi-entity, multi-currency consolidated view that demonstrates:
  * - Total Spend across all entities
  * - Total Payables across all entities
  * - Total Payments across all entities
  * - Currency conversion ONLY in this dashboard (NOT in transactions)
- * 
+ *
  * PRIMARY RULES:
  * - Transactions remain single-currency per entity
  * - Currency conversion ONLY for reporting purposes
  * - Uses Exchange Rate Master for FX conversion
  * - Default base currency: INR
- * 
+ *
  * REGRESSION SAFETY:
  * - Zero impact on transaction logic
  * - Pure read-only aggregation
@@ -20,16 +20,16 @@
  */
 
 import { useState } from 'react';
-import { 
-  TrendingUp, 
-  Wallet, 
-  CreditCard, 
-  Building2, 
+import {
+  TrendingUp,
+  Wallet,
+  CreditCard,
+  Building2,
   Info,
   Globe,
   ArrowRightLeft,
   BarChart3,
-  Coins
+  Coins,
 } from 'lucide-react';
 import { useMasterData } from '../contexts/MasterDataContext';
 
@@ -44,12 +44,7 @@ interface EntitySpendData {
 }
 
 export function ConsolidatedReportingDashboard() {
-  const { 
-    entities, 
-    getExchangeRate, 
-    getCurrencyByCode,
-    getActiveEntities 
-  } = useMasterData();
+  const { entities, getExchangeRate, getCurrencyByCode, getActiveEntities } = useMasterData();
 
   // Base currency for consolidated reporting
   const BASE_CURRENCY = 'INR';
@@ -64,7 +59,7 @@ export function ConsolidatedReportingDashboard() {
       currency: 'INR',
       totalSpend: 2500000, // ₹25,00,000
       totalPayables: 850000, // ₹8,50,000
-      totalPayments: 1650000 // ₹16,50,000
+      totalPayments: 1650000, // ₹16,50,000
     },
     {
       entityId: 'ENT-SUBKO-UAE',
@@ -73,7 +68,7 @@ export function ConsolidatedReportingDashboard() {
       currency: 'AED',
       totalSpend: 120000, // AED 1,20,000
       totalPayables: 45000, // AED 45,000
-      totalPayments: 75000 // AED 75,000
+      totalPayments: 75000, // AED 75,000
     },
     {
       entityId: 'ENT-PROCINIX-IN',
@@ -82,8 +77,8 @@ export function ConsolidatedReportingDashboard() {
       currency: 'INR',
       totalSpend: 3200000, // ₹32,00,000
       totalPayables: 980000, // ₹9,80,000
-      totalPayments: 2220000 // ₹22,20,000
-    }
+      totalPayments: 2220000, // ₹22,20,000
+    },
   ];
 
   /**
@@ -99,7 +94,7 @@ export function ConsolidatedReportingDashboard() {
 
     // Get exchange rate from Exchange Rate Master
     const rate = getExchangeRate(fromCurrency, BASE_CURRENCY);
-    
+
     if (!rate) {
       console.warn(`Exchange rate not found for ${fromCurrency} to ${BASE_CURRENCY}`);
       return amount; // Return original amount if rate not available
@@ -116,7 +111,7 @@ export function ConsolidatedReportingDashboard() {
     let totalPayables = 0;
     let totalPayments = 0;
 
-    entitySpendData.forEach(entity => {
+    entitySpendData.forEach((entity) => {
       totalSpend += convertToBaseCurrency(entity.totalSpend, entity.currency);
       totalPayables += convertToBaseCurrency(entity.totalPayables, entity.currency);
       totalPayments += convertToBaseCurrency(entity.totalPayments, entity.currency);
@@ -143,12 +138,14 @@ export function ConsolidatedReportingDashboard() {
         <div className="px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-[var(--color-ink)]">Consolidated Reporting</h1>
+              <h1 className="text-2xl font-semibold text-[var(--color-ink)]">
+                Consolidated Reporting
+              </h1>
               <p className="mt-1 text-sm text-[var(--color-mercury-grey)]">
                 Multi-entity, multi-currency view aggregated to base currency
               </p>
             </div>
-            
+
             {/* Base Currency Indicator */}
             <div className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-r from-teal-50 to-teal-100 border border-teal-200 rounded-lg">
               <Globe className="w-5 h-5 text-teal-600" />
@@ -165,8 +162,9 @@ export function ConsolidatedReportingDashboard() {
           <div className="mt-4 flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
             <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-blue-900">
-              <strong>Currency Conversion Notice:</strong> Amounts converted using exchange rates from Exchange Rate Master. 
-              All transactions remain in their respective entity's functional currency. This conversion is for reporting purposes only.
+              <strong>Currency Conversion Notice:</strong> Amounts converted using exchange rates
+              from Exchange Rate Master. All transactions remain in their respective entity's
+              functional currency. This conversion is for reporting purposes only.
             </div>
           </div>
         </div>
@@ -212,7 +210,9 @@ export function ConsolidatedReportingDashboard() {
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-[var(--color-silver)]">
-              <div className="text-xs text-[var(--color-mercury-grey)]">Outstanding across entities</div>
+              <div className="text-xs text-[var(--color-mercury-grey)]">
+                Outstanding across entities
+              </div>
             </div>
           </div>
 
@@ -276,19 +276,25 @@ export function ConsolidatedReportingDashboard() {
               <tbody className="bg-white divide-y divide-[var(--color-silver)]">
                 {entitySpendData.map((entity, index) => {
                   const currency = getCurrencyByCode(entity.currency);
-                  const exchangeRate = entity.currency !== BASE_CURRENCY 
-                    ? getExchangeRate(entity.currency, BASE_CURRENCY) 
-                    : null;
+                  const exchangeRate =
+                    entity.currency !== BASE_CURRENCY
+                      ? getExchangeRate(entity.currency, BASE_CURRENCY)
+                      : null;
 
                   return (
-                    <tr key={entity.entityId} className="hover:bg-[var(--color-cloud)] transition-colors">
+                    <tr
+                      key={entity.entityId}
+                      className="hover:bg-[var(--color-cloud)] transition-colors"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-slate-100 to-slate-200 rounded">
                             <Building2 className="w-4 h-4 text-slate-600" />
                           </div>
                           <div>
-                            <div className="font-medium text-[var(--color-ink)]">{entity.entityName}</div>
+                            <div className="font-medium text-[var(--color-ink)]">
+                              {entity.entityName}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -328,7 +334,10 @@ export function ConsolidatedReportingDashboard() {
               </tbody>
               <tfoot className="bg-gradient-to-r from-slate-50 to-slate-100 border-t-2 border-[var(--color-teal)]">
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-right font-semibold text-[var(--color-ink)]">
+                  <td
+                    colSpan={4}
+                    className="px-6 py-4 text-right font-semibold text-[var(--color-ink)]"
+                  >
                     Consolidated Total ({BASE_CURRENCY})
                   </td>
                   <td className="px-6 py-4 text-right font-bold text-[var(--color-ink)] text-lg">
@@ -352,16 +361,19 @@ export function ConsolidatedReportingDashboard() {
             <ArrowRightLeft className="w-5 h-5 text-[var(--color-teal)]" />
             <h3 className="font-semibold text-[var(--color-ink)]">Exchange Rates Used</h3>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {entitySpendData
-              .filter(entity => entity.currency !== BASE_CURRENCY)
-              .map(entity => {
+              .filter((entity) => entity.currency !== BASE_CURRENCY)
+              .map((entity) => {
                 const rate = getExchangeRate(entity.currency, BASE_CURRENCY);
                 const currency = getCurrencyByCode(entity.currency);
-                
+
                 return (
-                  <div key={entity.currency} className="flex items-center gap-3 p-3 bg-[var(--color-cloud)] rounded-lg border border-[var(--color-silver)]">
+                  <div
+                    key={entity.currency}
+                    className="flex items-center gap-3 p-3 bg-[var(--color-cloud)] rounded-lg border border-[var(--color-silver)]"
+                  >
                     <div className="text-sm text-[var(--color-mercury-grey)]">
                       1 {currency?.symbol} {entity.currency} =
                     </div>
@@ -377,8 +389,8 @@ export function ConsolidatedReportingDashboard() {
             <div className="flex items-start gap-2 text-xs text-[var(--color-mercury-grey)]">
               <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <div>
-                Exchange rates are sourced from Exchange Rate Master. In production, these would be updated regularly. 
-                For demo purposes, rates are static and manually maintained.
+                Exchange rates are sourced from Exchange Rate Master. In production, these would be
+                updated regularly. For demo purposes, rates are static and manually maintained.
               </div>
             </div>
           </div>
@@ -390,14 +402,14 @@ export function ConsolidatedReportingDashboard() {
 
 /**
  * INTEGRATION NOTES:
- * 
+ *
  * 1. This dashboard is PURE READ-ONLY - no transaction modifications
  * 2. Currency conversion logic ONLY exists here, NOT in transaction forms
  * 3. Transactions continue to operate in entity's functional currency
  * 4. Exchange rates pulled from Exchange Rate Master
  * 5. Base currency (INR) configurable but read-only for demo
  * 6. In production, entity spend data would come from transaction aggregation queries
- * 
+ *
  * REGRESSION SAFETY:
  * - Zero impact on PR, PO, GRN, Invoice, Debit Note, Payment logic
  * - No shared calculation functions with transactions

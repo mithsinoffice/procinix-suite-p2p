@@ -1,6 +1,6 @@
 /**
  * DASHBOARD DATA CONTEXT
- * 
+ *
  * Reactive context that provides dashboard data based on selected entity.
  * Handles entity-specific filtering and consolidated view with FX conversion.
  */
@@ -17,7 +17,7 @@ import {
   GRNTransaction,
   InvoiceTransaction,
   VendorAdvanceTransaction,
-  DebitNoteTransaction
+  DebitNoteTransaction,
 } from './EntityTransactionData';
 
 export interface DashboardMetrics {
@@ -28,31 +28,31 @@ export interface DashboardMetrics {
   poCount: number;
   openPOCount: number;
   avgPOProcessingTime: number; // in days
-  
+
   // GRN Metrics
   pendingGRNs: number;
   grnCount: number;
   totalGRNValue: number;
-  
+
   // Invoice Metrics
   totalInvoiceValue: number;
   pendingInvoices: number;
   approvedInvoices: number;
   overdueInvoices: number;
   invoiceCount: number;
-  
+
   // Payment Metrics
   totalPaymentsDue: number;
   upcomingPayments: number;
-  
+
   // Vendor Advance Metrics
   totalAdvances: number;
   pendingAdvances: number;
-  
+
   // Debit Note Metrics
   totalDebitNotes: number;
   pendingDebitNotes: number;
-  
+
   // PO Status Breakdown
   poStatusBreakdown: {
     draft: number;
@@ -61,14 +61,14 @@ export interface DashboardMetrics {
     fullyReceived: number;
     closed: number;
   };
-  
+
   // PO Volume Trend (monthly)
   poVolumeTrend: {
     month: string;
     count: number;
     value: number;
   }[];
-  
+
   // Invoice Status Breakdown
   invoiceStatusBreakdown: {
     pendingApproval: number;
@@ -76,7 +76,7 @@ export interface DashboardMetrics {
     paid: number;
     overdue: number;
   };
-  
+
   // Entity & Currency Info
   entityId: string | null;
   entityName: string;
@@ -105,7 +105,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
   // Convert amount to base currency (INR) using exchange rate
   const convertToBaseCurrency = (amount: number, fromCurrency: string): number => {
     if (fromCurrency === 'INR') return amount;
-    
+
     // Get exchange rate from currency master (only if getExchangeRate is available)
     if (getExchangeRate) {
       const rate = getExchangeRate(fromCurrency, 'INR');
@@ -113,15 +113,15 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
         return amount * rate;
       }
     }
-    
+
     // Fallback rates if not found in master
     const fallbackRates: { [key: string]: number } = {
-      'AED': 22.68, // 1 AED = 22.68 INR
-      'USD': 83.25, // 1 USD = 83.25 INR
-      'EUR': 90.50, // 1 EUR = 90.50 INR
-      'GBP': 105.20  // 1 GBP = 105.20 INR
+      AED: 22.68, // 1 AED = 22.68 INR
+      USD: 83.25, // 1 USD = 83.25 INR
+      EUR: 90.5, // 1 EUR = 90.50 INR
+      GBP: 105.2, // 1 GBP = 105.20 INR
     };
-    
+
     return amount * (fallbackRates[fromCurrency] || 1);
   };
 
@@ -134,32 +134,32 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
         grns: [],
         invoices: [],
         advances: [],
-        debitNotes: []
+        debitNotes: [],
       };
     }
 
     const isConsolidated = currentCompany.id === 'CONSOLIDATED';
-    
+
     // Filter transactions by entity (or use all for consolidated)
-    const filteredPOs = isConsolidated 
-      ? ALL_POS 
-      : ALL_POS.filter(po => po.entityId === currentCompany.id);
-    
+    const filteredPOs = isConsolidated
+      ? ALL_POS
+      : ALL_POS.filter((po) => po.entityId === currentCompany.id);
+
     const filteredGRNs = isConsolidated
       ? ALL_GRNS
-      : ALL_GRNS.filter(grn => grn.entityId === currentCompany.id);
-    
+      : ALL_GRNS.filter((grn) => grn.entityId === currentCompany.id);
+
     const filteredInvoices = isConsolidated
       ? ALL_INVOICES
-      : ALL_INVOICES.filter(inv => inv.entityId === currentCompany.id);
-    
+      : ALL_INVOICES.filter((inv) => inv.entityId === currentCompany.id);
+
     const filteredAdvances = isConsolidated
       ? ALL_ADVANCES
-      : ALL_ADVANCES.filter(adv => adv.entityId === currentCompany.id);
-    
+      : ALL_ADVANCES.filter((adv) => adv.entityId === currentCompany.id);
+
     const filteredDebitNotes = isConsolidated
       ? ALL_DEBIT_NOTES
-      : ALL_DEBIT_NOTES.filter(dn => dn.entityId === currentCompany.id);
+      : ALL_DEBIT_NOTES.filter((dn) => dn.entityId === currentCompany.id);
 
     // Calculate metrics
     const metrics = calculateMetrics(
@@ -180,14 +180,14 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       grns: filteredGRNs,
       invoices: filteredInvoices,
       advances: filteredAdvances,
-      debitNotes: filteredDebitNotes
+      debitNotes: filteredDebitNotes,
     };
   }, [currentCompany, refreshTrigger, getExchangeRate]);
 
   const refreshData = () => {
     setIsLoading(true);
     setTimeout(() => {
-      setRefreshTrigger(prev => prev + 1);
+      setRefreshTrigger((prev) => prev + 1);
       setIsLoading(false);
     }, 300);
   };
@@ -195,14 +195,10 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
   const value: DashboardDataContextType = {
     ...dashboardData,
     isLoading,
-    refreshData
+    refreshData,
   };
 
-  return (
-    <DashboardDataContext.Provider value={value}>
-      {children}
-    </DashboardDataContext.Provider>
-  );
+  return <DashboardDataContext.Provider value={value}>{children}</DashboardDataContext.Provider>;
 }
 
 export function useDashboardData() {
@@ -241,19 +237,19 @@ function getEmptyMetrics(): DashboardMetrics {
       approved: 0,
       partiallyReceived: 0,
       fullyReceived: 0,
-      closed: 0
+      closed: 0,
     },
     poVolumeTrend: [],
     invoiceStatusBreakdown: {
       pendingApproval: 0,
       approved: 0,
       paid: 0,
-      overdue: 0
+      overdue: 0,
     },
     entityId: null,
     entityName: 'No Entity Selected',
     currency: 'INR',
-    isConsolidated: false
+    isConsolidated: false,
   };
 }
 
@@ -269,18 +265,23 @@ function calculateMetrics(
   entityName: string,
   convertToBaseCurrency: (amount: number, currency: string) => number
 ): DashboardMetrics {
-  
   // PO Metrics
   const totalPOValue = pos.reduce((sum, po) => {
-    const amountInBase = isConsolidated ? convertToBaseCurrency(po.totalAmount, po.currency) : po.totalAmount;
+    const amountInBase = isConsolidated
+      ? convertToBaseCurrency(po.totalAmount, po.currency)
+      : po.totalAmount;
     return sum + amountInBase;
   }, 0);
 
   const totalPOValueYTD = totalPOValue; // Simplified - in real app would filter by date
 
-  const openPOs = pos.filter(po => po.status === 'Approved' || po.status === 'Partially Received');
+  const openPOs = pos.filter(
+    (po) => po.status === 'Approved' || po.status === 'Partially Received'
+  );
   const openPOValue = openPOs.reduce((sum, po) => {
-    const amountInBase = isConsolidated ? convertToBaseCurrency(po.totalAmount, po.currency) : po.totalAmount;
+    const amountInBase = isConsolidated
+      ? convertToBaseCurrency(po.totalAmount, po.currency)
+      : po.totalAmount;
     return sum + amountInBase;
   }, 0);
 
@@ -288,69 +289,80 @@ function calculateMetrics(
   const openPOCount = openPOs.length;
 
   // Calculate avg PO processing time (mock calculation)
-  const avgPOProcessingTime = pos.length > 0
-    ? pos.reduce((sum, po) => {
-        if (po.approvedDate && po.poDate) {
-          const poDate = new Date(po.poDate);
-          const approvedDate = new Date(po.approvedDate);
-          const diffTime = Math.abs(approvedDate.getTime() - poDate.getTime());
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          return sum + diffDays;
-        }
-        return sum + 2; // default
-      }, 0) / pos.length
-    : 0;
+  const avgPOProcessingTime =
+    pos.length > 0
+      ? pos.reduce((sum, po) => {
+          if (po.approvedDate && po.poDate) {
+            const poDate = new Date(po.poDate);
+            const approvedDate = new Date(po.approvedDate);
+            const diffTime = Math.abs(approvedDate.getTime() - poDate.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return sum + diffDays;
+          }
+          return sum + 2; // default
+        }, 0) / pos.length
+      : 0;
 
   // GRN Metrics
-  const pendingGRNs = grns.filter(grn => grn.status === 'Pending QC').length;
+  const pendingGRNs = grns.filter((grn) => grn.status === 'Pending QC').length;
   const grnCount = grns.length;
   const totalGRNValue = grns.reduce((sum, grn) => {
-    const amountInBase = isConsolidated ? convertToBaseCurrency(grn.totalAmount, grn.currency) : grn.totalAmount;
+    const amountInBase = isConsolidated
+      ? convertToBaseCurrency(grn.totalAmount, grn.currency)
+      : grn.totalAmount;
     return sum + amountInBase;
   }, 0);
 
   // Invoice Metrics
   const totalInvoiceValue = invoices.reduce((sum, inv) => {
-    const amountInBase = isConsolidated ? convertToBaseCurrency(inv.totalAmount, inv.currency) : inv.totalAmount;
+    const amountInBase = isConsolidated
+      ? convertToBaseCurrency(inv.totalAmount, inv.currency)
+      : inv.totalAmount;
     return sum + amountInBase;
   }, 0);
 
-  const pendingInvoices = invoices.filter(inv => inv.status === 'Pending Approval').length;
-  const approvedInvoices = invoices.filter(inv => inv.status === 'Approved').length;
-  const overdueInvoices = invoices.filter(inv => inv.status === 'Overdue').length;
+  const pendingInvoices = invoices.filter((inv) => inv.status === 'Pending Approval').length;
+  const approvedInvoices = invoices.filter((inv) => inv.status === 'Approved').length;
+  const overdueInvoices = invoices.filter((inv) => inv.status === 'Overdue').length;
   const invoiceCount = invoices.length;
 
   // Payment Metrics
-  const pendingPaymentInvoices = invoices.filter(inv => 
-    inv.status === 'Approved' || inv.status === 'Overdue'
+  const pendingPaymentInvoices = invoices.filter(
+    (inv) => inv.status === 'Approved' || inv.status === 'Overdue'
   );
   const totalPaymentsDue = pendingPaymentInvoices.reduce((sum, inv) => {
-    const amountInBase = isConsolidated ? convertToBaseCurrency(inv.totalAmount, inv.currency) : inv.totalAmount;
+    const amountInBase = isConsolidated
+      ? convertToBaseCurrency(inv.totalAmount, inv.currency)
+      : inv.totalAmount;
     return sum + amountInBase;
   }, 0);
   const upcomingPayments = pendingPaymentInvoices.length;
 
   // Vendor Advance Metrics
   const totalAdvances = advances.reduce((sum, adv) => {
-    const amountInBase = isConsolidated ? convertToBaseCurrency(adv.amount, adv.currency) : adv.amount;
+    const amountInBase = isConsolidated
+      ? convertToBaseCurrency(adv.amount, adv.currency)
+      : adv.amount;
     return sum + amountInBase;
   }, 0);
-  const pendingAdvances = advances.filter(adv => adv.status === 'Pending Approval').length;
+  const pendingAdvances = advances.filter((adv) => adv.status === 'Pending Approval').length;
 
   // Debit Note Metrics
   const totalDebitNotes = debitNotes.reduce((sum, dn) => {
     const amountInBase = isConsolidated ? convertToBaseCurrency(dn.amount, dn.currency) : dn.amount;
     return sum + amountInBase;
   }, 0);
-  const pendingDebitNotes = debitNotes.filter(dn => dn.status === 'Pending Approval' || dn.status === 'Draft').length;
+  const pendingDebitNotes = debitNotes.filter(
+    (dn) => dn.status === 'Pending Approval' || dn.status === 'Draft'
+  ).length;
 
   // PO Status Breakdown
   const poStatusBreakdown = {
-    draft: pos.filter(po => po.status === 'Draft').length,
-    approved: pos.filter(po => po.status === 'Approved').length,
-    partiallyReceived: pos.filter(po => po.status === 'Partially Received').length,
-    fullyReceived: pos.filter(po => po.status === 'Fully Received').length,
-    closed: pos.filter(po => po.status === 'Closed').length
+    draft: pos.filter((po) => po.status === 'Draft').length,
+    approved: pos.filter((po) => po.status === 'Approved').length,
+    partiallyReceived: pos.filter((po) => po.status === 'Partially Received').length,
+    fullyReceived: pos.filter((po) => po.status === 'Fully Received').length,
+    closed: pos.filter((po) => po.status === 'Closed').length,
   };
 
   // PO Volume Trend (last 6 months - mock data)
@@ -360,8 +372,8 @@ function calculateMetrics(
   const invoiceStatusBreakdown = {
     pendingApproval: pendingInvoices,
     approved: approvedInvoices,
-    paid: invoices.filter(inv => inv.status === 'Paid' || inv.status === 'Partially Paid').length,
-    overdue: overdueInvoices
+    paid: invoices.filter((inv) => inv.status === 'Paid' || inv.status === 'Partially Paid').length,
+    overdue: overdueInvoices,
   };
 
   // Determine currency display
@@ -399,7 +411,7 @@ function calculateMetrics(
     entityId: isConsolidated ? 'CONSOLIDATED' : entityId,
     entityName: isConsolidated ? 'Consolidated View' : entityName,
     currency,
-    isConsolidated
+    isConsolidated,
   };
 }
 
@@ -410,24 +422,26 @@ function generatePOVolumeTrend(
   convertToBaseCurrency: (amount: number, currency: string) => number
 ): { month: string; count: number; value: number }[] {
   const months = ['Nov', 'Dec'];
-  
-  return months.map(month => {
+
+  return months.map((month) => {
     // Filter POs by month (simplified - just using Nov/Dec 2024)
     const monthNumber = month === 'Nov' ? 11 : 12;
-    const monthPOs = pos.filter(po => {
+    const monthPOs = pos.filter((po) => {
       const poDate = new Date(po.poDate);
       return poDate.getMonth() + 1 === monthNumber;
     });
 
     const value = monthPOs.reduce((sum, po) => {
-      const amountInBase = isConsolidated ? convertToBaseCurrency(po.totalAmount, po.currency) : po.totalAmount;
+      const amountInBase = isConsolidated
+        ? convertToBaseCurrency(po.totalAmount, po.currency)
+        : po.totalAmount;
       return sum + amountInBase;
     }, 0);
 
     return {
       month,
       count: monthPOs.length,
-      value
+      value,
     };
   });
 }

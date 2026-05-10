@@ -67,7 +67,10 @@ function KpiCard({
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-wide truncate" style={{ color: textMuted }}>
+        <p
+          className="text-xs font-medium uppercase tracking-wide truncate"
+          style={{ color: textMuted }}
+        >
           {label}
         </p>
         <p className="text-2xl font-semibold tabular-nums" style={{ color: textMain }}>
@@ -111,15 +114,7 @@ export function PortalUsers() {
     return users.filter((u) => {
       if (statusFilter !== 'all' && u.status !== statusFilter) return false;
       if (!q) return true;
-      const hay = [
-        u.userId,
-        u.firstName,
-        u.lastName,
-        u.email,
-        u.vendorName,
-        u.vendorCode,
-        u.role,
-      ]
+      const hay = [u.userId, u.firstName, u.lastName, u.email, u.vendorName, u.vendorCode, u.role]
         .join(' ')
         .toLowerCase();
       return hay.includes(q);
@@ -158,7 +153,16 @@ export function PortalUsers() {
   };
 
   const handleExport = () => {
-    const headers = ['User ID', 'Name', 'Email', 'Vendor', 'Vendor code', 'Role', 'Status', 'Last login'];
+    const headers = [
+      'User ID',
+      'Name',
+      'Email',
+      'Vendor',
+      'Vendor code',
+      'Role',
+      'Status',
+      'Last login',
+    ];
     const rows = filtered.map((u) => [
       u.userId,
       `${u.firstName} ${u.lastName}`,
@@ -169,9 +173,10 @@ export function PortalUsers() {
       u.status,
       u.lastLoginAt ?? '',
     ]);
-    const csv = [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))].join(
-      '\n'
-    );
+    const csv = [
+      headers.join(','),
+      ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -236,7 +241,7 @@ export function PortalUsers() {
           loginUrl,
         });
         if (!sendResult.ok) {
-          setFormError(sendResult.error);
+          setFormError('error' in sendResult ? sendResult.error : 'Welcome email request failed.');
           return;
         }
         if (!sendResult.viaApi) {
@@ -275,12 +280,15 @@ export function PortalUsers() {
     <div className="p-6 md:p-8" style={{ backgroundColor: surface, minHeight: '100%' }}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-8">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" style={{ color: textMain }}>
+          <h1
+            className="text-2xl md:text-3xl font-semibold tracking-tight"
+            style={{ color: textMain }}
+          >
             Portal Users
           </h1>
           <p className="text-sm mt-1" style={{ color: textMuted }}>
-            Manage vendor portal user access and permissions. These users can receive invitations and complete vendor
-            onboarding.
+            Manage vendor portal user access and permissions. These users can receive invitations
+            and complete vendor onboarding.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -407,28 +415,52 @@ export function PortalUsers() {
           <table className="w-full min-w-[960px] text-sm text-left">
             <thead>
               <tr style={{ borderBottom: `1px solid ${border}`, backgroundColor: surface }}>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   User ID
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Name
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Email
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Vendor
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Role
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Status
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Last login
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Actions
                 </th>
               </tr>
@@ -535,7 +567,11 @@ export function PortalUsers() {
             className="w-full max-w-lg rounded-xl shadow-xl p-6 max-h-[90vh] overflow-y-auto"
             style={{ backgroundColor: '#fff', border: `1px solid ${border}` }}
           >
-            <h2 id="portal-user-modal-title" className="text-lg font-semibold" style={{ color: textMain }}>
+            <h2
+              id="portal-user-modal-title"
+              className="text-lg font-semibold"
+              style={{ color: textMain }}
+            >
               {editing ? 'Edit portal user' : 'Add Portal User'}
             </h2>
             <p className="text-sm mt-1 mb-6" style={{ color: textMuted }}>

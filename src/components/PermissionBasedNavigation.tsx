@@ -16,17 +16,22 @@ import {
 } from 'lucide-react';
 import { usePermissionRBAC } from '../contexts/PermissionRBACContext';
 import { useAuth } from '../contexts/AuthContext';
-import { navigationConfig, globalNavigationConfig, NavItem, NavPillar } from '../config/navigationConfig';
+import {
+  navigationConfig,
+  globalNavigationConfig,
+  NavItem,
+  NavPillar,
+} from '../config/navigationConfig';
 
 export function PermissionBasedNavigation() {
   const location = useLocation();
   const { user } = useAuth();
-  const { 
-    currentRole, 
-    availableRoles, 
-    currentCompany, 
+  const {
+    currentRole,
+    availableRoles,
+    currentCompany,
     availableCompanies,
-    switchRole, 
+    switchRole,
     switchCompany,
     hasAnyPermission,
     hasPermission,
@@ -54,22 +59,26 @@ export function PermissionBasedNavigation() {
   // Get permission type for an item
   const getPermissionType = (item: NavItem): 'edit' | 'view' | 'approve' | null => {
     // Check for create/edit permissions
-    const editPerms = item.requiredPerm.filter(p => 
-      p.includes('.CREATE') || p.includes('.EDIT') || p.includes('.MANAGE') || p.includes('.EXECUTE')
+    const editPerms = item.requiredPerm.filter(
+      (p) =>
+        p.includes('.CREATE') ||
+        p.includes('.EDIT') ||
+        p.includes('.MANAGE') ||
+        p.includes('.EXECUTE')
     );
-    if (editPerms.some(p => hasPermission(p))) {
+    if (editPerms.some((p) => hasPermission(p))) {
       return 'edit';
     }
 
     // Check for approve permissions
-    const approvePerms = item.requiredPerm.filter(p => p.includes('.APPROVE'));
-    if (approvePerms.some(p => hasPermission(p))) {
+    const approvePerms = item.requiredPerm.filter((p) => p.includes('.APPROVE'));
+    if (approvePerms.some((p) => hasPermission(p))) {
       return 'approve';
     }
 
     // Check for view permissions
-    const viewPerms = item.requiredPerm.filter(p => p.includes('.VIEW'));
-    if (viewPerms.some(p => hasPermission(p))) {
+    const viewPerms = item.requiredPerm.filter((p) => p.includes('.VIEW'));
+    if (viewPerms.some((p) => hasPermission(p))) {
       return 'view';
     }
 
@@ -90,17 +99,20 @@ export function PermissionBasedNavigation() {
     const paddingLeft = isCollapsed ? 0 : level === 0 ? 16 : level === 1 ? 32 : 48;
 
     // Permission indicator icon
-    const PermissionIcon = 
-      permissionType === 'edit' ? Edit3 :
-      permissionType === 'approve' ? ApproveIcon :
-      permissionType === 'view' ? Eye : null;
+    const PermissionIcon =
+      permissionType === 'edit'
+        ? Edit3
+        : permissionType === 'approve'
+          ? ApproveIcon
+          : permissionType === 'view'
+            ? Eye
+            : null;
 
     if (hasChildren && !isCollapsed) {
       // Filter accessible children
-      const accessibleChildren = item.children?.filter(child => 
-        hasAnyPermission(child.requiredPerm)
-      ) || [];
-      
+      const accessibleChildren =
+        item.children?.filter((child) => hasAnyPermission(child.requiredPerm)) || [];
+
       // If no accessible children, treat as regular link
       if (accessibleChildren.length === 0) {
         return renderNavItem({ ...item, children: undefined }, level);
@@ -114,7 +126,7 @@ export function PermissionBasedNavigation() {
             style={{
               paddingLeft: `${paddingLeft}px`,
               backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
-              color: isActive ? 'var(--color-teal)' : '#B8C5CE'
+              color: isActive ? 'var(--color-teal)' : '#B8C5CE',
             }}
             onMouseEnter={(e) => {
               if (!isActive) e.currentTarget.style.backgroundColor = '#3a4a52';
@@ -129,15 +141,19 @@ export function PermissionBasedNavigation() {
                 {item.label}
               </span>
               {PermissionIcon && permissionType === 'view' && (
-                <PermissionIcon className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} title="View Only" />
+                <PermissionIcon
+                  className="w-3.5 h-3.5"
+                  style={{ color: 'var(--color-slate)' }}
+                  aria-label="View Only"
+                />
               )}
               {item.badge && (
-                <span 
+                <span
                   className="px-2 py-0.5 rounded text-xs"
-                  style={{ 
+                  style={{
                     backgroundColor: '#007D87',
                     color: '#FFFFFF',
-                    fontWeight: '600'
+                    fontWeight: '600',
                   }}
                 >
                   {item.badge}
@@ -151,9 +167,7 @@ export function PermissionBasedNavigation() {
             )}
           </button>
           {isChildExpanded && (
-            <div>
-              {accessibleChildren.map(child => renderNavItem(child, level + 1))}
-            </div>
+            <div>{accessibleChildren.map((child) => renderNavItem(child, level + 1))}</div>
           )}
         </div>
       );
@@ -168,7 +182,7 @@ export function PermissionBasedNavigation() {
           paddingLeft: isCollapsed ? '16px' : `${paddingLeft}px`,
           backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
           color: isActive ? 'var(--color-teal)' : '#B8C5CE',
-          justifyContent: isCollapsed ? 'center' : 'flex-start'
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
         }}
         onMouseEnter={(e) => {
           if (!isActive) e.currentTarget.style.backgroundColor = '#3a4a52';
@@ -185,15 +199,19 @@ export function PermissionBasedNavigation() {
               {item.label}
             </span>
             {PermissionIcon && permissionType === 'view' && (
-              <PermissionIcon className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} title="View Only" />
+              <PermissionIcon
+                className="w-3.5 h-3.5"
+                style={{ color: 'var(--color-slate)' }}
+                aria-label="View Only"
+              />
             )}
             {item.badge && (
-              <span 
+              <span
                 className="px-2 py-0.5 rounded text-xs"
-                style={{ 
+                style={{
                   backgroundColor: '#007D87',
                   color: '#FFFFFF',
-                  fontWeight: '600'
+                  fontWeight: '600',
                 }}
               >
                 {item.badge}
@@ -210,9 +228,7 @@ export function PermissionBasedNavigation() {
     const PillarIcon = pillar.icon;
 
     // Filter accessible items
-    const accessibleItems = pillar.items.filter(item => 
-      hasAnyPermission(item.requiredPerm)
-    );
+    const accessibleItems = pillar.items.filter((item) => hasAnyPermission(item.requiredPerm));
 
     // Hide pillar if no accessible items
     if (accessibleItems.length === 0) {
@@ -228,7 +244,7 @@ export function PermissionBasedNavigation() {
           style={{
             backgroundColor: isExpanded ? '#3a4a52' : 'transparent',
             color: isExpanded ? '#FFFFFF' : 'var(--color-slate)',
-            justifyContent: isCollapsed ? 'center' : 'space-between'
+            justifyContent: isCollapsed ? 'center' : 'space-between',
           }}
           onMouseEnter={(e) => {
             if (!isExpanded) e.currentTarget.style.backgroundColor = '#3a4a52';
@@ -241,37 +257,38 @@ export function PermissionBasedNavigation() {
           <div className="flex items-center gap-3">
             <PillarIcon className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--color-teal)' }} />
             {!isCollapsed && (
-              <span style={{ fontWeight: '600', fontSize: '14px' }}>
-                {pillar.label}
-              </span>
+              <span style={{ fontWeight: '600', fontSize: '14px' }}>{pillar.label}</span>
             )}
           </div>
-          {!isCollapsed && (
-            isExpanded ? (
-              <ChevronDown className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }} />
+          {!isCollapsed &&
+            (isExpanded ? (
+              <ChevronDown
+                className="w-4 h-4"
+                style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }}
+              />
             ) : (
-              <ChevronRight className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }} />
-            )
-          )}
+              <ChevronRight
+                className="w-4 h-4"
+                style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }}
+              />
+            ))}
         </button>
 
         {/* Pillar Content */}
         {isExpanded && (
-          <div className="py-2">
-            {accessibleItems.map(item => renderNavItem(item))}
-          </div>
+          <div className="py-2">{accessibleItems.map((item) => renderNavItem(item))}</div>
         )}
       </div>
     );
   };
 
   return (
-    <div 
+    <div
       className="flex flex-col h-full transition-all duration-300"
-      style={{ 
+      style={{
         width: isCollapsed ? '64px' : '280px',
         backgroundColor: '#2A3A42',
-        borderRight: '1px solid #1a2832'
+        borderRight: '1px solid #1a2832',
       }}
     >
       {/* Company Switcher */}
@@ -282,14 +299,18 @@ export function PermissionBasedNavigation() {
               onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
               className="w-full flex items-center justify-between p-3 rounded-lg transition-colors"
               style={{ backgroundColor: '#3a4a52', color: '#FFFFFF' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a5a62'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3a4a52'}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#4a5a62')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3a4a52')}
             >
               <div className="flex items-center gap-3">
                 <Building2 className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                 <div className="text-left">
-                  <div className="text-xs" style={{ color: 'var(--color-slate)' }}>Company</div>
-                  <div className="text-sm" style={{ fontWeight: '600' }}>{currentCompany.code}</div>
+                  <div className="text-xs" style={{ color: 'var(--color-slate)' }}>
+                    Company
+                  </div>
+                  <div className="text-sm" style={{ fontWeight: '600' }}>
+                    {currentCompany.code}
+                  </div>
                 </div>
               </div>
               {showCompanyDropdown ? (
@@ -300,11 +321,11 @@ export function PermissionBasedNavigation() {
             </button>
 
             {showCompanyDropdown && (
-              <div 
+              <div
                 className="absolute top-full left-0 right-0 mt-2 rounded-lg overflow-hidden z-50"
                 style={{ backgroundColor: '#3a4a52', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
               >
-                {availableCompanies.map(company => (
+                {availableCompanies.map((company) => (
                   <button
                     key={company.id}
                     onClick={() => {
@@ -313,19 +334,26 @@ export function PermissionBasedNavigation() {
                     }}
                     className="w-full text-left px-4 py-3 transition-colors"
                     style={{
-                      backgroundColor: company.id === currentCompany.id ? 'var(--color-teal)20' : 'transparent',
+                      backgroundColor:
+                        company.id === currentCompany.id ? 'var(--color-teal)20' : 'transparent',
                       color: company.id === currentCompany.id ? 'var(--color-teal)' : '#B8C5CE',
-                      borderBottom: '1px solid #2A3A42'
+                      borderBottom: '1px solid #2A3A42',
                     }}
                     onMouseEnter={(e) => {
-                      if (company.id !== currentCompany.id) e.currentTarget.style.backgroundColor = '#4a5a62';
+                      if (company.id !== currentCompany.id)
+                        e.currentTarget.style.backgroundColor = '#4a5a62';
                     }}
                     onMouseLeave={(e) => {
-                      if (company.id !== currentCompany.id) e.currentTarget.style.backgroundColor = 'transparent';
+                      if (company.id !== currentCompany.id)
+                        e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    <div className="text-sm" style={{ fontWeight: '600' }}>{company.code}</div>
-                    <div className="text-xs mt-0.5" style={{ color: 'var(--color-slate)' }}>{company.name}</div>
+                    <div className="text-sm" style={{ fontWeight: '600' }}>
+                      {company.code}
+                    </div>
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--color-slate)' }}>
+                      {company.name}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -338,7 +366,7 @@ export function PermissionBasedNavigation() {
       {!isCollapsed && (
         <div className="p-4" style={{ borderBottom: '1px solid #3a4a52' }}>
           <div className="flex items-center gap-3 mb-3">
-            <div 
+            <div
               className="w-10 h-10 rounded-full flex items-center justify-center"
               style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF', fontWeight: '600' }}
             >
@@ -357,11 +385,16 @@ export function PermissionBasedNavigation() {
           {/* Current Role Badge */}
           <div className="flex items-center gap-2 mb-2">
             <Shield className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
-            <span className="text-xs" style={{ color: 'var(--color-slate)' }}>Current Role:</span>
+            <span className="text-xs" style={{ color: 'var(--color-slate)' }}>
+              Current Role:
+            </span>
           </div>
-          <div 
+          <div
             className="px-3 py-2 rounded-lg mb-2"
-            style={{ backgroundColor: 'var(--color-teal)20', border: '1px solid var(--color-teal)' }}
+            style={{
+              backgroundColor: 'var(--color-teal)20',
+              border: '1px solid var(--color-teal)',
+            }}
           >
             <span className="text-sm" style={{ color: 'var(--color-teal)', fontWeight: '600' }}>
               {currentRole.roleName}
@@ -375,19 +408,19 @@ export function PermissionBasedNavigation() {
                 onClick={() => setShowRoleDropdown(!showRoleDropdown)}
                 className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-colors text-xs"
                 style={{ backgroundColor: '#3a4a52', color: '#B8C5CE' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a5a62'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3a4a52'}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#4a5a62')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#3a4a52')}
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Switch Role</span>
               </button>
 
               {showRoleDropdown && (
-                <div 
+                <div
                   className="absolute top-full left-0 right-0 mt-2 rounded-lg overflow-hidden z-50"
                   style={{ backgroundColor: '#3a4a52', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}
                 >
-                  {availableRoles.map(role => (
+                  {availableRoles.map((role) => (
                     <button
                       key={role.roleId}
                       onClick={() => {
@@ -396,15 +429,20 @@ export function PermissionBasedNavigation() {
                       }}
                       className="w-full text-left px-4 py-2 transition-colors text-sm"
                       style={{
-                        backgroundColor: role.roleId === currentRole.roleId ? 'var(--color-teal)20' : 'transparent',
+                        backgroundColor:
+                          role.roleId === currentRole.roleId
+                            ? 'var(--color-teal)20'
+                            : 'transparent',
                         color: role.roleId === currentRole.roleId ? 'var(--color-teal)' : '#B8C5CE',
-                        borderBottom: '1px solid #2A3A42'
+                        borderBottom: '1px solid #2A3A42',
                       }}
                       onMouseEnter={(e) => {
-                        if (role.roleId !== currentRole.roleId) e.currentTarget.style.backgroundColor = '#4a5a62';
+                        if (role.roleId !== currentRole.roleId)
+                          e.currentTarget.style.backgroundColor = '#4a5a62';
                       }}
                       onMouseLeave={(e) => {
-                        if (role.roleId !== currentRole.roleId) e.currentTarget.style.backgroundColor = 'transparent';
+                        if (role.roleId !== currentRole.roleId)
+                          e.currentTarget.style.backgroundColor = 'transparent';
                       }}
                     >
                       {role.roleName}
@@ -418,9 +456,15 @@ export function PermissionBasedNavigation() {
       )}
 
       {/* Collapse Toggle */}
-      <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #3a4a52' }}>
+      <div
+        className="px-4 py-3 flex items-center justify-between"
+        style={{ borderBottom: '1px solid #3a4a52' }}
+      >
         {!isCollapsed && (
-          <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
+          <span
+            className="text-xs uppercase tracking-wider"
+            style={{ color: 'var(--color-slate)', fontWeight: '600' }}
+          >
             Navigation
           </span>
         )}
@@ -428,42 +472,43 @@ export function PermissionBasedNavigation() {
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-1.5 rounded-lg transition-colors"
           style={{ color: 'var(--color-slate)' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a4a52'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#3a4a52')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           title={isCollapsed ? 'Expand' : 'Collapse'}
         >
-          {isCollapsed ? (
-            <PanelLeft className="w-4 h-4" />
-          ) : (
-            <PanelLeftClose className="w-4 h-4" />
-          )}
+          {isCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
         </button>
       </div>
 
       {/* Navigation Pillars */}
       <div className="flex-1 overflow-y-auto">
-        {navigationConfig.pillars.map(pillar => renderPillar(pillar))}
+        {navigationConfig.pillars.map((pillar) => renderPillar(pillar))}
       </div>
 
       {/* Global Sections */}
       <div className="p-4" style={{ borderTop: '1px solid #3a4a52' }}>
         {!isCollapsed && (
           <div className="mb-2 px-2">
-            <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
+            <span
+              className="text-xs uppercase tracking-wider"
+              style={{ color: 'var(--color-slate)', fontWeight: '600' }}
+            >
               Global
             </span>
           </div>
         )}
-        {globalNavigationConfig.map(section => {
+        {globalNavigationConfig.map((section) => {
           // Check if user has any of the required permissions
           if (!hasAnyPermission(section.requiredPerm)) {
             return null;
           }
 
           const isActive = isActiveRoute(section.route);
-          const permissionType = section.requiredPerm.some(p => 
-            p.includes('.EDIT') || p.includes('.MANAGE')
-          ) ? 'edit' : 'view';
+          const permissionType = section.requiredPerm.some(
+            (p) => p.includes('.EDIT') || p.includes('.MANAGE')
+          )
+            ? 'edit'
+            : 'view';
 
           return (
             <Link
@@ -473,7 +518,7 @@ export function PermissionBasedNavigation() {
               style={{
                 backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
                 color: isActive ? 'var(--color-teal)' : '#B8C5CE',
-                justifyContent: isCollapsed ? 'center' : 'flex-start'
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) e.currentTarget.style.backgroundColor = '#3a4a52';
@@ -490,15 +535,19 @@ export function PermissionBasedNavigation() {
                     {section.label}
                   </span>
                   {permissionType === 'view' && (
-                    <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} title="View Only" />
+                    <Eye
+                      className="w-3.5 h-3.5"
+                      style={{ color: 'var(--color-slate)' }}
+                      aria-label="View Only"
+                    />
                   )}
                   {section.badge && section.badge > 0 && (
-                    <span 
+                    <span
                       className="px-2 py-0.5 rounded-full text-xs"
-                      style={{ 
+                      style={{
                         backgroundColor: '#EF4444',
                         color: '#FFFFFF',
-                        fontWeight: '600'
+                        fontWeight: '600',
                       }}
                     >
                       {section.badge}

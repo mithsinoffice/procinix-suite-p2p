@@ -1,6 +1,6 @@
 /**
  * PROCUREMENT DESK - OVERVIEW PAGE
- * 
+ *
  * Purpose: Procurement operations dashboard
  * Status: SCAFFOLD ONLY - No data or logic
  */
@@ -10,25 +10,38 @@ import { DeskLayoutShell } from '../../../components/desk-components/DeskLayoutS
 export const ProcurementOverview = () => {
   return (
     <DeskLayoutShell deskName="Procurement Desk" pageName="Overview">
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '24px',
+          marginBottom: '24px',
+        }}
+      >
         {['Active PRs', 'Open POs', 'Pending GRNs', 'This Month Spend'].map((title) => (
-          <div 
+          <div
             key={title}
-            style={{ 
-              backgroundColor: '#FFFFFF', 
-              border: '1px solid var(--color-silver)', 
-              borderRadius: '8px', 
-              padding: '20px'
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid var(--color-silver)',
+              borderRadius: '8px',
+              padding: '20px',
             }}
           >
-            <h3 style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: '0 0 12px 0' }}>{title}</h3>
-            <div style={{ 
-              padding: '16px', 
-              backgroundColor: 'var(--color-cloud)', 
-              border: '1px dashed var(--color-silver)', 
-              borderRadius: '4px',
-              textAlign: 'center'
-            }}>
+            <h3
+              style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: '0 0 12px 0' }}
+            >
+              {title}
+            </h3>
+            <div
+              style={{
+                padding: '16px',
+                backgroundColor: 'var(--color-cloud)',
+                border: '1px dashed var(--color-silver)',
+                borderRadius: '4px',
+                textAlign: 'center',
+              }}
+            >
               <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Value</span>
             </div>
           </div>
@@ -36,43 +49,55 @@ export const ProcurementOverview = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
-        <div 
-          style={{ 
-            backgroundColor: '#FFFFFF', 
-            border: '1px solid var(--color-silver)', 
-            borderRadius: '8px', 
-            padding: '20px'
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid var(--color-silver)',
+            borderRadius: '8px',
+            padding: '20px',
           }}
         >
-          <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: '0 0 16px 0' }}>Spend by Category</h3>
-          <div style={{ 
-            padding: '48px', 
-            backgroundColor: 'var(--color-cloud)', 
-            border: '1px dashed var(--color-silver)', 
-            borderRadius: '4px',
-            textAlign: 'center'
-          }}>
-            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Donut Chart Placeholder</span>
+          <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: '0 0 16px 0' }}>
+            Spend by Category
+          </h3>
+          <div
+            style={{
+              padding: '48px',
+              backgroundColor: 'var(--color-cloud)',
+              border: '1px dashed var(--color-silver)',
+              borderRadius: '4px',
+              textAlign: 'center',
+            }}
+          >
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>
+              Donut Chart Placeholder
+            </span>
           </div>
         </div>
 
-        <div 
-          style={{ 
-            backgroundColor: '#FFFFFF', 
-            border: '1px solid var(--color-silver)', 
-            borderRadius: '8px', 
-            padding: '20px'
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid var(--color-silver)',
+            borderRadius: '8px',
+            padding: '20px',
           }}
         >
-          <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: '0 0 16px 0' }}>Procurement Cycle Time</h3>
-          <div style={{ 
-            padding: '48px', 
-            backgroundColor: 'var(--color-cloud)', 
-            border: '1px dashed var(--color-silver)', 
-            borderRadius: '4px',
-            textAlign: 'center'
-          }}>
-            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>Bar Chart Placeholder</span>
+          <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: '0 0 16px 0' }}>
+            Procurement Cycle Time
+          </h3>
+          <div
+            style={{
+              padding: '48px',
+              backgroundColor: 'var(--color-cloud)',
+              border: '1px dashed var(--color-silver)',
+              borderRadius: '4px',
+              textAlign: 'center',
+            }}
+          >
+            <span style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>
+              Bar Chart Placeholder
+            </span>
           </div>
         </div>
       </div>

@@ -1,0 +1,24 @@
+# Dependencies / build artifacts
+node_modules/
+build/
+dist/
+coverage/
+
+# Legacy docs and SQL (generated / non-JS content)
+docs/legacy/
+sql/
+
+# Lock file (huge, no value in formatting)
+package-lock.json
+
+# Minified bundles
+**/*.min.js
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.mysql.example
+
+# Claude Code harness state (worktrees, local settings)
+.claude/

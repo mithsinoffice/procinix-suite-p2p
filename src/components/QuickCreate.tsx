@@ -1,16 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import {
-  FileText,
-  ShoppingCart,
-  Upload,
-  DollarSign,
-  FileMinus,
-  Wallet,
-} from 'lucide-react';
+import { FileText, ShoppingCart, Upload, DollarSign, FileMinus, Wallet } from 'lucide-react';
 
 /**
  * QUICK CREATE PAGE - SUBKO COFFEE
- * 
+ *
  * Simple card-based quick actions for creating transactions
  * No AI, no task lists, no approvals, no analytics
  */
@@ -75,7 +68,10 @@ export function QuickCreate() {
     <div style={{ padding: '24px', backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '700', marginBottom: '8px' }}>
+        <h1
+          className="text-2xl"
+          style={{ color: 'var(--color-ink)', fontWeight: '700', marginBottom: '8px' }}
+        >
           Quick Create
         </h1>
         <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -84,16 +80,16 @@ export function QuickCreate() {
       </div>
 
       {/* Quick Actions Grid */}
-      <div 
+      <div
         className="grid gap-4"
         style={{
           gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          maxWidth: '1200px'
+          maxWidth: '1200px',
         }}
       >
         {quickActions.map((action) => {
           const Icon = action.icon;
-          
+
           return (
             <button
               key={action.route}
@@ -125,7 +121,10 @@ export function QuickCreate() {
                   <Icon className="w-6 h-6" style={{ color: action.color, strokeWidth: 2 }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                  <h3
+                    className="text-base mb-1"
+                    style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                  >
                     {action.label}
                   </h3>
                   <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>

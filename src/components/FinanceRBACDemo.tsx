@@ -6,44 +6,69 @@ export function FinanceRBACDemo() {
 
   // Group permissions by pillar
   const permissionsByPillar = {
-    'AP Automation': currentRole.permissions.filter(p => 
-      p.startsWith('PROCUREMENT') || p.startsWith('AP_INVOICE') || 
-      p.startsWith('PAYMENT') || p.startsWith('VENDOR') ||
-      p.startsWith('SOURCING') || p.startsWith('BUDGET') ||
-      p.startsWith('FIXED_ASSET')
+    'AP Automation': currentRole.permissions.filter(
+      (p) =>
+        p.startsWith('PROCUREMENT') ||
+        p.startsWith('AP_INVOICE') ||
+        p.startsWith('PAYMENT') ||
+        p.startsWith('VENDOR') ||
+        p.startsWith('SOURCING') ||
+        p.startsWith('BUDGET') ||
+        p.startsWith('FIXED_ASSET')
     ),
-    'AR Automation': currentRole.permissions.filter(p => 
-      p.startsWith('CUSTOMER') || p.startsWith('AR_INVOICE') || 
-      p.startsWith('COLLECTION') || p.startsWith('CREDIT_NOTE') ||
-      p.startsWith('REVENUE')
+    'AR Automation': currentRole.permissions.filter(
+      (p) =>
+        p.startsWith('CUSTOMER') ||
+        p.startsWith('AR_INVOICE') ||
+        p.startsWith('COLLECTION') ||
+        p.startsWith('CREDIT_NOTE') ||
+        p.startsWith('REVENUE')
     ),
-    'R2R Automation': currentRole.permissions.filter(p => 
-      p.startsWith('GENERAL_LEDGER') || p.startsWith('FINANCIAL_CLOSE') || 
-      p.startsWith('FINANCIAL_STATEMENT') || p.startsWith('CONSOLIDATION') ||
-      p.startsWith('CASHFLOW') || p.startsWith('VARIANCE')
+    'R2R Automation': currentRole.permissions.filter(
+      (p) =>
+        p.startsWith('GENERAL_LEDGER') ||
+        p.startsWith('FINANCIAL_CLOSE') ||
+        p.startsWith('FINANCIAL_STATEMENT') ||
+        p.startsWith('CONSOLIDATION') ||
+        p.startsWith('CASHFLOW') ||
+        p.startsWith('VARIANCE')
     ),
-    'Global Functions': currentRole.permissions.filter(p => 
-      p.startsWith('DASHBOARD') || p.startsWith('APPROVALS') || 
-      p.startsWith('TASKS') || p.startsWith('AUDIT_LOG') ||
-      p.startsWith('SETTINGS') || p.startsWith('MASTERS') ||
-      p.startsWith('REPORTS')
-    )
+    'Global Functions': currentRole.permissions.filter(
+      (p) =>
+        p.startsWith('DASHBOARD') ||
+        p.startsWith('APPROVALS') ||
+        p.startsWith('TASKS') ||
+        p.startsWith('AUDIT_LOG') ||
+        p.startsWith('SETTINGS') ||
+        p.startsWith('MASTERS') ||
+        p.startsWith('REPORTS')
+    ),
   };
 
   const getPermissionIcon = (permission: string) => {
     if (permission.includes('.APPROVE') || permission.includes('.REJECT')) return CheckCircle;
-    if (permission.includes('.CREATE') || permission.includes('.EDIT') || 
-        permission.includes('.EXECUTE') || permission.includes('.POST') ||
-        permission.includes('.MANAGE')) return Edit3;
+    if (
+      permission.includes('.CREATE') ||
+      permission.includes('.EDIT') ||
+      permission.includes('.EXECUTE') ||
+      permission.includes('.POST') ||
+      permission.includes('.MANAGE')
+    )
+      return Edit3;
     if (permission.includes('.VIEW')) return Eye;
     return Lock;
   };
 
   const getPermissionColor = (permission: string) => {
     if (permission.includes('.APPROVE') || permission.includes('.REJECT')) return '#0066CC';
-    if (permission.includes('.CREATE') || permission.includes('.EDIT') || 
-        permission.includes('.EXECUTE') || permission.includes('.POST') ||
-        permission.includes('.MANAGE')) return '#16A34A';
+    if (
+      permission.includes('.CREATE') ||
+      permission.includes('.EDIT') ||
+      permission.includes('.EXECUTE') ||
+      permission.includes('.POST') ||
+      permission.includes('.MANAGE')
+    )
+      return '#16A34A';
     if (permission.includes('.VIEW')) return '#F59E0B';
     return '#64748B';
   };
@@ -52,7 +77,7 @@ export function FinanceRBACDemo() {
     const parts = permission.split('.');
     return {
       resource: parts[0].replace(/_/g, ' '),
-      action: parts[1]
+      action: parts[1],
     };
   };
 
@@ -65,19 +90,20 @@ export function FinanceRBACDemo() {
             Enterprise Finance RBAC System
           </h1>
           <p style={{ color: '#64748B', fontSize: '16px' }}>
-            Switch between roles to experience dynamic permission-based access control across AP, AR, and R2R modules
+            Switch between roles to experience dynamic permission-based access control across AP,
+            AR, and R2R modules
           </p>
         </div>
 
         {/* Current Context Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Company Card */}
-          <div 
-            className="bg-white rounded-xl p-6" 
+          <div
+            className="bg-white rounded-xl p-6"
             style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div 
+              <div
                 className="w-12 h-12 rounded-lg flex items-center justify-center"
                 style={{ backgroundColor: '#EBF5FF' }}
               >
@@ -98,12 +124,12 @@ export function FinanceRBACDemo() {
           </div>
 
           {/* Role Card */}
-          <div 
-            className="bg-white rounded-xl p-6" 
+          <div
+            className="bg-white rounded-xl p-6"
             style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div 
+              <div
                 className="w-12 h-12 rounded-lg flex items-center justify-center"
                 style={{ backgroundColor: '#F0FDF4' }}
               >
@@ -124,12 +150,12 @@ export function FinanceRBACDemo() {
           </div>
 
           {/* Access Summary Card */}
-          <div 
-            className="bg-white rounded-xl p-6" 
+          <div
+            className="bg-white rounded-xl p-6"
             style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div 
+              <div
                 className="w-12 h-12 rounded-lg flex items-center justify-center"
                 style={{ backgroundColor: '#FEF3C7' }}
               >
@@ -146,7 +172,7 @@ export function FinanceRBACDemo() {
             </div>
             <div className="flex gap-2">
               {permissionsByPillar['AP Automation'].length > 0 && (
-                <span 
+                <span
                   className="px-2 py-1 rounded text-xs"
                   style={{ backgroundColor: '#DBEAFE', color: '#1E3A8A', fontWeight: '600' }}
                 >
@@ -154,7 +180,7 @@ export function FinanceRBACDemo() {
                 </span>
               )}
               {permissionsByPillar['AR Automation'].length > 0 && (
-                <span 
+                <span
                   className="px-2 py-1 rounded text-xs"
                   style={{ backgroundColor: '#D1FAE5', color: '#065F46', fontWeight: '600' }}
                 >
@@ -162,7 +188,7 @@ export function FinanceRBACDemo() {
                 </span>
               )}
               {permissionsByPillar['R2R Automation'].length > 0 && (
-                <span 
+                <span
                   className="px-2 py-1 rounded text-xs"
                   style={{ backgroundColor: '#FEF3C7', color: '#78350F', fontWeight: '600' }}
                 >
@@ -174,8 +200,8 @@ export function FinanceRBACDemo() {
         </div>
 
         {/* Role Switcher */}
-        <div 
-          className="bg-white rounded-xl p-6 mb-8" 
+        <div
+          className="bg-white rounded-xl p-6 mb-8"
           style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
         >
           <div className="flex items-center gap-3 mb-4">
@@ -185,12 +211,13 @@ export function FinanceRBACDemo() {
             </h2>
           </div>
           <p className="text-sm mb-6" style={{ color: '#64748B' }}>
-            Click any role below to instantly switch and observe how the left navigation adapts. Only one primary pillar can be expanded at a time.
+            Click any role below to instantly switch and observe how the left navigation adapts.
+            Only one primary pillar can be expanded at a time.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {availableRoles.map(role => {
+            {availableRoles.map((role) => {
               const isActive = role.roleId === currentRole.roleId;
-              
+
               return (
                 <button
                   key={role.roleId}
@@ -214,15 +241,15 @@ export function FinanceRBACDemo() {
                   }}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <Shield 
-                      className="w-4 h-4" 
+                    <Shield
+                      className="w-4 h-4"
                       style={{ color: isActive ? '#0066CC' : '#64748B' }}
                     />
-                    <span 
-                      style={{ 
+                    <span
+                      style={{
                         fontWeight: '600',
                         fontSize: '14px',
-                        color: isActive ? '#0066CC' : 'var(--color-ink)'
+                        color: isActive ? '#0066CC' : 'var(--color-ink)',
                       }}
                     >
                       {role.roleName}
@@ -243,54 +270,57 @@ export function FinanceRBACDemo() {
             if (permissions.length === 0) return null;
 
             return (
-              <div 
+              <div
                 key={pillar}
-                className="bg-white rounded-xl p-6" 
+                className="bg-white rounded-xl p-6"
                 style={{ border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
               >
-                <h2 className="text-lg mb-4 flex items-center gap-3" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                <h2
+                  className="text-lg mb-4 flex items-center gap-3"
+                  style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                >
                   <span>{pillar}</span>
-                  <span 
+                  <span
                     className="px-2.5 py-1 rounded-full text-xs"
-                    style={{ 
+                    style={{
                       backgroundColor: '#F1F5F9',
                       color: '#334155',
-                      fontWeight: '600'
+                      fontWeight: '600',
                     }}
                   >
                     {permissions.length} permissions
                   </span>
                 </h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {permissions.map(permission => {
+                  {permissions.map((permission) => {
                     const PermIcon = getPermissionIcon(permission);
                     const color = getPermissionColor(permission);
                     const { resource, action } = getPermissionLabel(permission);
 
                     return (
-                      <div 
+                      <div
                         key={permission}
                         className="flex items-center gap-3 p-3 rounded-lg transition-all"
-                        style={{ 
+                        style={{
                           backgroundColor: '#F8FAFC',
-                          border: '1px solid #E2E8F0'
+                          border: '1px solid #E2E8F0',
                         }}
                       >
-                        <div 
+                        <div
                           className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
                           style={{ backgroundColor: `${color}15` }}
                         >
                           <PermIcon className="w-4.5 h-4.5" style={{ color }} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div 
-                            className="text-sm truncate" 
+                          <div
+                            className="text-sm truncate"
                             style={{ color: 'var(--color-ink)', fontWeight: '600' }}
                           >
                             {resource}
                           </div>
-                          <div 
+                          <div
                             className="text-xs uppercase tracking-wide"
                             style={{ color, fontWeight: '600' }}
                           >
@@ -307,14 +337,17 @@ export function FinanceRBACDemo() {
         </div>
 
         {/* Info Banner */}
-        <div 
-          className="mt-8 p-6 rounded-xl" 
-          style={{ 
+        <div
+          className="mt-8 p-6 rounded-xl"
+          style={{
             backgroundColor: '#EBF5FF',
-            border: '1px solid #93C5FD'
+            border: '1px solid #93C5FD',
           }}
         >
-          <h3 className="text-sm mb-3 flex items-center gap-2" style={{ color: '#1E3A8A', fontWeight: '600' }}>
+          <h3
+            className="text-sm mb-3 flex items-center gap-2"
+            style={{ color: '#1E3A8A', fontWeight: '600' }}
+          >
             <Shield className="w-4 h-4" />
             RBAC System Behavior
           </h3>
@@ -343,7 +376,10 @@ export function FinanceRBACDemo() {
             </div>
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--color-error-dark)' }} />
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: 'var(--color-error-dark)' }}
+                />
                 <span className="text-sm" style={{ color: '#1E3A8A', fontWeight: '600' }}>
                   No Access
                 </span>

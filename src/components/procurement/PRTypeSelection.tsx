@@ -1,5 +1,17 @@
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, FileText, Briefcase, ArrowRight, Check, ArrowLeft, Package, Building2, RefreshCw, FileCheck, Zap } from 'lucide-react';
+import {
+  ShoppingCart,
+  FileText,
+  Briefcase,
+  ArrowRight,
+  Check,
+  ArrowLeft,
+  Package,
+  Building2,
+  RefreshCw,
+  FileCheck,
+  Zap,
+} from 'lucide-react';
 
 /**
  * PR TYPE SELECTION - ENTERPRISE SCENARIOS
@@ -22,15 +34,15 @@ export function PRTypeSelection() {
       useCases: [
         'Office supplies & stationery',
         'IT accessories from approved vendors',
-        'Standard consumables'
+        'Standard consumables',
       ],
       constraints: [
         'Vendor & rates pre-fixed',
         'No price negotiation allowed',
-        'Auto-approval if within budget'
+        'Auto-approval if within budget',
       ],
       bestFor: 'Quick procurement of standard items',
-      implemented: true
+      implemented: true,
     },
     {
       id: 'regular',
@@ -44,15 +56,11 @@ export function PRTypeSelection() {
       useCases: [
         'Multiple items from different vendors',
         'Items not in catalog',
-        'Price comparison required'
+        'Price comparison required',
       ],
-      constraints: [
-        'Requires vendor selection',
-        'Price variance alerts',
-        'Budget approval needed'
-      ],
+      constraints: ['Requires vendor selection', 'Price variance alerts', 'Budget approval needed'],
       bestFor: 'General procurement needs',
-      implemented: true
+      implemented: true,
     },
     {
       id: 'kit-bundle',
@@ -62,19 +70,20 @@ export function PRTypeSelection() {
       color: '#1976D2',
       bgColor: '#E3F2FD',
       route: '/procurement/pr/create/kit-bundle',
-      description: 'For products that comprise multiple SKUs (e.g., Laptop Kit = Laptop + Charger + Mouse + Bag)',
+      description:
+        'For products that comprise multiple SKUs (e.g., Laptop Kit = Laptop + Charger + Mouse + Bag)',
       useCases: [
         'Laptop/Desktop kits with accessories',
         'Onboarding kits (laptop + peripherals)',
-        'Bundled products sold as one unit'
+        'Bundled products sold as one unit',
       ],
       constraints: [
         'All SKUs must be from same vendor',
         'Cannot split bundle items',
-        'Pricing shown for bundle & individual SKUs'
+        'Pricing shown for bundle & individual SKUs',
       ],
       bestFor: 'Multi-SKU product procurement',
-      implemented: true
+      implemented: true,
     },
     {
       id: 'service',
@@ -88,15 +97,15 @@ export function PRTypeSelection() {
       useCases: [
         'Professional consulting',
         'AMC & maintenance contracts',
-        'Training & development programs'
+        'Training & development programs',
       ],
       constraints: [
         'Requires GL account mapping',
         'SoW/Contract document mandatory',
-        'Milestone-based payments'
+        'Milestone-based payments',
       ],
       bestFor: 'Service-based procurement',
-      implemented: true
+      implemented: true,
     },
     {
       id: 'asset-capex',
@@ -110,15 +119,15 @@ export function PRTypeSelection() {
       useCases: [
         'Machinery & equipment (&gt;₹50L)',
         'Vehicles & infrastructure',
-        'IT hardware assets requiring tagging'
+        'IT hardware assets requiring tagging',
       ],
       constraints: [
         'Budget approval mandatory',
         'Asset tag assignment required',
-        'Depreciation schedule needed'
+        'Depreciation schedule needed',
       ],
       bestFor: 'Capital expenditure items',
-      implemented: true
+      implemented: true,
     },
     {
       id: 'blanket',
@@ -132,15 +141,15 @@ export function PRTypeSelection() {
       useCases: [
         'Monthly/quarterly consumables',
         'Recurring raw material orders',
-        'Scheduled deliveries over time'
+        'Scheduled deliveries over time',
       ],
       constraints: [
         'Total quantity & value defined upfront',
         'Release schedule must be specified',
-        'Valid for specific time period'
+        'Valid for specific time period',
       ],
       bestFor: 'Planned recurring procurement',
-      implemented: true
+      implemented: true,
     },
     {
       id: 'contract-based',
@@ -154,15 +163,15 @@ export function PRTypeSelection() {
       useCases: [
         'Call-off orders from rate contracts',
         'AMC renewal/continuation',
-        'Pre-negotiated framework agreements'
+        'Pre-negotiated framework agreements',
       ],
       constraints: [
         'Contract must be active',
         'Cannot exceed contract limits',
-        'Rates locked as per contract'
+        'Rates locked as per contract',
       ],
       bestFor: 'Contract-based ordering',
-      implemented: false
+      implemented: false,
     },
     {
       id: 'emergency',
@@ -176,23 +185,23 @@ export function PRTypeSelection() {
       useCases: [
         'Emergency breakdown repairs',
         'Critical production requirements',
-        'Urgent client deliverables'
+        'Urgent client deliverables',
       ],
       constraints: [
         'Justification mandatory',
         'Single-level approval',
-        'Post-facto approval tracking'
+        'Post-facto approval tracking',
       ],
       bestFor: 'Emergency situations only',
-      implemented: false
-    }
+      implemented: false,
+    },
   ];
 
   return (
     <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="bg-white px-8 py-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center gap-3 mb-4">
-          <button 
+          <button
             onClick={() => navigate('/procurement/pr/my-prs')}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
             style={{ color: 'var(--color-mercury-grey)' }}
@@ -200,43 +209,60 @@ export function PRTypeSelection() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl mb-1" style={{ color: 'var(--color-ink)', margin: 0 }}>Create Purchase Requisition</h1>
-            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>Select the type of PR based on your procurement scenario</p>
+            <h1 className="text-2xl mb-1" style={{ color: 'var(--color-ink)', margin: 0 }}>
+              Create Purchase Requisition
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', margin: 0 }}>
+              Select the type of PR based on your procurement scenario
+            </p>
           </div>
         </div>
       </div>
 
       <div className="p-8">
         {/* Help Section */}
-        <div className="bg-white p-6 rounded-lg mb-8" style={{ border: '1px solid var(--color-silver)' }}>
-          <h3 className="text-base mb-3" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>📋 How to Choose the Right PR Type?</h3>
+        <div
+          className="bg-white p-6 rounded-lg mb-8"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
+          <h3 className="text-base mb-3" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+            📋 How to Choose the Right PR Type?
+          </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-                <strong style={{ color: 'var(--color-ink)' }}>Catalogue PR:</strong> Use when ordering from pre-approved vendor catalogs
+                <strong style={{ color: 'var(--color-ink)' }}>Catalogue PR:</strong> Use when
+                ordering from pre-approved vendor catalogs
               </p>
               <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-                <strong style={{ color: 'var(--color-ink)' }}>Regular PR:</strong> Use for general procurement with multiple items/vendors
+                <strong style={{ color: 'var(--color-ink)' }}>Regular PR:</strong> Use for general
+                procurement with multiple items/vendors
               </p>
               <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-                <strong style={{ color: 'var(--color-ink)' }}>Kit/Bundle PR:</strong> Use when a product has multiple SKUs (e.g., laptop kit)
+                <strong style={{ color: 'var(--color-ink)' }}>Kit/Bundle PR:</strong> Use when a
+                product has multiple SKUs (e.g., laptop kit)
               </p>
               <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                <strong style={{ color: 'var(--color-ink)' }}>Service PR:</strong> Use for consulting, AMC, training, or service contracts
+                <strong style={{ color: 'var(--color-ink)' }}>Service PR:</strong> Use for
+                consulting, AMC, training, or service contracts
               </p>
             </div>
             <div>
               <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-                <strong style={{ color: 'var(--color-ink)' }}>Asset/CAPEX PR:</strong> Use for high-value capital assets (&gt;₹50L)
+                <strong style={{ color: 'var(--color-ink)' }}>Asset/CAPEX PR:</strong> Use for
+                high-value capital assets (&gt;₹50L)
               </p>
               <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-                <strong style={{ color: 'var(--color-ink)' }}>Blanket PR:</strong> Use for recurring orders with planned delivery schedule
+                <strong style={{ color: 'var(--color-ink)' }}>Blanket PR:</strong> Use for recurring
+                orders with planned delivery schedule
               </p>
               <p className="text-sm mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
-                <strong style={{ color: 'var(--color-ink)' }}>Contract-based PR:</strong> Use for orders against existing contracts/AMCs
+                <strong style={{ color: 'var(--color-ink)' }}>Contract-based PR:</strong> Use for
+                orders against existing contracts/AMCs
               </p>
               <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                <strong style={{ color: 'var(--color-ink)' }}>Emergency PR:</strong> Use only for urgent/emergency procurement needs
+                <strong style={{ color: 'var(--color-ink)' }}>Emergency PR:</strong> Use only for
+                urgent/emergency procurement needs
               </p>
             </div>
           </div>
@@ -250,40 +276,67 @@ export function PRTypeSelection() {
               <div
                 key={type.id}
                 className="bg-white rounded-lg p-6 cursor-pointer transition-all hover:shadow-lg"
-                style={{ 
+                style={{
                   border: `2px solid ${type.implemented ? type.color : 'var(--color-silver)'}`,
                   opacity: type.implemented ? 1 : 0.6,
-                  position: 'relative'
+                  position: 'relative',
                 }}
                 onClick={() => type.implemented && navigate(type.route)}
               >
                 {!type.implemented && (
-                  <div className="absolute top-3 right-3 px-2 py-1 rounded text-xs" style={{ backgroundColor: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' }}>
+                  <div
+                    className="absolute top-3 right-3 px-2 py-1 rounded text-xs"
+                    style={{
+                      backgroundColor: 'var(--color-warning-light)',
+                      color: 'var(--color-warning-dark)',
+                    }}
+                  >
                     Coming Soon
                   </div>
                 )}
-                
+
                 <div className="flex items-start gap-4 mb-4">
                   <div className="p-3 rounded-lg" style={{ backgroundColor: type.bgColor }}>
                     <Icon className="w-6 h-6" style={{ color: type.color }} />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{type.title}</h3>
-                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{type.subtitle}</p>
+                    <h3
+                      className="text-lg mb-1"
+                      style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                    >
+                      {type.title}
+                    </h3>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                      {type.subtitle}
+                    </p>
                   </div>
                   {type.implemented && (
                     <ArrowRight className="w-5 h-5" style={{ color: type.color }} />
                   )}
                 </div>
 
-                <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>{type.description}</p>
+                <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                  {type.description}
+                </p>
 
                 <div className="mb-4">
-                  <p className="text-xs mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>USE CASES:</p>
+                  <p
+                    className="text-xs mb-2"
+                    style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                  >
+                    USE CASES:
+                  </p>
                   <ul className="space-y-1">
                     {type.useCases.map((useCase, idx) => (
-                      <li key={idx} className="text-xs flex items-start gap-2" style={{ color: 'var(--color-mercury-grey)' }}>
-                        <Check className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: type.color }} />
+                      <li
+                        key={idx}
+                        className="text-xs flex items-start gap-2"
+                        style={{ color: 'var(--color-mercury-grey)' }}
+                      >
+                        <Check
+                          className="w-3 h-3 mt-0.5 flex-shrink-0"
+                          style={{ color: type.color }}
+                        />
                         <span>{useCase}</span>
                       </li>
                     ))}
@@ -291,10 +344,19 @@ export function PRTypeSelection() {
                 </div>
 
                 <div className="mb-4">
-                  <p className="text-xs mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>CONSTRAINTS:</p>
+                  <p
+                    className="text-xs mb-2"
+                    style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                  >
+                    CONSTRAINTS:
+                  </p>
                   <ul className="space-y-1">
                     {type.constraints.map((constraint, idx) => (
-                      <li key={idx} className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                      <li
+                        key={idx}
+                        className="text-xs"
+                        style={{ color: 'var(--color-mercury-grey)' }}
+                      >
                         • {constraint}
                       </li>
                     ))}

@@ -1,0 +1,16 @@
+-- B2: bcrypt password migration
+--
+-- Passwords in this application are stored in user_master.payload (a JSON column),
+-- NOT in a dedicated VARCHAR/TEXT column. There is no ALTER TABLE needed here.
+--
+-- The actual migration is a JavaScript script that reads every user_master row,
+-- bcrypt-hashes payload.password (and its aliases loginPassword, tempPassword),
+-- stores the hash in payload.passwordHash, and removes the plaintext field.
+--
+-- To run (once per environment):
+--   npm run migrate:password-hash
+--
+-- To preview without writing:
+--   MIGRATE_DRY_RUN=1 npm run migrate:password-hash
+--
+-- Idempotent: rows that already have payload.passwordHash are skipped.

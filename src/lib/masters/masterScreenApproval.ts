@@ -1,4 +1,4 @@
-import { ensureRelationalMasterRecords } from '../supabase/masterTables';
+import { ensureRelationalMasterRecords } from '../mysql/masterTables';
 import { updateMasterApprovalStatus } from './masterApproval';
 
 export function getCurrentApprovalActor() {
@@ -24,12 +24,16 @@ export async function applyMasterApprovalAction<T>(
   fallbackRecords: T[],
   recordId: string,
   action: 'approve' | 'reject' | 'request_info',
-  comments = '',
+  comments = ''
 ) {
   await updateMasterApprovalStatus(masterKey, recordId, action, {
     actor: getCurrentApprovalActor(),
     comments,
   });
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('master-saved', { detail: { masterKey, action } }));
+  }
 
   return ensureRelationalMasterRecords(masterKey, fallbackRecords);
 }

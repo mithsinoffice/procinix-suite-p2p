@@ -3,7 +3,7 @@ import React, { ReactNode } from 'react';
 /**
  * GLOBAL FIELD STANDARDIZATION COMPONENT
  * Reference: Debit Note Date field standard
- * 
+ *
  * Enforces identical sizing, spacing, icon placement, and visual alignment
  * across ALL forms and masters in the application.
  */
@@ -43,7 +43,7 @@ export function StandardInput({
   className = '',
   label,
   required = false,
-  maxLength
+  maxLength,
 }: StandardInputProps) {
   const paddingClass = icon ? 'pl-10 pr-3 py-2.5' : 'px-3 py-2.5';
   const borderColor = error ? 'var(--color-error)' : 'var(--color-silver)';
@@ -60,7 +60,7 @@ export function StandardInput({
       )}
       <div className="relative">
         {icon && (
-          <div 
+          <div
             className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
             style={{ color: 'var(--color-mercury-grey)' }}
           >
@@ -84,7 +84,7 @@ export function StandardInput({
             border: `1px solid ${borderColor}`,
             backgroundColor: bgColor,
             color: textColor,
-            cursor: disabled || readOnly ? 'not-allowed' : 'text'
+            cursor: disabled || readOnly ? 'not-allowed' : 'text',
           }}
         />
       </div>
@@ -117,7 +117,7 @@ export function StandardSelect({
   className = '',
   label,
   required = false,
-  placeholder
+  placeholder,
 }: StandardSelectProps) {
   const paddingClass = icon ? 'pl-10 pr-8 py-2.5' : 'px-3 pr-8 py-2.5';
   const borderColor = error ? 'var(--color-error)' : 'var(--color-silver)';
@@ -134,7 +134,7 @@ export function StandardSelect({
       )}
       <div className="relative">
         {icon && (
-          <div 
+          <div
             className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
             style={{ color: 'var(--color-mercury-grey)' }}
           >
@@ -155,19 +155,17 @@ export function StandardSelect({
             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236E7A82' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'right 0.75rem center',
-            backgroundSize: '12px'
+            backgroundSize: '12px',
           }}
         >
           {placeholder && <option value="">{placeholder}</option>}
-          {options ? (
-            options.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))
-          ) : (
-            children
-          )}
+          {options
+            ? options.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))
+            : children}
         </select>
       </div>
     </div>
@@ -199,7 +197,7 @@ export function StandardTextarea({
   error = false,
   className = '',
   label,
-  required = false
+  required = false,
 }: StandardTextareaProps) {
   const paddingClass = icon ? 'pl-10 pr-3 py-2.5' : 'px-3 py-2.5';
   const borderColor = error ? 'var(--color-error)' : 'var(--color-silver)';
@@ -216,7 +214,7 @@ export function StandardTextarea({
       )}
       <div className="relative">
         {icon && (
-          <div 
+          <div
             className="absolute left-3 top-3 pointer-events-none"
             style={{ color: 'var(--color-mercury-grey)' }}
           >
@@ -235,7 +233,7 @@ export function StandardTextarea({
             border: `1px solid ${borderColor}`,
             backgroundColor: bgColor,
             color: textColor,
-            cursor: disabled || readOnly ? 'not-allowed' : 'text'
+            cursor: disabled || readOnly ? 'not-allowed' : 'text',
           }}
         />
       </div>

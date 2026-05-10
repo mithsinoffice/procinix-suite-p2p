@@ -4,7 +4,19 @@ import { Filter, X, Plus, Trash2, Search } from 'lucide-react';
 export interface FilterCondition {
   id: string;
   field: string;
-  operator: 'equals' | 'contains' | 'startsWith' | 'endsWith' | 'greaterThan' | 'lessThan' | 'greaterThanOrEqual' | 'lessThanOrEqual' | 'notEquals' | 'isEmpty' | 'isNotEmpty' | 'between';
+  operator:
+    | 'equals'
+    | 'contains'
+    | 'startsWith'
+    | 'endsWith'
+    | 'greaterThan'
+    | 'lessThan'
+    | 'greaterThanOrEqual'
+    | 'lessThanOrEqual'
+    | 'notEquals'
+    | 'isEmpty'
+    | 'isNotEmpty'
+    | 'between';
   value: string;
   value2?: string; // For 'between' operator
 }
@@ -41,17 +53,17 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
           id: '1',
           field: fields[0]?.key || '',
           operator: 'contains',
-          value: ''
-        }
+          value: '',
+        },
       ],
-      logic: 'AND'
-    }
+      logic: 'AND',
+    },
   ]);
   const [groupLogic, setGroupLogic] = useState<'AND' | 'OR'>('AND');
 
   const getOperatorsForField = (fieldKey: string) => {
-    const field = fields.find(f => f.key === fieldKey);
-    
+    const field = fields.find((f) => f.key === fieldKey);
+
     if (!field) return [];
 
     switch (field.type) {
@@ -63,7 +75,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
           { value: 'endsWith', label: 'Ends With' },
           { value: 'notEquals', label: 'Not Equals' },
           { value: 'isEmpty', label: 'Is Empty' },
-          { value: 'isNotEmpty', label: 'Is Not Empty' }
+          { value: 'isNotEmpty', label: 'Is Not Empty' },
         ];
       case 'number':
       case 'date':
@@ -76,14 +88,14 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
           { value: 'lessThanOrEqual', label: 'Less Than or Equal' },
           { value: 'between', label: 'Between' },
           { value: 'isEmpty', label: 'Is Empty' },
-          { value: 'isNotEmpty', label: 'Is Not Empty' }
+          { value: 'isNotEmpty', label: 'Is Not Empty' },
         ];
       case 'select':
         return [
           { value: 'equals', label: 'Equals' },
           { value: 'notEquals', label: 'Not Equals' },
           { value: 'isEmpty', label: 'Is Empty' },
-          { value: 'isNotEmpty', label: 'Is Not Empty' }
+          { value: 'isNotEmpty', label: 'Is Not Empty' },
         ];
       default:
         return [];
@@ -91,62 +103,74 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
   };
 
   const addCondition = (groupId: string) => {
-    setFilterGroups(filterGroups.map(group => {
-      if (group.id === groupId) {
-        return {
-          ...group,
-          conditions: [
-            ...group.conditions,
-            {
-              id: Date.now().toString(),
-              field: fields[0]?.key || '',
-              operator: 'contains',
-              value: ''
-            }
-          ]
-        };
-      }
-      return group;
-    }));
+    setFilterGroups(
+      filterGroups.map((group) => {
+        if (group.id === groupId) {
+          return {
+            ...group,
+            conditions: [
+              ...group.conditions,
+              {
+                id: Date.now().toString(),
+                field: fields[0]?.key || '',
+                operator: 'contains',
+                value: '',
+              },
+            ],
+          };
+        }
+        return group;
+      })
+    );
   };
 
   const removeCondition = (groupId: string, conditionId: string) => {
-    setFilterGroups(filterGroups.map(group => {
-      if (group.id === groupId) {
-        const newConditions = group.conditions.filter(c => c.id !== conditionId);
-        if (newConditions.length === 0) {
-          // If removing last condition, keep one empty condition
-          return {
-            ...group,
-            conditions: [{
-              id: Date.now().toString(),
-              field: fields[0]?.key || '',
-              operator: 'contains',
-              value: ''
-            }]
-          };
+    setFilterGroups(
+      filterGroups.map((group) => {
+        if (group.id === groupId) {
+          const newConditions = group.conditions.filter((c) => c.id !== conditionId);
+          if (newConditions.length === 0) {
+            // If removing last condition, keep one empty condition
+            return {
+              ...group,
+              conditions: [
+                {
+                  id: Date.now().toString(),
+                  field: fields[0]?.key || '',
+                  operator: 'contains',
+                  value: '',
+                },
+              ],
+            };
+          }
+          return { ...group, conditions: newConditions };
         }
-        return { ...group, conditions: newConditions };
-      }
-      return group;
-    }));
+        return group;
+      })
+    );
   };
 
-  const updateCondition = (groupId: string, conditionId: string, updates: Partial<FilterCondition>) => {
-    setFilterGroups(filterGroups.map(group => {
-      if (group.id === groupId) {
-        return {
-          ...group,
-          conditions: group.conditions.map(condition => {
-            if (condition.id === conditionId) {
-              return { ...condition, ...updates };
-            }
-            return condition;
-          })
-        };
-      }
-      return group;
-    }));
+  const updateCondition = (
+    groupId: string,
+    conditionId: string,
+    updates: Partial<FilterCondition>
+  ) => {
+    setFilterGroups(
+      filterGroups.map((group) => {
+        if (group.id === groupId) {
+          return {
+            ...group,
+            conditions: group.conditions.map((condition) => {
+              if (condition.id === conditionId) {
+                return { ...condition, ...updates };
+              }
+              return condition;
+            }),
+          };
+        }
+        return group;
+      })
+    );
   };
 
   const addGroup = () => {
@@ -159,35 +183,37 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
             id: Date.now().toString() + '_1',
             field: fields[0]?.key || '',
             operator: 'contains',
-            value: ''
-          }
+            value: '',
+          },
         ],
-        logic: 'AND'
-      }
+        logic: 'AND',
+      },
     ]);
   };
 
   const removeGroup = (groupId: string) => {
     if (filterGroups.length > 1) {
-      setFilterGroups(filterGroups.filter(g => g.id !== groupId));
+      setFilterGroups(filterGroups.filter((g) => g.id !== groupId));
     }
   };
 
   const updateGroupLogicInternal = (groupId: string, logic: 'AND' | 'OR') => {
-    setFilterGroups(filterGroups.map(group => {
-      if (group.id === groupId) {
-        return { ...group, logic };
-      }
-      return group;
-    }));
+    setFilterGroups(
+      filterGroups.map((group) => {
+        if (group.id === groupId) {
+          return { ...group, logic };
+        }
+        return group;
+      })
+    );
   };
 
   const handleApply = () => {
     // Validate that all conditions have values (except isEmpty/isNotEmpty)
-    const hasInvalidConditions = filterGroups.some(group =>
-      group.conditions.some(condition => 
-        !['isEmpty', 'isNotEmpty'].includes(condition.operator) && 
-        !condition.value.trim()
+    const hasInvalidConditions = filterGroups.some((group) =>
+      group.conditions.some(
+        (condition) =>
+          !['isEmpty', 'isNotEmpty'].includes(condition.operator) && !condition.value.trim()
       )
     );
 
@@ -198,7 +224,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
 
     const config: FilterConfig = {
       groups: filterGroups,
-      groupLogic: groupLogic
+      groupLogic: groupLogic,
     };
     onApplyFilter(config);
     setIsOpen(false);
@@ -213,11 +239,11 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
             id: '1',
             field: fields[0]?.key || '',
             operator: 'contains',
-            value: ''
-          }
+            value: '',
+          },
         ],
-        logic: 'AND'
-      }
+        logic: 'AND',
+      },
     ]);
     setGroupLogic('AND');
     onClearFilter();
@@ -226,15 +252,15 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
 
   const getActiveFilterCount = () => {
     return filterGroups.reduce((count, group) => {
-      return count + group.conditions.filter(c => c.value.trim() !== '').length;
+      return count + group.conditions.filter((c) => c.value.trim() !== '').length;
     }, 0);
   };
 
   const activeCount = getActiveFilterCount();
 
   const renderValueInput = (group: FilterGroup, condition: FilterCondition) => {
-    const field = fields.find(f => f.key === condition.field);
-    
+    const field = fields.find((f) => f.key === condition.field);
+
     if (!field) return null;
 
     // No value input needed for isEmpty/isNotEmpty
@@ -277,8 +303,10 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
           style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
         >
           <option value="">Select value</option>
-          {field.options.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          {field.options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
       );
@@ -306,13 +334,13 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
         style={{
           backgroundColor: activeCount > 0 ? 'var(--color-teal-tint)' : 'white',
           border: activeCount > 0 ? '1px solid var(--color-teal)' : '1px solid var(--color-silver)',
-          color: activeCount > 0 ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
+          color: activeCount > 0 ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
         }}
       >
         <Filter className="w-4 h-4" />
         <span className="text-sm">Advanced Filter</span>
         {activeCount > 0 && (
-          <span 
+          <span
             className="px-2 py-0.5 rounded-full text-xs"
             style={{ backgroundColor: 'var(--color-teal)', color: 'white' }}
           >
@@ -324,32 +352,34 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
       {/* Filter Modal */}
       {isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div 
+          <div
             className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             {/* Header */}
-            <div 
+            <div
               className="border-b px-6 py-4 flex items-center justify-between flex-shrink-0"
               style={{ borderColor: 'var(--color-silver)' }}
             >
               <div className="flex items-center gap-3">
-                <div 
+                <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center"
                   style={{ backgroundColor: 'var(--color-teal-tint)' }}
                 >
                   <Filter className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
                 </div>
                 <div>
-                  <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>Advanced Filter</h2>
+                  <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
+                    Advanced Filter
+                  </h2>
                   <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                     Create complex filter conditions with AND/OR logic
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsOpen(false)} 
-                className="p-2 rounded-lg transition-colors" 
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-2 rounded-lg transition-colors"
                 style={{ color: 'var(--color-mercury-grey)' }}
               >
                 <X className="w-5 h-5" />
@@ -370,8 +400,12 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                       className="px-3 py-1 rounded text-sm transition-colors"
                       style={{
                         backgroundColor: groupLogic === 'AND' ? 'var(--color-teal-tint)' : 'white',
-                        border: groupLogic === 'AND' ? '1px solid var(--color-teal)' : '1px solid var(--color-silver)',
-                        color: groupLogic === 'AND' ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
+                        border:
+                          groupLogic === 'AND'
+                            ? '1px solid var(--color-teal)'
+                            : '1px solid var(--color-silver)',
+                        color:
+                          groupLogic === 'AND' ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
                       }}
                     >
                       AND
@@ -381,8 +415,12 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                       className="px-3 py-1 rounded text-sm transition-colors"
                       style={{
                         backgroundColor: groupLogic === 'OR' ? 'var(--color-teal-tint)' : 'white',
-                        border: groupLogic === 'OR' ? '1px solid var(--color-teal)' : '1px solid var(--color-silver)',
-                        color: groupLogic === 'OR' ? 'var(--color-teal)' : 'var(--color-mercury-grey)'
+                        border:
+                          groupLogic === 'OR'
+                            ? '1px solid var(--color-teal)'
+                            : '1px solid var(--color-silver)',
+                        color:
+                          groupLogic === 'OR' ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
                       }}
                     >
                       OR
@@ -397,20 +435,32 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                   {/* Group Separator */}
                   {groupIndex > 0 && (
                     <div className="flex items-center justify-center my-4">
-                      <div className="flex-1" style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}></div>
-                      <span 
+                      <div
+                        className="flex-1"
+                        style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}
+                      ></div>
+                      <span
                         className="px-3 py-1 rounded text-xs mx-3"
-                        style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}
+                        style={{
+                          backgroundColor: 'var(--color-teal-tint)',
+                          color: 'var(--color-teal)',
+                        }}
                       >
                         {groupLogic}
                       </span>
-                      <div className="flex-1" style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}></div>
+                      <div
+                        className="flex-1"
+                        style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}
+                      ></div>
                     </div>
                   )}
 
-                  <div 
+                  <div
                     className="p-4 rounded-lg"
-                    style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
+                    style={{
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                    }}
                   >
                     {/* Group Header */}
                     <div className="flex items-center justify-between mb-3">
@@ -420,15 +470,22 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                         </span>
                         {group.conditions.length > 1 && (
                           <>
-                            <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>-</span>
+                            <span
+                              className="text-xs"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              -
+                            </span>
                             <div className="flex gap-2">
                               <button
                                 onClick={() => updateGroupLogicInternal(group.id, 'AND')}
                                 className="px-2 py-0.5 rounded text-xs transition-colors"
                                 style={{
-                                  backgroundColor: group.logic === 'AND' ? 'var(--color-teal)' : 'white',
-                                  color: group.logic === 'AND' ? 'white' : 'var(--color-mercury-grey)',
-                                  border: '1px solid var(--color-silver)'
+                                  backgroundColor:
+                                    group.logic === 'AND' ? 'var(--color-teal)' : 'white',
+                                  color:
+                                    group.logic === 'AND' ? 'white' : 'var(--color-mercury-grey)',
+                                  border: '1px solid var(--color-silver)',
                                 }}
                               >
                                 AND
@@ -437,9 +494,11 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                                 onClick={() => updateGroupLogicInternal(group.id, 'OR')}
                                 className="px-2 py-0.5 rounded text-xs transition-colors"
                                 style={{
-                                  backgroundColor: group.logic === 'OR' ? 'var(--color-teal)' : 'white',
-                                  color: group.logic === 'OR' ? 'white' : 'var(--color-mercury-grey)',
-                                  border: '1px solid var(--color-silver)'
+                                  backgroundColor:
+                                    group.logic === 'OR' ? 'var(--color-teal)' : 'white',
+                                  color:
+                                    group.logic === 'OR' ? 'white' : 'var(--color-mercury-grey)',
+                                  border: '1px solid var(--color-silver)',
                                 }}
                               >
                                 OR
@@ -467,14 +526,24 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                           {/* Condition Logic Indicator */}
                           {conditionIndex > 0 && (
                             <div className="flex items-center gap-2 my-2 ml-4">
-                              <div className="w-8" style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}></div>
-                              <span 
+                              <div
+                                className="w-8"
+                                style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}
+                              ></div>
+                              <span
                                 className="px-2 py-0.5 rounded text-xs"
-                                style={{ backgroundColor: 'white', color: 'var(--color-teal)', border: '1px solid var(--color-teal)' }}
+                                style={{
+                                  backgroundColor: 'white',
+                                  color: 'var(--color-teal)',
+                                  border: '1px solid var(--color-teal)',
+                                }}
                               >
                                 {group.logic}
                               </span>
-                              <div className="flex-1" style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}></div>
+                              <div
+                                className="flex-1"
+                                style={{ height: '1px', backgroundColor: 'var(--color-silver)' }}
+                              ></div>
                             </div>
                           )}
 
@@ -484,15 +553,20 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                             <div className="col-span-3">
                               <select
                                 value={condition.field}
-                                onChange={(e) => updateCondition(group.id, condition.id, { 
-                                  field: e.target.value,
-                                  operator: 'contains',
-                                  value: ''
-                                })}
+                                onChange={(e) =>
+                                  updateCondition(group.id, condition.id, {
+                                    field: e.target.value,
+                                    operator: 'contains',
+                                    value: '',
+                                  })
+                                }
                                 className="w-full px-3 py-2 rounded-lg text-sm"
-                                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
                               >
-                                {fields.map(field => (
+                                {fields.map((field) => (
                                   <option key={field.key} value={field.key}>
                                     {field.label}
                                   </option>
@@ -504,15 +578,20 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                             <div className="col-span-3">
                               <select
                                 value={condition.operator}
-                                onChange={(e) => updateCondition(group.id, condition.id, { 
-                                  operator: e.target.value as any,
-                                  value: '',
-                                  value2: undefined
-                                })}
+                                onChange={(e) =>
+                                  updateCondition(group.id, condition.id, {
+                                    operator: e.target.value as any,
+                                    value: '',
+                                    value2: undefined,
+                                  })
+                                }
                                 className="w-full px-3 py-2 rounded-lg text-sm"
-                                style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
                               >
-                                {getOperatorsForField(condition.field).map(op => (
+                                {getOperatorsForField(condition.field).map((op) => (
                                   <option key={op.value} value={op.value}>
                                     {op.label}
                                   </option>
@@ -521,9 +600,7 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                             </div>
 
                             {/* Value Input */}
-                            <div className="col-span-5">
-                              {renderValueInput(group, condition)}
-                            </div>
+                            <div className="col-span-5">{renderValueInput(group, condition)}</div>
 
                             {/* Remove Button */}
                             <div className="col-span-1 flex items-center justify-center">
@@ -545,10 +622,10 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
                     <button
                       onClick={() => addCondition(group.id)}
                       className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm mt-3 transition-colors"
-                      style={{ 
-                        backgroundColor: 'white', 
+                      style={{
+                        backgroundColor: 'white',
                         border: '1px solid var(--color-teal)',
-                        color: 'var(--color-teal)'
+                        color: 'var(--color-teal)',
                       }}
                     >
                       <Plus className="w-4 h-4" />
@@ -562,10 +639,10 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
               <button
                 onClick={addGroup}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors"
-                style={{ 
-                  backgroundColor: 'white', 
+                style={{
+                  backgroundColor: 'white',
                   border: '1px solid var(--color-teal)',
-                  color: 'var(--color-teal)'
+                  color: 'var(--color-teal)',
                 }}
               >
                 <Plus className="w-4 h-4" />
@@ -574,39 +651,43 @@ export function AdvancedFilter({ fields, onApplyFilter, onClearFilter }: Advance
             </div>
 
             {/* Footer */}
-            <div 
+            <div
               className="border-t px-6 py-4 flex justify-between items-center gap-3 flex-shrink-0"
               style={{ borderColor: 'var(--color-silver)' }}
             >
               <button
                 onClick={handleClear}
                 className="px-4 py-2 rounded-lg text-sm transition-colors"
-                style={{ 
-                  border: '1px solid var(--color-silver)', 
-                  color: 'var(--color-mercury-grey)', 
-                  backgroundColor: 'white' 
+                style={{
+                  border: '1px solid var(--color-silver)',
+                  color: 'var(--color-mercury-grey)',
+                  backgroundColor: 'white',
                 }}
               >
                 Clear All
               </button>
               <div className="flex gap-3">
-                <button 
-                  onClick={() => setIsOpen(false)} 
-                  className="px-4 py-2 rounded-lg text-sm transition-colors" 
-                  style={{ 
-                    border: '1px solid var(--color-silver)', 
-                    color: 'var(--color-mercury-grey)', 
-                    backgroundColor: 'white' 
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="px-4 py-2 rounded-lg text-sm transition-colors"
+                  style={{
+                    border: '1px solid var(--color-silver)',
+                    color: 'var(--color-mercury-grey)',
+                    backgroundColor: 'white',
                   }}
                 >
                   Cancel
                 </button>
-                <button 
-                  onClick={handleApply} 
-                  className="px-4 py-2 rounded-lg text-white text-sm transition-colors" 
+                <button
+                  onClick={handleApply}
+                  className="px-4 py-2 rounded-lg text-white text-sm transition-colors"
                   style={{ backgroundColor: 'var(--color-teal)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = 'var(--color-teal)')
+                  }
                 >
                   Apply Filter
                 </button>

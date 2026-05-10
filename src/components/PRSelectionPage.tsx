@@ -11,20 +11,18 @@ export function PRSelectionPage() {
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   // Get approved PRs for current entity
-  const availablePRs = currentCompany 
-    ? getApprovedPRs(currentCompany.id)
-    : [];
+  const availablePRs = currentCompany ? getApprovedPRs(currentCompany.id) : [];
 
   // Toggle PR selection
   const togglePRSelection = (prId: string) => {
     const newSelection = new Set(selectedPRs);
-    
+
     if (newSelection.has(prId)) {
       newSelection.delete(prId);
     } else {
       newSelection.add(prId);
     }
-    
+
     setSelectedPRs(newSelection);
     setErrorMessage('');
   };
@@ -37,17 +35,17 @@ export function PRSelectionPage() {
     }
 
     // Get selected PR objects
-    const selectedPRObjects = availablePRs.filter(pr => selectedPRs.has(pr.id));
-    
+    const selectedPRObjects = availablePRs.filter((pr) => selectedPRs.has(pr.id));
+
     // Validate same vendor
-    const vendors = new Set(selectedPRObjects.map(pr => pr.vendorId));
+    const vendors = new Set(selectedPRObjects.map((pr) => pr.vendorId));
     if (vendors.size > 1) {
       setErrorMessage('All selected PRs must be for the same vendor.');
       return;
     }
 
     // Validate same entity (should already be filtered but double check)
-    const entities = new Set(selectedPRObjects.map(pr => pr.entityId));
+    const entities = new Set(selectedPRObjects.map((pr) => pr.entityId));
     if (entities.size > 1) {
       setErrorMessage('All selected PRs must be from the same entity.');
       return;
@@ -59,7 +57,7 @@ export function PRSelectionPage() {
   };
 
   // Calculate totals for selected PRs
-  const selectedPRObjects = availablePRs.filter(pr => selectedPRs.has(pr.id));
+  const selectedPRObjects = availablePRs.filter((pr) => selectedPRs.has(pr.id));
   const totalAmount = selectedPRObjects.reduce((sum, pr) => sum + pr.totalAmount, 0);
   const totalLineItems = selectedPRObjects.reduce((sum, pr) => sum + pr.lineItems.length, 0);
 
@@ -72,8 +70,8 @@ export function PRSelectionPage() {
             onClick={() => navigate('/purchase-orders')}
             className="p-2 rounded-lg transition-colors"
             style={{ color: 'var(--color-mercury-grey)', border: '1px solid var(--color-silver)' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-cloud)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -86,14 +84,14 @@ export function PRSelectionPage() {
             </p>
           </div>
         </div>
-        
+
         <button
           onClick={handleProceed}
           disabled={selectedPRs.size === 0}
           className="px-6 py-2 rounded-lg text-white transition-colors"
           style={{
             backgroundColor: selectedPRs.size === 0 ? 'var(--color-slate)' : 'var(--color-teal)',
-            cursor: selectedPRs.size === 0 ? 'not-allowed' : 'pointer'
+            cursor: selectedPRs.size === 0 ? 'not-allowed' : 'pointer',
           }}
           onMouseEnter={(e) => {
             if (selectedPRs.size > 0) {
@@ -111,9 +109,13 @@ export function PRSelectionPage() {
       </div>
 
       {/* Entity Info */}
-      <div className="bg-white rounded-lg p-4 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
+      <div
+        className="bg-white rounded-lg p-4 mb-6"
+        style={{ border: '1px solid var(--color-silver)' }}
+      >
         <div style={{ color: 'var(--color-mercury-grey)', fontSize: '14px' }}>
-          <strong style={{ color: 'var(--color-ink)' }}>Entity:</strong> {currentCompany?.name || 'Unknown'}
+          <strong style={{ color: 'var(--color-ink)' }}>Entity:</strong>{' '}
+          {currentCompany?.name || 'Unknown'}
         </div>
         <div style={{ color: 'var(--color-mercury-grey)', fontSize: '13px', marginTop: '4px' }}>
           Only approved PRs from this entity are shown
@@ -122,29 +124,32 @@ export function PRSelectionPage() {
 
       {/* Error Message */}
       {errorMessage && (
-        <div 
+        <div
           className="mb-6 p-4 rounded-lg flex items-start gap-3"
-          style={{ 
+          style={{
             backgroundColor: '#FFF5F5',
-            border: '1px solid #FED7D7'
+            border: '1px solid #FED7D7',
           }}
         >
           <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#E53E3E' }} />
-          <div style={{ color: '#742A2A', fontSize: '14px' }}>
-            {errorMessage}
-          </div>
+          <div style={{ color: '#742A2A', fontSize: '14px' }}>{errorMessage}</div>
         </div>
       )}
 
       {/* Selection Summary */}
       {selectedPRs.size > 0 && (
-        <div className="bg-white rounded-lg p-4 mb-6" style={{ border: '1px solid var(--color-teal)' }}>
+        <div
+          className="bg-white rounded-lg p-4 mb-6"
+          style={{ border: '1px solid var(--color-teal)' }}
+        >
           <div className="flex items-center justify-between">
             <div>
               <div style={{ color: 'var(--color-ink)', fontWeight: 500 }}>
                 {selectedPRs.size} PR(s) Selected
               </div>
-              <div style={{ color: 'var(--color-mercury-grey)', fontSize: '13px', marginTop: '4px' }}>
+              <div
+                style={{ color: 'var(--color-mercury-grey)', fontSize: '13px', marginTop: '4px' }}
+              >
                 Total: {totalLineItems} line items · ₹{totalAmount.toLocaleString('en-IN')}
               </div>
             </div>
@@ -156,7 +161,7 @@ export function PRSelectionPage() {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                textDecoration: 'underline'
+                textDecoration: 'underline',
               }}
             >
               Clear Selection
@@ -166,10 +171,16 @@ export function PRSelectionPage() {
       )}
 
       {/* PR Table */}
-      <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-silver)' }}>
+      <div
+        className="bg-white rounded-lg overflow-hidden"
+        style={{ border: '1px solid var(--color-silver)' }}
+      >
         {availablePRs.length === 0 ? (
           <div className="p-12 text-center">
-            <AlertCircle className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--color-slate)' }} />
+            <AlertCircle
+              className="w-12 h-12 mx-auto mb-4"
+              style={{ color: 'var(--color-slate)' }}
+            />
             <div style={{ color: 'var(--color-ink)', fontSize: '18px', marginBottom: '8px' }}>
               No Approved PRs Available
             </div>
@@ -182,7 +193,7 @@ export function PRSelectionPage() {
               style={{
                 border: '1px solid var(--color-silver)',
                 color: 'var(--color-ink)',
-                background: 'white'
+                background: 'white',
               }}
             >
               Go Back
@@ -212,9 +223,12 @@ export function PRSelectionPage() {
                       key={pr.id}
                       onClick={() => togglePRSelection(pr.id)}
                       style={{
-                        borderBottom: index !== availablePRs.length - 1 ? '1px solid var(--color-silver)' : 'none',
+                        borderBottom:
+                          index !== availablePRs.length - 1
+                            ? '1px solid var(--color-silver)'
+                            : 'none',
                         backgroundColor: isSelected ? '#F0FDFF' : 'white',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
                       }}
                       onMouseEnter={(e) => {
                         if (!isSelected) {
@@ -229,12 +243,21 @@ export function PRSelectionPage() {
                     >
                       <td className="px-6 py-4 text-center">
                         {isSelected ? (
-                          <CheckSquare className="w-5 h-5 mx-auto" style={{ color: 'var(--color-teal)' }} />
+                          <CheckSquare
+                            className="w-5 h-5 mx-auto"
+                            style={{ color: 'var(--color-teal)' }}
+                          />
                         ) : (
-                          <Square className="w-5 h-5 mx-auto" style={{ color: 'var(--color-slate)' }} />
+                          <Square
+                            className="w-5 h-5 mx-auto"
+                            style={{ color: 'var(--color-slate)' }}
+                          />
                         )}
                       </td>
-                      <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: 500 }}>
+                      <td
+                        className="px-6 py-4"
+                        style={{ color: 'var(--color-ink)', fontWeight: 500 }}
+                      >
                         {pr.prNumber}
                       </td>
                       <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -243,7 +266,10 @@ export function PRSelectionPage() {
                       <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
                         {pr.vendorName}
                       </td>
-                      <td className="px-6 py-4 text-center" style={{ color: 'var(--color-mercury-grey)' }}>
+                      <td
+                        className="px-6 py-4 text-center"
+                        style={{ color: 'var(--color-mercury-grey)' }}
+                      >
                         {pr.lineItems.length}
                       </td>
                       <td className="px-6 py-4 text-right" style={{ color: 'var(--color-ink)' }}>
@@ -267,7 +293,10 @@ export function PRSelectionPage() {
       </div>
 
       {/* Helper Text */}
-      <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+      <div
+        className="mt-6 p-4 rounded-lg"
+        style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
+      >
         <div style={{ color: 'var(--color-ink)', fontWeight: 500, marginBottom: '8px' }}>
           Selection Guidelines:
         </div>

@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Search, Shield, AlertTriangle, Edit, Trash2, CheckCircle,
-  XCircle, Settings, User, History
+  Plus,
+  Search,
+  Shield,
+  AlertTriangle,
+  Edit,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  Settings,
+  User,
+  History,
 } from 'lucide-react';
 import { useBudgetData, BudgetPolicy, ControlType } from '../contexts/BudgetDataContext';
 
@@ -23,16 +32,16 @@ export function BudgetPolicies() {
   const [alertRecipients, setAlertRecipients] = useState('');
   const [overridePermissions, setOverridePermissions] = useState<string[]>([]);
 
-  const filteredPolicies = policies.filter(p =>
+  const filteredPolicies = policies.filter((p) =>
     p.policyName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const stats = {
     totalPolicies: policies.length,
-    active: policies.filter(p => p.isActive).length,
-    inactive: policies.filter(p => !p.isActive).length,
-    hardStop: policies.filter(p => p.controlType === 'Hard Stop').length,
-    softWarning: policies.filter(p => p.controlType === 'Soft Warning').length
+    active: policies.filter((p) => p.isActive).length,
+    inactive: policies.filter((p) => !p.isActive).length,
+    hardStop: policies.filter((p) => p.controlType === 'Hard Stop').length,
+    softWarning: policies.filter((p) => p.controlType === 'Soft Warning').length,
   };
 
   const handleCreatePolicy = () => {
@@ -49,13 +58,16 @@ export function BudgetPolicies() {
       applicableDimensions: {
         department: department || undefined,
         costCentre: costCentre || undefined,
-        expenseCategory: expenseCategory || undefined
+        expenseCategory: expenseCategory || undefined,
       },
       overridePermissions,
-      alertRecipients: alertRecipients.split(',').map(e => e.trim()).filter(e => e),
+      alertRecipients: alertRecipients
+        .split(',')
+        .map((e) => e.trim())
+        .filter((e) => e),
       isActive: true,
       createdBy: 'Current User',
-      createdDate: new Date().toISOString().split('T')[0]
+      createdDate: new Date().toISOString().split('T')[0],
     };
 
     addPolicy(newPolicy);
@@ -79,17 +91,23 @@ export function BudgetPolicies() {
 
   const getControlTypeColor = (type: ControlType) => {
     switch (type) {
-      case 'Hard Stop': return 'bg-red-100 text-red-700';
-      case 'Soft Warning': return 'bg-yellow-100 text-yellow-700';
-      case 'Advisory': return 'bg-blue-100 text-blue-700';
+      case 'Hard Stop':
+        return 'bg-red-100 text-red-700';
+      case 'Soft Warning':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'Advisory':
+        return 'bg-blue-100 text-blue-700';
     }
   };
 
   const getControlTypeIcon = (type: ControlType) => {
     switch (type) {
-      case 'Hard Stop': return <XCircle className="w-4 h-4" />;
-      case 'Soft Warning': return <AlertTriangle className="w-4 h-4" />;
-      case 'Advisory': return <CheckCircle className="w-4 h-4" />;
+      case 'Hard Stop':
+        return <XCircle className="w-4 h-4" />;
+      case 'Soft Warning':
+        return <AlertTriangle className="w-4 h-4" />;
+      case 'Advisory':
+        return <CheckCircle className="w-4 h-4" />;
     }
   };
 
@@ -101,7 +119,9 @@ export function BudgetPolicies() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-[var(--color-ink)]">Budget Policies & Controls</h1>
-              <p className="text-[var(--color-mercury-grey)] text-sm">Configure budget control policies and enforcement rules</p>
+              <p className="text-[var(--color-mercury-grey)] text-sm">
+                Configure budget control policies and enforcement rules
+              </p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
@@ -178,25 +198,45 @@ export function BudgetPolicies() {
             <table className="w-full">
               <thead className="bg-[var(--color-cloud)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Policy Name</th>
-                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Control Type</th>
-                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Threshold</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Applicable To</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Override Permissions</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Alert Recipients</th>
-                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Status</th>
-                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Policy Name
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Control Type
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Threshold
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Applicable To
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Override Permissions
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Alert Recipients
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-silver)]">
-                {filteredPolicies.map(policy => (
+                {filteredPolicies.map((policy) => (
                   <tr key={policy.id} className="hover:bg-[var(--color-cloud)]">
                     <td className="px-4 py-3">
                       <div className="text-[var(--color-ink)]">{policy.policyName}</div>
-                      <div className="text-xs text-[var(--color-mercury-grey)] mt-1">{policy.id}</div>
+                      <div className="text-xs text-[var(--color-mercury-grey)] mt-1">
+                        {policy.id}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${getControlTypeColor(policy.controlType)}`}>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${getControlTypeColor(policy.controlType)}`}
+                      >
                         {getControlTypeIcon(policy.controlType)}
                         {policy.controlType}
                       </span>
@@ -204,40 +244,53 @@ export function BudgetPolicies() {
                     <td className="px-4 py-3 text-center">
                       <div className="inline-flex items-center gap-2">
                         <div className="w-20 bg-[var(--color-silver)] rounded-full h-2">
-                          <div 
+                          <div
                             className={`h-2 rounded-full ${
-                              policy.controlType === 'Hard Stop' ? 'bg-red-500' :
-                              policy.controlType === 'Soft Warning' ? 'bg-yellow-500' :
-                              'bg-blue-500'
+                              policy.controlType === 'Hard Stop'
+                                ? 'bg-red-500'
+                                : policy.controlType === 'Soft Warning'
+                                  ? 'bg-yellow-500'
+                                  : 'bg-blue-500'
                             }`}
                             style={{ width: `${policy.thresholdPercent}%` }}
                           ></div>
                         </div>
-                        <span className="text-sm text-[var(--color-ink)]">{policy.thresholdPercent}%</span>
+                        <span className="text-sm text-[var(--color-ink)]">
+                          {policy.thresholdPercent}%
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="space-y-1 text-sm">
                         {policy.applicableDimensions.department && (
-                          <div className="text-[var(--color-ink)]">Dept: {policy.applicableDimensions.department}</div>
+                          <div className="text-[var(--color-ink)]">
+                            Dept: {policy.applicableDimensions.department}
+                          </div>
                         )}
                         {policy.applicableDimensions.costCentre && (
-                          <div className="text-[var(--color-mercury-grey)]">CC: {policy.applicableDimensions.costCentre}</div>
+                          <div className="text-[var(--color-mercury-grey)]">
+                            CC: {policy.applicableDimensions.costCentre}
+                          </div>
                         )}
                         {policy.applicableDimensions.expenseCategory && (
-                          <div className="text-[var(--color-mercury-grey)]">Category: {policy.applicableDimensions.expenseCategory}</div>
+                          <div className="text-[var(--color-mercury-grey)]">
+                            Category: {policy.applicableDimensions.expenseCategory}
+                          </div>
                         )}
-                        {!policy.applicableDimensions.department && 
-                         !policy.applicableDimensions.costCentre && 
-                         !policy.applicableDimensions.expenseCategory && (
-                          <span className="text-[var(--color-mercury-grey)]">Global</span>
-                        )}
+                        {!policy.applicableDimensions.department &&
+                          !policy.applicableDimensions.costCentre &&
+                          !policy.applicableDimensions.expenseCategory && (
+                            <span className="text-[var(--color-mercury-grey)]">Global</span>
+                          )}
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {policy.overridePermissions.map((perm, idx) => (
-                          <span key={idx} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                          <span
+                            key={idx}
+                            className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs"
+                          >
                             {perm}
                           </span>
                         ))}
@@ -256,12 +309,16 @@ export function BudgetPolicies() {
                         onClick={() => togglePolicyStatus(policy.id, policy.isActive)}
                         className="relative inline-flex items-center"
                       >
-                        <div className={`w-10 h-5 rounded-full transition-colors ${
-                          policy.isActive ? 'bg-green-500' : 'bg-[var(--color-silver)]'
-                        }`}>
-                          <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform transform ${
-                            policy.isActive ? 'translate-x-5' : 'translate-x-0.5'
-                          } mt-0.5`}></div>
+                        <div
+                          className={`w-10 h-5 rounded-full transition-colors ${
+                            policy.isActive ? 'bg-green-500' : 'bg-[var(--color-silver)]'
+                          }`}
+                        >
+                          <div
+                            className={`w-4 h-4 bg-white rounded-full shadow transition-transform transform ${
+                              policy.isActive ? 'translate-x-5' : 'translate-x-0.5'
+                            } mt-0.5`}
+                          ></div>
                         </div>
                       </button>
                     </td>
@@ -288,12 +345,16 @@ export function BudgetPolicies() {
             <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
               <div className="px-6 py-4 border-b border-[var(--color-silver)]">
                 <h2 className="text-[var(--color-ink)]">Create Budget Policy</h2>
-                <p className="text-sm text-[var(--color-mercury-grey)] mt-1">Configure budget control and enforcement rules</p>
+                <p className="text-sm text-[var(--color-mercury-grey)] mt-1">
+                  Configure budget control and enforcement rules
+                </p>
               </div>
 
               <div className="px-6 py-4 space-y-4">
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Policy Name <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Policy Name <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <input
                     type="text"
                     value={policyName}
@@ -305,7 +366,9 @@ export function BudgetPolicies() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-[var(--color-ink)] mb-2">Control Type <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">
+                      Control Type <span style={{ color: 'var(--color-error)' }}>*</span>
+                    </label>
                     <select
                       value={controlType}
                       onChange={(e) => setControlType(e.target.value as ControlType)}
@@ -318,7 +381,9 @@ export function BudgetPolicies() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-[var(--color-ink)] mb-2">Threshold Percentage <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">
+                      Threshold Percentage <span style={{ color: 'var(--color-error)' }}>*</span>
+                    </label>
                     <div className="flex items-center gap-3">
                       <input
                         type="range"
@@ -349,7 +414,9 @@ export function BudgetPolicies() {
 
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm text-[var(--color-ink)] mb-2">Department</label>
+                      <label className="block text-sm text-[var(--color-ink)] mb-2">
+                        Department
+                      </label>
                       <select
                         value={department}
                         onChange={(e) => setDepartment(e.target.value)}
@@ -365,7 +432,9 @@ export function BudgetPolicies() {
                     </div>
 
                     <div>
-                      <label className="block text-sm text-[var(--color-ink)] mb-2">Cost Centre</label>
+                      <label className="block text-sm text-[var(--color-ink)] mb-2">
+                        Cost Centre
+                      </label>
                       <input
                         type="text"
                         value={costCentre}
@@ -376,7 +445,9 @@ export function BudgetPolicies() {
                     </div>
 
                     <div>
-                      <label className="block text-sm text-[var(--color-ink)] mb-2">Expense Category</label>
+                      <label className="block text-sm text-[var(--color-ink)] mb-2">
+                        Expense Category
+                      </label>
                       <select
                         value={expenseCategory}
                         onChange={(e) => setExpenseCategory(e.target.value)}
@@ -393,30 +464,41 @@ export function BudgetPolicies() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Override Permissions</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Override Permissions
+                  </label>
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {['CFO', 'Finance Manager', 'Department Head', 'Procurement Head'].map(role => (
-                      <label key={role} className="flex items-center gap-2 px-3 py-2 border border-[var(--color-silver)] rounded-lg cursor-pointer hover:bg-[var(--color-cloud)]">
-                        <input
-                          type="checkbox"
-                          checked={overridePermissions.includes(role)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setOverridePermissions([...overridePermissions, role]);
-                            } else {
-                              setOverridePermissions(overridePermissions.filter(p => p !== role));
-                            }
-                          }}
-                          className="rounded text-[var(--color-teal)] focus:ring-[var(--color-teal)]"
-                        />
-                        <span className="text-sm text-[var(--color-ink)]">{role}</span>
-                      </label>
-                    ))}
+                    {['CFO', 'Finance Manager', 'Department Head', 'Procurement Head'].map(
+                      (role) => (
+                        <label
+                          key={role}
+                          className="flex items-center gap-2 px-3 py-2 border border-[var(--color-silver)] rounded-lg cursor-pointer hover:bg-[var(--color-cloud)]"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={overridePermissions.includes(role)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setOverridePermissions([...overridePermissions, role]);
+                              } else {
+                                setOverridePermissions(
+                                  overridePermissions.filter((p) => p !== role)
+                                );
+                              }
+                            }}
+                            className="rounded text-[var(--color-teal)] focus:ring-[var(--color-teal)]"
+                          />
+                          <span className="text-sm text-[var(--color-ink)]">{role}</span>
+                        </label>
+                      )
+                    )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Alert Recipients (comma-separated emails)</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Alert Recipients (comma-separated emails)
+                  </label>
                   <textarea
                     value={alertRecipients}
                     onChange={(e) => setAlertRecipients(e.target.value)}
@@ -426,11 +508,15 @@ export function BudgetPolicies() {
                   />
                 </div>
 
-                <div className={`rounded-lg border p-4 ${
-                  controlType === 'Hard Stop' ? 'bg-red-50 border-red-200' :
-                  controlType === 'Soft Warning' ? 'bg-yellow-50 border-yellow-200' :
-                  'bg-blue-50 border-blue-200'
-                }`}>
+                <div
+                  className={`rounded-lg border p-4 ${
+                    controlType === 'Hard Stop'
+                      ? 'bg-red-50 border-red-200'
+                      : controlType === 'Soft Warning'
+                        ? 'bg-yellow-50 border-yellow-200'
+                        : 'bg-blue-50 border-blue-200'
+                  }`}
+                >
                   <div className="flex items-start gap-3">
                     {controlType === 'Hard Stop' ? (
                       <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
@@ -440,19 +526,32 @@ export function BudgetPolicies() {
                       <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                     )}
                     <div>
-                      <h4 className={
-                        controlType === 'Hard Stop' ? 'text-red-900' :
-                        controlType === 'Soft Warning' ? 'text-yellow-900' :
-                        'text-blue-900'
-                      }>{controlType} Policy Behavior</h4>
-                      <p className={`text-sm mt-1 ${
-                        controlType === 'Hard Stop' ? 'text-red-700' :
-                        controlType === 'Soft Warning' ? 'text-yellow-700' :
-                        'text-blue-700'
-                      }`}>
-                        {controlType === 'Hard Stop' && 'PO creation will be completely blocked when budget utilization reaches the threshold. No overrides permitted unless user has override permissions.'}
-                        {controlType === 'Soft Warning' && 'Warning message will be shown when threshold is reached, but users with override permissions can proceed after confirmation.'}
-                        {controlType === 'Advisory' && 'Informational message only - no restrictions on PO creation. Used for monitoring and awareness purposes.'}
+                      <h4
+                        className={
+                          controlType === 'Hard Stop'
+                            ? 'text-red-900'
+                            : controlType === 'Soft Warning'
+                              ? 'text-yellow-900'
+                              : 'text-blue-900'
+                        }
+                      >
+                        {controlType} Policy Behavior
+                      </h4>
+                      <p
+                        className={`text-sm mt-1 ${
+                          controlType === 'Hard Stop'
+                            ? 'text-red-700'
+                            : controlType === 'Soft Warning'
+                              ? 'text-yellow-700'
+                              : 'text-blue-700'
+                        }`}
+                      >
+                        {controlType === 'Hard Stop' &&
+                          'PO creation will be completely blocked when budget utilization reaches the threshold. No overrides permitted unless user has override permissions.'}
+                        {controlType === 'Soft Warning' &&
+                          'Warning message will be shown when threshold is reached, but users with override permissions can proceed after confirmation.'}
+                        {controlType === 'Advisory' &&
+                          'Informational message only - no restrictions on PO creation. Used for monitoring and awareness purposes.'}
                       </p>
                     </div>
                   </div>
@@ -484,11 +583,24 @@ export function BudgetPolicies() {
             <div>
               <h4 className="text-blue-900 mb-2">Budget Policy Guidelines</h4>
               <ul className="text-sm text-blue-700 space-y-1">
-                <li>• <strong>Hard Stop:</strong> Completely blocks PO creation when threshold is reached</li>
-                <li>• <strong>Soft Warning:</strong> Shows warning but allows override with proper permissions</li>
-                <li>• <strong>Advisory:</strong> Informational only, does not restrict PO creation</li>
-                <li>• Policies can be applied globally or to specific dimensions (department, cost centre, category)</li>
-                <li>• All policy changes are logged with user and timestamp for audit compliance</li>
+                <li>
+                  • <strong>Hard Stop:</strong> Completely blocks PO creation when threshold is
+                  reached
+                </li>
+                <li>
+                  • <strong>Soft Warning:</strong> Shows warning but allows override with proper
+                  permissions
+                </li>
+                <li>
+                  • <strong>Advisory:</strong> Informational only, does not restrict PO creation
+                </li>
+                <li>
+                  • Policies can be applied globally or to specific dimensions (department, cost
+                  centre, category)
+                </li>
+                <li>
+                  • All policy changes are logged with user and timestamp for audit compliance
+                </li>
                 <li>• Active policies are immediately enforced in real-time during PO creation</li>
               </ul>
             </div>

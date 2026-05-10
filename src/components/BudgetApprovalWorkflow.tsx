@@ -1,8 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search, Filter, CheckCircle, XCircle, Clock, AlertCircle,
-  Eye, ThumbsUp, ThumbsDown, MessageSquare, Calendar, User
+  Search,
+  Filter,
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Eye,
+  ThumbsUp,
+  ThumbsDown,
+  MessageSquare,
+  Calendar,
+  User,
 } from 'lucide-react';
 import { useBudgetData } from '../contexts/BudgetDataContext';
 
@@ -15,38 +25,48 @@ export function BudgetApprovalWorkflow() {
   const [selectedBudget, setSelectedBudget] = useState<string | null>(null);
 
   // Filter budgets in approval process
-  const approvalBudgets = budgets.filter(b => 
-    ['Submitted', 'In Approval'].includes(b.status) &&
-    (statusFilter === 'all' || b.status === statusFilter) &&
-    (b.budgetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     b.budgetNumber.toLowerCase().includes(searchTerm.toLowerCase()))
+  const approvalBudgets = budgets.filter(
+    (b) =>
+      ['Submitted', 'In Approval'].includes(b.status) &&
+      (statusFilter === 'all' || b.status === statusFilter) &&
+      (b.budgetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.budgetNumber.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const stats = {
-    pending: budgets.filter(b => b.status === 'Submitted' || b.status === 'In Approval').length,
-    approved: budgets.filter(b => b.status === 'Approved').length,
-    rejected: budgets.filter(b => b.status === 'Rejected').length,
-    overdue: budgets.filter(b => 
-      (b.status === 'Submitted' || b.status === 'In Approval') &&
-      b.approvalWorkflow.some(step => step.status === 'Pending' && step.overdue)
-    ).length
+    pending: budgets.filter((b) => b.status === 'Submitted' || b.status === 'In Approval').length,
+    approved: budgets.filter((b) => b.status === 'Approved').length,
+    rejected: budgets.filter((b) => b.status === 'Rejected').length,
+    overdue: budgets.filter(
+      (b) =>
+        (b.status === 'Submitted' || b.status === 'In Approval') &&
+        b.approvalWorkflow.some((step) => step.status === 'Pending' && step.overdue)
+    ).length,
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Approved': return 'bg-green-100 text-green-700';
-      case 'Rejected': return 'bg-red-100 text-red-700';
-      case 'Pending': return 'bg-yellow-100 text-yellow-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'Approved':
+        return 'bg-green-100 text-green-700';
+      case 'Rejected':
+        return 'bg-red-100 text-red-700';
+      case 'Pending':
+        return 'bg-yellow-100 text-yellow-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'Approved': return <CheckCircle className="w-4 h-4" />;
-      case 'Rejected': return <XCircle className="w-4 h-4" />;
-      case 'Pending': return <Clock className="w-4 h-4" />;
-      default: return <AlertCircle className="w-4 h-4" />;
+      case 'Approved':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'Rejected':
+        return <XCircle className="w-4 h-4" />;
+      case 'Pending':
+        return <Clock className="w-4 h-4" />;
+      default:
+        return <AlertCircle className="w-4 h-4" />;
     }
   };
 
@@ -57,7 +77,9 @@ export function BudgetApprovalWorkflow() {
         <div className="px-6 py-4">
           <div>
             <h1 className="text-[var(--color-ink)]">Budget Approval Workflow</h1>
-            <p className="text-[var(--color-mercury-grey)] text-sm">Multi-level approval tracking with SLA monitoring</p>
+            <p className="text-[var(--color-mercury-grey)] text-sm">
+              Multi-level approval tracking with SLA monitoring
+            </p>
           </div>
         </div>
       </div>
@@ -72,7 +94,7 @@ export function BudgetApprovalWorkflow() {
             </div>
             <div className="text-2xl text-[var(--color-ink)]">{stats.pending}</div>
           </div>
-          
+
           <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-[var(--color-mercury-grey)]">Approved</span>
@@ -80,7 +102,7 @@ export function BudgetApprovalWorkflow() {
             </div>
             <div className="text-2xl text-[var(--color-ink)]">{stats.approved}</div>
           </div>
-          
+
           <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-[var(--color-mercury-grey)]">Rejected</span>
@@ -88,7 +110,7 @@ export function BudgetApprovalWorkflow() {
             </div>
             <div className="text-2xl text-[var(--color-ink)]">{stats.rejected}</div>
           </div>
-          
+
           <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-[var(--color-mercury-grey)]">Overdue SLA</span>
@@ -128,15 +150,20 @@ export function BudgetApprovalWorkflow() {
 
         {/* Budgets List */}
         <div className="grid grid-cols-1 gap-4 mb-6">
-          {approvalBudgets.map(budget => (
-            <div key={budget.id} className="bg-white rounded-lg border border-[var(--color-silver)] overflow-hidden">
+          {approvalBudgets.map((budget) => (
+            <div
+              key={budget.id}
+              className="bg-white rounded-lg border border-[var(--color-silver)] overflow-hidden"
+            >
               {/* Budget Header */}
               <div className="px-6 py-4 border-b border-[var(--color-silver)] bg-[var(--color-cloud)]">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-[var(--color-ink)]">{budget.budgetName}</h3>
-                      <span className={`px-2 py-1 rounded text-xs ${getStatusColor(budget.status)}`}>
+                      <span
+                        className={`px-2 py-1 rounded text-xs ${getStatusColor(budget.status)}`}
+                      >
                         {budget.status}
                       </span>
                     </div>
@@ -145,13 +172,17 @@ export function BudgetApprovalWorkflow() {
                       <span>•</span>
                       <span>{budget.financialYear}</span>
                       <span>•</span>
-                      <span>{budget.currency} {budget.totalAmount.toLocaleString()}</span>
+                      <span>
+                        {budget.currency} {budget.totalAmount.toLocaleString()}
+                      </span>
                       <span>•</span>
                       <span>{budget.dimensions.department}</span>
                     </div>
                   </div>
                   <button
-                    onClick={() => setSelectedBudget(selectedBudget === budget.id ? null : budget.id)}
+                    onClick={() =>
+                      setSelectedBudget(selectedBudget === budget.id ? null : budget.id)
+                    }
                     className="px-3 py-2 border border-[var(--color-silver)] rounded-lg hover:bg-white transition-colors flex items-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
@@ -172,12 +203,17 @@ export function BudgetApprovalWorkflow() {
                       {budget.approvalWorkflow.map((step, index) => (
                         <div key={index} className="relative flex gap-4">
                           {/* Step Icon */}
-                          <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center border-2 ${
-                            step.status === 'Approved' ? 'bg-green-100 border-green-500' :
-                            step.status === 'Rejected' ? 'bg-red-100 border-red-500' :
-                            step.overdue ? 'bg-red-100 border-red-500' :
-                            'bg-yellow-100 border-yellow-500'
-                          }`}>
+                          <div
+                            className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center border-2 ${
+                              step.status === 'Approved'
+                                ? 'bg-green-100 border-green-500'
+                                : step.status === 'Rejected'
+                                  ? 'bg-red-100 border-red-500'
+                                  : step.overdue
+                                    ? 'bg-red-100 border-red-500'
+                                    : 'bg-yellow-100 border-yellow-500'
+                            }`}
+                          >
                             {getStatusIcon(step.status)}
                           </div>
 
@@ -186,7 +222,9 @@ export function BudgetApprovalWorkflow() {
                             <div className="flex items-start justify-between mb-3">
                               <div>
                                 <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="text-[var(--color-ink)]">Level {step.level}: {step.approverRole}</h4>
+                                  <h4 className="text-[var(--color-ink)]">
+                                    Level {step.level}: {step.approverRole}
+                                  </h4>
                                   {step.overdue && (
                                     <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs">
                                       Overdue
@@ -198,7 +236,9 @@ export function BudgetApprovalWorkflow() {
                                   <span>{step.approver}</span>
                                 </div>
                               </div>
-                              <span className={`px-3 py-1 rounded text-sm ${getStatusColor(step.status)}`}>
+                              <span
+                                className={`px-3 py-1 rounded text-sm ${getStatusColor(step.status)}`}
+                              >
                                 {step.status}
                               </span>
                             </div>
@@ -208,7 +248,11 @@ export function BudgetApprovalWorkflow() {
                                 <p className="text-[var(--color-mercury-grey)] mb-1">SLA Due</p>
                                 <div className="flex items-center gap-2">
                                   <Calendar className="w-4 h-4 text-[var(--color-mercury-grey)]" />
-                                  <span className={step.overdue ? 'text-red-600' : 'text-[var(--color-ink)]'}>
+                                  <span
+                                    className={
+                                      step.overdue ? 'text-red-600' : 'text-[var(--color-ink)]'
+                                    }
+                                  >
                                     {step.slaDue}
                                   </span>
                                 </div>
@@ -219,7 +263,9 @@ export function BudgetApprovalWorkflow() {
                               </div>
                               <div>
                                 <p className="text-[var(--color-mercury-grey)] mb-1">Action Date</p>
-                                <span className="text-[var(--color-ink)]">{step.actionDate || 'Pending'}</span>
+                                <span className="text-[var(--color-ink)]">
+                                  {step.actionDate || 'Pending'}
+                                </span>
                               </div>
                             </div>
 
@@ -228,8 +274,12 @@ export function BudgetApprovalWorkflow() {
                                 <div className="flex items-start gap-2">
                                   <MessageSquare className="w-4 h-4 text-[var(--color-mercury-grey)] mt-0.5" />
                                   <div>
-                                    <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Comments</p>
-                                    <p className="text-sm text-[var(--color-ink)]">{step.comments}</p>
+                                    <p className="text-xs text-[var(--color-mercury-grey)] mb-1">
+                                      Comments
+                                    </p>
+                                    <p className="text-sm text-[var(--color-ink)]">
+                                      {step.comments}
+                                    </p>
                                   </div>
                                 </div>
                               </div>
@@ -265,8 +315,10 @@ export function BudgetApprovalWorkflow() {
                       <div className="flex-1">
                         <h4 className="text-blue-900 mb-1">Approval Workflow Summary</h4>
                         <p className="text-sm text-blue-700">
-                          This budget requires {budget.approvalWorkflow.length}-level approval. 
-                          {' '}Current status: {budget.approvalWorkflow.filter(s => s.status === 'Approved').length} of {budget.approvalWorkflow.length} approvals completed.
+                          This budget requires {budget.approvalWorkflow.length}-level approval.{' '}
+                          Current status:{' '}
+                          {budget.approvalWorkflow.filter((s) => s.status === 'Approved').length} of{' '}
+                          {budget.approvalWorkflow.length} approvals completed.
                         </p>
                       </div>
                     </div>
@@ -283,7 +335,9 @@ export function BudgetApprovalWorkflow() {
             <CheckCircle className="w-12 h-12 mx-auto mb-3 text-[var(--color-mercury-grey)] opacity-50" />
             <p className="text-[var(--color-mercury-grey)] mb-1">No budgets pending approval</p>
             <p className="text-sm text-[var(--color-mercury-grey)]">
-              {searchTerm ? 'Try adjusting your search criteria' : 'All budgets are either approved or in draft status'}
+              {searchTerm
+                ? 'Try adjusting your search criteria'
+                : 'All budgets are either approved or in draft status'}
             </p>
           </div>
         )}

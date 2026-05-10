@@ -1,0 +1,259 @@
+# Procinix S2P — Claude Code Context (rolling memory)
+
+## Project context (locked-in facts)
+
+- **Name:** procinix-p2p-automation-erp — P2P/S2P ERP for Indian mid-market AP automation
+- **Stack:** React 18 + Vite 6 + TS frontend, Node ESM raw `http.createServer`, Azure MySQL, Gemini OCR, Anthropic Claude agents, IMAP/SMTP, node-cron
+- **Server entry:** `server/index.mjs` (4 092+ lines, all routes inline — **DO NOT add more inline routes**; new routes go into `server/routes/<domain>.mjs` once we start the split)
+- **Frontend API client invariant:** paths passed to `mysqlApiRequest()` start with `/<route>` NOT `/api/<route>`. `VITE_API_BASE_URL` already ends with `/api`
+- **Multi-tenant:** every AP endpoint requires `X-Tenant-Id` header. `tenantId` comes from `AuthContext` after login
+- **Dev ports:** Vite on `:3000` (per `vite.config.ts`). API server on `:8787`. Any doc that says 5173 is wrong
+- **`xlsx`** pinned to npm registry `^0.18.5` (CDN URL removed in Tier-0 B6 pass)
+- **Tests:** `npm test` (vitest run, no watch). 17 test files, 359 tests
+- **Auth:** session-token based. Login calls `POST /api/auth/login`, token stored in `sessionStorage['procinix.session.token']`. Reload rehydrates via `GET /api/auth/me`.
+
+## Commands
+
+```bash
+npm run dev               # API server + Vite (concurrently, recommended)
+npm run server:mysql      # API server only
+npm run dev:web           # Vite only
+npm test                  # vitest run (all unit tests)
+npm run typecheck         # tsc --noEmit (frontend only)
+npm run build             # Vite prod build → build/
+npm run start             # Prod: serve API + static from build/
+npm run migrate:tenant-schema  # Apply multi-tenancy migration
+npm run lint              # ESLint (zero errors target; warnings OK until F4)
+npm run lint:fix          # ESLint with --fix
+npm run format            # Prettier --write (auto-fix)
+npm run format:check      # Prettier --check (CI gate)
+```
+
+## Key Files
+
+| File                                      | Purpose                                                                                               |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `server/index.mjs`                        | 4 092-line monolith — all API routes as inline if/else                                                |
+| `server/mysql.mjs`                        | MySQL connection pool + `query`, `withTransaction`, `connExecute` helpers                             |
+| `server/masterStorage.mjs`                | Registry of 30+ master table names → DB/table mapping                                                 |
+| `server/services/agents/orchestrator.mjs` | Agent pipeline: intake → extraction → vendor → dup → match → tax → coding → routing + retry scheduler |
+| `src/lib/mysql/client.ts`                 | `mysqlApiRequest(path)` — the frontend API client                                                     |
+| `src/lib/mysql/documentStore.ts`          | `ensureDomainDocument('domain', fallback)` — JSON blob store                                          |
+| `src/lib/paymentsApi.ts`                  | Payments dashboard + batch API helpers                                                                |
+| `server/routes/auth.mjs`                  | Auth routes — `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`                     |
+| `server/services/auth/loginService.mjs`   | `authenticateUser`, `createSession`, `lookupSession`, `fetchContext`, `getUserById`, `revokeSession`  |
+| `src/contexts/AuthContext.tsx`            | Session-token login, `/auth/me` rehydration, `useAuth()` hook                                         |
+| `src/contexts/APDataContext.tsx`          | Invoice list fetched from `/api/invoices`                                                             |
+| `src/App.tsx`                             | React Router route tree                                                                               |
+| `sql/mysql/init.sql`                      | Base schema (item*master + erp_master*\* tables)                                                      |
+| `sql/mysql/migrations/`                   | 14 date-prefixed migration SQL files                                                                  |
+
+## API Auth
+
+All endpoints require `Authorization: Bearer <API_SECRET_KEY>`. If `API_SECRET_KEY` unset, auth is **disabled** (dev footgun — see B3). AP endpoints additionally require `X-Tenant-Id` header.
+
+## Data Sources
+
+| Source             | What lives there                                                              |
+| ------------------ | ----------------------------------------------------------------------------- |
+| **Real MySQL**     | invoices, vendors, master data, payment batches, auth, KPIs                   |
+| **Domain doc**     | PR, PO, GRN, Advances, Debit Notes, Budget (JSON blobs in `domain_documents`) |
+| **Mock/hardcoded** | `EntityTransactionData.tsx`, `DemoVendorDataset.ts` (demo only)               |
+
+## Agent pipeline (orchestrator.mjs)
+
+8 sequential steps: intake → extraction → vendorIdentity → duplicateFraud → match → taxCompliance → coding → workflowRouting.
+
+Steps 3-8 each wrapped in try/catch (`makeStepRunner`): one failing step uses a safe fallback and continues — does **not** abort the pipeline. Failures are recorded to `invoice_exceptions` (type `AGENT_FAILURE`).
+
+Retry mechanism: `agent_retry_queue` table (CREATE TABLE IF NOT EXISTS). On failure, `scheduleRetry()` upserts a row. `startAgentRetryScheduler()` (started at server boot) calls `processRetryQueue()` every 30 s. Max `MAX_AGENT_RETRIES = 3` attempts with backoff (30 s, 2 min, 10 min). On exhaustion: invoice → `processing_status='agent_failed'`, alert email to `ALERTS_EMAIL || MAIL_FROM`.
+
+Manual retry: `POST /api/invoice-ingestion/agent-retry/:invoiceId` → calls `resetAndRequeueInvoice(invoiceId)`.
+
+Structured metrics: each agent run emits `JSON.stringify({ event: 'agent_run', invoice_id, agent, duration_ms, status, attempt, ts })` to stdout.
+
+## AP Endpoints (require `X-Tenant-Id`)
+
+```
+GET  /api/invoices                    full invoice list (lifecycle + payment progress)
+GET  /api/ap/payments-dashboard       KPIs + invoice list
+GET  /api/ap/payable-invoices         invoices ready for payment
+GET  /api/ap/payment-batches          batch list
+POST /api/ap/payment-batches          create batch
+POST /api/ap/payment-batches/:id/submit|approve|reject|execute
+POST /api/invoice-ingestion/agent-retry/:invoiceId    manual agent retry
+```
+
+## Module → Component Map
+
+| Module/Page              | Component                 |
+| ------------------------ | ------------------------- |
+| APInvoices.tsx           | Invoices.tsx              |
+| APPayments.tsx           | PaymentsDashboard.tsx     |
+| InvoicesModule.tsx       | Invoices.tsx              |
+| PaymentsModule.tsx       | PaymentsDashboard.tsx     |
+| VendorAdvancesModule.tsx | AdvancesHub.tsx           |
+| PurchaseOrderModule.tsx  | PurchaseOrders.tsx        |
+| IntakePRModule.tsx       | procurement/PRListing.tsx |
+
+## Tests
+
+```
+src/utils/__tests__/                        4 tests (GST, TDS, journal entries, BOE)
+server/services/invoices/__tests__/         7 tests (lifecycle, GST, TDS, vendor ledger)
+server/services/agents/__tests__/           2 test files: matchAgent + orchestratorRetry (12 tests)
+server/services/auth/__tests__/             1 test file: loginService (21 tests)
+server/__tests__/                           1 test file: loginRoute (24 tests)
+Total: 17 test files, 359 tests
+```
+
+No integration tests, no E2E tests, no component tests.
+
+## DB State (single-tenant, May 2026)
+
+- **Tenant:** `tenant-default-001` — "Procinix S2P Platform" (code: PSTP, status: ACTIVE)
+- **Entities:**
+  - `entity-ptpl-001` — Procinix Technologies Private Limited (PTPL) · GSTIN `27AABCP1234Q1Z5` · **is_default=true**
+  - `entity-mtpl-001` — Mensbrand Technologies Private Limited (MTPL) · GSTIN `27AABCM5678Q1Z3`
+- **Users:** 5 active on `tenant-default-001`, all have access to both entities, `default_entity_id = entity-ptpl-001`. Login: `mithilesh@procinix.ai` / `Demo@123`
+- All 10 invoices on `tenant-default-001 / entity-ptpl-001`
+
+## Known issues — prioritized fix queue
+
+### Tier 0 (do first)
+
+- **B3:** refuse to boot in `NODE_ENV=production` without `API_SECRET_KEY`
+- **B6:** pin `xlsx` to a versioned npm package (no CDN URL)
+- **F2:** pin `react-router` and `react-router-dom` (currently `"*"`)
+- **F6:** move stale `.md` files out of `src/` into `docs/`
+- **W6:** reconcile port mismatch (Vite is 3000, not 5173)
+
+### Tier 1 (auth overhaul, in this order)
+
+- ~~**B2:** bcrypt-hash existing passwords in `user_master` (migration)~~ ✅ Done 2026-05-07
+- ~~**B1:** build `POST /api/auth/login` server-side~~ ✅ Done 2026-05-07
+- ~~**F1:** replace client-side password compare with `/api/auth/login` call~~ ✅ Done 2026-05-07
+
+### Tier 2 (ingestion robustness)
+
+- ~~**INV-5:** crash-safe agent pipeline (try/catch, retries, alerts)~~ ✅ Done 2026-05-07
+- ~~**INV-6:** validate API keys (`GOOGLE_AI_API_KEY`, `ANTHROPIC_API_KEY`) at startup with clear log~~ ✅ Done 2026-05-07
+- ~~**INV-7:** touchless AP routing engine (10 checks, lifecycle routing, workbench submit)~~ ✅ Done 2026-05-08
+- **INV-1, INV-2:** fix TS errors + replace bare `fetch` in `InvoiceFormPO.tsx` and `NonPOInvoiceForm.tsx`
+
+### Tier 3 (architecture)
+
+- **B4:** split 4 092-line `server/index.mjs` by domain
+- **B5:** real DB migration runner with `schema_migrations` table
+- **F4:** fix 7 TS errors then enable `strict` + `noImplicitAny`
+- **F3:** migrate remaining bare `fetch` calls (`EntityMaster.tsx`, `pages/Approvals.tsx`)
+
+### Tier 4 (quality gates)
+
+- ~~**W2:** GitHub Actions CI (typecheck + test + build on PR)~~ ✅ Done 2026-05-07
+- ~~**W3:** ESLint + Prettier baseline~~ ✅ Done 2026-05-07
+- ~~**W4:** Husky + lint-staged pre-commit~~ ✅ Done 2026-05-07
+- **W1:** integration tests for payment batches, approvals, invoice ingestion
+
+## Working conventions (MUST follow)
+
+1. Before starting any change, read `CLAUDE.md` and `DISCOVERY.md` first. Use them as ground truth.
+2. After completing any change, append a one-line entry to the **Change log** section below (date + what + file paths).
+3. After completing any change, update the "Known issues" queue: cross out completed items, add newly discovered issues.
+4. **Never add new inline routes to `server/index.mjs`** — create `server/routes/<domain>.mjs`.
+5. **Never use raw `fetch()` in frontend code** — always `mysqlApiRequest` from `src/lib/mysql/client.ts`.
+6. Never store new secrets in code or commit `.env` files. Update `.env.example` when adding env vars.
+7. Type errors are not allowed in any file you touch — fix them even if pre-existing.
+8. Every new server feature needs at least one vitest test in the matching `__tests__` folder.
+9. Multi-tenant: any new AP endpoint must require `X-Tenant-Id` and scope queries by `tenant_id`.
+10. Auth state lives in `sessionStorage` under `'procinix.session.token'`. After any auth-related code change, do a hard reload (Cmd+Shift+R) and clear sessionStorage in DevTools to test fresh login. Stale tokens from previous sessions can mask real bugs.
+11. Run `npm run lint` and `npm run format:check` before pushing. The pre-commit hook handles staged files automatically via Husky + lint-staged.
+
+## Open decisions (need human answer)
+
+- Password migration: **bcrypt** or argon2? Default to bcrypt unless told otherwise.
+- Migration runner: build minimal in-house or adopt a library? Default to minimal in-house (single-file, MySQL-native).
+- Should AR module (`src/components/ar/`) be removed or kept as stubs?
+- Vite port: confirm 3000 is the locked choice.
+- Super-admin scope: Procinix-only or customer admins too?
+- **`ReadyForPayment.tsx` deprecated 2026-05-10** — replaced by `/ap/payments/queue` (PaymentQueue.tsx). The old `/ap/ready-for-payment` route now 301-redirects to `/ap/payments/queue` via `<Navigate replace />`. Safe to hard-delete the file in the next sprint after one release cycle.
+- **`journal_entries` table** — JV writes currently fall back to `invoice_audit_log` with `change_type='JV_CREATED'`. When the GL module ships and creates the table, `jvCreator.mjs::tableExists('journal_entries')` will pick it up automatically — no code change needed.
+- **Banking Mode A (Connected)** — currently a stub: `/api/ap/banking/accounts/:id/fetch-balance` returns mock ₹, `/api/ap/banking/batches/:id/initiate` fakes UTRs. Real bank API integration (HDFC/ICICI/Axis OAuth + payment-init endpoints) is a separate workstream.
+
+## Required env vars
+
+```
+MYSQL_HOST, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD
+API_SECRET_KEY              (empty = auth disabled — see B3)
+VITE_API_BASE_URL           (= http://127.0.0.1:8787/api locally)
+GOOGLE_AI_API_KEY           (Gemini OCR)
+ANTHROPIC_API_KEY           (Claude agents)
+AP_EMAIL_HOST/USER/PASSWORD (IMAP invoice polling)
+SUPER_ADMIN_EMAILS          (super-admin console access)
+ALERTS_EMAIL                (agent failure alert recipient — falls back to MAIL_FROM)
+```
+
+## Deployment
+
+- **Railway:** `railway.json` — `npm install && npm run build` → `NODE_ENV=production node server/index.mjs`
+- **Heroku-compatible:** `Procfile` — `web: NODE_ENV=production node server/index.mjs`
+- **Health check:** `GET /health` → `{ ok: true, uptime: N }`
+
+## macOS dev note
+
+On first `npm install`, macOS Gatekeeper may block native binaries (rollup, esbuild). Fix:
+
+```bash
+xattr -dr com.apple.quarantine node_modules/
+```
+
+## Known remaining issues (pre-existing)
+
+- 7 pre-existing TS errors: `InvoiceFormPO.tsx` (3), `NonPOInvoiceForm.tsx` (1), `VendorGroupMaster.tsx` (3) — tracked as F4
+- 1138 ESLint warnings (all pre-existing in untouched files): `react/no-unescaped-entities` (45), `exhaustive-deps` (many), `no-explicit-any` (many) — tracked as F4
+- Bare `fetch('/api/...')` in `EntityMaster.tsx`, `InvoiceFormPO.tsx:222`, `pages/Approvals.tsx` — dev-only via Vite proxy, bypass `mysqlApiRequest`
+- Orphan tenant/entity rows (PTPL/Opptra) — harmless until multi-tenant testing needed
+
+## How to verify payments dashboard
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" \
+  -H "X-Tenant-Id: tenant-default-001" \
+  "http://127.0.0.1:8787/api/ap/payments-dashboard?tenantId=tenant-default-001"
+# Expected: 200
+```
+
+After login, DevTools console: `[AuthContext] post-merge user: { tenantId: 'tenant-default-001', ... }`
+
+## Change log
+
+- 2026-05-10 — Payment Settings tab (`/ap/payments/settings`) — last placeholder replaced. New `payment_settings` table (one row per tenant) with risk-flag thresholds, business hours, payment defaults, MSME warning lead time, approver-role allowlist and default payout format; auto-seeded for `tenant-default-001`. New `paymentSettings.mjs` service exposes `getSettings` (auto-creates row on first read), `updateSettings` (partial patch + enum validation), `resetSettings` (every column → defaults), `getDefaultSettings` (pure helper for fallback). Three new endpoints in `server/routes/payments.mjs`: `GET /api/ap/payment-settings` (open to any tenant member), `PUT` and `POST .../reset` both gated by `isAdmin(req)` — 403 for non-admin. **Critical**: the 12-rule risk-flag evaluator was refactored to consume live thresholds — `evaluateRiskFlags` now reads `ctx.settings` (camelCase shape from `getSettings`) and resolves a `cfg` object via the new `resolveThresholds` helper, falling back to the hardcoded `FLAG_CONFIG` when no settings provided (keeps existing tests + offline envs working). `buildPaymentQueue` and `buildSingleQueueItem` load settings once per request and pass them into both `loadEnrichmentForInvoices` (for the duplicate/splitting window) and `evaluateRiskFlags`. The previously hardcoded `% 1000 === 0` round-number check now uses `cfg.roundNumberDivisor`, and after-hours uses `cfg.businessHoursStart/End`. New `src/components/payments/PaymentSettings.tsx` (~580 lines): five cards (Risk thresholds with 7 inputs, Business hours with day-pill toggles, Payment defaults with NEFT/RTGS/IMPS/UPI radio + RTGS auto-select threshold + MSME warning lead time, Approver roles multi-select with green active-role chips, Payout format radio with descriptions). Single bottom save bar (Save changes / Reset to defaults link) only enabled when form differs from loaded snapshot. `beforeunload` listener fires browser warning on unsaved navigation. Non-admin view: full read-only with amber "Read-only view" banner — visibility preserved for discoverability. Reset has a confirmation modal. **Cleanup #1**: `ReadyForPayment.tsx` deprecated — added file-header notice; old `/ap/ready-for-payment` route now `<Navigate to="/ap/payments/queue" replace />`; `PaymentsDashboard` and `financeNavigationConfig` updated to point at the new queue. **Cleanup #2**: `PayModal` in `PaymentQueue.tsx` got a NEFT/RTGS/IMPS/UPI dropdown between UTR field and submit; auto-selects RTGS when amount > settings.rtgsThreshold (with "user-override-sticks" semantics); fetches `rtgsThreshold` and `defaultPaymentMode` from `/ap/payment-settings` on mount; pay payload now sends `paymentMode` (camelCase) + `payment_mode` (snake_case lower) for compatibility. 6 new vitest tests — GET returns defaults, PUT 403 non-admin, PUT updates `flag_bank_changed_days`, POST reset updates every column, evaluator uses DB bank_changed window, evaluator uses DB anomaly multiplier. 400 / 400 passing. Files: `sql/mysql/migrations/20260510_payment_settings.sql` (new), `server/services/payments/paymentSettings.mjs` (new), `server/routes/payments.mjs` (3 new endpoints + evaluator refactor), `src/components/payments/PaymentSettings.tsx` (new), `src/components/payments/PaymentQueue.tsx` (PayModal mode dropdown + settings fetch), `src/types/payments.ts` (`PaymentSettings` interface), `src/App.tsx` (settings route + ReadyForPayment redirect), `src/components/PaymentsDashboard.tsx` (link target), `src/config/financeNavigationConfig.ts` (link target), `src/components/ReadyForPayment.tsx` (deprecation header).
+- 2026-05-10 — Banking tab (`/ap/payments/banking`): replaces ComingSoon. Two operating modes per bank account, admin-configurable: **Mode A (Connected)** = stub for live balance + auto initiation (real bank API integration is a future sprint); **Mode B (Manual)** = generate HDFC/ICICI/Generic CSV bulk-upload payout file → upload to bank portal → ingest UTR acknowledgement → auto-create accounting JV. Three new services: `payoutFileGenerator.mjs` (HDFC pipe-delimited TXT, ICICI CSV without date column, Generic CSV with date column; CRLF line endings; pipe sanitisation), `utrIngestParser.mjs` (auto-detects pipe vs comma delimiter from first line, normalises SUCCESS/PROCESSED/COMPLETED/EXECUTED/OK → `confirmed` else `failed`), `jvCreator.mjs` (one DR Accounts Payable + one CR Bank per item, default GLs 2100/1100, persists to `journal_entries` if it exists else falls back to `invoice_audit_log` with `change_type='JV_CREATED'`). 11 new endpoints under `/api/ap/banking/*` in `server/routes/payments.mjs` — accounts CRUD + balance fetch (Mode A stub), batch list/detail, create-batch (validates lifecycle + active-flag-free), submit, approve (approver gate), reject, generate-file (Mode B), download-file (streams from `/tmp/payouts/`), upload-utr (multipart; auto-matches by client_ref; auto-creates JV for confirmed lines), initiate (Mode A stub: fakes UTRs + JV in 2-stage UPDATEs). RTGS auto-selected when batch total > ₹2L. Frontend `src/components/payments/PaymentBanking.tsx` (~960 lines): secondary tabs (Batches / Bank accounts), per-bank cards with bank-coloured logos and live-balance refresh, AccountModal with mode + format radio, eligible-invoice picker excluding flagged, batch creator with auto-RTGS, batch list with status pills, full Mode A/B detail card (5-step manual stepper with file download + UTR dropzone, single-button Mode A initiate). Migration `sql/mysql/migrations/20260510_banking.sql` adds `bank_accounts` plus `bank_payment_batches` + `bank_payment_batch_items`. **Deviation note**: spec said `payment_batches` but that name is already taken by the PaymentProposal flow with a different schema — used `bank_payment_batches`/`bank_payment_batch_items` to avoid breaking that flow. 8 new vitest cases — HDFC/ICICI generator headers + delimiters + date positions, HDFC/ICICI UTR parsers, batch creation rejects flagged invoices (400) and non-queued invoices (400), approve gate 403 for non-approver, JV creator emits 2 entries per item with default GLs. 394 / 394 passing. Files: `server/services/payments/payoutFileGenerator.mjs` (new), `server/services/payments/utrIngestParser.mjs` (new), `server/services/payments/jvCreator.mjs` (new), `server/routes/payments.mjs` (11 endpoints + helpers), `src/components/payments/PaymentBanking.tsx` (new), `src/types/payments.ts` (banking types), `src/App.tsx` (banking route → PaymentBanking).
+- 2026-05-09 — Payment Forecast tab (`/ap/payments/forecast`): replaces the ComingSoon placeholder. New `GET /api/ap/payment-forecast` endpoint in `server/routes/payments.mjs` accepts `from`, `to` (required, YYYY-MM-DD), `groupBy` (due_date/vendor/department/type/priority/msme_critical), `status` (all/unpaid/paid/partial/onhold), `entityId`. Returns `{ meta, chart, table }` — meta has totalOutflow/msmeOutflow/criticalOutflow + bankBalance:null (banking not connected); chart auto-rolls up to ISO weeks when range > 60 days; table aggregates with optional `items[]` for non-date groupings. Tenant-scoped via `X-Tenant-Id`. Frontend `src/components/payments/PaymentForecast.tsx` (~620 lines): preset date pills (This week / This month / Next 30 days / Custom), groupBy + status selects, 4-card metric strip (Total / MSME / Critical / Net cash), MSME callout banner with top-3 vendor breakdown, stacked Recharts BarChart (Critical/MSME/Standard) with INR-compact Y-axis + en-IN tooltip, expandable table with sort + per-row inline items. Empty / loading / error states. Currency helpers in new `src/lib/formatCurrency.ts` (`formatINR`, `formatINRCompact`). Forecast types added to `src/types/payments.ts`. Tests: 6 new vitest cases in `server/routes/__tests__/payments.test.mjs` — 400 on missing `from`/`to`, 400 on `from > to`, vendor grouping, department grouping, lifecycle filter (only `Queued for Payment` + `Exception Hold`), MSME-only outflow. 386 / 386 passing. Files: `server/routes/payments.mjs` (forecast handler + helpers exported), `src/components/payments/PaymentForecast.tsx` (new), `src/lib/formatCurrency.ts` (new), `src/types/payments.ts`, `src/App.tsx` (forecast route → PaymentForecast).
+- 2026-05-09 — Payment Queue + Risk Flags module: replaces ReadyForPayment with a unified queue under new `/ap/payments/queue` route. New domain route file `server/routes/payments.mjs` (registered in server/index.mjs after auth+invoices) exposes 7 endpoints — list, detail, due-date update, pay, hold toggle, clear-flags (approver-only with 403/400 gates), and flags summary. 12-rule risk-flag evaluator (bank_changed, vendor_blocked, duplicate_inv, name_mismatch, dual_approval, new_vendor, amount_anomaly, no_grn, round_number, inv_splitting, advance_no_doc, after_hours) runs on every queue fetch, persists to new `invoice_risk_flags` table, auto-holds on high-severity. Migration `sql/mysql/migrations/20260509_payment_risk_flags.sql` adds the table + invoice_audit_log columns (change_type/old_value/new_value/reason). Frontend: new `PaymentsLayout` wrapper with 5 sub-tabs (📋 Queue / 📊 Dashboard / 📈 Forecast / 🏦 Banking / ⚙ Settings) — Forecast/Banking/Settings render `<ComingSoon>` placeholder; PaymentQueue.tsx (~870 lines) with metrics row, role toggle, flagged alert banner, filter pills with live counts, sort, grouped sections (Flagged → Critical → MSME → Standard), red-bordered flagged rows, DetailDrawer with Details/Risk flags/Approval trail tabs + approver clearance panel, DueDateModal with urgency preview, PayModal with quick-fill % and partial detection. PaymentsDashboard gains a "Flagged & held" red banner that links to filtered queue. Types in `src/types/payments.ts`. Tests: 10 new vitest cases in `server/routes/__tests__/payments.test.mjs` — flag eval, approver gate, clear-flags 403/400/200, due-date audit log. Total 380 passing (was 370). Files: `server/routes/payments.mjs` (new), `server/index.mjs` (import + register), `sql/mysql/migrations/20260509_payment_risk_flags.sql` (new), `src/types/payments.ts` (new), `src/components/ComingSoon.tsx` (new), `src/components/payments/PaymentsLayout.tsx` (new), `src/components/payments/PaymentQueue.tsx` (new), `src/components/PaymentsDashboard.tsx`, `src/App.tsx` (route nesting under PaymentsLayout).
+- 2026-05-07 — added DISCOVERY.md (full codebase discovery, 15 sections)
+- 2026-05-07 — updated CLAUDE.md to rolling memory format with issue queue + conventions
+- 2026-05-07 — INV-5: crash-safe agent pipeline with per-step try/catch, bounded retry, SMTP alert, manual retry endpoint, structured metrics. Files: `server/services/agents/orchestrator.mjs`, `server/services/agents/__tests__/orchestratorRetry.test.mjs`, `sql/mysql/migrations/20260507_agent_retry_queue.sql`, `server/index.mjs` (import + route + startup), `.env.example` (ALERTS_EMAIL)
+- 2026-05-07 — macOS quarantine fix: `xattr -dr com.apple.quarantine node_modules/` clears Gatekeeper blocks on native .node binaries after npm install
+- 2026-05-07 — INV-5 done: agent pipeline crash-safe, retry queue, alerts, manual retry endpoint. Tests: 297 passing.
+- 2026-05-07 — INV-6 done: startup env validation; prod refuses to boot on missing API keys. Tests: 314 passing.
+- 2026-05-07 — Tier-0 quick wins: B6 (xlsx pinned to npm ^0.18.5), F2 (react-router/dom pinned to 7.13.0, clsx + tailwind-merge unpinned from _), F6 (54 stale src/_.md files → docs/legacy/), W6 (port 5173 ref removed from CORS comment → 3000), B3 (prod API_SECRET_KEY guard added to validateEnv + 4 new tests). Tests: 318 passing.
+- 2026-05-07 — B2+B1 done: 5 users migrated to bcrypt; POST /api/auth/login + sessions table live; first route module at server/routes/auth.mjs (B4 starts organically). Old client-side login still works in parallel until F1.
+- 2026-05-07 — F1 done: client-side password compare removed; AuthContext uses POST /api/auth/login + session token in sessionStorage; GET /api/auth/me for rehydration; POST /api/auth/logout revokes session; fetchContext/getUserById/revokeSession added to loginService; isAuthenticated always attempts session lookup even when API_SECRET_KEY unset. Files: server/services/auth/loginService.mjs, server/routes/auth.mjs, server/**tests**/loginRoute.test.mjs, server/services/auth/**tests**/loginService.test.mjs, src/lib/mysql/client.ts, src/contexts/AuthContext.tsx, server/index.mjs. Tests: 359 passing.
+- 2026-05-07 — W2+W3+W4 done: ESLint 9 flat config (eslint.config.mjs), Prettier (.prettierrc + .prettierignore), Husky pre-commit + lint-staged, GitHub Actions CI (lint + format:check + typecheck[continue-on-error] + test + build). All pre-existing violations downgraded to warn; zero lint errors. ESLint downgraded from v10→v9 (plugin-react compat). One-time format pass touched ~14 files (style only). Tests: 359 passing.
+- 2026-05-07 — F1 verified working in browser. Login flow: POST /auth/login → token in sessionStorage → /auth/me rehydrates → /auth/logout revokes. Plaintext password issue closed end-to-end.
+- 2026-05-08 — Fix payments dashboard "Demo dataset" bug: (1) refreshSession now preserves user.tenantId if /auth/me response would silently drop it (race between session INSERT and immediate /auth/me lookup after login); (2) paymentsApi.ts actorHeaders was reading localStorage['user'] (wrong storage+key) — fixed to sessionStorage['procinix.session.user']; (3) console.log('[AuthContext] post-merge user:', built) added in login() to confirm tenantId in DevTools on every login. Files: src/contexts/AuthContext.tsx, src/lib/paymentsApi.ts
+- 2026-05-08 — Applied missing migration 20260414_ocr_match_score.sql to Azure MySQL (invoice_ingestion_log: 6 new OCR score columns; ocr_field_corrections + ocr_learning_patterns tables). Was blocking all manual-upload calls with "Unknown column 'ocr_field_scores'".
+- 2026-05-08 — N8N OCR webhook response shape confirmed: returns ONLY `lineItems[]` + `payments[]` + `status` — NO header fields (invoice_number, vendor_name, vendor_gstin, invoice_date, total_amount). Each field within lineItems is nested as `{ value, confidence, suggestions }`. Fixed n8nOCR.mjs to derive total_amount/subtotal from line item sum when N8N omits them. Fixed NonPOInvoiceForm.tsx: replaced mock OCR timeout with real POST /api/invoice-ingestion/manual-upload call; added vendor lookup by GSTIN then name; maps all extracted line items (not just first); fixed pre-existing TS errors (notes/metadata on Invoice type). Files: server/services/invoiceIngestion/n8nOCR.mjs, src/components/NonPOInvoiceForm.tsx.
+- 2026-05-08 — Fix vendor approval dashboard: POST /api/vendors was not writing tenant_id (always NULL) and was not inserting into vendor_master.vendor_master (the governance table the approval dashboard reads). Fixed: extract X-Tenant-Id header → tenant_id column; when status=pending_approval mirror row into vendor_master.vendor_master with approval_status='Pending Approval'. Data fix: patched Google India (f5d8376a) tenant_id=tenant-default-001 and inserted its governance row. File: server/index.mjs (lines ~3970-4010).
+- 2026-05-08 — Invoice detail page: created src/pages/InvoiceDetail.tsx (read-only view; fetches GET /api/invoices/:id via mysqlApiRequest; shows Header+Status badge, Vendor, Invoice Details, Amounts, Line Items, Payments sections in two-column card layout; loading skeleton + error state; Back/Edit/Approve/Reject action bar). Added lazy Route `invoices/:id` in App.tsx after all specific invoices/\* routes so React Router v6 specificity rules keep create-po/create-direct/edit/:id unaffected. Fixed getInvoiceNavigationTarget() in Invoices.tsx: all invoices with an ID now navigate to /invoices/:id instead of the create form. Files: src/pages/InvoiceDetail.tsx (new), src/App.tsx, src/components/Invoices.tsx.
+- 2026-05-08 — Clean up blank invoices: deleted 8 empty `email_ingestion` rows (vendor_name/invoice_number/total_amount all null/0); added guard in `invoiceCreator.mjs` to skip INSERT when no extractable fields (returns `{success:false,reason:'insufficient_extraction'}`); APDataContext now filters those rows client-side before setState; APDataContext mapper changed from `|| 'AI-Extracted'` to `|| ''`; Invoices.tsx `invoiceDisplayRef()` helper computes fallback label from vendor initials+date or amount+date, falls back to 'AI-Extracted' only as last resort. Files: server/services/invoiceIngestion/invoiceCreator.mjs, src/contexts/APDataContext.tsx, src/components/Invoices.tsx.
+- 2026-05-08 — OCR confidence UI + N8N field mapping fix. (1) n8nOCR.mjs: fixed camelCase key mapping (N8N uses `vendorName`/`invoiceNumber`/`grossAmount`/`itemDescription`/`rate` — added `payload.X ?? payload.x` fallback); line item amount derived from qty×rate; vendor_address + bill_to_name extracted from N8N response; tax_amount derived from resolvedTotal−resolvedSubtotal when N8N omits it. (2) NonPOInvoiceForm.tsx: added OCRFieldData interface; ocrFields state populated from `extracted._raw` per-field `{value,confidence,suggestions}` objects; ocrSummary useMemo (avgConf + needsReview count); getConfidencePill() — ✓ green≥0.9 / ~ amber 0.7–0.89 / ! red<0.7; getSuggestionChips() — clickable chips below each field; enhanced OCR review modal with progress bar + toggle; "OCR applied" indicator bar above Invoice Header; Anthropic fallback gets synthetic confidence=0.88. (3) globals.css: @keyframes ocr-fadein. Files: server/services/invoiceIngestion/n8nOCR.mjs, src/components/NonPOInvoiceForm.tsx, src/styles/globals.css.
+- 2026-05-08 — Entity cleanup: replaced orphan Default/Opptra entities with PTPL (entity-ptpl-001, is_default) and MTPL (entity-mtpl-001); single tenant `tenant-default-001` renamed to "Procinix S2P Platform"; all 5 users linked to both entities; 10 invoices migrated to entity-ptpl-001; erp_master_entities updated with GSTIN/PAN/address for both.
+- 2026-05-08 — Fix entity switcher showing stale "Subko Coffee": (1) `EntityRegistry.ts` — replaced CANONICAL_ENTITIES + ENTITY_ALIAS_MAP with entity-ptpl-001/PTPL and entity-mtpl-001/MTPL; (2) `MasterDataContext.tsx` — replaced ENTITY_MASTER_DATA (was Subko/UAE/Procinix-IN) with PTPL+MTPL using DB entity IDs so getEntityById resolves correctly; (3) `AuthContext.tsx` buildUserFromApi — currentEntity now uses isDefault entity instead of authEntities[0], mustSelectPlatformEntity gate skips when a default is set; (4) DB: removed Subko from erp_master_entities. Hard refresh + re-login required to clear stale sessionStorage.
+- 2026-05-08 — Full hardcoded entity sweep: replaced ALL ENT-SUBKO-IN/ENT-SUBKO-UAE/ENT-PROCINIX-IN references → entity-ptpl-001/entity-mtpl-001 across 14 files. Files changed: MultiEntityMasterData.ts, EntityScopedTransactionData.ts (+ fixed duplicate key in TRANSACTION_DATA_SUMMARY), PurchaseRequestData.tsx, ComprehensiveMasterData.ts, EntityTransactionData.tsx, DemoVendorDataset.ts, InvoiceFormDirectV2.tsx ("Vendor Payable — PTPL (2101)"), InvoiceFormPO.tsx (EntityCurrencyBadge), APValidationWorkbench.tsx ("Procinix Technologies Pvt Ltd"), ConsolidatedReportingDashboard.tsx (2-entity mock), EmployeeMaster.tsx (baseEntity), LocationMaster.tsx (parentEntity), EnterpriseFinanceNavigationV2.tsx (nav label), DashboardLayout.tsx (JSX comment). Entity data source of truth: DB `entities` table — entity-ptpl-001 (PTPL, is_default) and entity-mtpl-001 (MTPL) only. 370 tests passing, 0 new TS errors.
+- 2026-05-08 — Touchless AP routing engine: (1) 10-check rule engine in `server/services/invoiceIngestion/touchlessEngine.mjs` (confidence≥95%, vendor in master, GSTIN format, duplicate, PO match, MSME 45-day, CFO threshold >₹10L, TDS threshold, first-time vendor, all-pass→touchless); (2) `invoiceCreator.mjs` calls engine post-insert, writes touchless/touchless_score/touchless_fail_reasons/lifecycle_state, inserts invoice_exceptions for exception+hold decisions; (3) lifecycle DAG updated — Ingested→Under Verification now valid (workbench submit path); (4) `server/routes/invoices.mjs` — POST /submit, /approve, /reject endpoints (registered in server/index.mjs); (5) PUT /api/invoices/:id extended for validated_by/validated_at; (6) APValidationWorkbench.tsx — lane logic uses lifecycle_state+touchless columns, openReview()→/invoices/:id, Submit for Approval button in expanded row + next-action, touchless_fail_reasons displayed as orange routing flags; (7) InvoiceDetail.tsx — lifecycle-aware banners (Ingested=warning, Exception Hold=amber, Under Verification=approve/reject, Processed=payment, Rejected=error) and action buttons (Submit/Review Exception/Approve+Reject/Payment Batch); (8) Migration `sql/mysql/migrations/20260508_touchless_routing.sql` applied. Files: touchlessEngine.mjs (new), invoiceCreator.mjs, lifecycleTransitions.mjs, routes/invoices.mjs (new), server/index.mjs, APValidationWorkbench.tsx, InvoiceDetail.tsx, **tests**/touchlessEngine.test.mjs (new, 11 tests). Tests: 370 passing.
+- 2026-05-08 — FIX A+B: `erp_master_entities` DB table reset — deleted all rows, inserted PTPL (stateCode 27, full address) and MTPL (stateCode 27) with canonical GSTIN/PAN; `ENTITY_MASTER_DATA` in `MasterDataContext.tsx` updated to match — stateCode changed from 'MH' to '27', address strings aligned to DB values. Both sources of truth now identical. Files: DB `erp_master_entities`, `src/contexts/MasterDataContext.tsx`.
+- 2026-05-08 — EntityRegistry.ts: expanded `CanonicalEntity` interface with optional `gstin`, `pan`, `state`, `stateCode`, `address`, `city`, `pincode` fields; `CANONICAL_ENTITIES` entries for PTPL and MTPL filled in with full tax/address data and `aliases` arrays (`ENT-PROCINIX-IN`/`PROC-IN`/`E001` and `ENT-MTPL`/`MTPL-IN`/`E002`) for backward-compat alias resolution. 0 new TS errors. File: `src/contexts/EntityRegistry.ts`.
+- 2026-05-08 — entity_master.entity_master DB table: deleted 12 stale rows (Subko Coffee, ODFZE, Oppdoor etc.) and inserted PTPL + MTPL with full payload. `STORAGE_PREFIX` in `masterTables.ts` renamed from `procinix-subko-erp:relational-master` → `procinix-s2p:relational-master` to auto-bust all browser localStorage master caches on next load (no manual DevTools step needed). Files: DB `entity_master`.`entity_master`, `src/lib/mysql/masterTables.ts`.
+- 2026-05-08 — NonPOInvoiceForm.tsx three fixes: (1) Bill-to Entity auto-populate — entityId useState init + useEffect now fall back to user.currentPlatformEntityId when currentCompany.id is absent; (2) PDF preview — added filePreviewUrl state + blob URL useEffect; added <object>/<img> preview panel (420px, shown after upload, before OCR button); (3) OCR confidence debug — added console.log('[OCR fields]') in render + '[OCR] ext values'/'newOcrFields built' logs in handleFileUpload before setOcrFields; also fixed vendorGSTIN raw key mismatch ('vendorGSTIN' → 'vendorGstin'). 0 new TS errors. File: src/components/NonPOInvoiceForm.tsx.

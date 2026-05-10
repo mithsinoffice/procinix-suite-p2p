@@ -12,11 +12,8 @@ export function VisitingCard() {
         <p className="text-slate-600">Click the card to flip</p>
       </div>
 
-      <div 
-        className="perspective-1000 cursor-pointer"
-        onClick={() => setIsFlipped(!isFlipped)}
-      >
-        <div 
+      <div className="perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
+        <div
           className={`relative w-full aspect-[1.75/1] transition-transform duration-700 transform-style-3d ${
             isFlipped ? 'rotate-y-180' : ''
           }`}
@@ -26,19 +23,19 @@ export function VisitingCard() {
           }}
         >
           {/* Front of card */}
-          <div 
+          <div
             className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl overflow-hidden"
-            style={{ 
+            style={{
               backfaceVisibility: 'hidden',
-              background: '#1a2332'
+              background: '#1a2332',
             }}
           >
             <div className="h-full flex items-center gap-12 p-10 md:p-14">
               {/* Left side - Logo */}
               <div className="flex items-center justify-center flex-shrink-0">
-                <img 
-                  src={logoImage} 
-                  alt="Procinix Logo" 
+                <img
+                  src={logoImage}
+                  alt="Procinix Logo"
                   className="h-40 md:h-48 w-auto object-contain"
                   style={{ mixBlendMode: 'screen' }}
                 />
@@ -73,23 +70,25 @@ export function VisitingCard() {
                 </div>
               </div>
             </div>
-            
+
             {/* Gold strip at bottom */}
             <div className="absolute bottom-0 left-0 right-0 h-2 md:h-3 bg-amber-400"></div>
           </div>
 
           {/* Back of card */}
-          <div 
+          <div
             className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl p-10 md:p-14"
-            style={{ 
+            style={{
               backfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
-              background: '#0d4d4d'
+              background: '#0d4d4d',
             }}
           >
             <div className="h-full flex flex-col justify-center">
-              <h3 className="text-amber-400 text-2xl md:text-3xl tracking-wider mb-8">OUR CORE OFFERINGS</h3>
-              
+              <h3 className="text-amber-400 text-2xl md:text-3xl tracking-wider mb-8">
+                OUR CORE OFFERINGS
+              </h3>
+
               <div className="space-y-6">
                 {/* Finance Automation */}
                 <div>
@@ -97,7 +96,9 @@ export function VisitingCard() {
                     <div className="w-2 h-2 rounded-full bg-amber-400 mt-2 flex-shrink-0"></div>
                     <div>
                       <h4 className="text-white text-xl md:text-2xl mb-2">Finance Automation</h4>
-                      <p className="text-gray-300 text-base md:text-lg">AP / AR  R2R  Data Analytics</p>
+                      <p className="text-gray-300 text-base md:text-lg">
+                        AP / AR R2R Data Analytics
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -108,7 +109,9 @@ export function VisitingCard() {
                     <div className="w-2 h-2 rounded-full bg-amber-400 mt-2 flex-shrink-0"></div>
                     <div>
                       <h4 className="text-white text-xl md:text-2xl mb-2">Finance Consulting</h4>
-                      <p className="text-gray-300 text-base md:text-lg">Process Re-engineering  Controls  Compliance</p>
+                      <p className="text-gray-300 text-base md:text-lg">
+                        Process Re-engineering Controls Compliance
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -118,7 +121,9 @@ export function VisitingCard() {
                   <div className="flex items-start gap-3 mb-2">
                     <div className="w-2 h-2 rounded-full bg-amber-400 mt-2 flex-shrink-0"></div>
                     <div>
-                      <h4 className="text-white text-xl md:text-2xl mb-2">Implementations & Integrations</h4>
+                      <h4 className="text-white text-xl md:text-2xl mb-2">
+                        Implementations & Integrations
+                      </h4>
                       <p className="text-gray-300 text-base md:text-lg">ERP enablement</p>
                     </div>
                   </div>

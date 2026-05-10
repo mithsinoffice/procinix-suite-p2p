@@ -2,13 +2,13 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * DESK-BASED ERP SCAFFOLD INDEX
  * ═══════════════════════════════════════════════════════════════════════════
- * 
+ *
  * Purpose: Documentation and navigation map for the ERP scaffold structure
  * Status: SCAFFOLD ONLY - NO DATA, NO LOGIC, NO BINDINGS
- * 
+ *
  * This file serves as a central reference for all scaffold components.
  * All components are UI shells only - ready for controlled logic layering.
- * 
+ *
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -43,10 +43,10 @@ export { ActionTable } from './components/core/ActionTable';
 export { DrilldownTable } from './components/core/DrilldownTable';
 
 // Charts
-export { 
-  LineChartPlaceholder, 
-  BarChartPlaceholder, 
-  DonutChartPlaceholder 
+export {
+  LineChartPlaceholder,
+  BarChartPlaceholder,
+  DonutChartPlaceholder,
 } from './components/core/ChartPlaceholders';
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -92,21 +92,9 @@ export { DebitNotesModule } from './pages/modules/DebitNotesModule';
 export { PaymentsModule } from './pages/modules/PaymentsModule';
 
 // ───────────────────────────────────────────────────────────────────────────
-// 05_MASTERS
+// 05_MASTERS — removed. Live master screens are in `src/components/*Master.tsx`
+// and wired to MySQL via `useIncrementalMasterRecords`.
 // ───────────────────────────────────────────────────────────────────────────
-
-export { MasterLayoutShell } from './pages/masters/MasterLayoutShell';
-
-export { EntityMasterScaffold } from './pages/masters/EntityMaster';
-export { CurrencyMasterScaffold } from './pages/masters/CurrencyMaster';
-export { ExchangeRateMasterScaffold } from './pages/masters/ExchangeRateMaster';
-export { VendorMasterScaffold } from './pages/masters/VendorMaster';
-export { ItemMasterScaffold } from './pages/masters/ItemMaster';
-export { GLCOAMasterScaffold } from './pages/masters/GLCOAMaster';
-export { CostCenterMasterScaffold } from './pages/masters/CostCenterMaster';
-export { ProfitCenterMasterScaffold } from './pages/masters/ProfitCenterMaster';
-export { BankMasterScaffold } from './pages/masters/BankMaster';
-export { PaymentTermsMasterScaffold } from './pages/masters/PaymentTermsMaster';
 
 // ───────────────────────────────────────────────────────────────────────────
 // 06_REPORTS
@@ -170,19 +158,6 @@ FOLDER STRUCTURE:
 │   │   ├── DebitNotesModule.tsx
 │   │   └── PaymentsModule.tsx
 │   │
-│   ├── masters/
-│   │   ├── MasterLayoutShell.tsx
-│   │   ├── EntityMaster.tsx
-│   │   ├── CurrencyMaster.tsx
-│   │   ├── ExchangeRateMaster.tsx
-│   │   ├── VendorMaster.tsx
-│   │   ├── ItemMaster.tsx
-│   │   ├── GLCOAMaster.tsx
-│   │   ├── CostCenterMaster.tsx
-│   │   ├── ProfitCenterMaster.tsx
-│   │   ├── BankMaster.tsx
-│   │   └── PaymentTermsMaster.tsx
-│   │
 │   └── reports/
 │       ├── EntityReports.tsx
 │       ├── ConsolidatedReports.tsx
@@ -194,7 +169,7 @@ DESIGN PRINCIPLES:
 ─────────────────
 ✓ Clean separation of concerns (Desks → Modules → Components)
 ✓ Consistent naming conventions across all files
-✓ Reusable layout shells (DeskLayoutShell, MasterLayoutShell)
+✓ Reusable layout shells (DeskLayoutShell)
 ✓ Placeholder components ready for logic injection
 ✓ No data bindings - pure UI structure
 ✓ No workflows - ready for controlled implementation
@@ -224,14 +199,16 @@ NEXT STEPS (NOT IMPLEMENTED):
 export default function ScaffoldIndexPage() {
   return (
     <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh', padding: '48px' }}>
-      <div style={{ 
-        maxWidth: '1200px', 
-        margin: '0 auto',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid var(--color-silver)',
-        borderRadius: '12px',
-        padding: '40px'
-      }}>
+      <div
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          backgroundColor: '#FFFFFF',
+          border: '1px solid var(--color-silver)',
+          borderRadius: '12px',
+          padding: '40px',
+        }}
+      >
         <h1 style={{ fontSize: '32px', color: 'var(--color-ink)', marginBottom: '16px' }}>
           Desk-Based ERP Scaffold Index
         </h1>
@@ -239,18 +216,22 @@ export default function ScaffoldIndexPage() {
           Complete UI structure for multi-entity, role-based ERP system
         </p>
 
-        <div style={{ 
-          padding: '24px', 
-          backgroundColor: 'var(--color-cloud)', 
-          border: '2px solid var(--color-teal)',
-          borderRadius: '8px',
-          marginBottom: '32px'
-        }}>
+        <div
+          style={{
+            padding: '24px',
+            backgroundColor: 'var(--color-cloud)',
+            border: '2px solid var(--color-teal)',
+            borderRadius: '8px',
+            marginBottom: '32px',
+          }}
+        >
           <p style={{ fontSize: '14px', color: 'var(--color-ink)', margin: 0 }}>
-            ✓ All scaffold components created successfully<br/>
-            ✓ 60+ files organized across 6 logical sections<br/>
-            ✓ Zero functional overlap - clean architecture<br/>
-            ✓ Ready for controlled logic and data layering
+            ✓ All scaffold components created successfully
+            <br />
+            ✓ 60+ files organized across 6 logical sections
+            <br />
+            ✓ Zero functional overlap - clean architecture
+            <br />✓ Ready for controlled logic and data layering
           </p>
         </div>
 
@@ -261,15 +242,15 @@ export default function ScaffoldIndexPage() {
             { title: '03_Desks', count: '18 pages', desc: '4 role-based desks' },
             { title: '04_Modules', count: '7 modules', desc: 'Transaction modules' },
             { title: '05_Masters', count: '10 masters', desc: 'Master data screens' },
-            { title: '06_Reports', count: '3 report groups', desc: 'Reporting & analytics' }
+            { title: '06_Reports', count: '3 report groups', desc: 'Reporting & analytics' },
           ].map((section) => (
-            <div 
+            <div
               key={section.title}
-              style={{ 
-                backgroundColor: '#FFFFFF', 
+              style={{
+                backgroundColor: '#FFFFFF',
                 border: '1px solid var(--color-silver)',
                 borderRadius: '8px',
-                padding: '20px'
+                padding: '20px',
               }}
             >
               <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: '0 0 8px 0' }}>
@@ -285,17 +266,26 @@ export default function ScaffoldIndexPage() {
           ))}
         </div>
 
-        <div style={{ 
-          marginTop: '40px',
-          padding: '24px',
-          backgroundColor: 'var(--color-cloud)',
-          borderLeft: '4px solid var(--color-teal)',
-          borderRadius: '4px'
-        }}>
+        <div
+          style={{
+            marginTop: '40px',
+            padding: '24px',
+            backgroundColor: 'var(--color-cloud)',
+            borderLeft: '4px solid var(--color-teal)',
+            borderRadius: '4px',
+          }}
+        >
           <h3 style={{ fontSize: '16px', color: 'var(--color-ink)', margin: '0 0 12px 0' }}>
             Important Notes
           </h3>
-          <ul style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: 0, paddingLeft: '20px' }}>
+          <ul
+            style={{
+              fontSize: '13px',
+              color: 'var(--color-mercury-grey)',
+              margin: 0,
+              paddingLeft: '20px',
+            }}
+          >
             <li>All components are UI SCAFFOLDS ONLY</li>
             <li>No data bindings or workflows implemented</li>
             <li>No navigation wiring between pages</li>

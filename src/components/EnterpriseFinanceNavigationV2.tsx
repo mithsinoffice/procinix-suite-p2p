@@ -15,26 +15,30 @@ import {
 } from 'lucide-react';
 import { useFinanceRBAC } from '../contexts/FinanceRBACContext';
 import { useAuth } from '../contexts/AuthContext';
-import { financeNavigationConfig, globalNavigationConfig, FinanceNavModule } from '../config/financeNavigationConfig';
+import {
+  financeNavigationConfig,
+  globalNavigationConfig,
+  FinanceNavModule,
+} from '../config/financeNavigationConfig';
 import procinixLogo from 'figma:asset/eb6183c63677cdc729899e9456f9ae8bda3594fb.png';
 
 /**
  * ENTERPRISE LEFT NAVIGATION - STRUCTURAL NAVIGATION ONLY
- * 
+ *
  * Purpose: Structural navigation across modules and sub-modules
- * 
+ *
  * Contains:
  * - Product modules (AP Automation, AR Automation, R2R Automation, etc.)
  * - Sub-navigation within each module
  * - Global utilities (Approvals, My Tasks, Audit Logs, Settings)
- * 
+ *
  * Does NOT contain:
  * - Entity selector (in top bar)
  * - Role selector (in top bar)
  * - Filters (in page header)
  * - Create/Export actions (in page header)
  * - Notifications (in top bar)
- * 
+ *
  * Design Rules:
  * - Icons ONLY for top-level modules
  * - Indentation and typography (not icons) for sub-items
@@ -44,10 +48,7 @@ import procinixLogo from 'figma:asset/eb6183c63677cdc729899e9456f9ae8bda3594fb.p
 export function EnterpriseFinanceNavigationV2() {
   const location = useLocation();
   const { user } = useAuth();
-  const { 
-    currentRole, 
-    hasAnyPermission,
-  } = useFinanceRBAC();
+  const { currentRole, hasAnyPermission } = useFinanceRBAC();
 
   const [selectedPillar, setSelectedPillar] = useState<string>('AP');
   const [showContextualPanel, setShowContextualPanel] = useState(false);
@@ -63,8 +64,8 @@ export function EnterpriseFinanceNavigationV2() {
     if (!hasAnyPermission(module.requiredPerm)) {
       return false;
     }
-    const hasCreate = module.requiredPerm.some(perm => 
-      perm.includes('.CREATE') && hasAnyPermission([perm])
+    const hasCreate = module.requiredPerm.some(
+      (perm) => perm.includes('.CREATE') && hasAnyPermission([perm])
     );
     return !hasCreate;
   };
@@ -87,17 +88,17 @@ export function EnterpriseFinanceNavigationV2() {
       return (
         <div key={module.key} className="mb-6">
           {/* MODULE HEADER - Enhanced Visual Hierarchy */}
-          <div 
+          <div
             className="flex items-center gap-2 px-4 py-3 mb-2"
             style={{ borderBottom: '1px solid var(--color-silver)' }}
           >
             <module.icon className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
-            <span 
-              className="text-sm uppercase tracking-wide" 
-              style={{ 
-                color: 'var(--color-ink)', 
+            <span
+              className="text-sm uppercase tracking-wide"
+              style={{
+                color: 'var(--color-ink)',
                 fontWeight: '700',
-                letterSpacing: '0.05em'
+                letterSpacing: '0.05em',
               }}
             >
               {module.label}
@@ -117,19 +118,19 @@ export function EnterpriseFinanceNavigationV2() {
                 return (
                   <div key={submodule.key} className="mb-3">
                     {/* SUB-MODULE HEADER - Medium Hierarchy */}
-                    <div 
+                    <div
                       className="flex items-center gap-2 px-3 py-2.5 mb-1"
-                      style={{ 
+                      style={{
                         borderLeft: '2px solid var(--color-teal)',
-                        marginLeft: '8px'
+                        marginLeft: '8px',
                       }}
                     >
                       <submodule.icon className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
-                      <span 
-                        className="text-sm" 
-                        style={{ 
-                          color: 'var(--color-ink)', 
-                          fontWeight: '600'
+                      <span
+                        className="text-sm"
+                        style={{
+                          color: 'var(--color-ink)',
+                          fontWeight: '600',
                         }}
                       >
                         {submodule.label}
@@ -149,10 +150,16 @@ export function EnterpriseFinanceNavigationV2() {
                             onClick={() => setShowContextualPanel(false)}
                             className="flex items-center gap-2.5 py-2 pl-8 pr-3 rounded-lg transition-all duration-200"
                             style={{
-                              backgroundColor: isNestedActive ? 'var(--color-teal)10' : 'transparent',
-                              color: isNestedActive ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
-                              borderLeft: isNestedActive ? '3px solid var(--color-teal)' : '3px solid transparent',
-                              marginLeft: '12px'
+                              backgroundColor: isNestedActive
+                                ? 'var(--color-teal)10'
+                                : 'transparent',
+                              color: isNestedActive
+                                ? 'var(--color-teal)'
+                                : 'var(--color-mercury-grey)',
+                              borderLeft: isNestedActive
+                                ? '3px solid var(--color-teal)'
+                                : '3px solid transparent',
+                              marginLeft: '12px',
                             }}
                             onMouseEnter={(e) => {
                               if (!isNestedActive) {
@@ -168,7 +175,10 @@ export function EnterpriseFinanceNavigationV2() {
                             }}
                           >
                             <nestedSubmodule.icon className="w-4 h-4" style={{ strokeWidth: 2 }} />
-                            <span className="text-sm" style={{ fontWeight: isNestedActive ? '500' : '400' }}>
+                            <span
+                              className="text-sm"
+                              style={{ fontWeight: isNestedActive ? '500' : '400' }}
+                            >
                               {nestedSubmodule.label}
                             </span>
                           </Link>
@@ -188,8 +198,10 @@ export function EnterpriseFinanceNavigationV2() {
                   style={{
                     backgroundColor: isSubActive ? 'var(--color-teal)10' : 'transparent',
                     color: isSubActive ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
-                    borderLeft: isSubActive ? '3px solid var(--color-teal)' : '3px solid transparent',
-                    marginLeft: '8px'
+                    borderLeft: isSubActive
+                      ? '3px solid var(--color-teal)'
+                      : '3px solid transparent',
+                    marginLeft: '8px',
                   }}
                   onMouseEnter={(e) => {
                     if (!isSubActive) {
@@ -225,7 +237,7 @@ export function EnterpriseFinanceNavigationV2() {
         className="flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg transition-all duration-200 mb-1"
         style={{
           backgroundColor: isActive ? 'var(--color-teal)' : 'transparent',
-          color: isActive ? '#FFFFFF' : 'var(--color-ink)'
+          color: isActive ? '#FFFFFF' : 'var(--color-ink)',
         }}
         onMouseEnter={(e) => {
           if (!isActive) {
@@ -243,16 +255,19 @@ export function EnterpriseFinanceNavigationV2() {
           {module.label}
         </span>
         {isViewOnly && (
-          <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-mercury-grey)' }} title="View Only Access" />
+          <Eye
+            className="w-3.5 h-3.5"
+            style={{ color: 'var(--color-mercury-grey)' }}
+            aria-label="View Only Access"
+          />
         )}
       </Link>
     );
   };
 
-  const selectedPillarData = financeNavigationConfig.pillars.find(p => p.key === selectedPillar);
-  const accessibleModules = selectedPillarData?.modules.filter(module => 
-    hasAnyPermission(module.requiredPerm)
-  ) || [];
+  const selectedPillarData = financeNavigationConfig.pillars.find((p) => p.key === selectedPillar);
+  const accessibleModules =
+    selectedPillarData?.modules.filter((module) => hasAnyPermission(module.requiredPerm)) || [];
 
   // Determine if current route belongs to a pillar
   const getActivePillar = () => {
@@ -278,68 +293,68 @@ export function EnterpriseFinanceNavigationV2() {
   return (
     <>
       {/* Left Navigation - Primary Pillars */}
-      <div 
+      <div
         className="flex flex-col h-full"
-        style={{ 
+        style={{
           width: '240px',
           backgroundColor: '#2A3A42',
-          borderRight: '1px solid #3a4a52'
+          borderRight: '1px solid #3a4a52',
         }}
       >
         {/* Logo/Brand Area */}
-        <div 
-          className="px-6 py-6" 
-          style={{ 
+        <div
+          className="px-6 py-6"
+          style={{
             borderBottom: '1px solid #3a4a52',
             overflow: 'visible',
             position: 'relative',
-            zIndex: 10
+            zIndex: 10,
           }}
         >
           {/* Vertical Flex Container for Logo + Text */}
-          <div 
-            style={{ 
-              display: 'flex', 
+          <div
+            style={{
+              display: 'flex',
               flexDirection: 'column',
               gap: '8px',
-              alignItems: 'flex-start'
+              alignItems: 'flex-start',
             }}
           >
             {/* Image Node - Procinix Logo */}
-            <img 
+            <img
               src={procinixLogo}
               alt="Procinix Logo"
-              style={{ 
-                height: '28px', 
+              style={{
+                height: '28px',
                 width: 'auto',
                 display: 'block',
                 position: 'relative',
-                zIndex: 20
+                zIndex: 20,
               }}
             />
-            
+
             {/* Text Node - Company Name */}
-            <h1 
-              style={{ 
-                color: '#FFFFFF', 
+            <h1
+              style={{
+                color: '#FFFFFF',
                 fontSize: '16px',
-                fontWeight: '600', 
+                fontWeight: '600',
                 letterSpacing: '-0.01em',
                 margin: 0,
-                lineHeight: '1.4'
+                lineHeight: '1.4',
               }}
             >
               Subko Coffee
             </h1>
-            
+
             {/* Text Node - Product Name */}
-            <p 
-              style={{ 
-                color: '#B6DCE0', 
+            <p
+              style={{
+                color: '#B6DCE0',
                 fontSize: '12px',
                 fontWeight: '500',
                 margin: 0,
-                lineHeight: '1.4'
+                lineHeight: '1.4',
               }}
             >
               AP Automation
@@ -351,13 +366,16 @@ export function EnterpriseFinanceNavigationV2() {
         <div className="flex-1 px-3 py-6">
           <div className="mb-6">
             <div className="px-3 mb-3">
-              <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
+              <span
+                className="text-xs uppercase tracking-wider"
+                style={{ color: 'var(--color-slate)', fontWeight: '600' }}
+              >
                 Modules
               </span>
             </div>
             <div className="space-y-1">
               {financeNavigationConfig.pillars.map((pillar) => {
-                const accessiblePillarModules = pillar.modules.filter(module => 
+                const accessiblePillarModules = pillar.modules.filter((module) =>
                   hasAnyPermission(module.requiredPerm)
                 );
 
@@ -375,7 +393,7 @@ export function EnterpriseFinanceNavigationV2() {
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200"
                     style={{
                       backgroundColor: isActive ? 'var(--color-teal)' : 'transparent',
-                      color: isActive ? '#FFFFFF' : '#B8C5CE'
+                      color: isActive ? '#FFFFFF' : '#B8C5CE',
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
@@ -389,7 +407,10 @@ export function EnterpriseFinanceNavigationV2() {
                     }}
                   >
                     <PillarIcon className="w-5 h-5" style={{ strokeWidth: 2 }} />
-                    <span className="text-sm flex-1 text-left" style={{ fontWeight: isActive ? '600' : '500' }}>
+                    <span
+                      className="text-sm flex-1 text-left"
+                      style={{ fontWeight: isActive ? '600' : '500' }}
+                    >
                       {pillar.label}
                     </span>
                     <ChevronRight className="w-4 h-4" style={{ opacity: 0.6 }} />
@@ -402,12 +423,15 @@ export function EnterpriseFinanceNavigationV2() {
           {/* Global Navigation */}
           <div>
             <div className="px-3 mb-3">
-              <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
+              <span
+                className="text-xs uppercase tracking-wider"
+                style={{ color: 'var(--color-slate)', fontWeight: '600' }}
+              >
                 Global
               </span>
             </div>
             <div className="space-y-1">
-              {globalNavigationConfig.map(section => {
+              {globalNavigationConfig.map((section) => {
                 if (!hasAnyPermission(section.requiredPerm)) {
                   return null;
                 }
@@ -421,7 +445,7 @@ export function EnterpriseFinanceNavigationV2() {
                     className="flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200"
                     style={{
                       backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
-                      color: isActive ? 'var(--color-teal)' : '#B8C5CE'
+                      color: isActive ? 'var(--color-teal)' : '#B8C5CE',
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
@@ -435,16 +459,19 @@ export function EnterpriseFinanceNavigationV2() {
                     }}
                   >
                     <section.icon className="w-4.5 h-4.5" style={{ strokeWidth: 2 }} />
-                    <span className="text-sm flex-1" style={{ fontWeight: isActive ? '600' : '500' }}>
+                    <span
+                      className="text-sm flex-1"
+                      style={{ fontWeight: isActive ? '600' : '500' }}
+                    >
                       {section.label}
                     </span>
                     {section.badge && section.badge > 0 && (
-                      <span 
+                      <span
                         className="px-2 py-0.5 rounded-full text-xs"
-                        style={{ 
+                        style={{
                           backgroundColor: '#EF4444',
                           color: '#FFFFFF',
-                          fontWeight: '600'
+                          fontWeight: '600',
                         }}
                       >
                         {section.badge}
@@ -460,7 +487,10 @@ export function EnterpriseFinanceNavigationV2() {
         {/* User Info */}
         <div className="px-6 py-4" style={{ borderTop: '1px solid #3a4a52' }}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal)' }}>
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: 'var(--color-teal)' }}
+            >
               <span className="text-sm" style={{ color: '#FFFFFF', fontWeight: '600' }}>
                 {user?.name?.charAt(0) || 'U'}
               </span>
@@ -479,13 +509,13 @@ export function EnterpriseFinanceNavigationV2() {
 
       {/* Contextual Panel - Module Navigation */}
       {showContextualPanel && (
-        <div 
+        <div
           className="h-full flex flex-col"
-          style={{ 
+          style={{
             width: '320px',
             backgroundColor: '#FFFFFF',
             borderRight: '1px solid var(--color-silver)',
-            boxShadow: '2px 0 8px rgba(0, 0, 0, 0.04)'
+            boxShadow: '2px 0 8px rgba(0, 0, 0, 0.04)',
           }}
         >
           {/* Panel Header */}
@@ -498,8 +528,8 @@ export function EnterpriseFinanceNavigationV2() {
                 onClick={() => setShowContextualPanel(false)}
                 className="p-1.5 rounded-lg transition-colors"
                 style={{ color: 'var(--color-mercury-grey)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-cloud)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -511,7 +541,7 @@ export function EnterpriseFinanceNavigationV2() {
 
           {/* Module List */}
           <div className="flex-1 overflow-y-auto px-2 py-4">
-            {accessibleModules.map(module => renderContextualModule(module))}
+            {accessibleModules.map((module) => renderContextualModule(module))}
           </div>
         </div>
       )}

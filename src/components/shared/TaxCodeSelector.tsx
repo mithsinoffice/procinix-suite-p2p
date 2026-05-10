@@ -1,9 +1,10 @@
 import { Receipt, AlertCircle } from 'lucide-react';
 import { useMasterData } from '../../contexts/MasterDataContext';
+import { isRecordMappedToEntity } from '../../lib/masters/entityMapping';
 
 /**
  * TAX CODE SELECTOR - SHARED COMPONENT
- * 
+ *
  * LINKED TO: Tax Code Master (System of Record)
  * USED BY: Procurement, AP Invoices
  */
@@ -17,6 +18,7 @@ interface TaxCodeSelectorProps {
   disabled?: boolean;
   error?: string;
   taxType?: 'GST' | 'TDS' | 'TCS';
+  entityId?: string;
 }
 
 export function TaxCodeSelector({
@@ -27,17 +29,20 @@ export function TaxCodeSelector({
   required = false,
   disabled = false,
   error,
-  taxType
+  taxType,
+  entityId,
 }: TaxCodeSelectorProps) {
   const { taxCodes, getActiveTaxCodes, getGSTCodes, getTDSCodes, getTaxCodeById } = useMasterData();
-  
-  let availableTaxCodes = getActiveTaxCodes();
+
+  let availableTaxCodes = entityId
+    ? taxCodes.filter((tax) => tax.isActive && isRecordMappedToEntity(tax, entityId))
+    : getActiveTaxCodes();
   if (taxType === 'GST') {
-    availableTaxCodes = getGSTCodes();
+    availableTaxCodes = availableTaxCodes.filter((tax) => tax.taxType === 'GST');
   } else if (taxType === 'TDS') {
-    availableTaxCodes = getTDSCodes();
+    availableTaxCodes = availableTaxCodes.filter((tax) => tax.taxType === 'TDS');
   }
-  
+
   const selectedTaxCode = value ? getTaxCodeById(value) : undefined;
 
   return (
@@ -46,8 +51,8 @@ export function TaxCodeSelector({
         <label className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
           {label}
           {required && <span style={{ color: 'var(--color-error-dark)' }}> *</span>}
-          <span 
-            className="ml-2 text-xs px-2 py-0.5 rounded" 
+          <span
+            className="ml-2 text-xs px-2 py-0.5 rounded"
             style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}
             title="Linked to Tax Code Master"
           >
@@ -55,7 +60,7 @@ export function TaxCodeSelector({
           </span>
         </label>
       )}
-      
+
       <div className="relative">
         <select
           value={value || ''}
@@ -65,7 +70,7 @@ export function TaxCodeSelector({
           style={{
             border: error ? '2px solid var(--color-error-dark)' : '2px solid var(--color-silver)',
             backgroundColor: disabled ? 'var(--color-cloud)' : '#FFFFFF',
-            color: 'var(--color-ink)'
+            color: 'var(--color-ink)',
           }}
         >
           <option value="">{placeholder}</option>
@@ -75,33 +80,43 @@ export function TaxCodeSelector({
             </option>
           ))}
         </select>
-        
-        <Receipt 
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" 
-          style={{ color: 'var(--color-mercury-grey)' }} 
+
+        <Receipt
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+          style={{ color: 'var(--color-mercury-grey)' }}
         />
-        
+
         {error && (
-          <AlertCircle 
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4" 
-            style={{ color: 'var(--color-error-dark)' }} 
+          <AlertCircle
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4"
+            style={{ color: 'var(--color-error-dark)' }}
           />
         )}
       </div>
 
       {selectedTaxCode && (
-        <div className="text-xs p-2 rounded" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}>
+        <div
+          className="text-xs p-2 rounded"
+          style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
+        >
           {selectedTaxCode.taxType === 'GST' && (
-            <>CGST: {selectedTaxCode.cgstRate}% | SGST: {selectedTaxCode.sgstRate}% | IGST: {selectedTaxCode.igstRate}%</>
+            <>
+              CGST: {selectedTaxCode.cgstRate}% | SGST: {selectedTaxCode.sgstRate}% | IGST:{' '}
+              {selectedTaxCode.igstRate}%
+            </>
           )}
           {selectedTaxCode.taxType === 'TDS' && (
-            <>Section: {selectedTaxCode.tdsSection} | {selectedTaxCode.tdsNature}</>
+            <>
+              Section: {selectedTaxCode.tdsSection} | {selectedTaxCode.tdsNature}
+            </>
           )}
         </div>
       )}
 
       {error && (
-        <p className="text-xs" style={{ color: 'var(--color-error-dark)' }}>{error}</p>
+        <p className="text-xs" style={{ color: 'var(--color-error-dark)' }}>
+          {error}
+        </p>
       )}
     </div>
   );

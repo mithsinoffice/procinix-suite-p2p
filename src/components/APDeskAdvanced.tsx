@@ -1,10 +1,37 @@
 import { useState } from 'react';
-import { 
-  FileText, Clock, CheckCircle, XCircle, AlertTriangle, 
-  TrendingUp, TrendingDown, IndianRupee, Users, Calendar,
-  Download, Filter, RefreshCw, MoreVertical
+import {
+  FileText,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown,
+  IndianRupee,
+  Users,
+  Calendar,
+  Download,
+  Filter,
+  RefreshCw,
+  MoreVertical,
 } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+} from 'recharts';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { useAPData } from '../contexts/APDataContext';
 
@@ -24,10 +51,14 @@ export function APDeskAdvanced() {
 
   // Calculate Key Metrics
   const totalInvoices = safeInvoices.length;
-  const pendingInvoices = safeInvoices.filter(inv => inv.status === 'Pending Approval' || inv.status === 'Under Review').length;
-  const approvedInvoices = safeInvoices.filter(inv => inv.status === 'Approved' || inv.status === 'Paid').length;
-  const rejectedInvoices = safeInvoices.filter(inv => inv.status === 'Rejected').length;
-  const overdueInvoices = safeInvoices.filter(inv => {
+  const pendingInvoices = safeInvoices.filter(
+    (inv) => inv.status === 'Pending Approval' || inv.status === 'Under Review'
+  ).length;
+  const approvedInvoices = safeInvoices.filter(
+    (inv) => inv.status === 'Approved' || inv.status === 'Paid'
+  ).length;
+  const rejectedInvoices = safeInvoices.filter((inv) => inv.status === 'Rejected').length;
+  const overdueInvoices = safeInvoices.filter((inv) => {
     if (!inv.dueDate) return false;
     const dueDate = new Date(inv.dueDate);
     return dueDate < new Date() && inv.status !== 'Paid';
@@ -35,10 +66,10 @@ export function APDeskAdvanced() {
 
   const totalInvoiceValue = safeInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
   const pendingValue = safeInvoices
-    .filter(inv => inv.status === 'Pending Approval' || inv.status === 'Under Review')
+    .filter((inv) => inv.status === 'Pending Approval' || inv.status === 'Under Review')
     .reduce((sum, inv) => sum + inv.totalAmount, 0);
   const approvedValue = safeInvoices
-    .filter(inv => inv.status === 'Approved' || inv.status === 'Paid')
+    .filter((inv) => inv.status === 'Approved' || inv.status === 'Paid')
     .reduce((sum, inv) => sum + inv.totalAmount, 0);
 
   const avgProcessingTime = 3.2; // days
@@ -49,7 +80,7 @@ export function APDeskAdvanced() {
     { name: 'Pending', value: pendingInvoices, color: '#F59E0B' },
     { name: 'Approved', value: approvedInvoices, color: '#10B981' },
     { name: 'Rejected', value: rejectedInvoices, color: '#EF4444' },
-    { name: 'Overdue', value: overdueInvoices, color: 'var(--color-error-dark)' }
+    { name: 'Overdue', value: overdueInvoices, color: 'var(--color-error-dark)' },
   ];
 
   // Monthly Invoice Trend (Last 6 months)
@@ -59,7 +90,7 @@ export function APDeskAdvanced() {
     { month: 'Oct', invoices: 182, value: 16.8, approved: 170, pending: 12 },
     { month: 'Nov', invoices: 195, value: 18.3, approved: 182, pending: 13 },
     { month: 'Dec', invoices: 210, value: 19.8, approved: 195, pending: 15 },
-    { month: 'Jan', invoices: 189, value: 17.2, approved: 175, pending: 14 }
+    { month: 'Jan', invoices: 189, value: 17.2, approved: 175, pending: 14 },
   ];
 
   // Processing Time Trends
@@ -67,15 +98,18 @@ export function APDeskAdvanced() {
     { week: 'W1', time: 3.8, target: 3.0 },
     { week: 'W2', time: 3.5, target: 3.0 },
     { week: 'W3', time: 3.2, target: 3.0 },
-    { week: 'W4', time: 2.9, target: 3.0 }
+    { week: 'W4', time: 2.9, target: 3.0 },
   ];
 
   // Top Vendors by Invoice Count
   const vendorInvoiceCount = safeVendors
-    .map(vendor => ({
+    .map((vendor) => ({
       name: vendor.name.length > 25 ? vendor.name.substring(0, 25) + '...' : vendor.name,
-      count: safeInvoices.filter(inv => inv.vendorId === vendor.id).length,
-      value: safeInvoices.filter(inv => inv.vendorId === vendor.id).reduce((sum, inv) => sum + inv.totalAmount, 0) / 100000 // in lakhs
+      count: safeInvoices.filter((inv) => inv.vendorCode === vendor.code).length,
+      value:
+        safeInvoices
+          .filter((inv) => inv.vendorCode === vendor.code)
+          .reduce((sum, inv) => sum + inv.totalAmount, 0) / 100000, // in lakhs
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
@@ -85,7 +119,7 @@ export function APDeskAdvanced() {
     { range: '0-30 days', count: 78, value: 6.5 },
     { range: '31-60 days', count: 45, value: 4.2 },
     { range: '61-90 days', count: 23, value: 2.8 },
-    { range: '90+ days', count: 12, value: 1.5 }
+    { range: '90+ days', count: 12, value: 1.5 },
   ];
 
   // Exception Analysis
@@ -94,7 +128,7 @@ export function APDeskAdvanced() {
     { type: 'Price Variance', count: 25, severity: 'medium' },
     { type: 'Tax Discrepancy', count: 12, severity: 'high' },
     { type: 'Missing GRN', count: 8, severity: 'high' },
-    { type: 'Duplicate Invoice', count: 5, severity: 'critical' }
+    { type: 'Duplicate Invoice', count: 5, severity: 'critical' },
   ];
 
   const formatCurrency = (value: number) => {
@@ -102,7 +136,7 @@ export function APDeskAdvanced() {
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(value);
   };
 
@@ -119,12 +153,18 @@ export function APDeskAdvanced() {
       {/* Key Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Total Invoices */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#EFF6FF' }}>
               <FileText className="w-5 h-5" style={{ color: '#3B82F6' }} />
             </div>
-            <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#D1FAE5', color: '#065F46' }}>
+            <span
+              className="text-xs px-2 py-1 rounded"
+              style={{ backgroundColor: '#D1FAE5', color: '#065F46' }}
+            >
               MTD
             </span>
           </div>
@@ -141,12 +181,18 @@ export function APDeskAdvanced() {
         </div>
 
         {/* Pending Invoices */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
               <Clock className="w-5 h-5" style={{ color: '#F59E0B' }} />
             </div>
-            <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}>
+            <span
+              className="text-xs px-2 py-1 rounded"
+              style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}
+            >
               Action Needed
             </span>
           </div>
@@ -162,7 +208,10 @@ export function APDeskAdvanced() {
         </div>
 
         {/* Approved Invoices */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
               <CheckCircle className="w-5 h-5" style={{ color: '#10B981' }} />
@@ -180,13 +229,19 @@ export function APDeskAdvanced() {
         </div>
 
         {/* Overdue Invoices */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
               <AlertTriangle className="w-5 h-5" style={{ color: '#EF4444' }} />
             </div>
             {overdueInvoices > 0 && (
-              <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-error-light)', color: '#991B1B' }}>
+              <span
+                className="text-xs px-2 py-1 rounded"
+                style={{ backgroundColor: 'var(--color-error-light)', color: '#991B1B' }}
+              >
                 Critical
               </span>
             )}
@@ -203,7 +258,10 @@ export function APDeskAdvanced() {
         </div>
 
         {/* Avg Processing Time */}
-        <div className="bg-white rounded-lg p-5" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-5"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-start justify-between mb-4">
             <div className="p-2 rounded-lg" style={{ backgroundColor: '#F3E8FF' }}>
               <TrendingDown className="w-5 h-5" style={{ color: '#9333EA' }} />
@@ -225,10 +283,16 @@ export function APDeskAdvanced() {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Invoice Status Distribution */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Invoice Status Distribution
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -270,10 +334,16 @@ export function APDeskAdvanced() {
         </div>
 
         {/* Monthly Invoice Trend */}
-        <div className="bg-white rounded-lg p-6 lg:col-span-2" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6 lg:col-span-2"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Monthly Invoice Trend
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -285,13 +355,39 @@ export function APDeskAdvanced() {
             <ResponsiveContainer width="100%" height={280} debounce={1}>
               <AreaChart data={monthlyTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                <XAxis dataKey="month" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
-                <YAxis yAxisId="left" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
-                <YAxis yAxisId="right" orientation="right" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
+                <XAxis
+                  dataKey="month"
+                  style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }}
+                />
+                <YAxis
+                  yAxisId="left"
+                  style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }}
+                />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Area yAxisId="left" type="monotone" dataKey="invoices" stroke="var(--color-teal)" fill="var(--color-teal)" fillOpacity={0.3} name="Invoice Count" />
-                <Area yAxisId="right" type="monotone" dataKey="value" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.3} name="Value (Cr)" />
+                <Area
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="invoices"
+                  stroke="var(--color-teal)"
+                  fill="var(--color-teal)"
+                  fillOpacity={0.3}
+                  name="Invoice Count"
+                />
+                <Area
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#F59E0B"
+                  fill="#F59E0B"
+                  fillOpacity={0.3}
+                  name="Value (Cr)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -301,10 +397,16 @@ export function APDeskAdvanced() {
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Vendors by Invoice Count */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Top Vendors by Invoice Count
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -316,8 +418,16 @@ export function APDeskAdvanced() {
             <ResponsiveContainer width="100%" height={300} minHeight={300}>
               <BarChart data={vendorInvoiceCount} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                <XAxis type="number" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
-                <YAxis dataKey="name" type="category" width={120} style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
+                <XAxis
+                  type="number"
+                  style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }}
+                />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  width={120}
+                  style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }}
+                />
                 <Tooltip />
                 <Bar dataKey="count" fill="var(--color-teal)" name="Invoice Count" />
               </BarChart>
@@ -326,10 +436,16 @@ export function APDeskAdvanced() {
         </div>
 
         {/* Processing Time Trend */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Processing Time Trend
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -341,12 +457,28 @@ export function APDeskAdvanced() {
             <ResponsiveContainer width="100%" height={300} minHeight={300}>
               <LineChart data={processingTimeTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                <XAxis dataKey="week" style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
+                <XAxis
+                  dataKey="week"
+                  style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }}
+                />
                 <YAxis style={{ fontSize: '12px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Line type="monotone" dataKey="time" stroke="var(--color-teal)" strokeWidth={2} name="Actual Time" />
-                <Line type="monotone" dataKey="target" stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" name="Target" />
+                <Line
+                  type="monotone"
+                  dataKey="time"
+                  stroke="var(--color-teal)"
+                  strokeWidth={2}
+                  name="Actual Time"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="target"
+                  stroke="#EF4444"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Target"
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -356,10 +488,16 @@ export function APDeskAdvanced() {
       {/* Exception Analysis & Aging */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Exception Analysis */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Exception Analysis
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -372,12 +510,12 @@ export function APDeskAdvanced() {
               const severityColors = {
                 critical: { bg: 'var(--color-error-light)', text: '#991B1B', border: '#EF4444' },
                 high: { bg: '#FED7AA', text: '#9A3412', border: '#F97316' },
-                medium: { bg: '#FEF3C7', text: '#92400E', border: '#F59E0B' }
+                medium: { bg: '#FEF3C7', text: '#92400E', border: '#F59E0B' },
               };
               const colors = severityColors[exception.severity as keyof typeof severityColors];
 
               return (
-                <div 
+                <div
                   key={idx}
                   className="flex items-center justify-between p-3 rounded-lg"
                   style={{ border: `1px solid ${colors.border}`, backgroundColor: colors.bg }}
@@ -385,7 +523,10 @@ export function APDeskAdvanced() {
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="w-5 h-5" style={{ color: colors.border }} />
                     <div>
-                      <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
+                      <div
+                        className="text-sm"
+                        style={{ color: 'var(--color-ink)', fontWeight: '500' }}
+                      >
                         {exception.type}
                       </div>
                       <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -393,7 +534,7 @@ export function APDeskAdvanced() {
                       </div>
                     </div>
                   </div>
-                  <span 
+                  <span
                     className="text-xs px-2 py-1 rounded uppercase"
                     style={{ backgroundColor: '#FFFFFF', color: colors.text, fontWeight: '600' }}
                   >
@@ -406,10 +547,16 @@ export function APDeskAdvanced() {
         </div>
 
         {/* Aging Analysis */}
-        <div className="bg-white rounded-lg p-6" style={{ border: '1px solid var(--color-silver)' }}>
+        <div
+          className="bg-white rounded-lg p-6"
+          style={{ border: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              <h3
+                className="text-base mb-1"
+                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+              >
                 Invoice Aging Analysis
               </h3>
               <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -421,7 +568,10 @@ export function APDeskAdvanced() {
             <ResponsiveContainer width="100%" height={260} minHeight={260}>
               <BarChart data={agingData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                <XAxis dataKey="range" style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
+                <XAxis
+                  dataKey="range"
+                  style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }}
+                />
                 <YAxis style={{ fontSize: '11px', fill: 'var(--color-mercury-grey)' }} />
                 <Tooltip />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />

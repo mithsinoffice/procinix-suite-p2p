@@ -1,8 +1,34 @@
 import type { DragEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, X, GitBranch, Check, AlertCircle, Clock, ChevronDown, ChevronRight, ChevronLeft, DollarSign, Users, ArrowRight, Send, Filter, GripVertical, MousePointer2, Route, ShieldCheck, Sparkles, Bot, Wand2 } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  X,
+  GitBranch,
+  Check,
+  AlertCircle,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  DollarSign,
+  Users,
+  ArrowRight,
+  Send,
+  Filter,
+  GripVertical,
+  MousePointer2,
+  Route,
+  ShieldCheck,
+  Sparkles,
+  Bot,
+  Wand2,
+} from 'lucide-react';
 import { isMysqlApiEnabled, mysqlApiRequest } from '../lib/mysql/client';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 
 interface WorkflowStep {
   id: string;
@@ -54,7 +80,10 @@ function ArrowDownConnector() {
 
 function ArrowRightConnector() {
   return (
-    <div className="flex items-center" style={{ gap: '6px', minWidth: '88px', justifyContent: 'center' }}>
+    <div
+      className="flex items-center"
+      style={{ gap: '6px', minWidth: '88px', justifyContent: 'center' }}
+    >
       <div
         style={{
           width: '24px',
@@ -180,10 +209,16 @@ const mockWorkflows: Workflow[] = [
     triggerEvent: 'On Record Submission',
     conditions: [{ field: 'Total Amount', operator: '<', value: '100000' }],
     steps: [
-      { id: 's1', stepNumber: 1, approverRole: 'PO Approver', isMandatory: true, allowDelegation: false }
+      {
+        id: 's1',
+        stepNumber: 1,
+        approverRole: 'PO Approver',
+        isMandatory: true,
+        allowDelegation: false,
+      },
     ],
     status: 'Active',
-    createdDate: '2024-01-15'
+    createdDate: '2024-01-15',
   },
   {
     id: '2',
@@ -195,12 +230,30 @@ const mockWorkflows: Workflow[] = [
     triggerEvent: 'On Record Submission',
     conditions: [{ field: 'Total Amount', operator: '>=', value: '100000' }],
     steps: [
-      { id: 's2', stepNumber: 1, approverRole: 'PO Approver', isMandatory: true, allowDelegation: false },
-      { id: 's3', stepNumber: 2, approverRole: 'Finance Manager', isMandatory: true, allowDelegation: true },
-      { id: 's4', stepNumber: 3, approverRole: 'Admin', isMandatory: false, allowDelegation: false }
+      {
+        id: 's2',
+        stepNumber: 1,
+        approverRole: 'PO Approver',
+        isMandatory: true,
+        allowDelegation: false,
+      },
+      {
+        id: 's3',
+        stepNumber: 2,
+        approverRole: 'Finance Manager',
+        isMandatory: true,
+        allowDelegation: true,
+      },
+      {
+        id: 's4',
+        stepNumber: 3,
+        approverRole: 'Admin',
+        isMandatory: false,
+        allowDelegation: false,
+      },
     ],
     status: 'Active',
-    createdDate: '2024-01-18'
+    createdDate: '2024-01-18',
   },
   {
     id: '3',
@@ -212,10 +265,16 @@ const mockWorkflows: Workflow[] = [
     triggerEvent: 'On Record Submission',
     conditions: [],
     steps: [
-      { id: 's5', stepNumber: 1, approverRole: 'Location Manager', isMandatory: true, allowDelegation: false }
+      {
+        id: 's5',
+        stepNumber: 1,
+        approverRole: 'Location Manager',
+        isMandatory: true,
+        allowDelegation: false,
+      },
     ],
     status: 'Active',
-    createdDate: '2024-01-20'
+    createdDate: '2024-01-20',
   },
   {
     id: '4',
@@ -227,11 +286,17 @@ const mockWorkflows: Workflow[] = [
     triggerEvent: 'On Record Submission',
     conditions: [],
     steps: [
-      { id: 's6', stepNumber: 1, approverRole: 'Procurement Head', isMandatory: true, allowDelegation: false }
+      {
+        id: 's6',
+        stepNumber: 1,
+        approverRole: 'Procurement Head',
+        isMandatory: true,
+        allowDelegation: false,
+      },
     ],
     status: 'Draft',
-    createdDate: '2024-12-10'
-  }
+    createdDate: '2024-12-10',
+  },
 ];
 
 const workflowTargets: Record<WorkflowCategory, string[]> = {
@@ -289,21 +354,23 @@ function inferWorkflowCategory(module: string): WorkflowCategory {
 export function WorkflowConfigurator() {
   const navigate = useNavigate();
   const canvasScrollRef = useRef<HTMLDivElement | null>(null);
-  const [workflows, setWorkflows] = useState<Workflow[]>(mockWorkflows);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
   const [expandedWorkflow, setExpandedWorkflow] = useState<string | null>(null);
   const [isHydrating, setIsHydrating] = useState(true);
   const [designerNodes, setDesignerNodes] = useState<DesignerNode[]>([
-    { id: 'node-step-1', nodeType: 'approval', refId: '1' }
+    { id: 'node-step-1', nodeType: 'approval', refId: '1' },
   ]);
   const [draggedPaletteType, setDraggedPaletteType] = useState<DesignerNodeType | null>(null);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
   const [dragOverZoneId, setDragOverZoneId] = useState<string | null>(null);
   const [workflowPrompt, setWorkflowPrompt] = useState('');
-  const [assistantMessage, setAssistantMessage] = useState('Describe the business rule in plain language and I will draft the workflow conditions and approver chain for you.');
+  const [assistantMessage, setAssistantMessage] = useState(
+    'Describe the business rule in plain language and I will draft the workflow conditions and approver chain for you.'
+  );
   const [formData, setFormData] = useState<Workflow>({
     id: '',
     workflowName: '',
@@ -313,12 +380,21 @@ export function WorkflowConfigurator() {
     description: '',
     triggerEvent: 'On Record Submission',
     conditions: [],
-    steps: [{ id: '1', stepNumber: 1, approverRole: '', isMandatory: true, allowDelegation: false }],
+    steps: [
+      { id: '1', stepNumber: 1, approverRole: '', isMandatory: true, allowDelegation: false },
+    ],
     status: 'Draft',
-    createdDate: ''
+    createdDate: '',
   });
 
-  const roles = ['PO Approver', 'Finance Manager', 'Admin', 'Procurement Head', 'Location Manager', 'Department Head'];
+  const roles = [
+    'PO Approver',
+    'Finance Manager',
+    'Admin',
+    'Procurement Head',
+    'Location Manager',
+    'Department Head',
+  ];
   const availableTargets = workflowTargets[formData.workflowCategory ?? 'Masters'];
 
   const buildDesignerNodes = (workflow: Workflow): DesignerNode[] => [
@@ -335,42 +411,72 @@ export function WorkflowConfigurator() {
   ];
 
   useEffect(() => {
-    if (!isMysqlApiEnabled()) {
-      setIsHydrating(false);
-      return;
-    }
-
-    mysqlApiRequest<{ success: boolean; data: Workflow[] }>('/workflows/configurations')
-      .then((response) => {
-        if (response.data.length > 0) {
-          setWorkflows(response.data);
-        }
+    let cancelled = false;
+    ensureDomainDocument<{ listings?: unknown[]; configurations?: Workflow[] }>(
+      'workflows_config',
+      { configurations: mockWorkflows }
+    )
+      .then((doc) => {
+        if (cancelled) return;
+        setWorkflows(doc.configurations ?? mockWorkflows);
       })
       .catch((error) => {
-        console.warn('Failed to load workflow configurations from MySQL API', error);
+        console.warn('Failed to hydrate workflows_config document', error);
+        if (cancelled) return;
+        setWorkflows(mockWorkflows);
       })
       .finally(() => {
-        setIsHydrating(false);
+        if (!cancelled) setIsHydrating(false);
       });
+
+    if (isMysqlApiEnabled()) {
+      mysqlApiRequest<{ success: boolean; data: Workflow[] }>('/workflows/configurations')
+        .then((response) => {
+          if (cancelled) return;
+          if (response.data && response.data.length > 0) {
+            setWorkflows(response.data);
+          }
+        })
+        .catch((error) => {
+          console.warn('Failed to load workflow configurations from MySQL API', error);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    if (!isMysqlApiEnabled() || isHydrating) {
+    if (isHydrating) {
       return;
     }
 
-    mysqlApiRequest('/workflows/configurations', {
-      method: 'PUT',
-      body: JSON.stringify({ workflows }),
-    }).catch((error) => {
-      console.warn('Failed to save workflow configurations to MySQL API', error);
+    void ensureDomainDocument<{ listings?: unknown[]; configurations?: Workflow[] }>(
+      'workflows_config',
+      { configurations: mockWorkflows }
+    ).then((existing) => {
+      void saveDomainDocument('workflows_config', {
+        ...existing,
+        configurations: workflows,
+      });
     });
+
+    if (isMysqlApiEnabled()) {
+      mysqlApiRequest('/workflows/configurations', {
+        method: 'PUT',
+        body: JSON.stringify({ workflows }),
+      }).catch((error) => {
+        console.warn('Failed to save workflow configurations to MySQL API', error);
+      });
+    }
   }, [isHydrating, workflows]);
 
-  const filteredWorkflows = workflows.filter(wf =>
-    wf.workflowName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wf.module.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wf.description.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredWorkflows = workflows.filter(
+    (wf) =>
+      wf.workflowName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      wf.module.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      wf.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const laneMinWidth = Math.max(1400, 480 + designerNodes.length * 700);
@@ -405,13 +511,21 @@ export function WorkflowConfigurator() {
     !formData.description.trim() ||
     formData.steps.length === 0 ||
     formData.steps.some((step) => !step.approverRole.trim()) ||
-    formData.conditions.some((condition) =>
-      !condition.field.trim() || !condition.operator.trim() || !condition.value.trim()
+    formData.conditions.some(
+      (condition) =>
+        !condition.field.trim() || !condition.operator.trim() || !condition.value.trim()
     );
 
-  const normaliseText = (value: string) => value.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const normaliseText = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-  const inferTargetFromPrompt = (prompt: string): { workflowCategory: WorkflowCategory; workflowTarget: string } => {
+  const inferTargetFromPrompt = (
+    prompt: string
+  ): { workflowCategory: WorkflowCategory; workflowTarget: string } => {
     const normalized = normaliseText(prompt);
 
     const matchedMaster = workflowTargets.Masters.find((target) =>
@@ -440,17 +554,31 @@ export function WorkflowConfigurator() {
     const normalized = normaliseText(prompt);
     const conditions: { field: string; operator: string; value: string }[] = [];
 
-    const amountMatch = normalized.match(/(?:above|over|greater than|more than)\s*(?:rs|inr)?\s*([0-9]+(?:,[0-9]{3})*)/);
+    const amountMatch = normalized.match(
+      /(?:above|over|greater than|more than)\s*(?:rs|inr)?\s*([0-9]+(?:,[0-9]{3})*)/
+    );
     if (amountMatch) {
-      conditions.push({ field: 'Total Amount', operator: '>=', value: amountMatch[1].replace(/,/g, '') });
+      conditions.push({
+        field: 'Total Amount',
+        operator: '>=',
+        value: amountMatch[1].replace(/,/g, ''),
+      });
     }
 
-    const belowMatch = normalized.match(/(?:below|under|less than)\s*(?:rs|inr)?\s*([0-9]+(?:,[0-9]{3})*)/);
+    const belowMatch = normalized.match(
+      /(?:below|under|less than)\s*(?:rs|inr)?\s*([0-9]+(?:,[0-9]{3})*)/
+    );
     if (belowMatch) {
-      conditions.push({ field: 'Total Amount', operator: '<=', value: belowMatch[1].replace(/,/g, '') });
+      conditions.push({
+        field: 'Total Amount',
+        operator: '<=',
+        value: belowMatch[1].replace(/,/g, ''),
+      });
     }
 
-    const entityMatch = workflowTargets.Masters.find((target) => normalized.includes(normaliseText(target)));
+    const entityMatch = workflowTargets.Masters.find((target) =>
+      normalized.includes(normaliseText(target))
+    );
     if (normalized.includes('entity') && !entityMatch) {
       conditions.push({ field: 'Entity', operator: '=', value: 'Selected Entity' });
     }
@@ -458,7 +586,11 @@ export function WorkflowConfigurator() {
     const departmentKeywords = ['procurement', 'finance', 'warehouse', 'quality', 'admin'];
     const matchedDepartment = departmentKeywords.find((keyword) => normalized.includes(keyword));
     if (matchedDepartment) {
-      conditions.push({ field: 'Department', operator: '=', value: matchedDepartment.charAt(0).toUpperCase() + matchedDepartment.slice(1) });
+      conditions.push({
+        field: 'Department',
+        operator: '=',
+        value: matchedDepartment.charAt(0).toUpperCase() + matchedDepartment.slice(1),
+      });
     }
 
     return conditions;
@@ -489,7 +621,9 @@ export function WorkflowConfigurator() {
   const generateWorkflowFromPrompt = () => {
     const prompt = workflowPrompt.trim();
     if (!prompt) {
-      setAssistantMessage('Add a workflow description first, and I will generate a draft for review.');
+      setAssistantMessage(
+        'Add a workflow description first, and I will generate a draft for review.'
+      );
       return;
     }
 
@@ -525,7 +659,7 @@ export function WorkflowConfigurator() {
       ...formData,
       module: formData.workflowTarget || formData.module,
       id: Date.now().toString(),
-      createdDate: new Date().toISOString().split('T')[0]
+      createdDate: new Date().toISOString().split('T')[0],
     };
     setWorkflows([...workflows, newWorkflow]);
     setShowCreateModal(false);
@@ -536,7 +670,9 @@ export function WorkflowConfigurator() {
     setSelectedWorkflow(workflow);
     setFormData({
       ...workflow,
-      workflowCategory: workflow.workflowCategory ?? inferWorkflowCategory(workflow.workflowTarget ?? workflow.module),
+      workflowCategory:
+        workflow.workflowCategory ??
+        inferWorkflowCategory(workflow.workflowTarget ?? workflow.module),
       workflowTarget: workflow.workflowTarget ?? workflow.module,
     });
     setDesignerNodes(buildDesignerNodes(workflow));
@@ -549,10 +685,16 @@ export function WorkflowConfigurator() {
     }
 
     if (selectedWorkflow) {
-      setWorkflows(workflows.map(wf => wf.id === selectedWorkflow.id ? {
-        ...formData,
-        module: formData.workflowTarget || formData.module,
-      } : wf));
+      setWorkflows(
+        workflows.map((wf) =>
+          wf.id === selectedWorkflow.id
+            ? {
+                ...formData,
+                module: formData.workflowTarget || formData.module,
+              }
+            : wf
+        )
+      );
       setShowCreateModal(false);
       setSelectedWorkflow(null);
       resetForm();
@@ -569,13 +711,17 @@ export function WorkflowConfigurator() {
       description: '',
       triggerEvent: 'On Record Submission',
       conditions: [],
-      steps: [{ id: '1', stepNumber: 1, approverRole: '', isMandatory: true, allowDelegation: false }],
+      steps: [
+        { id: '1', stepNumber: 1, approverRole: '', isMandatory: true, allowDelegation: false },
+      ],
       status: 'Draft',
-      createdDate: ''
+      createdDate: '',
     });
     setDesignerNodes([{ id: 'node-step-1', nodeType: 'approval', refId: '1' }]);
     setWorkflowPrompt('');
-    setAssistantMessage('Describe the business rule in plain language and I will draft the workflow conditions and approver chain for you.');
+    setAssistantMessage(
+      'Describe the business rule in plain language and I will draft the workflow conditions and approver chain for you.'
+    );
   };
 
   const addStep = () => {
@@ -584,24 +730,31 @@ export function WorkflowConfigurator() {
       stepNumber: formData.steps.length + 1,
       approverRole: '',
       isMandatory: true,
-      allowDelegation: false
+      allowDelegation: false,
     };
     setFormData({ ...formData, steps: [...formData.steps, newStep] });
-    setDesignerNodes((current) => [...current, { id: `node-step-${newStep.id}`, nodeType: 'approval', refId: newStep.id }]);
+    setDesignerNodes((current) => [
+      ...current,
+      { id: `node-step-${newStep.id}`, nodeType: 'approval', refId: newStep.id },
+    ]);
   };
 
   const removeStep = (stepId: string) => {
-    setFormData({ 
-      ...formData, 
-      steps: formData.steps.filter(s => s.id !== stepId).map((s, idx) => ({ ...s, stepNumber: idx + 1 }))
+    setFormData({
+      ...formData,
+      steps: formData.steps
+        .filter((s) => s.id !== stepId)
+        .map((s, idx) => ({ ...s, stepNumber: idx + 1 })),
     });
-    setDesignerNodes((current) => current.filter((node) => !(node.nodeType === 'approval' && node.refId === stepId)));
+    setDesignerNodes((current) =>
+      current.filter((node) => !(node.nodeType === 'approval' && node.refId === stepId))
+    );
   };
 
   const updateStep = (stepId: string, field: keyof WorkflowStep, value: any) => {
     setFormData({
       ...formData,
-      steps: formData.steps.map(s => s.id === stepId ? { ...s, [field]: value } : s)
+      steps: formData.steps.map((s) => (s.id === stepId ? { ...s, [field]: value } : s)),
     });
   };
 
@@ -609,26 +762,36 @@ export function WorkflowConfigurator() {
     const conditionIndex = formData.conditions.length;
     setFormData({
       ...formData,
-      conditions: [...formData.conditions, { field: '', operator: '=', value: '' }]
+      conditions: [...formData.conditions, { field: '', operator: '=', value: '' }],
     });
-    setDesignerNodes((current) => [...current, { id: `node-condition-${Date.now()}`, nodeType: 'condition', refId: `${conditionIndex}` }]);
+    setDesignerNodes((current) => [
+      ...current,
+      { id: `node-condition-${Date.now()}`, nodeType: 'condition', refId: `${conditionIndex}` },
+    ]);
   };
 
   const removeCondition = (index: number) => {
     setFormData({
       ...formData,
-      conditions: formData.conditions.filter((_, idx) => idx !== index)
+      conditions: formData.conditions.filter((_, idx) => idx !== index),
     });
-    setDesignerNodes((current) => current.filter((node) => !(node.nodeType === 'condition' && node.refId === `${index}`))
-      .map((node) => node.nodeType === 'condition' && Number(node.refId) > index
-        ? { ...node, refId: `${Number(node.refId) - 1}` }
-        : node));
+    setDesignerNodes((current) =>
+      current
+        .filter((node) => !(node.nodeType === 'condition' && node.refId === `${index}`))
+        .map((node) =>
+          node.nodeType === 'condition' && Number(node.refId) > index
+            ? { ...node, refId: `${Number(node.refId) - 1}` }
+            : node
+        )
+    );
   };
 
   const updateCondition = (index: number, field: string, value: string) => {
     setFormData({
       ...formData,
-      conditions: formData.conditions.map((c, idx) => idx === index ? { ...c, [field]: value } : c)
+      conditions: formData.conditions.map((c, idx) =>
+        idx === index ? { ...c, [field]: value } : c
+      ),
     });
   };
 
@@ -653,8 +816,12 @@ export function WorkflowConfigurator() {
         }
       }
 
-      const orderedConditionIndices = next.filter((node) => node.nodeType === 'condition').map((node) => Number(node.refId));
-      const orderedConditions = orderedConditionIndices.map((index) => formData.conditions[index]).filter(Boolean);
+      const orderedConditionIndices = next
+        .filter((node) => node.nodeType === 'condition')
+        .map((node) => Number(node.refId));
+      const orderedConditions = orderedConditionIndices
+        .map((index) => formData.conditions[index])
+        .filter(Boolean);
       const reindexedNodes = next.map((node) => {
         if (node.nodeType !== 'condition') {
           return node;
@@ -664,7 +831,9 @@ export function WorkflowConfigurator() {
         return { ...node, refId: `${newIndex}` };
       });
 
-      const orderedStepIds = next.filter((node) => node.nodeType === 'approval').map((node) => node.refId);
+      const orderedStepIds = next
+        .filter((node) => node.nodeType === 'approval')
+        .map((node) => node.refId);
       const orderedSteps = orderedStepIds
         .map((stepId) => formData.steps.find((step) => step.id === stepId))
         .filter((step): step is WorkflowStep => Boolean(step))
@@ -694,7 +863,11 @@ export function WorkflowConfigurator() {
       }));
       setDesignerNodes((current) => {
         const next = [...current];
-        const newNode: DesignerNode = { id: newConditionId, nodeType: 'condition', refId: `${newIndex}` };
+        const newNode: DesignerNode = {
+          id: newConditionId,
+          nodeType: 'condition',
+          refId: `${newIndex}`,
+        };
         if (!targetNodeId) {
           next.push(newNode);
         } else {
@@ -719,7 +892,11 @@ export function WorkflowConfigurator() {
       }));
       setDesignerNodes((current) => {
         const next = [...current];
-        const newNode: DesignerNode = { id: `node-step-${newStep.id}`, nodeType: 'approval', refId: newStep.id };
+        const newNode: DesignerNode = {
+          id: `node-step-${newStep.id}`,
+          nodeType: 'approval',
+          refId: newStep.id,
+        };
         if (!targetNodeId) {
           next.push(newNode);
         } else {
@@ -737,16 +914,21 @@ export function WorkflowConfigurator() {
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, { bg: string; text: string; icon: any }> = {
-      'Active': { bg: '#E8F7F0', text: '#0A7E4A', icon: Check },
-      'Inactive': { bg: '#FFE5E5', text: '#D32F2F', icon: AlertCircle },
-      'Draft': { bg: '#FFF9E6', text: '#D97706', icon: Clock }
+      Active: { bg: '#E8F7F0', text: '#0A7E4A', icon: Check },
+      Inactive: { bg: '#FFE5E5', text: '#D32F2F', icon: AlertCircle },
+      Draft: { bg: '#FFF9E6', text: '#D97706', icon: Clock },
     };
     const config = styles[status] || styles['Draft'];
     const Icon = config.icon;
     return (
-      <span 
-        className="inline-flex items-center gap-1 px-3 py-1 rounded-full" 
-        style={{ backgroundColor: config.bg, color: config.text, fontSize: '12px', fontWeight: '500' }}
+      <span
+        className="inline-flex items-center gap-1 px-3 py-1 rounded-full"
+        style={{
+          backgroundColor: config.bg,
+          color: config.text,
+          fontSize: '12px',
+          fontWeight: '500',
+        }}
       >
         <Icon style={{ width: '14px', height: '14px' }} />
         {status}
@@ -762,7 +944,13 @@ export function WorkflowConfigurator() {
           <button
             onClick={() => navigate('/workflow-engine')}
             className="mb-3 text-sm"
-            style={{ color: 'var(--color-mercury-grey)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            style={{
+              color: 'var(--color-mercury-grey)',
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+            }}
           >
             ← Back to Workflow Engine
           </button>
@@ -774,7 +962,10 @@ export function WorkflowConfigurator() {
           </p>
         </div>
         <button
-          onClick={() => { setSelectedWorkflow(null); setShowCreateModal(true); }}
+          onClick={() => {
+            setSelectedWorkflow(null);
+            setShowCreateModal(true);
+          }}
           className="flex items-center gap-2 rounded-lg transition-all"
           style={{
             padding: '12px 20px',
@@ -783,10 +974,10 @@ export function WorkflowConfigurator() {
             border: 'none',
             fontSize: '14px',
             fontWeight: '500',
-            cursor: 'pointer'
+            cursor: 'pointer',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
         >
           <Plus style={{ width: '18px', height: '18px' }} />
           Create Workflow
@@ -796,40 +987,74 @@ export function WorkflowConfigurator() {
       {!showCreateModal && (
         <>
           {/* Info Banner */}
-          <div 
+          <div
             className="rounded-lg flex items-start gap-3"
-            style={{ 
-              backgroundColor: 'var(--color-teal-tint)', 
+            style={{
+              backgroundColor: 'var(--color-teal-tint)',
               border: '1px solid var(--color-teal)',
               padding: '16px',
-              marginBottom: '16px'
+              marginBottom: '16px',
             }}
           >
-            <Send style={{ width: '20px', height: '20px', color: 'var(--color-teal)', flexShrink: 0, marginTop: '2px' }} />
+            <Send
+              style={{
+                width: '20px',
+                height: '20px',
+                color: 'var(--color-teal)',
+                flexShrink: 0,
+                marginTop: '2px',
+              }}
+            />
             <div>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 4px 0' }}>
+              <h3
+                style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: 'var(--color-ink)',
+                  margin: '0 0 4px 0',
+                }}
+              >
                 Workflow Trigger: Record Submission
               </h3>
-              <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: 0, lineHeight: '1.5' }}>
-                All workflows are <strong>automatically triggered when a submitter submits a record for approval</strong>. 
-                Use conditions to route submissions to the appropriate workflow based on field values (e.g., amount thresholds, categories, departments). 
-                If multiple workflows match, the first active workflow with matching conditions will be applied.
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: 'var(--color-mercury-grey)',
+                  margin: 0,
+                  lineHeight: '1.5',
+                }}
+              >
+                All workflows are{' '}
+                <strong>
+                  automatically triggered when a submitter submits a record for approval
+                </strong>
+                . Use conditions to route submissions to the appropriate workflow based on field
+                values (e.g., amount thresholds, categories, departments). If multiple workflows
+                match, the first active workflow with matching conditions will be applied.
               </p>
             </div>
           </div>
 
           {/* Search */}
-          <div 
-            className="rounded-lg" 
-            style={{ 
-              backgroundColor: '#FFFFFF', 
+          <div
+            className="rounded-lg"
+            style={{
+              backgroundColor: '#FFFFFF',
               border: '1px solid var(--color-silver)',
               padding: '16px',
-              marginBottom: '16px'
+              marginBottom: '16px',
             }}
           >
             <div className="flex items-center gap-2" style={{ position: 'relative' }}>
-              <Search style={{ position: 'absolute', left: '12px', width: '18px', height: '18px', color: 'var(--color-mercury-grey)' }} />
+              <Search
+                style={{
+                  position: 'absolute',
+                  left: '12px',
+                  width: '18px',
+                  height: '18px',
+                  color: 'var(--color-mercury-grey)',
+                }}
+              />
               <input
                 type="text"
                 placeholder="Search by workflow name, module, or description..."
@@ -842,7 +1067,7 @@ export function WorkflowConfigurator() {
                   borderRadius: '8px',
                   fontSize: '14px',
                   color: 'var(--color-ink)',
-                  outline: 'none'
+                  outline: 'none',
                 }}
               />
             </div>
@@ -850,132 +1075,223 @@ export function WorkflowConfigurator() {
 
           {/* Workflows List */}
           <div className="space-y-3">
-        {filteredWorkflows.map((workflow) => (
-          <div 
-            key={workflow.id}
-            className="rounded-lg" 
-            style={{ 
-              backgroundColor: '#FFFFFF', 
-              border: '1px solid var(--color-silver)',
-              overflow: 'hidden'
-            }}
-          >
-            {/* Workflow Header */}
-            <div 
-              className="flex items-center justify-between cursor-pointer"
-              style={{ padding: '16px', borderBottom: expandedWorkflow === workflow.id ? '1px solid var(--color-silver)' : 'none' }}
-              onClick={() => setExpandedWorkflow(expandedWorkflow === workflow.id ? null : workflow.id)}
-            >
-              <div className="flex items-center gap-4 flex-1">
-                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-teal)' }}>
-                  {expandedWorkflow === workflow.id ? <ChevronDown style={{ width: '20px', height: '20px' }} /> : <ChevronRight style={{ width: '20px', height: '20px' }} />}
-                </button>
-                <div className="flex items-center gap-2">
-                  <GitBranch style={{ width: '20px', height: '20px', color: 'var(--color-teal)' }} />
-                  <div>
-                    <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
-                      {workflow.workflowName}
-                    </h3>
-                    <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
-                      {(workflow.workflowCategory ?? inferWorkflowCategory(workflow.workflowTarget ?? workflow.module))} • {(workflow.workflowTarget ?? workflow.module)} • {workflow.steps.length} Step{workflow.steps.length > 1 ? 's' : ''}
-                      {workflow.conditions.length > 0 && ` • ${workflow.conditions.length} Condition${workflow.conditions.length > 1 ? 's' : ''}`}
-                    </p>
+            {filteredWorkflows.map((workflow) => (
+              <div
+                key={workflow.id}
+                className="rounded-lg"
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid var(--color-silver)',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Workflow Header */}
+                <div
+                  className="flex items-center justify-between cursor-pointer"
+                  style={{
+                    padding: '16px',
+                    borderBottom:
+                      expandedWorkflow === workflow.id ? '1px solid var(--color-silver)' : 'none',
+                  }}
+                  onClick={() =>
+                    setExpandedWorkflow(expandedWorkflow === workflow.id ? null : workflow.id)
+                  }
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    <button
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--color-teal)',
+                      }}
+                    >
+                      {expandedWorkflow === workflow.id ? (
+                        <ChevronDown style={{ width: '20px', height: '20px' }} />
+                      ) : (
+                        <ChevronRight style={{ width: '20px', height: '20px' }} />
+                      )}
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <GitBranch
+                        style={{ width: '20px', height: '20px', color: 'var(--color-teal)' }}
+                      />
+                      <div>
+                        <h3
+                          style={{
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            color: 'var(--color-ink)',
+                            margin: 0,
+                          }}
+                        >
+                          {workflow.workflowName}
+                        </h3>
+                        <p
+                          style={{
+                            fontSize: '13px',
+                            color: 'var(--color-mercury-grey)',
+                            margin: '2px 0 0 0',
+                          }}
+                        >
+                          {workflow.workflowCategory ??
+                            inferWorkflowCategory(workflow.workflowTarget ?? workflow.module)}{' '}
+                          • {workflow.workflowTarget ?? workflow.module} • {workflow.steps.length}{' '}
+                          Step{workflow.steps.length > 1 ? 's' : ''}
+                          {workflow.conditions.length > 0 &&
+                            ` • ${workflow.conditions.length} Condition${workflow.conditions.length > 1 ? 's' : ''}`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {getStatusBadge(workflow.status)}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(workflow);
+                      }}
+                      className="p-2 rounded-lg transition-all"
+                      style={{
+                        backgroundColor: 'var(--color-cloud)',
+                        border: '1px solid var(--color-silver)',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor = 'var(--color-silver)')
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = 'var(--color-cloud)')
+                      }
+                    >
+                      <Edit style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
+                    </button>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {getStatusBadge(workflow.status)}
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleEdit(workflow); }}
-                  className="p-2 rounded-lg transition-all"
-                  style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)', cursor: 'pointer' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-silver)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
-                >
-                  <Edit style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
-                </button>
-              </div>
-            </div>
 
-            {/* Expanded Content */}
-            {expandedWorkflow === workflow.id && (
-              <div style={{ padding: '20px' }}>
-                <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', marginBottom: '16px' }}>
-                  {workflow.description}
-                </p>
+                {/* Expanded Content */}
+                {expandedWorkflow === workflow.id && (
+                  <div style={{ padding: '20px' }}>
+                    <p
+                      style={{
+                        fontSize: '14px',
+                        color: 'var(--color-mercury-grey)',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      {workflow.description}
+                    </p>
 
-                {/* Conditions */}
-                {workflow.conditions.length > 0 && (
-                  <div style={{ marginBottom: '20px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-ink)', marginBottom: '8px' }}>
-                      Trigger Conditions:
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {workflow.conditions.map((condition, idx) => (
-                        <span 
-                          key={idx}
-                          className="px-3 py-1 rounded-full"
-                          style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)', fontSize: '13px', fontWeight: '500' }}
+                    {/* Conditions */}
+                    {workflow.conditions.length > 0 && (
+                      <div style={{ marginBottom: '20px' }}>
+                        <h4
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: 'var(--color-ink)',
+                            marginBottom: '8px',
+                          }}
                         >
-                          {condition.field} {condition.operator} {condition.value}
-                        </span>
-                      ))}
+                          Trigger Conditions:
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {workflow.conditions.map((condition, idx) => (
+                            <span
+                              key={idx}
+                              className="px-3 py-1 rounded-full"
+                              style={{
+                                backgroundColor: 'var(--color-teal-tint)',
+                                color: 'var(--color-teal)',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                              }}
+                            >
+                              {condition.field} {condition.operator} {condition.value}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Approval Steps */}
+                    <div>
+                      <h4
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: 'var(--color-ink)',
+                          marginBottom: '12px',
+                        }}
+                      >
+                        Approval Flow:
+                      </h4>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {workflow.steps.map((step, idx) => (
+                          <div key={step.id} className="flex items-center gap-3">
+                            <div
+                              className="rounded-lg"
+                              style={{
+                                padding: '12px 16px',
+                                backgroundColor: 'var(--color-cloud)',
+                                border: '1px solid var(--color-silver)',
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="rounded-full flex items-center justify-center"
+                                  style={{
+                                    width: '24px',
+                                    height: '24px',
+                                    backgroundColor: 'var(--color-teal)',
+                                    color: '#FFFFFF',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                  }}
+                                >
+                                  {step.stepNumber}
+                                </span>
+                                <div>
+                                  <p
+                                    style={{
+                                      fontSize: '13px',
+                                      fontWeight: '500',
+                                      color: 'var(--color-ink)',
+                                      margin: 0,
+                                    }}
+                                  >
+                                    {step.approverRole}
+                                  </p>
+                                  <p
+                                    style={{
+                                      fontSize: '11px',
+                                      color: 'var(--color-mercury-grey)',
+                                      margin: '2px 0 0 0',
+                                    }}
+                                  >
+                                    {step.isMandatory ? 'Mandatory' : 'Optional'}
+                                    {step.allowDelegation && ' • Can Delegate'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            {idx < workflow.steps.length - 1 && (
+                              <ArrowRight
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  color: 'var(--color-mercury-grey)',
+                                }}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
-
-                {/* Approval Steps */}
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--color-ink)', marginBottom: '12px' }}>
-                    Approval Flow:
-                  </h4>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {workflow.steps.map((step, idx) => (
-                      <div key={step.id} className="flex items-center gap-3">
-                        <div 
-                          className="rounded-lg"
-                          style={{ 
-                            padding: '12px 16px',
-                            backgroundColor: 'var(--color-cloud)',
-                            border: '1px solid var(--color-silver)'
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span 
-                              className="rounded-full flex items-center justify-center"
-                              style={{
-                                width: '24px',
-                                height: '24px',
-                                backgroundColor: 'var(--color-teal)',
-                                color: '#FFFFFF',
-                                fontSize: '12px',
-                                fontWeight: '600'
-                              }}
-                            >
-                              {step.stepNumber}
-                            </span>
-                            <div>
-                              <p style={{ fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', margin: 0 }}>
-                                {step.approverRole}
-                              </p>
-                              <p style={{ fontSize: '11px', color: 'var(--color-mercury-grey)', margin: '2px 0 0 0' }}>
-                                {step.isMandatory ? 'Mandatory' : 'Optional'}
-                                {step.allowDelegation && ' • Can Delegate'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        {idx < workflow.steps.length - 1 && (
-                          <ArrowRight style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
-            )}
-          </div>
-        ))}
+            ))}
           </div>
         </>
       )}
@@ -992,7 +1308,7 @@ export function WorkflowConfigurator() {
             overflow: 'visible',
           }}
         >
-          <div 
+          <div
             className="w-full"
             style={{
               width: '100%',
@@ -1002,23 +1318,48 @@ export function WorkflowConfigurator() {
             }}
           >
             {/* Workspace Header */}
-            <div className="flex items-center justify-between" style={{ padding: '20px', borderBottom: '1px solid var(--color-silver)' }}>
+            <div
+              className="flex items-center justify-between"
+              style={{ padding: '20px', borderBottom: '1px solid var(--color-silver)' }}
+            >
               <div>
                 <button
                   onClick={() => setShowCreateModal(false)}
                   className="mb-2 text-sm"
-                  style={{ color: 'var(--color-mercury-grey)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  style={{
+                    color: 'var(--color-mercury-grey)',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                  }}
                 >
                   ← Back to Workflow List
                 </button>
-                <h2 style={{ fontSize: '22px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
+                <h2
+                  style={{
+                    fontSize: '22px',
+                    fontWeight: '600',
+                    color: 'var(--color-ink)',
+                    margin: 0,
+                  }}
+                >
                   {selectedWorkflow ? 'Edit Workflow Builder' : 'Create Workflow Builder'}
                 </h2>
-                <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: '6px 0 0 0' }}>
+                <p
+                  style={{
+                    fontSize: '13px',
+                    color: 'var(--color-mercury-grey)',
+                    margin: '6px 0 0 0',
+                  }}
+                >
                   Use the full workspace to design routing conditions and approval steps visually.
                 </p>
               </div>
-              <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
                 <X style={{ width: '20px', height: '20px', color: 'var(--color-mercury-grey)' }} />
               </button>
             </div>
@@ -1026,19 +1367,36 @@ export function WorkflowConfigurator() {
             {/* Workspace Body */}
             <div style={{ padding: '24px', flex: 1 }}>
               {/* Basic Info */}
-              <div className="grid grid-cols-[1.15fr_0.85fr] gap-5" style={{ marginBottom: '20px' }}>
+              <div
+                className="grid grid-cols-[1.15fr_0.85fr] gap-5"
+                style={{ marginBottom: '20px' }}
+              >
                 <div
                   className="rounded-lg"
-                  style={{ border: '1px solid var(--color-silver)', backgroundColor: '#FFFFFF', padding: '20px' }}
+                  style={{
+                    border: '1px solid var(--color-silver)',
+                    backgroundColor: '#FFFFFF',
+                    padding: '20px',
+                  }}
                 >
                   <div className="flex items-center gap-2" style={{ marginBottom: '16px' }}>
                     <Wand2 style={{ width: '18px', height: '18px', color: 'var(--color-teal)' }} />
-                    <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
+                    <h3
+                      style={{
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        color: 'var(--color-ink)',
+                        margin: 0,
+                      }}
+                    >
                       Workflow Basics
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4" style={{ marginBottom: '16px', alignItems: 'start' }}>
+                  <div
+                    className="grid grid-cols-2 gap-4"
+                    style={{ marginBottom: '16px', alignItems: 'start' }}
+                  >
                     <div>
                       <label style={fieldLabelStyle}>
                         Workflow Name <span style={{ color: 'var(--color-error)' }}>*</span>
@@ -1058,12 +1416,14 @@ export function WorkflowConfigurator() {
                       </label>
                       <select
                         value={formData.workflowCategory ?? 'Masters'}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          workflowCategory: e.target.value as WorkflowCategory,
-                          workflowTarget: '',
-                          module: '',
-                        })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            workflowCategory: e.target.value as WorkflowCategory,
+                            workflowTarget: '',
+                            module: '',
+                          })
+                        }
                         style={fieldStyle}
                       >
                         <option value="Masters">Masters</option>
@@ -1072,27 +1432,41 @@ export function WorkflowConfigurator() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4" style={{ marginBottom: '16px', alignItems: 'start' }}>
+                  <div
+                    className="grid grid-cols-2 gap-4"
+                    style={{ marginBottom: '16px', alignItems: 'start' }}
+                  >
                     <div>
                       <label style={fieldLabelStyle}>
-                        {formData.workflowCategory === 'Masters' ? 'Select Master' : 'Select Form'} <span style={{ color: 'var(--color-error)' }}>*</span>
+                        {formData.workflowCategory === 'Masters' ? 'Select Master' : 'Select Form'}{' '}
+                        <span style={{ color: 'var(--color-error)' }}>*</span>
                       </label>
                       <select
                         value={formData.workflowTarget ?? ''}
-                        onChange={(e) => setFormData({ ...formData, workflowTarget: e.target.value, module: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            workflowTarget: e.target.value,
+                            module: e.target.value,
+                          })
+                        }
                         style={fieldStyle}
                       >
-                        <option value="">{formData.workflowCategory === 'Masters' ? 'Select Master' : 'Select Form'}</option>
+                        <option value="">
+                          {formData.workflowCategory === 'Masters'
+                            ? 'Select Master'
+                            : 'Select Form'}
+                        </option>
                         {availableTargets.map((target) => (
-                          <option key={target} value={target}>{target}</option>
+                          <option key={target} value={target}>
+                            {target}
+                          </option>
                         ))}
                       </select>
                     </div>
 
                     <div>
-                      <label style={fieldLabelStyle}>
-                        Suggested Trigger
-                      </label>
+                      <label style={fieldLabelStyle}>Suggested Trigger</label>
                       <div
                         className="flex items-center"
                         style={{
@@ -1134,26 +1508,65 @@ export function WorkflowConfigurator() {
 
                 <div
                   className="rounded-lg"
-                  style={{ border: '1px solid #D7EEF1', backgroundColor: '#F8FDFF', padding: '20px' }}
+                  style={{
+                    border: '1px solid #D7EEF1',
+                    backgroundColor: '#F8FDFF',
+                    padding: '20px',
+                  }}
                 >
                   <div className="flex items-center gap-2" style={{ marginBottom: '12px' }}>
                     <Bot style={{ width: '18px', height: '18px', color: 'var(--color-teal)' }} />
-                    <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
+                    <h3
+                      style={{
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        color: 'var(--color-ink)',
+                        margin: 0,
+                      }}
+                    >
                       Workflow Assistant
                     </h3>
                   </div>
 
-                  <p style={{ fontSize: '13px', color: 'var(--color-mercury-grey)', margin: '0 0 12px 0', lineHeight: '1.5' }}>
-                    Tell the system what workflow you want in plain English. It will draft conditions and approver steps for review.
+                  <p
+                    style={{
+                      fontSize: '13px',
+                      color: 'var(--color-mercury-grey)',
+                      margin: '0 0 12px 0',
+                      lineHeight: '1.5',
+                    }}
+                  >
+                    Tell the system what workflow you want in plain English. It will draft
+                    conditions and approver steps for review.
                   </p>
 
                   <div
                     className="rounded-lg"
-                    style={{ border: '1px solid #D7EEF1', backgroundColor: '#FFFFFF', padding: '12px', marginBottom: '12px' }}
+                    style={{
+                      border: '1px solid #D7EEF1',
+                      backgroundColor: '#FFFFFF',
+                      padding: '12px',
+                      marginBottom: '12px',
+                    }}
                   >
                     <div className="flex items-start gap-2">
-                      <Sparkles style={{ width: '16px', height: '16px', color: 'var(--color-teal)', flexShrink: 0, marginTop: '2px' }} />
-                      <p style={{ fontSize: '12px', color: 'var(--color-ink)', margin: 0, lineHeight: '1.6' }}>
+                      <Sparkles
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          color: 'var(--color-teal)',
+                          flexShrink: 0,
+                          marginTop: '2px',
+                        }}
+                      />
+                      <p
+                        style={{
+                          fontSize: '12px',
+                          color: 'var(--color-ink)',
+                          margin: 0,
+                          lineHeight: '1.6',
+                        }}
+                      >
                         {assistantMessage}
                       </p>
                     </div>
@@ -1193,8 +1606,12 @@ export function WorkflowConfigurator() {
                         fontWeight: '600',
                         cursor: 'pointer',
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = 'var(--color-teal)')
+                      }
                     >
                       <Sparkles style={{ width: '15px', height: '15px' }} />
                       Generate Draft
@@ -1209,7 +1626,10 @@ export function WorkflowConfigurator() {
                   <label style={{ fontSize: '14px', fontWeight: '500', color: 'var(--color-ink)' }}>
                     Visual Workflow Canvas <span style={{ color: 'var(--color-error)' }}>*</span>
                   </label>
-                  <div className="flex items-center gap-2" style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}>
+                  <div
+                    className="flex items-center gap-2"
+                    style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}
+                  >
                     <MousePointer2 style={{ width: '14px', height: '14px' }} />
                     Drag blocks into the canvas and reorder them visually
                   </div>
@@ -1225,7 +1645,14 @@ export function WorkflowConfigurator() {
                       boxShadow: '0 12px 24px rgba(65, 85, 140, 0.08)',
                     }}
                   >
-                    <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 12px 0' }}>
+                    <p
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: 'var(--color-ink)',
+                        margin: '0 0 12px 0',
+                      }}
+                    >
                       Drag Blocks
                     </p>
 
@@ -1251,10 +1678,27 @@ export function WorkflowConfigurator() {
                           <BadgeChip label="Drag" tone="neutral" />
                         </div>
                         <div className="flex items-center gap-2" style={{ marginTop: '10px' }}>
-                          <Filter style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
-                          <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)' }}>Condition Block</span>
+                          <Filter
+                            style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }}
+                          />
+                          <span
+                            style={{
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              color: 'var(--color-ink)',
+                            }}
+                          >
+                            Condition Block
+                          </span>
                         </div>
-                        <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '8px 0 0 0', lineHeight: '1.6' }}>
+                        <p
+                          style={{
+                            fontSize: '12px',
+                            color: 'var(--color-mercury-grey)',
+                            margin: '8px 0 0 0',
+                            lineHeight: '1.6',
+                          }}
+                        >
                           Add amount, department, entity, or field-based routing rules.
                         </p>
                       </div>
@@ -1280,10 +1724,27 @@ export function WorkflowConfigurator() {
                           <BadgeChip label="Drag" tone="neutral" />
                         </div>
                         <div className="flex items-center gap-2" style={{ marginTop: '10px' }}>
-                          <ShieldCheck style={{ width: '16px', height: '16px', color: '#4D5DF0' }} />
-                          <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)' }}>Approval Step</span>
+                          <ShieldCheck
+                            style={{ width: '16px', height: '16px', color: '#4D5DF0' }}
+                          />
+                          <span
+                            style={{
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              color: 'var(--color-ink)',
+                            }}
+                          >
+                            Approval Step
+                          </span>
                         </div>
-                        <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '8px 0 0 0', lineHeight: '1.6' }}>
+                        <p
+                          style={{
+                            fontSize: '12px',
+                            color: 'var(--color-mercury-grey)',
+                            margin: '8px 0 0 0',
+                            lineHeight: '1.6',
+                          }}
+                        >
                           Add approver roles and arrange the approval chain visually.
                         </p>
                       </div>
@@ -1297,13 +1758,31 @@ export function WorkflowConfigurator() {
                           minHeight: '112px',
                         }}
                       >
-                        <div className="flex items-center justify-between gap-2" style={{ marginBottom: '8px' }}>
-                          <p style={{ fontSize: '12px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
+                        <div
+                          className="flex items-center justify-between gap-2"
+                          style={{ marginBottom: '8px' }}
+                        >
+                          <p
+                            style={{
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              color: 'var(--color-ink)',
+                              margin: 0,
+                            }}
+                          >
                             Builder Guidance
                           </p>
                           <BadgeChip label="Tips" tone="amber" />
                         </div>
-                        <ul style={{ margin: 0, paddingLeft: '18px', color: 'var(--color-mercury-grey)', fontSize: '12px', lineHeight: '1.6' }}>
+                        <ul
+                          style={{
+                            margin: 0,
+                            paddingLeft: '18px',
+                            color: 'var(--color-mercury-grey)',
+                            fontSize: '12px',
+                            lineHeight: '1.6',
+                          }}
+                        >
                           <li>Start with conditions only when routing depends on values.</li>
                           <li>Add one or more approval steps in the exact execution order.</li>
                           <li>Drag blocks and review the flow from left to right.</li>
@@ -1325,9 +1804,19 @@ export function WorkflowConfigurator() {
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => handlePaletteDrop(null)}
                   >
-                    <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
+                    <div
+                      className="flex items-center justify-between"
+                      style={{ marginBottom: '12px' }}
+                    >
                       <div className="flex items-center gap-2">
-                        <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>
+                        <p
+                          style={{
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            color: 'var(--color-ink)',
+                            margin: 0,
+                          }}
+                        >
                           Workflow Canvas
                         </p>
                         <BadgeChip label="Live Preview" tone="indigo" />
@@ -1337,7 +1826,13 @@ export function WorkflowConfigurator() {
                         <BadgeChip label="Final Outcome" tone="green" />
                       </div>
                       <div className="flex items-center gap-3">
-                        <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: 0 }}>
+                        <p
+                          style={{
+                            fontSize: '12px',
+                            color: 'var(--color-mercury-grey)',
+                            margin: 0,
+                          }}
+                        >
                           Conditions route first, then approval steps execute left to right.
                         </p>
                         <div className="flex items-center gap-2">
@@ -1382,7 +1877,8 @@ export function WorkflowConfigurator() {
                       className="rounded-lg"
                       style={{
                         border: '1px solid #E8EEF2',
-                        background: 'radial-gradient(circle at top left, #F4F8FF 0%, #FBFCFD 45%, #F8FBFF 100%)',
+                        background:
+                          'radial-gradient(circle at top left, #F4F8FF 0%, #FBFCFD 45%, #F8FBFF 100%)',
                         padding: '18px',
                         overflowX: 'scroll',
                         overflowY: 'hidden',
@@ -1397,12 +1893,31 @@ export function WorkflowConfigurator() {
                       {designerNodes.length === 0 ? (
                         <div
                           className="rounded-lg flex items-center justify-center"
-                          style={{ minHeight: '220px', border: '1px dashed #C7D0D8', backgroundColor: '#F9FBFC' }}
+                          style={{
+                            minHeight: '220px',
+                            border: '1px dashed #C7D0D8',
+                            backgroundColor: '#F9FBFC',
+                          }}
                         >
                           <div style={{ textAlign: 'center' }}>
-                            <Route style={{ width: '28px', height: '28px', color: 'var(--color-teal)', margin: '0 auto 12px auto' }} />
-                            <p style={{ fontSize: '14px', color: 'var(--color-ink)', margin: 0 }}>Drop blocks here to build the workflow</p>
-                            <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '6px 0 0 0' }}>
+                            <Route
+                              style={{
+                                width: '28px',
+                                height: '28px',
+                                color: 'var(--color-teal)',
+                                margin: '0 auto 12px auto',
+                              }}
+                            />
+                            <p style={{ fontSize: '14px', color: 'var(--color-ink)', margin: 0 }}>
+                              Drop blocks here to build the workflow
+                            </p>
+                            <p
+                              style={{
+                                fontSize: '12px',
+                                color: 'var(--color-mercury-grey)',
+                                margin: '6px 0 0 0',
+                              }}
+                            >
                               Start with a condition or jump straight to approval steps.
                             </p>
                           </div>
@@ -1466,9 +1981,16 @@ export function WorkflowConfigurator() {
                         </div>
 
                         {designerNodes.map((node, nodeIndex) => {
-                          const conditionIndex = node.nodeType === 'condition' ? Number(node.refId) : -1;
-                          const condition = node.nodeType === 'condition' ? formData.conditions[conditionIndex] : null;
-                          const step = node.nodeType === 'approval' ? formData.steps.find((item) => item.id === node.refId) : null;
+                          const conditionIndex =
+                            node.nodeType === 'condition' ? Number(node.refId) : -1;
+                          const condition =
+                            node.nodeType === 'condition'
+                              ? formData.conditions[conditionIndex]
+                              : null;
+                          const step =
+                            node.nodeType === 'approval'
+                              ? formData.steps.find((item) => item.id === node.refId)
+                              : null;
 
                           return (
                             <div key={node.id} className="flex items-center" style={{ gap: '0px' }}>
@@ -1500,24 +2022,27 @@ export function WorkflowConfigurator() {
                                   setDragOverZoneId(null);
                                 }}
                                 className="rounded-lg"
-                              style={{
-                                width: node.nodeType === 'condition' ? '420px' : '360px',
-                                minHeight: '180px',
-                                padding: '14px',
-                                background: node.nodeType === 'condition'
-                                  ? 'linear-gradient(180deg, #F3FCFF 0%, #EAF7FC 100%)'
-                                  : 'linear-gradient(180deg, #F4F6FF 0%, #ECEFFE 100%)',
-                                border: dragOverNodeId === node.id
-                                  ? '1px solid #6677E8'
-                                  : node.nodeType === 'condition'
-                                    ? '1px solid #BEE8F3'
-                                    : '1px solid #CCD5FF',
-                                flexShrink: 0,
-                                boxShadow: dragOverNodeId === node.id
-                                  ? '0 16px 36px rgba(102, 119, 232, 0.16)'
-                                  : '0 12px 28px rgba(34, 51, 84, 0.08)',
-                              }}
-                            >
+                                style={{
+                                  width: node.nodeType === 'condition' ? '420px' : '360px',
+                                  minHeight: '180px',
+                                  padding: '14px',
+                                  background:
+                                    node.nodeType === 'condition'
+                                      ? 'linear-gradient(180deg, #F3FCFF 0%, #EAF7FC 100%)'
+                                      : 'linear-gradient(180deg, #F4F6FF 0%, #ECEFFE 100%)',
+                                  border:
+                                    dragOverNodeId === node.id
+                                      ? '1px solid #6677E8'
+                                      : node.nodeType === 'condition'
+                                        ? '1px solid #BEE8F3'
+                                        : '1px solid #CCD5FF',
+                                  flexShrink: 0,
+                                  boxShadow:
+                                    dragOverNodeId === node.id
+                                      ? '0 16px 36px rgba(102, 119, 232, 0.16)'
+                                      : '0 12px 28px rgba(34, 51, 84, 0.08)',
+                                }}
+                              >
                                 <div className="flex items-start gap-3">
                                   <div
                                     className="rounded-lg flex items-center justify-center"
@@ -1531,7 +2056,13 @@ export function WorkflowConfigurator() {
                                       boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
                                     }}
                                   >
-                                    <GripVertical style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
+                                    <GripVertical
+                                      style={{
+                                        width: '16px',
+                                        height: '16px',
+                                        color: 'var(--color-mercury-grey)',
+                                      }}
+                                    />
                                   </div>
 
                                   <div
@@ -1539,9 +2070,10 @@ export function WorkflowConfigurator() {
                                     style={{
                                       width: '30px',
                                       height: '30px',
-                                      background: node.nodeType === 'condition'
-                                        ? 'linear-gradient(135deg, #18B6C9 0%, #0E8DA5 100%)'
-                                        : 'linear-gradient(135deg, #6E7FFF 0%, #4D5DF0 100%)',
+                                      background:
+                                        node.nodeType === 'condition'
+                                          ? 'linear-gradient(135deg, #18B6C9 0%, #0E8DA5 100%)'
+                                          : 'linear-gradient(135deg, #6E7FFF 0%, #4D5DF0 100%)',
                                       color: '#FFFFFF',
                                       fontSize: '12px',
                                       fontWeight: '600',
@@ -1554,14 +2086,34 @@ export function WorkflowConfigurator() {
                                   <div style={{ flex: 1 }}>
                                     {node.nodeType === 'condition' && condition && (
                                       <>
-                                        <div className="flex items-center justify-between gap-2" style={{ marginBottom: '10px' }}>
+                                        <div
+                                          className="flex items-center justify-between gap-2"
+                                          style={{ marginBottom: '10px' }}
+                                        >
                                           <div className="flex items-center gap-2">
-                                          <Filter style={{ width: '16px', height: '16px', color: '#0E8DA5' }} />
-                                          <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)' }}>Condition Block</span>
+                                            <Filter
+                                              style={{
+                                                width: '16px',
+                                                height: '16px',
+                                                color: '#0E8DA5',
+                                              }}
+                                            />
+                                            <span
+                                              style={{
+                                                fontSize: '13px',
+                                                fontWeight: '600',
+                                                color: 'var(--color-ink)',
+                                              }}
+                                            >
+                                              Condition Block
+                                            </span>
                                           </div>
                                           <BadgeChip label="Routing Rule" tone="cyan" />
                                         </div>
-                                        <div className="flex items-center gap-2 flex-wrap" style={{ marginBottom: '10px' }}>
+                                        <div
+                                          className="flex items-center gap-2 flex-wrap"
+                                          style={{ marginBottom: '10px' }}
+                                        >
                                           <BadgeChip label="Field" tone="neutral" />
                                           <BadgeChip label="Operator" tone="neutral" />
                                           <BadgeChip label="Value" tone="neutral" />
@@ -1570,14 +2122,40 @@ export function WorkflowConfigurator() {
                                           <input
                                             type="text"
                                             value={condition.field}
-                                            onChange={(e) => updateCondition(conditionIndex, 'field', e.target.value)}
+                                            onChange={(e) =>
+                                              updateCondition(
+                                                conditionIndex,
+                                                'field',
+                                                e.target.value
+                                              )
+                                            }
                                             placeholder="Field"
-                                            style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '13px', outline: 'none' }}
+                                            style={{
+                                              width: '100%',
+                                              padding: '8px 12px',
+                                              border: '1px solid var(--color-silver)',
+                                              borderRadius: '8px',
+                                              fontSize: '13px',
+                                              outline: 'none',
+                                            }}
                                           />
                                           <select
                                             value={condition.operator}
-                                            onChange={(e) => updateCondition(conditionIndex, 'operator', e.target.value)}
-                                            style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '13px', outline: 'none' }}
+                                            onChange={(e) =>
+                                              updateCondition(
+                                                conditionIndex,
+                                                'operator',
+                                                e.target.value
+                                              )
+                                            }
+                                            style={{
+                                              width: '100%',
+                                              padding: '8px 12px',
+                                              border: '1px solid var(--color-silver)',
+                                              borderRadius: '8px',
+                                              fontSize: '13px',
+                                              outline: 'none',
+                                            }}
                                           >
                                             <option value="=">=</option>
                                             <option value="!=">!=</option>
@@ -1589,9 +2167,22 @@ export function WorkflowConfigurator() {
                                           <input
                                             type="text"
                                             value={condition.value}
-                                            onChange={(e) => updateCondition(conditionIndex, 'value', e.target.value)}
+                                            onChange={(e) =>
+                                              updateCondition(
+                                                conditionIndex,
+                                                'value',
+                                                e.target.value
+                                              )
+                                            }
                                             placeholder="Value"
-                                            style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '13px', outline: 'none' }}
+                                            style={{
+                                              width: '100%',
+                                              padding: '8px 12px',
+                                              border: '1px solid var(--color-silver)',
+                                              borderRadius: '8px',
+                                              fontSize: '13px',
+                                              outline: 'none',
+                                            }}
                                           />
                                         </div>
                                       </>
@@ -1599,43 +2190,108 @@ export function WorkflowConfigurator() {
 
                                     {node.nodeType === 'approval' && step && (
                                       <>
-                                        <div className="flex items-center justify-between gap-2" style={{ marginBottom: '10px' }}>
+                                        <div
+                                          className="flex items-center justify-between gap-2"
+                                          style={{ marginBottom: '10px' }}
+                                        >
                                           <div className="flex items-center gap-2">
-                                          <ShieldCheck style={{ width: '16px', height: '16px', color: '#4D5DF0' }} />
-                                          <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-ink)' }}>Approval Step</span>
+                                            <ShieldCheck
+                                              style={{
+                                                width: '16px',
+                                                height: '16px',
+                                                color: '#4D5DF0',
+                                              }}
+                                            />
+                                            <span
+                                              style={{
+                                                fontSize: '13px',
+                                                fontWeight: '600',
+                                                color: 'var(--color-ink)',
+                                              }}
+                                            >
+                                              Approval Step
+                                            </span>
                                           </div>
-                                          <BadgeChip label={`Step ${nodeIndex + 1}`} tone="indigo" />
+                                          <BadgeChip
+                                            label={`Step ${nodeIndex + 1}`}
+                                            tone="indigo"
+                                          />
                                         </div>
                                         <div style={{ marginBottom: '10px' }}>
                                           <select
                                             value={step.approverRole}
-                                            onChange={(e) => updateStep(step.id, 'approverRole', e.target.value)}
-                                            style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--color-silver)', borderRadius: '8px', fontSize: '13px', outline: 'none' }}
+                                            onChange={(e) =>
+                                              updateStep(step.id, 'approverRole', e.target.value)
+                                            }
+                                            style={{
+                                              width: '100%',
+                                              padding: '8px 12px',
+                                              border: '1px solid var(--color-silver)',
+                                              borderRadius: '8px',
+                                              fontSize: '13px',
+                                              outline: 'none',
+                                            }}
                                           >
                                             <option value="">Select Approver Role</option>
                                             {roles.map((role) => (
-                                              <option key={role} value={role}>{role}</option>
+                                              <option key={role} value={role}>
+                                                {role}
+                                              </option>
                                             ))}
                                           </select>
                                         </div>
                                         <div className="flex items-center gap-2 flex-wrap">
-                                          <label className="flex items-center gap-2" style={{ fontSize: '13px', color: 'var(--color-mercury-grey)' }}>
+                                          <label
+                                            className="flex items-center gap-2"
+                                            style={{
+                                              fontSize: '13px',
+                                              color: 'var(--color-mercury-grey)',
+                                            }}
+                                          >
                                             <input
                                               type="checkbox"
                                               checked={step.isMandatory}
-                                              onChange={(e) => updateStep(step.id, 'isMandatory', e.target.checked)}
-                                              style={{ width: '16px', height: '16px', accentColor: 'var(--color-teal)' }}
+                                              onChange={(e) =>
+                                                updateStep(step.id, 'isMandatory', e.target.checked)
+                                              }
+                                              style={{
+                                                width: '16px',
+                                                height: '16px',
+                                                accentColor: 'var(--color-teal)',
+                                              }}
                                             />
-                                            <BadgeChip label="Mandatory" tone={step.isMandatory ? 'green' : 'neutral'} />
+                                            <BadgeChip
+                                              label="Mandatory"
+                                              tone={step.isMandatory ? 'green' : 'neutral'}
+                                            />
                                           </label>
-                                          <label className="flex items-center gap-2" style={{ fontSize: '13px', color: 'var(--color-mercury-grey)' }}>
+                                          <label
+                                            className="flex items-center gap-2"
+                                            style={{
+                                              fontSize: '13px',
+                                              color: 'var(--color-mercury-grey)',
+                                            }}
+                                          >
                                             <input
                                               type="checkbox"
                                               checked={step.allowDelegation}
-                                              onChange={(e) => updateStep(step.id, 'allowDelegation', e.target.checked)}
-                                              style={{ width: '16px', height: '16px', accentColor: 'var(--color-teal)' }}
+                                              onChange={(e) =>
+                                                updateStep(
+                                                  step.id,
+                                                  'allowDelegation',
+                                                  e.target.checked
+                                                )
+                                              }
+                                              style={{
+                                                width: '16px',
+                                                height: '16px',
+                                                accentColor: 'var(--color-teal)',
+                                              }}
                                             />
-                                            <BadgeChip label="Delegation" tone={step.allowDelegation ? 'amber' : 'neutral'} />
+                                            <BadgeChip
+                                              label="Delegation"
+                                              tone={step.allowDelegation ? 'amber' : 'neutral'}
+                                            />
                                           </label>
                                         </div>
                                       </>
@@ -1643,20 +2299,42 @@ export function WorkflowConfigurator() {
                                   </div>
 
                                   <button
-                                    onClick={() => node.nodeType === 'condition' ? removeCondition(conditionIndex) : step && removeStep(step.id)}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+                                    onClick={() =>
+                                      node.nodeType === 'condition'
+                                        ? removeCondition(conditionIndex)
+                                        : step && removeStep(step.id)
+                                    }
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      flexShrink: 0,
+                                    }}
                                   >
-                                    <X style={{ width: '16px', height: '16px', color: 'var(--color-error)' }} />
+                                    <X
+                                      style={{
+                                        width: '16px',
+                                        height: '16px',
+                                        color: 'var(--color-error)',
+                                      }}
+                                    />
                                   </button>
                                 </div>
                               </div>
 
                               <ArrowRightConnector />
 
-                              <div className="flex flex-col items-center" style={{ minWidth: '200px' }}>
+                              <div
+                                className="flex flex-col items-center"
+                                style={{ minWidth: '200px' }}
+                              >
                                 <DropZone
                                   isActive={dragOverZoneId === `between-${node.id}`}
-                                  label={nodeIndex === designerNodes.length - 1 ? 'Add next block' : 'Insert between'}
+                                  label={
+                                    nodeIndex === designerNodes.length - 1
+                                      ? 'Add next block'
+                                      : 'Insert between'
+                                  }
                                   onDragOver={(event) => {
                                     event.preventDefault();
                                     setDragOverZoneId(`between-${node.id}`);
@@ -1710,7 +2388,14 @@ export function WorkflowConfigurator() {
                       <button
                         onClick={addCondition}
                         className="flex items-center gap-1 px-3 py-1 rounded-lg transition-all"
-                        style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)', color: 'var(--color-teal)', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}
+                        style={{
+                          backgroundColor: 'var(--color-teal-tint)',
+                          border: '1px solid var(--color-teal)',
+                          color: 'var(--color-teal)',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                        }}
                       >
                         <Plus style={{ width: '14px', height: '14px' }} />
                         Add Condition
@@ -1718,7 +2403,14 @@ export function WorkflowConfigurator() {
                       <button
                         onClick={addStep}
                         className="flex items-center gap-1 px-3 py-1 rounded-lg transition-all"
-                        style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)', color: 'var(--color-teal)', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}
+                        style={{
+                          backgroundColor: 'var(--color-teal-tint)',
+                          border: '1px solid var(--color-teal)',
+                          color: 'var(--color-teal)',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                        }}
                       >
                         <Plus style={{ width: '14px', height: '14px' }} />
                         Add Step
@@ -1735,9 +2427,18 @@ export function WorkflowConfigurator() {
                           border: '1px solid #F5D97B',
                         }}
                       >
-                        <AlertCircle style={{ width: '16px', height: '16px', color: '#D97706', flexShrink: 0, marginTop: '1px' }} />
+                        <AlertCircle
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            color: '#D97706',
+                            flexShrink: 0,
+                            marginTop: '1px',
+                          }}
+                        />
                         <div style={{ fontSize: '12px', color: '#7A5B00', lineHeight: '1.5' }}>
-                          Complete the workflow name, target, description, every condition, and at least one approval step before saving.
+                          Complete the workflow name, target, description, every condition, and at
+                          least one approval step before saving.
                         </div>
                       </div>
                     )}
@@ -1747,7 +2448,14 @@ export function WorkflowConfigurator() {
             </div>
 
             {/* Workspace Footer */}
-            <div className="flex items-center justify-end gap-3" style={{ padding: '20px 24px', borderTop: '1px solid var(--color-silver)', backgroundColor: '#FFFFFF' }}>
+            <div
+              className="flex items-center justify-end gap-3"
+              style={{
+                padding: '20px 24px',
+                borderTop: '1px solid var(--color-silver)',
+                backgroundColor: '#FFFFFF',
+              }}
+            >
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="px-6 py-2 rounded-lg transition-all"
@@ -1757,10 +2465,10 @@ export function WorkflowConfigurator() {
                   color: 'var(--color-mercury-grey)',
                   fontSize: '14px',
                   fontWeight: '500',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-cloud)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#FFFFFF')}
               >
                 Cancel
               </button>
@@ -1774,7 +2482,7 @@ export function WorkflowConfigurator() {
                   color: '#FFFFFF',
                   fontSize: '14px',
                   fontWeight: '500',
-                  cursor: hasInvalidCanvas ? 'not-allowed' : 'pointer'
+                  cursor: hasInvalidCanvas ? 'not-allowed' : 'pointer',
                 }}
                 onMouseEnter={(e) => {
                   if (!hasInvalidCanvas) {
@@ -1782,7 +2490,9 @@ export function WorkflowConfigurator() {
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = hasInvalidCanvas ? '#9BD5DA' : 'var(--color-teal)';
+                  e.currentTarget.style.backgroundColor = hasInvalidCanvas
+                    ? '#9BD5DA'
+                    : 'var(--color-teal)';
                 }}
               >
                 {selectedWorkflow ? 'Update Workflow' : 'Create Workflow'}

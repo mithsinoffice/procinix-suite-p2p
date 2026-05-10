@@ -1,10 +1,29 @@
-import { ArrowLeft, Plus, Trash2, X, Hash, Type, FileText, Edit, Calendar, Eye } from 'lucide-react';
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  X,
+  Hash,
+  Type,
+  FileText,
+  Edit,
+  Calendar,
+  Eye,
+} from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useState, useMemo, useCallback } from 'react';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { ApprovalModal } from './ApprovalModal';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import {
+  FormShell,
+  FormSection,
+  PxFormField,
+  CheckCard,
+  type SaveStatus,
+} from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { EntityMappingSelector } from './shared/EntityMappingSelector';
 import type { EntityScopeMapping } from '../lib/masters/entityMapping';
@@ -16,6 +35,7 @@ interface PaymentTerm {
   creditDays: string;
   status: string;
   approvalStatus?: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected' | 'Changes Requested';
+  entityMappings?: EntityScopeMapping[];
   originalData?: PaymentTerm;
 }
 
@@ -27,10 +47,27 @@ interface Change {
 
 export function VendorPaymentTermsMaster() {
   const navigate = useNavigate();
-  const [paymentTerms, setPaymentTerms] = useIncrementalMasterRecords<PaymentTerm>('vendor_payment_terms_master', [
-    { id: '1', code: 'NET15', description: 'Payment due in 15 days', creditDays: '15', status: 'Active', approvalStatus: 'Approved' },
-    { id: '2', code: 'NET30', description: 'Payment due in 30 days', creditDays: '30', status: 'Active', approvalStatus: 'Approved' }
-  ]);
+  const [paymentTerms, setPaymentTerms] = useIncrementalMasterRecords<PaymentTerm>(
+    'vendor_payment_terms_master',
+    [
+      {
+        id: '1',
+        code: 'NET15',
+        description: 'Payment due in 15 days',
+        creditDays: '15',
+        status: 'Active',
+        approvalStatus: 'Approved',
+      },
+      {
+        id: '2',
+        code: 'NET30',
+        description: 'Payment due in 30 days',
+        creditDays: '30',
+        status: 'Active',
+        approvalStatus: 'Approved',
+      },
+    ]
+  );
 
   const [showForm, setShowForm] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -45,6 +82,20 @@ export function VendorPaymentTermsMaster() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<PaymentTerm | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
+  const filteredTerms = useMemo(() => {
+    return paymentTerms.filter((t) => {
+      const haystack = [t.code, t.description, t.creditDays].join(' ').toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(t.status);
+      const matchesApproval =
+        approvalFilter.length === 0 || approvalFilter.includes(t.approvalStatus ?? 'Approved');
+      return matchesSearch && matchesStatus && matchesApproval;
+    });
+  }, [paymentTerms, searchTerm, statusFilter, approvalFilter]);
 
   const handleSubmit = (approvalStatus: PaymentTerm['approvalStatus'] = 'Pending Approval') => {
     if (isEditMode && editingId) {
@@ -60,7 +111,7 @@ export function VendorPaymentTermsMaster() {
         entityMappings,
       };
 
-      setPaymentTerms(paymentTerms.map(t => t.id === editingId ? updatedTerm : t));
+      setPaymentTerms(paymentTerms.map((t) => (t.id === editingId ? updatedTerm : t)));
     } else {
       const newTerm: PaymentTerm = {
         id: Date.now().toString(),
@@ -106,7 +157,7 @@ export function VendorPaymentTermsMaster() {
       return;
     }
     if (window.confirm('Are you sure you want to delete this payment term?')) {
-      setPaymentTerms(paymentTerms.filter(t => t.id !== id));
+      setPaymentTerms(paymentTerms.filter((t) => t.id !== id));
     }
   };
 
@@ -114,10 +165,22 @@ export function VendorPaymentTermsMaster() {
     const changes: Change[] = [];
     const original = term.originalData;
     if (original) {
-      if (original.code !== term.code) changes.push({ field: 'Term Code', oldValue: original.code, newValue: term.code });
-      if (original.description !== term.description) changes.push({ field: 'Description', oldValue: original.description, newValue: term.description });
-      if (original.creditDays !== term.creditDays) changes.push({ field: 'Credit Days', oldValue: original.creditDays, newValue: term.creditDays });
-      if (original.status !== term.status) changes.push({ field: 'Status', oldValue: original.status, newValue: term.status });
+      if (original.code !== term.code)
+        changes.push({ field: 'Term Code', oldValue: original.code, newValue: term.code });
+      if (original.description !== term.description)
+        changes.push({
+          field: 'Description',
+          oldValue: original.description,
+          newValue: term.description,
+        });
+      if (original.creditDays !== term.creditDays)
+        changes.push({
+          field: 'Credit Days',
+          oldValue: original.creditDays,
+          newValue: term.creditDays,
+        });
+      if (original.status !== term.status)
+        changes.push({ field: 'Status', oldValue: original.status, newValue: term.status });
     }
     setCurrentReviewRecord(term);
     setDetectedChanges(changes);
@@ -126,7 +189,12 @@ export function VendorPaymentTermsMaster() {
 
   const handleApprove = async () => {
     if (!currentReviewRecord) return;
-    const nextRecords = await applyMasterApprovalAction('vendor_payment_terms_master', paymentTerms, currentReviewRecord.id, 'approve');
+    const nextRecords = await applyMasterApprovalAction(
+      'vendor_payment_terms_master',
+      paymentTerms,
+      currentReviewRecord.id,
+      'approve'
+    );
     setPaymentTerms(nextRecords);
     setShowApprovalModal(false);
     setCurrentReviewRecord(null);
@@ -134,7 +202,12 @@ export function VendorPaymentTermsMaster() {
 
   const handleReject = async () => {
     if (!currentReviewRecord) return;
-    const nextRecords = await applyMasterApprovalAction('vendor_payment_terms_master', paymentTerms, currentReviewRecord.id, 'reject');
+    const nextRecords = await applyMasterApprovalAction(
+      'vendor_payment_terms_master',
+      paymentTerms,
+      currentReviewRecord.id,
+      'reject'
+    );
     setPaymentTerms(nextRecords);
     setShowApprovalModal(false);
     setCurrentReviewRecord(null);
@@ -144,7 +217,13 @@ export function VendorPaymentTermsMaster() {
     if (!currentReviewRecord) return;
     const comments = window.prompt('Enter comments for the request:', '');
     if (comments === null) return;
-    const nextRecords = await applyMasterApprovalAction('vendor_payment_terms_master', paymentTerms, currentReviewRecord.id, 'request_info', comments);
+    const nextRecords = await applyMasterApprovalAction(
+      'vendor_payment_terms_master',
+      paymentTerms,
+      currentReviewRecord.id,
+      'request_info',
+      comments
+    );
     setPaymentTerms(nextRecords);
     setShowApprovalModal(false);
     setCurrentReviewRecord(null);
@@ -185,6 +264,7 @@ export function VendorPaymentTermsMaster() {
   if (showForm) {
     return (
       <FormShell
+        masterName="Vendor Payment Terms Master"
         title={isEditMode ? 'Edit Payment Term' : 'Create Payment Term'}
         subtitle="Manage vendor payment terms and credit periods"
         modeLabel={isEditMode ? 'Edit Master Record' : 'Create Master Record'}
@@ -203,38 +283,54 @@ export function VendorPaymentTermsMaster() {
       >
         <FormSection title="Payment Term Details" columns={2}>
           <PxFormField label="Term Code" required filled={!!code.trim()}>
-            <input type="text" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g., NET15" className="px-input" />
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="e.g., NET15"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Credit Days" required filled={!!creditDays.trim()}>
-            <input type="number" value={creditDays} onChange={(e) => setCreditDays(e.target.value)} placeholder="e.g., 15" className="px-input" />
+            <input
+              type="number"
+              value={creditDays}
+              onChange={(e) => setCreditDays(e.target.value)}
+              placeholder="e.g., 15"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Description" required filled={!!description.trim()}>
-            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Payment due in 15 days" className="px-input" />
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g., Payment due in 15 days"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Status" required filled={!!status}>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-select">
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="px-select"
+            >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
           </PxFormField>
-                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
+          <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Vendor Payment Terms Master</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage vendor payment terms and credit periods</p>
-          </div>
-        </div>
+    <MasterPageShell
+      masterName="Vendor Payment Terms Master"
+      description="Manage vendor payment terms"
+    >
+      <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
             resetForm();
@@ -242,54 +338,157 @@ export function VendorPaymentTermsMaster() {
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
           style={{ backgroundColor: 'var(--color-teal)' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
         >
           <Plus className="w-5 h-5" />
           Add Payment Term
         </button>
       </div>
 
+      <MasterListToolbar
+        masterName="Vendor Payment Terms"
+        masterKey="vendor_payment_terms_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          {
+            key: 'status',
+            label: 'Status',
+            options: ['Active', 'Inactive'],
+            selected: statusFilter,
+          },
+          {
+            key: 'approval',
+            label: 'Approval',
+            options: ['Draft', 'Pending Approval', 'Approved', 'Rejected', 'Changes Requested'],
+            selected: approvalFilter,
+          },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredTerms}
+        columns={[
+          { key: 'code', label: 'Term Code' },
+          { key: 'description', label: 'Description' },
+          { key: 'creditDays', label: 'Credit Days' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
+
       <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Term Code</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Description</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Credit Days</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Term Code
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Description
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Credit Days
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Status
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Approval
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
-              {paymentTerms.map((term, index) => (
-                <tr key={term.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{term.code}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>{term.description}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>{term.creditDays} days</td>
+              {filteredTerms.map((term, index) => (
+                <tr
+                  key={term.id}
+                  style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}
+                >
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
+                    {term.code}
+                  </td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
+                    {term.description}
+                  </td>
+                  <td className="px-6 py-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                    {term.creditDays} days
+                  </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: term.status === 'Active' ? 'var(--color-teal-tint)' : '#E5E7EB', color: term.status === 'Active' ? 'var(--color-teal)' : 'var(--color-mercury-grey)' }}>
+                    <span
+                      className="px-3 py-1 rounded-full text-sm"
+                      style={{
+                        backgroundColor:
+                          term.status === 'Active' ? 'var(--color-teal-tint)' : '#E5E7EB',
+                        color:
+                          term.status === 'Active'
+                            ? 'var(--color-teal)'
+                            : 'var(--color-mercury-grey)',
+                      }}
+                    >
                       {term.status}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={getApprovalBadgeStyle(term.approvalStatus)}>
+                    <span
+                      className="px-3 py-1 rounded-full text-sm"
+                      style={getApprovalBadgeStyle(term.approvalStatus)}
+                    >
                       {term.approvalStatus ?? 'Approved'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => handleEdit(term)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }} title="Edit">
+                      <button
+                        onClick={() => handleEdit(term)}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: 'var(--color-mercury-grey)' }}
+                        title="Edit"
+                      >
                         <Edit className="w-4 h-4" />
                       </button>
-                      {(term.approvalStatus === 'Pending Approval' || term.approvalStatus === 'Changes Requested' || term.approvalStatus === 'Draft') && (
-                        <button onClick={() => handleReview(term)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-teal)' }} title="Review Changes">
+                      {(term.approvalStatus === 'Pending Approval' ||
+                        term.approvalStatus === 'Changes Requested' ||
+                        term.approvalStatus === 'Draft') && (
+                        <button
+                          onClick={() => handleReview(term)}
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: 'var(--color-teal)' }}
+                          title="Review Changes"
+                        >
                           <Eye className="w-4 h-4" />
                         </button>
                       )}
-                      <button onClick={() => handleDelete(term.id)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-error)' }} title="Delete">
+                      <button
+                        onClick={() => handleDelete(term.id)}
+                        className="p-2 rounded-lg transition-colors"
+                        style={{ color: 'var(--color-error)' }}
+                        title="Delete"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -311,6 +510,6 @@ export function VendorPaymentTermsMaster() {
         onReject={handleReject}
         onRequestInfo={handleRequestInfo}
       />
-    </div>
+    </MasterPageShell>
   );
 }

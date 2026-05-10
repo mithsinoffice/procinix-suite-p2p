@@ -19,7 +19,7 @@ import {
   ChevronUp,
   ExternalLink,
   Play,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 
 interface AIAssuranceInsight {
@@ -49,7 +49,9 @@ interface AIAssurancePanelProps {
 }
 
 export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAssurancePanelProps) {
-  const [activeTab, setActiveTab] = useState<'compliance' | 'vendor_risk' | 'payment_impact' | 'evidence'>('compliance');
+  const [activeTab, setActiveTab] = useState<
+    'compliance' | 'vendor_risk' | 'payment_impact' | 'evidence'
+  >('compliance');
   const [expandedInsights, setExpandedInsights] = useState<Set<string>>(new Set());
   const [showEvidenceModal, setShowEvidenceModal] = useState<string | null>(null);
   const [overrideReasons, setOverrideReasons] = useState<Record<string, string>>({});
@@ -57,10 +59,10 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
 
   // Generate AI insights based on invoice data
   const insights = generateAIInsights(invoiceData);
-  
-  const blockerCount = insights.filter(i => i.severity === 'blocker').length;
-  const warningCount = insights.filter(i => i.severity === 'warning').length;
-  const infoCount = insights.filter(i => i.severity === 'info').length;
+
+  const blockerCount = insights.filter((i) => i.severity === 'blocker').length;
+  const warningCount = insights.filter((i) => i.severity === 'warning').length;
+  const infoCount = insights.filter((i) => i.severity === 'info').length;
 
   const overallRisk = blockerCount > 0 ? 'High' : warningCount > 2 ? 'Medium' : 'Low';
 
@@ -77,7 +79,7 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
   const handleOverride = (insightId: string, reason: string) => {
     setOverrideReasons({ ...overrideReasons, [insightId]: reason });
     if (onActionTaken) {
-      const insight = insights.find(i => i.id === insightId);
+      const insight = insights.find((i) => i.id === insightId);
       if (insight) {
         onActionTaken('override', insight);
       }
@@ -93,63 +95,79 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'blocker': return 'var(--color-error-dark)';
-      case 'warning': return '#F59E0B';
-      case 'info': return 'var(--color-teal)';
-      default: return 'var(--color-mercury-grey)';
+      case 'blocker':
+        return 'var(--color-error-dark)';
+      case 'warning':
+        return '#F59E0B';
+      case 'info':
+        return 'var(--color-teal)';
+      default:
+        return 'var(--color-mercury-grey)';
     }
   };
 
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
-      case 'blocker': return XCircle;
-      case 'warning': return AlertTriangle;
-      case 'info': return Info;
-      default: return Info;
+      case 'blocker':
+        return XCircle;
+      case 'warning':
+        return AlertTriangle;
+      case 'info':
+        return Info;
+      default:
+        return Info;
     }
   };
 
   const getRiskBadgeStyle = (risk: string) => {
     switch (risk) {
       case 'High':
-        return { backgroundColor: 'var(--color-error-light)', color: 'var(--color-error-dark)', borderColor: '#FCA5A5' };
+        return {
+          backgroundColor: 'var(--color-error-light)',
+          color: 'var(--color-error-dark)',
+          borderColor: '#FCA5A5',
+        };
       case 'Medium':
         return { backgroundColor: '#FEF3C7', color: '#D97706', borderColor: '#FCD34D' };
       case 'Low':
         return { backgroundColor: '#D1FAE5', color: '#059669', borderColor: '#6EE7B7' };
       default:
-        return { backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)', borderColor: 'var(--color-silver)' };
+        return {
+          backgroundColor: 'var(--color-cloud)',
+          color: 'var(--color-mercury-grey)',
+          borderColor: 'var(--color-silver)',
+        };
     }
   };
 
-  const filteredInsights = insights.filter(i => i.category === activeTab);
+  const filteredInsights = insights.filter((i) => i.category === activeTab);
 
   const tabs = [
     { key: 'compliance' as const, label: 'Compliance & Tax', icon: Shield },
     { key: 'vendor_risk' as const, label: 'Vendor & Risk', icon: Building2 },
     { key: 'payment_impact' as const, label: 'Cash & Payment', icon: DollarSign },
-    { key: 'evidence' as const, label: 'Evidence & Audit', icon: Database }
+    { key: 'evidence' as const, label: 'Evidence & Audit', icon: Database },
   ];
 
   return (
-    <div 
+    <div
       className="flex flex-col h-full"
-      style={{ 
+      style={{
         width: '420px',
         backgroundColor: '#FFFFFF',
-        borderLeft: '1px solid var(--color-silver)'
+        borderLeft: '1px solid var(--color-silver)',
       }}
     >
       {/* Header */}
       <div className="p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div 
-              className="flex items-center justify-center rounded-lg" 
-              style={{ 
-                width: '40px', 
-                height: '40px', 
-                backgroundColor: '#E6F7F8' 
+            <div
+              className="flex items-center justify-center rounded-lg"
+              style={{
+                width: '40px',
+                height: '40px',
+                backgroundColor: '#E6F7F8',
               }}
             >
               <Shield className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
@@ -168,10 +186,11 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
             disabled={checksStatus === 'running'}
             className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
             style={{
-              backgroundColor: checksStatus === 'running' ? 'var(--color-silver)' : 'var(--color-teal)',
+              backgroundColor:
+                checksStatus === 'running' ? 'var(--color-silver)' : 'var(--color-teal)',
               color: '#FFFFFF',
               border: 'none',
-              cursor: checksStatus === 'running' ? 'not-allowed' : 'pointer'
+              cursor: checksStatus === 'running' ? 'not-allowed' : 'pointer',
             }}
           >
             {checksStatus === 'running' ? (
@@ -190,29 +209,42 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
 
         {/* Risk Score & Counts */}
         <div className="grid grid-cols-2 gap-3">
-          <div 
+          <div
             className="p-3 rounded-lg"
-            style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
+            style={{
+              backgroundColor: 'var(--color-cloud)',
+              border: '1px solid var(--color-silver)',
+            }}
           >
-            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Overall Risk</div>
-            <div 
+            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+              Overall Risk
+            </div>
+            <div
               className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs"
               style={{
                 ...getRiskBadgeStyle(overallRisk),
                 fontWeight: '600',
-                border: `1px solid ${getRiskBadgeStyle(overallRisk).borderColor}`
+                border: `1px solid ${getRiskBadgeStyle(overallRisk).borderColor}`,
               }}
             >
               {overallRisk}
             </div>
           </div>
-          <div 
+          <div
             className="p-3 rounded-lg"
-            style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
+            style={{
+              backgroundColor: 'var(--color-cloud)',
+              border: '1px solid var(--color-silver)',
+            }}
           >
-            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Findings</div>
+            <div className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+              Findings
+            </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}>
+              <span
+                className="text-xs"
+                style={{ color: 'var(--color-error-dark)', fontWeight: '600' }}
+              >
                 {blockerCount} Blockers
               </span>
               <span className="text-xs" style={{ color: '#F59E0B', fontWeight: '600' }}>
@@ -224,11 +256,11 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
       </div>
 
       {/* Tabs */}
-      <div 
+      <div
         className="flex gap-1 px-4 py-3"
         style={{ borderBottom: '1px solid var(--color-silver)', backgroundColor: '#FAFBFC' }}
       >
-        {tabs.map(tab => (
+        {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -236,8 +268,9 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
             style={{
               backgroundColor: activeTab === tab.key ? '#FFFFFF' : 'transparent',
               color: activeTab === tab.key ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
-              border: activeTab === tab.key ? '1px solid var(--color-silver)' : '1px solid transparent',
-              fontWeight: activeTab === tab.key ? '600' : '400'
+              border:
+                activeTab === tab.key ? '1px solid var(--color-silver)' : '1px solid transparent',
+              fontWeight: activeTab === tab.key ? '600' : '400',
             }}
           >
             <tab.icon className="w-3.5 h-3.5" />
@@ -257,7 +290,7 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
             </p>
           </div>
         ) : (
-          filteredInsights.map(insight => (
+          filteredInsights.map((insight) => (
             <InsightCard
               key={insight.id}
               insight={insight}
@@ -277,7 +310,7 @@ export function AIAssurancePanel({ invoiceId, invoiceData, onActionTaken }: AIAs
       {/* Evidence Modal */}
       {showEvidenceModal && (
         <EvidenceModal
-          insight={insights.find(i => i.id === showEvidenceModal)!}
+          insight={insights.find((i) => i.id === showEvidenceModal)!}
           onClose={() => setShowEvidenceModal(null)}
         />
       )}
@@ -306,7 +339,7 @@ function InsightCard({
   overrideReason,
   getSeverityColor,
   getSeverityIcon,
-  onActionTaken
+  onActionTaken,
 }: InsightCardProps) {
   const [showOverrideInput, setShowOverrideInput] = useState(false);
   const [overrideText, setOverrideText] = useState('');
@@ -325,26 +358,26 @@ function InsightCard({
       className="rounded-lg overflow-hidden"
       style={{
         border: `1px solid ${getSeverityColor(insight.severity)}40`,
-        backgroundColor: '#FFFFFF'
+        backgroundColor: '#FFFFFF',
       }}
     >
       {/* Card Header */}
-      <div 
+      <div
         className="p-4 cursor-pointer"
         onClick={onToggleExpand}
         style={{ borderBottom: isExpanded ? '1px solid var(--color-silver)' : 'none' }}
       >
         <div className="flex items-start gap-3">
-          <div 
+          <div
             className="flex items-center justify-center rounded-full flex-shrink-0"
-            style={{ 
-              width: '32px', 
+            style={{
+              width: '32px',
               height: '32px',
-              backgroundColor: `${getSeverityColor(insight.severity)}15`
+              backgroundColor: `${getSeverityColor(insight.severity)}15`,
             }}
           >
-            <SeverityIcon 
-              className="w-4 h-4" 
+            <SeverityIcon
+              className="w-4 h-4"
               style={{ color: getSeverityColor(insight.severity) }}
             />
           </div>
@@ -355,14 +388,17 @@ function InsightCard({
                 style={{
                   backgroundColor: `${getSeverityColor(insight.severity)}15`,
                   color: getSeverityColor(insight.severity),
-                  fontWeight: '600'
+                  fontWeight: '600',
                 }}
               >
                 {insight.severity}
               </span>
-              <span 
+              <span
                 className="text-xs px-2 py-0.5 rounded"
-                style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
+                style={{
+                  backgroundColor: 'var(--color-cloud)',
+                  color: 'var(--color-mercury-grey)',
+                }}
               >
                 {insight.confidence}% confidence
               </span>
@@ -400,7 +436,10 @@ function InsightCard({
           {/* Recommended Actions */}
           {insight.recommendedActions.length > 0 && (
             <div className="space-y-2">
-              <div className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+              <div
+                className="text-xs"
+                style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+              >
                 Recommended Actions
               </div>
               <div className="space-y-2">
@@ -410,10 +449,18 @@ function InsightCard({
                     onClick={() => handleActionClick(action)}
                     className="w-full text-left px-3 py-2 rounded-lg text-xs transition-colors"
                     style={{
-                      backgroundColor: action.type === 'primary' ? 'var(--color-teal)' : 
-                                     action.type === 'danger' ? 'var(--color-error-dark)' : '#FFFFFF',
-                      color: action.type === 'primary' || action.type === 'danger' ? '#FFFFFF' : 'var(--color-ink)',
-                      border: action.type === 'secondary' ? '1px solid var(--color-silver)' : 'none'
+                      backgroundColor:
+                        action.type === 'primary'
+                          ? 'var(--color-teal)'
+                          : action.type === 'danger'
+                            ? 'var(--color-error-dark)'
+                            : '#FFFFFF',
+                      color:
+                        action.type === 'primary' || action.type === 'danger'
+                          ? '#FFFFFF'
+                          : 'var(--color-ink)',
+                      border:
+                        action.type === 'secondary' ? '1px solid var(--color-silver)' : 'none',
                     }}
                   >
                     {action.label}
@@ -445,7 +492,7 @@ function InsightCard({
                       backgroundColor: '#FFFFFF',
                       border: '1px solid var(--color-silver)',
                       color: 'var(--color-ink)',
-                      resize: 'none'
+                      resize: 'none',
                     }}
                     rows={2}
                   />
@@ -458,8 +505,10 @@ function InsightCard({
                       disabled={!overrideText.trim()}
                       className="px-3 py-1.5 rounded text-xs"
                       style={{
-                        backgroundColor: overrideText.trim() ? 'var(--color-teal)' : 'var(--color-silver)',
-                        color: '#FFFFFF'
+                        backgroundColor: overrideText.trim()
+                          ? 'var(--color-teal)'
+                          : 'var(--color-silver)',
+                        color: '#FFFFFF',
                       }}
                     >
                       Submit Override
@@ -470,7 +519,7 @@ function InsightCard({
                       style={{
                         backgroundColor: '#FFFFFF',
                         border: '1px solid var(--color-silver)',
-                        color: 'var(--color-mercury-grey)'
+                        color: 'var(--color-mercury-grey)',
                       }}
                     >
                       Cancel
@@ -483,7 +532,7 @@ function InsightCard({
 
           {/* Override Applied */}
           {overrideReason && (
-            <div 
+            <div
               className="p-3 rounded-lg"
               style={{ backgroundColor: '#FEF3C7', border: '1px solid #FCD34D' }}
             >
@@ -513,7 +562,7 @@ interface EvidenceModalProps {
 
 function EvidenceModal({ insight, onClose }: EvidenceModalProps) {
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(10, 15, 20, 0.6)' }}
       onClick={onClose}
@@ -548,10 +597,13 @@ function EvidenceModal({ insight, onClose }: EvidenceModalProps) {
           <div className="space-y-4">
             {/* Evidence Type */}
             <div>
-              <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+              <div
+                className="text-xs mb-2"
+                style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+              >
                 Evidence Type
               </div>
-              <div 
+              <div
                 className="px-3 py-2 rounded-lg text-sm"
                 style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)' }}
               >
@@ -561,12 +613,18 @@ function EvidenceModal({ insight, onClose }: EvidenceModalProps) {
 
             {/* Evidence Details */}
             <div>
-              <div className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+              <div
+                className="text-xs mb-2"
+                style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+              >
                 Details
               </div>
-              <div 
+              <div
                 className="p-4 rounded-lg"
-                style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}
+                style={{
+                  backgroundColor: 'var(--color-cloud)',
+                  border: '1px solid var(--color-silver)',
+                }}
               >
                 <pre className="text-xs whitespace-pre-wrap" style={{ color: 'var(--color-ink)' }}>
                   {JSON.stringify(insight.evidence.details, null, 2)}
@@ -575,7 +633,10 @@ function EvidenceModal({ insight, onClose }: EvidenceModalProps) {
             </div>
 
             {/* Timestamp */}
-            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+            <div
+              className="flex items-center gap-2 text-xs"
+              style={{ color: 'var(--color-mercury-grey)' }}
+            >
               <Clock className="w-4 h-4" />
               <span>Check performed: {new Date().toLocaleString()}</span>
             </div>
@@ -583,7 +644,7 @@ function EvidenceModal({ insight, onClose }: EvidenceModalProps) {
         </div>
 
         {/* Modal Footer */}
-        <div 
+        <div
           className="p-6 flex justify-end"
           style={{ borderTop: '1px solid var(--color-silver)' }}
         >
@@ -592,7 +653,7 @@ function EvidenceModal({ insight, onClose }: EvidenceModalProps) {
             className="px-6 py-2.5 rounded-lg text-sm"
             style={{
               backgroundColor: 'var(--color-teal)',
-              color: '#FFFFFF'
+              color: '#FFFFFF',
             }}
           >
             Close
@@ -622,22 +683,22 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
           vendorId: invoiceData.vendorId,
           vendorName: invoiceData.vendorName,
           status: invoiceData.vendorStatus,
-          lastUpdated: '2025-01-10'
-        }
+          lastUpdated: '2025-01-10',
+        },
       },
       recommendedActions: [
         {
           label: 'Request Vendor Reactivation',
           type: 'primary',
-          handler: () => console.log('Requesting vendor reactivation')
+          handler: () => console.log('Requesting vendor reactivation'),
         },
         {
           label: 'Contact Vendor Management',
           type: 'secondary',
-          handler: () => console.log('Contacting vendor management')
-        }
+          handler: () => console.log('Contacting vendor management'),
+        },
       ],
-      canOverride: false
+      canOverride: false,
     });
   }
 
@@ -647,29 +708,30 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
       category: 'vendor_risk',
       severity: 'warning',
       title: 'Vendor PAN Missing or Invalid',
-      explanation: 'Valid PAN is required for TDS compliance. Payment may be delayed without proper PAN details.',
+      explanation:
+        'Valid PAN is required for TDS compliance. Payment may be delayed without proper PAN details.',
       confidence: 95,
       evidence: {
         type: 'Vendor Tax Details',
         details: {
           vendorId: invoiceData.vendorId,
           panStatus: invoiceData.vendorPAN ? 'Invalid Format' : 'Missing',
-          panValue: invoiceData.vendorPAN || 'Not provided'
-        }
+          panValue: invoiceData.vendorPAN || 'Not provided',
+        },
       },
       recommendedActions: [
         {
           label: 'Request PAN from Vendor',
           type: 'primary',
-          handler: () => console.log('Requesting PAN')
+          handler: () => console.log('Requesting PAN'),
         },
         {
           label: 'Send Back to AP for PAN Update',
           type: 'secondary',
-          handler: () => console.log('Sending back')
-        }
+          handler: () => console.log('Sending back'),
+        },
       ],
-      canOverride: true
+      canOverride: true,
     });
   }
 
@@ -687,22 +749,22 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
           previousAccount: invoiceData.previousBankAccount,
           currentAccount: invoiceData.currentBankAccount,
           changeDate: invoiceData.bankChangeDate,
-          changedBy: 'AP Team'
-        }
+          changedBy: 'AP Team',
+        },
       },
       recommendedActions: [
         {
           label: 'Verify Bank Details with Vendor',
           type: 'primary',
-          handler: () => console.log('Verifying bank details')
+          handler: () => console.log('Verifying bank details'),
         },
         {
           label: 'Put Payment on Hold',
           type: 'danger',
-          handler: () => console.log('Putting payment on hold')
-        }
+          handler: () => console.log('Putting payment on hold'),
+        },
       ],
-      canOverride: true
+      canOverride: true,
     });
   }
 
@@ -713,7 +775,8 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
       category: 'compliance',
       severity: 'blocker',
       title: 'Section 206AB: Higher TDS Rate Required',
-      explanation: 'Vendor is a non-filer under Section 206AB. Higher TDS rate must be applied as per statutory requirement.',
+      explanation:
+        'Vendor is a non-filer under Section 206AB. Higher TDS rate must be applied as per statutory requirement.',
       confidence: 100,
       evidence: {
         type: 'Section 206AB Compliance Check',
@@ -722,22 +785,22 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
           filingStatus: 'Non-Filer',
           requiredTDSRate: '20%',
           appliedTDSRate: invoiceData.tdsRate,
-          baseAmount: invoiceData.tdsBaseAmount
-        }
+          baseAmount: invoiceData.tdsBaseAmount,
+        },
       },
       recommendedActions: [
         {
           label: 'Apply Higher TDS Rate (20%)',
           type: 'primary',
-          handler: () => console.log('Applying higher TDS rate')
+          handler: () => console.log('Applying higher TDS rate'),
         },
         {
           label: 'Send Back for TDS Correction',
           type: 'secondary',
-          handler: () => console.log('Sending back for correction')
-        }
+          handler: () => console.log('Sending back for correction'),
+        },
       ],
-      canOverride: false
+      canOverride: false,
     });
   }
 
@@ -757,22 +820,22 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
           expectedSection: invoiceData.expectedTDSSection,
           expectedRate: invoiceData.expectedTDSRate,
           appliedSection: invoiceData.tdsSection,
-          appliedRate: invoiceData.tdsRate
-        }
+          appliedRate: invoiceData.tdsRate,
+        },
       },
       recommendedActions: [
         {
           label: `Apply Recommended TDS: ${invoiceData.expectedTDSSection} @ ${invoiceData.expectedTDSRate}%`,
           type: 'primary',
-          handler: () => console.log('Applying recommended TDS')
+          handler: () => console.log('Applying recommended TDS'),
         },
         {
           label: 'Create Exception Approval',
           type: 'secondary',
-          handler: () => console.log('Creating exception')
-        }
+          handler: () => console.log('Creating exception'),
+        },
       ],
-      canOverride: true
+      canOverride: true,
     });
   }
 
@@ -782,7 +845,8 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
       category: 'compliance',
       severity: 'blocker',
       title: 'Lower TDS Certificate Expired',
-      explanation: 'Vendor has a lower TDS certificate but it has expired. Normal TDS rates must be applied.',
+      explanation:
+        'Vendor has a lower TDS certificate but it has expired. Normal TDS rates must be applied.',
       confidence: 100,
       evidence: {
         type: 'TDS Certificate Validation',
@@ -791,22 +855,22 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
           validFrom: invoiceData.lowerTDSCertificate.validFrom,
           validTo: invoiceData.lowerTDSCertificate.validTo,
           status: 'Expired',
-          currentDate: new Date().toISOString().split('T')[0]
-        }
+          currentDate: new Date().toISOString().split('T')[0],
+        },
       },
       recommendedActions: [
         {
           label: 'Request Updated Certificate',
           type: 'primary',
-          handler: () => console.log('Requesting updated certificate')
+          handler: () => console.log('Requesting updated certificate'),
         },
         {
           label: 'Apply Normal TDS Rates',
           type: 'secondary',
-          handler: () => console.log('Applying normal rates')
-        }
+          handler: () => console.log('Applying normal rates'),
+        },
       ],
-      canOverride: false
+      canOverride: false,
     });
   }
 
@@ -814,7 +878,7 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
   if (invoiceData.isMSME) {
     const daysOverdue = invoiceData.msmePaymentDaysOverdue || 0;
     const severity = daysOverdue > 45 ? 'blocker' : daysOverdue > 30 ? 'warning' : 'info';
-    
+
     insights.push({
       id: 'msme-payment-criticality',
       category: 'payment_impact',
@@ -830,22 +894,22 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
           invoiceDate: invoiceData.invoiceDate,
           dueDate: invoiceData.dueDate,
           daysOverdue: daysOverdue,
-          statutoryLimit: '45 days'
-        }
+          statutoryLimit: '45 days',
+        },
       },
       recommendedActions: [
         {
           label: 'Mark as Critical Payment',
           type: 'primary',
-          handler: () => console.log('Marking as critical')
+          handler: () => console.log('Marking as critical'),
         },
         {
           label: 'Set High Payment Priority',
           type: 'primary',
-          handler: () => console.log('Setting high priority')
-        }
+          handler: () => console.log('Setting high priority'),
+        },
       ],
-      canOverride: daysOverdue <= 30
+      canOverride: daysOverdue <= 30,
     });
   }
 
@@ -864,22 +928,22 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
           totalAdvances: invoiceData.totalAdvances,
           advanceAdjusted: invoiceData.advanceAdjusted,
           openBalance: invoiceData.openAdvanceBalance,
-          advanceIds: invoiceData.advanceIds || []
-        }
+          advanceIds: invoiceData.advanceIds || [],
+        },
       },
       recommendedActions: [
         {
           label: 'Review Advance Adjustment',
           type: 'primary',
-          handler: () => console.log('Reviewing advances')
+          handler: () => console.log('Reviewing advances'),
         },
         {
           label: 'Send Back to AP for Adjustment',
           type: 'secondary',
-          handler: () => console.log('Sending back for adjustment')
-        }
+          handler: () => console.log('Sending back for adjustment'),
+        },
       ],
-      canOverride: true
+      canOverride: true,
     });
   }
 
@@ -890,7 +954,8 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
       category: 'compliance',
       severity: 'warning',
       title: 'Invoice Not Found in Vendor GST Return',
-      explanation: 'Invoice does not appear in vendor\'s GST return. Consider GST retention until vendor files return.',
+      explanation:
+        "Invoice does not appear in vendor's GST return. Consider GST retention until vendor files return.",
       confidence: 82,
       evidence: {
         type: 'GST Return Reconciliation',
@@ -900,27 +965,27 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
           gstAmount: invoiceData.gstAmount,
           returnPeriod: invoiceData.gstReturnPeriod,
           matchStatus: 'Not Found',
-          lastChecked: new Date().toISOString()
-        }
+          lastChecked: new Date().toISOString(),
+        },
       },
       recommendedActions: [
         {
           label: 'Enable GST Retention',
           type: 'primary',
-          handler: () => console.log('Enabling GST retention')
+          handler: () => console.log('Enabling GST retention'),
         },
         {
           label: 'Send Query to Vendor',
           type: 'secondary',
-          handler: () => console.log('Sending query')
+          handler: () => console.log('Sending query'),
         },
         {
           label: 'Mark as Exception with Reason',
           type: 'secondary',
-          handler: () => console.log('Creating exception')
-        }
+          handler: () => console.log('Creating exception'),
+        },
       ],
-      canOverride: true
+      canOverride: true,
     });
   }
 
@@ -940,22 +1005,22 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
           duplicateInvoice: invoiceData.duplicateInvoiceNumber,
           duplicateId: invoiceData.duplicateInvoiceId,
           duplicateDate: invoiceData.duplicateInvoiceDate,
-          duplicateAmount: invoiceData.duplicateInvoiceAmount
-        }
+          duplicateAmount: invoiceData.duplicateInvoiceAmount,
+        },
       },
       recommendedActions: [
         {
           label: 'View Duplicate Invoice',
           type: 'primary',
-          handler: () => console.log('Opening duplicate invoice')
+          handler: () => console.log('Opening duplicate invoice'),
         },
         {
           label: 'Put Invoice on Hold',
           type: 'danger',
-          handler: () => console.log('Putting on hold')
-        }
+          handler: () => console.log('Putting on hold'),
+        },
       ],
-      canOverride: false
+      canOverride: false,
     });
   }
 
@@ -965,7 +1030,8 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
     category: 'evidence',
     severity: 'info',
     title: 'Complete Audit Trail Available',
-    explanation: 'All invoice lifecycle events have been logged and are available for compliance review.',
+    explanation:
+      'All invoice lifecycle events have been logged and are available for compliance review.',
     confidence: 100,
     evidence: {
       type: 'Audit Trail Summary',
@@ -975,17 +1041,17 @@ function generateAIInsights(invoiceData: any): AIAssuranceInsight[] {
         submittedBy: invoiceData.submittedBy,
         submittedDate: invoiceData.submittedDate,
         totalEvents: 15,
-        complianceChecksPassed: 12
-      }
+        complianceChecksPassed: 12,
+      },
     },
     recommendedActions: [
       {
         label: 'View Full Audit Trail',
         type: 'secondary',
-        handler: () => console.log('Viewing audit trail')
-      }
+        handler: () => console.log('Viewing audit trail'),
+      },
     ],
-    canOverride: false
+    canOverride: false,
   });
 
   return insights;

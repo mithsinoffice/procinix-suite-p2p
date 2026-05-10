@@ -32,10 +32,15 @@ const exceptionReasons = [
   'Currency Fluctuation',
   'Transportation Cost Increase',
   'Regulatory Compliance Cost',
-  'Other'
+  'Other',
 ];
 
-export function POInvoiceExceptionModal({ isOpen, onClose, onSubmit, lineItem }: POInvoiceExceptionModalProps) {
+export function POInvoiceExceptionModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  lineItem,
+}: POInvoiceExceptionModalProps) {
   const [formData, setFormData] = useState<ExceptionRequestData>({
     requestedRate: lineItem.requestedRate,
     poRate: lineItem.poRate,
@@ -43,7 +48,7 @@ export function POInvoiceExceptionModal({ isOpen, onClose, onSubmit, lineItem }:
     variancePercent: ((lineItem.requestedRate - lineItem.poRate) / lineItem.poRate) * 100,
     exceptionReason: '',
     comments: '',
-    attachments: []
+    attachments: [],
   });
 
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -81,16 +86,29 @@ export function POInvoiceExceptionModal({ isOpen, onClose, onSubmit, lineItem }:
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto" style={{ border: '1px solid var(--color-silver)' }}>
+      <div
+        className="bg-white rounded-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
+        style={{ border: '1px solid var(--color-silver)' }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+        <div
+          className="flex items-center justify-between p-6"
+          style={{ borderBottom: '1px solid var(--color-silver)' }}
+        >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FFF9E6' }}>
+            <div
+              className="w-10 h-10 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: '#FFF9E6' }}
+            >
               <AlertTriangle className="w-5 h-5" style={{ color: '#D97706' }} />
             </div>
             <div>
-              <h2 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>Request Rate Exception Approval</h2>
-              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoice rate exceeds PO rate - requires CFO approval</p>
+              <h2 className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
+                Request Rate Exception Approval
+              </h2>
+              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                Invoice rate exceeds PO rate - requires CFO approval
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
@@ -101,48 +119,95 @@ export function POInvoiceExceptionModal({ isOpen, onClose, onSubmit, lineItem }:
         {/* Body */}
         <div className="p-6">
           {/* Item Details Card */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
+          <div
+            className="bg-gray-50 rounded-lg p-4 mb-6"
+            style={{ border: '1px solid var(--color-silver)' }}
+          >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '500' }}>Item</p>
-                <p className="text-base mt-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{lineItem.itemName}</p>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{lineItem.itemCode}</p>
+                <p
+                  className="text-sm"
+                  style={{ color: 'var(--color-mercury-grey)', fontWeight: '500' }}
+                >
+                  Item
+                </p>
+                <p
+                  className="text-base mt-1"
+                  style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                >
+                  {lineItem.itemName}
+                </p>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                  {lineItem.itemCode}
+                </p>
               </div>
               <div className="text-right">
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '500' }}>Quantity</p>
-                <p className="text-base mt-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{lineItem.quantity}</p>
+                <p
+                  className="text-sm"
+                  style={{ color: 'var(--color-mercury-grey)', fontWeight: '500' }}
+                >
+                  Quantity
+                </p>
+                <p
+                  className="text-base mt-1"
+                  style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                >
+                  {lineItem.quantity}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Rate Comparison */}
           <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-white rounded-lg p-4" style={{ border: '2px solid var(--color-silver)' }}>
+            <div
+              className="bg-white rounded-lg p-4"
+              style={{ border: '2px solid var(--color-silver)' }}
+            >
               <div className="flex items-center gap-2 mb-2">
                 <FileText className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
-                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>PO RATE</p>
+                <p
+                  className="text-xs"
+                  style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                >
+                  PO RATE
+                </p>
               </div>
               <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                 ₹{lineItem.poRate.toFixed(2)}
               </p>
-              <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>Original agreed rate</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
+                Original agreed rate
+              </p>
             </div>
 
             <div className="bg-white rounded-lg p-4" style={{ border: '2px solid #D97706' }}>
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="w-4 h-4" style={{ color: '#D97706' }} />
-                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>REQUESTED RATE</p>
+                <p
+                  className="text-xs"
+                  style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                >
+                  REQUESTED RATE
+                </p>
               </div>
               <p className="text-2xl" style={{ color: '#D97706', fontWeight: '700' }}>
                 ₹{lineItem.requestedRate.toFixed(2)}
               </p>
-              <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>Invoice rate entered</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
+                Invoice rate entered
+              </p>
             </div>
 
-            <div className="bg-red-50 rounded-lg p-4" style={{ border: '2px solid var(--color-error)' }}>
+            <div
+              className="bg-red-50 rounded-lg p-4"
+              style={{ border: '2px solid var(--color-error)' }}
+            >
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-4 h-4" style={{ color: 'var(--color-error)' }} />
-                <p className="text-xs" style={{ color: 'var(--color-error)', fontWeight: '600' }}>VARIANCE</p>
+                <p className="text-xs" style={{ color: 'var(--color-error)', fontWeight: '600' }}>
+                  VARIANCE
+                </p>
               </div>
               <p className="text-2xl" style={{ color: 'var(--color-error)', fontWeight: '700' }}>
                 +₹{formData.varianceAmount.toFixed(2)}
@@ -154,10 +219,18 @@ export function POInvoiceExceptionModal({ isOpen, onClose, onSubmit, lineItem }:
           </div>
 
           {/* Total Impact */}
-          <div className="bg-red-50 rounded-lg p-4 mb-6" style={{ border: '1px solid var(--color-error)' }}>
+          <div
+            className="bg-red-50 rounded-lg p-4 mb-6"
+            style={{ border: '1px solid var(--color-error)' }}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '500' }}>Total Financial Impact</p>
+                <p
+                  className="text-sm"
+                  style={{ color: 'var(--color-mercury-grey)', fontWeight: '500' }}
+                >
+                  Total Financial Impact
+                </p>
                 <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
                   Variance × Quantity ({lineItem.quantity} units)
                 </p>
@@ -166,14 +239,19 @@ export function POInvoiceExceptionModal({ isOpen, onClose, onSubmit, lineItem }:
                 <p className="text-2xl" style={{ color: 'var(--color-error)', fontWeight: '700' }}>
                   ₹{totalVarianceAmount.toFixed(2)}
                 </p>
-                <p className="text-xs" style={{ color: 'var(--color-error)' }}>Additional cost</p>
+                <p className="text-xs" style={{ color: 'var(--color-error)' }}>
+                  Additional cost
+                </p>
               </div>
             </div>
           </div>
 
           {/* Exception Reason */}
           <div className="mb-6">
-            <label className="block text-sm mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+            <label
+              className="block text-sm mb-2"
+              style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+            >
               Exception Reason <span style={{ color: 'var(--color-error)' }}>*</span>
             </label>
             <select
@@ -183,22 +261,31 @@ export function POInvoiceExceptionModal({ isOpen, onClose, onSubmit, lineItem }:
               style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
             >
               <option value="">Select reason for rate variance</option>
-              {exceptionReasons.map(reason => (
-                <option key={reason} value={reason}>{reason}</option>
+              {exceptionReasons.map((reason) => (
+                <option key={reason} value={reason}>
+                  {reason}
+                </option>
               ))}
             </select>
           </div>
 
           {/* Comments */}
           <div className="mb-6">
-            <label className="block text-sm mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+            <label
+              className="block text-sm mb-2"
+              style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+            >
               Detailed Explanation <span style={{ color: 'var(--color-error)' }}>*</span>
             </label>
             <textarea
               value={formData.comments}
               onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
               className="w-full px-4 py-3 rounded-lg text-sm"
-              style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', minHeight: '120px' }}
+              style={{
+                border: '1px solid var(--color-silver)',
+                color: 'var(--color-ink)',
+                minHeight: '120px',
+              }}
               placeholder="Provide detailed justification for the rate increase. Include market conditions, vendor communication, business impact, and any mitigating factors..."
             />
             <p className="text-xs mt-2" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -208,16 +295,30 @@ export function POInvoiceExceptionModal({ isOpen, onClose, onSubmit, lineItem }:
 
           {/* Attachment Upload */}
           <div className="mb-6">
-            <label className="block text-sm mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+            <label
+              className="block text-sm mb-2"
+              style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+            >
               Supporting Documents
             </label>
-            <div className="border-2 border-dashed rounded-lg p-6 text-center" style={{ borderColor: 'var(--color-silver)' }}>
-              <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--color-mercury-grey)' }} />
-              <p className="text-sm mb-2" style={{ color: 'var(--color-ink)' }}>Upload supporting documents</p>
+            <div
+              className="border-2 border-dashed rounded-lg p-6 text-center"
+              style={{ borderColor: 'var(--color-silver)' }}
+            >
+              <Upload
+                className="w-8 h-8 mx-auto mb-2"
+                style={{ color: 'var(--color-mercury-grey)' }}
+              />
+              <p className="text-sm mb-2" style={{ color: 'var(--color-ink)' }}>
+                Upload supporting documents
+              </p>
               <p className="text-xs mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
                 Vendor rate sheet, email correspondence, market analysis, etc.
               </p>
-              <label className="inline-block px-4 py-2 rounded-lg cursor-pointer transition-colors" style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF' }}>
+              <label
+                className="inline-block px-4 py-2 rounded-lg cursor-pointer transition-colors"
+                style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF' }}
+              >
                 <input
                   type="file"
                   multiple
@@ -233,11 +334,23 @@ export function POInvoiceExceptionModal({ isOpen, onClose, onSubmit, lineItem }:
             {attachments.length > 0 && (
               <div className="mt-4 space-y-2">
                 {attachments.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 rounded-lg"
+                    style={{
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                    }}
+                  >
                     <div className="flex items-center gap-3">
                       <FileText className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                       <div>
-                        <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>{file.name}</p>
+                        <p
+                          className="text-sm"
+                          style={{ color: 'var(--color-ink)', fontWeight: '500' }}
+                        >
+                          {file.name}
+                        </p>
                         <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                           {(file.size / 1024).toFixed(2)} KB
                         </p>
@@ -256,23 +369,36 @@ export function POInvoiceExceptionModal({ isOpen, onClose, onSubmit, lineItem }:
           </div>
 
           {/* Approval Info */}
-          <div className="bg-blue-50 rounded-lg p-4" style={{ border: '1px solid var(--color-teal)' }}>
-            <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Approval Routing</p>
+          <div
+            className="bg-blue-50 rounded-lg p-4"
+            style={{ border: '1px solid var(--color-teal)' }}
+          >
+            <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+              Approval Routing
+            </p>
             <p className="text-sm mt-2" style={{ color: 'var(--color-mercury-grey)' }}>
-              This exception will be routed to <strong>CFO</strong> and <strong>Finance Controller</strong> for approval. 
-              Invoice will be held in "Pending Exception Approval" status until decision is made.
+              This exception will be routed to <strong>CFO</strong> and{' '}
+              <strong>Finance Controller</strong> for approval. Invoice will be held in "Pending
+              Exception Approval" status until decision is made.
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6" style={{ borderTop: '1px solid var(--color-silver)' }}>
+        <div
+          className="flex items-center justify-end gap-3 p-6"
+          style={{ borderTop: '1px solid var(--color-silver)' }}
+        >
           <button
             onClick={onClose}
             className="px-6 py-2.5 rounded-lg transition-all text-sm"
-            style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)', fontWeight: '500' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-cloud)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            style={{
+              border: '1px solid var(--color-silver)',
+              color: 'var(--color-ink)',
+              fontWeight: '500',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-cloud)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             Cancel
           </button>
@@ -280,8 +406,8 @@ export function POInvoiceExceptionModal({ isOpen, onClose, onSubmit, lineItem }:
             onClick={handleSubmit}
             className="px-6 py-2.5 rounded-lg transition-all text-sm"
             style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF', fontWeight: '600' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
           >
             Submit Exception Request
           </button>

@@ -1,7 +1,18 @@
-import { Settings as SettingsIcon, User, Bell, Shield, Globe, Palette, Database, Mail } from 'lucide-react';
+import {
+  Settings as SettingsIcon,
+  User,
+  Bell,
+  Shield,
+  Globe,
+  Palette,
+  Database,
+  Mail,
+} from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export function Settings() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
 
   const tabs = [
@@ -10,7 +21,7 @@ export function Settings() {
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'preferences', label: 'Preferences', icon: Palette },
     { id: 'integrations', label: 'Integrations', icon: Database },
-    { id: 'email', label: 'Email', icon: Mail }
+    { id: 'email', label: 'Email', icon: Mail },
   ];
 
   return (
@@ -27,14 +38,28 @@ export function Settings() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '24px' }}>
         {/* Sidebar */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--color-silver)', padding: '8px', height: 'fit-content' }}>
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '12px',
+            border: '1px solid var(--color-silver)',
+            padding: '8px',
+            height: 'fit-content',
+          }}
+        >
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  if (tab.id === 'integrations') {
+                    navigate('/settings/integrations');
+                    return;
+                  }
+                  setActiveTab(tab.id);
+                }}
                 style={{
                   width: '100%',
                   display: 'flex',
@@ -49,7 +74,7 @@ export function Settings() {
                   fontWeight: isActive ? '500' : '400',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
                 }}
               >
                 <Icon style={{ width: '16px', height: '16px' }} />
@@ -60,16 +85,38 @@ export function Settings() {
         </div>
 
         {/* Content */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--color-silver)', padding: '24px' }}>
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '12px',
+            border: '1px solid var(--color-silver)',
+            padding: '24px',
+          }}
+        >
           {activeTab === 'profile' && (
             <div>
-              <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 20px 0' }}>
+              <h2
+                style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: 'var(--color-ink)',
+                  margin: '0 0 20px 0',
+                }}
+              >
                 Profile Settings
               </h2>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', marginBottom: '8px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--color-ink)',
+                      marginBottom: '8px',
+                    }}
+                  >
                     Full Name
                   </label>
                   <input
@@ -83,13 +130,21 @@ export function Settings() {
                       borderRadius: '8px',
                       fontSize: '14px',
                       color: 'var(--color-ink)',
-                      backgroundColor: 'var(--color-cloud)'
+                      backgroundColor: 'var(--color-cloud)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', marginBottom: '8px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--color-ink)',
+                      marginBottom: '8px',
+                    }}
+                  >
                     Email Address
                   </label>
                   <input
@@ -103,13 +158,21 @@ export function Settings() {
                       borderRadius: '8px',
                       fontSize: '14px',
                       color: 'var(--color-ink)',
-                      backgroundColor: 'var(--color-cloud)'
+                      backgroundColor: 'var(--color-cloud)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', marginBottom: '8px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--color-ink)',
+                      marginBottom: '8px',
+                    }}
+                  >
                     Department
                   </label>
                   <input
@@ -123,13 +186,21 @@ export function Settings() {
                       borderRadius: '8px',
                       fontSize: '14px',
                       color: 'var(--color-ink)',
-                      backgroundColor: 'var(--color-cloud)'
+                      backgroundColor: 'var(--color-cloud)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', marginBottom: '8px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--color-ink)',
+                      marginBottom: '8px',
+                    }}
+                  >
                     Phone Number
                   </label>
                   <input
@@ -143,7 +214,7 @@ export function Settings() {
                       borderRadius: '8px',
                       fontSize: '14px',
                       color: 'var(--color-ink)',
-                      backgroundColor: 'var(--color-cloud)'
+                      backgroundColor: 'var(--color-cloud)',
                     }}
                   />
                 </div>
@@ -158,7 +229,7 @@ export function Settings() {
                       fontSize: '14px',
                       fontWeight: '500',
                       color: '#FFFFFF',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
                     }}
                   >
                     Save Changes
@@ -172,7 +243,7 @@ export function Settings() {
                       fontSize: '14px',
                       fontWeight: '500',
                       color: 'var(--color-ink)',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
                     }}
                   >
                     Cancel
@@ -184,47 +255,102 @@ export function Settings() {
 
           {activeTab === 'notifications' && (
             <div>
-              <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 20px 0' }}>
+              <h2
+                style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: 'var(--color-ink)',
+                  margin: '0 0 20px 0',
+                }}
+              >
                 Notification Preferences
               </h2>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {[
-                  { label: 'Email notifications for approvals', description: 'Receive emails when approval is required' },
-                  { label: 'Push notifications', description: 'Get push notifications for important updates' },
+                  {
+                    label: 'Email notifications for approvals',
+                    description: 'Receive emails when approval is required',
+                  },
+                  {
+                    label: 'Push notifications',
+                    description: 'Get push notifications for important updates',
+                  },
                   { label: 'Invoice updates', description: 'Notify when invoice status changes' },
                   { label: 'Payment alerts', description: 'Get alerts for payment activities' },
-                  { label: 'Weekly summary', description: 'Receive weekly summary of activities' }
+                  { label: 'Weekly summary', description: 'Receive weekly summary of activities' },
                 ].map((item, index) => (
-                  <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', backgroundColor: 'var(--color-cloud)', borderRadius: '8px' }}>
+                  <div
+                    key={index}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '16px',
+                      backgroundColor: 'var(--color-cloud)',
+                      borderRadius: '8px',
+                    }}
+                  >
                     <div>
-                      <p style={{ fontSize: '14px', fontWeight: '500', color: 'var(--color-ink)', margin: 0 }}>{item.label}</p>
-                      <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>{item.description}</p>
+                      <p
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          color: 'var(--color-ink)',
+                          margin: 0,
+                        }}
+                      >
+                        {item.label}
+                      </p>
+                      <p
+                        style={{
+                          fontSize: '12px',
+                          color: 'var(--color-mercury-grey)',
+                          margin: '4px 0 0 0',
+                        }}
+                      >
+                        {item.description}
+                      </p>
                     </div>
-                    <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
-                      <input type="checkbox" defaultChecked={index < 3} style={{ opacity: 0, width: 0, height: 0 }} />
-                      <span style={{
-                        position: 'absolute',
-                        cursor: 'pointer',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: index < 3 ? 'var(--color-teal)' : 'var(--color-silver)',
-                        transition: '0.3s',
-                        borderRadius: '24px'
-                      }}>
-                        <span style={{
+                    <label
+                      style={{
+                        position: 'relative',
+                        display: 'inline-block',
+                        width: '44px',
+                        height: '24px',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        defaultChecked={index < 3}
+                        style={{ opacity: 0, width: 0, height: 0 }}
+                      />
+                      <span
+                        style={{
                           position: 'absolute',
-                          content: '""',
-                          height: '18px',
-                          width: '18px',
-                          left: index < 3 ? '23px' : '3px',
-                          bottom: '3px',
-                          backgroundColor: 'white',
+                          cursor: 'pointer',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: index < 3 ? 'var(--color-teal)' : 'var(--color-silver)',
                           transition: '0.3s',
-                          borderRadius: '50%'
-                        }} />
+                          borderRadius: '24px',
+                        }}
+                      >
+                        <span
+                          style={{
+                            position: 'absolute',
+                            content: '""',
+                            height: '18px',
+                            width: '18px',
+                            left: index < 3 ? '23px' : '3px',
+                            bottom: '3px',
+                            backgroundColor: 'white',
+                            transition: '0.3s',
+                            borderRadius: '50%',
+                          }}
+                        />
                       </span>
                     </label>
                   </div>
@@ -235,13 +361,28 @@ export function Settings() {
 
           {activeTab === 'security' && (
             <div>
-              <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 20px 0' }}>
+              <h2
+                style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: 'var(--color-ink)',
+                  margin: '0 0 20px 0',
+                }}
+              >
                 Security Settings
               </h2>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', marginBottom: '8px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--color-ink)',
+                      marginBottom: '8px',
+                    }}
+                  >
                     Current Password
                   </label>
                   <input
@@ -255,13 +396,21 @@ export function Settings() {
                       borderRadius: '8px',
                       fontSize: '14px',
                       color: 'var(--color-ink)',
-                      backgroundColor: 'var(--color-cloud)'
+                      backgroundColor: 'var(--color-cloud)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', marginBottom: '8px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--color-ink)',
+                      marginBottom: '8px',
+                    }}
+                  >
                     New Password
                   </label>
                   <input
@@ -275,13 +424,21 @@ export function Settings() {
                       borderRadius: '8px',
                       fontSize: '14px',
                       color: 'var(--color-ink)',
-                      backgroundColor: 'var(--color-cloud)'
+                      backgroundColor: 'var(--color-cloud)',
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--color-ink)', marginBottom: '8px' }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--color-ink)',
+                      marginBottom: '8px',
+                    }}
+                  >
                     Confirm New Password
                   </label>
                   <input
@@ -295,7 +452,7 @@ export function Settings() {
                       borderRadius: '8px',
                       fontSize: '14px',
                       color: 'var(--color-ink)',
-                      backgroundColor: 'var(--color-cloud)'
+                      backgroundColor: 'var(--color-cloud)',
                     }}
                   />
                 </div>
@@ -311,7 +468,7 @@ export function Settings() {
                     color: '#FFFFFF',
                     cursor: 'pointer',
                     width: 'fit-content',
-                    marginTop: '8px'
+                    marginTop: '8px',
                   }}
                 >
                   Update Password
@@ -322,11 +479,31 @@ export function Settings() {
 
           {['preferences', 'integrations', 'email'].includes(activeTab) && (
             <div style={{ padding: '60px 20px', textAlign: 'center' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'var(--color-cloud)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <SettingsIcon style={{ width: '24px', height: '24px', color: 'var(--color-mercury-grey)' }} />
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  backgroundColor: 'var(--color-cloud)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px',
+                }}
+              >
+                <SettingsIcon
+                  style={{ width: '24px', height: '24px', color: 'var(--color-mercury-grey)' }}
+                />
               </div>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--color-ink)', margin: '0 0 8px 0' }}>
-                {tabs.find(t => t.id === activeTab)?.label} Settings
+              <h3
+                style={{
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: 'var(--color-ink)',
+                  margin: '0 0 8px 0',
+                }}
+              >
+                {tabs.find((t) => t.id === activeTab)?.label} Settings
               </h3>
               <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: 0 }}>
                 Configuration options will be available soon

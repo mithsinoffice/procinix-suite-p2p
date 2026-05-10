@@ -23,14 +23,9 @@ export function FormSection({
       <div className="flex items-center gap-2.5 mb-5">
         <span className="px-section-dot" />
         <span className="px-section-label">{title}</span>
-        <hr
-          className="flex-1 border-0 h-px"
-          style={{ backgroundColor: 'var(--color-silver)' }}
-        />
+        <hr className="flex-1 border-0 h-px" style={{ backgroundColor: 'var(--color-silver)' }} />
       </div>
-      <div className={cn('grid gap-x-6 gap-y-5', COLS[columns])}>
-        {children}
-      </div>
+      <div className={cn('grid gap-x-6 gap-y-5', COLS[columns])}>{children}</div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { query } from '../../mysql.mjs';
+import { LIFECYCLE_STATES } from '../invoices/lifecycleMapping.mjs';
 
 function buildTransporter() {
   const host = process.env.SMTP_HOST;
@@ -17,10 +18,7 @@ function buildTransporter() {
 }
 
 export async function triggerWorkflow(invoiceId, validationResult, matchResult) {
-  const rows = await query(
-    'SELECT * FROM invoices WHERE id = ? LIMIT 1',
-    [invoiceId]
-  );
+  const rows = await query('SELECT * FROM invoices WHERE id = ? LIMIT 1', [invoiceId]);
 
   if (rows.length === 0) return;
   const invoice = rows[0];
@@ -28,7 +26,10 @@ export async function triggerWorkflow(invoiceId, validationResult, matchResult) 
   const notificationEmail = process.env.AP_NOTIFICATION_EMAIL;
   const transporter = buildTransporter();
 
-  if (invoice.status === 'pending_approval') {
+  if (
+    invoice.status === 'pending_approval' ||
+    invoice.lifecycle_state === LIFECYCLE_STATES.UNDER_VERIFICATION
+  ) {
     // Trigger approval workflow — insert a workflow task
     await query(
       `INSERT INTO approval_workflows (id, workflow_name, min_amount, max_amount, approver, status, created_at, updated_at)
@@ -45,9 +46,10 @@ export async function triggerWorkflow(invoiceId, validationResult, matchResult) 
 
   // Send email notification
   if (transporter && notificationEmail) {
-    const warningLines = validationResult.warnings.length > 0
-      ? `\n\nWarnings:\n${validationResult.warnings.map((w) => `  - ${w}`).join('\n')}`
-      : '';
+    const warningLines =
+      validationResult.warnings.length > 0
+        ? `\n\nWarnings:\n${validationResult.warnings.map((w) => `  - ${w}`).join('\n')}`
+        : '';
 
     const matchLine = matchResult.matched
       ? `PO Match: ${matchResult.matchType} — ${matchResult.poNumber} (${(matchResult.matchConfidence * 100).toFixed(0)}% confidence)`
@@ -62,9 +64,7 @@ export async function triggerWorkflow(invoiceId, validationResult, matchResult) 
       `Status: ${invoice.status}`,
       matchLine,
       warningLines,
-      validationResult.requiresManualReview
-        ? '\n** This invoice requires manual review **'
-        : '',
+      validationResult.requiresManualReview ? '\n** This invoice requires manual review **' : '',
     ].join('\n');
 
     try {

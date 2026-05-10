@@ -46,7 +46,10 @@ export function FormShell({
       style={{ backgroundColor: isMaster ? 'var(--color-cloud)' : undefined }}
     >
       {/* Header */}
-      <div className={isMaster ? 'px-8 pt-8 pb-4' : 'bg-white px-8 py-6'} style={!isMaster ? { borderBottom: '1px solid var(--color-silver)' } : undefined}>
+      <div
+        className={isMaster ? 'px-8 pt-8 pb-4' : 'bg-white px-8 py-6'}
+        style={!isMaster ? { borderBottom: '1px solid var(--color-silver)' } : undefined}
+      >
         <div className="flex items-center gap-4 min-w-0">
           <button
             type="button"

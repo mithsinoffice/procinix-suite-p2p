@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
-import { ensureDomainDocument, saveDomainDocument } from '../lib/supabase/documentStore';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 
 export type PurchaseRequestType =
   | 'Catalogue'
@@ -63,7 +63,7 @@ interface ProcurementDataContextType {
 }
 
 const defaultProcurementData: ProcurementDataDocument = {
-  purchaseRequests: []
+  purchaseRequests: [],
 };
 
 const ProcurementDataContext = createContext<ProcurementDataContextType | undefined>(undefined);
@@ -78,7 +78,9 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
 
     const hydrate = async () => {
-      const document = await ensureDomainDocument('procurement_data', defaultProcurementData);
+      const document = await ensureDomainDocument('procurement_data', defaultProcurementData, {
+        seedIfMissing: false,
+      });
       if (!isMounted) {
         return;
       }
@@ -102,31 +104,32 @@ export function ProcurementDataProvider({ children }: { children: ReactNode }) {
     saveDomainDocument('procurement_data', { purchaseRequests });
   }, [purchaseRequests, isHydrating]);
 
-  const value = useMemo<ProcurementDataContextType>(() => ({
-    purchaseRequests,
-    isHydrating,
-    addPurchaseRequest: (request) => {
-      setPurchaseRequests((current) => [request, ...current]);
-    },
-    updatePurchaseRequestStatus: (id, status, updates = {}) => {
-      setPurchaseRequests((current) =>
-        current.map((request) =>
-          request.id === id
-            ? {
-                ...request,
-                ...updates,
-                status
-              }
-            : request
-        )
-      );
-    }
-  }), [purchaseRequests, isHydrating]);
+  const value = useMemo<ProcurementDataContextType>(
+    () => ({
+      purchaseRequests,
+      isHydrating,
+      addPurchaseRequest: (request) => {
+        setPurchaseRequests((current) => [request, ...current]);
+      },
+      updatePurchaseRequestStatus: (id, status, updates = {}) => {
+        setPurchaseRequests((current) =>
+          current.map((request) =>
+            request.id === id
+              ? {
+                  ...request,
+                  ...updates,
+                  status,
+                }
+              : request
+          )
+        );
+      },
+    }),
+    [purchaseRequests, isHydrating]
+  );
 
   return (
-    <ProcurementDataContext.Provider value={value}>
-      {children}
-    </ProcurementDataContext.Provider>
+    <ProcurementDataContext.Provider value={value}>{children}</ProcurementDataContext.Provider>
   );
 }
 

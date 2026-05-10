@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  Save, ArrowLeft, Download, Upload, CheckCircle, AlertTriangle
-} from 'lucide-react';
+import { Save, ArrowLeft, Download, Upload, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useBudgetData, BudgetAllocation } from '../contexts/BudgetDataContext';
 
 export function BudgetPhasing() {
@@ -10,7 +8,7 @@ export function BudgetPhasing() {
   const { id } = useParams();
   const { budgets, updateBudget } = useBudgetData();
 
-  const budget = budgets.find(b => b.id === id) || budgets[0];
+  const budget = budgets.find((b) => b.id === id) || budgets[0];
   const [allocations, setAllocations] = useState<BudgetAllocation[]>(budget.allocations);
   const [isModified, setIsModified] = useState(false);
 
@@ -29,11 +27,11 @@ export function BudgetPhasing() {
     const total = field === 'plannedAmount' ? budget.totalAmount : calculateTotal('revisedAmount');
     const periodsCount = allocations.length;
     const evenAmount = Math.floor(total / periodsCount);
-    const remainder = total - (evenAmount * periodsCount);
+    const remainder = total - evenAmount * periodsCount;
 
     const distributed = allocations.map((item, index) => ({
       ...item,
-      [field]: index === periodsCount - 1 ? evenAmount + remainder : evenAmount
+      [field]: index === periodsCount - 1 ? evenAmount + remainder : evenAmount,
     }));
 
     setAllocations(distributed);
@@ -49,7 +47,8 @@ export function BudgetPhasing() {
   const plannedTotal = calculateTotal('plannedAmount');
   const revisedTotal = calculateTotal('revisedAmount');
   const plannedMatch = Math.abs(plannedTotal - budget.totalAmount) < 1;
-  const revisedMatch = budget.budgetType === 'Revised' ? Math.abs(revisedTotal - budget.totalAmount) < 1 : true;
+  const revisedMatch =
+    budget.budgetType === 'Revised' ? Math.abs(revisedTotal - budget.totalAmount) < 1 : true;
 
   return (
     <div className="min-h-screen bg-[var(--color-cloud)]">
@@ -98,7 +97,9 @@ export function BudgetPhasing() {
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Total Budget</p>
-            <p className="text-2xl text-[var(--color-ink)]">{budget.currency} {budget.totalAmount.toLocaleString()}</p>
+            <p className="text-2xl text-[var(--color-ink)]">
+              {budget.currency} {budget.totalAmount.toLocaleString()}
+            </p>
             <p className="text-xs text-[var(--color-mercury-grey)] mt-1">{budget.financialYear}</p>
           </div>
           <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
@@ -107,7 +108,9 @@ export function BudgetPhasing() {
               {budget.currency} {plannedTotal.toLocaleString()}
             </p>
             <p className="text-xs text-[var(--color-mercury-grey)] mt-1">
-              {plannedMatch ? 'Fully allocated' : `${Math.abs(plannedTotal - budget.totalAmount).toLocaleString()} mismatch`}
+              {plannedMatch
+                ? 'Fully allocated'
+                : `${Math.abs(plannedTotal - budget.totalAmount).toLocaleString()} mismatch`}
             </p>
           </div>
           <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
@@ -122,7 +125,9 @@ export function BudgetPhasing() {
           <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
             <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Allocation Period</p>
             <p className="text-2xl text-[var(--color-ink)]">{budget.allocationPeriod}</p>
-            <p className="text-xs text-[var(--color-mercury-grey)] mt-1">{allocations.length} periods</p>
+            <p className="text-xs text-[var(--color-mercury-grey)] mt-1">
+              {allocations.length} periods
+            </p>
           </div>
         </div>
 
@@ -133,7 +138,8 @@ export function BudgetPhasing() {
               <div>
                 <h2 className="text-[var(--color-ink)]">Period-wise Budget Allocation</h2>
                 <p className="text-sm text-[var(--color-mercury-grey)] mt-1">
-                  Allocate budget across {budget.allocationPeriod.toLowerCase()} periods with manual overrides
+                  Allocate budget across {budget.allocationPeriod.toLowerCase()} periods with manual
+                  overrides
                 </p>
               </div>
               <div className="flex gap-2">
@@ -159,20 +165,33 @@ export function BudgetPhasing() {
             <table className="w-full">
               <thead className="bg-[var(--color-cloud)] sticky top-0">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase w-32">Period</th>
-                  <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase w-48">Planned Budget ({budget.currency})</th>
-                  <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase w-48">Revised Budget ({budget.currency})</th>
-                  <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase w-32">Variance</th>
-                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Comments</th>
-                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase w-24">Status</th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase w-32">
+                    Period
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase w-48">
+                    Planned Budget ({budget.currency})
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase w-48">
+                    Revised Budget ({budget.currency})
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase w-32">
+                    Variance
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                    Comments
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs text-[var(--color-mercury-grey)] uppercase w-24">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-silver)]">
                 {allocations.map((item, index) => {
                   const variance = (item.revisedAmount || item.plannedAmount) - item.plannedAmount;
-                  const variancePercent = item.plannedAmount > 0 
-                    ? ((variance / item.plannedAmount) * 100).toFixed(1) 
-                    : '0';
+                  const variancePercent =
+                    item.plannedAmount > 0
+                      ? ((variance / item.plannedAmount) * 100).toFixed(1)
+                      : '0';
 
                   return (
                     <tr key={index} className="hover:bg-[var(--color-cloud)]">
@@ -183,7 +202,9 @@ export function BudgetPhasing() {
                         <input
                           type="number"
                           value={item.plannedAmount || ''}
-                          onChange={(e) => updateAllocation(index, 'plannedAmount', Number(e.target.value))}
+                          onChange={(e) =>
+                            updateAllocation(index, 'plannedAmount', Number(e.target.value))
+                          }
                           className="w-full px-3 py-2 text-right border border-[var(--color-silver)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                         />
                       </td>
@@ -191,13 +212,18 @@ export function BudgetPhasing() {
                         <input
                           type="number"
                           value={item.revisedAmount || item.plannedAmount || ''}
-                          onChange={(e) => updateAllocation(index, 'revisedAmount', Number(e.target.value))}
+                          onChange={(e) =>
+                            updateAllocation(index, 'revisedAmount', Number(e.target.value))
+                          }
                           className="w-full px-3 py-2 text-right border border-[var(--color-silver)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)] bg-yellow-50"
                         />
                       </td>
                       <td className="px-4 py-2 text-right">
-                        <div className={`text-sm ${variance > 0 ? 'text-green-600' : variance < 0 ? 'text-red-600' : 'text-[var(--color-mercury-grey)]'}`}>
-                          {variance !== 0 && (variance > 0 ? '+' : '')}{variance.toLocaleString()}
+                        <div
+                          className={`text-sm ${variance > 0 ? 'text-green-600' : variance < 0 ? 'text-red-600' : 'text-[var(--color-mercury-grey)]'}`}
+                        >
+                          {variance !== 0 && (variance > 0 ? '+' : '')}
+                          {variance.toLocaleString()}
                           <div className="text-xs">({variancePercent}%)</div>
                         </div>
                       </td>
@@ -236,8 +262,11 @@ export function BudgetPhasing() {
                     {budget.currency} {revisedTotal.toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className={`${(revisedTotal - plannedTotal) > 0 ? 'text-green-600' : (revisedTotal - plannedTotal) < 0 ? 'text-red-600' : 'text-[var(--color-mercury-grey)]'}`}>
-                      {(revisedTotal - plannedTotal) !== 0 && ((revisedTotal - plannedTotal) > 0 ? '+' : '')}
+                    <div
+                      className={`${revisedTotal - plannedTotal > 0 ? 'text-green-600' : revisedTotal - plannedTotal < 0 ? 'text-red-600' : 'text-[var(--color-mercury-grey)]'}`}
+                    >
+                      {revisedTotal - plannedTotal !== 0 &&
+                        (revisedTotal - plannedTotal > 0 ? '+' : '')}
                       {(revisedTotal - plannedTotal).toLocaleString()}
                     </div>
                   </td>
@@ -250,33 +279,41 @@ export function BudgetPhasing() {
 
         {/* Validation Summary */}
         <div className="grid grid-cols-2 gap-4 mt-6">
-          <div className={`rounded-lg border p-4 ${plannedMatch ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+          <div
+            className={`rounded-lg border p-4 ${plannedMatch ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
+          >
             <div className="flex items-center gap-2 mb-2">
               {plannedMatch ? (
                 <CheckCircle className="w-5 h-5 text-green-600" />
               ) : (
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               )}
-              <h3 className={plannedMatch ? 'text-green-900' : 'text-red-900'}>Planned Budget Validation</h3>
+              <h3 className={plannedMatch ? 'text-green-900' : 'text-red-900'}>
+                Planned Budget Validation
+              </h3>
             </div>
             <p className={`text-sm ${plannedMatch ? 'text-green-700' : 'text-red-700'}`}>
-              {plannedMatch 
+              {plannedMatch
                 ? 'Planned amounts are correctly allocated and match the total budget.'
                 : `Planned allocation has a mismatch of ${budget.currency} ${Math.abs(plannedTotal - budget.totalAmount).toLocaleString()}.`}
             </p>
           </div>
 
-          <div className={`rounded-lg border p-4 ${revisedMatch ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+          <div
+            className={`rounded-lg border p-4 ${revisedMatch ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}
+          >
             <div className="flex items-center gap-2 mb-2">
               {revisedMatch ? (
                 <CheckCircle className="w-5 h-5 text-green-600" />
               ) : (
                 <AlertTriangle className="w-5 h-5 text-yellow-600" />
               )}
-              <h3 className={revisedMatch ? 'text-green-900' : 'text-yellow-900'}>Revised Budget Status</h3>
+              <h3 className={revisedMatch ? 'text-green-900' : 'text-yellow-900'}>
+                Revised Budget Status
+              </h3>
             </div>
             <p className={`text-sm ${revisedMatch ? 'text-green-700' : 'text-yellow-700'}`}>
-              {revisedTotal > 0 
+              {revisedTotal > 0
                 ? `Revised allocation is ${budget.currency} ${revisedTotal.toLocaleString()} with variance of ${budget.currency} ${(revisedTotal - plannedTotal).toLocaleString()}.`
                 : 'No revised amounts have been set. Planned amounts will be used.'}
             </p>
@@ -290,10 +327,20 @@ export function BudgetPhasing() {
             <div>
               <h4 className="text-blue-900 mb-1">Budget Phasing Guidelines</h4>
               <ul className="text-sm text-blue-700 space-y-1">
-                <li>• <strong>Auto-Distribute:</strong> Evenly split budget across all periods</li>
-                <li>• <strong>Manual Override:</strong> Enter specific amounts for each period to match seasonal patterns</li>
-                <li>• <strong>Revised Budget:</strong> Use yellow highlighted column for budget revisions (requires approval)</li>
-                <li>• <strong>Validation:</strong> Ensure totals match before saving changes</li>
+                <li>
+                  • <strong>Auto-Distribute:</strong> Evenly split budget across all periods
+                </li>
+                <li>
+                  • <strong>Manual Override:</strong> Enter specific amounts for each period to
+                  match seasonal patterns
+                </li>
+                <li>
+                  • <strong>Revised Budget:</strong> Use yellow highlighted column for budget
+                  revisions (requires approval)
+                </li>
+                <li>
+                  • <strong>Validation:</strong> Ensure totals match before saving changes
+                </li>
               </ul>
             </div>
           </div>

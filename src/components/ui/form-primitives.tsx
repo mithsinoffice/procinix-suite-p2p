@@ -1,6 +1,6 @@
 import type { ReactNode, CSSProperties } from 'react';
 import { useMemo } from 'react';
-import { ArrowLeft, Save, Send } from 'lucide-react';
+import { ArrowLeft, Save, Send, ChevronRight } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
 /*  SaveStatus type                                                    */
@@ -16,6 +16,7 @@ export function FormShell({
   subtitle,
   variant = 'transaction',
   onBack,
+  onCancel,
   onSaveDraft,
   onSubmit,
   submitLabel = 'Submit for Approval',
@@ -23,21 +24,39 @@ export function FormShell({
   saveStatus = 'idle',
   completeness,
   extraActions,
+  masterName,
+  modeLabel,
+  draftStatus,
+  submitDisabled,
+  headerExtra,
   children,
 }: {
   title: string;
   subtitle?: string;
   variant?: 'transaction' | 'master';
   onBack: () => void;
+  onCancel?: () => void;
   onSaveDraft?: () => void;
   onSubmit?: () => void;
   submitLabel?: string;
   draftLabel?: string;
   saveStatus?: SaveStatus;
-  completeness?: number;
+  completeness?: number | { filled: number; total: number };
   extraActions?: ReactNode;
+  masterName?: string;
+  modeLabel?: string;
+  draftStatus?: string;
+  submitDisabled?: boolean;
+  headerExtra?: ReactNode;
   children: ReactNode;
 }) {
+  const completenessPercent =
+    typeof completeness === 'number'
+      ? completeness
+      : completeness && completeness.total > 0
+        ? Math.round((completeness.filled / completeness.total) * 100)
+        : 0;
+
   return (
     <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       {/* Sticky header */}
@@ -46,6 +65,42 @@ export function FormShell({
         style={{ borderBottom: '2px solid var(--color-silver)' }}
       >
         <div className="px-8 py-4">
+          {/* Breadcrumbs */}
+          {masterName && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <a
+                href="/masters"
+                style={{
+                  fontSize: 12,
+                  color: 'var(--color-teal)',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                Masters
+              </a>
+              <ChevronRight style={{ width: 12, height: 12, color: 'var(--color-mercury-grey)' }} />
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onBack();
+                }}
+                style={{
+                  fontSize: 12,
+                  color: 'var(--color-teal)',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                {masterName}
+              </a>
+              <ChevronRight style={{ width: 12, height: 12, color: 'var(--color-mercury-grey)' }} />
+              <span style={{ fontSize: 12, color: 'var(--color-ink)', fontWeight: 600 }}>
+                {title}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
@@ -57,9 +112,14 @@ export function FormShell({
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl" style={{ color: 'var(--color-ink)' }}>
-                  {title}
-                </h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl" style={{ color: 'var(--color-ink)' }}>
+                    {title}
+                  </h1>
+                  {modeLabel && <span className="badge-teal text-xs">{modeLabel}</span>}
+                  {draftStatus && <span className="badge-neutral text-xs">{draftStatus}</span>}
+                  {headerExtra}
+                </div>
                 {subtitle && (
                   <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                     {subtitle}
@@ -77,32 +137,52 @@ export function FormShell({
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
-                        width: `${Math.min(completeness, 100)}%`,
+                        width: `${Math.min(completenessPercent, 100)}%`,
                         backgroundColor:
-                          completeness >= 100
+                          completenessPercent >= 100
                             ? '#16A34A'
-                            : completeness >= 50
-                            ? '#D97706'
-                            : 'var(--color-error)',
+                            : completenessPercent >= 50
+                              ? '#D97706'
+                              : 'var(--color-error)',
                       }}
                     />
                   </div>
                   <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                    {Math.round(completeness)}%
+                    {Math.round(completenessPercent)}%
                   </span>
                 </div>
               )}
               {saveStatus === 'saving' && (
-                <span className="text-xs px-2 py-1 rounded" style={{ color: '#D97706', backgroundColor: '#FEF3C7' }}>
+                <span
+                  className="text-xs px-2 py-1 rounded"
+                  style={{ color: '#D97706', backgroundColor: '#FEF3C7' }}
+                >
                   Saving...
                 </span>
               )}
               {saveStatus === 'saved' && (
-                <span className="text-xs px-2 py-1 rounded" style={{ color: '#16A34A', backgroundColor: '#DCFCE7' }}>
+                <span
+                  className="text-xs px-2 py-1 rounded"
+                  style={{ color: '#16A34A', backgroundColor: '#DCFCE7' }}
+                >
                   Saved
                 </span>
               )}
               {extraActions}
+              {onCancel && (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="flex items-center gap-2 px-6 py-2 rounded-lg transition-colors"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    color: 'var(--color-ink)',
+                    border: '1px solid var(--color-silver)',
+                  }}
+                >
+                  Cancel
+                </button>
+              )}
               {onSaveDraft && (
                 <button
                   type="button"
@@ -118,8 +198,11 @@ export function FormShell({
                 <button
                   type="button"
                   onClick={onSubmit}
+                  disabled={submitDisabled}
                   className="flex items-center gap-2 px-6 py-2 rounded-lg text-white transition-colors"
-                  style={{ backgroundColor: 'var(--color-teal)' }}
+                  style={{
+                    backgroundColor: submitDisabled ? 'var(--color-silver)' : 'var(--color-teal)',
+                  }}
                 >
                   <Send className="w-4 h-4" />
                   {submitLabel}
@@ -145,45 +228,60 @@ export function FormSection({
   subtitle,
   columns = 2,
   icon,
+  action,
   children,
   className,
   style,
+  flat = false,
 }: {
   title: string;
   subtitle?: string;
   columns?: 1 | 2 | 3 | 4;
   icon?: ReactNode;
+  action?: ReactNode;
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
+  /** When true, drops the outer white card styling so the section can sit inside a single parent container. */
+  flat?: boolean;
 }) {
   const gridClass =
     columns === 1
       ? 'grid grid-cols-1 gap-6'
       : columns === 2
-      ? 'grid grid-cols-1 md:grid-cols-2 gap-6'
-      : columns === 3
-      ? 'grid grid-cols-3 gap-6'
-      : 'grid grid-cols-4 gap-6';
+        ? 'grid grid-cols-1 md:grid-cols-2 gap-6'
+        : columns === 3
+          ? 'grid grid-cols-3 gap-6'
+          : 'grid grid-cols-4 gap-6';
+
+  const outerClass = flat
+    ? `py-6 ${className ?? ''}`
+    : `bg-white rounded-xl border-2 p-6 mb-6 ${className ?? ''}`;
+  const outerStyle: CSSProperties = flat
+    ? { borderTop: '1px solid var(--color-silver)', ...style }
+    : { borderColor: 'var(--color-silver)', ...style };
 
   return (
-    <div
-      className={`bg-white rounded-xl border-2 p-6 mb-6 ${className ?? ''}`}
-      style={{ borderColor: 'var(--color-silver)', ...style }}
-    >
-      {(title || icon) && (
-        <div className="flex items-center gap-3 mb-6">
-          {icon}
-          <div>
-            <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                {subtitle}
-              </p>
-            )}
+    <div className={outerClass} style={outerStyle}>
+      {(title || icon || action) && (
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            {icon}
+            <div>
+              <h2
+                className={flat ? 'text-base' : 'text-xl'}
+                style={{ color: 'var(--color-ink)', fontWeight: flat ? 600 : undefined }}
+              >
+                {title}
+              </h2>
+              {subtitle && (
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                  {subtitle}
+                </p>
+              )}
+            </div>
           </div>
+          {action && <div>{action}</div>}
         </div>
       )}
       <div className={gridClass}>{children}</div>
@@ -200,6 +298,7 @@ export function PxFormField({
   required,
   error,
   hint,
+  filled,
   colSpan,
   children,
 }: {
@@ -207,6 +306,7 @@ export function PxFormField({
   required?: boolean;
   error?: string;
   hint?: string;
+  filled?: boolean;
   colSpan?: number;
   children: ReactNode;
 }) {
@@ -214,11 +314,12 @@ export function PxFormField({
 
   return (
     <div className={spanClass}>
-      <label className="text-sm mb-2 block" style={{ color: 'var(--color-mercury-grey)' }}>
+      <label
+        className="text-sm mb-2 block"
+        style={{ color: filled ? 'var(--color-ink)' : 'var(--color-mercury-grey)' }}
+      >
         {label}
-        {required && (
-          <span style={{ color: 'var(--color-error-dark)' }}> *</span>
-        )}
+        {required && <span style={{ color: 'var(--color-error-dark)' }}> *</span>}
       </label>
       {children}
       {error && (

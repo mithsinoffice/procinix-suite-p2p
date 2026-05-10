@@ -61,21 +61,21 @@ export const navigationConfig: { pillars: NavPillar[] } = {
           label: 'Dashboard',
           route: '/',
           icon: LayoutDashboard,
-          requiredPerm: ['DASHBOARD.VIEW']
+          requiredPerm: ['DASHBOARD.VIEW'],
         },
         {
           key: 'PURCHASE_ORDERS',
           label: 'Purchase Orders',
           route: '/purchase-orders',
           icon: ShoppingCart,
-          requiredPerm: ['PURCHASE_ORDER.VIEW']
+          requiredPerm: ['PURCHASE_ORDER.VIEW'],
         },
         {
           key: 'GOODS_RECEIPT',
           label: 'Goods Receipt (GRN)',
           route: '/goods-receipt',
           icon: Package,
-          requiredPerm: ['GRN.VIEW']
+          requiredPerm: ['GRN.VIEW'],
         },
         {
           key: 'AP_INVOICES',
@@ -89,7 +89,7 @@ export const navigationConfig: { pillars: NavPillar[] } = {
               label: 'All Invoices',
               route: '/invoices',
               icon: FileText,
-              requiredPerm: ['AP_INVOICE.VIEW']
+              requiredPerm: ['AP_INVOICE.VIEW'],
             },
             {
               key: 'AI_CAPTURE',
@@ -97,30 +97,30 @@ export const navigationConfig: { pillars: NavPillar[] } = {
               route: '/invoices/ai-capture',
               icon: Sparkles,
               requiredPerm: ['AI_CAPTURE.VIEW'],
-              badge: 'AI'
-            }
-          ]
+              badge: 'AI',
+            },
+          ],
         },
         {
           key: 'PAYMENTS',
           label: 'Payments',
           route: '/ap/payments',
           icon: Banknote,
-          requiredPerm: ['PAYMENT_RUN.VIEW']
+          requiredPerm: ['PAYMENT_RUN.VIEW'],
         },
         {
           key: 'VENDORS',
           label: 'Vendor Management',
           route: '/vendors',
           icon: Users,
-          requiredPerm: ['VENDOR.VIEW']
+          requiredPerm: ['VENDOR.VIEW'],
         },
         {
           key: 'CASHFLOW',
           label: 'Cash Flow Forecasting',
           route: '/ap/cashflow',
           icon: TrendingUp,
-          requiredPerm: ['CASHFLOW.VIEW']
+          requiredPerm: ['CASHFLOW.VIEW'],
         },
         {
           key: 'AP_MASTERS',
@@ -134,44 +134,44 @@ export const navigationConfig: { pillars: NavPillar[] } = {
               label: 'Category Master',
               route: '/masters/category-master',
               icon: FolderTree,
-              requiredPerm: ['MASTERS.VIEW']
+              requiredPerm: ['MASTERS.VIEW'],
             },
             {
               key: 'ITEM_MASTER',
               label: 'Item Master',
               route: '/masters/item-master',
               icon: Package,
-              requiredPerm: ['MASTERS.VIEW']
+              requiredPerm: ['MASTERS.VIEW'],
             },
             {
               key: 'PRODUCT_MASTER',
               label: 'Product Master',
               route: '/masters/product-master',
               icon: Package,
-              requiredPerm: ['MASTERS.VIEW']
+              requiredPerm: ['MASTERS.VIEW'],
             },
             {
               key: 'SKU_MASTER',
               label: 'SKU Master',
               route: '/masters/sku-master',
               icon: Package,
-              requiredPerm: ['MASTERS.VIEW']
+              requiredPerm: ['MASTERS.VIEW'],
             },
             {
               key: 'CONTRACT_MASTER',
               label: 'Contract Master',
               route: '/masters/contract-master',
               icon: FileText,
-              requiredPerm: ['MASTERS.VIEW']
+              requiredPerm: ['MASTERS.VIEW'],
             },
             {
               key: 'TAX_CODE_MASTER',
               label: 'Tax Code Master',
               route: '/masters/tax-code-master',
               icon: Receipt,
-              requiredPerm: ['MASTERS.VIEW']
-            }
-          ]
+              requiredPerm: ['MASTERS.VIEW'],
+            },
+          ],
         },
         {
           key: 'AP_REPORTS',
@@ -185,25 +185,25 @@ export const navigationConfig: { pillars: NavPillar[] } = {
               label: 'Procurement Dashboard',
               route: '/reports/procurement-head-desk',
               icon: BarChart3,
-              requiredPerm: ['REPORTS.VIEW']
+              requiredPerm: ['REPORTS.VIEW'],
             },
             {
               key: 'OPERATIONAL_DASHBOARD',
               label: 'Operations Dashboard',
               route: '/reports/operational-dashboard',
               icon: TrendingUp,
-              requiredPerm: ['REPORTS.VIEW']
+              requiredPerm: ['REPORTS.VIEW'],
             },
             {
               key: 'WORKFLOW_REPORT',
               label: 'Workflow Report',
               route: '/reports/workflow-report',
               icon: FileText,
-              requiredPerm: ['REPORTS.VIEW']
-            }
-          ]
-        }
-      ]
+              requiredPerm: ['REPORTS.VIEW'],
+            },
+          ],
+        },
+      ],
     },
     {
       key: 'AR',
@@ -215,35 +215,35 @@ export const navigationConfig: { pillars: NavPillar[] } = {
           label: 'AR Dashboard',
           route: '/ar/dashboard',
           icon: LayoutDashboard,
-          requiredPerm: ['DASHBOARD.VIEW', 'AR_INVOICE.VIEW']
+          requiredPerm: ['DASHBOARD.VIEW', 'AR_INVOICE.VIEW'],
         },
         {
           key: 'CUSTOMER_INVOICING',
           label: 'Customer Invoicing',
           route: '/ar/customer-invoicing',
           icon: Receipt,
-          requiredPerm: ['AR_INVOICE.VIEW']
+          requiredPerm: ['AR_INVOICE.VIEW'],
         },
         {
           key: 'PAYMENT_COLLECTIONS',
           label: 'Payment Collections',
           route: '/ar/payment-collections',
           icon: DollarSign,
-          requiredPerm: ['COLLECTION.VIEW']
+          requiredPerm: ['COLLECTION.VIEW'],
         },
         {
           key: 'CREDIT_MANAGEMENT',
           label: 'Credit Management',
           route: '/ar/credit-management',
           icon: TrendingUp,
-          requiredPerm: ['CREDIT_MGMT.VIEW']
+          requiredPerm: ['CREDIT_MGMT.VIEW'],
         },
         {
           key: 'CUSTOMER_PORTAL',
           label: 'Customer Portal',
           route: '/ar/customer-portal',
           icon: UserCheck,
-          requiredPerm: ['CUSTOMER.VIEW']
+          requiredPerm: ['CUSTOMER.VIEW'],
         },
         {
           key: 'AR_MASTERS',
@@ -257,23 +257,23 @@ export const navigationConfig: { pillars: NavPillar[] } = {
               label: 'Customer Master',
               route: '/ar/masters/customer-master',
               icon: Users,
-              requiredPerm: ['CUSTOMER.VIEW']
+              requiredPerm: ['CUSTOMER.VIEW'],
             },
             {
               key: 'PRICING_MASTER',
               label: 'Pricing Master',
               route: '/ar/masters/pricing-master',
               icon: DollarSign,
-              requiredPerm: ['MASTERS.VIEW']
+              requiredPerm: ['MASTERS.VIEW'],
             },
             {
               key: 'PAYMENT_TERMS',
               label: 'Payment Terms',
               route: '/ar/masters/payment-terms',
               icon: Calendar,
-              requiredPerm: ['MASTERS.VIEW']
-            }
-          ]
+              requiredPerm: ['MASTERS.VIEW'],
+            },
+          ],
         },
         {
           key: 'AR_REPORTS',
@@ -287,25 +287,25 @@ export const navigationConfig: { pillars: NavPillar[] } = {
               label: 'Aging Report',
               route: '/ar/reports/aging-report',
               icon: BarChart3,
-              requiredPerm: ['REPORTS.VIEW']
+              requiredPerm: ['REPORTS.VIEW'],
             },
             {
               key: 'COLLECTION_REPORT',
               label: 'Collection Report',
               route: '/ar/reports/collection-report',
               icon: TrendingUp,
-              requiredPerm: ['REPORTS.VIEW']
+              requiredPerm: ['REPORTS.VIEW'],
             },
             {
               key: 'REVENUE_REPORT',
               label: 'Revenue Report',
               route: '/ar/reports/revenue-report',
               icon: FileText,
-              requiredPerm: ['REPORTS.VIEW']
-            }
-          ]
-        }
-      ]
+              requiredPerm: ['REPORTS.VIEW'],
+            },
+          ],
+        },
+      ],
     },
     {
       key: 'R2R',
@@ -317,35 +317,35 @@ export const navigationConfig: { pillars: NavPillar[] } = {
           label: 'R2R Dashboard',
           route: '/r2r/dashboard',
           icon: LayoutDashboard,
-          requiredPerm: ['DASHBOARD.VIEW', 'GENERAL_LEDGER.VIEW']
+          requiredPerm: ['DASHBOARD.VIEW', 'GENERAL_LEDGER.VIEW'],
         },
         {
           key: 'GENERAL_LEDGER',
           label: 'General Ledger',
           route: '/r2r/general-ledger',
           icon: BookOpen,
-          requiredPerm: ['GENERAL_LEDGER.VIEW']
+          requiredPerm: ['GENERAL_LEDGER.VIEW'],
         },
         {
           key: 'FINANCIAL_CLOSE',
           label: 'Financial Close',
           route: '/r2r/financial-close',
           icon: Calendar,
-          requiredPerm: ['FINANCIAL_CLOSE.VIEW']
+          requiredPerm: ['FINANCIAL_CLOSE.VIEW'],
         },
         {
           key: 'RECONCILIATIONS',
           label: 'Reconciliations',
           route: '/r2r/reconciliations',
           icon: Target,
-          requiredPerm: ['RECONCILIATION.VIEW']
+          requiredPerm: ['RECONCILIATION.VIEW'],
         },
         {
           key: 'CONSOLIDATIONS',
           label: 'Consolidations',
           route: '/r2r/consolidations',
           icon: BarChart3,
-          requiredPerm: ['CONSOLIDATION.VIEW']
+          requiredPerm: ['CONSOLIDATION.VIEW'],
         },
         {
           key: 'R2R_MASTERS',
@@ -359,30 +359,30 @@ export const navigationConfig: { pillars: NavPillar[] } = {
               label: 'Department Master',
               route: '/masters/department-master',
               icon: FolderTree,
-              requiredPerm: ['MASTERS.VIEW']
+              requiredPerm: ['MASTERS.VIEW'],
             },
             {
               key: 'COST_CENTRE_MASTER',
               label: 'Cost Centre Master',
               route: '/masters/cost-centre-master',
               icon: Target,
-              requiredPerm: ['MASTERS.VIEW']
+              requiredPerm: ['MASTERS.VIEW'],
             },
             {
               key: 'PROFIT_CENTRE_MASTER',
               label: 'Profit Centre Master',
               route: '/masters/profit-centre-master',
               icon: TrendingUp,
-              requiredPerm: ['MASTERS.VIEW']
+              requiredPerm: ['MASTERS.VIEW'],
             },
             {
               key: 'EMPLOYEE_MASTER',
               label: 'Employee Master',
               route: '/masters/employee-master',
               icon: Users,
-              requiredPerm: ['MASTERS.VIEW']
-            }
-          ]
+              requiredPerm: ['MASTERS.VIEW'],
+            },
+          ],
         },
         {
           key: 'R2R_REPORTS',
@@ -396,27 +396,27 @@ export const navigationConfig: { pillars: NavPillar[] } = {
               label: 'CFO Dashboard',
               route: '/reports/cfo-desk',
               icon: BarChart3,
-              requiredPerm: ['REPORTS.VIEW']
+              requiredPerm: ['REPORTS.VIEW'],
             },
             {
               key: 'MANAGEMENT_DESK',
               label: 'Management Dashboard',
               route: '/reports/management-desk',
               icon: TrendingUp,
-              requiredPerm: ['REPORTS.VIEW']
+              requiredPerm: ['REPORTS.VIEW'],
             },
             {
               key: 'AUDIT_TRAIL',
               label: 'Audit Trail',
               route: '/reports/audit-trail',
               icon: FileText,
-              requiredPerm: ['AUDIT_LOG.VIEW']
-            }
-          ]
-        }
-      ]
-    }
-  ]
+              requiredPerm: ['AUDIT_LOG.VIEW'],
+            },
+          ],
+        },
+      ],
+    },
+  ],
 };
 
 export const globalNavigationConfig: GlobalNavItem[] = [
@@ -425,7 +425,7 @@ export const globalNavigationConfig: GlobalNavItem[] = [
     label: 'Chanakya Desk',
     route: '/',
     icon: LayoutDashboard,
-    requiredPerm: ['DASHBOARD.VIEW']
+    requiredPerm: ['DASHBOARD.VIEW'],
   },
   {
     key: 'APPROVALS',
@@ -433,7 +433,7 @@ export const globalNavigationConfig: GlobalNavItem[] = [
     route: '/approvals',
     icon: CheckCircle,
     requiredPerm: ['APPROVALS.VIEW'],
-    badge: 12
+    badge: 12,
   },
   {
     key: 'TASKS',
@@ -441,20 +441,20 @@ export const globalNavigationConfig: GlobalNavItem[] = [
     route: '/tasks',
     icon: ListTodo,
     requiredPerm: ['TASKS.VIEW'],
-    badge: 5
+    badge: 5,
   },
   {
     key: 'AUDIT_LOG',
     label: 'Audit Log',
     route: '/audit-log',
     icon: History,
-    requiredPerm: ['AUDIT_LOG.VIEW']
+    requiredPerm: ['AUDIT_LOG.VIEW'],
   },
   {
     key: 'SETTINGS',
     label: 'Settings',
     route: '/settings',
     icon: Settings,
-    requiredPerm: ['SETTINGS.VIEW']
-  }
+    requiredPerm: ['SETTINGS.VIEW'],
+  },
 ];

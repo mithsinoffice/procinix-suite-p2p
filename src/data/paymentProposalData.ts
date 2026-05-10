@@ -18,6 +18,9 @@ export interface ProposalInvoice {
   };
   category: string;
   isStatutory: boolean;
+  lifecycleState?: string;
+  paymentTotal?: number;
+  paymentCount?: number;
 }
 
 export const mockProposalInvoices: ProposalInvoice[] = [
@@ -36,7 +39,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'RTGS',
     status: 'approved',
     category: 'Statutory',
-    isStatutory: true
+    isStatutory: true,
   },
   {
     id: 'INV-002',
@@ -52,7 +55,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'NEFT',
     status: 'approved',
     category: 'Payroll',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-003',
@@ -68,7 +71,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'RTGS',
     status: 'approved',
     category: 'Statutory',
-    isStatutory: true
+    isStatutory: true,
   },
 
   // High Priority with Discounts
@@ -88,10 +91,10 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     earlyPaymentDiscount: {
       amount: 64000,
       percentage: 2,
-      validUntil: '2024-12-14'
+      validUntil: '2024-12-14',
     },
     category: 'Consulting',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-005',
@@ -109,10 +112,10 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     earlyPaymentDiscount: {
       amount: 42000,
       percentage: 2,
-      validUntil: '2024-12-15'
+      validUntil: '2024-12-15',
     },
     category: 'Technology',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-006',
@@ -130,10 +133,10 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     earlyPaymentDiscount: {
       amount: 85500,
       percentage: 3,
-      validUntil: '2024-12-14'
+      validUntil: '2024-12-14',
     },
     category: 'Technology',
-    isStatutory: false
+    isStatutory: false,
   },
 
   // Normal Priority - Due Soon
@@ -151,7 +154,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'Wire',
     status: 'approved',
     category: 'Technology',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-008',
@@ -167,7 +170,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'Wire',
     status: 'approved',
     category: 'Technology',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-009',
@@ -183,7 +186,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'NEFT',
     status: 'approved',
     category: 'Telecom',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-010',
@@ -199,7 +202,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'NEFT',
     status: 'approved',
     category: 'Logistics',
-    isStatutory: false
+    isStatutory: false,
   },
 
   // Further Out - Normal Priority
@@ -217,7 +220,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'RTGS',
     status: 'approved',
     category: 'Consulting',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-012',
@@ -233,7 +236,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'RTGS',
     status: 'approved',
     category: 'Real Estate',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-013',
@@ -249,7 +252,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'NEFT',
     status: 'approved',
     category: 'Utilities',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-014',
@@ -265,7 +268,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'NEFT',
     status: 'approved',
     category: 'Utilities',
-    isStatutory: false
+    isStatutory: false,
   },
 
   // On Hold
@@ -283,7 +286,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'Wire',
     status: 'on-hold',
     category: 'Technology',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-016',
@@ -299,7 +302,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'RTGS',
     status: 'on-hold',
     category: 'Technology',
-    isStatutory: false
+    isStatutory: false,
   },
 
   // More Normal Priority
@@ -317,7 +320,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'Wire',
     status: 'approved',
     category: 'Marketing',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-018',
@@ -333,7 +336,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'Wire',
     status: 'approved',
     category: 'Marketing',
-    isStatutory: false
+    isStatutory: false,
   },
 
   // Overdue
@@ -351,7 +354,7 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'NEFT',
     status: 'approved',
     category: 'Logistics',
-    isStatutory: false
+    isStatutory: false,
   },
   {
     id: 'INV-020',
@@ -367,8 +370,8 @@ export const mockProposalInvoices: ProposalInvoice[] = [
     paymentMode: 'NEFT',
     status: 'approved',
     category: 'Supplies',
-    isStatutory: false
-  }
+    isStatutory: false,
+  },
 ];
 
 // Bank account balances
@@ -377,12 +380,12 @@ export const cashBalances = {
     accountName: 'HDFC Bank - Operating Account',
     accountNo: '50200012345678',
     balance: 45000000,
-    currency: 'INR'
+    currency: 'INR',
   },
   USD: {
     accountName: 'Citibank - USD Account',
     accountNo: 'US1234567890',
     balance: 8500000,
-    currency: 'USD'
-  }
+    currency: 'USD',
+  },
 };

@@ -57,7 +57,7 @@ const rolePermissionsData: RolePermissions[] = [
       { modulePath: '/tasks', permission: 'edit' },
       { modulePath: '/audit-log', permission: 'view' },
       { modulePath: '/settings', permission: 'edit' },
-    ]
+    ],
   },
   {
     roleName: 'AP Manager',
@@ -75,7 +75,7 @@ const rolePermissionsData: RolePermissions[] = [
       { modulePath: '/approvals', permission: 'approve' },
       { modulePath: '/tasks', permission: 'edit' },
       { modulePath: '/audit-log', permission: 'view' },
-    ]
+    ],
   },
   {
     roleName: 'AP Clerk',
@@ -89,7 +89,7 @@ const rolePermissionsData: RolePermissions[] = [
       { modulePath: '/vendors', permission: 'view' },
       { modulePath: '/masters/category-master', permission: 'view' },
       { modulePath: '/tasks', permission: 'view' },
-    ]
+    ],
   },
   {
     roleName: 'CFO',
@@ -106,7 +106,7 @@ const rolePermissionsData: RolePermissions[] = [
       { modulePath: '/reports/', permission: 'view' },
       { modulePath: '/approvals', permission: 'approve' },
       { modulePath: '/audit-log', permission: 'view' },
-    ]
+    ],
   },
   {
     roleName: 'AR Manager',
@@ -120,7 +120,7 @@ const rolePermissionsData: RolePermissions[] = [
       { modulePath: '/approvals', permission: 'approve' },
       { modulePath: '/tasks', permission: 'edit' },
       { modulePath: '/audit-log', permission: 'view' },
-    ]
+    ],
   },
   {
     roleName: 'Finance Controller',
@@ -135,8 +135,8 @@ const rolePermissionsData: RolePermissions[] = [
       { modulePath: '/reports/', permission: 'view' },
       { modulePath: '/approvals', permission: 'approve' },
       { modulePath: '/audit-log', permission: 'view' },
-    ]
-  }
+    ],
+  },
 ];
 
 const companiesData: Company[] = [
@@ -151,14 +151,14 @@ export function RBACProvider({ children }: { children: ReactNode }) {
   const [currentCompany, setCurrentCompany] = useState<Company>(companiesData[0]);
 
   const switchRole = (roleId: string) => {
-    const role = rolePermissionsData.find(r => r.roleId === roleId);
+    const role = rolePermissionsData.find((r) => r.roleId === roleId);
     if (role) {
       setCurrentRole(role);
     }
   };
 
   const switchCompany = (companyId: string) => {
-    const company = companiesData.find(c => c.id === companyId);
+    const company = companiesData.find((c) => c.id === companyId);
     if (company) {
       setCurrentCompany(company);
     }
@@ -166,12 +166,12 @@ export function RBACProvider({ children }: { children: ReactNode }) {
 
   const hasAccess = (modulePath: string): Permission => {
     // Check exact match first
-    const exactMatch = currentRole.modules.find(m => m.modulePath === modulePath);
+    const exactMatch = currentRole.modules.find((m) => m.modulePath === modulePath);
     if (exactMatch) return exactMatch.permission;
 
     // Check if any parent path matches
-    const parentMatch = currentRole.modules.find(m => 
-      modulePath.startsWith(m.modulePath) && m.modulePath !== modulePath
+    const parentMatch = currentRole.modules.find(
+      (m) => modulePath.startsWith(m.modulePath) && m.modulePath !== modulePath
     );
     if (parentMatch) return parentMatch.permission;
 

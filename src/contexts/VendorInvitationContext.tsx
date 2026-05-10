@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ensureDomainDocument, saveDomainDocument } from '../lib/supabase/documentStore';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 import { useMasterData } from './MasterDataContext';
 import type { VendorMaster } from './MasterDataContext';
 import type {
@@ -18,7 +18,7 @@ import type {
 } from '../types/vendorInvitation';
 
 /** Legacy localStorage key (pre–MySQL document sync); migrated into `vendor_invitations` domain */
-const LEGACY_STORAGE_KEY = 'procinix-subko:vendor-invitations';
+const LEGACY_STORAGE_KEY = 'procinix-s2p:vendor-invitations';
 
 export type VendorInvitationsDocument = { invitations: VendorInvitation[] };
 
@@ -56,31 +56,40 @@ interface VendorInvitationContextValue {
   extendInvitationExpiry: (id: string) => void;
   getById: (id: string) => VendorInvitation | undefined;
   getByToken: (token: string) => VendorInvitation | undefined;
-  updateStatus: (id: string, status: VendorInvitationStatus, patch?: Partial<VendorInvitation>) => void;
+  updateStatus: (
+    id: string,
+    status: VendorInvitationStatus,
+    patch?: Partial<VendorInvitation>
+  ) => void;
   markVendorOpened: (token: string) => void;
   saveVendorSubmission: (token: string, submission: VendorSubmissionPayload) => void;
   setInternalNotes: (id: string, notes: string) => void;
   submitForInternalApproval: (id: string) => void;
   requestChanges: (id: string, message: string) => void;
   rejectInvitation: (id: string, reason: string) => void;
-  approveAndCreateVendorMaster: (id: string) => { ok: true; code: string } | { ok: false; error: string };
+  approveAndCreateVendorMaster: (
+    id: string
+  ) => { ok: true; code: string } | { ok: false; error: string };
   buildInvitationUrl: (token: string) => string;
 }
 
-const VendorInvitationContext = createContext<VendorInvitationContextValue | undefined>(
-  undefined
-);
+const VendorInvitationContext = createContext<VendorInvitationContextValue | undefined>(undefined);
 
 export function VendorInvitationProvider({ children }: { children: ReactNode }) {
   const { addVendor, vendors, entities, getEntityById } = useMasterData();
-  const [invitations, setInvitations] = useState<VendorInvitation[]>(() => migrateLegacyInvitations());
+  const [invitations, setInvitations] = useState<VendorInvitation[]>(() =>
+    migrateLegacyInvitations()
+  );
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     let alive = true;
     void (async () => {
       const fallback: VendorInvitationsDocument = { invitations: migrateLegacyInvitations() };
-      const doc = await ensureDomainDocument<VendorInvitationsDocument>('vendor_invitations', fallback);
+      const doc = await ensureDomainDocument<VendorInvitationsDocument>(
+        'vendor_invitations',
+        fallback
+      );
       if (!alive) return;
       setInvitations(doc.invitations ?? []);
       setHydrated(true);
@@ -138,10 +147,7 @@ export function VendorInvitationProvider({ children }: { children: ReactNode }) 
     );
   }, []);
 
-  const getById = useCallback(
-    (id: string) => invitations.find((i) => i.id === id),
-    [invitations]
-  );
+  const getById = useCallback((id: string) => invitations.find((i) => i.id === id), [invitations]);
 
   const getByToken = useCallback(
     (token: string) => invitations.find((i) => i.token === token),
@@ -150,9 +156,7 @@ export function VendorInvitationProvider({ children }: { children: ReactNode }) 
 
   const updateStatus = useCallback(
     (id: string, status: VendorInvitationStatus, patch?: Partial<VendorInvitation>) => {
-      setInvitations((prev) =>
-        prev.map((i) => (i.id === id ? { ...i, ...patch, status } : i))
-      );
+      setInvitations((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch, status } : i)));
     },
     []
   );
@@ -186,9 +190,7 @@ export function VendorInvitationProvider({ children }: { children: ReactNode }) 
   }, []);
 
   const setInternalNotes = useCallback((id: string, notes: string) => {
-    setInvitations((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, internalNotes: notes } : i))
-    );
+    setInvitations((prev) => prev.map((i) => (i.id === id ? { ...i, internalNotes: notes } : i)));
   }, []);
 
   const submitForInternalApproval = useCallback((id: string) => {
@@ -220,9 +222,12 @@ export function VendorInvitationProvider({ children }: { children: ReactNode }) 
     );
   }, []);
 
-  const rejectInvitation = useCallback((id: string, reason: string) => {
-    updateStatus(id, 'rejected', { rejectedReason: reason });
-  }, [updateStatus]);
+  const rejectInvitation = useCallback(
+    (id: string, reason: string) => {
+      updateStatus(id, 'rejected', { rejectedReason: reason });
+    },
+    [updateStatus]
+  );
 
   const approveAndCreateVendorMaster = useCallback(
     (id: string): { ok: true; code: string } | { ok: false; error: string } => {
@@ -238,8 +243,7 @@ export function VendorInvitationProvider({ children }: { children: ReactNode }) 
       const code = nextVendorCode(codeSet);
       const b = inv.basic;
       const s = inv.submission;
-      const entity =
-        (b.entityId && getEntityById(b.entityId)) || entities[0];
+      const entity = (b.entityId && getEntityById(b.entityId)) || entities[0];
       if (!entity) {
         return { ok: false, error: 'No entity configured for this invitation.' };
       }

@@ -74,17 +74,13 @@ function StatusChip({ kind }: { kind: InvitationUiKind }) {
 export function InviteVendors() {
   const { user } = useAuth();
   const { getActiveEntities } = useMasterData();
-  const [countryRows] = useIncrementalMasterRecords<CountryMasterRow>('country_master', COUNTRY_MASTER_SEED);
-  const countryOptions = useMemo(
-    () => selectableCountriesFromMaster(countryRows),
-    [countryRows]
+  const [countryRows] = useIncrementalMasterRecords<CountryMasterRow>(
+    'country_master',
+    COUNTRY_MASTER_SEED
   );
-  const {
-    invitations,
-    createInvitation,
-    buildInvitationUrl,
-    extendInvitationExpiry,
-  } = useVendorInvitations();
+  const countryOptions = useMemo(() => selectableCountriesFromMaster(countryRows), [countryRows]);
+  const { invitations, createInvitation, buildInvitationUrl, extendInvitationExpiry } =
+    useVendorInvitations();
 
   const [search, setSearch] = useState('');
   const [filterKind, setFilterKind] = useState<InvitationUiKind | 'all'>('all');
@@ -214,7 +210,7 @@ export function InviteVendors() {
     }
     const emailCheck = normalizeAndValidateInvitationEmail(email);
     if (!emailCheck.ok) {
-      setError(emailCheck.error);
+      setError('error' in emailCheck ? emailCheck.error : 'Enter a valid email address.');
       return;
     }
     const normalizedEmail = emailCheck.email;
@@ -236,7 +232,9 @@ export function InviteVendors() {
     );
 
     if (!assertInvitationEmailBound(inv.basic.email, normalizedEmail)) {
-      setError('Email could not be bound to this invitation. Please re-enter the email and try again.');
+      setError(
+        'Email could not be bound to this invitation. Please re-enter the email and try again.'
+      );
       return;
     }
 
@@ -265,7 +263,10 @@ export function InviteVendors() {
         setEmailDelivery({ sentByApi: false });
       }
     } else {
-      setEmailDelivery({ sentByApi: false, error: sendResult.error });
+      setEmailDelivery({
+        sentByApi: false,
+        error: 'error' in sendResult ? sendResult.error : 'Automatic send failed.',
+      });
     }
 
     console.info('[Vendor invite] Target email:', inv.basic.email, 'URL:', url, sendResult);
@@ -331,7 +332,10 @@ export function InviteVendors() {
     <div className="p-6 md:p-8" style={{ backgroundColor: surface, minHeight: '100%' }}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-8">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" style={{ color: textMain }}>
+          <h1
+            className="text-2xl md:text-3xl font-semibold tracking-tight"
+            style={{ color: textMain }}
+          >
             Vendor Invitations
           </h1>
           <p className="text-sm mt-1" style={{ color: textMuted }}>
@@ -395,7 +399,12 @@ export function InviteVendors() {
           value={kpis.accepted}
         />
         <KpiCard
-          icon={<XCircle className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: 'var(--color-error-dark)' }} />}
+          icon={
+            <XCircle
+              className="w-5 h-5 sm:w-6 sm:h-6"
+              style={{ color: 'var(--color-error-dark)' }}
+            />
+          }
           label="Expired"
           value={kpis.expired}
         />
@@ -473,28 +482,52 @@ export function InviteVendors() {
           <table className="w-full min-w-[920px] text-sm text-left">
             <thead>
               <tr style={{ borderBottom: `1px solid ${border}`, backgroundColor: surface }}>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Invitation ID
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Vendor name
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Email
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Invited by
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Invited date
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Status
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Expires in
                 </th>
-                <th className="py-3 px-4 font-semibold text-xs uppercase tracking-wide" style={{ color: textMuted }}>
+                <th
+                  className="py-3 px-4 font-semibold text-xs uppercase tracking-wide"
+                  style={{ color: textMuted }}
+                >
                   Actions
                 </th>
               </tr>
@@ -590,106 +623,138 @@ export function InviteVendors() {
                     style={{ backgroundColor: surface, border: `1px solid ${border}` }}
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field label="Entity name" required>
-                      <select
-                        required
-                        className="w-full px-4 py-3 rounded-lg text-sm"
-                        style={{ border: `1px solid ${border}`, color: textMain, backgroundColor: '#fff' }}
-                        value={entityId}
-                        onChange={(e) => setEntityId(e.target.value)}
-                      >
-                        {getActiveEntities().length === 0 ? (
-                          <option value="">No entities in master</option>
-                        ) : (
-                          getActiveEntities().map((ent) => (
-                            <option key={ent.id} value={ent.id}>
-                              {ent.name}
+                      <Field label="Entity name" required>
+                        <select
+                          required
+                          className="w-full px-4 py-3 rounded-lg text-sm"
+                          style={{
+                            border: `1px solid ${border}`,
+                            color: textMain,
+                            backgroundColor: '#fff',
+                          }}
+                          value={entityId}
+                          onChange={(e) => setEntityId(e.target.value)}
+                        >
+                          {getActiveEntities().length === 0 ? (
+                            <option value="">No entities in master</option>
+                          ) : (
+                            getActiveEntities().map((ent) => (
+                              <option key={ent.id} value={ent.id}>
+                                {ent.name}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      </Field>
+                      <Field label="Country" required>
+                        <select
+                          required
+                          className="w-full px-4 py-3 rounded-lg text-sm"
+                          style={{
+                            border: `1px solid ${border}`,
+                            color: textMain,
+                            backgroundColor: '#fff',
+                          }}
+                          value={countryCode}
+                          onChange={(e) => setCountryCode(e.target.value)}
+                        >
+                          {countryOptions.length === 0 ? (
+                            <option value="">No countries in master</option>
+                          ) : (
+                            countryOptions.map((c) => (
+                              <option key={c.id} value={c.countryCode}>
+                                {c.countryName}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      </Field>
+                      <Field label="Vendor legal name" required>
+                        <input
+                          required
+                          className="w-full px-4 py-3 rounded-lg text-sm"
+                          style={{
+                            border: `1px solid ${border}`,
+                            color: textMain,
+                            backgroundColor: '#fff',
+                          }}
+                          value={legalName}
+                          onChange={(e) => setLegalName(e.target.value)}
+                        />
+                      </Field>
+                      <Field label="PAN" required>
+                        <input
+                          required
+                          className="w-full px-4 py-3 rounded-lg text-sm font-mono uppercase"
+                          style={{
+                            border: `1px solid ${border}`,
+                            color: textMain,
+                            backgroundColor: '#fff',
+                          }}
+                          value={pan}
+                          onChange={(e) => setPan(e.target.value.toUpperCase())}
+                          maxLength={10}
+                        />
+                      </Field>
+                      <Field label="Category" required>
+                        <select
+                          className="w-full px-4 py-3 rounded-lg text-sm"
+                          style={{
+                            border: `1px solid ${border}`,
+                            color: textMain,
+                            backgroundColor: '#fff',
+                          }}
+                          value={category}
+                          onChange={(e) => setCategory(e.target.value)}
+                        >
+                          {CATEGORIES.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
                             </option>
-                          ))
-                        )}
-                      </select>
-                    </Field>
-                    <Field label="Country" required>
-                      <select
-                        required
-                        className="w-full px-4 py-3 rounded-lg text-sm"
-                        style={{ border: `1px solid ${border}`, color: textMain, backgroundColor: '#fff' }}
-                        value={countryCode}
-                        onChange={(e) => setCountryCode(e.target.value)}
-                      >
-                        {countryOptions.length === 0 ? (
-                          <option value="">No countries in master</option>
-                        ) : (
-                          countryOptions.map((c) => (
-                            <option key={c.id} value={c.countryCode}>
-                              {c.countryName}
-                            </option>
-                          ))
-                        )}
-                      </select>
-                    </Field>
-                    <Field label="Vendor legal name" required>
-                      <input
-                        required
-                        className="w-full px-4 py-3 rounded-lg text-sm"
-                        style={{ border: `1px solid ${border}`, color: textMain, backgroundColor: '#fff' }}
-                        value={legalName}
-                        onChange={(e) => setLegalName(e.target.value)}
-                      />
-                    </Field>
-                    <Field label="PAN" required>
-                      <input
-                        required
-                        className="w-full px-4 py-3 rounded-lg text-sm font-mono uppercase"
-                        style={{ border: `1px solid ${border}`, color: textMain, backgroundColor: '#fff' }}
-                        value={pan}
-                        onChange={(e) => setPan(e.target.value.toUpperCase())}
-                        maxLength={10}
-                      />
-                    </Field>
-                    <Field label="Category" required>
-                      <select
-                        className="w-full px-4 py-3 rounded-lg text-sm"
-                        style={{ border: `1px solid ${border}`, color: textMain, backgroundColor: '#fff' }}
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                      >
-                        {CATEGORIES.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Contact name" required>
-                      <input
-                        required
-                        className="w-full px-4 py-3 rounded-lg text-sm"
-                        style={{ border: `1px solid ${border}`, color: textMain, backgroundColor: '#fff' }}
-                        value={contactName}
-                        onChange={(e) => setContactName(e.target.value)}
-                      />
-                    </Field>
-                    <Field label="Email ID" required>
-                      <input
-                        required
-                        type="email"
-                        className="w-full px-4 py-3 rounded-lg text-sm"
-                        style={{ border: `1px solid ${border}`, color: textMain, backgroundColor: '#fff' }}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </Field>
-                    <Field label="Message">
-                      <textarea
-                        rows={4}
-                        className="w-full px-4 py-3 rounded-lg text-sm resize-y min-h-[120px]"
-                        style={{ border: `1px solid ${border}`, color: textMain, backgroundColor: '#fff' }}
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        placeholder="Optional note for the vendor (shown on the invitation page)"
-                      />
-                    </Field>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Contact name" required>
+                        <input
+                          required
+                          className="w-full px-4 py-3 rounded-lg text-sm"
+                          style={{
+                            border: `1px solid ${border}`,
+                            color: textMain,
+                            backgroundColor: '#fff',
+                          }}
+                          value={contactName}
+                          onChange={(e) => setContactName(e.target.value)}
+                        />
+                      </Field>
+                      <Field label="Email ID" required>
+                        <input
+                          required
+                          type="email"
+                          className="w-full px-4 py-3 rounded-lg text-sm"
+                          style={{
+                            border: `1px solid ${border}`,
+                            color: textMain,
+                            backgroundColor: '#fff',
+                          }}
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                        />
+                      </Field>
+                      <Field label="Message">
+                        <textarea
+                          rows={4}
+                          className="w-full px-4 py-3 rounded-lg text-sm resize-y min-h-[120px]"
+                          style={{
+                            border: `1px solid ${border}`,
+                            color: textMain,
+                            backgroundColor: '#fff',
+                          }}
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                          placeholder="Optional note for the vendor (shown on the invitation page)"
+                        />
+                      </Field>
                     </div>
                   </div>
                   {error && (
@@ -713,7 +778,10 @@ export function InviteVendors() {
                       type="submit"
                       disabled={emailSending}
                       className="w-full md:w-auto px-6 py-3 rounded-lg text-sm font-medium text-white"
-                      style={{ backgroundColor: accent, boxShadow: '0 1px 2px rgba(10, 15, 20, 0.06)' }}
+                      style={{
+                        backgroundColor: accent,
+                        boxShadow: '0 1px 2px rgba(10, 15, 20, 0.06)',
+                      }}
                     >
                       {emailSending ? 'Sending…' : 'Send invitation'}
                     </button>
@@ -728,7 +796,10 @@ export function InviteVendors() {
                     </span>
                   </div>
                   {lastInviteMeta && (
-                    <div className="rounded-lg p-3 text-sm" style={{ backgroundColor: surface, border: `1px solid ${border}` }}>
+                    <div
+                      className="rounded-lg p-3 text-sm"
+                      style={{ backgroundColor: surface, border: `1px solid ${border}` }}
+                    >
                       <p style={{ color: textMuted }} className="text-xs mb-1">
                         Email recipient (from form)
                       </p>
@@ -741,13 +812,13 @@ export function InviteVendors() {
                         </p>
                       ) : emailDelivery?.error ? (
                         <p className="mt-2 text-xs" style={{ color: '#B45309' }}>
-                          Automatic send failed: {emailDelivery.error}. Use &quot;Open mail&quot; below — the draft is
-                          addressed to the same email.
+                          Automatic send failed: {emailDelivery.error}. Use &quot;Open mail&quot;
+                          below — the draft is addressed to the same email.
                         </p>
                       ) : (
                         <p className="mt-2 text-xs" style={{ color: textMuted }}>
-                          No email API configured or send skipped. Use &quot;Open mail&quot; to send from your app to
-                          the address above.
+                          No email API configured or send skipped. Use &quot;Open mail&quot; to send
+                          from your app to the address above.
                         </p>
                       )}
                     </div>
@@ -805,15 +876,7 @@ export function InviteVendors() {
   );
 }
 
-function KpiCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: number;
-}) {
+function KpiCard({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
   return (
     <div
       className="rounded-xl p-3 sm:p-5 flex items-start justify-between gap-2 sm:gap-3 min-w-0"
@@ -826,7 +889,10 @@ function KpiCard({
         >
           {label}
         </p>
-        <p className="text-xl sm:text-2xl font-semibold tabular-nums leading-tight" style={{ color: textMain }}>
+        <p
+          className="text-xl sm:text-2xl font-semibold tabular-nums leading-tight"
+          style={{ color: textMain }}
+        >
           {value}
         </p>
       </div>
@@ -855,9 +921,7 @@ function Field({
     <div className={className}>
       <label className="block text-sm font-medium mb-2" style={{ color: textMain }}>
         {label}
-        {required && (
-          <span style={{ color: '#B91C1C' }}> *</span>
-        )}
+        {required && <span style={{ color: '#B91C1C' }}> *</span>}
       </label>
       {children}
     </div>

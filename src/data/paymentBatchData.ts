@@ -39,7 +39,14 @@ export interface PaymentBatch {
   invoiceCount: number;
   paymentDate: string;
   paymentMode: 'RTGS' | 'NEFT' | 'Wire' | 'Check' | 'UPI' | 'ACH';
-  status: 'draft' | 'pending-approval' | 'approved' | 'executed' | 'failed' | 'partially-executed' | 'rejected';
+  status:
+    | 'draft'
+    | 'pending-approval'
+    | 'approved'
+    | 'executed'
+    | 'failed'
+    | 'partially-executed'
+    | 'rejected';
   createdBy: string;
   createdAt: string;
   approvedBy?: string;
@@ -61,6 +68,21 @@ export interface PaymentBatch {
   comments?: string;
 }
 
+/** List view row (API list endpoint omits line items and approval chain). */
+export type PaymentBatchListRow = Pick<
+  PaymentBatch,
+  | 'id'
+  | 'batchNo'
+  | 'totalAmount'
+  | 'currency'
+  | 'invoiceCount'
+  | 'paymentDate'
+  | 'paymentMode'
+  | 'status'
+  | 'createdBy'
+  | 'createdAt'
+>;
+
 export const mockPaymentBatches: PaymentBatch[] = [
   // Pending Approval
   {
@@ -77,7 +99,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
     bankAccount: {
       accountName: 'HDFC Bank - Operating Account',
       accountNo: '50200012345678',
-      bankName: 'HDFC Bank Ltd'
+      bankName: 'HDFC Bank Ltd',
     },
     invoices: [
       {
@@ -89,7 +111,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 2850000,
         currency: 'INR',
         dueDate: '2024-12-15',
-        category: 'Statutory'
+        category: 'Statutory',
       },
       {
         id: 'INV-002',
@@ -100,7 +122,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 18500000,
         currency: 'INR',
         dueDate: '2024-12-15',
-        category: 'Payroll'
+        category: 'Payroll',
       },
       {
         id: 'INV-003',
@@ -111,8 +133,8 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 1250000,
         currency: 'INR',
         dueDate: '2024-12-16',
-        category: 'Statutory'
-      }
+        category: 'Statutory',
+      },
     ],
     approvalChain: [
       {
@@ -122,17 +144,17 @@ export const mockPaymentBatches: PaymentBatch[] = [
         action: 'approved',
         timestamp: '2024-12-13T10:15:00',
         comments: 'Verified all statutory invoices. Documents in order.',
-        level: 1
+        level: 1,
       },
       {
         id: 'APP-002',
         approverName: 'Amit Patel',
         approverRole: 'CFO',
         action: 'pending',
-        level: 2
-      }
+        level: 2,
+      },
     ],
-    comments: 'Critical statutory payments for Q4 2024. Urgent approval required.'
+    comments: 'Critical statutory payments for Q4 2024. Urgent approval required.',
   },
 
   // Approved - Ready for Execution
@@ -152,7 +174,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
     bankAccount: {
       accountName: 'HDFC Bank - Operating Account',
       accountNo: '50200012345678',
-      bankName: 'HDFC Bank Ltd'
+      bankName: 'HDFC Bank Ltd',
     },
     invoices: [
       {
@@ -164,7 +186,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 3200000,
         currency: 'INR',
         dueDate: '2024-12-18',
-        category: 'Consulting'
+        category: 'Consulting',
       },
       {
         id: 'INV-005',
@@ -175,7 +197,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 2100000,
         currency: 'INR',
         dueDate: '2024-12-20',
-        category: 'Technology'
+        category: 'Technology',
       },
       {
         id: 'INV-006',
@@ -186,7 +208,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 2850000,
         currency: 'INR',
         dueDate: '2024-12-22',
-        category: 'Technology'
+        category: 'Technology',
       },
       {
         id: 'INV-007',
@@ -197,8 +219,8 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 385000,
         currency: 'INR',
         dueDate: '2024-12-24',
-        category: 'Utilities'
-      }
+        category: 'Utilities',
+      },
     ],
     approvalChain: [
       {
@@ -208,7 +230,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         action: 'approved',
         timestamp: '2024-12-12T16:00:00',
         comments: 'All invoices verified. Early payment discounts captured.',
-        level: 1
+        level: 1,
       },
       {
         id: 'APP-004',
@@ -217,12 +239,12 @@ export const mockPaymentBatches: PaymentBatch[] = [
         action: 'approved',
         timestamp: '2024-12-13T11:30:00',
         comments: 'Approved for payment on 14th Dec. Good cash position.',
-        level: 2
-      }
+        level: 2,
+      },
     ],
     bankFileGenerated: true,
     bankFileGeneratedAt: '2024-12-13T11:45:00',
-    comments: 'Payment batch with early payment discounts - ₹1.91L savings.'
+    comments: 'Payment batch with early payment discounts - ₹1.91L savings.',
   },
 
   // Executed Successfully
@@ -244,7 +266,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
     bankAccount: {
       accountName: 'HDFC Bank - Operating Account',
       accountNo: '50200012345678',
-      bankName: 'HDFC Bank Ltd'
+      bankName: 'HDFC Bank Ltd',
     },
     invoices: [
       {
@@ -256,7 +278,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 185000,
         currency: 'INR',
         dueDate: '2024-12-20',
-        category: 'Telecom'
+        category: 'Telecom',
       },
       {
         id: 'INV-009',
@@ -267,7 +289,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 425000,
         currency: 'INR',
         dueDate: '2024-12-21',
-        category: 'Logistics'
+        category: 'Logistics',
       },
       {
         id: 'INV-010',
@@ -278,8 +300,8 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 1850000,
         currency: 'INR',
         dueDate: '2024-12-28',
-        category: 'Real Estate'
-      }
+        category: 'Real Estate',
+      },
     ],
     approvalChain: [
       {
@@ -289,8 +311,8 @@ export const mockPaymentBatches: PaymentBatch[] = [
         action: 'approved',
         timestamp: '2024-12-11T14:30:00',
         comments: 'Routine operational payments approved.',
-        level: 1
-      }
+        level: 1,
+      },
     ],
     executionDetails: [
       {
@@ -300,7 +322,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 185000,
         status: 'success',
         utr: 'HDFC24121200145678',
-        executedAt: '2024-12-12T10:15:23'
+        executedAt: '2024-12-12T10:15:23',
       },
       {
         id: 'EXE-002',
@@ -309,7 +331,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 425000,
         status: 'success',
         utr: 'HDFC24121200145679',
-        executedAt: '2024-12-12T10:15:24'
+        executedAt: '2024-12-12T10:15:24',
       },
       {
         id: 'EXE-003',
@@ -318,14 +340,14 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 1850000,
         status: 'success',
         utr: 'HDFC24121200145680',
-        executedAt: '2024-12-12T10:15:25'
-      }
+        executedAt: '2024-12-12T10:15:25',
+      },
     ],
     bankFileGenerated: true,
     bankFileGeneratedAt: '2024-12-11T14:45:00',
     sentToBank: true,
     sentToBankAt: '2024-12-12T10:00:00',
-    comments: 'All payments executed successfully via NEFT.'
+    comments: 'All payments executed successfully via NEFT.',
   },
 
   // Partially Executed
@@ -347,7 +369,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
     bankAccount: {
       accountName: 'Citibank - USD Account',
       accountNo: 'US1234567890',
-      bankName: 'Citibank N.A.'
+      bankName: 'Citibank N.A.',
     },
     invoices: [
       {
@@ -359,7 +381,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 875000,
         currency: 'USD',
         dueDate: '2024-12-17',
-        category: 'Technology'
+        category: 'Technology',
       },
       {
         id: 'INV-012',
@@ -370,7 +392,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 1250000,
         currency: 'USD',
         dueDate: '2024-12-19',
-        category: 'Technology'
+        category: 'Technology',
       },
       {
         id: 'INV-013',
@@ -381,8 +403,8 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 1680000,
         currency: 'USD',
         dueDate: '2024-12-23',
-        category: 'Technology'
-      }
+        category: 'Technology',
+      },
     ],
     approvalChain: [
       {
@@ -392,7 +414,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         action: 'approved',
         timestamp: '2024-12-10T15:00:00',
         comments: 'USD payments for international vendors verified.',
-        level: 1
+        level: 1,
       },
       {
         id: 'APP-007',
@@ -401,8 +423,8 @@ export const mockPaymentBatches: PaymentBatch[] = [
         action: 'approved',
         timestamp: '2024-12-12T09:00:00',
         comments: 'Approved. Ensure forex rates are locked.',
-        level: 2
-      }
+        level: 2,
+      },
     ],
     executionDetails: [
       {
@@ -412,7 +434,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 875000,
         status: 'success',
         utr: 'CITI24121300234567',
-        executedAt: '2024-12-13T11:30:15'
+        executedAt: '2024-12-13T11:30:15',
       },
       {
         id: 'EXE-005',
@@ -421,7 +443,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 1250000,
         status: 'success',
         utr: 'CITI24121300234568',
-        executedAt: '2024-12-13T11:30:16'
+        executedAt: '2024-12-13T11:30:16',
       },
       {
         id: 'EXE-006',
@@ -430,14 +452,14 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 1680000,
         status: 'failed',
         failureReason: 'Beneficiary account validation failed - SWIFT code mismatch',
-        executedAt: '2024-12-13T11:30:17'
-      }
+        executedAt: '2024-12-13T11:30:17',
+      },
     ],
     bankFileGenerated: true,
     bankFileGeneratedAt: '2024-12-12T09:30:00',
     sentToBank: true,
     sentToBankAt: '2024-12-13T11:15:00',
-    comments: 'International wire transfers. One payment failed - requires correction.'
+    comments: 'International wire transfers. One payment failed - requires correction.',
   },
 
   // Rejected
@@ -455,7 +477,7 @@ export const mockPaymentBatches: PaymentBatch[] = [
     bankAccount: {
       accountName: 'HDFC Bank - Operating Account',
       accountNo: '50200012345678',
-      bankName: 'HDFC Bank Ltd'
+      bankName: 'HDFC Bank Ltd',
     },
     invoices: [
       {
@@ -467,8 +489,8 @@ export const mockPaymentBatches: PaymentBatch[] = [
         amount: 1250000,
         currency: 'INR',
         dueDate: '2024-12-18',
-        category: 'Services'
-      }
+        category: 'Services',
+      },
     ],
     approvalChain: [
       {
@@ -477,10 +499,11 @@ export const mockPaymentBatches: PaymentBatch[] = [
         approverRole: 'AP Manager',
         action: 'rejected',
         timestamp: '2024-12-12T10:00:00',
-        comments: 'Vendor not in approved vendor list. KYC documents missing. Please complete vendor onboarding first.',
-        level: 1
-      }
+        comments:
+          'Vendor not in approved vendor list. KYC documents missing. Please complete vendor onboarding first.',
+        level: 1,
+      },
     ],
-    comments: 'New vendor payment - requires vendor master approval first.'
-  }
+    comments: 'New vendor payment - requires vendor master approval first.',
+  },
 ];

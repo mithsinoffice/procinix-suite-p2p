@@ -1,30 +1,26 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { 
-  SUBKO_VENDORS, 
-  SUBKO_ITEMS, 
-  SUBKO_UOM, 
-  SUBKO_DEPARTMENTS, 
-  SUBKO_COST_CENTRES, 
-  SUBKO_DEBIT_NOTE_REASONS 
-} from './SubkoMasterData';
 import {
   MULTI_ENTITY_VENDORS,
   MULTI_ENTITY_BANKS,
   MULTI_ENTITY_COST_CENTRES,
-  MULTI_ENTITY_TAX_CODES
+  MULTI_ENTITY_TAX_CODES,
+  MULTI_ENTITY_DEPARTMENTS,
 } from './MultiEntityMasterData';
 import { DEMO_VENDOR_DATASET } from './DemoVendorDataset';
-import { ensureRelationalMasterRecords, saveRelationalMasterRecords } from '../lib/supabase/masterTables';
-import { ensureDomainDocument, saveDomainDocument } from '../lib/supabase/documentStore';
+import {
+  ensureRelationalMasterRecords,
+  saveRelationalMasterRecords,
+} from '../lib/mysql/masterTables';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 import { isMysqlApiEnabled, mysqlApiRequest } from '../lib/mysql/client';
 import { EntityScopeMapping, isRecordMappedToEntity } from '../lib/masters/entityMapping';
 
 /**
  * MASTER DATA CONTEXT - SYSTEM OF RECORD
- * 
+ *
  * This is the SINGLE SOURCE OF TRUTH for all master data across AP Automation.
  * All modules must consume data from this context - NO local/duplicate masters allowed.
- * 
+ *
  * AP AUTOMATION MODULES IN SCOPE:
  * - Procurement
  * - Accounts Payable
@@ -33,7 +29,7 @@ import { EntityScopeMapping, isRecordMappedToEntity } from '../lib/masters/entit
  * - Vendor Onboarding
  * - Budgeting
  * - Masters
- * 
+ *
  * GOVERNANCE RULES:
  * 1. Masters defined here are authoritative and immutable at the transaction level
  * 2. All dropdowns, selectors, and references MUST use these masters
@@ -48,8 +44,10 @@ import { EntityScopeMapping, isRecordMappedToEntity } from '../lib/masters/entit
 export interface VendorMaster {
   id: string;
   code: string;
+  clientErpVendorCode?: string;
   name: string;
   legalName: string;
+  approvalStatus?: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected' | 'Changes Requested';
   pan: string;
   gstin: string;
   email: string;
@@ -336,6 +334,28 @@ export interface DebitNoteReasonMaster {
   entityMappings?: EntityScopeMapping[];
 }
 
+export interface TDSSectionMasterRecord {
+  id: string;
+  sectionCode: string;
+  sectionName: string;
+  description?: string;
+  rateIndividual: number;
+  rateCompany: number;
+  rateNoTan?: number;
+  thresholdAmount?: number;
+  applicableTo?: string;
+  status: 'Active' | 'Inactive';
+  approvalStatus?: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected';
+  entityMappings?: EntityScopeMapping[];
+}
+
+export interface VendorGroupMaster {
+  code: string;
+  name: string;
+  relationshipType?: 'Third party' | 'Related party' | 'Associate' | 'JV';
+  entities?: Array<{ id: string; name: string }>;
+}
+
 // ============================================================================
 // MULTI-CURRENCY SUPPORT - ADDITIVE ONLY (NO TRANSACTION IMPACT)
 // ============================================================================
@@ -376,151 +396,310 @@ export interface ExchangeRateMaster {
 // In production, this would come from API/Database
 // ============================================================================
 
-const VENDOR_MASTER_DATA: VendorMaster[] = [
-  ...SUBKO_VENDORS,
-  ...MULTI_ENTITY_VENDORS,
-  ...DEMO_VENDOR_DATASET
-];
+const VENDOR_MASTER_DATA: VendorMaster[] = [...MULTI_ENTITY_VENDORS, ...DEMO_VENDOR_DATASET];
 
-const ITEM_MASTER_DATA: ItemMaster[] = SUBKO_ITEMS;
+const ITEM_MASTER_DATA: ItemMaster[] = [];
 
 const ENTITY_MASTER_DATA: EntityMaster[] = [
-  // MULTI-ENTITY EXTENSION - New Entities Added
   {
-    id: 'ENT-SUBKO-IN',
-    code: 'SUBKO-IN',
-    name: 'Subko Coffee Pvt Ltd – India',
-    legalName: 'Subko Coffee Private Limited',
-    pan: 'AABCS1234D',
-    gstin: '29AABCS1234D1Z5',
+    id: 'entity-ptpl-001',
+    code: 'PTPL',
+    name: 'Procinix Technologies Private Limited',
+    legalName: 'Procinix Technologies Private Limited',
+    pan: 'AABCP1234Q',
+    gstin: '27AABCP1234Q1Z5',
     entityType: 'Company',
-    address: '45 Lavelle Road, Ashok Nagar',
-    city: 'Bangalore',
-    state: 'Karnataka',
-    stateCode: 'KA',
-    pincode: '560001',
-    isActive: true,
-    country: 'India',
-    currency: 'INR',
-    taxRegime: 'GST'
-  },
-  {
-    id: 'ENT-SUBKO-UAE',
-    code: 'SUBKO-UAE',
-    name: 'Subko Coffee – Dubai',
-    legalName: 'Subko Coffee LLC',
-    pan: '',
-    gstin: '',
-    entityType: 'Company',
-    address: 'Dubai Investment Park, Building 3',
-    city: 'Dubai',
-    state: 'Dubai',
-    stateCode: 'DXB',
-    pincode: '00000',
-    isActive: true,
-    country: 'UAE',
-    currency: 'AED',
-    taxRegime: 'VAT',
-    vatRegistrationNumber: '100123456700003',
-    taxIdentificationNumber: '100123456700003'
-  },
-  {
-    id: 'ENT-PROCINIX-IN',
-    code: 'PROC-IN',
-    name: 'Procinix Ltd – India',
-    legalName: 'Procinix Solutions Private Limited',
-    pan: 'AABCP5678E',
-    gstin: '27AABCP5678E1Z9',
-    entityType: 'Company',
-    address: '301 Maker Chambers V, Nariman Point',
+    address: 'A 1302 Sunteck City Avenue 1 Goregaon West Mumbai 400104',
     city: 'Mumbai',
     state: 'Maharashtra',
-    stateCode: 'MH',
-    pincode: '400021',
+    stateCode: '27',
+    pincode: '400104',
     isActive: true,
     country: 'India',
     currency: 'INR',
-    taxRegime: 'GST'
-  },
-  // EXISTING ENTITIES - MARKED INACTIVE (DEMO DATA)
-  {
-    id: 'ENT-001',
-    code: 'ENT-BLR',
-    name: 'Bangalore Office',
-    legalName: 'ABC Private Limited - Bangalore',
-    pan: 'AAAAA1234A',
-    gstin: '29AAAAA1234A1Z1',
-    entityType: 'Branch',
-    address: '100 MG Road',
-    city: 'Bangalore',
-    state: 'Karnataka',
-    stateCode: 'KA',
-    pincode: '560001',
-    isActive: false, // DEMO DATA - EXCLUDED
-    country: 'India',
-    currency: 'INR',
-    taxRegime: 'GST'
+    taxRegime: 'GST',
   },
   {
-    id: 'ENT-002',
-    code: 'ENT-MUM',
-    name: 'Mumbai Office',
-    legalName: 'ABC Private Limited - Mumbai',
-    pan: 'AAAAA1234A',
-    gstin: '27AAAAA1234A1Z2',
-    entityType: 'Branch',
-    address: '200 Nariman Point',
+    id: 'entity-mtpl-001',
+    code: 'MTPL',
+    name: 'Mensbrand Technologies Private Limited',
+    legalName: 'Mensbrand Technologies Private Limited',
+    pan: 'AABCM5678Q',
+    gstin: '27AABCM5678Q1Z3',
+    entityType: 'Company',
+    address: 'Mumbai Maharashtra',
     city: 'Mumbai',
     state: 'Maharashtra',
-    stateCode: 'MH',
-    pincode: '400021',
-    isActive: false, // DEMO DATA - EXCLUDED
+    stateCode: '27',
+    pincode: '400001',
+    isActive: true,
     country: 'India',
     currency: 'INR',
-    taxRegime: 'GST'
-  }
+    taxRegime: 'GST',
+  },
 ];
 
-const COST_CENTRE_MASTER_DATA: CostCentreMaster[] = [
-  ...SUBKO_COST_CENTRES,
-  ...MULTI_ENTITY_COST_CENTRES
-];
+const COST_CENTRE_MASTER_DATA: CostCentreMaster[] = [...MULTI_ENTITY_COST_CENTRES];
 
 const PROFIT_CENTRE_MASTER_DATA: ProfitCentreMaster[] = [
-  { id: 'PC-001', code: 'PC-SOUTH', name: 'South Region', description: 'Southern India operations', headOfCentre: 'Rajesh Kumar', isActive: true },
-  { id: 'PC-002', code: 'PC-WEST', name: 'West Region', description: 'Western India operations', headOfCentre: 'Priya Sharma', isActive: true },
-  { id: 'PC-003', code: 'PC-NORTH', name: 'North Region', description: 'Northern India operations', headOfCentre: 'Amit Patel', isActive: true }
+  {
+    id: 'PC-001',
+    code: 'PC-SOUTH',
+    name: 'South Region',
+    description: 'Southern India operations',
+    headOfCentre: 'Rajesh Kumar',
+    isActive: true,
+  },
+  {
+    id: 'PC-002',
+    code: 'PC-WEST',
+    name: 'West Region',
+    description: 'Western India operations',
+    headOfCentre: 'Priya Sharma',
+    isActive: true,
+  },
+  {
+    id: 'PC-003',
+    code: 'PC-NORTH',
+    name: 'North Region',
+    description: 'Northern India operations',
+    headOfCentre: 'Amit Patel',
+    isActive: true,
+  },
 ];
 
 const ACCOUNT_CODE_MASTER_DATA: AccountCodeMaster[] = [
-  { id: 'AC-001', code: '5001', name: 'Direct Materials', accountType: 'Expense', accountSubType: 'Cost of Goods Sold', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
-  { id: 'AC-002', code: '5002', name: 'Contract Labor', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
-  { id: 'AC-003', code: '5003', name: 'IT Services', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
-  { id: 'AC-004', code: '5004', name: 'Office Supplies', accountType: 'Expense', accountSubType: 'Operating Expense', isActive: true, requiresCostCentre: true, requiresProject: false, level: 2 },
-  { id: 'AC-005', code: '2001', name: 'Accounts Payable', accountType: 'Liability', accountSubType: 'Current Liability', isActive: true, requiresCostCentre: false, requiresProject: false, level: 2 }
+  {
+    id: 'AC-001',
+    code: '5001',
+    name: 'Direct Materials',
+    accountType: 'Expense',
+    accountSubType: 'Cost of Goods Sold',
+    isActive: true,
+    requiresCostCentre: true,
+    requiresProject: false,
+    level: 2,
+  },
+  {
+    id: 'AC-002',
+    code: '5002',
+    name: 'Contract Labor',
+    accountType: 'Expense',
+    accountSubType: 'Operating Expense',
+    isActive: true,
+    requiresCostCentre: true,
+    requiresProject: false,
+    level: 2,
+  },
+  {
+    id: 'AC-003',
+    code: '5003',
+    name: 'IT Services',
+    accountType: 'Expense',
+    accountSubType: 'Operating Expense',
+    isActive: true,
+    requiresCostCentre: true,
+    requiresProject: false,
+    level: 2,
+  },
+  {
+    id: 'AC-004',
+    code: '5004',
+    name: 'Office Supplies',
+    accountType: 'Expense',
+    accountSubType: 'Operating Expense',
+    isActive: true,
+    requiresCostCentre: true,
+    requiresProject: false,
+    level: 2,
+  },
+  {
+    id: 'AC-005',
+    code: '2001',
+    name: 'Accounts Payable',
+    accountType: 'Liability',
+    accountSubType: 'Current Liability',
+    isActive: true,
+    requiresCostCentre: false,
+    requiresProject: false,
+    level: 2,
+  },
 ];
 
 const TAX_CODE_MASTER_DATA: TaxCodeMaster[] = [
   ...MULTI_ENTITY_TAX_CODES,
-  { id: 'TAX-001', taxCode: 'GST18', taxType: 'GST', taxName: 'GST @ 18%', taxRate: 18, isActive: true, applicableFrom: '2017-07-01', cgstRate: 9, sgstRate: 9, igstRate: 18 },
-  { id: 'TAX-002', taxCode: 'GST12', taxType: 'GST', taxName: 'GST @ 12%', taxRate: 12, isActive: true, applicableFrom: '2017-07-01', cgstRate: 6, sgstRate: 6, igstRate: 12 },
-  { id: 'TAX-003', taxCode: 'GST5', taxType: 'GST', taxName: 'GST @ 5%', taxRate: 5, isActive: true, applicableFrom: '2017-07-01', cgstRate: 2.5, sgstRate: 2.5, igstRate: 5 },
-  { id: 'TAX-004', taxCode: 'TDS194C', taxType: 'TDS', taxName: 'TDS u/s 194C - Contractors', taxRate: 2, isActive: true, applicableFrom: '2020-04-01', tdsSection: '194C', tdsNature: 'Payments to Contractors' },
-  { id: 'TAX-005', taxCode: 'TDS194J', taxType: 'TDS', taxName: 'TDS u/s 194J - Professional Services', taxRate: 10, isActive: true, applicableFrom: '2020-04-01', tdsSection: '194J', tdsNature: 'Professional/Technical Services' }
+  {
+    id: 'TAX-001',
+    taxCode: 'GST18',
+    taxType: 'GST',
+    taxName: 'GST @ 18%',
+    taxRate: 18,
+    isActive: true,
+    applicableFrom: '2017-07-01',
+    cgstRate: 9,
+    sgstRate: 9,
+    igstRate: 18,
+  },
+  {
+    id: 'TAX-002',
+    taxCode: 'GST12',
+    taxType: 'GST',
+    taxName: 'GST @ 12%',
+    taxRate: 12,
+    isActive: true,
+    applicableFrom: '2017-07-01',
+    cgstRate: 6,
+    sgstRate: 6,
+    igstRate: 12,
+  },
+  {
+    id: 'TAX-003',
+    taxCode: 'GST5',
+    taxType: 'GST',
+    taxName: 'GST @ 5%',
+    taxRate: 5,
+    isActive: true,
+    applicableFrom: '2017-07-01',
+    cgstRate: 2.5,
+    sgstRate: 2.5,
+    igstRate: 5,
+  },
+  {
+    id: 'TAX-004',
+    taxCode: 'TDS194C',
+    taxType: 'TDS',
+    taxName: 'TDS u/s 194C - Contractors',
+    taxRate: 2,
+    isActive: true,
+    applicableFrom: '2020-04-01',
+    tdsSection: '194C',
+    tdsNature: 'Payments to Contractors',
+  },
+  {
+    id: 'TAX-005',
+    taxCode: 'TDS194J',
+    taxType: 'TDS',
+    taxName: 'TDS u/s 194J - Professional Services',
+    taxRate: 10,
+    isActive: true,
+    applicableFrom: '2020-04-01',
+    tdsSection: '194J',
+    tdsNature: 'Professional/Technical Services',
+  },
 ];
 
 const BANK_MASTER_DATA: BankMaster[] = [
   ...MULTI_ENTITY_BANKS,
-  { id: 'BANK-001', bankName: 'HDFC Bank', branchName: 'MG Road Branch', ifscCode: 'HDFC0000123', accountNumber: '00123456789', accountName: 'ABC Pvt Ltd', accountType: 'Current', entityId: 'ENT-001', entityName: 'Bangalore Office', currency: 'INR', isActive: true, isPrimary: true },
-  { id: 'BANK-002', bankName: 'ICICI Bank', branchName: 'Koramangala Branch', ifscCode: 'ICIC0000456', accountNumber: '00456789012', accountName: 'ABC Pvt Ltd', accountType: 'Current', entityId: 'ENT-001', entityName: 'Bangalore Office', currency: 'INR', isActive: true, isPrimary: false },
-  { id: 'BANK-003', bankName: 'State Bank of India', branchName: 'Nariman Point Branch', ifscCode: 'SBIN0000789', accountNumber: '00789012345', accountName: 'ABC Pvt Ltd - Mumbai', accountType: 'Current', entityId: 'ENT-002', entityName: 'Mumbai Office', currency: 'INR', isActive: true, isPrimary: true }
+  {
+    id: 'BANK-001',
+    bankName: 'HDFC Bank',
+    branchName: 'MG Road Branch',
+    ifscCode: 'HDFC0000123',
+    accountNumber: '00123456789',
+    accountName: 'ABC Pvt Ltd',
+    accountType: 'Current',
+    entityId: 'ENT-001',
+    entityName: 'Bangalore Office',
+    currency: 'INR',
+    isActive: true,
+    isPrimary: true,
+  },
+  {
+    id: 'BANK-002',
+    bankName: 'ICICI Bank',
+    branchName: 'Koramangala Branch',
+    ifscCode: 'ICIC0000456',
+    accountNumber: '00456789012',
+    accountName: 'ABC Pvt Ltd',
+    accountType: 'Current',
+    entityId: 'ENT-001',
+    entityName: 'Bangalore Office',
+    currency: 'INR',
+    isActive: true,
+    isPrimary: false,
+  },
+  {
+    id: 'BANK-003',
+    bankName: 'State Bank of India',
+    branchName: 'Nariman Point Branch',
+    ifscCode: 'SBIN0000789',
+    accountNumber: '00789012345',
+    accountName: 'ABC Pvt Ltd - Mumbai',
+    accountType: 'Current',
+    entityId: 'ENT-002',
+    entityName: 'Mumbai Office',
+    currency: 'INR',
+    isActive: true,
+    isPrimary: true,
+  },
 ];
 
-const UOM_MASTER_DATA: UOMMaster[] = SUBKO_UOM;
+const UOM_MASTER_DATA: UOMMaster[] = [
+  {
+    id: 'UOM-001',
+    code: 'KG',
+    name: 'Kilogram',
+    description: 'Unit of weight measurement',
+    isActive: true,
+  },
+  {
+    id: 'UOM-002',
+    code: 'LITRE',
+    name: 'Litre',
+    description: 'Unit of volume measurement',
+    isActive: true,
+  },
+  { id: 'UOM-003', code: 'NOS', name: 'Numbers', description: 'Count of items', isActive: true },
+  {
+    id: 'UOM-004',
+    code: 'HOUR',
+    name: 'Hour',
+    description: 'Unit of time for services',
+    isActive: true,
+  },
+  { id: 'UOM-005', code: 'MT', name: 'Metric Ton', description: '1000 kilograms', isActive: true },
+  { id: 'UOM-006', code: 'PKT', name: 'Packet', description: 'Standard packet', isActive: true },
+];
 
-const DEPARTMENT_MASTER_DATA: DepartmentMaster[] = SUBKO_DEPARTMENTS;
+const DEPARTMENT_MASTER_DATA: DepartmentMaster[] = [...MULTI_ENTITY_DEPARTMENTS];
 
-const DEBIT_NOTE_REASON_MASTER_DATA: DebitNoteReasonMaster[] = SUBKO_DEBIT_NOTE_REASONS;
+const DEBIT_NOTE_REASON_MASTER_DATA: DebitNoteReasonMaster[] = [];
+const VENDOR_GROUP_MASTER_DATA: VendorGroupMaster[] = [
+  { code: 'VG001', name: 'Tata Group', relationshipType: 'Associate' },
+  { code: 'VG002', name: 'Reliance Group', relationshipType: 'Related party' },
+  { code: 'VG003', name: 'Aditya Birla Group', relationshipType: 'Associate' },
+  { code: 'VG004', name: 'Mahindra Group', relationshipType: 'Third party' },
+  { code: 'VG015', name: 'Independent Vendors', relationshipType: 'Third party' },
+];
+
+const TDS_SECTION_MASTER_DATA: TDSSectionMasterRecord[] = [
+  {
+    id: 'TDS-194C',
+    sectionCode: '194C',
+    sectionName: 'Payment to Contractors',
+    description: 'TDS on payments to contractors and sub-contractors',
+    rateIndividual: 1,
+    rateCompany: 2,
+    rateNoTan: 20,
+    thresholdAmount: 30000,
+    applicableTo: 'Contractors',
+    status: 'Active',
+    approvalStatus: 'Approved',
+  },
+  {
+    id: 'TDS-194J',
+    sectionCode: '194J',
+    sectionName: 'Professional/Technical Services',
+    description: 'TDS on professional and technical service fees',
+    rateIndividual: 10,
+    rateCompany: 10,
+    rateNoTan: 20,
+    thresholdAmount: 30000,
+    applicableTo: 'Professionals',
+    status: 'Active',
+    approvalStatus: 'Approved',
+  },
+];
 
 // ============================================================================
 // CURRENCY MASTER DATA (MULTI-COUNTRY SUPPORT)
@@ -535,7 +714,7 @@ const CURRENCY_MASTER_DATA: CurrencyMaster[] = [
     symbol: '₹',
     decimalPrecision: 2,
     isActive: true,
-    isBaseCurrency: true // Default base currency for reporting
+    isBaseCurrency: true, // Default base currency for reporting
   },
   {
     id: 'CUR-002',
@@ -544,7 +723,7 @@ const CURRENCY_MASTER_DATA: CurrencyMaster[] = [
     symbol: 'د.إ',
     decimalPrecision: 2,
     isActive: true,
-    isBaseCurrency: false
+    isBaseCurrency: false,
   },
   {
     id: 'CUR-003',
@@ -553,7 +732,7 @@ const CURRENCY_MASTER_DATA: CurrencyMaster[] = [
     symbol: '$',
     decimalPrecision: 2,
     isActive: true,
-    isBaseCurrency: false
+    isBaseCurrency: false,
   },
   {
     id: 'CUR-004',
@@ -562,7 +741,7 @@ const CURRENCY_MASTER_DATA: CurrencyMaster[] = [
     symbol: '€',
     decimalPrecision: 2,
     isActive: true,
-    isBaseCurrency: false
+    isBaseCurrency: false,
   },
   {
     id: 'CUR-005',
@@ -571,8 +750,8 @@ const CURRENCY_MASTER_DATA: CurrencyMaster[] = [
     symbol: '£',
     decimalPrecision: 2,
     isActive: true,
-    isBaseCurrency: false
-  }
+    isBaseCurrency: false,
+  },
 ];
 
 // ============================================================================
@@ -592,7 +771,7 @@ const EXCHANGE_RATE_MASTER_DATA: ExchangeRateMaster[] = [
     effectiveFromDate: '2024-01-01',
     isActive: true,
     createdBy: 'System',
-    createdDate: '2024-01-01'
+    createdDate: '2024-01-01',
   },
   {
     id: 'FX-002',
@@ -603,7 +782,7 @@ const EXCHANGE_RATE_MASTER_DATA: ExchangeRateMaster[] = [
     effectiveFromDate: '2024-01-01',
     isActive: true,
     createdBy: 'System',
-    createdDate: '2024-01-01'
+    createdDate: '2024-01-01',
   },
   // INR to USD conversions
   {
@@ -615,7 +794,7 @@ const EXCHANGE_RATE_MASTER_DATA: ExchangeRateMaster[] = [
     effectiveFromDate: '2024-01-01',
     isActive: true,
     createdBy: 'System',
-    createdDate: '2024-01-01'
+    createdDate: '2024-01-01',
   },
   {
     id: 'FX-004',
@@ -626,7 +805,7 @@ const EXCHANGE_RATE_MASTER_DATA: ExchangeRateMaster[] = [
     effectiveFromDate: '2024-01-01',
     isActive: true,
     createdBy: 'System',
-    createdDate: '2024-01-01'
+    createdDate: '2024-01-01',
   },
   // AED to USD conversions
   {
@@ -638,7 +817,7 @@ const EXCHANGE_RATE_MASTER_DATA: ExchangeRateMaster[] = [
     effectiveFromDate: '2024-01-01',
     isActive: true,
     createdBy: 'System',
-    createdDate: '2024-01-01'
+    createdDate: '2024-01-01',
   },
   {
     id: 'FX-006',
@@ -649,19 +828,19 @@ const EXCHANGE_RATE_MASTER_DATA: ExchangeRateMaster[] = [
     effectiveFromDate: '2024-01-01',
     isActive: true,
     createdBy: 'System',
-    createdDate: '2024-01-01'
+    createdDate: '2024-01-01',
   },
   // EUR conversions (for reference)
   {
     id: 'FX-007',
     fromCurrency: 'EUR',
     toCurrency: 'INR',
-    exchangeRate: 90.50, // 1 EUR = 90.50 INR (approx)
+    exchangeRate: 90.5, // 1 EUR = 90.50 INR (approx)
     rateType: 'Standard',
     effectiveFromDate: '2024-01-01',
     isActive: true,
     createdBy: 'System',
-    createdDate: '2024-01-01'
+    createdDate: '2024-01-01',
   },
   {
     id: 'FX-008',
@@ -672,8 +851,8 @@ const EXCHANGE_RATE_MASTER_DATA: ExchangeRateMaster[] = [
     effectiveFromDate: '2024-01-01',
     isActive: true,
     createdBy: 'System',
-    createdDate: '2024-01-01'
-  }
+    createdDate: '2024-01-01',
+  },
 ];
 
 // ============================================================================
@@ -703,35 +882,35 @@ interface MasterDataContextType {
   getVendorByCode: (code: string) => VendorMaster | undefined;
   getActiveVendors: () => VendorMaster[];
   getVendorsByEntity: (entityId: string) => VendorMaster[]; // MULTI-ENTITY FILTER
-  
+
   // Items
   items: ItemMaster[];
   getItemById: (id: string) => ItemMaster | undefined;
   getItemByCode: (code: string) => ItemMaster | undefined;
   getActiveItems: () => ItemMaster[];
-  
+
   // Entities
   entities: EntityMaster[];
   getEntityById: (id: string) => EntityMaster | undefined;
   getActiveEntities: () => EntityMaster[];
   getEntitiesByCountry: (country: string) => EntityMaster[]; // MULTI-COUNTRY FILTER
-  
+
   // Cost Centres
   costCentres: CostCentreMaster[];
   getCostCentreById: (id: string) => CostCentreMaster | undefined;
   getActiveCostCentres: () => CostCentreMaster[];
-  
+
   // Profit Centres
   profitCentres: ProfitCentreMaster[];
   getProfitCentreById: (id: string) => ProfitCentreMaster | undefined;
   getActiveProfitCentres: () => ProfitCentreMaster[];
-  
+
   // Account Codes
   accountCodes: AccountCodeMaster[];
   getAccountCodeById: (id: string) => AccountCodeMaster | undefined;
   getAccountCodeByCode: (code: string) => AccountCodeMaster | undefined;
   getActiveAccountCodes: () => AccountCodeMaster[];
-  
+
   // Tax Codes
   taxCodes: TaxCodeMaster[];
   getTaxCodeById: (id: string) => TaxCodeMaster | undefined;
@@ -739,41 +918,49 @@ interface MasterDataContextType {
   getGSTCodes: () => TaxCodeMaster[];
   getTDSCodes: () => TaxCodeMaster[];
   getVATCodes: () => TaxCodeMaster[]; // UAE VAT codes
-  
+
   // Banks
   banks: BankMaster[];
   getBankById: (id: string) => BankMaster | undefined;
   getActiveBanks: () => BankMaster[];
   getBanksByEntity: (entityId: string) => BankMaster[];
-  
+
   // UOMs
   uoms: UOMMaster[];
   getUOMById: (id: string) => UOMMaster | undefined;
   getUOMByCode: (code: string) => UOMMaster | undefined;
   getActiveUOMs: () => UOMMaster[];
-  
+
   // Departments
   departments: DepartmentMaster[];
   getDepartmentById: (id: string) => DepartmentMaster | undefined;
   getActiveDepartments: () => DepartmentMaster[];
-  
+
   // Debit Note Reasons
   debitNoteReasons: DebitNoteReasonMaster[];
   getDebitNoteReasonById: (id: string) => DebitNoteReasonMaster | undefined;
   getActiveDebitNoteReasons: () => DebitNoteReasonMaster[];
-  
+
+  // Vendor Groups
+  vendorGroups: VendorGroupMaster[];
+
+  // TDS Sections
+  tdsSections: TDSSectionMasterRecord[];
+  getTDSSectionByCode: (sectionCode: string) => TDSSectionMasterRecord | undefined;
+  getActiveTDSSections: () => TDSSectionMasterRecord[];
+
   // Currencies
   currencies: CurrencyMaster[];
   getCurrencyById: (id: string) => CurrencyMaster | undefined;
   getCurrencyByCode: (code: string) => CurrencyMaster | undefined;
   getActiveCurrencies: () => CurrencyMaster[];
-  
+
   // Exchange Rates
   exchangeRates: ExchangeRateMaster[];
   getExchangeRateById: (id: string) => ExchangeRateMaster | undefined;
   getActiveExchangeRates: () => ExchangeRateMaster[];
   getExchangeRate: (fromCurrency: string, toCurrency: string) => number | null; // Helper to get rate
-  
+
   // ENTITY CONTEXT - GLOBAL STATE FOR HEADER/NAVIGATION
   currentCompany: Company | null;
   availableCompanies: Company[];
@@ -793,6 +980,8 @@ interface MasterDataDocument {
   uoms: UOMMaster[];
   departments: DepartmentMaster[];
   debitNoteReasons: DebitNoteReasonMaster[];
+  vendorGroups: VendorGroupMaster[];
+  tdsSections: TDSSectionMasterRecord[];
   currencies: CurrencyMaster[];
   exchangeRates: ExchangeRateMaster[];
 }
@@ -829,23 +1018,39 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     uoms: UOM_MASTER_DATA,
     departments: DEPARTMENT_MASTER_DATA,
     debitNoteReasons: DEBIT_NOTE_REASON_MASTER_DATA,
+    vendorGroups: VENDOR_GROUP_MASTER_DATA,
+    tdsSections: TDS_SECTION_MASTER_DATA,
     currencies: CURRENCY_MASTER_DATA,
-    exchangeRates: EXCHANGE_RATE_MASTER_DATA
+    exchangeRates: EXCHANGE_RATE_MASTER_DATA,
   };
 
   const [vendors, setVendors] = useState<VendorMaster[]>(defaultDocument.vendors);
   const [items, setItems] = useState<ItemMaster[]>(defaultDocument.items);
   const [entities, setEntities] = useState<EntityMaster[]>(defaultDocument.entities);
   const [costCentres, setCostCentres] = useState<CostCentreMaster[]>(defaultDocument.costCentres);
-  const [profitCentres, setProfitCentres] = useState<ProfitCentreMaster[]>(defaultDocument.profitCentres);
-  const [accountCodes, setAccountCodes] = useState<AccountCodeMaster[]>(defaultDocument.accountCodes);
+  const [profitCentres, setProfitCentres] = useState<ProfitCentreMaster[]>(
+    defaultDocument.profitCentres
+  );
+  const [accountCodes, setAccountCodes] = useState<AccountCodeMaster[]>(
+    defaultDocument.accountCodes
+  );
   const [taxCodes, setTaxCodes] = useState<TaxCodeMaster[]>(defaultDocument.taxCodes);
   const [banks, setBanks] = useState<BankMaster[]>(defaultDocument.banks);
   const [uoms, setUoms] = useState<UOMMaster[]>(defaultDocument.uoms);
   const [departments, setDepartments] = useState<DepartmentMaster[]>(defaultDocument.departments);
-  const [debitNoteReasons, setDebitNoteReasons] = useState<DebitNoteReasonMaster[]>(defaultDocument.debitNoteReasons);
+  const [debitNoteReasons, setDebitNoteReasons] = useState<DebitNoteReasonMaster[]>(
+    defaultDocument.debitNoteReasons
+  );
+  const [vendorGroups, setVendorGroups] = useState<VendorGroupMaster[]>(
+    defaultDocument.vendorGroups
+  );
+  const [tdsSections, setTdsSections] = useState<TDSSectionMasterRecord[]>(
+    defaultDocument.tdsSections
+  );
   const [currencies, setCurrencies] = useState<CurrencyMaster[]>(defaultDocument.currencies);
-  const [exchangeRates, setExchangeRates] = useState<ExchangeRateMaster[]>(defaultDocument.exchangeRates);
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRateMaster[]>(
+    defaultDocument.exchangeRates
+  );
   const [isHydrating, setIsHydrating] = useState(true);
 
   useEffect(() => {
@@ -864,10 +1069,11 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           uomsData,
           departmentsData,
           debitNoteReasonsData,
+          tdsSectionsData,
           currenciesData,
           exchangeRatesData,
           document,
-          itemsResponse
+          itemsResponse,
         ] = await Promise.all([
           ensureRelationalMasterRecords('vendor_master', defaultDocument.vendors),
           ensureRelationalMasterRecords('entity_master', defaultDocument.entities),
@@ -878,7 +1084,11 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           ensureRelationalMasterRecords('bank_master', defaultDocument.banks),
           ensureRelationalMasterRecords('uom_master', defaultDocument.uoms),
           ensureRelationalMasterRecords('department_master', defaultDocument.departments),
-          ensureRelationalMasterRecords('debit_note_reason_master', defaultDocument.debitNoteReasons),
+          ensureRelationalMasterRecords(
+            'debit_note_reason_master',
+            defaultDocument.debitNoteReasons
+          ),
+          ensureRelationalMasterRecords('tds_section_master', defaultDocument.tdsSections),
           ensureRelationalMasterRecords('currency_master', defaultDocument.currencies),
           ensureRelationalMasterRecords('exchange_rate_master', defaultDocument.exchangeRates),
           ensureDomainDocument('master_data', defaultDocument),
@@ -905,8 +1115,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
                 uom: item.uom ?? '',
                 hsnCode: item.hsnCode ?? '',
                 gstRate: Number(item.gstRate ?? 0),
-                itemType: 'Goods',
-                status: item.itemStatus === 'Inactive' ? 'Inactive' : 'Active',
+                itemType: 'Goods' as const,
+                status: (item.itemStatus === 'Inactive'
+                  ? 'Inactive'
+                  : 'Active') as ItemMaster['status'],
                 createdBy: 'system',
                 createdDate: item.createdAt?.split('T')[0] ?? '',
               }))
@@ -921,6 +1133,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
         setUoms(uomsData ?? defaultDocument.uoms);
         setDepartments(departmentsData ?? defaultDocument.departments);
         setDebitNoteReasons(debitNoteReasonsData ?? defaultDocument.debitNoteReasons);
+        setVendorGroups(document.vendorGroups ?? defaultDocument.vendorGroups);
+        setTdsSections(tdsSectionsData ?? defaultDocument.tdsSections);
         setCurrencies(currenciesData ?? defaultDocument.currencies);
         setExchangeRates(exchangeRatesData ?? defaultDocument.exchangeRates);
         setIsHydrating(false);
@@ -943,6 +1157,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       setUoms(document.uoms ?? defaultDocument.uoms);
       setDepartments(document.departments ?? defaultDocument.departments);
       setDebitNoteReasons(document.debitNoteReasons ?? defaultDocument.debitNoteReasons);
+      setVendorGroups(document.vendorGroups ?? defaultDocument.vendorGroups);
+      setTdsSections(document.tdsSections ?? defaultDocument.tdsSections);
       setCurrencies(document.currencies ?? defaultDocument.currencies);
       setExchangeRates(document.exchangeRates ?? defaultDocument.exchangeRates);
       setIsHydrating(false);
@@ -964,6 +1180,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       saveRelationalMasterRecords('vendor_master', vendors);
       saveRelationalMasterRecords('account_code_master', accountCodes);
       saveRelationalMasterRecords('bank_master', banks);
+      saveRelationalMasterRecords('tds_section_master', tdsSections);
       saveDomainDocument('master_data', {
         vendors,
         items,
@@ -976,8 +1193,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
         uoms,
         departments,
         debitNoteReasons,
+        vendorGroups,
+        tdsSections,
         currencies,
-        exchangeRates
+        exchangeRates,
       });
       return;
     }
@@ -994,8 +1213,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       uoms,
       departments,
       debitNoteReasons,
+      vendorGroups,
+      tdsSections,
       currencies,
-      exchangeRates
+      exchangeRates,
     });
   }, [
     accountCodes,
@@ -1003,6 +1224,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     costCentres,
     currencies,
     debitNoteReasons,
+    vendorGroups,
     departments,
     entities,
     exchangeRates,
@@ -1010,74 +1232,116 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     items,
     profitCentres,
     taxCodes,
+    tdsSections,
     uoms,
-    vendors
+    vendors,
   ]);
 
   // Vendor helpers
-  const getVendorById = (id: string) => vendors.find(v => v.id === id);
-  const getVendorByCode = (code: string) => vendors.find(v => v.code === code);
-  const getActiveVendors = () => vendors.filter(v => v.status === 'Active' && isRecordMappedToEntity(v, currentCompany?.id));
-  const getVendorsByEntity = (entityId: string) => vendors.filter(v => v.status === 'Active' && isRecordMappedToEntity(v, entityId));
+  const getVendorById = (id: string) => vendors.find((v) => v.id === id);
+  const getVendorByCode = (code: string) => vendors.find((v) => v.code === code);
+  const getActiveVendors = () =>
+    vendors.filter(
+      (v) =>
+        v.status === 'Active' &&
+        (v.approvalStatus ?? 'Approved') === 'Approved' &&
+        isRecordMappedToEntity(v, currentCompany?.id)
+    );
+  const getVendorsByEntity = (entityId: string) =>
+    vendors.filter((v) => v.status === 'Active' && isRecordMappedToEntity(v, entityId));
 
   // Item helpers
-  const getItemById = (id: string) => items.find(i => i.id === id);
-  const getItemByCode = (code: string) => items.find(i => i.code === code);
-  const getActiveItems = () => items.filter(i => i.status === 'Active' && isRecordMappedToEntity(i, currentCompany?.id));
+  const getItemById = (id: string) => items.find((i) => i.id === id);
+  const getItemByCode = (code: string) => items.find((i) => i.code === code);
+  const getActiveItems = () =>
+    items.filter((i) => i.status === 'Active' && isRecordMappedToEntity(i, currentCompany?.id));
 
   // Entity helpers
-  const getEntityById = (id: string) => entities.find(e => e.id === id);
-  const getActiveEntities = () => entities.filter(e => e.isActive);
-  const getEntitiesByCountry = (country: string) => entities.filter(e => e.country === country && e.isActive);
+  const getEntityById = (id: string) => entities.find((e) => e.id === id);
+  const getActiveEntities = () => entities.filter((e) => e.isActive);
+  const getEntitiesByCountry = (country: string) =>
+    entities.filter((e) => e.country === country && e.isActive);
 
   // Cost Centre helpers
-  const getCostCentreById = (id: string) => costCentres.find(c => c.id === id);
-  const getActiveCostCentres = () => costCentres.filter(c => c.isActive && isRecordMappedToEntity(c, currentCompany?.id));
+  const getCostCentreById = (id: string) => costCentres.find((c) => c.id === id);
+  const getActiveCostCentres = () =>
+    costCentres.filter((c) => c.isActive && isRecordMappedToEntity(c, currentCompany?.id));
 
   // Profit Centre helpers
-  const getProfitCentreById = (id: string) => profitCentres.find(p => p.id === id);
-  const getActiveProfitCentres = () => profitCentres.filter(p => p.isActive && isRecordMappedToEntity(p, currentCompany?.id));
+  const getProfitCentreById = (id: string) => profitCentres.find((p) => p.id === id);
+  const getActiveProfitCentres = () =>
+    profitCentres.filter((p) => p.isActive && isRecordMappedToEntity(p, currentCompany?.id));
 
   // Account Code helpers
-  const getAccountCodeById = (id: string) => accountCodes.find(a => a.id === id);
-  const getAccountCodeByCode = (code: string) => accountCodes.find(a => a.code === code);
-  const getActiveAccountCodes = () => accountCodes.filter(a => a.isActive && isRecordMappedToEntity(a, currentCompany?.id));
+  const getAccountCodeById = (id: string) => accountCodes.find((a) => a.id === id);
+  const getAccountCodeByCode = (code: string) => accountCodes.find((a) => a.code === code);
+  const getActiveAccountCodes = () =>
+    accountCodes.filter((a) => a.isActive && isRecordMappedToEntity(a, currentCompany?.id));
 
   // Tax Code helpers
-  const getTaxCodeById = (id: string) => taxCodes.find(t => t.id === id);
-  const getActiveTaxCodes = () => taxCodes.filter(t => t.isActive && isRecordMappedToEntity(t, currentCompany?.id));
-  const getGSTCodes = () => taxCodes.filter(t => t.taxType === 'GST' && t.isActive && isRecordMappedToEntity(t, currentCompany?.id));
-  const getTDSCodes = () => taxCodes.filter(t => t.taxType === 'TDS' && t.isActive && isRecordMappedToEntity(t, currentCompany?.id));
-  const getVATCodes = () => taxCodes.filter(t => t.taxType === 'VAT' && t.isActive && isRecordMappedToEntity(t, currentCompany?.id));
+  const getTaxCodeById = (id: string) => taxCodes.find((t) => t.id === id);
+  const getActiveTaxCodes = () =>
+    taxCodes.filter((t) => t.isActive && isRecordMappedToEntity(t, currentCompany?.id));
+  const getGSTCodes = () =>
+    taxCodes.filter(
+      (t) => t.taxType === 'GST' && t.isActive && isRecordMappedToEntity(t, currentCompany?.id)
+    );
+  const getTDSCodes = () =>
+    taxCodes.filter(
+      (t) => t.taxType === 'TDS' && t.isActive && isRecordMappedToEntity(t, currentCompany?.id)
+    );
+  const getVATCodes = () => [];
 
   // Bank helpers
-  const getBankById = (id: string) => banks.find(b => b.id === id);
-  const getActiveBanks = () => banks.filter(b => b.isActive && isRecordMappedToEntity(b, currentCompany?.id));
-  const getBanksByEntity = (entityId: string) => banks.filter(b => b.isActive && isRecordMappedToEntity(b, entityId));
+  const getBankById = (id: string) => banks.find((b) => b.id === id);
+  const getActiveBanks = () =>
+    banks.filter((b) => b.isActive && isRecordMappedToEntity(b, currentCompany?.id));
+  const getBanksByEntity = (entityId: string) =>
+    banks.filter((b) => b.isActive && isRecordMappedToEntity(b, entityId));
 
   // UOM helpers
-  const getUOMById = (id: string) => uoms.find(u => u.id === id);
-  const getUOMByCode = (code: string) => uoms.find(u => u.code === code);
-  const getActiveUOMs = () => uoms.filter(u => u.isActive && isRecordMappedToEntity(u, currentCompany?.id));
+  const getUOMById = (id: string) => uoms.find((u) => u.id === id);
+  const getUOMByCode = (code: string) => uoms.find((u) => u.code === code);
+  const getActiveUOMs = () =>
+    uoms.filter((u) => u.isActive && isRecordMappedToEntity(u, currentCompany?.id));
 
   // Department helpers
-  const getDepartmentById = (id: string) => departments.find(d => d.id === id);
-  const getActiveDepartments = () => departments.filter(d => d.isActive && isRecordMappedToEntity(d, currentCompany?.id));
+  const getDepartmentById = (id: string) => departments.find((d) => d.id === id);
+  const getActiveDepartments = () =>
+    departments.filter((d) => d.isActive && isRecordMappedToEntity(d, currentCompany?.id));
 
   // Debit Note Reason helpers
-  const getDebitNoteReasonById = (id: string) => debitNoteReasons.find(d => d.id === id);
-  const getActiveDebitNoteReasons = () => debitNoteReasons.filter(d => d.status === 'Active' && isRecordMappedToEntity(d, currentCompany?.id));
+  const getDebitNoteReasonById = (id: string) => debitNoteReasons.find((d) => d.id === id);
+  const getActiveDebitNoteReasons = () =>
+    debitNoteReasons.filter(
+      (d) => d.status === 'Active' && isRecordMappedToEntity(d, currentCompany?.id)
+    );
+
+  // TDS Section helpers
+  const getTDSSectionByCode = (sectionCode: string) =>
+    tdsSections.find((section) => section.sectionCode === sectionCode);
+  const getActiveTDSSections = () =>
+    tdsSections.filter(
+      (section) =>
+        section.status === 'Active' &&
+        (section.approvalStatus ?? 'Approved') === 'Approved' &&
+        isRecordMappedToEntity(section, currentCompany?.id)
+    );
 
   // Currency helpers
-  const getCurrencyById = (id: string) => currencies.find(c => c.id === id);
-  const getCurrencyByCode = (code: string) => currencies.find(c => c.code === code);
-  const getActiveCurrencies = () => currencies.filter(c => c.isActive && isRecordMappedToEntity(c, currentCompany?.id));
+  const getCurrencyById = (id: string) => currencies.find((c) => c.id === id);
+  const getCurrencyByCode = (code: string) => currencies.find((c) => c.code === code);
+  const getActiveCurrencies = () =>
+    currencies.filter((c) => c.isActive && isRecordMappedToEntity(c, currentCompany?.id));
 
   // Exchange Rate helpers
-  const getExchangeRateById = (id: string) => exchangeRates.find(e => e.id === id);
-  const getActiveExchangeRates = () => exchangeRates.filter(e => e.isActive && isRecordMappedToEntity(e, currentCompany?.id));
+  const getExchangeRateById = (id: string) => exchangeRates.find((e) => e.id === id);
+  const getActiveExchangeRates = () =>
+    exchangeRates.filter((e) => e.isActive && isRecordMappedToEntity(e, currentCompany?.id));
   const getExchangeRate = (fromCurrency: string, toCurrency: string) => {
-    const rate = exchangeRates.find(e => e.fromCurrency === fromCurrency && e.toCurrency === toCurrency);
+    const rate = exchangeRates.find(
+      (e) => e.fromCurrency === fromCurrency && e.toCurrency === toCurrency
+    );
     return rate ? rate.exchangeRate : null;
   };
 
@@ -1088,24 +1352,24 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
 
   // Initialize availableCompanies from Entity Master on mount
   useEffect(() => {
-    const activeEntities = entities.filter(e => e.isActive);
-    const companies: Company[] = activeEntities.map(e => ({
+    const activeEntities = entities.filter((e) => e.isActive);
+    const companies: Company[] = activeEntities.map((e) => ({
       id: e.id,
       code: e.code,
-      name: e.name
+      name: e.name,
     }));
-    
+
     setAvailableCompanies(companies);
-    
+
     // Auto-select first entity if no entity is selected
     if (!currentCompany && companies.length > 0) {
       setCurrentCompany(companies[0]);
-      
+
       // Also set default role
       setCurrentRole({
         roleId: 'role-cfo',
         roleName: 'CFO View',
-        permissions: ['*']
+        permissions: ['*'],
       });
     }
   }, []); // Run once on mount
@@ -1116,13 +1380,13 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       setCurrentCompany({
         id: 'CONSOLIDATED',
         code: 'CONSOLIDATED',
-        name: 'Consolidated View'
+        name: 'Consolidated View',
       });
       return;
     }
-    
+
     // Handle regular entity selection
-    const company = availableCompanies.find(c => c.id === companyId);
+    const company = availableCompanies.find((c) => c.id === companyId);
     if (company) {
       setCurrentCompany(company);
     }
@@ -1178,6 +1442,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     debitNoteReasons,
     getDebitNoteReasonById,
     getActiveDebitNoteReasons,
+    vendorGroups,
+    tdsSections,
+    getTDSSectionByCode,
+    getActiveTDSSections,
     currencies,
     getCurrencyById,
     getCurrencyByCode,
@@ -1189,14 +1457,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     currentCompany,
     availableCompanies,
     switchCompany,
-    currentRole
+    currentRole,
   };
 
-  return (
-    <MasterDataContext.Provider value={value}>
-      {children}
-    </MasterDataContext.Provider>
-  );
+  return <MasterDataContext.Provider value={value}>{children}</MasterDataContext.Provider>;
 }
 
 // ============================================================================
@@ -1213,10 +1477,10 @@ export function useMasterData() {
 
 /**
  * GOVERNANCE NOTE:
- * 
+ *
  * All future components MUST use useMasterData() hook to access master data.
  * DO NOT create local arrays, hardcoded dropdowns, or duplicate master definitions.
- * 
+ *
  * Example usage:
  * ```
  * const { vendors, getActiveVendors } = useMasterData();

@@ -14,12 +14,11 @@ export async function fetchVendorGovernanceSummary(
   }
   try {
     const q =
-      entityId && entityId !== 'CONSOLIDATED'
-        ? `?entityId=${encodeURIComponent(entityId)}`
-        : '';
-    const res = await mysqlApiRequest<{ success: boolean; data?: VendorGovernanceSummaryApiPayload }>(
-      `/vendor-governance/summary${q}`
-    );
+      entityId && entityId !== 'CONSOLIDATED' ? `?entityId=${encodeURIComponent(entityId)}` : '';
+    const res = await mysqlApiRequest<{
+      success: boolean;
+      data?: VendorGovernanceSummaryApiPayload;
+    }>(`/vendor-governance/summary${q}`);
     return res.success && res.data ? res.data : null;
   } catch {
     return null;

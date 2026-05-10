@@ -5,7 +5,9 @@ function isValidEmailShape(normalized: string): boolean {
   return normalized.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
 }
 
-export function normalizeAndValidateInvitationEmail(raw: string): { ok: true; email: string } | { ok: false; error: string } {
+export function normalizeAndValidateInvitationEmail(
+  raw: string
+): { ok: true; email: string } | { ok: false; error: string } {
   const trimmed = raw.trim().toLowerCase();
   if (!trimmed) {
     return { ok: false, error: 'Email is required.' };
@@ -17,7 +19,10 @@ export function normalizeAndValidateInvitationEmail(raw: string): { ok: true; em
 }
 
 /** Ensures persisted invitation email matches what the user entered (defensive). */
-export function assertInvitationEmailBound(invitationEmail: string, expectedNormalized: string): boolean {
+export function assertInvitationEmailBound(
+  invitationEmail: string,
+  expectedNormalized: string
+): boolean {
   return invitationEmail === expectedNormalized;
 }
 
@@ -61,16 +66,19 @@ export async function sendVendorInvitationEmail(params: {
   }
 
   try {
-    const payload = await mysqlApiRequest<{ success?: boolean; mock?: boolean }>('/vendor-invitations/send', {
-      method: 'POST',
-      body: JSON.stringify({
-        to: params.to,
-        invitationUrl: params.invitationUrl,
-        legalName: params.legalName,
-        entityName: params.entityName,
-        invitationId: params.invitationId,
-      }),
-    });
+    const payload = await mysqlApiRequest<{ success?: boolean; mock?: boolean }>(
+      '/vendor-invitations/send',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          to: params.to,
+          invitationUrl: params.invitationUrl,
+          legalName: params.legalName,
+          entityName: params.entityName,
+          invitationId: params.invitationId,
+        }),
+      }
+    );
     if (payload.mock) {
       return { ok: true, viaApi: false, reason: 'API_DISABLED' };
     }

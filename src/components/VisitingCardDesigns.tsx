@@ -8,25 +8,25 @@ export function VisitingCardDesigns() {
 
   const designs = [
     {
-      name: "Current Design",
-      component: <CurrentDesign isFlipped={isFlipped} />
+      name: 'Current Design',
+      component: <CurrentDesign isFlipped={isFlipped} />,
     },
     {
-      name: "Minimalist White",
-      component: <MinimalistDesign isFlipped={isFlipped} />
+      name: 'Minimalist White',
+      component: <MinimalistDesign isFlipped={isFlipped} />,
     },
     {
-      name: "Gradient Modern",
-      component: <GradientDesign isFlipped={isFlipped} />
+      name: 'Gradient Modern',
+      component: <GradientDesign isFlipped={isFlipped} />,
     },
     {
-      name: "Dark Premium",
-      component: <PremiumDesign isFlipped={isFlipped} />
+      name: 'Dark Premium',
+      component: <PremiumDesign isFlipped={isFlipped} />,
     },
     {
-      name: "Split Design",
-      component: <SplitDesign isFlipped={isFlipped} />
-    }
+      name: 'Split Design',
+      component: <SplitDesign isFlipped={isFlipped} />,
+    },
   ];
 
   const nextDesign = () => {
@@ -63,10 +63,7 @@ export function VisitingCardDesigns() {
         </div>
       </div>
 
-      <div 
-        className="perspective-1000 cursor-pointer"
-        onClick={() => setIsFlipped(!isFlipped)}
-      >
+      <div className="perspective-1000 cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
         {designs[currentDesign].component}
       </div>
 
@@ -85,25 +82,25 @@ export function VisitingCardDesigns() {
 // Design 1: Current Design
 function CurrentDesign({ isFlipped }: { isFlipped: boolean }) {
   return (
-    <div 
+    <div
       className={`relative w-full aspect-[1.75/1] transition-transform duration-700`}
       style={{
         transformStyle: 'preserve-3d',
         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
       }}
     >
-      <div 
+      <div
         className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl overflow-hidden"
-        style={{ 
+        style={{
           backfaceVisibility: 'hidden',
-          background: '#1a2332'
+          background: '#1a2332',
         }}
       >
         <div className="h-full flex items-center gap-12 p-10 md:p-14">
           <div className="flex items-center justify-center flex-shrink-0">
-            <img 
-              src={logoImage} 
-              alt="Procinix Logo" 
+            <img
+              src={logoImage}
+              alt="Procinix Logo"
               className="h-40 md:h-48 w-auto object-contain"
               style={{ mixBlendMode: 'screen' }}
             />
@@ -136,35 +133,41 @@ function CurrentDesign({ isFlipped }: { isFlipped: boolean }) {
         <div className="absolute bottom-0 left-0 right-0 h-2 md:h-3 bg-amber-400"></div>
       </div>
 
-      <div 
+      <div
         className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl p-10 md:p-14"
-        style={{ 
+        style={{
           backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
-          background: '#0d4d4d'
+          background: '#0d4d4d',
         }}
       >
         <div className="h-full flex flex-col justify-center">
-          <h3 className="text-amber-400 text-2xl md:text-3xl tracking-wider mb-8">OUR CORE OFFERINGS</h3>
+          <h3 className="text-amber-400 text-2xl md:text-3xl tracking-wider mb-8">
+            OUR CORE OFFERINGS
+          </h3>
           <div className="space-y-6">
             <div className="flex items-start gap-3 mb-2">
               <div className="w-2 h-2 rounded-full bg-amber-400 mt-2 flex-shrink-0"></div>
               <div>
                 <h4 className="text-white text-xl md:text-2xl mb-2">Finance Automation</h4>
-                <p className="text-gray-300 text-base md:text-lg">AP / AR  R2R  Data Analytics</p>
+                <p className="text-gray-300 text-base md:text-lg">AP / AR R2R Data Analytics</p>
               </div>
             </div>
             <div className="flex items-start gap-3 mb-2">
               <div className="w-2 h-2 rounded-full bg-amber-400 mt-2 flex-shrink-0"></div>
               <div>
                 <h4 className="text-white text-xl md:text-2xl mb-2">Finance Consulting</h4>
-                <p className="text-gray-300 text-base md:text-lg">Process Re-engineering  Controls  Compliance</p>
+                <p className="text-gray-300 text-base md:text-lg">
+                  Process Re-engineering Controls Compliance
+                </p>
               </div>
             </div>
             <div className="flex items-start gap-3 mb-2">
               <div className="w-2 h-2 rounded-full bg-amber-400 mt-2 flex-shrink-0"></div>
               <div>
-                <h4 className="text-white text-xl md:text-2xl mb-2">Implementations & Integrations</h4>
+                <h4 className="text-white text-xl md:text-2xl mb-2">
+                  Implementations & Integrations
+                </h4>
                 <p className="text-gray-300 text-base md:text-lg">ERP enablement</p>
               </div>
             </div>
@@ -178,22 +181,22 @@ function CurrentDesign({ isFlipped }: { isFlipped: boolean }) {
 // Design 2: Minimalist White
 function MinimalistDesign({ isFlipped }: { isFlipped: boolean }) {
   return (
-    <div 
+    <div
       className={`relative w-full aspect-[1.75/1] transition-transform duration-700`}
       style={{
         transformStyle: 'preserve-3d',
         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
       }}
     >
-      <div 
+      <div
         className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl overflow-hidden bg-white"
         style={{ backfaceVisibility: 'hidden' }}
       >
         <div className="h-full flex items-center gap-12 p-10 md:p-14">
           <div className="flex items-center justify-center flex-shrink-0 bg-slate-100 p-8 rounded-2xl">
-            <img 
-              src={logoImage} 
-              alt="Procinix Logo" 
+            <img
+              src={logoImage}
+              alt="Procinix Logo"
               className="h-32 md:h-40 w-auto object-contain"
             />
           </div>
@@ -225,11 +228,11 @@ function MinimalistDesign({ isFlipped }: { isFlipped: boolean }) {
         </div>
       </div>
 
-      <div 
+      <div
         className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl p-10 md:p-14 bg-slate-900"
-        style={{ 
+        style={{
           backfaceVisibility: 'hidden',
-          transform: 'rotateY(180deg)'
+          transform: 'rotateY(180deg)',
         }}
       >
         <div className="h-full flex flex-col justify-center">
@@ -237,14 +240,18 @@ function MinimalistDesign({ isFlipped }: { isFlipped: boolean }) {
           <div className="space-y-6">
             <div>
               <h4 className="text-white text-xl md:text-2xl mb-2">Finance Automation</h4>
-              <p className="text-gray-300 text-base md:text-lg">AP / AR  R2R  Data Analytics</p>
+              <p className="text-gray-300 text-base md:text-lg">AP / AR R2R Data Analytics</p>
             </div>
             <div>
               <h4 className="text-white text-xl md:text-2xl mb-2">Finance Consulting</h4>
-              <p className="text-gray-300 text-base md:text-lg">Process Re-engineering  Controls  Compliance</p>
+              <p className="text-gray-300 text-base md:text-lg">
+                Process Re-engineering Controls Compliance
+              </p>
             </div>
             <div>
-              <h4 className="text-white text-xl md:text-2xl mb-2">Implementations & Integrations</h4>
+              <h4 className="text-white text-xl md:text-2xl mb-2">
+                Implementations & Integrations
+              </h4>
               <p className="text-gray-300 text-base md:text-lg">ERP enablement</p>
             </div>
           </div>
@@ -257,28 +264,28 @@ function MinimalistDesign({ isFlipped }: { isFlipped: boolean }) {
 // Design 3: Gradient Modern
 function GradientDesign({ isFlipped }: { isFlipped: boolean }) {
   return (
-    <div 
+    <div
       className={`relative w-full aspect-[1.75/1] transition-transform duration-700`}
       style={{
         transformStyle: 'preserve-3d',
         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
       }}
     >
-      <div 
+      <div
         className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl overflow-hidden"
-        style={{ 
+        style={{
           backfaceVisibility: 'hidden',
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)'
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
         }}
       >
         <div className="absolute top-0 right-0 w-96 h-96 bg-amber-400/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-400/10 rounded-full blur-3xl"></div>
-        
+
         <div className="h-full flex items-center gap-12 p-10 md:p-14 relative z-10">
           <div className="flex items-center justify-center flex-shrink-0 bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10">
-            <img 
-              src={logoImage} 
-              alt="Procinix Logo" 
+            <img
+              src={logoImage}
+              alt="Procinix Logo"
               className="h-32 md:h-40 w-auto object-contain"
               style={{ mixBlendMode: 'screen' }}
             />
@@ -310,12 +317,12 @@ function GradientDesign({ isFlipped }: { isFlipped: boolean }) {
         </div>
       </div>
 
-      <div 
+      <div
         className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl p-10 md:p-14"
-        style={{ 
+        style={{
           backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
-          background: 'linear-gradient(135deg, #0d4d4d 0%, #115e59 100%)'
+          background: 'linear-gradient(135deg, #0d4d4d 0%, #115e59 100%)',
         }}
       >
         <div className="h-full flex flex-col justify-center">
@@ -323,14 +330,18 @@ function GradientDesign({ isFlipped }: { isFlipped: boolean }) {
           <div className="space-y-6">
             <div className="bg-white/5 backdrop-blur-sm p-4 rounded-xl border border-white/10">
               <h4 className="text-white text-xl md:text-2xl mb-2">Finance Automation</h4>
-              <p className="text-gray-200 text-base md:text-lg">AP / AR  R2R  Data Analytics</p>
+              <p className="text-gray-200 text-base md:text-lg">AP / AR R2R Data Analytics</p>
             </div>
             <div className="bg-white/5 backdrop-blur-sm p-4 rounded-xl border border-white/10">
               <h4 className="text-white text-xl md:text-2xl mb-2">Finance Consulting</h4>
-              <p className="text-gray-200 text-base md:text-lg">Process Re-engineering  Controls  Compliance</p>
+              <p className="text-gray-200 text-base md:text-lg">
+                Process Re-engineering Controls Compliance
+              </p>
             </div>
             <div className="bg-white/5 backdrop-blur-sm p-4 rounded-xl border border-white/10">
-              <h4 className="text-white text-xl md:text-2xl mb-2">Implementations & Integrations</h4>
+              <h4 className="text-white text-xl md:text-2xl mb-2">
+                Implementations & Integrations
+              </h4>
               <p className="text-gray-200 text-base md:text-lg">ERP enablement</p>
             </div>
           </div>
@@ -343,24 +354,24 @@ function GradientDesign({ isFlipped }: { isFlipped: boolean }) {
 // Design 4: Dark Premium
 function PremiumDesign({ isFlipped }: { isFlipped: boolean }) {
   return (
-    <div 
+    <div
       className={`relative w-full aspect-[1.75/1] transition-transform duration-700`}
       style={{
         transformStyle: 'preserve-3d',
         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
       }}
     >
-      <div 
+      <div
         className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl overflow-hidden bg-black"
         style={{ backfaceVisibility: 'hidden' }}
       >
         <div className="h-full flex items-center gap-12 p-10 md:p-14 relative">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-400/5 via-transparent to-transparent"></div>
-          
+
           <div className="flex items-center justify-center flex-shrink-0 relative z-10">
-            <img 
-              src={logoImage} 
-              alt="Procinix Logo" 
+            <img
+              src={logoImage}
+              alt="Procinix Logo"
               className="h-40 md:h-48 w-auto object-contain"
               style={{ mixBlendMode: 'screen' }}
             />
@@ -369,8 +380,12 @@ function PremiumDesign({ isFlipped }: { isFlipped: boolean }) {
             <div>
               <div className="inline-block mb-4">
                 <div className="h-px w-12 bg-amber-400 mb-4"></div>
-                <h3 className="text-white text-3xl md:text-4xl mb-2 tracking-wide">Mithilesh Tiwari</h3>
-                <p className="text-amber-400 text-lg md:text-xl uppercase tracking-widest">Founder & CEO</p>
+                <h3 className="text-white text-3xl md:text-4xl mb-2 tracking-wide">
+                  Mithilesh Tiwari
+                </h3>
+                <p className="text-amber-400 text-lg md:text-xl uppercase tracking-widest">
+                  Founder & CEO
+                </p>
               </div>
             </div>
             <div className="space-y-3 border-l-2 border-amber-400 pl-6">
@@ -396,27 +411,33 @@ function PremiumDesign({ isFlipped }: { isFlipped: boolean }) {
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent"></div>
       </div>
 
-      <div 
+      <div
         className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl p-10 md:p-14 bg-gradient-to-br from-gray-900 to-black"
-        style={{ 
+        style={{
           backfaceVisibility: 'hidden',
-          transform: 'rotateY(180deg)'
+          transform: 'rotateY(180deg)',
         }}
       >
         <div className="h-full flex flex-col justify-center">
           <div className="h-px w-24 bg-amber-400 mb-6"></div>
-          <h3 className="text-amber-400 text-2xl md:text-3xl uppercase tracking-widest mb-8">Core Offerings</h3>
+          <h3 className="text-amber-400 text-2xl md:text-3xl uppercase tracking-widest mb-8">
+            Core Offerings
+          </h3>
           <div className="space-y-6">
             <div className="border-l-2 border-amber-400/30 pl-6">
               <h4 className="text-white text-xl md:text-2xl mb-2">Finance Automation</h4>
-              <p className="text-gray-400 text-base md:text-lg">AP / AR  R2R  Data Analytics</p>
+              <p className="text-gray-400 text-base md:text-lg">AP / AR R2R Data Analytics</p>
             </div>
             <div className="border-l-2 border-amber-400/30 pl-6">
               <h4 className="text-white text-xl md:text-2xl mb-2">Finance Consulting</h4>
-              <p className="text-gray-400 text-base md:text-lg">Process Re-engineering  Controls  Compliance</p>
+              <p className="text-gray-400 text-base md:text-lg">
+                Process Re-engineering Controls Compliance
+              </p>
             </div>
             <div className="border-l-2 border-amber-400/30 pl-6">
-              <h4 className="text-white text-xl md:text-2xl mb-2">Implementations & Integrations</h4>
+              <h4 className="text-white text-xl md:text-2xl mb-2">
+                Implementations & Integrations
+              </h4>
               <p className="text-gray-400 text-base md:text-lg">ERP enablement</p>
             </div>
           </div>
@@ -429,28 +450,28 @@ function PremiumDesign({ isFlipped }: { isFlipped: boolean }) {
 // Design 5: Split Design
 function SplitDesign({ isFlipped }: { isFlipped: boolean }) {
   return (
-    <div 
+    <div
       className={`relative w-full aspect-[1.75/1] transition-transform duration-700`}
       style={{
         transformStyle: 'preserve-3d',
         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
       }}
     >
-      <div 
+      <div
         className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl overflow-hidden"
         style={{ backfaceVisibility: 'hidden' }}
       >
         <div className="h-full flex">
           {/* Left side - Dark with logo */}
           <div className="w-2/5 bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-8">
-            <img 
-              src={logoImage} 
-              alt="Procinix Logo" 
+            <img
+              src={logoImage}
+              alt="Procinix Logo"
               className="h-48 md:h-56 w-auto object-contain"
               style={{ mixBlendMode: 'screen' }}
             />
           </div>
-          
+
           {/* Right side - White with content */}
           <div className="flex-1 bg-white p-10 md:p-12 flex flex-col justify-between">
             <div>
@@ -488,12 +509,12 @@ function SplitDesign({ isFlipped }: { isFlipped: boolean }) {
         </div>
       </div>
 
-      <div 
+      <div
         className="absolute inset-0 backface-hidden rounded-3xl shadow-2xl p-10 md:p-14"
-        style={{ 
+        style={{
           backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
-          background: 'linear-gradient(135deg, #1a2332 0%, #0d4d4d 100%)'
+          background: 'linear-gradient(135deg, #1a2332 0%, #0d4d4d 100%)',
         }}
       >
         <div className="h-full flex flex-col justify-center">
@@ -504,20 +525,24 @@ function SplitDesign({ isFlipped }: { isFlipped: boolean }) {
               <div className="w-1 bg-amber-400 rounded-full"></div>
               <div>
                 <h4 className="text-white text-xl md:text-2xl mb-2">Finance Automation</h4>
-                <p className="text-gray-300 text-base md:text-lg">AP / AR  R2R  Data Analytics</p>
+                <p className="text-gray-300 text-base md:text-lg">AP / AR R2R Data Analytics</p>
               </div>
             </div>
             <div className="flex gap-4">
               <div className="w-1 bg-amber-400 rounded-full"></div>
               <div>
                 <h4 className="text-white text-xl md:text-2xl mb-2">Finance Consulting</h4>
-                <p className="text-gray-300 text-base md:text-lg">Process Re-engineering  Controls  Compliance</p>
+                <p className="text-gray-300 text-base md:text-lg">
+                  Process Re-engineering Controls Compliance
+                </p>
               </div>
             </div>
             <div className="flex gap-4">
               <div className="w-1 bg-amber-400 rounded-full"></div>
               <div>
-                <h4 className="text-white text-xl md:text-2xl mb-2">Implementations & Integrations</h4>
+                <h4 className="text-white text-xl md:text-2xl mb-2">
+                  Implementations & Integrations
+                </h4>
                 <p className="text-gray-300 text-base md:text-lg">ERP enablement</p>
               </div>
             </div>

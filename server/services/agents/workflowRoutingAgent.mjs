@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { query, withTransaction, connExecute } from '../../mysql.mjs';
+import { mapProcessingStatusToLifecycle } from '../invoices/lifecycleMapping.mjs';
 
 const AGENT_NAME = 'WorkflowRoutingAgent';
 const AGENT_VERSION = '1.0.0';
@@ -7,7 +8,8 @@ const AGENT_VERSION = '1.0.0';
 // ── Score extraction helpers ──────────────────────────
 
 function extractScores(agentResults) {
-  const { extraction, vendorMatch, duplicateCheck, matchResult, taxValidation, codingSuggestions } = agentResults;
+  const { extraction, vendorMatch, duplicateCheck, matchResult, taxValidation, codingSuggestions } =
+    agentResults;
 
   return {
     extraction_score_header: extraction?.headerScore ?? 0,
@@ -109,16 +111,20 @@ function determineLane(scores) {
   const amberReasons = [];
 
   if (scores.extraction_score_header >= 0.93 && scores.extraction_score_header < 0.985) {
-    amberReasons.push(`Header score ${scores.extraction_score_header} in amber range (0.93–0.9849)`);
+    amberReasons.push(
+      `Header score ${scores.extraction_score_header} in amber range (0.93–0.9849)`
+    );
   }
-  if (scores.extraction_score_lines >= 0.90 && scores.extraction_score_lines < 0.97) {
+  if (scores.extraction_score_lines >= 0.9 && scores.extraction_score_lines < 0.97) {
     amberReasons.push(`Lines score ${scores.extraction_score_lines} in amber range (0.90–0.9699)`);
   }
   if (scores.vendor_match_score >= 0.95 && scores.vendor_match_score < 0.99) {
     amberReasons.push(`Vendor match ${scores.vendor_match_score} in amber range (0.95–0.9899)`);
   }
-  if (scores.accounting_certainty_score >= 0.90 && scores.accounting_certainty_score < 0.97) {
-    amberReasons.push(`Accounting certainty ${scores.accounting_certainty_score} in amber range (0.90–0.9699)`);
+  if (scores.accounting_certainty_score >= 0.9 && scores.accounting_certainty_score < 0.97) {
+    amberReasons.push(
+      `Accounting certainty ${scores.accounting_certainty_score} in amber range (0.90–0.9699)`
+    );
   }
 
   if (amberReasons.length > 0) {
@@ -126,7 +132,10 @@ function determineLane(scores) {
   }
 
   // Default to AMBER if not clearly GREEN and not RED
-  return { lane: 'AMBER', reasons: ['Does not meet GREEN thresholds but no hard control failures detected'] };
+  return {
+    lane: 'AMBER',
+    reasons: ['Does not meet GREEN thresholds but no hard control failures detected'],
+  };
 }
 
 // ── Posting readiness (weighted average) ──────────────
@@ -134,25 +143,25 @@ function determineLane(scores) {
 function computePostingReadiness(scores) {
   const weights = {
     extraction_score_header: 0.15,
-    extraction_score_lines: 0.10,
-    vendor_match_score: 0.20,
+    extraction_score_lines: 0.1,
+    vendor_match_score: 0.2,
     duplicate_safe: 0.15,
-    tax_validation: 0.20,
-    accounting_certainty_score: 0.10,
-    match_confidence: 0.10,
+    tax_validation: 0.2,
+    accounting_certainty_score: 0.1,
+    match_confidence: 0.1,
   };
 
   const duplicateSafe = Math.max(0, (100 - scores.duplicate_risk_score) / 100);
   const taxNormalized = scores.tax_validation_score / 100;
 
   const weighted =
-    (scores.extraction_score_header * weights.extraction_score_header) +
-    (scores.extraction_score_lines * weights.extraction_score_lines) +
-    (scores.vendor_match_score * weights.vendor_match_score) +
-    (duplicateSafe * weights.duplicate_safe) +
-    (taxNormalized * weights.tax_validation) +
-    (scores.accounting_certainty_score * weights.accounting_certainty_score) +
-    (scores.match_confidence * weights.match_confidence);
+    scores.extraction_score_header * weights.extraction_score_header +
+    scores.extraction_score_lines * weights.extraction_score_lines +
+    scores.vendor_match_score * weights.vendor_match_score +
+    duplicateSafe * weights.duplicate_safe +
+    taxNormalized * weights.tax_validation +
+    scores.accounting_certainty_score * weights.accounting_certainty_score +
+    scores.match_confidence * weights.match_confidence;
 
   return parseFloat(weighted.toFixed(3));
 }
@@ -166,7 +175,7 @@ function determineReviewType(lane, scores) {
   if (scores.is_duplicate) return 'duplicate_review';
   if (scores.tax_issues) return 'tax_review';
   if (!scores.match_found) return 'po_match_review';
-  if (scores.accounting_certainty_score < 0.90) return 'coding_review';
+  if (scores.accounting_certainty_score < 0.9) return 'coding_review';
 
   return lane === 'RED' ? 'exception_review' : 'general_review';
 }
@@ -196,9 +205,9 @@ export async function processRouting(invoiceId, agentResults) {
       `Reason(s): ${laneReason}`,
       `Posting readiness: ${(postingReadiness * 100).toFixed(1)}%`,
       `Scores — header: ${scores.extraction_score_header}, lines: ${scores.extraction_score_lines}, ` +
-      `vendor: ${scores.vendor_match_score}, duplicate_risk: ${scores.duplicate_risk_score}, ` +
-      `tax: ${scores.tax_validation_score}/100, accounting: ${scores.accounting_certainty_score}, ` +
-      `match: ${scores.match_confidence} (${scores.match_type})`,
+        `vendor: ${scores.vendor_match_score}, duplicate_risk: ${scores.duplicate_risk_score}, ` +
+        `tax: ${scores.tax_validation_score}/100, accounting: ${scores.accounting_certainty_score}, ` +
+        `match: ${scores.match_confidence} (${scores.match_type})`,
     ];
     if (reviewType) {
       explanationParts.push(`Review type: ${reviewType}`);
@@ -206,9 +215,8 @@ export async function processRouting(invoiceId, agentResults) {
     const explanation = explanationParts.join('. ');
 
     // Determine processing status based on lane
-    const processingStatus = lane === 'GREEN' ? 'auto_posting'
-      : lane === 'AMBER' ? 'pending_review'
-      : 'exception';
+    const processingStatus =
+      lane === 'GREEN' ? 'auto_posting' : lane === 'AMBER' ? 'pending_review' : 'exception';
 
     // Persist everything in a transaction
     const routeId = randomUUID();
@@ -216,35 +224,40 @@ export async function processRouting(invoiceId, agentResults) {
 
     await withTransaction(async (conn) => {
       // 1. Store workflow route
-      await connExecute(conn,
+      await connExecute(
+        conn,
         `INSERT INTO ap_invoice_workflow_routes
            (id, invoice_id, lane, lane_reason,
             confidence_scores, sla_hours, created_at)
          VALUES (?, ?, ?, ?, CAST(? AS JSON), 24, NOW())`,
-        [
-          routeId, invoiceId, lane.toLowerCase(), laneReason,
-          JSON.stringify(scores),
-        ]
+        [routeId, invoiceId, lane.toLowerCase(), laneReason, JSON.stringify(scores)]
       );
 
       // 2. Update invoices table
-      await connExecute(conn,
+      // NOTE: transition guard bypassed — automated pipeline flow, not user-facing
+      const mappedLifecycle = mapProcessingStatusToLifecycle(processingStatus);
+      await connExecute(
+        conn,
         `UPDATE invoices
-         SET lane = ?, posting_readiness_score = ?, processing_status = ?, updated_at = NOW()
+         SET lane = ?, posting_readiness_score = ?, processing_status = ?${mappedLifecycle ? ', lifecycle_state = ?' : ''}, updated_at = NOW()
          WHERE id = ?`,
-        [lane.toLowerCase(), postingReadiness, processingStatus, invoiceId]
+        mappedLifecycle
+          ? [lane.toLowerCase(), postingReadiness, processingStatus, mappedLifecycle, invoiceId]
+          : [lane.toLowerCase(), postingReadiness, processingStatus, invoiceId]
       );
 
       // 3. Lane-specific actions
       if (lane === 'GREEN') {
-        await connExecute(conn,
+        await connExecute(
+          conn,
           `INSERT INTO ap_invoice_posting_queue
              (id, invoice_id, auto_post_flag, posting_readiness_score, auto_post_reason, status, created_at)
            VALUES (?, ?, 1, ?, ?, 'queued', NOW())`,
           [randomUUID(), invoiceId, postingReadiness, laneReason]
         );
       } else if (lane === 'AMBER') {
-        await connExecute(conn,
+        await connExecute(
+          conn,
           `INSERT INTO ap_invoice_review_tasks
              (id, invoice_id, task_type, status, created_at)
            VALUES (?, ?, ?, 'open', NOW())`,
@@ -252,7 +265,8 @@ export async function processRouting(invoiceId, agentResults) {
         );
       } else {
         // RED
-        await connExecute(conn,
+        await connExecute(
+          conn,
           `INSERT INTO ap_invoice_exception_cases
              (id, invoice_id, exception_type, exception_detail, severity, created_at)
            VALUES (?, ?, ?, ?, 'high', NOW())`,
@@ -270,7 +284,10 @@ export async function processRouting(invoiceId, agentResults) {
           input_summary, output_summary, processing_time_ms, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        randomUUID(), invoiceId, AGENT_NAME, AGENT_VERSION,
+        randomUUID(),
+        invoiceId,
+        AGENT_NAME,
+        AGENT_VERSION,
         `routed_${lane.toLowerCase()}`,
         postingReadiness,
         explanation,
@@ -288,7 +305,9 @@ export async function processRouting(invoiceId, agentResults) {
       ]
     );
 
-    console.log(`[${AGENT_NAME}] invoice ${invoiceId}: routed ${lane} — readiness ${(postingReadiness * 100).toFixed(1)}%, ${reviewType || 'auto-post'}`);
+    console.log(
+      `[${AGENT_NAME}] invoice ${invoiceId}: routed ${lane} — readiness ${(postingReadiness * 100).toFixed(1)}%, ${reviewType || 'auto-post'}`
+    );
 
     return {
       routeId,
@@ -301,7 +320,10 @@ export async function processRouting(invoiceId, agentResults) {
     };
   } catch (err) {
     const processingTimeMs = Date.now() - startTime;
-    console.error(`[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`, err.message);
+    console.error(
+      `[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`,
+      err.message
+    );
 
     try {
       await query(
@@ -310,13 +332,18 @@ export async function processRouting(invoiceId, agentResults) {
             input_summary, output_summary, processing_time_ms, created_at)
          VALUES (?, ?, ?, ?, 'error', 0, ?, ?, NULL, ?, NOW())`,
         [
-          randomUUID(), invoiceId, AGENT_NAME, AGENT_VERSION,
+          randomUUID(),
+          invoiceId,
+          AGENT_NAME,
+          AGENT_VERSION,
           `Routing failed: ${err.message}`,
           JSON.stringify({ invoiceId }),
           processingTimeMs,
         ]
       );
-    } catch (_) { /* swallow logging failure */ }
+    } catch (_) {
+      /* swallow logging failure */
+    }
 
     throw err;
   }

@@ -3,7 +3,7 @@ import { useMasterData } from '../../contexts/MasterDataContext';
 
 /**
  * ENTITY SELECTOR - SHARED COMPONENT
- * 
+ *
  * LINKED TO: Entity Master (System of Record)
  * USED BY: Procurement, AP Invoices, Payments, Budgeting
  */
@@ -25,7 +25,7 @@ export function EntitySelector({
   placeholder = 'Select entity...',
   required = false,
   disabled = false,
-  error
+  error,
 }: EntitySelectorProps) {
   const { entities, getActiveEntities, getEntityById } = useMasterData();
   const activeEntities = getActiveEntities();
@@ -37,8 +37,8 @@ export function EntitySelector({
         <label className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
           {label}
           {required && <span style={{ color: 'var(--color-error-dark)' }}> *</span>}
-          <span 
-            className="ml-2 text-xs px-2 py-0.5 rounded" 
+          <span
+            className="ml-2 text-xs px-2 py-0.5 rounded"
             style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}
             title="Linked to Entity Master"
           >
@@ -46,7 +46,7 @@ export function EntitySelector({
           </span>
         </label>
       )}
-      
+
       <div className="relative">
         <select
           value={value || ''}
@@ -56,7 +56,7 @@ export function EntitySelector({
           style={{
             border: error ? '2px solid var(--color-error-dark)' : '2px solid var(--color-silver)',
             backgroundColor: disabled ? 'var(--color-cloud)' : '#FFFFFF',
-            color: 'var(--color-ink)'
+            color: 'var(--color-ink)',
           }}
         >
           <option value="">{placeholder}</option>
@@ -66,28 +66,33 @@ export function EntitySelector({
             </option>
           ))}
         </select>
-        
-        <Building 
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" 
-          style={{ color: 'var(--color-mercury-grey)' }} 
+
+        <Building
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+          style={{ color: 'var(--color-mercury-grey)' }}
         />
-        
+
         {error && (
-          <AlertCircle 
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4" 
-            style={{ color: 'var(--color-error-dark)' }} 
+          <AlertCircle
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4"
+            style={{ color: 'var(--color-error-dark)' }}
           />
         )}
       </div>
 
       {selectedEntity && (
-        <div className="text-xs p-2 rounded" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}>
+        <div
+          className="text-xs p-2 rounded"
+          style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
+        >
           GSTIN: {selectedEntity.gstin} | {selectedEntity.city}, {selectedEntity.state}
         </div>
       )}
 
       {error && (
-        <p className="text-xs" style={{ color: 'var(--color-error-dark)' }}>{error}</p>
+        <p className="text-xs" style={{ color: 'var(--color-error-dark)' }}>
+          {error}
+        </p>
       )}
     </div>
   );

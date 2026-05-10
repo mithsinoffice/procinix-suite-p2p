@@ -12,6 +12,10 @@ import {
   Eye,
   PencilLine,
   ArrowUpRight,
+  CheckCircle2,
+  XCircle,
+  MessageSquareText,
+  Send,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMasterData } from '../contexts/MasterDataContext';
@@ -29,21 +33,76 @@ function statusChipStyle(status: VendorMaster['status']): CSSProperties {
     case 'Active':
       return { backgroundColor: `${accent}18`, color: accent, border: `1px solid ${accent}55` };
     case 'Inactive':
-      return { backgroundColor: '#F1F4F6', color: 'var(--color-mercury-grey)', border: '1px solid var(--color-silver)' };
+      return {
+        backgroundColor: '#F1F4F6',
+        color: 'var(--color-mercury-grey)',
+        border: '1px solid var(--color-silver)',
+      };
     case 'Blocked':
-      return { backgroundColor: 'var(--color-error-light)', color: '#B91C1C', border: '1px solid #FECACA' };
+      return {
+        backgroundColor: 'var(--color-error-light)',
+        color: '#B91C1C',
+        border: '1px solid #FECACA',
+      };
     default:
-      return { backgroundColor: '#F1F4F6', color: 'var(--color-mercury-grey)', border: '1px solid var(--color-silver)' };
+      return {
+        backgroundColor: '#F1F4F6',
+        color: 'var(--color-mercury-grey)',
+        border: '1px solid var(--color-silver)',
+      };
   }
 }
 
-function Chip({
-  children,
-  style,
-}: {
-  children: ReactNode;
-  style?: CSSProperties;
-}) {
+const APPROVAL_FILTER_OPTIONS = [
+  'Approved',
+  'Draft',
+  'Pending Approval',
+  'Changes Requested',
+  'Rejected',
+] as const;
+
+function effectiveApprovalStatus(
+  vendor: VendorMaster
+): NonNullable<VendorMaster['approvalStatus']> {
+  return vendor.approvalStatus ?? 'Approved';
+}
+
+function approvalChipStyle(status: string): CSSProperties {
+  switch (status) {
+    case 'Pending Approval':
+      return {
+        backgroundColor: '#FFF9E6',
+        color: '#D97706',
+        border: '1px solid #FCD34D',
+      };
+    case 'Rejected':
+      return {
+        backgroundColor: '#FFE8EA',
+        color: 'var(--color-error)',
+        border: '1px solid #FECACA',
+      };
+    case 'Changes Requested':
+      return {
+        backgroundColor: '#E0F2FE',
+        color: '#0284C7',
+        border: '1px solid #7DD3FC',
+      };
+    case 'Draft':
+      return {
+        backgroundColor: '#E5E7EB',
+        color: 'var(--color-mercury-grey)',
+        border: '1px solid var(--color-silver)',
+      };
+    default:
+      return {
+        backgroundColor: 'var(--color-teal-tint)',
+        color: 'var(--color-teal)',
+        border: `1px solid ${accent}55`,
+      };
+  }
+}
+
+function Chip({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return (
     <span
       className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
@@ -80,7 +139,10 @@ function VendorKpiCard({
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-wide truncate" style={{ color: textMuted }}>
+        <p
+          className="text-xs font-medium uppercase tracking-wide truncate"
+          style={{ color: textMuted }}
+        >
           {label}
         </p>
         <p className="text-2xl font-semibold tabular-nums" style={{ color: textMain }}>
@@ -95,14 +157,32 @@ export function Vendors() {
   const [searchTerm, setSearchTerm] = useState('');
   const [entityFilter, setEntityFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { vendors } = useMasterData();
+  const { vendors, updateVendor } = useMasterData();
 
-  const pageTitle = location.pathname.includes('/vendor-management')
-    ? 'Vendor Master'
-    : 'Vendors';
+  const setVendorApproval = (
+    vendor: VendorMaster,
+    next: NonNullable<VendorMaster['approvalStatus']>
+  ) => {
+    updateVendor({
+      ...vendor,
+      approvalStatus: next,
+      ...(next === 'Approved'
+        ? {
+            approvedBy: 'Procurement',
+            approvedDate: new Date().toISOString().slice(0, 10),
+          }
+        : {
+            approvedBy: undefined,
+            approvedDate: undefined,
+          }),
+    });
+  };
+
+  const pageTitle = location.pathname.includes('/vendor-management') ? 'Vendor Master' : 'Vendors';
 
   const listReturnState = { returnTo: `${location.pathname}${location.search}` };
 
@@ -118,6 +198,7 @@ export function Vendors() {
         v.entityId,
         v.vendorType,
         v.status,
+        effectiveApprovalStatus(v),
         v.country,
         v.currency,
       ]
@@ -127,10 +208,12 @@ export function Vendors() {
       const matchesSearch = !q || hay.includes(q);
       const matchesEntity = entityFilter.length === 0 || entityFilter.includes(entityLabel(v));
       const matchesStatus = statusFilter.length === 0 || statusFilter.includes(v.status);
+      const matchesApproval =
+        approvalFilter.length === 0 || approvalFilter.includes(effectiveApprovalStatus(v));
       const matchesType = typeFilter.length === 0 || typeFilter.includes(v.vendorType);
-      return matchesSearch && matchesEntity && matchesStatus && matchesType;
+      return matchesSearch && matchesEntity && matchesStatus && matchesApproval && matchesType;
     });
-  }, [entityFilter, searchTerm, statusFilter, typeFilter, vendors]);
+  }, [approvalFilter, entityFilter, searchTerm, statusFilter, typeFilter, vendors]);
 
   const kpis = useMemo(() => {
     const total = vendors.length;
@@ -143,7 +226,11 @@ export function Vendors() {
     return { total, active, inactive, blocked, domestic, importCount, msme };
   }, [vendors]);
   const hasActiveFilters =
-    searchTerm.trim().length > 0 || entityFilter.length > 0 || statusFilter.length > 0 || typeFilter.length > 0;
+    searchTerm.trim().length > 0 ||
+    entityFilter.length > 0 ||
+    statusFilter.length > 0 ||
+    approvalFilter.length > 0 ||
+    typeFilter.length > 0;
 
   return (
     <div className="p-6 md:p-8" style={{ backgroundColor: surface, minHeight: '100%' }}>
@@ -226,11 +313,11 @@ export function Vendors() {
         style={{ border: `1px solid ${border}`, backgroundColor: '#fff' }}
       >
         <div className="overflow-x-auto">
-          <div className="min-w-[800px]">
+          <div className="min-w-[960px]">
             <div
               className="grid gap-4 px-4 py-4"
               style={{
-                gridTemplateColumns: '2.6fr 1.2fr 1fr 1.3fr 1.2fr 0.9fr',
+                gridTemplateColumns: '2.4fr 1.1fr 0.95fr 1.05fr 1.1fr 1.1fr 0.85fr',
                 borderBottom: `1px solid ${border}`,
               }}
             >
@@ -260,6 +347,7 @@ export function Vendors() {
                       setSearchTerm('');
                       setEntityFilter([]);
                       setStatusFilter([]);
+                      setApprovalFilter([]);
                       setTypeFilter([]);
                     }}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
@@ -279,7 +367,9 @@ export function Vendors() {
                   label="Entity"
                   options={[...new Set(vendors.map((vendor) => entityLabel(vendor)))]}
                   selected={entityFilter}
-                  onToggle={(value) => setEntityFilter((current) => toggleMultiSelect(current, value))}
+                  onToggle={(value) =>
+                    setEntityFilter((current) => toggleMultiSelect(current, value))
+                  }
                 />
               </div>
               <div className="flex items-start">
@@ -287,7 +377,19 @@ export function Vendors() {
                   label="Status"
                   options={['Active', 'Inactive', 'Blocked']}
                   selected={statusFilter}
-                  onToggle={(value) => setStatusFilter((current) => toggleMultiSelect(current, value))}
+                  onToggle={(value) =>
+                    setStatusFilter((current) => toggleMultiSelect(current, value))
+                  }
+                />
+              </div>
+              <div className="flex items-start">
+                <PremiumFilterMenu
+                  label="Approval"
+                  options={[...APPROVAL_FILTER_OPTIONS]}
+                  selected={approvalFilter}
+                  onToggle={(value) =>
+                    setApprovalFilter((current) => toggleMultiSelect(current, value))
+                  }
                 />
               </div>
               <div className="flex items-start">
@@ -295,7 +397,9 @@ export function Vendors() {
                   label="Type"
                   options={['Domestic', 'Import']}
                   selected={typeFilter}
-                  onToggle={(value) => setTypeFilter((current) => toggleMultiSelect(current, value))}
+                  onToggle={(value) =>
+                    setTypeFilter((current) => toggleMultiSelect(current, value))
+                  }
                 />
               </div>
               <div />
@@ -304,86 +408,214 @@ export function Vendors() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr style={{ borderBottom: `1px solid ${border}`, backgroundColor: surface }}>
-                  <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wide" style={{ color: textMuted }}>
+                  <th
+                    className="py-3 px-4 text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: textMuted }}
+                  >
                     Vendor
                   </th>
-                  <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wide" style={{ color: textMuted }}>
+                  <th
+                    className="py-3 px-4 text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: textMuted }}
+                  >
                     Entity
                   </th>
-                  <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wide" style={{ color: textMuted }}>
+                  <th
+                    className="py-3 px-4 text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: textMuted }}
+                  >
                     Status
                   </th>
-                  <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wide" style={{ color: textMuted }}>
+                  <th
+                    className="py-3 px-4 text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: textMuted }}
+                  >
                     Classification
                   </th>
-                  <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wide" style={{ color: textMuted }}>
+                  <th
+                    className="py-3 px-4 text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: textMuted }}
+                  >
                     Payment
                   </th>
                   <th className="py-3 px-4 w-28" aria-hidden />
                 </tr>
               </thead>
               <tbody>
-              {filteredVendors.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-16 text-center text-sm" style={{ color: textMuted }}>
-                    No vendors match your search.
-                  </td>
-                </tr>
-              ) : (
-                filteredVendors.map((vendor) => (
-                  <tr
-                    key={vendor.id}
-                    className="group transition-colors cursor-pointer"
-                    style={{ borderBottom: `1px solid ${border}` }}
-                    onClick={() =>
-                      navigate(`/add-vendor/${encodeURIComponent(vendor.id)}`, { state: listReturnState })
-                    }
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = surface;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#fff';
-                    }}
-                  >
-                    <td className="py-4 px-4 align-top">
-                      <div className="flex gap-3">
-                        <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: surface }}
-                        >
-                          <Building2 className="w-5 h-5" style={{ color: accent }} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm leading-tight" style={{ color: textMain }}>
-                            {vendor.name}
+                {filteredVendors.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="py-16 text-center text-sm"
+                      style={{ color: textMuted }}
+                    >
+                      No vendors match your search.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredVendors.map((vendor) => {
+                    const approval = effectiveApprovalStatus(vendor);
+                    const canReject =
+                      approval === 'Draft' ||
+                      approval === 'Pending Approval' ||
+                      approval === 'Changes Requested';
+                    const canApprove = approval !== 'Approved';
+                    const canRequestChanges =
+                      approval === 'Draft' ||
+                      approval === 'Pending Approval' ||
+                      approval === 'Changes Requested' ||
+                      approval === 'Rejected' ||
+                      approval === 'Approved';
+                    const showSubmitForApproval = approval === 'Draft';
+                    const showWorkflowBar =
+                      showSubmitForApproval || canApprove || canReject || canRequestChanges;
+                    return (
+                      <tr
+                        key={vendor.id}
+                        className="group transition-colors cursor-pointer"
+                        style={{ borderBottom: `1px solid ${border}` }}
+                        onClick={() =>
+                          navigate(`/add-vendor/${encodeURIComponent(vendor.id)}`, {
+                            state: listReturnState,
+                          })
+                        }
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = surface;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#fff';
+                        }}
+                      >
+                        <td className="py-4 px-4 align-top">
+                          <div className="flex gap-3">
+                            <div
+                              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                              style={{ backgroundColor: surface }}
+                            >
+                              <Building2 className="w-5 h-5" style={{ color: accent }} />
+                            </div>
+                            <div className="min-w-0">
+                              <p
+                                className="font-medium text-sm leading-tight"
+                                style={{ color: textMain }}
+                              >
+                                {vendor.name}
+                              </p>
+                              {vendor.legalName && vendor.legalName !== vendor.name && (
+                                <p
+                                  className="text-xs mt-0.5 truncate max-w-[260px]"
+                                  style={{ color: textMuted }}
+                                >
+                                  {vendor.legalName}
+                                </p>
+                              )}
+                              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                <Chip
+                                  style={{
+                                    backgroundColor: '#fff',
+                                    color: textMain,
+                                    border: `1px solid ${border}`,
+                                  }}
+                                >
+                                  {vendor.code}
+                                </Chip>
+                                {vendor.currency && (
+                                  <Chip
+                                    style={{
+                                      backgroundColor: `${accent}12`,
+                                      color: 'var(--color-teal-dark)',
+                                      border: `1px solid ${accent}40`,
+                                    }}
+                                  >
+                                    {vendor.currency}
+                                  </Chip>
+                                )}
+                                {vendor.country && (
+                                  <Chip
+                                    style={{
+                                      backgroundColor: surface,
+                                      color: textMuted,
+                                      border: `1px solid ${border}`,
+                                    }}
+                                  >
+                                    {vendor.country}
+                                  </Chip>
+                                )}
+                                <Chip style={approvalChipStyle(approval)}>{approval}</Chip>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 align-top">
+                          <p className="text-sm font-medium" style={{ color: textMain }}>
+                            {entityLabel(vendor)}
                           </p>
-                          {vendor.legalName && vendor.legalName !== vendor.name && (
-                            <p className="text-xs mt-0.5 truncate max-w-[260px]" style={{ color: textMuted }}>
-                              {vendor.legalName}
-                            </p>
-                          )}
-                          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                          {vendor.entityName &&
+                            vendor.entityId &&
+                            vendor.entityId !== vendor.entityName && (
+                              <p className="text-xs mt-1 font-mono" style={{ color: textMuted }}>
+                                {vendor.entityId}
+                              </p>
+                            )}
+                        </td>
+                        <td className="py-4 px-4 align-top">
+                          <Chip style={statusChipStyle(vendor.status)}>{vendor.status}</Chip>
+                        </td>
+                        <td className="py-4 px-4 align-top">
+                          <div className="flex flex-wrap gap-1.5 max-w-[280px]">
                             <Chip
                               style={{
-                                backgroundColor: '#fff',
+                                backgroundColor: surface,
                                 color: textMain,
                                 border: `1px solid ${border}`,
                               }}
                             >
-                              {vendor.code}
+                              {vendor.category}
                             </Chip>
-                            {vendor.currency && (
+                            <Chip
+                              style={{
+                                backgroundColor:
+                                  vendor.vendorType === 'Import' ? '#EEF2FF' : surface,
+                                color: vendor.vendorType === 'Import' ? '#4338CA' : textMuted,
+                                border:
+                                  vendor.vendorType === 'Import'
+                                    ? '1px solid #C7D2FE'
+                                    : `1px solid ${border}`,
+                              }}
+                            >
+                              {vendor.vendorType}
+                            </Chip>
+                            {vendor.msmeRegistered && (
                               <Chip
                                 style={{
-                                  backgroundColor: `${accent}12`,
-                                  color: 'var(--color-teal-dark)',
-                                  border: `1px solid ${accent}40`,
+                                  backgroundColor: '#ECFDF5',
+                                  color: '#047857',
+                                  border: '1px solid #A7F3D0',
                                 }}
                               >
-                                {vendor.currency}
+                                MSME
+                                {vendor.msmeCategory ? ` · ${vendor.msmeCategory}` : ''}
                               </Chip>
                             )}
-                            {vendor.country && (
+                            {vendor.tdsApplicable && (
+                              <Chip
+                                style={{
+                                  backgroundColor: '#FFFBEB',
+                                  color: '#B45309',
+                                  border: '1px solid #FDE68A',
+                                }}
+                              >
+                                TDS
+                              </Chip>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 align-top">
+                          <div className="space-y-1.5">
+                            <span className="text-sm font-medium" style={{ color: textMain }}>
+                              {vendor.paymentTerms}
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
                               <Chip
                                 style={{
                                   backgroundColor: surface,
@@ -391,117 +623,138 @@ export function Vendors() {
                                   border: `1px solid ${border}`,
                                 }}
                               >
-                                {vendor.country}
+                                {vendor.creditDays} days credit
                               </Chip>
-                            )}
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 align-top">
-                      <p className="text-sm font-medium" style={{ color: textMain }}>
-                        {entityLabel(vendor)}
-                      </p>
-                      {vendor.entityName && vendor.entityId && vendor.entityId !== vendor.entityName && (
-                        <p className="text-xs mt-1 font-mono" style={{ color: textMuted }}>
-                          {vendor.entityId}
-                        </p>
-                      )}
-                    </td>
-                    <td className="py-4 px-4 align-top">
-                      <Chip style={statusChipStyle(vendor.status)}>{vendor.status}</Chip>
-                    </td>
-                    <td className="py-4 px-4 align-top">
-                      <div className="flex flex-wrap gap-1.5 max-w-[280px]">
-                        <Chip
-                          style={{
-                            backgroundColor: surface,
-                            color: textMain,
-                            border: `1px solid ${border}`,
-                          }}
+                        </td>
+                        <td
+                          className="py-4 px-2 align-middle text-right"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          {vendor.category}
-                        </Chip>
-                        <Chip
-                          style={{
-                            backgroundColor: vendor.vendorType === 'Import' ? '#EEF2FF' : surface,
-                            color: vendor.vendorType === 'Import' ? '#4338CA' : textMuted,
-                            border:
-                              vendor.vendorType === 'Import'
-                                ? '1px solid #C7D2FE'
-                                : `1px solid ${border}`,
-                          }}
-                        >
-                          {vendor.vendorType}
-                        </Chip>
-                        {vendor.msmeRegistered && (
-                          <Chip
-                            style={{
-                              backgroundColor: '#ECFDF5',
-                              color: '#047857',
-                              border: '1px solid #A7F3D0',
-                            }}
-                          >
-                            MSME
-                            {vendor.msmeCategory ? ` · ${vendor.msmeCategory}` : ''}
-                          </Chip>
-                        )}
-                        {vendor.tdsApplicable && (
-                          <Chip
-                            style={{
-                              backgroundColor: '#FFFBEB',
-                              color: '#B45309',
-                              border: '1px solid #FDE68A',
-                            }}
-                          >
-                            TDS
-                          </Chip>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 align-top">
-                      <div className="space-y-1.5">
-                        <span className="text-sm font-medium" style={{ color: textMain }}>
-                          {vendor.paymentTerms}
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          <Chip
-                            style={{
-                              backgroundColor: surface,
-                              color: textMuted,
-                              border: `1px solid ${border}`,
-                            }}
-                          >
-                            {vendor.creditDays} days credit
-                          </Chip>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-2 align-middle text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <PremiumActionButton
-                          label="View vendor"
-                          icon={<Eye className="w-4 h-4" />}
-                          tone="teal"
-                          onClick={() => navigate(`/add-vendor/${encodeURIComponent(vendor.id)}`, { state: listReturnState })}
-                        />
-                        <PremiumActionButton
-                          label="Edit vendor"
-                          icon={<PencilLine className="w-4 h-4" />}
-                          tone="violet"
-                          onClick={() => navigate(`/add-vendor/${encodeURIComponent(vendor.id)}`, { state: listReturnState })}
-                        />
-                        <PremiumActionButton
-                          label="Open vendor"
-                          icon={<ArrowUpRight className="w-4 h-4" />}
-                          tone="blue"
-                          onClick={() => navigate(`/add-vendor/${encodeURIComponent(vendor.id)}`, { state: listReturnState })}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
+                          <div className="flex flex-col items-end gap-2">
+                            {showWorkflowBar && (
+                              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                                {showSubmitForApproval && (
+                                  <button
+                                    type="button"
+                                    title="Submit for approval"
+                                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold border transition-colors"
+                                    style={{
+                                      borderColor: `${accent}55`,
+                                      backgroundColor: `${accent}14`,
+                                      color: 'var(--color-teal-dark)',
+                                    }}
+                                    onClick={() => setVendorApproval(vendor, 'Pending Approval')}
+                                  >
+                                    <Send className="w-3.5 h-3.5 shrink-0" />
+                                    Submit for approval
+                                  </button>
+                                )}
+                                {canApprove && (
+                                  <button
+                                    type="button"
+                                    title="Approve vendor"
+                                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold border transition-colors"
+                                    style={{
+                                      borderColor: '#A7F3D0',
+                                      backgroundColor: '#ECFDF5',
+                                      color: '#047857',
+                                    }}
+                                    onClick={() => setVendorApproval(vendor, 'Approved')}
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                    Approve
+                                  </button>
+                                )}
+                                {canReject && (
+                                  <button
+                                    type="button"
+                                    title="Reject vendor"
+                                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold border transition-colors"
+                                    style={{
+                                      borderColor: '#FECACA',
+                                      backgroundColor: '#FEF2F2',
+                                      color: '#B91C1C',
+                                    }}
+                                    onClick={() => setVendorApproval(vendor, 'Rejected')}
+                                  >
+                                    <XCircle className="w-3.5 h-3.5 shrink-0" />
+                                    Reject
+                                  </button>
+                                )}
+                                {canRequestChanges && (
+                                  <button
+                                    type="button"
+                                    title={
+                                      approval === 'Approved'
+                                        ? 'Re-open for changes (clears approval)'
+                                        : 'Request changes'
+                                    }
+                                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold border transition-colors"
+                                    style={{
+                                      borderColor: '#7DD3FC',
+                                      backgroundColor: '#E0F2FE',
+                                      color: '#0369A1',
+                                    }}
+                                    onClick={() => {
+                                      if (
+                                        window.prompt(
+                                          approval === 'Approved'
+                                            ? 'Reason for re-opening this approved vendor (demo — not persisted on the record):'
+                                            : 'Optional note for the vendor (demo — not persisted on the record):',
+                                          ''
+                                        ) === null
+                                      ) {
+                                        return;
+                                      }
+                                      setVendorApproval(vendor, 'Changes Requested');
+                                    }}
+                                  >
+                                    <MessageSquareText className="w-3.5 h-3.5 shrink-0" />
+                                    Request changes
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                            <div className="flex items-center justify-end gap-2">
+                              <PremiumActionButton
+                                label="View vendor"
+                                icon={<Eye className="w-4 h-4" />}
+                                tone="teal"
+                                onClick={() =>
+                                  navigate(`/add-vendor/${encodeURIComponent(vendor.id)}`, {
+                                    state: listReturnState,
+                                  })
+                                }
+                              />
+                              <PremiumActionButton
+                                label="Edit vendor"
+                                icon={<PencilLine className="w-4 h-4" />}
+                                tone="violet"
+                                onClick={() =>
+                                  navigate(`/add-vendor/${encodeURIComponent(vendor.id)}`, {
+                                    state: listReturnState,
+                                  })
+                                }
+                              />
+                              <PremiumActionButton
+                                label="Open vendor"
+                                icon={<ArrowUpRight className="w-4 h-4" />}
+                                tone="blue"
+                                onClick={() =>
+                                  navigate(`/add-vendor/${encodeURIComponent(vendor.id)}`, {
+                                    state: listReturnState,
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

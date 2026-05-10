@@ -1,6 +1,23 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Plus, Search, Edit, Trash2, Mail, Shield, Check, AlertCircle, Clock, Building2, Lock } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Mail,
+  Shield,
+  Check,
+  AlertCircle,
+  Clock,
+  Building2,
+  Lock,
+  Eye,
+} from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
+import { ApprovalModal } from './ApprovalModal';
+import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserMasterRecord, UserEntityAccessRow } from '../types/userMaster';
 import {
@@ -8,7 +25,13 @@ import {
   createUserEntityAccessRow,
   deriveUserRolesFromEntityRows,
 } from '../types/userMaster';
-import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import {
+  FormShell,
+  FormSection,
+  PxFormField,
+  CheckCard,
+  type SaveStatus,
+} from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { EntityMappingSelector } from './shared/EntityMappingSelector';
 import type { EntityScopeMapping } from '../lib/masters/entityMapping';
@@ -61,7 +84,15 @@ interface EntityOption {
   approvalStatus?: string;
 }
 
-const USER_TYPE_BASE: { value: string; label: string }[] = [{ value: 'Employee', label: 'Employee' }];
+interface Change {
+  field: string;
+  oldValue: string;
+  newValue: string;
+}
+
+const USER_TYPE_BASE: { value: string; label: string }[] = [
+  { value: 'Employee', label: 'Employee' },
+];
 
 const USER_TYPE_OPTIONS: { value: string; label: string }[] = [];
 
@@ -83,7 +114,10 @@ function deriveUsernameFromEmployee(emp: EmployeeOption): string {
 }
 
 /** Map Employee Master `baseEntity` text to Entity Master id (legal name / name / code). */
-function resolvePrimaryEntityId(baseEntityRaw: string | undefined, entities: EntityOption[]): string {
+function resolvePrimaryEntityId(
+  baseEntityRaw: string | undefined,
+  entities: EntityOption[]
+): string {
   const t = (baseEntityRaw ?? '').trim().toLowerCase();
   if (!t) return '';
   for (const e of entities) {
@@ -102,7 +136,10 @@ function resolvePrimaryEntityId(baseEntityRaw: string | undefined, entities: Ent
   return '';
 }
 
-type UserFormState = Omit<UserMasterRecord, 'id' | 'createdDate' | 'approvalStatus' | 'userRoles'> & {
+type UserFormState = Omit<
+  UserMasterRecord,
+  'id' | 'createdDate' | 'approvalStatus' | 'userRoles'
+> & {
   password: string;
   employeeMasterRecordId: string;
 };
@@ -131,10 +168,10 @@ function emptyFormState(): UserFormState {
 function recordToFormState(
   record: UserMasterRecord,
   includePassword: boolean,
-  employees: EmployeeOption[],
+  employees: EmployeeOption[]
 ): UserFormState {
   const match = employees.find(
-    (e) => e.empCode.trim().toLowerCase() === record.employeeId.trim().toLowerCase(),
+    (e) => e.empCode.trim().toLowerCase() === record.employeeId.trim().toLowerCase()
   );
   return {
     userCode: record.userCode,
@@ -184,9 +221,14 @@ function rolesForEntitySelect(roles: RoleOption[], entityId: string): RoleOption
 }
 
 /** Row 0 = default context; remaining rows are user-added. */
-function normalizeFormAccessForEdit(defaultEntityId: string, rows: UserEntityAccessRow[]): UserEntityAccessRow[] {
+function normalizeFormAccessForEdit(
+  defaultEntityId: string,
+  rows: UserEntityAccessRow[]
+): UserEntityAccessRow[] {
   const d = defaultEntityId.trim();
-  const list = rows.length ? rows.map((r) => ({ ...r })) : [createUserEntityAccessRow({ isDefault: true })];
+  const list = rows.length
+    ? rows.map((r) => ({ ...r }))
+    : [createUserEntityAccessRow({ isDefault: true })];
   if (!d) {
     const withEntity = list.filter((r) => r.entityId.trim());
     const row0 = createUserEntityAccessRow({ isDefault: true });
@@ -213,10 +255,19 @@ export function UserMaster() {
   const employeeMasterInitial = useMemo<EmployeeOption[]>(() => [], []);
   const rolesMasterInitial = useMemo<RoleOption[]>(() => [], []);
 
-  const [users, setUsers] = useIncrementalMasterRecords<UserMasterRecord>('user_master', userMasterInitial);
-  const [employees] = useIncrementalMasterRecords<EmployeeOption>('employee_master', employeeMasterInitial);
+  const [users, setUsers] = useIncrementalMasterRecords<UserMasterRecord>(
+    'user_master',
+    userMasterInitial
+  );
+  const [employees] = useIncrementalMasterRecords<EmployeeOption>(
+    'employee_master',
+    employeeMasterInitial
+  );
   const [roles] = useIncrementalMasterRecords<RoleOption>('roles_master', rolesMasterInitial);
-  const [entities] = useIncrementalMasterRecords<EntityOption>('entity_master', entityMasterInitial);
+  const [entities] = useIncrementalMasterRecords<EntityOption>(
+    'entity_master',
+    entityMasterInitial
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'form'>('list');
   const [selectedUser, setSelectedUser] = useState<UserMasterRecord | null>(null);
@@ -226,14 +277,20 @@ export function UserMaster() {
   const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
   const employeeComboRef = useRef<HTMLDivElement>(null);
 
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [currentReviewRecord, setCurrentReviewRecord] = useState<UserMasterRecord | null>(null);
+  const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
+
   const normalizedUsers = useMemo(() => users.map((u) => normalizeUserMasterRecord(u)), [users]);
 
   const approvedEmployees = useMemo(
     () =>
       employees.filter(
-        (employee) => employee.status !== 'Inactive' && employee.approvalStatus === 'Approved',
+        (employee) => employee.status !== 'Inactive' && employee.approvalStatus === 'Approved'
       ),
-    [employees],
+    [employees]
   );
   const approvedRoles = useMemo(
     () =>
@@ -244,17 +301,18 @@ export function UserMaster() {
           const allowed = readRoleAllowedEntityIds(ext);
           return allowed ? { ...role, allowedEntityIds: allowed } : role;
         }),
-    [roles],
+    [roles]
   );
   const approvedEntities = useMemo(
     () =>
       entities.filter((entity) => {
         if (entity.isActive === false) return false;
         if (entity.status === 'Inactive') return false;
-        if (entity.approvalStatus === 'Pending Approval' || entity.approvalStatus === 'Rejected') return false;
+        if (entity.approvalStatus === 'Pending Approval' || entity.approvalStatus === 'Rejected')
+          return false;
         return true;
       }),
-    [entities],
+    [entities]
   );
 
   const entityOptionsForSelect = useMemo(() => {
@@ -273,7 +331,7 @@ export function UserMaster() {
         includesSafe(e.empCode, q) ||
         includesSafe(officialEmailFromEmployee(e), q) ||
         includesSafe(e.baseEntity ?? '', q) ||
-        includesSafe(e.department ?? '', q),
+        includesSafe(e.department ?? '', q)
     );
   }, [approvedEmployees, employeeQuery]);
 
@@ -293,8 +351,10 @@ export function UserMaster() {
   useEffect(() => {
     const d = formData.defaultEntityId.trim();
     setFormData((prev) => {
-      let rows =
-        prev.userEntityAccess.length > 0 ? [...prev.userEntityAccess] : [createUserEntityAccessRow({ isDefault: true })];
+      const rows =
+        prev.userEntityAccess.length > 0
+          ? [...prev.userEntityAccess]
+          : [createUserEntityAccessRow({ isDefault: true })];
       const row0 = rows[0];
       const entityMatches = row0.entityId.trim() === d;
       if (entityMatches && row0.isDefault && rows.slice(1).every((r) => !r.isDefault)) {
@@ -340,9 +400,8 @@ export function UserMaster() {
   };
 
   const filteredUsers = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    if (!q) return normalizedUsers;
     return normalizedUsers.filter((user) => {
+      const q = searchTerm.trim().toLowerCase();
       const fields = [
         user.name,
         user.email,
@@ -351,9 +410,14 @@ export function UserMaster() {
         user.username,
         user.userType,
       ].map((s) => (s ?? '').toLowerCase());
-      return fields.some((f) => f.includes(q));
+      const matchesSearch = !q || fields.some((f) => f.includes(q));
+      const matchesStatus =
+        statusFilter.length === 0 || statusFilter.includes(user.status ?? 'Active');
+      const matchesApproval =
+        approvalFilter.length === 0 || approvalFilter.includes(user.approvalStatus ?? 'Approved');
+      return matchesSearch && matchesStatus && matchesApproval;
     });
-  }, [normalizedUsers, searchTerm]);
+  }, [normalizedUsers, searchTerm, statusFilter, approvalFilter]);
 
   const openFormCreate = () => {
     setSelectedUser(null);
@@ -368,7 +432,7 @@ export function UserMaster() {
     setSelectedUser(n);
     setFormData(recordToFormState(n, true, approvedEmployees));
     const m = approvedEmployees.find(
-      (e) => e.empCode.trim().toLowerCase() === n.employeeId.trim().toLowerCase(),
+      (e) => e.empCode.trim().toLowerCase() === n.employeeId.trim().toLowerCase()
     );
     setEmployeeQuery(m ? `${m.empName} (${m.empCode})` : '');
     setEmployeeComboOpen(false);
@@ -415,7 +479,7 @@ export function UserMaster() {
       const fid = prev.userEntityAccess[0]?.id;
       const rows = prev.userEntityAccess.map((r) => {
         if (r.id !== rowId) return r;
-        let next = { ...r, ...effective };
+        const next = { ...r, ...effective };
         if (effective.entityId !== undefined && rowId !== fid) {
           const eid = effective.entityId.trim();
           if (next.roleId.trim()) {
@@ -439,8 +503,8 @@ export function UserMaster() {
   };
 
   const validateForm = (): string | null => {
-    if (!formData.userCode.trim()) return 'User Code is required.';
-    if (!formData.employeeId.trim()) return 'Employee Name is required — search and select an employee.';
+    if (!formData.employeeId.trim())
+      return 'Employee Name is required — search and select an employee.';
     if (!formData.name.trim()) return 'Full Name is required.';
     if (!formData.email.trim()) return 'Login Email is required.';
 
@@ -476,7 +540,7 @@ export function UserMaster() {
     }
 
     const activeRows = formData.userEntityAccess.filter(
-      (r) => r.entityId.trim() && r.roleId.trim() && r.status !== 'Inactive',
+      (r) => r.entityId.trim() && r.roleId.trim() && r.status !== 'Inactive'
     );
     if (activeRows.length === 0) {
       return 'At least one active entity row with entity and role is required — complete the first row if a default entity is set, or add rows below.';
@@ -489,6 +553,12 @@ export function UserMaster() {
     return null;
   };
 
+  const generateUserCode = (): string => {
+    const ts = Date.now().toString(36).toUpperCase().slice(-4);
+    const rand = Math.random().toString(36).toUpperCase().slice(2, 4);
+    return `UC-${ts}${rand}`;
+  };
+
   const buildPayload = (): UserMasterRecord => {
     const id = selectedUser?.id ?? Date.now().toString();
     const password =
@@ -497,7 +567,7 @@ export function UserMaster() {
 
     return {
       id,
-      userCode: formData.userCode.trim(),
+      userCode: formData.userCode.trim() || generateUserCode(),
       employeeId: formData.employeeId.trim(),
       name: formData.name.trim(),
       email: formData.email.trim(),
@@ -536,18 +606,105 @@ export function UserMaster() {
       setUsers((prev) =>
         prev.map((u) =>
           String((u as UserMasterRecord).id) === selectedUser.id
-            ? ({ ...payload, approvalStatus: 'Pending' as const, entityMappings } as UserMasterRecord)
-            : u,
-        ),
+            ? ({
+                ...payload,
+                approvalStatus: 'Pending' as const,
+                entityMappings,
+              } as UserMasterRecord)
+            : u
+        )
       );
     } else {
-      setUsers((prev) => [...prev, { ...payload, approvalStatus: 'Pending' as const, entityMappings } as UserMasterRecord]);
+      setUsers((prev) => [
+        ...prev,
+        { ...payload, approvalStatus: 'Pending' as const, entityMappings } as UserMasterRecord,
+      ]);
     }
 
     leaveForm();
     window.setTimeout(() => {
       refreshSession();
     }, 300);
+  };
+
+  const handleReviewUser = (user: UserMasterRecord) => {
+    const n = normalizeUserMasterRecord(user);
+    const activeAccess = n.userEntityAccess.filter(
+      (r) => r.entityId.trim() && r.roleId.trim() && r.status !== 'Inactive'
+    ).length;
+    const changes: Change[] = [
+      { field: 'User Code', oldValue: '(new)', newValue: n.userCode || '-' },
+      { field: 'Full Name', oldValue: '(new)', newValue: n.name || '-' },
+      { field: 'Login Email', oldValue: '(new)', newValue: n.email || '-' },
+      { field: 'Username', oldValue: '(new)', newValue: n.username || '-' },
+      { field: 'Linked Employee', oldValue: '(new)', newValue: n.employeeId || '-' },
+      { field: 'User Type', oldValue: '(new)', newValue: n.userType || '-' },
+      { field: 'Login Method', oldValue: '(new)', newValue: n.loginMethod || '-' },
+      {
+        field: 'Active Entity Roles',
+        oldValue: '(new)',
+        newValue: activeAccess ? `${activeAccess}` : '0',
+      },
+    ];
+    setCurrentReviewRecord(n);
+    setDetectedChanges(changes);
+    setShowApprovalModal(true);
+  };
+
+  const handleApprove = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction<UserMasterRecord>(
+        'user_master',
+        users,
+        currentReviewRecord.id,
+        'approve'
+      );
+      setUsers(nextRecords);
+      window.setTimeout(() => {
+        refreshSession();
+      }, 300);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleReject = async () => {
+    if (currentReviewRecord) {
+      const nextRecords = await applyMasterApprovalAction<UserMasterRecord>(
+        'user_master',
+        users,
+        currentReviewRecord.id,
+        'reject'
+      );
+      setUsers(nextRecords);
+      window.setTimeout(() => {
+        refreshSession();
+      }, 300);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
+  };
+
+  const handleRequestInfo = async () => {
+    if (currentReviewRecord) {
+      const comments = window.prompt('Enter comments for the request:', '');
+      if (comments === null) {
+        return;
+      }
+      const nextRecords = await applyMasterApprovalAction<UserMasterRecord>(
+        'user_master',
+        users,
+        currentReviewRecord.id,
+        'request_info',
+        comments
+      );
+      setUsers(nextRecords);
+      window.setTimeout(() => {
+        refreshSession();
+      }, 300);
+    }
+    setShowApprovalModal(false);
+    setCurrentReviewRecord(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -561,7 +718,12 @@ export function UserMaster() {
     return (
       <span
         className="inline-flex items-center gap-1 px-3 py-1 rounded-full"
-        style={{ backgroundColor: config.bg, color: config.text, fontSize: '12px', fontWeight: '500' }}
+        style={{
+          backgroundColor: config.bg,
+          color: config.text,
+          fontSize: '12px',
+          fontWeight: '500',
+        }}
       >
         <Icon style={{ width: '14px', height: '14px' }} />
         {status}
@@ -570,7 +732,9 @@ export function UserMaster() {
   };
 
   const summarizeAccess = (user: UserMasterRecord) => {
-    const n = user.userRoles.filter((r) => r.entityId.trim() && r.roleId.trim() && r.status !== 'Inactive').length;
+    const n = user.userRoles.filter(
+      (r) => r.entityId.trim() && r.roleId.trim() && r.status !== 'Inactive'
+    ).length;
     if (!n) return '—';
     return n === 1 ? '1 role' : `${n} roles`;
   };
@@ -586,9 +750,19 @@ export function UserMaster() {
   const completeness = useMemo(() => {
     const fields = [formData.userCode, formData.employeeId, formData.name, formData.email];
     const filled = fields.filter((v) => String(v).trim().length > 0).length;
-    const hasEntityAccess = formData.userEntityAccess.some((r) => r.entityId.trim() && r.roleId.trim()) ? 1 : 0;
+    const hasEntityAccess = formData.userEntityAccess.some(
+      (r) => r.entityId.trim() && r.roleId.trim()
+    )
+      ? 1
+      : 0;
     return { filled: filled + hasEntityAccess, total: fields.length + 1 };
-  }, [formData.userCode, formData.employeeId, formData.name, formData.email, formData.userEntityAccess]);
+  }, [
+    formData.userCode,
+    formData.employeeId,
+    formData.name,
+    formData.email,
+    formData.userEntityAccess,
+  ]);
 
   const handleSaveDraftUser = useCallback(() => {
     setSaveStatus('saving');
@@ -602,16 +776,29 @@ export function UserMaster() {
   const formContent = (
     <>
       <FormSection title="User Details" columns={2}>
-        <PxFormField label="User Code" required filled={!!formData.userCode.trim()} hint="Unique user identifier">
+        <PxFormField
+          label="User Code"
+          filled={!!formData.userCode.trim()}
+          hint="Auto-generated on save"
+        >
           <input
             type="text"
-            value={formData.userCode}
-            onChange={(e) => setFormData({ ...formData, userCode: e.target.value })}
-            placeholder="Unique user code"
+            value={formData.userCode || '(Auto-generated)'}
+            readOnly
             className="px-input"
+            style={{
+              backgroundColor: 'var(--color-cloud)',
+              color: 'var(--color-mercury-grey)',
+              cursor: 'default',
+            }}
           />
         </PxFormField>
-        <PxFormField label="Employee Name" required filled={!!formData.employeeMasterRecordId} hint="Search and select an employee">
+        <PxFormField
+          label="Employee Name"
+          required
+          filled={!!formData.employeeMasterRecordId}
+          hint="Search and select an employee"
+        >
           <div ref={employeeComboRef} className="relative">
             <input
               type="text"
@@ -655,7 +842,10 @@ export function UserMaster() {
                         <span style={{ fontWeight: 600 }}>{emp.empName}</span>
                         <span style={{ color: 'var(--color-mercury-grey)' }}> · {emp.empCode}</span>
                         {emp.baseEntity ? (
-                          <span className="block text-xs mt-0.5" style={{ color: 'var(--color-mercury-grey)' }}>
+                          <span
+                            className="block text-xs mt-0.5"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
                             {emp.baseEntity}
                           </span>
                         ) : null}
@@ -768,12 +958,19 @@ export function UserMaster() {
             className="px-input"
           />
         </PxFormField>
-        <PxFormField label={`Login Password${!selectedUser ? ' *' : ''}`} required={!selectedUser} filled={!!formData.password.trim()} hint="Used by the login screen when the user is approved and active">
+        <PxFormField
+          label={`Login Password${!selectedUser ? ' *' : ''}`}
+          required={!selectedUser}
+          filled={!!formData.password.trim()}
+          hint="Used by the login screen when the user is approved and active"
+        >
           <input
             type="password"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            placeholder={selectedUser ? 'Leave blank to keep existing password' : 'Set login password'}
+            placeholder={
+              selectedUser ? 'Leave blank to keep existing password' : 'Set login password'
+            }
             className="px-input"
           />
         </PxFormField>
@@ -796,11 +993,13 @@ export function UserMaster() {
       <h3 style={sectionTitleStyle}>C. Assigned entities &amp; roles</h3>
       <p style={{ fontSize: '12px', color: 'var(--color-mercury-grey)', margin: '0 0 12px 0' }}>
         The first row mirrors the default entity when one is set (for example from Employee Master{' '}
-        <code style={{ fontSize: '11px' }}>baseEntity</code> matching Entity Master); that entity is fixed in the grid —
-        choose role and validity only. Use <strong>Add row</strong> for more entities. Roles can be limited per entity
-        via <code style={{ fontSize: '11px' }}>allowedEntityIds</code> / <code style={{ fontSize: '11px' }}>entityIds</code>{' '}
-        on the role; otherwise all approved roles apply. Persists to{' '}
-        <code style={{ fontSize: '11px' }}>user_entity_access</code> and <code style={{ fontSize: '11px' }}>user_roles</code>.
+        <code style={{ fontSize: '11px' }}>baseEntity</code> matching Entity Master); that entity is
+        fixed in the grid — choose role and validity only. Use <strong>Add row</strong> for more
+        entities. Roles can be limited per entity via{' '}
+        <code style={{ fontSize: '11px' }}>allowedEntityIds</code> /{' '}
+        <code style={{ fontSize: '11px' }}>entityIds</code> on the role; otherwise all approved
+        roles apply. Persists to <code style={{ fontSize: '11px' }}>user_entity_access</code> and{' '}
+        <code style={{ fontSize: '11px' }}>user_roles</code>.
       </p>
       <div
         style={{
@@ -814,22 +1013,68 @@ export function UserMaster() {
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
               <tr style={{ backgroundColor: formColors.tableHeaderBg }}>
-                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: 'var(--color-mercury-grey)' }}>
+                <th
+                  style={{
+                    padding: '10px 8px',
+                    textAlign: 'left',
+                    fontSize: '11px',
+                    color: 'var(--color-mercury-grey)',
+                  }}
+                >
                   Entity <span style={{ color: 'var(--color-error)' }}>*</span>
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: 'var(--color-mercury-grey)' }}>
+                <th
+                  style={{
+                    padding: '10px 8px',
+                    textAlign: 'left',
+                    fontSize: '11px',
+                    color: 'var(--color-mercury-grey)',
+                  }}
+                >
                   Role <span style={{ color: 'var(--color-error)' }}>*</span>
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'center', fontSize: '11px', color: 'var(--color-mercury-grey)', width: '56px' }}>
+                <th
+                  style={{
+                    padding: '10px 8px',
+                    textAlign: 'center',
+                    fontSize: '11px',
+                    color: 'var(--color-mercury-grey)',
+                    width: '56px',
+                  }}
+                >
                   Def.
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: 'var(--color-mercury-grey)', width: '100px' }}>
+                <th
+                  style={{
+                    padding: '10px 8px',
+                    textAlign: 'left',
+                    fontSize: '11px',
+                    color: 'var(--color-mercury-grey)',
+                    width: '100px',
+                  }}
+                >
                   Status
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: 'var(--color-mercury-grey)', width: '108px' }}>
+                <th
+                  style={{
+                    padding: '10px 8px',
+                    textAlign: 'left',
+                    fontSize: '11px',
+                    color: 'var(--color-mercury-grey)',
+                    width: '108px',
+                  }}
+                >
                   Valid from
                 </th>
-                <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', color: 'var(--color-mercury-grey)', width: '108px' }}>
+                <th
+                  style={{
+                    padding: '10px 8px',
+                    textAlign: 'left',
+                    fontSize: '11px',
+                    color: 'var(--color-mercury-grey)',
+                    width: '108px',
+                  }}
+                >
                   Valid to
                 </th>
                 <th style={{ padding: '10px 8px', width: '40px' }} />
@@ -841,126 +1086,152 @@ export function UserMaster() {
                 const entityIdForRoles = row.entityId.trim();
                 const roleChoices = rolesForEntitySelect(approvedRoles, entityIdForRoles);
                 return (
-                <tr key={row.id} style={{ borderTop: `1px solid ${formColors.border}` }}>
-                  <td style={{ padding: '8px', verticalAlign: 'middle', minWidth: 0 }}>
-                    {isPrimaryRow ? (
-                      <div
-                        style={tableEntityLockedCellStyle}
-                        title="Mirrors default entity when set (e.g. from employee entity match)"
-                      >
-                        <Lock style={{ width: '14px', height: '14px', color: 'var(--color-mercury-grey)', flexShrink: 0 }} />
-                        <span className="min-w-0 truncate">
-                          {entityIdForRoles
-                            ? entityLabel(row.entityId)
-                            : 'No default entity — use Add row below'}
-                        </span>
-                      </div>
-                    ) : (
+                  <tr key={row.id} style={{ borderTop: `1px solid ${formColors.border}` }}>
+                    <td style={{ padding: '8px', verticalAlign: 'middle', minWidth: 0 }}>
+                      {isPrimaryRow ? (
+                        <div
+                          style={tableEntityLockedCellStyle}
+                          title="Mirrors default entity when set (e.g. from employee entity match)"
+                        >
+                          <Lock
+                            style={{
+                              width: '14px',
+                              height: '14px',
+                              color: 'var(--color-mercury-grey)',
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span className="min-w-0 truncate">
+                            {entityIdForRoles
+                              ? entityLabel(row.entityId)
+                              : 'No default entity — use Add row below'}
+                          </span>
+                        </div>
+                      ) : (
+                        <select
+                          value={row.entityId}
+                          onChange={(e) => updateAccessRow(row.id, { entityId: e.target.value })}
+                          style={selectStyleCompact}
+                        >
+                          <option value="">Select entity</option>
+                          {entityOptionsForSelect.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
+                    <td style={{ padding: '8px', verticalAlign: 'middle', minWidth: 0 }}>
                       <select
-                        value={row.entityId}
-                        onChange={(e) => updateAccessRow(row.id, { entityId: e.target.value })}
-                        style={selectStyleCompact}
+                        value={row.roleId}
+                        onChange={(e) => updateAccessRow(row.id, { roleId: e.target.value })}
+                        disabled={!entityIdForRoles}
+                        style={{
+                          ...selectStyleCompact,
+                          opacity: entityIdForRoles ? 1 : 0.6,
+                        }}
                       >
-                        <option value="">Select entity</option>
-                        {entityOptionsForSelect.map((opt) => (
-                          <option key={opt.id} value={opt.id}>
-                            {opt.label}
+                        <option value="">
+                          {entityIdForRoles ? 'Select role' : 'Select entity first'}
+                        </option>
+                        {roleChoices.map((role) => (
+                          <option key={role.id} value={role.id}>
+                            {role.roleName}
                           </option>
                         ))}
                       </select>
-                    )}
-                  </td>
-                  <td style={{ padding: '8px', verticalAlign: 'middle', minWidth: 0 }}>
-                    <select
-                      value={row.roleId}
-                      onChange={(e) => updateAccessRow(row.id, { roleId: e.target.value })}
-                      disabled={!entityIdForRoles}
-                      style={{
-                        ...selectStyleCompact,
-                        opacity: entityIdForRoles ? 1 : 0.6,
-                      }}
-                    >
-                      <option value="">{entityIdForRoles ? 'Select role' : 'Select entity first'}</option>
-                      {roleChoices.map((role) => (
-                        <option key={role.id} value={role.id}>
-                          {role.roleName}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td style={{ padding: '8px', verticalAlign: 'middle', textAlign: 'center' }}>
-                    {isPrimaryRow ? (
-                      formData.defaultEntityId.trim() ? (
-                        <span
-                          title="Default entity row (mirrors matched base entity when set)"
-                          style={{ fontSize: '12px', color: '#0A7E4A', fontWeight: 600 }}
-                        >
-                          Default
-                        </span>
+                    </td>
+                    <td style={{ padding: '8px', verticalAlign: 'middle', textAlign: 'center' }}>
+                      {isPrimaryRow ? (
+                        formData.defaultEntityId.trim() ? (
+                          <span
+                            title="Default entity row (mirrors matched base entity when set)"
+                            style={{ fontSize: '12px', color: '#0A7E4A', fontWeight: 600 }}
+                          >
+                            Default
+                          </span>
+                        ) : (
+                          <span
+                            title="No default row entity — assign access using Add row"
+                            style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}
+                          >
+                            —
+                          </span>
+                        )
                       ) : (
-                        <span
-                          title="No default row entity — assign access using Add row"
-                          style={{ fontSize: '12px', color: 'var(--color-mercury-grey)' }}
-                        >
-                          —
-                        </span>
-                      )
-                    ) : (
-                      <span style={{ fontSize: '12px', color: 'var(--color-silver)' }}>—</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '8px', verticalAlign: 'middle' }}>
-                    <select
-                      value={row.status}
-                      onChange={(e) =>
-                        updateAccessRow(row.id, { status: e.target.value as UserEntityAccessRow['status'] })
-                      }
-                      style={selectStyleCompact}
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </td>
-                  <td style={{ padding: '8px', verticalAlign: 'middle' }}>
-                    <input
-                      type="date"
-                      value={row.validFrom}
-                      onChange={(e) => updateAccessRow(row.id, { validFrom: e.target.value })}
-                      style={inputStyleCompact}
-                    />
-                  </td>
-                  <td style={{ padding: '8px', verticalAlign: 'middle' }}>
-                    <input
-                      type="date"
-                      value={row.validTo}
-                      onChange={(e) => updateAccessRow(row.id, { validTo: e.target.value })}
-                      style={inputStyleCompact}
-                    />
-                  </td>
-                  <td style={{ padding: '8px', verticalAlign: 'middle', textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={() => removeEntityRow(row.id)}
-                      disabled={isPrimaryRow || formData.userEntityAccess.length <= 1}
-                      title={isPrimaryRow ? 'Primary row cannot be removed' : 'Remove row'}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: isPrimaryRow || formData.userEntityAccess.length <= 1 ? 'not-allowed' : 'pointer',
-                        opacity: isPrimaryRow || formData.userEntityAccess.length <= 1 ? 0.35 : 1,
-                        padding: '4px',
-                      }}
-                    >
-                      <Trash2 style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
-                    </button>
-                  </td>
-                </tr>
+                        <span style={{ fontSize: '12px', color: 'var(--color-silver)' }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '8px', verticalAlign: 'middle' }}>
+                      <select
+                        value={row.status}
+                        onChange={(e) =>
+                          updateAccessRow(row.id, {
+                            status: e.target.value as UserEntityAccessRow['status'],
+                          })
+                        }
+                        style={selectStyleCompact}
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </td>
+                    <td style={{ padding: '8px', verticalAlign: 'middle' }}>
+                      <input
+                        type="date"
+                        value={row.validFrom}
+                        onChange={(e) => updateAccessRow(row.id, { validFrom: e.target.value })}
+                        style={inputStyleCompact}
+                      />
+                    </td>
+                    <td style={{ padding: '8px', verticalAlign: 'middle' }}>
+                      <input
+                        type="date"
+                        value={row.validTo}
+                        onChange={(e) => updateAccessRow(row.id, { validTo: e.target.value })}
+                        style={inputStyleCompact}
+                      />
+                    </td>
+                    <td style={{ padding: '8px', verticalAlign: 'middle', textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => removeEntityRow(row.id)}
+                        disabled={isPrimaryRow || formData.userEntityAccess.length <= 1}
+                        title={isPrimaryRow ? 'Primary row cannot be removed' : 'Remove row'}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor:
+                            isPrimaryRow || formData.userEntityAccess.length <= 1
+                              ? 'not-allowed'
+                              : 'pointer',
+                          opacity: isPrimaryRow || formData.userEntityAccess.length <= 1 ? 0.35 : 1,
+                          padding: '4px',
+                        }}
+                      >
+                        <Trash2
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            color: 'var(--color-mercury-grey)',
+                          }}
+                        />
+                      </button>
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <div style={{ padding: '10px 12px', borderTop: '1px solid var(--color-silver)', background: '#FAFBFC' }}>
+        <div
+          style={{
+            padding: '10px 12px',
+            borderTop: '1px solid var(--color-silver)',
+            background: '#FAFBFC',
+          }}
+        >
           <button
             type="button"
             onClick={addEntityRow}
@@ -984,6 +1255,7 @@ export function UserMaster() {
   if (viewMode === 'form') {
     return (
       <FormShell
+        masterName="User Master"
         title="User Master"
         subtitle={
           selectedUser
@@ -1007,14 +1279,8 @@ export function UserMaster() {
   }
 
   return (
-    <div style={{ padding: '24px', backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
-      <div className="flex items-center justify-between" style={{ marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: 'var(--color-ink)', margin: 0 }}>User Master</h1>
-          <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', margin: '4px 0 0 0' }}>
-            Manage system users and their access
-          </p>
-        </div>
+    <MasterPageShell masterName="User Master" description="Manage system users and access">
+      <div className="flex items-center justify-end" style={{ marginBottom: '24px' }}>
         <button
           type="button"
           onClick={openFormCreate}
@@ -1040,36 +1306,49 @@ export function UserMaster() {
         </button>
       </div>
 
-      <div
-        className="rounded-lg"
-        style={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid var(--color-silver)',
-          padding: '16px',
-          marginBottom: '16px',
+      <MasterListToolbar
+        masterName="User Master"
+        masterKey="user_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          {
+            key: 'status',
+            label: 'Status',
+            options: ['Active', 'Inactive'],
+            selected: statusFilter,
+          },
+          {
+            key: 'approval',
+            label: 'Approval',
+            options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'],
+            selected: approvalFilter,
+          },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
         }}
-      >
-        <div className="flex items-center gap-2" style={{ position: 'relative' }}>
-          <Search
-            style={{ position: 'absolute', left: '12px', width: '18px', height: '18px', color: 'var(--color-mercury-grey)' }}
-          />
-          <input
-            type="text"
-            placeholder="Search by user code, name, email, linked employee…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '10px 10px 10px 40px',
-              border: '1px solid var(--color-silver)',
-              borderRadius: '8px',
-              fontSize: '14px',
-              color: 'var(--color-ink)',
-              outline: 'none',
-            }}
-          />
-        </div>
-      </div>
+        records={filteredUsers}
+        columns={[
+          { key: 'userCode', label: 'User Code' },
+          { key: 'employeeId', label: 'Employee ID' },
+          { key: 'name', label: 'Name' },
+          { key: 'email', label: 'Email' },
+          { key: 'username', label: 'Username' },
+          { key: 'userType', label: 'User Type' },
+          { key: 'loginMethod', label: 'Login Method' },
+          { key: 'locked', label: 'Locked' },
+          { key: 'passwordResetRequired', label: 'Password Reset Required' },
+          { key: 'accessExpiryDate', label: 'Access Expiry Date' },
+          { key: 'defaultEntityId', label: 'Default Entity ID' },
+          { key: 'remarks', label: 'Remarks' },
+          { key: 'createdDate', label: 'Created Date' },
+          { key: 'status', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
 
       <div
         className="rounded-lg"
@@ -1082,22 +1361,29 @@ export function UserMaster() {
         <div style={{ overflowX: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
-              <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '1px solid var(--color-silver)' }}>
-                {['User Code', 'Name', 'Email', 'Linked Emp.', 'Access', 'Status', 'Actions'].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: '12px 16px',
-                      textAlign: 'left',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      color: 'var(--color-mercury-grey)',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
+              <tr
+                style={{
+                  backgroundColor: 'var(--color-cloud)',
+                  borderBottom: '1px solid var(--color-silver)',
+                }}
+              >
+                {['User Code', 'Name', 'Email', 'Linked Emp.', 'Access', 'Status', 'Actions'].map(
+                  (h) => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: '12px 16px',
+                        textAlign: 'left',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: 'var(--color-mercury-grey)',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {h}
+                    </th>
+                  )
+                )}
               </tr>
             </thead>
             <tbody>
@@ -1155,7 +1441,13 @@ export function UserMaster() {
                   >
                     {user.employeeId || '—'}
                   </td>
-                  <td style={{ padding: '16px', fontSize: '14px', color: 'var(--color-mercury-grey)' }}>
+                  <td
+                    style={{
+                      padding: '16px',
+                      fontSize: '14px',
+                      color: 'var(--color-mercury-grey)',
+                    }}
+                  >
                     <div className="flex items-center gap-2 min-w-0 flex-wrap">
                       <Building2 style={{ width: '14px', height: '14px', flexShrink: 0 }} />
                       <span className="truncate">{summarizeEntities(user)}</span>
@@ -1166,6 +1458,34 @@ export function UserMaster() {
                   <td style={{ padding: '16px' }}>{getStatusBadge(user.status)}</td>
                   <td style={{ padding: '16px' }}>
                     <div className="flex items-center gap-2">
+                      {(user.approvalStatus === 'Pending' ||
+                        user.status === 'Pending Approval') && (
+                        <button
+                          type="button"
+                          onClick={() => handleReviewUser(user)}
+                          className="p-2 rounded-lg transition-all"
+                          style={{
+                            backgroundColor: 'var(--color-teal-tint)',
+                            border: '1px solid var(--color-teal)',
+                            cursor: 'pointer',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--color-teal)';
+                            const icon = e.currentTarget.querySelector('svg');
+                            if (icon) icon.style.color = '#FFFFFF';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--color-teal-tint)';
+                            const icon = e.currentTarget.querySelector('svg');
+                            if (icon) icon.style.color = 'var(--color-teal)';
+                          }}
+                          title="Review User"
+                        >
+                          <Eye
+                            style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }}
+                          />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => openFormEdit(user)}
@@ -1183,7 +1503,9 @@ export function UserMaster() {
                         }}
                         title="Edit User"
                       >
-                        <Edit style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }} />
+                        <Edit
+                          style={{ width: '16px', height: '16px', color: 'var(--color-teal)' }}
+                        />
                       </button>
                       {user.approvalStatus === 'Approved' && (
                         <button
@@ -1198,7 +1520,13 @@ export function UserMaster() {
                           title="Cannot delete approved user"
                           disabled
                         >
-                          <Trash2 style={{ width: '16px', height: '16px', color: 'var(--color-mercury-grey)' }} />
+                          <Trash2
+                            style={{
+                              width: '16px',
+                              height: '16px',
+                              color: 'var(--color-mercury-grey)',
+                            }}
+                          />
                         </button>
                       )}
                     </div>
@@ -1209,12 +1537,25 @@ export function UserMaster() {
           </table>
         </div>
       </div>
-    </div>
+
+      <ApprovalModal
+        isOpen={showApprovalModal}
+        onClose={() => setShowApprovalModal(false)}
+        recordType="User Master"
+        recordId={currentReviewRecord?.userCode || currentReviewRecord?.id || ''}
+        changes={detectedChanges}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onRequestInfo={handleRequestInfo}
+      />
+    </MasterPageShell>
   );
 }
 
 function summarizeEntities(user: UserMasterRecord) {
-  const n = user.userEntityAccess.filter((r) => r.entityId.trim() && r.status !== 'Inactive').length;
+  const n = user.userEntityAccess.filter(
+    (r) => r.entityId.trim() && r.status !== 'Inactive'
+  ).length;
   if (!n) return '—';
   return n === 1 ? '1 ent.' : `${n} ent.`;
 }

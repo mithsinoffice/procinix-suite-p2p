@@ -23,7 +23,7 @@ import {
   PanelLeft,
   Sparkles,
   Building2,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 
 interface NavModule {
@@ -57,16 +57,16 @@ export function FinanceNavigation() {
         { path: '/', label: 'Dashboard', icon: LayoutDashboard },
         { path: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
         { path: '/goods-receipt', label: 'Goods Receipt (GRN)', icon: Package },
-        { 
-          path: '/invoices', 
-          label: 'Invoices', 
+        {
+          path: '/invoices',
+          label: 'Invoices',
           icon: CreditCard,
           children: [
             { path: '/invoices', label: 'All Invoices', icon: FileText },
-            { path: '/invoices/ai-capture', label: 'AI Capture', icon: Sparkles, badge: 'AI' }
-          ]
+            { path: '/invoices/ai-capture', label: 'AI Capture', icon: Sparkles, badge: 'AI' },
+          ],
         },
-        { path: '/vendors', label: 'Vendor Management', icon: Users }
+        { path: '/vendors', label: 'Vendor Management', icon: Users },
       ],
       masters: [
         { path: '/masters/category-master', label: 'Category Master', icon: FolderTree },
@@ -77,13 +77,13 @@ export function FinanceNavigation() {
         { path: '/masters/tax-code-master', label: 'Tax Code Master', icon: Receipt },
         { path: '/masters/entity-master', label: 'Entity Master', icon: Building2 },
         { path: '/masters/currency-master', label: 'Currency Master', icon: DollarSign },
-        { path: '/masters/exchange-rate-master', label: 'Exchange Rate Master', icon: RefreshCw }
+        { path: '/masters/exchange-rate-master', label: 'Exchange Rate Master', icon: RefreshCw },
       ],
       reports: [
         { path: '/reports/procurement-head-desk', label: 'Procurement Dashboard', icon: BarChart3 },
         { path: '/reports/operational-dashboard', label: 'Operations Dashboard', icon: TrendingUp },
-        { path: '/reports/workflow-report', label: 'Workflow Report', icon: FileText }
-      ]
+        { path: '/reports/workflow-report', label: 'Workflow Report', icon: FileText },
+      ],
     },
     {
       id: 'ar',
@@ -94,18 +94,18 @@ export function FinanceNavigation() {
         { path: '/ar/customer-invoicing', label: 'Customer Invoicing', icon: Receipt },
         { path: '/ar/payment-collections', label: 'Payment Collections', icon: DollarSign },
         { path: '/ar/credit-management', label: 'Credit Management', icon: TrendingUp },
-        { path: '/ar/customer-portal', label: 'Customer Portal', icon: UserCheck }
+        { path: '/ar/customer-portal', label: 'Customer Portal', icon: UserCheck },
       ],
       masters: [
         { path: '/ar/masters/customer-master', label: 'Customer Master', icon: Users },
         { path: '/ar/masters/pricing-master', label: 'Pricing Master', icon: DollarSign },
-        { path: '/ar/masters/payment-terms', label: 'Payment Terms', icon: Calendar }
+        { path: '/ar/masters/payment-terms', label: 'Payment Terms', icon: Calendar },
       ],
       reports: [
         { path: '/ar/reports/aging-report', label: 'Aging Report', icon: BarChart3 },
         { path: '/ar/reports/collection-report', label: 'Collection Report', icon: TrendingUp },
-        { path: '/ar/reports/revenue-report', label: 'Revenue Report', icon: FileText }
-      ]
+        { path: '/ar/reports/revenue-report', label: 'Revenue Report', icon: FileText },
+      ],
     },
     {
       id: 'r2r',
@@ -116,20 +116,20 @@ export function FinanceNavigation() {
         { path: '/r2r/general-ledger', label: 'General Ledger', icon: BookOpen },
         { path: '/r2r/financial-close', label: 'Financial Close', icon: Calendar },
         { path: '/r2r/reconciliations', label: 'Reconciliations', icon: Target },
-        { path: '/r2r/consolidations', label: 'Consolidations', icon: BarChart3 }
+        { path: '/r2r/consolidations', label: 'Consolidations', icon: BarChart3 },
       ],
       masters: [
         { path: '/masters/department-master', label: 'Department Master', icon: FolderTree },
         { path: '/masters/cost-centre-master', label: 'Cost Centre Master', icon: Target },
         { path: '/masters/profit-centre-master', label: 'Profit Centre Master', icon: TrendingUp },
-        { path: '/masters/employee-master', label: 'Employee Master', icon: Users }
+        { path: '/masters/employee-master', label: 'Employee Master', icon: Users },
       ],
       reports: [
         { path: '/reports/cfo-desk', label: 'CFO Dashboard', icon: BarChart3 },
         { path: '/reports/management-desk', label: 'Management Dashboard', icon: TrendingUp },
-        { path: '/reports/audit-trail', label: 'Audit Trail', icon: FileText }
-      ]
-    }
+        { path: '/reports/audit-trail', label: 'Audit Trail', icon: FileText },
+      ],
+    },
   ];
 
   const toggleSection = (sectionId: string) => {
@@ -159,7 +159,7 @@ export function FinanceNavigation() {
             style={{
               paddingLeft: `${paddingLeft}px`,
               backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
-              color: isActive ? 'var(--color-teal)' : '#B8C5CE'
+              color: isActive ? 'var(--color-teal)' : '#B8C5CE',
             }}
             onMouseEnter={(e) => {
               if (!isActive) e.currentTarget.style.backgroundColor = '#3a4a52';
@@ -174,12 +174,12 @@ export function FinanceNavigation() {
                 {module.label}
               </span>
               {module.badge && (
-                <span 
+                <span
                   className="px-2 py-0.5 rounded text-xs"
-                  style={{ 
+                  style={{
                     backgroundColor: '#007D87',
                     color: '#FFFFFF',
-                    fontWeight: '600'
+                    fontWeight: '600',
                   }}
                 >
                   {module.badge}
@@ -193,9 +193,7 @@ export function FinanceNavigation() {
             )}
           </button>
           {isChildExpanded && (
-            <div>
-              {module.children?.map(child => renderNavItem(child, level + 1))}
-            </div>
+            <div>{module.children?.map((child) => renderNavItem(child, level + 1))}</div>
           )}
         </div>
       );
@@ -210,7 +208,7 @@ export function FinanceNavigation() {
           paddingLeft: isCollapsed ? '16px' : `${paddingLeft}px`,
           backgroundColor: isActive ? 'var(--color-teal)20' : 'transparent',
           color: isActive ? 'var(--color-teal)' : '#B8C5CE',
-          justifyContent: isCollapsed ? 'center' : 'flex-start'
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
         }}
         onMouseEnter={(e) => {
           if (!isActive) e.currentTarget.style.backgroundColor = '#3a4a52';
@@ -227,12 +225,12 @@ export function FinanceNavigation() {
               {module.label}
             </span>
             {module.badge && (
-              <span 
+              <span
                 className="px-2 py-0.5 rounded text-xs"
-                style={{ 
+                style={{
                   backgroundColor: '#007D87',
                   color: '#FFFFFF',
-                  fontWeight: '600'
+                  fontWeight: '600',
                 }}
               >
                 {module.badge}
@@ -245,18 +243,24 @@ export function FinanceNavigation() {
   };
 
   return (
-    <div 
+    <div
       className="flex flex-col h-full transition-all duration-300"
-      style={{ 
+      style={{
         width: isCollapsed ? '64px' : '280px',
         backgroundColor: '#2A3A42',
-        borderRight: '1px solid #1a2832'
+        borderRight: '1px solid #1a2832',
       }}
     >
       {/* Collapse Toggle */}
-      <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid #3a4a52' }}>
+      <div
+        className="p-4 flex items-center justify-between"
+        style={{ borderBottom: '1px solid #3a4a52' }}
+      >
         {!isCollapsed && (
-          <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
+          <span
+            className="text-xs uppercase tracking-wider"
+            style={{ color: 'var(--color-slate)', fontWeight: '600' }}
+          >
             Finance Automation
           </span>
         )}
@@ -264,15 +268,11 @@ export function FinanceNavigation() {
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-1.5 rounded-lg transition-colors"
           style={{ color: 'var(--color-slate)' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a4a52'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#3a4a52')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
           title={isCollapsed ? 'Expand' : 'Collapse'}
         >
-          {isCollapsed ? (
-            <PanelLeft className="w-4 h-4" />
-          ) : (
-            <PanelLeftClose className="w-4 h-4" />
-          )}
+          {isCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
         </button>
       </div>
 
@@ -291,7 +291,7 @@ export function FinanceNavigation() {
                 style={{
                   backgroundColor: isExpanded ? '#3a4a52' : 'transparent',
                   color: isExpanded ? '#FFFFFF' : 'var(--color-slate)',
-                  justifyContent: isCollapsed ? 'center' : 'space-between'
+                  justifyContent: isCollapsed ? 'center' : 'space-between',
                 }}
                 onMouseEnter={(e) => {
                   if (!isExpanded) e.currentTarget.style.backgroundColor = '#3a4a52';
@@ -302,29 +302,33 @@ export function FinanceNavigation() {
                 title={isCollapsed ? section.label : ''}
               >
                 <div className="flex items-center gap-3">
-                  <SectionIcon className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--color-teal)' }} />
+                  <SectionIcon
+                    className="w-5 h-5 flex-shrink-0"
+                    style={{ color: 'var(--color-teal)' }}
+                  />
                   {!isCollapsed && (
-                    <span style={{ fontWeight: '600', fontSize: '14px' }}>
-                      {section.label}
-                    </span>
+                    <span style={{ fontWeight: '600', fontSize: '14px' }}>{section.label}</span>
                   )}
                 </div>
-                {!isCollapsed && (
-                  isExpanded ? (
-                    <ChevronDown className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }} />
+                {!isCollapsed &&
+                  (isExpanded ? (
+                    <ChevronDown
+                      className="w-4 h-4"
+                      style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }}
+                    />
                   ) : (
-                    <ChevronRight className="w-4 h-4" style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }} />
-                  )
-                )}
+                    <ChevronRight
+                      className="w-4 h-4"
+                      style={{ color: isExpanded ? '#FFFFFF' : 'var(--color-slate)' }}
+                    />
+                  ))}
               </button>
 
               {/* Section Content */}
               {isExpanded && (
                 <div className="py-2">
                   {/* Core Modules */}
-                  <div>
-                    {section.modules.map(module => renderNavItem(module))}
-                  </div>
+                  <div>{section.modules.map((module) => renderNavItem(module))}</div>
 
                   {/* Divider */}
                   {!isCollapsed && (
@@ -336,14 +340,15 @@ export function FinanceNavigation() {
                   {/* Masters Section */}
                   {!isCollapsed && (
                     <div className="px-4 py-1">
-                      <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
+                      <span
+                        className="text-xs uppercase tracking-wider"
+                        style={{ color: 'var(--color-slate)', fontWeight: '600' }}
+                      >
                         Masters
                       </span>
                     </div>
                   )}
-                  <div>
-                    {section.masters.map(module => renderNavItem(module))}
-                  </div>
+                  <div>{section.masters.map((module) => renderNavItem(module))}</div>
 
                   {/* Divider */}
                   {!isCollapsed && (
@@ -355,14 +360,15 @@ export function FinanceNavigation() {
                   {/* Reports Section */}
                   {!isCollapsed && (
                     <div className="px-4 py-1">
-                      <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--color-slate)', fontWeight: '600' }}>
+                      <span
+                        className="text-xs uppercase tracking-wider"
+                        style={{ color: 'var(--color-slate)', fontWeight: '600' }}
+                      >
                         Reports
                       </span>
                     </div>
                   )}
-                  <div>
-                    {section.reports.map(module => renderNavItem(module))}
-                  </div>
+                  <div>{section.reports.map((module) => renderNavItem(module))}</div>
                 </div>
               )}
             </div>
@@ -376,21 +382,26 @@ export function FinanceNavigation() {
           to="/masters"
           className="flex items-center gap-3 px-4 py-2 rounded-lg transition-colors"
           style={{
-            backgroundColor: location.pathname === '/masters' ? 'var(--color-teal)20' : 'transparent',
+            backgroundColor:
+              location.pathname === '/masters' ? 'var(--color-teal)20' : 'transparent',
             color: location.pathname === '/masters' ? 'var(--color-teal)' : '#B8C5CE',
-            justifyContent: isCollapsed ? 'center' : 'flex-start'
+            justifyContent: isCollapsed ? 'center' : 'flex-start',
           }}
           onMouseEnter={(e) => {
             if (location.pathname !== '/masters') e.currentTarget.style.backgroundColor = '#3a4a52';
           }}
           onMouseLeave={(e) => {
-            if (location.pathname !== '/masters') e.currentTarget.style.backgroundColor = 'transparent';
+            if (location.pathname !== '/masters')
+              e.currentTarget.style.backgroundColor = 'transparent';
           }}
           title={isCollapsed ? 'System Settings' : ''}
         >
           <FolderTree className="w-4 h-4 flex-shrink-0" />
           {!isCollapsed && (
-            <span className="text-sm" style={{ fontWeight: location.pathname === '/masters' ? '600' : '400' }}>
+            <span
+              className="text-sm"
+              style={{ fontWeight: location.pathname === '/masters' ? '600' : '400' }}
+            >
               System Settings
             </span>
           )}

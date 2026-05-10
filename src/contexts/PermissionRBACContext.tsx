@@ -70,7 +70,7 @@ const ALL_PERMISSIONS = {
     VIEW: 'CASHFLOW.VIEW',
     FORECAST: 'CASHFLOW.FORECAST',
   },
-  
+
   // AR Automation Permissions
   AR_INVOICE: {
     VIEW: 'AR_INVOICE.VIEW',
@@ -93,7 +93,7 @@ const ALL_PERMISSIONS = {
     MANAGE: 'CREDIT_MGMT.MANAGE',
     APPROVE: 'CREDIT_MGMT.APPROVE',
   },
-  
+
   // R2R Automation Permissions
   GENERAL_LEDGER: {
     VIEW: 'GENERAL_LEDGER.VIEW',
@@ -114,7 +114,7 @@ const ALL_PERMISSIONS = {
     VIEW: 'CONSOLIDATION.VIEW',
     EXECUTE: 'CONSOLIDATION.EXECUTE',
   },
-  
+
   // Masters Permissions
   MASTERS: {
     VIEW: 'MASTERS.VIEW',
@@ -123,14 +123,14 @@ const ALL_PERMISSIONS = {
     DELETE: 'MASTERS.DELETE',
     APPROVE: 'MASTERS.APPROVE',
   },
-  
+
   // Reports Permissions
   REPORTS: {
     VIEW: 'REPORTS.VIEW',
     EXPORT: 'REPORTS.EXPORT',
     SCHEDULE: 'REPORTS.SCHEDULE',
   },
-  
+
   // Global Permissions
   DASHBOARD: {
     VIEW: 'DASHBOARD.VIEW',
@@ -188,7 +188,7 @@ const userRolesData: UserRole[] = [
       ...Object.values(ALL_PERMISSIONS.AUDIT_LOG),
       ...Object.values(ALL_PERMISSIONS.SETTINGS),
       ...Object.values(ALL_PERMISSIONS.AI_CAPTURE),
-    ]
+    ],
   },
   {
     roleId: 'ap-manager',
@@ -229,7 +229,7 @@ const userRolesData: UserRole[] = [
       ALL_PERMISSIONS.TASKS.VIEW,
       ALL_PERMISSIONS.TASKS.MANAGE,
       ALL_PERMISSIONS.AUDIT_LOG.VIEW,
-    ]
+    ],
   },
   {
     roleId: 'ap-clerk',
@@ -251,7 +251,7 @@ const userRolesData: UserRole[] = [
       // Global
       ALL_PERMISSIONS.DASHBOARD.VIEW,
       ALL_PERMISSIONS.TASKS.VIEW,
-    ]
+    ],
   },
   {
     roleId: 'cfo',
@@ -292,7 +292,7 @@ const userRolesData: UserRole[] = [
       ALL_PERMISSIONS.APPROVALS.APPROVE,
       ALL_PERMISSIONS.AUDIT_LOG.VIEW,
       ALL_PERMISSIONS.AUDIT_LOG.EXPORT,
-    ]
+    ],
   },
   {
     roleId: 'ar-manager',
@@ -324,7 +324,7 @@ const userRolesData: UserRole[] = [
       ALL_PERMISSIONS.TASKS.VIEW,
       ALL_PERMISSIONS.TASKS.MANAGE,
       ALL_PERMISSIONS.AUDIT_LOG.VIEW,
-    ]
+    ],
   },
   {
     roleId: 'finance-controller',
@@ -363,7 +363,7 @@ const userRolesData: UserRole[] = [
       ALL_PERMISSIONS.APPROVALS.VIEW,
       ALL_PERMISSIONS.APPROVALS.APPROVE,
       ALL_PERMISSIONS.AUDIT_LOG.VIEW,
-    ]
+    ],
   },
   {
     roleId: 'accounts-payable-approver',
@@ -388,8 +388,8 @@ const userRolesData: UserRole[] = [
       ALL_PERMISSIONS.APPROVALS.VIEW,
       ALL_PERMISSIONS.APPROVALS.APPROVE,
       ALL_PERMISSIONS.TASKS.VIEW,
-    ]
-  }
+    ],
+  },
 ];
 
 const companiesData: Company[] = [
@@ -404,14 +404,14 @@ export function PermissionRBACProvider({ children }: { children: ReactNode }) {
   const [currentCompany, setCurrentCompany] = useState<Company>(companiesData[0]);
 
   const switchRole = (roleId: string) => {
-    const role = userRolesData.find(r => r.roleId === roleId);
+    const role = userRolesData.find((r) => r.roleId === roleId);
     if (role) {
       setCurrentRole(role);
     }
   };
 
   const switchCompany = (companyId: string) => {
-    const company = companiesData.find(c => c.id === companyId);
+    const company = companiesData.find((c) => c.id === companyId);
     if (company) {
       setCurrentCompany(company);
     }
@@ -422,11 +422,11 @@ export function PermissionRBACProvider({ children }: { children: ReactNode }) {
   };
 
   const hasAnyPermission = (permissions: PermissionKey[]): boolean => {
-    return permissions.some(perm => currentRole.permissions.includes(perm));
+    return permissions.some((perm) => currentRole.permissions.includes(perm));
   };
 
   const hasAllPermissions = (permissions: PermissionKey[]): boolean => {
-    return permissions.every(perm => currentRole.permissions.includes(perm));
+    return permissions.every((perm) => currentRole.permissions.includes(perm));
   };
 
   return (

@@ -52,7 +52,14 @@ function computeQualityScore(buffer, mimeType, filename) {
 
 // ── Main entry ─────────────────────────────────────────
 
-export async function processIntake(buffer, filename, mimeType, sourceChannel, sourceReference, entityId) {
+export async function processIntake(
+  buffer,
+  filename,
+  mimeType,
+  sourceChannel,
+  sourceReference,
+  entityId
+) {
   const startTime = Date.now();
   const invoiceId = null; // Not yet created at intake stage
 
@@ -76,7 +83,8 @@ export async function processIntake(buffer, filename, mimeType, sourceChannel, s
     // 5. Write records in a transaction
     const { documentId, batchId } = await withTransaction(async (conn) => {
       const bId = randomUUID();
-      await connExecute(conn,
+      await connExecute(
+        conn,
         `INSERT INTO ap_invoice_intake_batches
            (id, source_channel, source_reference, entity_id, status, created_at)
          VALUES (?, ?, ?, ?, 'received', NOW())`,
@@ -84,7 +92,8 @@ export async function processIntake(buffer, filename, mimeType, sourceChannel, s
       );
 
       const dId = randomUUID();
-      await connExecute(conn,
+      await connExecute(
+        conn,
         `INSERT INTO ap_invoice_documents
            (id, batch_id, filename, mime_type, file_size_bytes, document_type, quality_score, content_hash, status, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'received', NOW())`,
@@ -92,7 +101,8 @@ export async function processIntake(buffer, filename, mimeType, sourceChannel, s
       );
 
       if (!isDuplicate) {
-        await connExecute(conn,
+        await connExecute(
+          conn,
           `INSERT INTO ap_invoice_document_hashes (id, document_id, content_hash, first_seen_at)
            VALUES (?, ?, ?, NOW())`,
           [randomUUID(), dId, contentHash]
@@ -135,9 +145,19 @@ export async function processIntake(buffer, filename, mimeType, sourceChannel, s
       ]
     );
 
-    console.log(`[${AGENT_NAME}] document ${documentId}: ${decision} — ${documentType}, quality ${qualityScore}${isDuplicate ? ', DUPLICATE' : ''}`);
+    console.log(
+      `[${AGENT_NAME}] document ${documentId}: ${decision} — ${documentType}, quality ${qualityScore}${isDuplicate ? ', DUPLICATE' : ''}`
+    );
 
-    return { documentId, batchId, documentType, contentHash, qualityScore, isDuplicate, explanation };
+    return {
+      documentId,
+      batchId,
+      documentType,
+      contentHash,
+      qualityScore,
+      isDuplicate,
+      explanation,
+    };
   } catch (err) {
     const processingTimeMs = Date.now() - startTime;
     console.error(`[${AGENT_NAME}] error after ${processingTimeMs}ms:`, err.message);
@@ -159,7 +179,9 @@ export async function processIntake(buffer, filename, mimeType, sourceChannel, s
           processingTimeMs,
         ]
       );
-    } catch (_) { /* swallow logging failure */ }
+    } catch (_) {
+      /* swallow logging failure */
+    }
 
     throw err;
   }

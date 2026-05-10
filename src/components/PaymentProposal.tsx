@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Filter,
@@ -21,9 +22,21 @@ import {
   X,
   Check,
 } from 'lucide-react';
-import { mockProposalInvoices, cashBalances, type ProposalInvoice } from '../data/paymentProposalData';
+import {
+  mockProposalInvoices,
+  cashBalances,
+  type ProposalInvoice,
+} from '../data/paymentProposalData';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  createPaymentBatchApi,
+  fetchPayableInvoices,
+  submitPaymentBatchApi,
+} from '../lib/paymentsApi';
 
 export function PaymentProposal() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   // Selection state
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
 
@@ -37,16 +50,54 @@ export function PaymentProposal() {
   const [discountFilter, setDiscountFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('approved');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sourceInvoices, setSourceInvoices] = useState<ProposalInvoice[]>(mockProposalInvoices);
+  const [loadingPayables, setLoadingPayables] = useState(false);
+  const [payablesError, setPayablesError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user?.tenantId) {
+        if (!cancelled) {
+          setSourceInvoices(mockProposalInvoices);
+          setPayablesError(null);
+        }
+        return;
+      }
+      setLoadingPayables(true);
+      setPayablesError(null);
+      try {
+        const rows = await fetchPayableInvoices(
+          user.tenantId,
+          user.currentPlatformEntityId ?? undefined
+        );
+        if (!cancelled) setSourceInvoices(rows);
+      } catch (e) {
+        if (!cancelled) {
+          setPayablesError(e instanceof Error ? e.message : 'Failed to load payable invoices');
+          setSourceInvoices([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingPayables(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.tenantId, user?.currentPlatformEntityId]);
 
   // Filtered invoices
   const filteredInvoices = useMemo(() => {
-    return mockProposalInvoices.filter(invoice => {
+    return sourceInvoices.filter((invoice) => {
       // Search
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        if (!invoice.vendor.toLowerCase().includes(query) &&
-            !invoice.invoiceNo.toLowerCase().includes(query) &&
-            !invoice.vendorCode.toLowerCase().includes(query)) {
+        if (
+          !invoice.vendor.toLowerCase().includes(query) &&
+          !invoice.invoiceNo.toLowerCase().includes(query) &&
+          !invoice.vendorCode.toLowerCase().includes(query)
+        ) {
           return false;
         }
       }
@@ -83,7 +134,18 @@ export function PaymentProposal() {
 
       return true;
     });
-  }, [searchQuery, vendorFilter, dueDateFrom, dueDateTo, agingBucket, priorityFilter, paymentModeFilter, discountFilter, statusFilter]);
+  }, [
+    sourceInvoices,
+    searchQuery,
+    vendorFilter,
+    dueDateFrom,
+    dueDateTo,
+    agingBucket,
+    priorityFilter,
+    paymentModeFilter,
+    discountFilter,
+    statusFilter,
+  ]);
 
   // Calculate summary
   const summary = useMemo(() => {
@@ -91,12 +153,12 @@ export function PaymentProposal() {
     let totalDiscount = 0;
     const currencies: { [key: string]: number } = {};
 
-    selectedInvoices.forEach(id => {
-      const invoice = mockProposalInvoices.find(inv => inv.id === id);
+    selectedInvoices.forEach((id) => {
+      const invoice = sourceInvoices.find((inv) => inv.id === id);
       if (invoice) {
         totalAmount += invoice.amount;
         currencies[invoice.currency] = (currencies[invoice.currency] || 0) + invoice.amount;
-        
+
         if (invoice.earlyPaymentDiscount) {
           const discountDate = new Date(invoice.earlyPaymentDiscount.validUntil);
           const today = new Date('2024-12-13');
@@ -113,7 +175,7 @@ export function PaymentProposal() {
 
     const inrBalanceBefore = cashBalances.INR.balance;
     const inrBalanceAfter = inrBalanceBefore - inrAmount;
-    
+
     const usdBalanceBefore = cashBalances.USD.balance;
     const usdBalanceAfter = usdBalanceBefore - usdAmount;
 
@@ -144,9 +206,9 @@ export function PaymentProposal() {
       riskLevel,
       riskMessage,
       inrUtilization,
-      usdUtilization
+      usdUtilization,
     };
-  }, [selectedInvoices]);
+  }, [selectedInvoices, sourceInvoices]);
 
   const formatCurrency = (amount: number, currency: string = 'INR') => {
     if (currency === 'USD') {
@@ -189,7 +251,7 @@ export function PaymentProposal() {
   };
 
   const selectAll = () => {
-    const newSelection = new Set(filteredInvoices.map(inv => inv.id));
+    const newSelection = new Set(filteredInvoices.map((inv) => inv.id));
     setSelectedInvoices(newSelection);
   };
 
@@ -199,11 +261,16 @@ export function PaymentProposal() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'critical': return '#EF4444';
-      case 'high': return '#F59E0B';
-      case 'normal': return '#3B82F6';
-      case 'low': return '#6B7280';
-      default: return '#6B7280';
+      case 'critical':
+        return '#EF4444';
+      case 'high':
+        return '#F59E0B';
+      case 'normal':
+        return '#3B82F6';
+      case 'low':
+        return '#6B7280';
+      default:
+        return '#6B7280';
     }
   };
 
@@ -215,10 +282,55 @@ export function PaymentProposal() {
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'high': return '#EF4444';
-      case 'medium': return '#F59E0B';
-      case 'low': return '#10B981';
-      default: return '#6B7280';
+      case 'high':
+        return '#EF4444';
+      case 'medium':
+        return '#F59E0B';
+      case 'low':
+        return '#10B981';
+      default:
+        return '#6B7280';
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!user?.tenantId) {
+      window.alert('Sign in with a platform tenant (MySQL) to create payment batches.');
+      return;
+    }
+    if (selectedInvoices.size === 0) return;
+    setSubmitting(true);
+    try {
+      const ids = [...selectedInvoices];
+      const { id } = await createPaymentBatchApi(user.tenantId, ids, {
+        entityId: user.currentPlatformEntityId ?? undefined,
+      });
+      navigate(`/ap/payment-batches/${id}`);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Failed to create batch');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmitForApproval = async () => {
+    if (!user?.tenantId) {
+      window.alert('Sign in with a platform tenant (MySQL) to create payment batches.');
+      return;
+    }
+    if (selectedInvoices.size === 0) return;
+    setSubmitting(true);
+    try {
+      const ids = [...selectedInvoices];
+      const { id } = await createPaymentBatchApi(user.tenantId, ids, {
+        entityId: user.currentPlatformEntityId ?? undefined,
+      });
+      await submitPaymentBatchApi(user.tenantId, id);
+      navigate(`/ap/payment-batches/${id}`);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Failed to submit batch');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -229,20 +341,20 @@ export function PaymentProposal() {
 
     switch (type) {
       case 'critical':
-        toSelect = filteredInvoices.filter(inv => inv.priority === 'critical');
+        toSelect = filteredInvoices.filter((inv) => inv.priority === 'critical');
         break;
       case 'discount':
-        toSelect = filteredInvoices.filter(inv => inv.earlyPaymentDiscount);
+        toSelect = filteredInvoices.filter((inv) => inv.earlyPaymentDiscount);
         break;
       case 'due-soon':
-        toSelect = filteredInvoices.filter(inv => inv.aging > -7 && inv.aging <= 0);
+        toSelect = filteredInvoices.filter((inv) => inv.aging > -7 && inv.aging <= 0);
         break;
       case 'statutory':
-        toSelect = filteredInvoices.filter(inv => inv.isStatutory);
+        toSelect = filteredInvoices.filter((inv) => inv.isStatutory);
         break;
     }
 
-    setSelectedInvoices(new Set(toSelect.map(inv => inv.id)));
+    setSelectedInvoices(new Set(toSelect.map((inv) => inv.id)));
   };
 
   return (
@@ -263,49 +375,84 @@ export function PaymentProposal() {
             <p style={{ color: 'var(--color-mercury-grey)', fontSize: '14px' }}>
               Select invoices for payment and optimize cash usage
             </p>
+            {user?.tenantId ? (
+              <p className="text-xs mt-2" style={{ color: 'var(--color-teal)', fontWeight: 600 }}>
+                Live data: invoices in Processed or Queued for Payment with an outstanding balance
+                (and not already in an open batch).
+              </p>
+            ) : null}
+            {payablesError ? (
+              <p className="text-xs mt-2" style={{ color: '#EF4444' }}>
+                {payablesError}
+              </p>
+            ) : null}
+            {loadingPayables && user?.tenantId ? (
+              <p className="text-xs mt-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                Loading payables…
+              </p>
+            ) : null}
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={clearSelection}
-              disabled={selectedInvoices.size === 0}
+              disabled={selectedInvoices.size === 0 || submitting}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
                 backgroundColor: '#FFFFFF',
                 border: '1px solid var(--color-silver)',
                 color: 'var(--color-mercury-grey)',
                 opacity: selectedInvoices.size === 0 ? 0.5 : 1,
-                cursor: selectedInvoices.size === 0 ? 'not-allowed' : 'pointer'
+                cursor: selectedInvoices.size === 0 ? 'not-allowed' : 'pointer',
               }}
             >
               <X className="w-4 h-4" />
-              <span className="text-sm" style={{ fontWeight: '500' }}>Clear Selection</span>
+              <span className="text-sm" style={{ fontWeight: '500' }}>
+                Clear Selection
+              </span>
             </button>
             <button
-              disabled={selectedInvoices.size === 0}
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={selectedInvoices.size === 0 || submitting || loadingPayables}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
                 backgroundColor: '#FFFFFF',
                 border: '1px solid var(--color-silver)',
                 color: 'var(--color-mercury-grey)',
-                opacity: selectedInvoices.size === 0 ? 0.5 : 1,
-                cursor: selectedInvoices.size === 0 ? 'not-allowed' : 'pointer'
+                opacity: selectedInvoices.size === 0 || submitting || loadingPayables ? 0.5 : 1,
+                cursor:
+                  selectedInvoices.size === 0 || submitting || loadingPayables
+                    ? 'not-allowed'
+                    : 'pointer',
               }}
             >
               <Save className="w-4 h-4" />
-              <span className="text-sm" style={{ fontWeight: '500' }}>Save Draft</span>
+              <span className="text-sm" style={{ fontWeight: '500' }}>
+                Save Draft
+              </span>
             </button>
             <button
-              disabled={selectedInvoices.size === 0}
+              type="button"
+              onClick={handleSubmitForApproval}
+              disabled={selectedInvoices.size === 0 || submitting || loadingPayables}
               className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
               style={{
-                backgroundColor: selectedInvoices.size === 0 ? 'var(--color-silver)' : 'var(--color-teal)',
+                backgroundColor:
+                  selectedInvoices.size === 0 || submitting || loadingPayables
+                    ? 'var(--color-silver)'
+                    : 'var(--color-teal)',
                 color: '#FFFFFF',
                 border: 'none',
-                cursor: selectedInvoices.size === 0 ? 'not-allowed' : 'pointer'
+                cursor:
+                  selectedInvoices.size === 0 || submitting || loadingPayables
+                    ? 'not-allowed'
+                    : 'pointer',
               }}
             >
               <Send className="w-4 h-4" />
-              <span className="text-sm" style={{ fontWeight: '600' }}>Submit for Approval</span>
+              <span className="text-sm" style={{ fontWeight: '600' }}>
+                {submitting ? 'Working…' : 'Submit for Approval'}
+              </span>
             </button>
           </div>
         </div>
@@ -318,7 +465,10 @@ export function PaymentProposal() {
           <div className="p-6">
             {/* Quick Actions */}
             <div className="mb-4 flex items-center gap-3">
-              <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+              <span
+                className="text-sm"
+                style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+              >
                 Quick Select:
               </span>
               <button
@@ -328,7 +478,7 @@ export function PaymentProposal() {
                   backgroundColor: 'var(--color-error-light)',
                   color: '#EF4444',
                   border: '1px solid #FECACA',
-                  fontWeight: '600'
+                  fontWeight: '600',
                 }}
               >
                 Critical Only
@@ -340,7 +490,7 @@ export function PaymentProposal() {
                   backgroundColor: 'var(--color-error-light)',
                   color: 'var(--color-error-dark)',
                   border: '1px solid #FECACA',
-                  fontWeight: '600'
+                  fontWeight: '600',
                 }}
               >
                 Statutory
@@ -352,7 +502,7 @@ export function PaymentProposal() {
                   backgroundColor: '#D1FAE5',
                   color: '#10B981',
                   border: '1px solid #A7F3D0',
-                  fontWeight: '600'
+                  fontWeight: '600',
                 }}
               >
                 With Discount
@@ -364,7 +514,7 @@ export function PaymentProposal() {
                   backgroundColor: '#FEF3C7',
                   color: '#F59E0B',
                   border: '1px solid #FDE68A',
-                  fontWeight: '600'
+                  fontWeight: '600',
                 }}
               >
                 Due This Week
@@ -376,7 +526,7 @@ export function PaymentProposal() {
                   backgroundColor: '#E0F2F1',
                   color: 'var(--color-teal)',
                   border: '1px solid #B2DFDB',
-                  fontWeight: '600'
+                  fontWeight: '600',
                 }}
               >
                 Select All ({filteredInvoices.length})
@@ -384,7 +534,10 @@ export function PaymentProposal() {
             </div>
 
             {/* Filters */}
-            <div className="bg-white rounded-lg p-4 mb-4" style={{ border: '1px solid var(--color-silver)' }}>
+            <div
+              className="bg-white rounded-lg p-4 mb-4"
+              style={{ border: '1px solid var(--color-silver)' }}
+            >
               <div className="flex items-center gap-2 mb-4">
                 <Filter className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
                 <h3 style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '14px' }}>
@@ -395,11 +548,17 @@ export function PaymentProposal() {
               <div className="grid grid-cols-4 gap-4">
                 {/* Search */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+                  <label
+                    className="block text-xs mb-1.5"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
                     Search
                   </label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--color-slate)' }} />
+                    <Search
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5"
+                      style={{ color: 'var(--color-slate)' }}
+                    />
                     <input
                       type="text"
                       value={searchQuery}
@@ -409,7 +568,7 @@ export function PaymentProposal() {
                       style={{
                         backgroundColor: 'var(--color-cloud)',
                         border: '1px solid var(--color-silver)',
-                        color: 'var(--color-ink)'
+                        color: 'var(--color-ink)',
                       }}
                     />
                   </div>
@@ -417,7 +576,10 @@ export function PaymentProposal() {
 
                 {/* Due Date From */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+                  <label
+                    className="block text-xs mb-1.5"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
                     Due From
                   </label>
                   <input
@@ -428,14 +590,17 @@ export function PaymentProposal() {
                     style={{
                       backgroundColor: 'var(--color-cloud)',
                       border: '1px solid var(--color-silver)',
-                      color: 'var(--color-ink)'
+                      color: 'var(--color-ink)',
                     }}
                   />
                 </div>
 
                 {/* Due Date To */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+                  <label
+                    className="block text-xs mb-1.5"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
                     Due To
                   </label>
                   <input
@@ -446,14 +611,17 @@ export function PaymentProposal() {
                     style={{
                       backgroundColor: 'var(--color-cloud)',
                       border: '1px solid var(--color-silver)',
-                      color: 'var(--color-ink)'
+                      color: 'var(--color-ink)',
                     }}
                   />
                 </div>
 
                 {/* Aging Bucket */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+                  <label
+                    className="block text-xs mb-1.5"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
                     Aging Bucket
                   </label>
                   <select
@@ -463,7 +631,7 @@ export function PaymentProposal() {
                     style={{
                       backgroundColor: 'var(--color-cloud)',
                       border: '1px solid var(--color-silver)',
-                      color: 'var(--color-ink)'
+                      color: 'var(--color-ink)',
                     }}
                   >
                     <option value="all">All</option>
@@ -476,7 +644,10 @@ export function PaymentProposal() {
 
                 {/* Priority */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+                  <label
+                    className="block text-xs mb-1.5"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
                     Priority
                   </label>
                   <select
@@ -486,7 +657,7 @@ export function PaymentProposal() {
                     style={{
                       backgroundColor: 'var(--color-cloud)',
                       border: '1px solid var(--color-silver)',
-                      color: 'var(--color-ink)'
+                      color: 'var(--color-ink)',
                     }}
                   >
                     <option value="all">All Priorities</option>
@@ -499,7 +670,10 @@ export function PaymentProposal() {
 
                 {/* Payment Mode */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+                  <label
+                    className="block text-xs mb-1.5"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
                     Payment Mode
                   </label>
                   <select
@@ -509,7 +683,7 @@ export function PaymentProposal() {
                     style={{
                       backgroundColor: 'var(--color-cloud)',
                       border: '1px solid var(--color-silver)',
-                      color: 'var(--color-ink)'
+                      color: 'var(--color-ink)',
                     }}
                   >
                     <option value="all">All Modes</option>
@@ -523,7 +697,10 @@ export function PaymentProposal() {
 
                 {/* Discount Filter */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+                  <label
+                    className="block text-xs mb-1.5"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
                     Early Discount
                   </label>
                   <select
@@ -533,7 +710,7 @@ export function PaymentProposal() {
                     style={{
                       backgroundColor: 'var(--color-cloud)',
                       border: '1px solid var(--color-silver)',
-                      color: 'var(--color-ink)'
+                      color: 'var(--color-ink)',
                     }}
                   >
                     <option value="all">All Invoices</option>
@@ -544,7 +721,10 @@ export function PaymentProposal() {
 
                 {/* Status */}
                 <div>
-                  <label className="block text-xs mb-1.5" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+                  <label
+                    className="block text-xs mb-1.5"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
                     Status
                   </label>
                   <select
@@ -554,7 +734,7 @@ export function PaymentProposal() {
                     style={{
                       backgroundColor: 'var(--color-cloud)',
                       border: '1px solid var(--color-silver)',
-                      color: 'var(--color-ink)'
+                      color: 'var(--color-ink)',
                     }}
                   >
                     <option value="all">All Status</option>
@@ -566,42 +746,77 @@ export function PaymentProposal() {
             </div>
 
             {/* Invoice Table */}
-            <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-silver)' }}>
+            <div
+              className="bg-white rounded-lg overflow-hidden"
+              style={{ border: '1px solid var(--color-silver)' }}
+            >
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr style={{ backgroundColor: 'var(--color-cloud)', borderBottom: '2px solid var(--color-silver)' }}>
+                    <tr
+                      style={{
+                        backgroundColor: 'var(--color-cloud)',
+                        borderBottom: '2px solid var(--color-silver)',
+                      }}
+                    >
                       <th className="px-4 py-3" style={{ width: '40px' }}>
                         <input
                           type="checkbox"
-                          checked={selectedInvoices.size === filteredInvoices.length && filteredInvoices.length > 0}
-                          onChange={(e) => e.target.checked ? selectAll() : clearSelection()}
+                          checked={
+                            selectedInvoices.size === filteredInvoices.length &&
+                            filteredInvoices.length > 0
+                          }
+                          onChange={(e) => (e.target.checked ? selectAll() : clearSelection())}
                           className="w-4 h-4"
                           style={{ accentColor: 'var(--color-teal)' }}
                         />
                       </th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                      <th
+                        className="text-left px-4 py-3 text-xs"
+                        style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                      >
                         VENDOR
                       </th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                      <th
+                        className="text-left px-4 py-3 text-xs"
+                        style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                      >
                         INVOICE NO
                       </th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                      <th
+                        className="text-left px-4 py-3 text-xs"
+                        style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                      >
                         INVOICE DATE
                       </th>
-                      <th className="text-left px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                      <th
+                        className="text-left px-4 py-3 text-xs"
+                        style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                      >
                         DUE DATE
                       </th>
-                      <th className="text-right px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                      <th
+                        className="text-right px-4 py-3 text-xs"
+                        style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                      >
                         AMOUNT
                       </th>
-                      <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                      <th
+                        className="text-center px-4 py-3 text-xs"
+                        style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                      >
                         AGING
                       </th>
-                      <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                      <th
+                        className="text-center px-4 py-3 text-xs"
+                        style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                      >
                         PRIORITY
                       </th>
-                      <th className="text-center px-4 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                      <th
+                        className="text-center px-4 py-3 text-xs"
+                        style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                      >
                         DISCOUNT
                       </th>
                     </tr>
@@ -611,9 +826,13 @@ export function PaymentProposal() {
                       <tr
                         key={invoice.id}
                         style={{
-                          backgroundColor: selectedInvoices.has(invoice.id) ? '#E0F2F1' : (index % 2 === 0 ? '#FFFFFF' : '#FAFBFC'),
+                          backgroundColor: selectedInvoices.has(invoice.id)
+                            ? '#E0F2F1'
+                            : index % 2 === 0
+                              ? '#FFFFFF'
+                              : '#FAFBFC',
                           borderBottom: '1px solid var(--color-silver)',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
                         }}
                         onClick={() => toggleInvoiceSelection(invoice.id)}
                       >
@@ -627,7 +846,13 @@ export function PaymentProposal() {
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '13px' }}>
+                          <div
+                            style={{
+                              color: 'var(--color-ink)',
+                              fontWeight: '600',
+                              fontSize: '13px',
+                            }}
+                          >
                             {invoice.vendor}
                           </div>
                           <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
@@ -635,27 +860,51 @@ export function PaymentProposal() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '500' }}>
+                          <div
+                            className="text-sm"
+                            style={{ color: 'var(--color-ink)', fontWeight: '500' }}
+                          >
                             {invoice.invoiceNo}
                           </div>
                           {invoice.isStatutory && (
-                            <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--color-error-light)', color: 'var(--color-error-dark)', fontWeight: '600' }}>
+                            <span
+                              className="text-xs px-1.5 py-0.5 rounded"
+                              style={{
+                                backgroundColor: 'var(--color-error-light)',
+                                color: 'var(--color-error-dark)',
+                                fontWeight: '600',
+                              }}
+                            >
                               STATUTORY
                             </span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                            {new Date(invoice.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {new Date(invoice.invoiceDate).toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                            {new Date(invoice.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {new Date(invoice.dueDate).toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div style={{ color: 'var(--color-ink)', fontWeight: '600', fontSize: '14px' }}>
+                          <div
+                            style={{
+                              color: 'var(--color-ink)',
+                              fontWeight: '600',
+                              fontSize: '14px',
+                            }}
+                          >
                             {formatCompactCurrency(invoice.amount, invoice.currency)}
                           </div>
                         </td>
@@ -665,10 +914,12 @@ export function PaymentProposal() {
                             style={{
                               backgroundColor: `${getAgingColor(invoice.aging)}15`,
                               color: getAgingColor(invoice.aging),
-                              fontWeight: '600'
+                              fontWeight: '600',
                             }}
                           >
-                            {invoice.aging > 0 ? `+${invoice.aging}d` : `${Math.abs(invoice.aging)}d`}
+                            {invoice.aging > 0
+                              ? `+${invoice.aging}d`
+                              : `${Math.abs(invoice.aging)}d`}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -678,7 +929,7 @@ export function PaymentProposal() {
                               backgroundColor: `${getPriorityColor(invoice.priority)}15`,
                               color: getPriorityColor(invoice.priority),
                               fontWeight: '600',
-                              textTransform: 'uppercase'
+                              textTransform: 'uppercase',
                             }}
                           >
                             {invoice.priority}
@@ -687,15 +938,26 @@ export function PaymentProposal() {
                         <td className="px-4 py-3 text-center">
                           {invoice.earlyPaymentDiscount ? (
                             <div className="flex flex-col items-center">
-                              <span className="text-xs" style={{ color: '#10B981', fontWeight: '700' }}>
-                                {formatCompactCurrency(invoice.earlyPaymentDiscount.amount, invoice.currency)}
+                              <span
+                                className="text-xs"
+                                style={{ color: '#10B981', fontWeight: '700' }}
+                              >
+                                {formatCompactCurrency(
+                                  invoice.earlyPaymentDiscount.amount,
+                                  invoice.currency
+                                )}
                               </span>
-                              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                              <span
+                                className="text-xs"
+                                style={{ color: 'var(--color-mercury-grey)' }}
+                              >
                                 ({invoice.earlyPaymentDiscount.percentage}%)
                               </span>
                             </div>
                           ) : (
-                            <span className="text-xs" style={{ color: '#CBD5E1' }}>—</span>
+                            <span className="text-xs" style={{ color: '#CBD5E1' }}>
+                              —
+                            </span>
                           )}
                         </td>
                       </tr>
@@ -715,9 +977,9 @@ export function PaymentProposal() {
         {/* Right Panel - Payment Summary (Sticky) */}
         <div
           className="w-[420px] overflow-y-auto"
-          style={{ 
+          style={{
             backgroundColor: '#FFFFFF',
-            borderLeft: '2px solid var(--color-silver)'
+            borderLeft: '2px solid var(--color-silver)',
           }}
         >
           <div className="p-6 sticky top-0">
@@ -729,23 +991,40 @@ export function PaymentProposal() {
             </div>
 
             {/* Selection Summary */}
-            <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
+            <div
+              className="mb-6 p-4 rounded-lg"
+              style={{
+                backgroundColor: 'var(--color-cloud)',
+                border: '1px solid var(--color-silver)',
+              }}
+            >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Invoices Selected</span>
+                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                  Invoices Selected
+                </span>
                 <span className="text-xl" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
                   {summary.count}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Total Amount</span>
+                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                  Total Amount
+                </span>
                 <span className="text-xl" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
-                  {summary.currencies.INR ? formatCompactCurrency(summary.currencies.INR, 'INR') : '₹0'}
+                  {summary.currencies.INR
+                    ? formatCompactCurrency(summary.currencies.INR, 'INR')
+                    : '₹0'}
                 </span>
               </div>
               {summary.currencies.USD && (
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>USD Amount</span>
-                  <span className="text-lg" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                    USD Amount
+                  </span>
+                  <span
+                    className="text-lg"
+                    style={{ color: 'var(--color-teal)', fontWeight: '700' }}
+                  >
                     {formatCompactCurrency(summary.currencies.USD, 'USD')}
                   </span>
                 </div>
@@ -754,7 +1033,10 @@ export function PaymentProposal() {
 
             {/* Discount Captured */}
             {summary.totalDiscount > 0 && (
-              <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: '#D1FAE5', border: '1px solid #A7F3D0' }}>
+              <div
+                className="mb-6 p-4 rounded-lg"
+                style={{ backgroundColor: '#D1FAE5', border: '1px solid #A7F3D0' }}
+              >
                 <div className="flex items-center gap-2 mb-2">
                   <Percent className="w-4 h-4" style={{ color: '#10B981' }} />
                   <span className="text-sm" style={{ color: '#059669', fontWeight: '700' }}>
@@ -774,21 +1056,31 @@ export function PaymentProposal() {
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-3">
                 <Building2 className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
-                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                <span
+                  className="text-sm"
+                  style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                >
                   Cash Impact - INR
                 </span>
               </div>
-              
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Balance Before</span>
-                  <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Balance Before
+                  </span>
+                  <span
+                    className="text-sm"
+                    style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                  >
                     {formatCompactCurrency(summary.inrBalanceBefore, 'INR')}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
-                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Payment Amount</span>
+                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Payment Amount
+                  </span>
                   <span className="text-sm" style={{ color: '#EF4444', fontWeight: '600' }}>
                     -{formatCompactCurrency(summary.currencies.INR || 0, 'INR')}
                   </span>
@@ -796,19 +1088,30 @@ export function PaymentProposal() {
 
                 <div className="pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>Balance After</span>
-                    <span className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
+                    <span
+                      className="text-sm"
+                      style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                    >
+                      Balance After
+                    </span>
+                    <span
+                      className="text-lg"
+                      style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                    >
                       {formatCompactCurrency(summary.inrBalanceAfter, 'INR')}
                     </span>
                   </div>
-                  
+
                   {/* Utilization bar */}
-                  <div className="w-full h-2 rounded-full" style={{ backgroundColor: 'var(--color-silver)' }}>
+                  <div
+                    className="w-full h-2 rounded-full"
+                    style={{ backgroundColor: 'var(--color-silver)' }}
+                  >
                     <div
                       className="h-2 rounded-full transition-all"
                       style={{
                         width: `${summary.inrUtilization}%`,
-                        backgroundColor: getRiskColor(summary.riskLevel)
+                        backgroundColor: getRiskColor(summary.riskLevel),
                       }}
                     />
                   </div>
@@ -824,21 +1127,31 @@ export function PaymentProposal() {
               <div className="mb-4 pt-4" style={{ borderTop: '1px solid var(--color-silver)' }}>
                 <div className="flex items-center gap-2 mb-3">
                   <Building2 className="w-4 h-4" style={{ color: 'var(--color-teal)' }} />
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>
+                  <span
+                    className="text-sm"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                  >
                     Cash Impact - USD
                   </span>
                 </div>
-                
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Balance Before</span>
-                    <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                    <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                      Balance Before
+                    </span>
+                    <span
+                      className="text-sm"
+                      style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                    >
                       {formatCompactCurrency(summary.usdBalanceBefore, 'USD')}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Payment Amount</span>
+                    <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                      Payment Amount
+                    </span>
                     <span className="text-sm" style={{ color: '#EF4444', fontWeight: '600' }}>
                       -{formatCompactCurrency(summary.currencies.USD, 'USD')}
                     </span>
@@ -846,19 +1159,30 @@ export function PaymentProposal() {
 
                   <div className="pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}>Balance After</span>
-                      <span className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
+                      <span
+                        className="text-sm"
+                        style={{ color: 'var(--color-mercury-grey)', fontWeight: '700' }}
+                      >
+                        Balance After
+                      </span>
+                      <span
+                        className="text-lg"
+                        style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                      >
                         {formatCompactCurrency(summary.usdBalanceAfter, 'USD')}
                       </span>
                     </div>
-                    
+
                     {/* Utilization bar */}
-                    <div className="w-full h-2 rounded-full" style={{ backgroundColor: 'var(--color-silver)' }}>
+                    <div
+                      className="w-full h-2 rounded-full"
+                      style={{ backgroundColor: 'var(--color-silver)' }}
+                    >
                       <div
                         className="h-2 rounded-full transition-all"
                         style={{
                           width: `${summary.usdUtilization}%`,
-                          backgroundColor: getRiskColor(summary.riskLevel)
+                          backgroundColor: getRiskColor(summary.riskLevel),
                         }}
                       />
                     </div>
@@ -875,20 +1199,36 @@ export function PaymentProposal() {
               className="p-4 rounded-lg"
               style={{
                 backgroundColor: `${getRiskColor(summary.riskLevel)}15`,
-                border: `1px solid ${getRiskColor(summary.riskLevel)}30`
+                border: `1px solid ${getRiskColor(summary.riskLevel)}30`,
               }}
             >
               <div className="flex items-start gap-3">
                 {summary.riskLevel === 'high' ? (
-                  <AlertTriangle className="w-5 h-5 flex-shrink-0" style={{ color: getRiskColor(summary.riskLevel) }} />
+                  <AlertTriangle
+                    className="w-5 h-5 flex-shrink-0"
+                    style={{ color: getRiskColor(summary.riskLevel) }}
+                  />
                 ) : summary.riskLevel === 'medium' ? (
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: getRiskColor(summary.riskLevel) }} />
+                  <AlertCircle
+                    className="w-5 h-5 flex-shrink-0"
+                    style={{ color: getRiskColor(summary.riskLevel) }}
+                  />
                 ) : (
-                  <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: getRiskColor(summary.riskLevel) }} />
+                  <CheckCircle
+                    className="w-5 h-5 flex-shrink-0"
+                    style={{ color: getRiskColor(summary.riskLevel) }}
+                  />
                 )}
                 <div className="flex-1">
-                  <div className="text-sm mb-1" style={{ color: getRiskColor(summary.riskLevel), fontWeight: '700' }}>
-                    {summary.riskLevel === 'high' ? 'High Risk' : summary.riskLevel === 'medium' ? 'Medium Risk' : 'Low Risk'}
+                  <div
+                    className="text-sm mb-1"
+                    style={{ color: getRiskColor(summary.riskLevel), fontWeight: '700' }}
+                  >
+                    {summary.riskLevel === 'high'
+                      ? 'High Risk'
+                      : summary.riskLevel === 'medium'
+                        ? 'Medium Risk'
+                        : 'Low Risk'}
                   </div>
                   <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
                     {summary.riskMessage}
@@ -899,14 +1239,27 @@ export function PaymentProposal() {
 
             {/* Account Details */}
             <div className="mt-6 pt-6" style={{ borderTop: '2px solid var(--color-silver)' }}>
-              <div className="text-xs mb-3" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', textTransform: 'uppercase' }}>
+              <div
+                className="text-xs mb-3"
+                style={{
+                  color: 'var(--color-mercury-grey)',
+                  fontWeight: '700',
+                  textTransform: 'uppercase',
+                }}
+              >
                 Payment Accounts
               </div>
-              
+
               {/* INR Account */}
-              <div className="mb-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+              <div
+                className="mb-3 p-3 rounded-lg"
+                style={{ backgroundColor: 'var(--color-cloud)' }}
+              >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+                  <span
+                    className="text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
                     {cashBalances.INR.accountName}
                   </span>
                 </div>
@@ -918,7 +1271,10 @@ export function PaymentProposal() {
               {/* USD Account */}
               <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
+                  <span
+                    className="text-xs"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
                     {cashBalances.USD.accountName}
                   </span>
                 </div>

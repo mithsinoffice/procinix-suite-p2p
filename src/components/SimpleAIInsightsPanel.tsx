@@ -27,7 +27,11 @@ interface SimpleAIInsightsPanelProps {
   onActionClick: (actionId: string) => void;
 }
 
-export function SimpleAIInsightsPanel({ insights, actions, onActionClick }: SimpleAIInsightsPanelProps) {
+export function SimpleAIInsightsPanel({
+  insights,
+  actions,
+  onActionClick,
+}: SimpleAIInsightsPanelProps) {
   const getInsightIcon = (type: SimpleAIInsight['type']) => {
     switch (type) {
       case 'success':
@@ -48,26 +52,26 @@ export function SimpleAIInsightsPanel({ insights, actions, onActionClick }: Simp
         return {
           bg: 'bg-green-50',
           border: 'border-green-200',
-          text: 'text-green-900'
+          text: 'text-green-900',
         };
       case 'warning':
         return {
           bg: 'bg-yellow-50',
           border: 'border-yellow-200',
-          text: 'text-yellow-900'
+          text: 'text-yellow-900',
         };
       case 'error':
         return {
           bg: 'bg-red-50',
           border: 'border-red-200',
-          text: 'text-red-900'
+          text: 'text-red-900',
         };
       case 'info':
       default:
         return {
           bg: 'bg-blue-50',
           border: 'border-blue-200',
-          text: 'text-blue-900'
+          text: 'text-blue-900',
         };
     }
   };
@@ -105,9 +109,7 @@ export function SimpleAIInsightsPanel({ insights, actions, onActionClick }: Simp
                 )}
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs text-gray-400">{insight.category}</span>
-                  <span className="text-xs text-gray-500">
-                    Confidence: {insight.confidence}%
-                  </span>
+                  <span className="text-xs text-gray-500">Confidence: {insight.confidence}%</span>
                 </div>
               </div>
             );
@@ -130,16 +132,20 @@ export function SimpleAIInsightsPanel({ insights, actions, onActionClick }: Simp
               }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className={`text-sm ${
-                  action.type === 'primary' ? 'text-teal-900' : 'text-gray-900'
-                }`}>
+                <span
+                  className={`text-sm ${
+                    action.type === 'primary' ? 'text-teal-900' : 'text-gray-900'
+                  }`}
+                >
                   {action.label}
                 </span>
-                <span className={`text-xs px-2 py-0.5 rounded ${
-                  action.type === 'primary'
-                    ? 'bg-teal-100 text-teal-700'
-                    : 'bg-gray-100 text-gray-700'
-                }`}>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded ${
+                    action.type === 'primary'
+                      ? 'bg-teal-100 text-teal-700'
+                      : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
                   {action.type}
                 </span>
               </div>

@@ -2,9 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { ChevronDown, Filter } from 'lucide-react';
 
 export function toggleMultiSelect(current: string[], value: string) {
-  return current.includes(value)
-    ? current.filter((entry) => entry !== value)
-    : [...current, value];
+  return current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value];
 }
 
 export function PremiumFilterMenu({
@@ -59,7 +57,9 @@ export function PremiumFilterMenu({
         >
           <div className="flex flex-wrap gap-2 mb-3">
             {selected.length === 0 ? (
-              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>No filters selected</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                No filters selected
+              </span>
             ) : (
               selected.map((value) => (
                 <span
@@ -91,7 +91,11 @@ export function PremiumFilterMenu({
                   {isSelected && (
                     <span
                       className="px-2 py-0.5 rounded-full text-[11px]"
-                      style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF', fontWeight: 700 }}
+                      style={{
+                        backgroundColor: 'var(--color-teal)',
+                        color: '#FFFFFF',
+                        fontWeight: 700,
+                      }}
                     >
                       On
                     </span>

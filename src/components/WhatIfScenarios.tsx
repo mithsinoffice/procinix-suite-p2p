@@ -1,10 +1,28 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Play, Save, Trash2, Copy, AlertTriangle, TrendingUp, TrendingDown
+  Plus,
+  Play,
+  Save,
+  Trash2,
+  Copy,
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 import { useBudgetData, ScenarioType } from '../contexts/BudgetDataContext';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 export function WhatIfScenarios() {
   const navigate = useNavigate();
@@ -15,7 +33,7 @@ export function WhatIfScenarios() {
   const [adjustmentPercent, setAdjustmentPercent] = useState(0);
   const [timeHorizon, setTimeHorizon] = useState('FY2025');
 
-  const activeBudgets = budgets.filter(b => b.status === 'Approved');
+  const activeBudgets = budgets.filter((b) => b.status === 'Approved');
   const totalBudget = activeBudgets.reduce((sum, b) => sum + b.totalAmount, 0);
   const totalCommitted = activeBudgets.reduce((sum, b) => sum + b.committed, 0);
   const totalActual = activeBudgets.reduce((sum, b) => sum + b.actual, 0);
@@ -25,9 +43,11 @@ export function WhatIfScenarios() {
   const projectedCommitted = totalCommitted * (1 + adjustmentPercent / 100);
   const projectedActual = totalActual * (1 + adjustmentPercent / 100);
   const projectedAvailable = projectedBudget - projectedCommitted - projectedActual;
-  const utilizationPercent = projectedBudget > 0 ? ((projectedCommitted + projectedActual) / projectedBudget * 100) : 0;
+  const utilizationPercent =
+    projectedBudget > 0 ? ((projectedCommitted + projectedActual) / projectedBudget) * 100 : 0;
 
-  const breachRisk = utilizationPercent >= 95 ? 'High' : utilizationPercent >= 85 ? 'Medium' : 'Low';
+  const breachRisk =
+    utilizationPercent >= 95 ? 'High' : utilizationPercent >= 85 ? 'Medium' : 'Low';
 
   // Scenario comparison data
   const comparisonData = [
@@ -36,25 +56,38 @@ export function WhatIfScenarios() {
       Budget: totalBudget / 1000000,
       Committed: totalCommitted / 1000000,
       Actual: totalActual / 1000000,
-      Available: (totalBudget - totalCommitted - totalActual) / 1000000
+      Available: (totalBudget - totalCommitted - totalActual) / 1000000,
     },
     {
       name: 'Projected',
       Budget: projectedBudget / 1000000,
       Committed: projectedCommitted / 1000000,
       Actual: projectedActual / 1000000,
-      Available: projectedAvailable / 1000000
-    }
+      Available: projectedAvailable / 1000000,
+    },
   ];
 
   // Budget burn projection
-  const months = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+  const months = [
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+  ];
   const burnProjection = months.map((month, index) => {
     const progress = (index + 1) / 12;
     return {
       month,
-      current: (totalActual / totalBudget * 100) * progress,
-      projected: (projectedActual / projectedBudget * 100) * progress
+      current: (totalActual / totalBudget) * 100 * progress,
+      projected: (projectedActual / projectedBudget) * 100 * progress,
     };
   });
 
@@ -76,7 +109,7 @@ export function WhatIfScenarios() {
       projectedAvailable,
       breachRisk: breachRisk as 'Low' | 'Medium' | 'High',
       createdBy: 'Current User',
-      createdDate: new Date().toISOString().split('T')[0]
+      createdDate: new Date().toISOString().split('T')[0],
     };
 
     addScenario(newScenario);
@@ -87,7 +120,7 @@ export function WhatIfScenarios() {
     { name: 'Conservative (-10%)', type: 'Conservative' as ScenarioType, adjustment: -10 },
     { name: 'Base (0%)', type: 'Base' as ScenarioType, adjustment: 0 },
     { name: 'Optimistic (+15%)', type: 'Optimistic' as ScenarioType, adjustment: 15 },
-    { name: 'Growth (+25%)', type: 'Custom' as ScenarioType, adjustment: 25 }
+    { name: 'Growth (+25%)', type: 'Custom' as ScenarioType, adjustment: 25 },
   ];
 
   return (
@@ -97,7 +130,9 @@ export function WhatIfScenarios() {
         <div className="px-6 py-4">
           <div>
             <h1 className="text-[var(--color-ink)]">What-If & Scenario Analysis</h1>
-            <p className="text-[var(--color-mercury-grey)] text-sm">Model budget scenarios with adjustable parameters and impact analysis</p>
+            <p className="text-[var(--color-mercury-grey)] text-sm">
+              Model budget scenarios with adjustable parameters and impact analysis
+            </p>
           </div>
         </div>
       </div>
@@ -112,7 +147,9 @@ export function WhatIfScenarios() {
               <div className="space-y-3">
                 <div>
                   <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Total Budget</p>
-                  <p className="text-xl text-[var(--color-ink)]">₹{(totalBudget / 1000000).toFixed(2)}M</p>
+                  <p className="text-xl text-[var(--color-ink)]">
+                    ₹{(totalBudget / 1000000).toFixed(2)}M
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Committed</p>
@@ -120,11 +157,15 @@ export function WhatIfScenarios() {
                 </div>
                 <div>
                   <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Actual</p>
-                  <p className="text-lg text-px-teal-dark">₹{(totalActual / 1000000).toFixed(2)}M</p>
+                  <p className="text-lg text-px-teal-dark">
+                    ₹{(totalActual / 1000000).toFixed(2)}M
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Available</p>
-                  <p className="text-lg text-green-600">₹{((totalBudget - totalCommitted - totalActual) / 1000000).toFixed(2)}M</p>
+                  <p className="text-lg text-green-600">
+                    ₹{((totalBudget - totalCommitted - totalActual) / 1000000).toFixed(2)}M
+                  </p>
                 </div>
               </div>
             </div>
@@ -135,7 +176,9 @@ export function WhatIfScenarios() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Scenario Name</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Scenario Name
+                  </label>
                   <input
                     type="text"
                     value={scenarioName}
@@ -146,7 +189,9 @@ export function WhatIfScenarios() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Scenario Type</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Scenario Type
+                  </label>
                   <select
                     value={scenarioType}
                     onChange={(e) => setScenarioType(e.target.value as ScenarioType)}
@@ -176,7 +221,8 @@ export function WhatIfScenarios() {
 
                 <div>
                   <label className="block text-sm text-[var(--color-ink)] mb-2">
-                    Budget Adjustment: {adjustmentPercent > 0 ? '+' : ''}{adjustmentPercent}%
+                    Budget Adjustment: {adjustmentPercent > 0 ? '+' : ''}
+                    {adjustmentPercent}%
                   </label>
                   <input
                     type="range"
@@ -231,16 +277,27 @@ export function WhatIfScenarios() {
             <div className="grid grid-cols-4 gap-4">
               <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
                 <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Projected Budget</p>
-                <p className="text-2xl text-[var(--color-ink)]">₹{(projectedBudget / 1000000).toFixed(2)}M</p>
-                <p className={`text-xs mt-1 flex items-center gap-1 ${adjustmentPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {adjustmentPercent >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                  {adjustmentPercent > 0 ? '+' : ''}{adjustmentPercent}%
+                <p className="text-2xl text-[var(--color-ink)]">
+                  ₹{(projectedBudget / 1000000).toFixed(2)}M
+                </p>
+                <p
+                  className={`text-xs mt-1 flex items-center gap-1 ${adjustmentPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                >
+                  {adjustmentPercent >= 0 ? (
+                    <TrendingUp className="w-3 h-3" />
+                  ) : (
+                    <TrendingDown className="w-3 h-3" />
+                  )}
+                  {adjustmentPercent > 0 ? '+' : ''}
+                  {adjustmentPercent}%
                 </p>
               </div>
 
               <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
                 <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Projected Committed</p>
-                <p className="text-2xl text-blue-600">₹{(projectedCommitted / 1000000).toFixed(2)}M</p>
+                <p className="text-2xl text-blue-600">
+                  ₹{(projectedCommitted / 1000000).toFixed(2)}M
+                </p>
                 <p className="text-xs text-[var(--color-mercury-grey)] mt-1">
                   {((projectedCommitted / projectedBudget) * 100).toFixed(1)}% of budget
                 </p>
@@ -248,7 +305,9 @@ export function WhatIfScenarios() {
 
               <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
                 <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Projected Available</p>
-                <p className="text-2xl text-green-600">₹{(projectedAvailable / 1000000).toFixed(2)}M</p>
+                <p className="text-2xl text-green-600">
+                  ₹{(projectedAvailable / 1000000).toFixed(2)}M
+                </p>
                 <p className="text-xs text-[var(--color-mercury-grey)] mt-1">
                   {((projectedAvailable / projectedBudget) * 100).toFixed(1)}% remaining
                 </p>
@@ -256,27 +315,52 @@ export function WhatIfScenarios() {
 
               <div className="bg-white rounded-lg border border-[var(--color-silver)] p-4">
                 <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Breach Risk</p>
-                <p className={`text-2xl ${
-                  breachRisk === 'High' ? 'text-red-600' :
-                  breachRisk === 'Medium' ? 'text-yellow-600' :
-                  'text-green-600'
-                }`}>
+                <p
+                  className={`text-2xl ${
+                    breachRisk === 'High'
+                      ? 'text-red-600'
+                      : breachRisk === 'Medium'
+                        ? 'text-yellow-600'
+                        : 'text-green-600'
+                  }`}
+                >
                   {breachRisk}
                 </p>
-                <p className="text-xs text-[var(--color-mercury-grey)] mt-1">{utilizationPercent.toFixed(1)}% utilized</p>
+                <p className="text-xs text-[var(--color-mercury-grey)] mt-1">
+                  {utilizationPercent.toFixed(1)}% utilized
+                </p>
               </div>
             </div>
 
             {/* Scenario Comparison Chart */}
             <div className="bg-white rounded-lg border border-[var(--color-silver)] p-6">
-              <h2 className="text-[var(--color-ink)] mb-4">Scenario Comparison - Current vs Projected</h2>
+              <h2 className="text-[var(--color-ink)] mb-4">
+                Scenario Comparison - Current vs Projected
+              </h2>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={comparisonData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                  <XAxis dataKey="name" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} label={{ value: 'Amount (₹M)', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' } }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#fff', border: '1px solid var(--color-silver)', borderRadius: '8px' }}
+                  <XAxis
+                    dataKey="name"
+                    stroke="var(--color-mercury-grey)"
+                    style={{ fontSize: '12px' }}
+                  />
+                  <YAxis
+                    stroke="var(--color-mercury-grey)"
+                    style={{ fontSize: '12px' }}
+                    label={{
+                      value: 'Amount (₹M)',
+                      angle: -90,
+                      position: 'insideLeft',
+                      style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' },
+                    }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid var(--color-silver)',
+                      borderRadius: '8px',
+                    }}
                     formatter={(value: number) => `₹${value.toFixed(2)}M`}
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -290,61 +374,123 @@ export function WhatIfScenarios() {
 
             {/* Budget Burn Projection */}
             <div className="bg-white rounded-lg border border-[var(--color-silver)] p-6">
-              <h2 className="text-[var(--color-ink)] mb-4">Budget Burn Projection - Cumulative %</h2>
+              <h2 className="text-[var(--color-ink)] mb-4">
+                Budget Burn Projection - Cumulative %
+              </h2>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={burnProjection}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-silver)" />
-                  <XAxis dataKey="month" stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="var(--color-mercury-grey)" style={{ fontSize: '12px' }} domain={[0, 100]} label={{ value: 'Utilization %', angle: -90, position: 'insideLeft', style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' } }} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#fff', border: '1px solid var(--color-silver)', borderRadius: '8px' }}
+                  <XAxis
+                    dataKey="month"
+                    stroke="var(--color-mercury-grey)"
+                    style={{ fontSize: '12px' }}
+                  />
+                  <YAxis
+                    stroke="var(--color-mercury-grey)"
+                    style={{ fontSize: '12px' }}
+                    domain={[0, 100]}
+                    label={{
+                      value: 'Utilization %',
+                      angle: -90,
+                      position: 'insideLeft',
+                      style: { fontSize: '12px', fill: 'var(--color-mercury-grey)' },
+                    }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid var(--color-silver)',
+                      borderRadius: '8px',
+                    }}
                     formatter={(value: number) => `${value.toFixed(1)}%`}
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  <Line type="monotone" dataKey="current" stroke="var(--color-teal)" strokeWidth={2} dot={{ fill: 'var(--color-teal)', r: 4 }} name="Current Burn" />
-                  <Line type="monotone" dataKey="projected" stroke="#3B82F6" strokeWidth={2} strokeDasharray="5 5" dot={{ fill: '#3B82F6', r: 4 }} name="Projected Burn" />
+                  <Line
+                    type="monotone"
+                    dataKey="current"
+                    stroke="var(--color-teal)"
+                    strokeWidth={2}
+                    dot={{ fill: 'var(--color-teal)', r: 4 }}
+                    name="Current Burn"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="projected"
+                    stroke="#3B82F6"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={{ fill: '#3B82F6', r: 4 }}
+                    name="Projected Burn"
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
 
             {/* Impact Analysis */}
-            <div className={`rounded-lg border p-6 ${
-              breachRisk === 'High' ? 'bg-red-50 border-red-200' :
-              breachRisk === 'Medium' ? 'bg-yellow-50 border-yellow-200' :
-              'bg-green-50 border-green-200'
-            }`}>
+            <div
+              className={`rounded-lg border p-6 ${
+                breachRisk === 'High'
+                  ? 'bg-red-50 border-red-200'
+                  : breachRisk === 'Medium'
+                    ? 'bg-yellow-50 border-yellow-200'
+                    : 'bg-green-50 border-green-200'
+              }`}
+            >
               <div className="flex items-start gap-3">
-                <AlertTriangle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                  breachRisk === 'High' ? 'text-red-600' :
-                  breachRisk === 'Medium' ? 'text-yellow-600' :
-                  'text-green-600'
-                }`} />
+                <AlertTriangle
+                  className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                    breachRisk === 'High'
+                      ? 'text-red-600'
+                      : breachRisk === 'Medium'
+                        ? 'text-yellow-600'
+                        : 'text-green-600'
+                  }`}
+                />
                 <div className="flex-1">
-                  <h3 className={
-                    breachRisk === 'High' ? 'text-red-900' :
-                    breachRisk === 'Medium' ? 'text-yellow-900' :
-                    'text-green-900'
-                  }>Impact Analysis</h3>
-                  <div className={`mt-2 space-y-2 text-sm ${
-                    breachRisk === 'High' ? 'text-red-700' :
-                    breachRisk === 'Medium' ? 'text-yellow-700' :
-                    'text-green-700'
-                  }`}>
+                  <h3
+                    className={
+                      breachRisk === 'High'
+                        ? 'text-red-900'
+                        : breachRisk === 'Medium'
+                          ? 'text-yellow-900'
+                          : 'text-green-900'
+                    }
+                  >
+                    Impact Analysis
+                  </h3>
+                  <div
+                    className={`mt-2 space-y-2 text-sm ${
+                      breachRisk === 'High'
+                        ? 'text-red-700'
+                        : breachRisk === 'Medium'
+                          ? 'text-yellow-700'
+                          : 'text-green-700'
+                    }`}
+                  >
                     <p>
-                      • <strong>Budget Change:</strong> {adjustmentPercent > 0 ? 'Increase' : adjustmentPercent < 0 ? 'Decrease' : 'No change'} of {Math.abs(adjustmentPercent)}% 
-                      (₹{(Math.abs(projectedBudget - totalBudget) / 1000000).toFixed(2)}M)
+                      • <strong>Budget Change:</strong>{' '}
+                      {adjustmentPercent > 0
+                        ? 'Increase'
+                        : adjustmentPercent < 0
+                          ? 'Decrease'
+                          : 'No change'}{' '}
+                      of {Math.abs(adjustmentPercent)}% (₹
+                      {(Math.abs(projectedBudget - totalBudget) / 1000000).toFixed(2)}M)
                     </p>
                     <p>
-                      • <strong>Available Budget:</strong> ₹{(projectedAvailable / 1000000).toFixed(2)}M 
-                      ({((projectedAvailable / projectedBudget) * 100).toFixed(1)}% of total)
+                      • <strong>Available Budget:</strong> ₹
+                      {(projectedAvailable / 1000000).toFixed(2)}M (
+                      {((projectedAvailable / projectedBudget) * 100).toFixed(1)}% of total)
                     </p>
                     <p>
-                      • <strong>Procurement Capacity:</strong> {projectedAvailable > 0 
-                        ? `Can accommodate additional POs up to ₹${(projectedAvailable / 1000000).toFixed(2)}M` 
+                      • <strong>Procurement Capacity:</strong>{' '}
+                      {projectedAvailable > 0
+                        ? `Can accommodate additional POs up to ₹${(projectedAvailable / 1000000).toFixed(2)}M`
                         : 'Budget fully utilized or exceeded'}
                     </p>
                     <p>
-                      • <strong>Risk Assessment:</strong> {breachRisk} risk of budget breach based on current trajectory
+                      • <strong>Risk Assessment:</strong> {breachRisk} risk of budget breach based
+                      on current trajectory
                     </p>
                   </div>
                 </div>
@@ -357,34 +503,48 @@ export function WhatIfScenarios() {
                 <h2 className="text-[var(--color-ink)]">Saved Scenarios</h2>
               </div>
               <div className="divide-y divide-[var(--color-silver)]">
-                {scenarios.map(scenario => (
+                {scenarios.map((scenario) => (
                   <div key={scenario.id} className="px-6 py-4 hover:bg-[var(--color-cloud)]">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-[var(--color-ink)]">{scenario.scenarioName}</h3>
-                          <span className={`px-2 py-0.5 rounded text-xs ${
-                            scenario.scenarioType === 'Optimistic' ? 'bg-green-100 text-green-700' :
-                            scenario.scenarioType === 'Conservative' ? 'bg-red-100 text-red-700' :
-                            scenario.scenarioType === 'Base' ? 'bg-blue-100 text-blue-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs ${
+                              scenario.scenarioType === 'Optimistic'
+                                ? 'bg-green-100 text-green-700'
+                                : scenario.scenarioType === 'Conservative'
+                                  ? 'bg-red-100 text-red-700'
+                                  : scenario.scenarioType === 'Base'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-gray-100 text-gray-700'
+                            }`}
+                          >
                             {scenario.scenarioType}
                           </span>
-                          <span className={`px-2 py-0.5 rounded text-xs ${
-                            scenario.breachRisk === 'High' ? 'bg-red-100 text-red-700' :
-                            scenario.breachRisk === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs ${
+                              scenario.breachRisk === 'High'
+                                ? 'bg-red-100 text-red-700'
+                                : scenario.breachRisk === 'Medium'
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : 'bg-green-100 text-green-700'
+                            }`}
+                          >
                             {scenario.breachRisk} Risk
                           </span>
                         </div>
                         <div className="flex items-center gap-6 text-sm text-[var(--color-mercury-grey)]">
-                          <span>Adjustment: {scenario.adjustmentPercent > 0 ? '+' : ''}{scenario.adjustmentPercent}%</span>
+                          <span>
+                            Adjustment: {scenario.adjustmentPercent > 0 ? '+' : ''}
+                            {scenario.adjustmentPercent}%
+                          </span>
                           <span>•</span>
                           <span>Budget: ₹{(scenario.projectedBudget / 1000000).toFixed(2)}M</span>
                           <span>•</span>
-                          <span>Available: ₹{(scenario.projectedAvailable / 1000000).toFixed(2)}M</span>
+                          <span>
+                            Available: ₹{(scenario.projectedAvailable / 1000000).toFixed(2)}M
+                          </span>
                           <span>•</span>
                           <span>{scenario.createdDate}</span>
                         </div>

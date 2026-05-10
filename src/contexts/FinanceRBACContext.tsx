@@ -32,34 +32,111 @@ const FinanceRBACContext = createContext<FinanceRBACContextType | undefined>(und
 // Comprehensive permission definitions
 const PERMISSIONS = {
   // AP Automation
-  PROCUREMENT: { VIEW: 'PROCUREMENT.VIEW', CREATE: 'PROCUREMENT.CREATE', EDIT: 'PROCUREMENT.EDIT', APPROVE: 'PROCUREMENT.APPROVE' },
-  AP_INVOICE: { VIEW: 'AP_INVOICE.VIEW', CREATE: 'AP_INVOICE.CREATE', EDIT: 'AP_INVOICE.EDIT', APPROVE: 'AP_INVOICE.APPROVE', POST: 'AP_INVOICE.POST' },
-  PAYMENT: { VIEW: 'PAYMENT.VIEW', CREATE: 'PAYMENT.CREATE', EXECUTE: 'PAYMENT.EXECUTE', APPROVE: 'PAYMENT.APPROVE' },
-  ADVANCE: { VIEW: 'ADVANCE.VIEW', CREATE: 'ADVANCE.CREATE', EDIT: 'ADVANCE.EDIT', APPROVE: 'ADVANCE.APPROVE', PROCESS: 'ADVANCE.PROCESS' },
-  VENDOR: { VIEW: 'VENDOR.VIEW', CREATE: 'VENDOR.CREATE', EDIT: 'VENDOR.EDIT', APPROVE: 'VENDOR.APPROVE' },
+  PROCUREMENT: {
+    VIEW: 'PROCUREMENT.VIEW',
+    CREATE: 'PROCUREMENT.CREATE',
+    EDIT: 'PROCUREMENT.EDIT',
+    APPROVE: 'PROCUREMENT.APPROVE',
+  },
+  AP_INVOICE: {
+    VIEW: 'AP_INVOICE.VIEW',
+    CREATE: 'AP_INVOICE.CREATE',
+    EDIT: 'AP_INVOICE.EDIT',
+    APPROVE: 'AP_INVOICE.APPROVE',
+    POST: 'AP_INVOICE.POST',
+  },
+  PAYMENT: {
+    VIEW: 'PAYMENT.VIEW',
+    CREATE: 'PAYMENT.CREATE',
+    EXECUTE: 'PAYMENT.EXECUTE',
+    APPROVE: 'PAYMENT.APPROVE',
+  },
+  ADVANCE: {
+    VIEW: 'ADVANCE.VIEW',
+    CREATE: 'ADVANCE.CREATE',
+    EDIT: 'ADVANCE.EDIT',
+    APPROVE: 'ADVANCE.APPROVE',
+    PROCESS: 'ADVANCE.PROCESS',
+  },
+  VENDOR: {
+    VIEW: 'VENDOR.VIEW',
+    CREATE: 'VENDOR.CREATE',
+    EDIT: 'VENDOR.EDIT',
+    APPROVE: 'VENDOR.APPROVE',
+  },
   SOURCING: { VIEW: 'SOURCING.VIEW', CREATE: 'SOURCING.CREATE', MANAGE: 'SOURCING.MANAGE' },
-  BUDGET: { VIEW: 'BUDGET.VIEW', CREATE: 'BUDGET.CREATE', EDIT: 'BUDGET.EDIT', APPROVE: 'BUDGET.APPROVE' },
-  FIXED_ASSET: { VIEW: 'FIXED_ASSET.VIEW', CREATE: 'FIXED_ASSET.CREATE', EDIT: 'FIXED_ASSET.EDIT', DEPRECIATE: 'FIXED_ASSET.DEPRECIATE' },
-  
+  BUDGET: {
+    VIEW: 'BUDGET.VIEW',
+    CREATE: 'BUDGET.CREATE',
+    EDIT: 'BUDGET.EDIT',
+    APPROVE: 'BUDGET.APPROVE',
+  },
+  FIXED_ASSET: {
+    VIEW: 'FIXED_ASSET.VIEW',
+    CREATE: 'FIXED_ASSET.CREATE',
+    EDIT: 'FIXED_ASSET.EDIT',
+    DEPRECIATE: 'FIXED_ASSET.DEPRECIATE',
+  },
+
   // AR Automation
-  CUSTOMER: { VIEW: 'CUSTOMER.VIEW', CREATE: 'CUSTOMER.CREATE', EDIT: 'CUSTOMER.EDIT', APPROVE: 'CUSTOMER.APPROVE' },
-  AR_INVOICE: { VIEW: 'AR_INVOICE.VIEW', CREATE: 'AR_INVOICE.CREATE', EDIT: 'AR_INVOICE.EDIT', APPROVE: 'AR_INVOICE.APPROVE' },
-  COLLECTION: { VIEW: 'COLLECTION.VIEW', CREATE: 'COLLECTION.CREATE', MANAGE: 'COLLECTION.MANAGE', APPROVE: 'COLLECTION.APPROVE' },
-  CREDIT_NOTE: { VIEW: 'CREDIT_NOTE.VIEW', CREATE: 'CREDIT_NOTE.CREATE', APPROVE: 'CREDIT_NOTE.APPROVE' },
+  CUSTOMER: {
+    VIEW: 'CUSTOMER.VIEW',
+    CREATE: 'CUSTOMER.CREATE',
+    EDIT: 'CUSTOMER.EDIT',
+    APPROVE: 'CUSTOMER.APPROVE',
+  },
+  AR_INVOICE: {
+    VIEW: 'AR_INVOICE.VIEW',
+    CREATE: 'AR_INVOICE.CREATE',
+    EDIT: 'AR_INVOICE.EDIT',
+    APPROVE: 'AR_INVOICE.APPROVE',
+  },
+  COLLECTION: {
+    VIEW: 'COLLECTION.VIEW',
+    CREATE: 'COLLECTION.CREATE',
+    MANAGE: 'COLLECTION.MANAGE',
+    APPROVE: 'COLLECTION.APPROVE',
+  },
+  CREDIT_NOTE: {
+    VIEW: 'CREDIT_NOTE.VIEW',
+    CREATE: 'CREDIT_NOTE.CREATE',
+    APPROVE: 'CREDIT_NOTE.APPROVE',
+  },
   REVENUE: { VIEW: 'REVENUE.VIEW', RECOGNIZE: 'REVENUE.RECOGNIZE', DEFER: 'REVENUE.DEFER' },
-  
+
   // R2R Automation
-  GENERAL_LEDGER: { VIEW: 'GENERAL_LEDGER.VIEW', POST: 'GENERAL_LEDGER.POST', REVERSE: 'GENERAL_LEDGER.REVERSE' },
-  FINANCIAL_CLOSE: { VIEW: 'FINANCIAL_CLOSE.VIEW', EXECUTE: 'FINANCIAL_CLOSE.EXECUTE', APPROVE: 'FINANCIAL_CLOSE.APPROVE' },
-  FINANCIAL_STATEMENT: { VIEW: 'FINANCIAL_STATEMENT.VIEW', GENERATE: 'FINANCIAL_STATEMENT.GENERATE', APPROVE: 'FINANCIAL_STATEMENT.APPROVE' },
-  CONSOLIDATION: { VIEW: 'CONSOLIDATION.VIEW', EXECUTE: 'CONSOLIDATION.EXECUTE', APPROVE: 'CONSOLIDATION.APPROVE' },
+  GENERAL_LEDGER: {
+    VIEW: 'GENERAL_LEDGER.VIEW',
+    POST: 'GENERAL_LEDGER.POST',
+    REVERSE: 'GENERAL_LEDGER.REVERSE',
+  },
+  FINANCIAL_CLOSE: {
+    VIEW: 'FINANCIAL_CLOSE.VIEW',
+    EXECUTE: 'FINANCIAL_CLOSE.EXECUTE',
+    APPROVE: 'FINANCIAL_CLOSE.APPROVE',
+  },
+  FINANCIAL_STATEMENT: {
+    VIEW: 'FINANCIAL_STATEMENT.VIEW',
+    GENERATE: 'FINANCIAL_STATEMENT.GENERATE',
+    APPROVE: 'FINANCIAL_STATEMENT.APPROVE',
+  },
+  CONSOLIDATION: {
+    VIEW: 'CONSOLIDATION.VIEW',
+    EXECUTE: 'CONSOLIDATION.EXECUTE',
+    APPROVE: 'CONSOLIDATION.APPROVE',
+  },
   CASHFLOW: { VIEW: 'CASHFLOW.VIEW', FORECAST: 'CASHFLOW.FORECAST', ANALYZE: 'CASHFLOW.ANALYZE' },
   VARIANCE: { VIEW: 'VARIANCE.VIEW', ANALYZE: 'VARIANCE.ANALYZE', COMMENT: 'VARIANCE.COMMENT' },
-  
+
   // Masters & Reports
-  MASTERS: { VIEW: 'MASTERS.VIEW', CREATE: 'MASTERS.CREATE', EDIT: 'MASTERS.EDIT', APPROVE: 'MASTERS.APPROVE' },
+  MASTERS: {
+    VIEW: 'MASTERS.VIEW',
+    CREATE: 'MASTERS.CREATE',
+    EDIT: 'MASTERS.EDIT',
+    APPROVE: 'MASTERS.APPROVE',
+  },
   REPORTS: { VIEW: 'REPORTS.VIEW', EXPORT: 'REPORTS.EXPORT', SCHEDULE: 'REPORTS.SCHEDULE' },
-  
+
   // Global
   DASHBOARD: { VIEW: 'DASHBOARD.VIEW', CUSTOMIZE: 'DASHBOARD.CUSTOMIZE' },
   APPROVALS: { VIEW: 'APPROVALS.VIEW', APPROVE: 'APPROVALS.APPROVE', REJECT: 'APPROVALS.REJECT' },
@@ -116,7 +193,7 @@ const userRolesData: UserRole[] = [
       PERMISSIONS.AUDIT_LOG.VIEW,
       PERMISSIONS.AUDIT_LOG.EXPORT,
       PERMISSIONS.SETTINGS.VIEW,
-    ]
+    ],
   },
   {
     roleId: 'ap-manager',
@@ -163,7 +240,7 @@ const userRolesData: UserRole[] = [
       PERMISSIONS.TASKS.MANAGE,
       PERMISSIONS.AUDIT_LOG.VIEW,
       PERMISSIONS.SETTINGS.VIEW,
-    ]
+    ],
   },
   {
     roleId: 'ap-clerk',
@@ -179,7 +256,7 @@ const userRolesData: UserRole[] = [
       PERMISSIONS.REPORTS.VIEW,
       PERMISSIONS.DASHBOARD.VIEW,
       PERMISSIONS.TASKS.VIEW,
-    ]
+    ],
   },
   {
     roleId: 'ar-manager',
@@ -216,7 +293,7 @@ const userRolesData: UserRole[] = [
       PERMISSIONS.TASKS.MANAGE,
       PERMISSIONS.AUDIT_LOG.VIEW,
       PERMISSIONS.SETTINGS.VIEW,
-    ]
+    ],
   },
   {
     roleId: 'finance-controller',
@@ -258,7 +335,7 @@ const userRolesData: UserRole[] = [
       PERMISSIONS.TASKS.MANAGE,
       PERMISSIONS.AUDIT_LOG.VIEW,
       PERMISSIONS.SETTINGS.VIEW,
-    ]
+    ],
   },
   {
     roleId: 'accountant',
@@ -281,7 +358,7 @@ const userRolesData: UserRole[] = [
       PERMISSIONS.REPORTS.VIEW,
       PERMISSIONS.DASHBOARD.VIEW,
       PERMISSIONS.TASKS.VIEW,
-    ]
+    ],
   },
   {
     roleId: 'auditor',
@@ -313,8 +390,8 @@ const userRolesData: UserRole[] = [
       PERMISSIONS.DASHBOARD.VIEW,
       PERMISSIONS.AUDIT_LOG.VIEW,
       PERMISSIONS.AUDIT_LOG.EXPORT,
-    ]
-  }
+    ],
+  },
 ];
 
 const companiesData: Company[] = [
@@ -329,14 +406,14 @@ export function FinanceRBACProvider({ children }: { children: ReactNode }) {
   const [currentCompany, setCurrentCompany] = useState<Company>(companiesData[0]);
 
   const switchRole = (roleId: string) => {
-    const role = userRolesData.find(r => r.roleId === roleId);
+    const role = userRolesData.find((r) => r.roleId === roleId);
     if (role) {
       setCurrentRole(role);
     }
   };
 
   const switchCompany = (companyId: string) => {
-    const company = companiesData.find(c => c.id === companyId);
+    const company = companiesData.find((c) => c.id === companyId);
     if (company) {
       setCurrentCompany(company);
     }
@@ -347,13 +424,13 @@ export function FinanceRBACProvider({ children }: { children: ReactNode }) {
   };
 
   const hasAnyPermission = (permissions: PermissionKey[]): boolean => {
-    return permissions.some(perm => currentRole.permissions.includes(perm));
+    return permissions.some((perm) => currentRole.permissions.includes(perm));
   };
 
   const hasCreatePermission = (resourcePrefix: string): boolean => {
     // Check if user has any CREATE permission for the resource
-    return currentRole.permissions.some(perm => 
-      perm.startsWith(resourcePrefix) && perm.includes('.CREATE')
+    return currentRole.permissions.some(
+      (perm) => perm.startsWith(resourcePrefix) && perm.includes('.CREATE')
     );
   };
 

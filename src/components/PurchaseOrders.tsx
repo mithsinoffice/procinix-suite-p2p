@@ -13,25 +13,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PremiumActionButton, PremiumFilterMenu, toggleMultiSelect } from './ui/premium-register';
-
-interface PurchaseOrder {
-  id: string;
-  poNumber: string;
-  vendor: string;
-  date: string;
-  amount: number;
-  status: 'Draft' | 'Issued' | 'Partially Received' | 'Fully Received' | 'Closed / Cancelled';
-  department: string;
-}
-
-const mockPurchaseOrders: PurchaseOrder[] = [
-  { id: '1', poNumber: 'PO-2024-001', vendor: 'Acme Supplies Ltd', date: '2024-12-10', amount: 125000, status: 'Issued', department: 'IT' },
-  { id: '2', poNumber: 'PO-2024-002', vendor: 'Global Tech Solutions', date: '2024-12-09', amount: 89500, status: 'Partially Received', department: 'Operations' },
-  { id: '3', poNumber: 'PO-2024-003', vendor: 'Office Depot India', date: '2024-12-08', amount: 45200, status: 'Fully Received', department: 'Admin' },
-  { id: '4', poNumber: 'PO-2024-004', vendor: 'Engineering Parts Co', date: '2024-12-07', amount: 210000, status: 'Issued', department: 'Manufacturing' },
-  { id: '5', poNumber: 'PO-2024-005', vendor: 'Marketing Materials Inc', date: '2024-12-06', amount: 68000, status: 'Draft', department: 'Marketing' },
-  { id: '6', poNumber: 'PO-2024-006', vendor: 'Facility Services Ltd', date: '2024-12-05', amount: 32500, status: 'Closed / Cancelled', department: 'Facilities' },
-];
+import { useAPData, PurchaseOrder } from '../contexts/APDataContext';
 
 const statusTone = (status: PurchaseOrder['status']) => {
   switch (status) {
@@ -52,6 +34,7 @@ const statusTone = (status: PurchaseOrder['status']) => {
 
 export function PurchaseOrders() {
   const navigate = useNavigate();
+  const { purchaseOrders } = useAPData();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [departmentFilter, setDepartmentFilter] = useState<string[]>([]);
@@ -59,13 +42,17 @@ export function PurchaseOrders() {
 
   const filteredOrders = useMemo(
     () =>
-      mockPurchaseOrders.filter((order) => {
+      purchaseOrders.filter((order) => {
         const searchValue = searchTerm.trim().toLowerCase();
         const matchesSearch =
           !searchValue ||
-          [order.poNumber, order.vendor, order.department, order.status].join(' ').toLowerCase().includes(searchValue);
+          [order.poNumber, order.vendor, order.department, order.status]
+            .join(' ')
+            .toLowerCase()
+            .includes(searchValue);
         const matchesStatus = statusFilter.length === 0 || statusFilter.includes(order.status);
-        const matchesDepartment = departmentFilter.length === 0 || departmentFilter.includes(order.department);
+        const matchesDepartment =
+          departmentFilter.length === 0 || departmentFilter.includes(order.department);
         return matchesSearch && matchesStatus && matchesDepartment;
       }),
     [departmentFilter, searchTerm, statusFilter]
@@ -82,7 +69,14 @@ export function PurchaseOrders() {
     searchTerm.trim().length > 0 || statusFilter.length > 0 || departmentFilter.length > 0;
 
   return (
-    <div className="p-8" style={{ background: 'linear-gradient(180deg, #EEF6FB 0%, var(--color-cloud) 42%, var(--color-cloud) 100%)', minHeight: '100vh' }}>
+    <div
+      className="p-8"
+      style={{
+        background:
+          'linear-gradient(180deg, #EEF6FB 0%, var(--color-cloud) 42%, var(--color-cloud) 100%)',
+        minHeight: '100vh',
+      }}
+    >
       <div className="flex items-start justify-between gap-6 mb-8">
         <div>
           <div className="flex items-center gap-3 mb-3">
@@ -96,17 +90,26 @@ export function PurchaseOrders() {
               <ClipboardList className="w-6 h-6" style={{ color: '#2563EB' }} />
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-3 py-1 rounded-full text-xs" style={{ backgroundColor: '#EEF7FF', color: '#2563EB', fontWeight: 700 }}>
+              <span
+                className="px-3 py-1 rounded-full text-xs"
+                style={{ backgroundColor: '#EEF7FF', color: '#2563EB', fontWeight: 700 }}
+              >
                 PO Register
               </span>
-              <span className="px-3 py-1 rounded-full text-xs" style={{ backgroundColor: '#E8FFF2', color: '#0F9D69', fontWeight: 700 }}>
+              <span
+                className="px-3 py-1 rounded-full text-xs"
+                style={{ backgroundColor: '#E8FFF2', color: '#0F9D69', fontWeight: 700 }}
+              >
                 {filteredOrders.length} Visible
               </span>
             </div>
           </div>
-          <h1 className="text-3xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>Purchase Orders</h1>
+          <h1 className="text-3xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
+            Purchase Orders
+          </h1>
           <p style={{ color: 'var(--color-mercury-grey)', maxWidth: '820px' }}>
-            Review purchase orders, receiving status, department ownership, and act from one premium operational register.
+            Review purchase orders, receiving status, department ownership, and act from one premium
+            operational register.
           </p>
         </div>
 
@@ -114,7 +117,10 @@ export function PurchaseOrders() {
           <button
             onClick={() => setShowCreateMenu(!showCreateMenu)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white transition-colors"
-            style={{ backgroundColor: 'var(--color-teal)', boxShadow: '0 10px 22px rgba(0, 169, 183, 0.18)' }}
+            style={{
+              backgroundColor: 'var(--color-teal)',
+              boxShadow: '0 10px 22px rgba(0, 169, 183, 0.18)',
+            }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)';
             }}
@@ -153,7 +159,15 @@ export function PurchaseOrders() {
                     setShowCreateMenu(false);
                     navigate('/purchase-orders/create?mode=direct');
                   }}
-                  style={{ width: '100%', padding: '14px 18px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer', borderBottom: '1px solid #EAF0F4' }}
+                  style={{
+                    width: '100%',
+                    padding: '14px 18px',
+                    textAlign: 'left',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #EAF0F4',
+                  }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#F8FBFD';
                   }}
@@ -161,8 +175,12 @@ export function PurchaseOrders() {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <div style={{ color: 'var(--color-ink)', fontWeight: 600, marginBottom: '4px' }}>Create Direct PO</div>
-                  <div style={{ color: 'var(--color-mercury-grey)', fontSize: '13px' }}>Create a purchase order without PR.</div>
+                  <div style={{ color: 'var(--color-ink)', fontWeight: 600, marginBottom: '4px' }}>
+                    Create Direct PO
+                  </div>
+                  <div style={{ color: 'var(--color-mercury-grey)', fontSize: '13px' }}>
+                    Create a purchase order without PR.
+                  </div>
                 </button>
 
                 <button
@@ -170,7 +188,14 @@ export function PurchaseOrders() {
                     setShowCreateMenu(false);
                     navigate('/purchase-orders/create-from-pr');
                   }}
-                  style={{ width: '100%', padding: '14px 18px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                  style={{
+                    width: '100%',
+                    padding: '14px 18px',
+                    textAlign: 'left',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                  }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#F8FBFD';
                   }}
@@ -178,8 +203,12 @@ export function PurchaseOrders() {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <div style={{ color: 'var(--color-ink)', fontWeight: 600, marginBottom: '4px' }}>Create PO from PR</div>
-                  <div style={{ color: 'var(--color-mercury-grey)', fontSize: '13px' }}>Combine one or more approved PRs.</div>
+                  <div style={{ color: 'var(--color-ink)', fontWeight: 600, marginBottom: '4px' }}>
+                    Create PO from PR
+                  </div>
+                  <div style={{ color: 'var(--color-mercury-grey)', fontSize: '13px' }}>
+                    Combine one or more approved PRs.
+                  </div>
                 </button>
               </div>
             </>
@@ -188,21 +217,65 @@ export function PurchaseOrders() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
-          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Orders</p>
-          <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{stats.total}</p>
+        <div
+          className="rounded-2xl p-5"
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid var(--color-fog)',
+            boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)',
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+            Total Orders
+          </p>
+          <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
+            {stats.total}
+          </p>
         </div>
-        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
-          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Issued</p>
-          <p className="text-2xl" style={{ color: 'var(--color-teal)', fontWeight: 700 }}>{stats.issued}</p>
+        <div
+          className="rounded-2xl p-5"
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid var(--color-fog)',
+            boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)',
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+            Issued
+          </p>
+          <p className="text-2xl" style={{ color: 'var(--color-teal)', fontWeight: 700 }}>
+            {stats.issued}
+          </p>
         </div>
-        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
-          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Fully Received</p>
-          <p className="text-2xl" style={{ color: '#0F9D69', fontWeight: 700 }}>{stats.received}</p>
+        <div
+          className="rounded-2xl p-5"
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid var(--color-fog)',
+            boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)',
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+            Fully Received
+          </p>
+          <p className="text-2xl" style={{ color: '#0F9D69', fontWeight: 700 }}>
+            {stats.received}
+          </p>
         </div>
-        <div className="rounded-2xl p-5" style={{ backgroundColor: '#FFFFFF', border: '1px solid var(--color-fog)', boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)' }}>
-          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Total Value</p>
-          <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>₹{stats.totalValue.toLocaleString('en-IN')}</p>
+        <div
+          className="rounded-2xl p-5"
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid var(--color-fog)',
+            boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)',
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+            Total Value
+          </p>
+          <p className="text-2xl" style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
+            ₹{stats.totalValue.toLocaleString('en-IN')}
+          </p>
         </div>
       </div>
 
@@ -225,14 +298,21 @@ export function PurchaseOrders() {
             >
               <div className="space-y-2">
                 <div className="relative w-full">
-                  <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
+                  <Search
+                    className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  />
                   <input
                     type="text"
                     placeholder="Search PO..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-11 pr-4 py-2.5 rounded-2xl text-sm"
-                    style={{ backgroundColor: '#F8FBFD', border: '1px solid var(--color-fog)', color: 'var(--color-ink)' }}
+                    style={{
+                      backgroundColor: '#F8FBFD',
+                      border: '1px solid var(--color-fog)',
+                      color: 'var(--color-ink)',
+                    }}
                   />
                 </div>
                 {hasActiveFilters && (
@@ -244,7 +324,12 @@ export function PurchaseOrders() {
                       setDepartmentFilter([]);
                     }}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
-                    style={{ backgroundColor: '#FFF5F5', border: '1px solid #FED7D7', color: '#C53030', fontWeight: 600 }}
+                    style={{
+                      backgroundColor: '#FFF5F5',
+                      border: '1px solid #FED7D7',
+                      color: '#C53030',
+                      fontWeight: 600,
+                    }}
                   >
                     Clear Filters
                   </button>
@@ -255,22 +340,39 @@ export function PurchaseOrders() {
               <div className="flex items-start">
                 <PremiumFilterMenu
                   label="Department"
-                  options={[...new Set(mockPurchaseOrders.map((order) => order.department))]}
+                  options={[...new Set(purchaseOrders.map((order) => order.department))]}
                   selected={departmentFilter}
-                  onToggle={(value) => setDepartmentFilter((current) => toggleMultiSelect(current, value))}
+                  onToggle={(value) =>
+                    setDepartmentFilter((current) => toggleMultiSelect(current, value))
+                  }
                 />
               </div>
               <div />
               <div className="flex items-start">
                 <PremiumFilterMenu
                   label="Status"
-                  options={['Draft', 'Issued', 'Partially Received', 'Fully Received', 'Closed / Cancelled']}
+                  options={[
+                    'Draft',
+                    'Issued',
+                    'Partially Received',
+                    'Fully Received',
+                    'Closed / Cancelled',
+                  ]}
                   selected={statusFilter}
-                  onToggle={(value) => setStatusFilter((current) => toggleMultiSelect(current, value))}
+                  onToggle={(value) =>
+                    setStatusFilter((current) => toggleMultiSelect(current, value))
+                  }
                 />
               </div>
               <div className="flex justify-end">
-                <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm" style={{ border: '1px solid var(--color-fog)', color: 'var(--color-ink)', backgroundColor: '#FFFFFF' }}>
+                <button
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm"
+                  style={{
+                    border: '1px solid var(--color-fog)',
+                    color: 'var(--color-ink)',
+                    backgroundColor: '#FFFFFF',
+                  }}
+                >
                   <Download className="w-4 h-4" />
                   Export
                 </button>
@@ -285,11 +387,17 @@ export function PurchaseOrders() {
                 borderBottom: '1px solid #E4EDF2',
               }}
             >
-              {['PO Number', 'Vendor', 'Date', 'Department', 'Amount', 'Status', 'Action'].map((column) => (
-                <div key={column} className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}>
-                  {column}
-                </div>
-              ))}
+              {['PO Number', 'Vendor', 'Date', 'Department', 'Amount', 'Status', 'Action'].map(
+                (column) => (
+                  <div
+                    key={column}
+                    className="text-xs uppercase tracking-[0.18em]"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}
+                  >
+                    {column}
+                  </div>
+                )
+              )}
             </div>
 
             {filteredOrders.map((order, index) => {
@@ -300,7 +408,8 @@ export function PurchaseOrders() {
                   className="grid gap-4 px-6 py-4"
                   style={{
                     gridTemplateColumns: '2.2fr 1.6fr 1.1fr 1.2fr 1.2fr 1.3fr 0.9fr',
-                    borderBottom: index === filteredOrders.length - 1 ? 'none' : '1px solid #EDF3F7',
+                    borderBottom:
+                      index === filteredOrders.length - 1 ? 'none' : '1px solid #EDF3F7',
                     backgroundColor: '#FFFFFF',
                   }}
                   onMouseEnter={(e) => {
@@ -311,18 +420,29 @@ export function PurchaseOrders() {
                   }}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #E8F3FF 0%, #D8EAFE 100%)' }}>
+                    <div
+                      className="w-10 h-10 rounded-2xl flex items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg, #E8F3FF 0%, #D8EAFE 100%)' }}
+                    >
                       <Package className="w-4 h-4" style={{ color: '#2563EB' }} />
                     </div>
                     <div>
-                      <div style={{ color: 'var(--color-ink)', fontWeight: 700 }}>{order.poNumber}</div>
-                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Purchase order</div>
+                      <div style={{ color: 'var(--color-ink)', fontWeight: 700 }}>
+                        {order.poNumber}
+                      </div>
+                      <div className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                        Purchase order
+                      </div>
                     </div>
                   </div>
                   <div style={{ color: 'var(--color-ink)' }}>{order.vendor}</div>
-                  <div style={{ color: 'var(--color-mercury-grey)' }}>{new Date(order.date).toLocaleDateString('en-IN')}</div>
+                  <div style={{ color: 'var(--color-mercury-grey)' }}>
+                    {new Date(order.date).toLocaleDateString('en-IN')}
+                  </div>
                   <div style={{ color: 'var(--color-mercury-grey)' }}>{order.department}</div>
-                  <div style={{ color: 'var(--color-ink)', fontWeight: 600 }}>₹{order.amount.toLocaleString('en-IN')}</div>
+                  <div style={{ color: 'var(--color-ink)', fontWeight: 600 }}>
+                    ₹{order.amount.toLocaleString('en-IN')}
+                  </div>
                   <div>
                     <span
                       className="inline-flex items-center rounded-full px-3 py-1 text-xs"
@@ -370,21 +490,36 @@ export function PurchaseOrders() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between px-6 py-4" style={{ borderTop: '1px solid #E8F0F4' }}>
+        <div
+          className="flex items-center justify-between px-6 py-4"
+          style={{ borderTop: '1px solid #E8F0F4' }}
+        >
           <span style={{ color: 'var(--color-mercury-grey)' }}>
-            Showing {filteredOrders.length} of {mockPurchaseOrders.length} orders
+            Showing {filteredOrders.length} of {purchaseOrders.length} orders
           </span>
           <div className="flex gap-2">
-            <button className="px-4 py-2 rounded-xl" style={{ border: '1px solid var(--color-fog)', color: 'var(--color-mercury-grey)' }}>
+            <button
+              className="px-4 py-2 rounded-xl"
+              style={{ border: '1px solid var(--color-fog)', color: 'var(--color-mercury-grey)' }}
+            >
               Previous
             </button>
-            <button className="px-4 py-2 rounded-xl text-white" style={{ backgroundColor: 'var(--color-teal)' }}>
+            <button
+              className="px-4 py-2 rounded-xl text-white"
+              style={{ backgroundColor: 'var(--color-teal)' }}
+            >
               1
             </button>
-            <button className="px-4 py-2 rounded-xl" style={{ border: '1px solid var(--color-fog)', color: 'var(--color-mercury-grey)' }}>
+            <button
+              className="px-4 py-2 rounded-xl"
+              style={{ border: '1px solid var(--color-fog)', color: 'var(--color-mercury-grey)' }}
+            >
               2
             </button>
-            <button className="px-4 py-2 rounded-xl" style={{ border: '1px solid var(--color-fog)', color: 'var(--color-mercury-grey)' }}>
+            <button
+              className="px-4 py-2 rounded-xl"
+              style={{ border: '1px solid var(--color-fog)', color: 'var(--color-mercury-grey)' }}
+            >
               Next
             </button>
           </div>

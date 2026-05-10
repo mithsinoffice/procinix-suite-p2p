@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ensureDomainDocument, saveDomainDocument } from '../lib/supabase/documentStore';
+import { ensureDomainDocument, saveDomainDocument } from '../lib/mysql/documentStore';
 import type { PortalUser, PortalUserStatus } from '../types/portalUser';
 
 export type PortalUsersDocument = { users: PortalUser[] };
@@ -39,7 +39,17 @@ interface PortalUsersContextValue {
   updateUser: (
     id: string,
     patch: Partial<
-      Pick<PortalUser, 'firstName' | 'lastName' | 'email' | 'role' | 'status' | 'vendorId' | 'vendorCode' | 'vendorName'>
+      Pick<
+        PortalUser,
+        | 'firstName'
+        | 'lastName'
+        | 'email'
+        | 'role'
+        | 'status'
+        | 'vendorId'
+        | 'vendorCode'
+        | 'vendorName'
+      >
     >
   ) => void;
   suspendUser: (id: string) => void;
@@ -103,7 +113,17 @@ export function PortalUsersProvider({ children }: { children: ReactNode }) {
     (
       id: string,
       patch: Partial<
-        Pick<PortalUser, 'firstName' | 'lastName' | 'email' | 'role' | 'status' | 'vendorId' | 'vendorCode' | 'vendorName'>
+        Pick<
+          PortalUser,
+          | 'firstName'
+          | 'lastName'
+          | 'email'
+          | 'role'
+          | 'status'
+          | 'vendorId'
+          | 'vendorCode'
+          | 'vendorName'
+        >
       >
     ) => {
       const now = new Date().toISOString();
@@ -127,12 +147,16 @@ export function PortalUsersProvider({ children }: { children: ReactNode }) {
 
   const suspendUser = useCallback((id: string) => {
     const now = new Date().toISOString();
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'suspended' as const, updatedAt: now } : u)));
+    setUsers((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, status: 'suspended' as const, updatedAt: now } : u))
+    );
   }, []);
 
   const activateUser = useCallback((id: string) => {
     const now = new Date().toISOString();
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'active' as const, updatedAt: now } : u)));
+    setUsers((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, status: 'active' as const, updatedAt: now } : u))
+    );
   }, []);
 
   const value = useMemo(

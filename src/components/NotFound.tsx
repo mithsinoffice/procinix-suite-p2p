@@ -5,8 +5,24 @@ export function NotFound() {
 
   return (
     <div style={{ padding: '48px', textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ fontSize: '64px', fontWeight: 700, color: 'var(--color-silver)', marginBottom: '8px' }}>404</div>
-      <h1 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-ink)', marginBottom: '8px' }}>
+      <div
+        style={{
+          fontSize: '64px',
+          fontWeight: 700,
+          color: 'var(--color-silver)',
+          marginBottom: '8px',
+        }}
+      >
+        404
+      </div>
+      <h1
+        style={{
+          fontSize: '20px',
+          fontWeight: 600,
+          color: 'var(--color-ink)',
+          marginBottom: '8px',
+        }}
+      >
         Page not found
       </h1>
       <p style={{ fontSize: '14px', color: 'var(--color-mercury-grey)', marginBottom: '24px' }}>

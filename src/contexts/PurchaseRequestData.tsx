@@ -1,6 +1,6 @@
 /**
  * PURCHASE REQUEST (PR) TRANSACTION DATA
- * 
+ *
  * Mock data for purchase requests with line items.
  * PRs can be converted to POs through the "Create PO from PR" flow.
  */
@@ -79,7 +79,7 @@ export const ALL_PURCHASE_REQUESTS: PurchaseRequestTransaction[] = [
         uom: 'Each',
         amount: 325000,
         specifications: '11th Gen Intel i7, 16GB RAM, 512GB SSD',
-        department: 'IT Department'
+        department: 'IT Department',
       },
       {
         id: 'PRL-001-2',
@@ -88,14 +88,14 @@ export const ALL_PURCHASE_REQUESTS: PurchaseRequestTransaction[] = [
         unitPrice: 2500,
         uom: 'Each',
         amount: 12500,
-        department: 'IT Department'
-      }
+        department: 'IT Department',
+      },
     ],
     totalAmount: 337500,
     approvedBy: 'Amit Sharma',
     approvedDate: '2024-12-05',
     createdDate: '2024-12-01',
-    modifiedDate: '2024-12-05'
+    modifiedDate: '2024-12-05',
   },
   {
     id: 'PR-002',
@@ -124,7 +124,7 @@ export const ALL_PURCHASE_REQUESTS: PurchaseRequestTransaction[] = [
         uom: 'Each',
         amount: 37000,
         specifications: 'Print, Scan, Copy, Fax',
-        department: 'Operations'
+        department: 'Operations',
       },
       {
         id: 'PRL-002-2',
@@ -133,14 +133,14 @@ export const ALL_PURCHASE_REQUESTS: PurchaseRequestTransaction[] = [
         unitPrice: 350,
         uom: 'Pack',
         amount: 7000,
-        department: 'Operations'
-      }
+        department: 'Operations',
+      },
     ],
     totalAmount: 44000,
     approvedBy: 'Amit Sharma',
     approvedDate: '2024-12-06',
     createdDate: '2024-12-03',
-    modifiedDate: '2024-12-06'
+    modifiedDate: '2024-12-06',
   },
   {
     id: 'PR-003',
@@ -169,7 +169,7 @@ export const ALL_PURCHASE_REQUESTS: PurchaseRequestTransaction[] = [
         uom: 'Each',
         amount: 60000,
         specifications: '350 GSM, Glossy Finish',
-        department: 'Marketing'
+        department: 'Marketing',
       },
       {
         id: 'PRL-003-2',
@@ -179,14 +179,14 @@ export const ALL_PURCHASE_REQUESTS: PurchaseRequestTransaction[] = [
         uom: 'Each',
         amount: 5000,
         specifications: '300 GSM, Matt Lamination',
-        department: 'Marketing'
-      }
+        department: 'Marketing',
+      },
     ],
     totalAmount: 65000,
     approvedBy: 'Amit Sharma',
     approvedDate: '2024-12-08',
     createdDate: '2024-12-05',
-    modifiedDate: '2024-12-08'
+    modifiedDate: '2024-12-08',
   },
   {
     id: 'PR-004',
@@ -215,14 +215,14 @@ export const ALL_PURCHASE_REQUESTS: PurchaseRequestTransaction[] = [
         uom: 'Each',
         amount: 25000,
         specifications: '2x Intel Xeon, 64GB RAM, 4TB Storage',
-        department: 'IT Department'
-      }
+        department: 'IT Department',
+      },
     ],
     totalAmount: 25000,
     approvedBy: 'Mohammed Ali',
     approvedDate: '2024-12-09',
     createdDate: '2024-12-07',
-    modifiedDate: '2024-12-09'
+    modifiedDate: '2024-12-09',
   },
   {
     id: 'PR-005',
@@ -251,7 +251,7 @@ export const ALL_PURCHASE_REQUESTS: PurchaseRequestTransaction[] = [
         uom: 'Each',
         amount: 220000,
         specifications: 'L-shaped, Wood finish',
-        department: 'Admin'
+        department: 'Admin',
       },
       {
         id: 'PRL-005-2',
@@ -261,12 +261,12 @@ export const ALL_PURCHASE_REQUESTS: PurchaseRequestTransaction[] = [
         uom: 'Each',
         amount: 120000,
         specifications: 'Mesh back, Adjustable height',
-        department: 'Admin'
-      }
+        department: 'Admin',
+      },
     ],
     totalAmount: 340000,
     createdDate: '2024-12-10',
-    modifiedDate: '2024-12-10'
+    modifiedDate: '2024-12-10',
   },
   {
     id: 'PR-006',
@@ -295,7 +295,7 @@ export const ALL_PURCHASE_REQUESTS: PurchaseRequestTransaction[] = [
         uom: 'Each',
         amount: 100000,
         specifications: 'Full HD, IPS Panel',
-        department: 'Operations'
+        department: 'Operations',
       },
       {
         id: 'PRL-006-2',
@@ -304,15 +304,15 @@ export const ALL_PURCHASE_REQUESTS: PurchaseRequestTransaction[] = [
         unitPrice: 1800,
         uom: 'Set',
         amount: 14400,
-        department: 'Operations'
-      }
+        department: 'Operations',
+      },
     ],
     totalAmount: 114400,
     approvedBy: 'Amit Sharma',
     approvedDate: '2024-12-14',
     createdDate: '2024-12-12',
-    modifiedDate: '2024-12-14'
-  }
+    modifiedDate: '2024-12-14',
+  },
 ];
 
 // Helper function to get PRs by entity
@@ -320,22 +320,22 @@ export function getPRsByEntity(entityId: string): PurchaseRequestTransaction[] {
   if (entityId === 'CONSOLIDATED') {
     return ALL_PURCHASE_REQUESTS;
   }
-  return ALL_PURCHASE_REQUESTS.filter(pr => pr.entityId === entityId);
+  return ALL_PURCHASE_REQUESTS.filter((pr) => pr.entityId === entityId);
 }
 
 // Helper function to get approved PRs only
 export function getApprovedPRs(entityId: string): PurchaseRequestTransaction[] {
   const entityPRs = getPRsByEntity(entityId);
-  return entityPRs.filter(pr => pr.status === 'Approved');
+  return entityPRs.filter((pr) => pr.status === 'Approved');
 }
 
 // Helper function to get PRs by vendor
 export function getPRsByVendor(entityId: string, vendorId: string): PurchaseRequestTransaction[] {
   const entityPRs = getApprovedPRs(entityId);
-  return entityPRs.filter(pr => pr.vendorId === vendorId);
+  return entityPRs.filter((pr) => pr.vendorId === vendorId);
 }
 
 // Helper function to get PR by ID
 export function getPRById(prId: string): PurchaseRequestTransaction | undefined {
-  return ALL_PURCHASE_REQUESTS.find(pr => pr.id === prId);
+  return ALL_PURCHASE_REQUESTS.find((pr) => pr.id === prId);
 }

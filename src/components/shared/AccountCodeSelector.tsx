@@ -1,9 +1,10 @@
 import { BookOpen, AlertCircle } from 'lucide-react';
 import { useMasterData } from '../../contexts/MasterDataContext';
+import { isRecordMappedToEntity } from '../../lib/masters/entityMapping';
 
 /**
  * ACCOUNT CODE SELECTOR - SHARED COMPONENT
- * 
+ *
  * LINKED TO: Account Code Master / Chart of Accounts (System of Record)
  * USED BY: AP Invoices, Payments, Budgeting
  */
@@ -17,6 +18,7 @@ interface AccountCodeSelectorProps {
   disabled?: boolean;
   error?: string;
   filterByType?: 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense';
+  entityId?: string;
 }
 
 export function AccountCodeSelector({
@@ -27,15 +29,18 @@ export function AccountCodeSelector({
   required = false,
   disabled = false,
   error,
-  filterByType
+  filterByType,
+  entityId,
 }: AccountCodeSelectorProps) {
   const { accountCodes, getActiveAccountCodes, getAccountCodeById } = useMasterData();
-  
-  let availableAccountCodes = getActiveAccountCodes();
+
+  let availableAccountCodes = entityId
+    ? accountCodes.filter((ac) => ac.isActive && isRecordMappedToEntity(ac, entityId))
+    : getActiveAccountCodes();
   if (filterByType) {
-    availableAccountCodes = availableAccountCodes.filter(ac => ac.accountType === filterByType);
+    availableAccountCodes = availableAccountCodes.filter((ac) => ac.accountType === filterByType);
   }
-  
+
   const selectedAccountCode = value ? getAccountCodeById(value) : undefined;
 
   return (
@@ -44,8 +49,8 @@ export function AccountCodeSelector({
         <label className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
           {label}
           {required && <span style={{ color: 'var(--color-error-dark)' }}> *</span>}
-          <span 
-            className="ml-2 text-xs px-2 py-0.5 rounded" 
+          <span
+            className="ml-2 text-xs px-2 py-0.5 rounded"
             style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}
             title="Linked to Chart of Accounts Master"
           >
@@ -53,7 +58,7 @@ export function AccountCodeSelector({
           </span>
         </label>
       )}
-      
+
       <div className="relative">
         <select
           value={value || ''}
@@ -63,7 +68,7 @@ export function AccountCodeSelector({
           style={{
             border: error ? '2px solid var(--color-error-dark)' : '2px solid var(--color-silver)',
             backgroundColor: disabled ? 'var(--color-cloud)' : '#FFFFFF',
-            color: 'var(--color-ink)'
+            color: 'var(--color-ink)',
           }}
         >
           <option value="">{placeholder}</option>
@@ -73,30 +78,39 @@ export function AccountCodeSelector({
             </option>
           ))}
         </select>
-        
-        <BookOpen 
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" 
-          style={{ color: 'var(--color-mercury-grey)' }} 
+
+        <BookOpen
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+          style={{ color: 'var(--color-mercury-grey)' }}
         />
-        
+
         {error && (
-          <AlertCircle 
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4" 
-            style={{ color: 'var(--color-error-dark)' }} 
+          <AlertCircle
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4"
+            style={{ color: 'var(--color-error-dark)' }}
           />
         )}
       </div>
 
       {selectedAccountCode && (
-        <div className="text-xs p-2 rounded" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}>
+        <div
+          className="text-xs p-2 rounded"
+          style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
+        >
           Type: {selectedAccountCode.accountType} - {selectedAccountCode.accountSubType}
-          {selectedAccountCode.requiresCostCentre && <span className="ml-2 text-amber-600">• Requires Cost Centre</span>}
-          {selectedAccountCode.requiresProject && <span className="ml-2 text-amber-600">• Requires Project</span>}
+          {selectedAccountCode.requiresCostCentre && (
+            <span className="ml-2 text-amber-600">• Requires Cost Centre</span>
+          )}
+          {selectedAccountCode.requiresProject && (
+            <span className="ml-2 text-amber-600">• Requires Project</span>
+          )}
         </div>
       )}
 
       {error && (
-        <p className="text-xs" style={{ color: 'var(--color-error-dark)' }}>{error}</p>
+        <p className="text-xs" style={{ color: 'var(--color-error-dark)' }}>
+          {error}
+        </p>
       )}
     </div>
   );

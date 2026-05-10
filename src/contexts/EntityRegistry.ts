@@ -1,14 +1,14 @@
 /**
  * CANONICAL ENTITY REGISTRY
- * 
+ *
  * Single source of truth for all entities across the application.
- * 
+ *
  * PURPOSE:
  * - Drive entity switcher
  * - Drive dashboard context
  * - Drive analytics filtering
  * - Drive transaction scoping
- * 
+ *
  * SAFETY:
  * - Preserves old entity IDs for backward compatibility
  * - Alias mapping for legacy datasets
@@ -21,19 +21,19 @@ export interface CanonicalEntity {
   code: string; // Unique entity code (SUBKO-IN, SUBKO-UAE, PROC-IN)
   name: string;
   legalName: string;
-  
+
   // Operating context
   country: string;
   currency: string;
   taxRegime: 'GST' | 'VAT' | 'Sales Tax';
-  
+
   // Display properties
   logo?: string;
   status: 'Active' | 'Inactive';
-  
+
   // Backward compatibility (legacy entity IDs)
   aliases?: string[]; // Old entity IDs that map to this canonical entity
-  
+
   // Additional metadata
   establishedDate?: string;
   fiscalYearEnd?: string;
@@ -58,7 +58,7 @@ export const CANONICAL_ENTITIES: CanonicalEntity[] = [
     status: 'Active',
     aliases: ['E001', 'PSPL', 'ACME'], // Legacy entity IDs
     establishedDate: '2015-06-01',
-    fiscalYearEnd: '31-Mar'
+    fiscalYearEnd: '31-Mar',
   },
 
   // ──────────────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ export const CANONICAL_ENTITIES: CanonicalEntity[] = [
     status: 'Active',
     aliases: ['E004', 'PGS', 'GLBL'], // Legacy entity IDs
     establishedDate: '2020-01-15',
-    fiscalYearEnd: '31-Dec'
+    fiscalYearEnd: '31-Dec',
   },
 
   // ──────────────────────────────────────────────────────────────────────
@@ -92,14 +92,14 @@ export const CANONICAL_ENTITIES: CanonicalEntity[] = [
     status: 'Active',
     aliases: ['E002', 'PML', 'TECH'], // Legacy entity IDs
     establishedDate: '2018-03-10',
-    fiscalYearEnd: '31-Mar'
+    fiscalYearEnd: '31-Mar',
   },
 
   // ──────────────────────────────────────────────────────────────────────
   // LEGACY ENTITIES (ALIASED TO CANONICAL, BUT HIDDEN)
   // ──────────────────────────────────────────────────────────────────────
   // These are kept for dataset continuity but not shown in switcher
-  
+
   {
     id: 'E003',
     code: 'PRI',
@@ -111,8 +111,8 @@ export const CANONICAL_ENTITIES: CanonicalEntity[] = [
     status: 'Inactive', // Hidden from switcher
     aliases: ['PREM'], // Legacy alias
     establishedDate: '2019-08-01',
-    fiscalYearEnd: '31-Mar'
-  }
+    fiscalYearEnd: '31-Mar',
+  },
 ];
 
 // ============================================================================
@@ -123,21 +123,21 @@ export const CANONICAL_ENTITIES: CanonicalEntity[] = [
  * Get all active entities (shown in entity switcher)
  */
 export function getActiveEntities(): CanonicalEntity[] {
-  return CANONICAL_ENTITIES.filter(entity => entity.status === 'Active');
+  return CANONICAL_ENTITIES.filter((entity) => entity.status === 'Active');
 }
 
 /**
  * Get entity by canonical ID
  */
 export function getEntityById(id: string): CanonicalEntity | undefined {
-  return CANONICAL_ENTITIES.find(entity => entity.id === id);
+  return CANONICAL_ENTITIES.find((entity) => entity.id === id);
 }
 
 /**
  * Get entity by entity code (SUBKO-IN, SUBKO-UAE, PROC-IN)
  */
 export function getEntityByCode(code: string): CanonicalEntity | undefined {
-  return CANONICAL_ENTITIES.find(entity => entity.code === code);
+  return CANONICAL_ENTITIES.find((entity) => entity.code === code);
 }
 
 /**
@@ -146,15 +146,13 @@ export function getEntityByCode(code: string): CanonicalEntity | undefined {
  */
 export function resolveEntity(idOrAlias: string): CanonicalEntity | undefined {
   // First, try direct match
-  let entity = CANONICAL_ENTITIES.find(e => e.id === idOrAlias);
-  
+  let entity = CANONICAL_ENTITIES.find((e) => e.id === idOrAlias);
+
   // If not found, try alias match
   if (!entity) {
-    entity = CANONICAL_ENTITIES.find(e => 
-      e.aliases && e.aliases.includes(idOrAlias)
-    );
+    entity = CANONICAL_ENTITIES.find((e) => e.aliases && e.aliases.includes(idOrAlias));
   }
-  
+
   return entity;
 }
 
@@ -163,7 +161,7 @@ export function resolveEntity(idOrAlias: string): CanonicalEntity | undefined {
  */
 export function getEntitiesByCountry(country: string): CanonicalEntity[] {
   return CANONICAL_ENTITIES.filter(
-    entity => entity.country === country && entity.status === 'Active'
+    (entity) => entity.country === country && entity.status === 'Active'
   );
 }
 
@@ -172,7 +170,7 @@ export function getEntitiesByCountry(country: string): CanonicalEntity[] {
  */
 export function getEntitiesByCurrency(currency: string): CanonicalEntity[] {
   return CANONICAL_ENTITIES.filter(
-    entity => entity.currency === currency && entity.status === 'Active'
+    (entity) => entity.currency === currency && entity.status === 'Active'
   );
 }
 
@@ -181,7 +179,7 @@ export function getEntitiesByCurrency(currency: string): CanonicalEntity[] {
  */
 export function getEntitiesByTaxRegime(taxRegime: string): CanonicalEntity[] {
   return CANONICAL_ENTITIES.filter(
-    entity => entity.taxRegime === taxRegime && entity.status === 'Active'
+    (entity) => entity.taxRegime === taxRegime && entity.status === 'Active'
   );
 }
 
@@ -189,7 +187,7 @@ export function getEntitiesByTaxRegime(taxRegime: string): CanonicalEntity[] {
  * Check if an entity ID is an alias
  */
 export function isAlias(id: string): boolean {
-  return CANONICAL_ENTITIES.some(e => e.aliases && e.aliases.includes(id));
+  return CANONICAL_ENTITIES.some((e) => e.aliases && e.aliases.includes(id));
 }
 
 /**
@@ -210,24 +208,24 @@ export function getCanonicalId(idOrAlias: string): string | undefined {
  */
 export const ENTITY_ALIAS_MAP: Record<string, string> = {
   // Procinix Solutions → Subko Coffee India
-  'E001': 'ENT-SUBKO-IN',
-  'PSPL': 'ENT-SUBKO-IN',
-  'ACME': 'ENT-SUBKO-IN',
-  
+  E001: 'ENT-SUBKO-IN',
+  PSPL: 'ENT-SUBKO-IN',
+  ACME: 'ENT-SUBKO-IN',
+
   // Procinix Global Services → Subko Coffee Dubai
-  'E004': 'ENT-SUBKO-UAE',
-  'PGS': 'ENT-SUBKO-UAE',
-  'GLBL': 'ENT-SUBKO-UAE',
-  
+  E004: 'ENT-SUBKO-UAE',
+  PGS: 'ENT-SUBKO-UAE',
+  GLBL: 'ENT-SUBKO-UAE',
+
   // Procinix Manufacturing → Procinix India
-  'E002': 'ENT-PROCINIX-IN',
-  'PML': 'ENT-PROCINIX-IN',
-  'TECH': 'ENT-PROCINIX-IN',
-  
+  E002: 'ENT-PROCINIX-IN',
+  PML: 'ENT-PROCINIX-IN',
+  TECH: 'ENT-PROCINIX-IN',
+
   // Procinix Retail → Inactive (hidden)
-  'E003': 'E003', // Kept for dataset continuity
-  'PRI': 'E003',
-  'PREM': 'E003'
+  E003: 'E003', // Kept for dataset continuity
+  PRI: 'E003',
+  PREM: 'E003',
 };
 
 /**
@@ -244,14 +242,14 @@ export function resolveToCanonical(legacyId: string): string {
 export function createEntityFilter(activeEntityId: string) {
   const canonicalId = resolveToCanonical(activeEntityId);
   const entity = getEntityById(canonicalId);
-  
+
   return (dataEntity: string): boolean => {
     // Check if data entity matches canonical ID
     if (dataEntity === canonicalId) return true;
-    
+
     // Check if data entity is an alias of the canonical entity
     if (entity?.aliases && entity.aliases.includes(dataEntity)) return true;
-    
+
     // Check if data entity resolves to same canonical ID
     return resolveToCanonical(dataEntity) === canonicalId;
   };
@@ -274,15 +272,15 @@ export function getEntityDisplayName(idOrAlias: string): string {
  */
 export function getEntityCurrencySymbol(idOrAlias: string): string {
   const entity = resolveEntity(idOrAlias);
-  
+
   const currencySymbols: Record<string, string> = {
-    'INR': '₹',
-    'AED': 'د.إ',
-    'USD': '$',
-    'EUR': '€',
-    'GBP': '£'
+    INR: '₹',
+    AED: 'د.إ',
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
   };
-  
+
   return currencySymbols[entity?.currency || 'INR'] || '';
 }
 
@@ -291,15 +289,15 @@ export function getEntityCurrencySymbol(idOrAlias: string): string {
  */
 export function getEntityFlag(idOrAlias: string): string {
   const entity = resolveEntity(idOrAlias);
-  
+
   const flags: Record<string, string> = {
-    'India': '🇮🇳',
-    'UAE': '🇦🇪',
-    'USA': '🇺🇸',
-    'UK': '🇬🇧',
-    'Singapore': '🇸🇬'
+    India: '🇮🇳',
+    UAE: '🇦🇪',
+    USA: '🇺🇸',
+    UK: '🇬🇧',
+    Singapore: '🇸🇬',
   };
-  
+
   return flags[entity?.country || 'India'] || '🌍';
 }
 
@@ -322,7 +320,7 @@ export const EntityRegistry = {
   createEntityFilter,
   getEntityDisplayName,
   getEntityCurrencySymbol,
-  getEntityFlag
+  getEntityFlag,
 };
 
 export default EntityRegistry;

@@ -41,17 +41,20 @@ export async function sendPortalWelcomeEmail(params: {
   }
 
   try {
-    const payload = await mysqlApiRequest<{ success?: boolean; mock?: boolean }>('/portal-users/welcome-email', {
-      method: 'POST',
-      body: JSON.stringify({
-        to: params.to,
-        firstName: params.firstName,
-        lastName: params.lastName,
-        vendorName: params.vendorName,
-        role: params.role,
-        loginUrl: params.loginUrl,
-      }),
-    });
+    const payload = await mysqlApiRequest<{ success?: boolean; mock?: boolean }>(
+      '/portal-users/welcome-email',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          to: params.to,
+          firstName: params.firstName,
+          lastName: params.lastName,
+          vendorName: params.vendorName,
+          role: params.role,
+          loginUrl: params.loginUrl,
+        }),
+      }
+    );
     if (payload.mock) {
       return { ok: true, viaApi: false };
     }

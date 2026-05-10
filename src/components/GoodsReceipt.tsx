@@ -1,5 +1,16 @@
 import { useState } from 'react';
-import { Search, Filter, Plus, Package, X, ChevronDown, MapPin, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  Plus,
+  Package,
+  X,
+  ChevronDown,
+  MapPin,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+} from 'lucide-react';
 import { useAPData } from '../contexts/APDataContext';
 import { FormSection, PxFormField } from './ui/form-primitives';
 
@@ -45,25 +56,34 @@ const locations = [
   'Pune Store',
   'Delhi Hub',
   'Chennai Depot',
-  'Kolkata Branch'
+  'Kolkata Branch',
 ];
 
 const getStatusColor = (status: GRN['status']) => {
   switch (status) {
-    case 'Pending': return 'var(--color-slate)';
-    case 'Partial': return 'var(--color-teal-dark)';
-    case 'Complete': return 'var(--color-teal)';
-    default: return 'var(--color-mercury-grey)';
+    case 'Pending':
+      return 'var(--color-slate)';
+    case 'Partial':
+      return 'var(--color-teal-dark)';
+    case 'Complete':
+      return 'var(--color-teal)';
+    default:
+      return 'var(--color-mercury-grey)';
   }
 };
 
 const getAllocationStatusColor = (status: GRN['allocationStatus']) => {
   switch (status) {
-    case 'Not Allocated': return 'var(--color-error)';
-    case 'Partially Allocated': return '#D97706';
-    case 'Fully Allocated': return 'var(--color-teal)';
-    case 'Accepted': return 'var(--color-teal)';
-    default: return 'var(--color-mercury-grey)';
+    case 'Not Allocated':
+      return 'var(--color-error)';
+    case 'Partially Allocated':
+      return '#D97706';
+    case 'Fully Allocated':
+      return 'var(--color-teal)';
+    case 'Accepted':
+      return 'var(--color-teal)';
+    default:
+      return 'var(--color-mercury-grey)';
   }
 };
 
@@ -73,7 +93,7 @@ export function GoodsReceipt() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedPO, setSelectedPO] = useState<POItem | null>(null);
   const [qtyReceived, setQtyReceived] = useState(0);
-  
+
   // Part B - Allocation states
   const [currentStep, setCurrentStep] = useState<'partA' | 'partB'>('partA');
   const [allocations, setAllocations] = useState<LocationAllocation[]>([]);
@@ -116,10 +136,11 @@ export function GoodsReceipt() {
       }))
   );
 
-  const filteredGRNs = grns.filter(grn => 
-    grn.grnNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    grn.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    grn.vendor.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredGRNs = grns.filter(
+    (grn) =>
+      grn.grnNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      grn.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      grn.vendor.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const addAllocationLine = () => {
@@ -128,19 +149,19 @@ export function GoodsReceipt() {
       location: '',
       allocatedQty: 0,
       acceptedQty: 0,
-      status: 'Pending Acceptance'
+      status: 'Pending Acceptance',
     };
     setAllocations([...allocations, newAllocation]);
   };
 
   const updateAllocation = (id: string, field: keyof LocationAllocation, value: any) => {
-    setAllocations(allocations.map(alloc => 
-      alloc.id === id ? { ...alloc, [field]: value } : alloc
-    ));
+    setAllocations(
+      allocations.map((alloc) => (alloc.id === id ? { ...alloc, [field]: value } : alloc))
+    );
   };
 
   const removeAllocation = (id: string) => {
-    setAllocations(allocations.filter(alloc => alloc.id !== id));
+    setAllocations(allocations.filter((alloc) => alloc.id !== id));
   };
 
   const getTotalAllocated = () => {
@@ -149,7 +170,7 @@ export function GoodsReceipt() {
 
   const isAllocationValid = () => {
     const total = getTotalAllocated();
-    const allHaveLocation = allocations.every(alloc => alloc.location && alloc.allocatedQty > 0);
+    const allHaveLocation = allocations.every((alloc) => alloc.location && alloc.allocatedQty > 0);
     return total === qtyReceived && allHaveLocation && allocations.length > 0;
   };
 
@@ -157,13 +178,15 @@ export function GoodsReceipt() {
     if (selectedPO && qtyReceived > 0) {
       setCurrentStep('partB');
       // Initialize with original PO location
-      setAllocations([{
-        id: '1',
-        location: selectedPO.deliveryLocation,
-        allocatedQty: qtyReceived,
-        acceptedQty: 0,
-        status: 'Pending Acceptance'
-      }]);
+      setAllocations([
+        {
+          id: '1',
+          location: selectedPO.deliveryLocation,
+          allocatedQty: qtyReceived,
+          acceptedQty: 0,
+          status: 'Pending Acceptance',
+        },
+      ]);
     }
   };
 
@@ -193,7 +216,9 @@ export function GoodsReceipt() {
         qtyReceived: newGRN.qtyReceived,
         poQty: newGRN.poQty,
         status: newGRN.status,
-        allocationStatus: allocations.every((allocation) => allocation.acceptedQty >= allocation.allocatedQty)
+        allocationStatus: allocations.every(
+          (allocation) => allocation.acceptedQty >= allocation.allocatedQty
+        )
           ? 'Accepted'
           : allocations.length > 0
             ? 'Partially Allocated'
@@ -213,7 +238,7 @@ export function GoodsReceipt() {
           amount: allocation.allocatedQty * (selectedPO?.unitPrice || 0),
         })),
       });
-      
+
       // Reset
       setShowCreateModal(false);
       setCurrentStep('partA');
@@ -238,15 +263,19 @@ export function GoodsReceipt() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Goods Receipt (GRN)</h1>
-          <p style={{ color: 'var(--color-mercury-grey)' }}>Record vendor deliveries and manage location allocations</p>
+          <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>
+            Goods Receipt (GRN)
+          </h1>
+          <p style={{ color: 'var(--color-mercury-grey)' }}>
+            Record vendor deliveries and manage location allocations
+          </p>
         </div>
-        <button 
+        <button
           onClick={() => setShowCreateModal(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
           style={{ backgroundColor: 'var(--color-teal)' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
         >
           <Plus className="w-5 h-5" />
           Create GRN from PO
@@ -254,29 +283,35 @@ export function GoodsReceipt() {
       </div>
 
       {/* Search */}
-      <div className="bg-white rounded-lg p-6 mb-6" style={{ border: '1px solid var(--color-silver)' }}>
+      <div
+        className="bg-white rounded-lg p-6 mb-6"
+        style={{ border: '1px solid var(--color-silver)' }}
+      >
         <div className="flex gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--color-mercury-grey)' }} />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5"
+              style={{ color: 'var(--color-mercury-grey)' }}
+            />
             <input
               type="text"
               placeholder="Search by GRN number, PO number, or vendor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg"
-              style={{ 
+              style={{
                 border: '1px solid var(--color-silver)',
                 backgroundColor: 'var(--color-cloud)',
-                color: 'var(--color-ink)'
+                color: 'var(--color-ink)',
               }}
             />
           </div>
-          <button 
+          <button
             className="flex items-center gap-2 px-4 py-2 rounded-lg"
-            style={{ 
+            style={{
               border: '1px solid var(--color-silver)',
               color: 'var(--color-ink)',
-              backgroundColor: 'white'
+              backgroundColor: 'white',
             }}
           >
             <Filter className="w-5 h-5" />
@@ -286,27 +321,70 @@ export function GoodsReceipt() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-silver)' }}>
+      <div
+        className="bg-white rounded-lg overflow-hidden"
+        style={{ border: '1px solid var(--color-silver)' }}
+      >
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>GRN Number</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>PO Number</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Receipt Date</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Qty Received</th>
-                <th className="text-right px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Amount</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Allocation Status</th>
-                <th className="text-left px-6 py-4 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  GRN Number
+                </th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  PO Number
+                </th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Vendor
+                </th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Receipt Date
+                </th>
+                <th
+                  className="text-right px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Qty Received
+                </th>
+                <th
+                  className="text-right px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Amount
+                </th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Allocation Status
+                </th>
+                <th
+                  className="text-left px-6 py-4 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {filteredGRNs.map((grn, index) => (
-                <tr 
+                <tr
                   key={grn.id}
-                  style={{ 
-                    borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)'
+                  style={{
+                    borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)',
                   }}
                 >
                   <td className="px-6 py-4" style={{ color: 'var(--color-ink)' }}>
@@ -331,16 +409,20 @@ export function GoodsReceipt() {
                     ₹{grn.amount.toLocaleString('en-IN')}
                   </td>
                   <td className="px-6 py-4">
-                    <span 
+                    <span
                       className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm"
-                      style={{ 
+                      style={{
                         backgroundColor: getAllocationStatusColor(grn.allocationStatus) + '20',
-                        color: getAllocationStatusColor(grn.allocationStatus)
+                        color: getAllocationStatusColor(grn.allocationStatus),
                       }}
                     >
                       {grn.allocationStatus === 'Accepted' && <CheckCircle className="w-3 h-3" />}
-                      {grn.allocationStatus === 'Partially Allocated' && <Clock className="w-3 h-3" />}
-                      {grn.allocationStatus === 'Not Allocated' && <AlertCircle className="w-3 h-3" />}
+                      {grn.allocationStatus === 'Partially Allocated' && (
+                        <Clock className="w-3 h-3" />
+                      )}
+                      {grn.allocationStatus === 'Not Allocated' && (
+                        <AlertCircle className="w-3 h-3" />
+                      )}
                       {grn.allocationStatus}
                     </span>
                   </td>
@@ -348,9 +430,9 @@ export function GoodsReceipt() {
                     <button
                       onClick={() => handleViewAllocations(grn)}
                       className="px-3 py-1 rounded text-sm transition-colors"
-                      style={{ 
+                      style={{
                         backgroundColor: 'var(--color-teal-tint)',
-                        color: 'var(--color-teal)'
+                        color: 'var(--color-teal)',
                       }}
                     >
                       View Allocations
@@ -368,18 +450,23 @@ export function GoodsReceipt() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+            <div
+              className="flex items-center justify-between p-6"
+              style={{ borderBottom: '1px solid var(--color-silver)' }}
+            >
               <div>
                 <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
-                  {currentStep === 'partA' ? 'Part A: Record Physical Receipt' : 'Part B: Allocate to Locations'}
+                  {currentStep === 'partA'
+                    ? 'Part A: Record Physical Receipt'
+                    : 'Part B: Allocate to Locations'}
                 </h2>
                 <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                  {currentStep === 'partA' 
-                    ? 'Record the actual quantity received from vendor' 
+                  {currentStep === 'partA'
+                    ? 'Record the actual quantity received from vendor'
                     : 'Distribute received quantity to multiple locations'}
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => {
                   setShowCreateModal(false);
                   setCurrentStep('partA');
@@ -397,29 +484,43 @@ export function GoodsReceipt() {
             <div className="px-6 pt-4">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <div 
+                  <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-                    style={{ 
-                      backgroundColor: currentStep === 'partA' || currentStep === 'partB' ? 'var(--color-teal)' : 'var(--color-silver)',
-                      color: currentStep === 'partA' || currentStep === 'partB' ? 'white' : 'var(--color-mercury-grey)'
+                    style={{
+                      backgroundColor:
+                        currentStep === 'partA' || currentStep === 'partB'
+                          ? 'var(--color-teal)'
+                          : 'var(--color-silver)',
+                      color:
+                        currentStep === 'partA' || currentStep === 'partB'
+                          ? 'white'
+                          : 'var(--color-mercury-grey)',
                     }}
                   >
                     {currentStep === 'partB' ? '✓' : '1'}
                   </div>
-                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>Physical Receipt</span>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                    Physical Receipt
+                  </span>
                 </div>
-                <div className="flex-1 h-px" style={{ backgroundColor: 'var(--color-silver)' }}></div>
+                <div
+                  className="flex-1 h-px"
+                  style={{ backgroundColor: 'var(--color-silver)' }}
+                ></div>
                 <div className="flex items-center gap-2">
-                  <div 
+                  <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-                    style={{ 
-                      backgroundColor: currentStep === 'partB' ? 'var(--color-teal)' : 'var(--color-silver)',
-                      color: currentStep === 'partB' ? 'white' : 'var(--color-mercury-grey)'
+                    style={{
+                      backgroundColor:
+                        currentStep === 'partB' ? 'var(--color-teal)' : 'var(--color-silver)',
+                      color: currentStep === 'partB' ? 'white' : 'var(--color-mercury-grey)',
                     }}
                   >
                     2
                   </div>
-                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>Location Allocation</span>
+                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                    Location Allocation
+                  </span>
                 </div>
               </div>
             </div>
@@ -434,16 +535,17 @@ export function GoodsReceipt() {
                       <select
                         value={selectedPO?.id || ''}
                         onChange={(e) => {
-                          const po = availablePOItems.find(p => p.id === e.target.value);
+                          const po = availablePOItems.find((p) => p.id === e.target.value);
                           setSelectedPO(po || null);
                           setQtyReceived(0);
                         }}
                         className="px-select"
                       >
                         <option value="">Choose a PO...</option>
-                        {availablePOItems.map(po => (
+                        {availablePOItems.map((po) => (
                           <option key={po.id} value={po.id}>
-                            {po.poNumber} - {po.vendor} - {po.itemName} (Remaining: {po.remainingQty})
+                            {po.poNumber} - {po.vendor} - {po.itemName} (Remaining:{' '}
+                            {po.remainingQty})
                           </option>
                         ))}
                       </select>
@@ -452,34 +554,75 @@ export function GoodsReceipt() {
 
                   {/* PO Details */}
                   {selectedPO && (
-                    <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
-                      <h3 className="mb-3" style={{ color: 'var(--color-ink)' }}>PO Details</h3>
+                    <div
+                      className="mb-6 p-4 rounded-lg"
+                      style={{
+                        backgroundColor: 'var(--color-cloud)',
+                        border: '1px solid var(--color-silver)',
+                      }}
+                    >
+                      <h3 className="mb-3" style={{ color: 'var(--color-ink)' }}>
+                        PO Details
+                      </h3>
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Item Name</p>
+                          <p
+                            className="text-sm mb-1"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
+                            Item Name
+                          </p>
                           <p style={{ color: 'var(--color-ink)' }}>{selectedPO.itemName}</p>
                         </div>
                         <div>
-                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</p>
+                          <p
+                            className="text-sm mb-1"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
+                            Vendor
+                          </p>
                           <p style={{ color: 'var(--color-ink)' }}>{selectedPO.vendor}</p>
                         </div>
                         <div>
-                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Original Delivery Location</p>
-                          <p className="flex items-center gap-1" style={{ color: 'var(--color-teal)' }}>
+                          <p
+                            className="text-sm mb-1"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
+                            Original Delivery Location
+                          </p>
+                          <p
+                            className="flex items-center gap-1"
+                            style={{ color: 'var(--color-teal)' }}
+                          >
                             <MapPin className="w-4 h-4" />
                             {selectedPO.deliveryLocation}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Order Qty</p>
+                          <p
+                            className="text-sm mb-1"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
+                            Order Qty
+                          </p>
                           <p style={{ color: 'var(--color-ink)' }}>{selectedPO.orderQty}</p>
                         </div>
                         <div>
-                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Already Received</p>
+                          <p
+                            className="text-sm mb-1"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
+                            Already Received
+                          </p>
                           <p style={{ color: 'var(--color-ink)' }}>{selectedPO.receivedQty}</p>
                         </div>
                         <div>
-                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Remaining Qty</p>
+                          <p
+                            className="text-sm mb-1"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
+                            Remaining Qty
+                          </p>
                           <p style={{ color: 'var(--color-teal)' }}>{selectedPO.remainingQty}</p>
                         </div>
                       </div>
@@ -489,13 +632,21 @@ export function GoodsReceipt() {
                   {/* Quantity Received */}
                   {selectedPO && (
                     <FormSection title="Receipt Details" columns={1}>
-                      <PxFormField label="Quantity Received from Vendor" required hint={`Max: ${selectedPO.remainingQty} units`}>
+                      <PxFormField
+                        label="Quantity Received from Vendor"
+                        required
+                        hint={`Max: ${selectedPO.remainingQty} units`}
+                      >
                         <input
                           type="number"
                           min="0"
                           max={selectedPO.remainingQty}
                           value={qtyReceived}
-                          onChange={(e) => setQtyReceived(Math.min(parseInt(e.target.value) || 0, selectedPO.remainingQty))}
+                          onChange={(e) =>
+                            setQtyReceived(
+                              Math.min(parseInt(e.target.value) || 0, selectedPO.remainingQty)
+                            )
+                          }
                           className="px-input"
                           placeholder="Enter quantity received"
                         />
@@ -506,7 +657,10 @@ export function GoodsReceipt() {
               ) : (
                 <>
                   {/* Part B - Location Allocations */}
-                  <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: '#FFF9E6', border: '1px solid #D97706' }}>
+                  <div
+                    className="mb-4 p-4 rounded-lg"
+                    style={{ backgroundColor: '#FFF9E6', border: '1px solid #D97706' }}
+                  >
                     <div className="flex items-start gap-2">
                       <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: '#D97706' }} />
                       <div>
@@ -514,7 +668,8 @@ export function GoodsReceipt() {
                           <strong>Total Received: {qtyReceived} units</strong>
                         </p>
                         <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                          Allocate the complete quantity to one or more locations. Total allocation must equal {qtyReceived} units.
+                          Allocate the complete quantity to one or more locations. Total allocation
+                          must equal {qtyReceived} units.
                         </p>
                       </div>
                     </div>
@@ -529,9 +684,9 @@ export function GoodsReceipt() {
                       <button
                         onClick={addAllocationLine}
                         className="flex items-center gap-1 px-3 py-1 rounded text-sm transition-colors"
-                        style={{ 
+                        style={{
                           backgroundColor: 'var(--color-teal-tint)',
-                          color: 'var(--color-teal)'
+                          color: 'var(--color-teal)',
                         }}
                       >
                         <Plus className="w-4 h-4" />
@@ -541,22 +696,29 @@ export function GoodsReceipt() {
 
                     <div className="space-y-3">
                       {allocations.map((allocation, index) => (
-                        <div 
-                          key={allocation.id} 
+                        <div
+                          key={allocation.id}
                           className="p-4 rounded-lg"
-                          style={{ border: '1px solid var(--color-silver)', backgroundColor: 'white' }}
+                          style={{
+                            border: '1px solid var(--color-silver)',
+                            backgroundColor: 'white',
+                          }}
                         >
                           <div className="flex items-center gap-3">
                             <div className="flex-1 grid grid-cols-2 gap-3">
                               <PxFormField label="Location" required>
                                 <select
                                   value={allocation.location}
-                                  onChange={(e) => updateAllocation(allocation.id, 'location', e.target.value)}
+                                  onChange={(e) =>
+                                    updateAllocation(allocation.id, 'location', e.target.value)
+                                  }
                                   className="px-select-compact"
                                 >
                                   <option value="">Select location...</option>
-                                  {locations.map(loc => (
-                                    <option key={loc} value={loc}>{loc}</option>
+                                  {locations.map((loc) => (
+                                    <option key={loc} value={loc}>
+                                      {loc}
+                                    </option>
                                   ))}
                                 </select>
                               </PxFormField>
@@ -565,7 +727,13 @@ export function GoodsReceipt() {
                                   type="number"
                                   min="0"
                                   value={allocation.allocatedQty || ''}
-                                  onChange={(e) => updateAllocation(allocation.id, 'allocatedQty', parseInt(e.target.value) || 0)}
+                                  onChange={(e) =>
+                                    updateAllocation(
+                                      allocation.id,
+                                      'allocatedQty',
+                                      parseInt(e.target.value) || 0
+                                    )
+                                  }
                                   className="px-input-compact"
                                   placeholder="Enter quantity"
                                 />
@@ -588,18 +756,22 @@ export function GoodsReceipt() {
                   </div>
 
                   {/* Allocation Summary */}
-                  <div className="p-4 rounded-lg" style={{ 
-                    backgroundColor: getTotalAllocated() === qtyReceived ? 'var(--color-teal-tint)' : '#FFE8EA',
-                    border: `1px solid ${getTotalAllocated() === qtyReceived ? 'var(--color-teal)' : 'var(--color-error)'}`
-                  }}>
+                  <div
+                    className="p-4 rounded-lg"
+                    style={{
+                      backgroundColor:
+                        getTotalAllocated() === qtyReceived ? 'var(--color-teal-tint)' : '#FFE8EA',
+                      border: `1px solid ${getTotalAllocated() === qtyReceived ? 'var(--color-teal)' : 'var(--color-error)'}`,
+                    }}
+                  >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
                           Total Allocated: <strong>{getTotalAllocated()} units</strong>
                         </p>
                         <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                          {getTotalAllocated() === qtyReceived 
-                            ? '✓ Allocation complete - matches received quantity' 
+                          {getTotalAllocated() === qtyReceived
+                            ? '✓ Allocation complete - matches received quantity'
                             : `${qtyReceived - getTotalAllocated()} units ${getTotalAllocated() > qtyReceived ? 'over' : 'remaining'}`}
                         </p>
                       </div>
@@ -627,10 +799,10 @@ export function GoodsReceipt() {
                   }
                 }}
                 className="flex-1 px-4 py-3 rounded-lg"
-                style={{ 
+                style={{
                   border: '1px solid var(--color-silver)',
                   color: 'var(--color-ink)',
-                  backgroundColor: 'white'
+                  backgroundColor: 'white',
                 }}
               >
                 {currentStep === 'partB' ? 'Back' : 'Cancel'}
@@ -641,8 +813,14 @@ export function GoodsReceipt() {
                   disabled={!selectedPO || qtyReceived === 0}
                   className="flex-1 px-4 py-3 rounded-lg text-white transition-colors disabled:opacity-50"
                   style={{ backgroundColor: 'var(--color-teal)' }}
-                  onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
-                  onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
+                  onMouseEnter={(e) =>
+                    !e.currentTarget.disabled &&
+                    (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
+                  }
+                  onMouseLeave={(e) =>
+                    !e.currentTarget.disabled &&
+                    (e.currentTarget.style.backgroundColor = 'var(--color-teal)')
+                  }
                 >
                   Continue to Allocation →
                 </button>
@@ -652,8 +830,14 @@ export function GoodsReceipt() {
                   disabled={!isAllocationValid()}
                   className="flex-1 px-4 py-3 rounded-lg text-white transition-colors disabled:opacity-50"
                   style={{ backgroundColor: 'var(--color-teal)' }}
-                  onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
-                  onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
+                  onMouseEnter={(e) =>
+                    !e.currentTarget.disabled &&
+                    (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
+                  }
+                  onMouseLeave={(e) =>
+                    !e.currentTarget.disabled &&
+                    (e.currentTarget.style.backgroundColor = 'var(--color-teal)')
+                  }
                 >
                   Create GRN & Notify Locations
                 </button>
@@ -667,7 +851,10 @@ export function GoodsReceipt() {
       {showAllocationModal && selectedGRN && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--color-silver)' }}>
+            <div
+              className="flex items-center justify-between p-6"
+              style={{ borderBottom: '1px solid var(--color-silver)' }}
+            >
               <div>
                 <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
                   GRN Allocations - {selectedGRN.grnNumber}
@@ -676,7 +863,10 @@ export function GoodsReceipt() {
                   Total Received: {selectedGRN.qtyReceived} units
                 </p>
               </div>
-              <button onClick={() => setShowAllocationModal(false)} style={{ color: 'var(--color-mercury-grey)' }}>
+              <button
+                onClick={() => setShowAllocationModal(false)}
+                style={{ color: 'var(--color-mercury-grey)' }}
+              >
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -684,7 +874,7 @@ export function GoodsReceipt() {
             <div className="p-6">
               <div className="space-y-4">
                 {selectedGRN.allocations?.map((allocation) => (
-                  <div 
+                  <div
                     key={allocation.id}
                     className="p-4 rounded-lg"
                     style={{ border: '1px solid var(--color-silver)' }}
@@ -699,11 +889,12 @@ export function GoodsReceipt() {
                           </p>
                         </div>
                       </div>
-                      <span 
+                      <span
                         className="px-3 py-1 rounded-full text-sm"
-                        style={{ 
-                          backgroundColor: allocation.status === 'Accepted' ? 'var(--color-teal-tint)' : '#FFF9E6',
-                          color: allocation.status === 'Accepted' ? 'var(--color-teal)' : '#D97706'
+                        style={{
+                          backgroundColor:
+                            allocation.status === 'Accepted' ? 'var(--color-teal-tint)' : '#FFF9E6',
+                          color: allocation.status === 'Accepted' ? 'var(--color-teal)' : '#D97706',
                         }}
                       >
                         {allocation.status}
@@ -713,7 +904,10 @@ export function GoodsReceipt() {
                     {allocation.status === 'Accepted' && (
                       <div className="pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
                         <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                          Accepted by: <strong style={{ color: 'var(--color-ink)' }}>{allocation.acceptedBy}</strong>
+                          Accepted by:{' '}
+                          <strong style={{ color: 'var(--color-ink)' }}>
+                            {allocation.acceptedBy}
+                          </strong>
                         </p>
                         <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
                           Date: {allocation.acceptedDate}
@@ -726,8 +920,12 @@ export function GoodsReceipt() {
                         onClick={() => handleAcceptAllocation(selectedGRN.id, allocation.id)}
                         className="mt-3 w-full px-4 py-2 rounded-lg text-white transition-colors"
                         style={{ backgroundColor: 'var(--color-teal)' }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.backgroundColor = 'var(--color-teal)')
+                        }
                       >
                         Accept Allocation
                       </button>

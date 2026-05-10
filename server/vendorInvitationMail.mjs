@@ -31,7 +31,9 @@ export async function sendVendorInvitationEmailServer(body) {
   const invitationUrl = typeof body?.invitationUrl === 'string' ? body.invitationUrl.trim() : '';
   const legalName = typeof body?.legalName === 'string' ? body.legalName.trim() : '';
   const entityName =
-    typeof body?.entityName === 'string' && body.entityName.trim() ? body.entityName.trim() : undefined;
+    typeof body?.entityName === 'string' && body.entityName.trim()
+      ? body.entityName.trim()
+      : undefined;
 
   if (!to || !isValidEmailShape(to)) {
     return { ok: false, error: 'Invalid or missing "to" email address.', status: 400 };

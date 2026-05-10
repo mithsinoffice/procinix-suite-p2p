@@ -5,7 +5,18 @@ export interface AuditLog {
   userName: string;
   userEmail: string;
   userRole: string;
-  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'APPROVE' | 'REJECT' | 'SUBMIT' | 'REQUEST_INFO' | 'VIEW' | 'EXPORT' | 'LOGIN' | 'LOGOUT';
+  action:
+    | 'CREATE'
+    | 'UPDATE'
+    | 'DELETE'
+    | 'APPROVE'
+    | 'REJECT'
+    | 'SUBMIT'
+    | 'REQUEST_INFO'
+    | 'VIEW'
+    | 'EXPORT'
+    | 'LOGIN'
+    | 'LOGOUT';
   module: string; // e.g., "Contract Master", "Purchase Order", "GRN", "User Management"
   recordType: string; // e.g., "Contract", "PO", "GRN Part A", "Vendor"
   recordId: string;
@@ -74,10 +85,28 @@ class AuditLogService {
           location: 'Mumbai, India',
           status: 'SUCCESS',
           changes: [
-            { field: 'vendor', fieldLabel: 'Vendor', oldValue: null, newValue: 'Tata Steel Ltd.', changeType: 'ADDED' },
-            { field: 'contractStartDate', fieldLabel: 'Contract Start Date', oldValue: null, newValue: '2024-01-01', changeType: 'ADDED' },
-            { field: 'ratePerUnit', fieldLabel: 'Rate Per Unit', oldValue: null, newValue: '65.50', changeType: 'ADDED' }
-          ]
+            {
+              field: 'vendor',
+              fieldLabel: 'Vendor',
+              oldValue: null,
+              newValue: 'Tata Steel Ltd.',
+              changeType: 'ADDED',
+            },
+            {
+              field: 'contractStartDate',
+              fieldLabel: 'Contract Start Date',
+              oldValue: null,
+              newValue: '2024-01-01',
+              changeType: 'ADDED',
+            },
+            {
+              field: 'ratePerUnit',
+              fieldLabel: 'Rate Per Unit',
+              oldValue: null,
+              newValue: '65.50',
+              changeType: 'ADDED',
+            },
+          ],
         },
         {
           id: 'AUDIT-2',
@@ -96,9 +125,21 @@ class AuditLogService {
           location: 'Mumbai, India',
           status: 'SUCCESS',
           changes: [
-            { field: 'ratePerUnit', fieldLabel: 'Rate Per Unit', oldValue: '420.00', newValue: '435.00', changeType: 'MODIFIED' },
-            { field: 'leadTime', fieldLabel: 'Lead Time', oldValue: '10', newValue: '12', changeType: 'MODIFIED' }
-          ]
+            {
+              field: 'ratePerUnit',
+              fieldLabel: 'Rate Per Unit',
+              oldValue: '420.00',
+              newValue: '435.00',
+              changeType: 'MODIFIED',
+            },
+            {
+              field: 'leadTime',
+              fieldLabel: 'Lead Time',
+              oldValue: '10',
+              newValue: '12',
+              changeType: 'MODIFIED',
+            },
+          ],
         },
         {
           id: 'AUDIT-3',
@@ -115,7 +156,7 @@ class AuditLogService {
           ipAddress: '192.168.1.110',
           deviceInfo: navigator.userAgent,
           location: 'Mumbai, India',
-          status: 'SUCCESS'
+          status: 'SUCCESS',
         },
         {
           id: 'AUDIT-4',
@@ -132,7 +173,7 @@ class AuditLogService {
           ipAddress: '192.168.1.100',
           deviceInfo: navigator.userAgent,
           location: 'Mumbai, India',
-          status: 'SUCCESS'
+          status: 'SUCCESS',
         },
         {
           id: 'AUDIT-5',
@@ -149,7 +190,7 @@ class AuditLogService {
           ipAddress: '192.168.1.105',
           deviceInfo: navigator.userAgent,
           location: 'Mumbai, India',
-          status: 'SUCCESS'
+          status: 'SUCCESS',
         },
         {
           id: 'AUDIT-6',
@@ -167,7 +208,7 @@ class AuditLogService {
           deviceInfo: navigator.userAgent,
           location: 'Mumbai, India',
           status: 'FAILED',
-          errorMessage: 'Invalid credentials'
+          errorMessage: 'Invalid credentials',
         },
         {
           id: 'AUDIT-7',
@@ -185,8 +226,8 @@ class AuditLogService {
           deviceInfo: navigator.userAgent,
           location: 'Mumbai, India',
           status: 'SUCCESS',
-          metadata: { format: 'CSV', recordCount: 48 }
-        }
+          metadata: { format: 'CSV', recordCount: 48 },
+        },
       ];
 
       this.logs = demoLogs;
@@ -208,7 +249,12 @@ class AuditLogService {
   /**
    * Get current user information from session
    */
-  private getCurrentUser(): { userId: string; userName: string; userEmail: string; userRole: string } {
+  private getCurrentUser(): {
+    userId: string;
+    userName: string;
+    userEmail: string;
+    userRole: string;
+  } {
     try {
       const userSession = localStorage.getItem('userSession');
       if (userSession) {
@@ -217,18 +263,20 @@ class AuditLogService {
           userId: session.userId || 'SYSTEM',
           userName: session.name || 'System User',
           userEmail: session.email || 'system@procinix.ai',
-          userRole: Array.isArray(session.role) ? session.role.join(', ') : session.role || 'Unknown'
+          userRole: Array.isArray(session.role)
+            ? session.role.join(', ')
+            : session.role || 'Unknown',
         };
       }
     } catch (error) {
       console.error('Failed to get current user:', error);
     }
-    
+
     return {
       userId: 'SYSTEM',
       userName: 'System User',
       userEmail: 'system@procinix.ai',
-      userRole: 'System'
+      userRole: 'System',
     };
   }
 
@@ -247,7 +295,7 @@ class AuditLogService {
     metadata?: Record<string, any>;
   }) {
     const user = this.getCurrentUser();
-    
+
     const auditLog: AuditLog = {
       id: `AUDIT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
@@ -266,7 +314,7 @@ class AuditLogService {
       location: this.getLocation(),
       status: params.status || 'SUCCESS',
       errorMessage: params.errorMessage,
-      metadata: params.metadata
+      metadata: params.metadata,
     };
 
     this.logs.unshift(auditLog); // Add to beginning for recent-first ordering
@@ -274,7 +322,7 @@ class AuditLogService {
 
     // In production, this would also send to backend API
     console.log('Audit Log Created:', auditLog);
-    
+
     return auditLog;
   }
 
@@ -287,7 +335,7 @@ class AuditLogService {
       fieldLabel: this.formatFieldLabel(key),
       oldValue: null,
       newValue: this.formatValue(value),
-      changeType: 'ADDED' as const
+      changeType: 'ADDED' as const,
     }));
 
     return this.log({
@@ -296,30 +344,36 @@ class AuditLogService {
       recordType,
       recordId,
       description: `Created new ${recordType} record: ${recordId}`,
-      changes
+      changes,
     });
   }
 
   /**
    * Log an update action
    */
-  logUpdate(module: string, recordType: string, recordId: string, oldData: Record<string, any>, newData: Record<string, any>) {
+  logUpdate(
+    module: string,
+    recordType: string,
+    recordId: string,
+    oldData: Record<string, any>,
+    newData: Record<string, any>
+  ) {
     const changes: AuditChange[] = [];
-    
+
     // Find all changed fields
     const allKeys = new Set([...Object.keys(oldData), ...Object.keys(newData)]);
-    
-    allKeys.forEach(key => {
+
+    allKeys.forEach((key) => {
       const oldValue = oldData[key];
       const newValue = newData[key];
-      
+
       if (oldValue !== newValue) {
         changes.push({
           field: key,
           fieldLabel: this.formatFieldLabel(key),
           oldValue: this.formatValue(oldValue),
           newValue: this.formatValue(newValue),
-          changeType: 'MODIFIED'
+          changeType: 'MODIFIED',
         });
       }
     });
@@ -334,7 +388,7 @@ class AuditLogService {
       recordType,
       recordId,
       description: `Updated ${recordType} record: ${recordId} (${changes.length} field(s) changed)`,
-      changes
+      changes,
     });
   }
 
@@ -347,7 +401,7 @@ class AuditLogService {
       fieldLabel: this.formatFieldLabel(key),
       oldValue: this.formatValue(value),
       newValue: null,
-      changeType: 'REMOVED' as const
+      changeType: 'REMOVED' as const,
     }));
 
     return this.log({
@@ -356,23 +410,29 @@ class AuditLogService {
       recordType,
       recordId,
       description: `Deleted ${recordType} record: ${recordId}`,
-      changes
+      changes,
     });
   }
 
   /**
    * Log an approval action
    */
-  logApproval(module: string, recordType: string, recordId: string, approved: boolean, comments?: string) {
+  logApproval(
+    module: string,
+    recordType: string,
+    recordId: string,
+    approved: boolean,
+    comments?: string
+  ) {
     return this.log({
       action: approved ? 'APPROVE' : 'REJECT',
       module,
       recordType,
       recordId,
-      description: approved 
+      description: approved
         ? `Approved ${recordType} record: ${recordId}${comments ? ` - ${comments}` : ''}`
         : `Rejected ${recordType} record: ${recordId}${comments ? ` - ${comments}` : ''}`,
-      metadata: { comments }
+      metadata: { comments },
     });
   }
 
@@ -385,7 +445,7 @@ class AuditLogService {
       module,
       recordType,
       recordId,
-      description: `Submitted ${recordType} record for approval: ${recordId}`
+      description: `Submitted ${recordType} record for approval: ${recordId}`,
     });
   }
 
@@ -399,7 +459,7 @@ class AuditLogService {
       recordType,
       recordId,
       description: `Requested more information for ${recordType} record: ${recordId} - ${comments}`,
-      metadata: { comments }
+      metadata: { comments },
     });
   }
 
@@ -412,7 +472,7 @@ class AuditLogService {
       module,
       recordType,
       recordId,
-      description: `Viewed ${recordType} record: ${recordId}`
+      description: `Viewed ${recordType} record: ${recordId}`,
     });
   }
 
@@ -426,7 +486,7 @@ class AuditLogService {
       recordType,
       recordId: `EXPORT-${Date.now()}`,
       description: `Exported ${recordType} data as ${format}`,
-      metadata: { format, filters }
+      metadata: { format, filters },
     });
   }
 
@@ -439,11 +499,12 @@ class AuditLogService {
       module: 'Authentication',
       recordType: 'User Session',
       recordId: email,
-      description: status === 'SUCCESS' 
-        ? `User logged in successfully: ${email}`
-        : `Failed login attempt: ${email}`,
+      description:
+        status === 'SUCCESS'
+          ? `User logged in successfully: ${email}`
+          : `Failed login attempt: ${email}`,
       status,
-      errorMessage
+      errorMessage,
     });
   }
 
@@ -456,7 +517,7 @@ class AuditLogService {
       module: 'Authentication',
       recordType: 'User Session',
       recordId: email,
-      description: `User logged out: ${email}`
+      description: `User logged out: ${email}`,
     });
   }
 
@@ -471,21 +532,21 @@ class AuditLogService {
    * Get logs by user
    */
   getLogsByUser(userId: string): AuditLog[] {
-    return this.logs.filter(log => log.userId === userId);
+    return this.logs.filter((log) => log.userId === userId);
   }
 
   /**
    * Get logs by module
    */
   getLogsByModule(module: string): AuditLog[] {
-    return this.logs.filter(log => log.module === module);
+    return this.logs.filter((log) => log.module === module);
   }
 
   /**
    * Get logs by record
    */
   getLogsByRecord(recordId: string): AuditLog[] {
-    return this.logs.filter(log => log.recordId === recordId);
+    return this.logs.filter((log) => log.recordId === recordId);
   }
 
   /**
@@ -494,8 +555,8 @@ class AuditLogService {
   getLogsByDateRange(startDate: string, endDate: string): AuditLog[] {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
-    return this.logs.filter(log => {
+
+    return this.logs.filter((log) => {
       const logDate = new Date(log.timestamp);
       return logDate >= start && logDate <= end;
     });
@@ -536,10 +597,10 @@ class AuditLogService {
       'Description',
       'Status',
       'IP Address',
-      'Changes'
+      'Changes',
     ];
 
-    const rows = this.logs.map(log => [
+    const rows = this.logs.map((log) => [
       log.timestamp,
       log.userName,
       log.userEmail,
@@ -551,12 +612,12 @@ class AuditLogService {
       log.description,
       log.status,
       log.ipAddress || 'N/A',
-      log.changes ? log.changes.length.toString() : '0'
+      log.changes ? log.changes.length.toString() : '0',
     ]);
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
     ].join('\n');
 
     return csvContent;
@@ -568,7 +629,7 @@ class AuditLogService {
   private formatFieldLabel(field: string): string {
     return field
       .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, str => str.toUpperCase())
+      .replace(/^./, (str) => str.toUpperCase())
       .trim();
   }
 

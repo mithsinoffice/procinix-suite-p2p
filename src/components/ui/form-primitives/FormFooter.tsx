@@ -43,12 +43,7 @@ export function FormFooter({
         )}
         {saveStatus && <AutoSaveIndicator status={saveStatus} />}
       </div>
-      <button
-        type="button"
-        className="btn-primary"
-        onClick={onSubmit}
-        disabled={submitDisabled}
-      >
+      <button type="button" className="btn-primary" onClick={onSubmit} disabled={submitDisabled}>
         {submitLabel}
       </button>
     </div>

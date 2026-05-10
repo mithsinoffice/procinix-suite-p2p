@@ -80,7 +80,11 @@ async function matchByEmailDomain(email) {
 function parseVendorPayload(row) {
   try {
     const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
-    return { id: row.id, name: payload.legal_name || payload.trade_name || payload.vendor_name || 'Unknown', payload };
+    return {
+      id: row.id,
+      name: payload.legal_name || payload.trade_name || payload.vendor_name || 'Unknown',
+      payload,
+    };
   } catch {
     return { id: row.id, name: 'Unknown', payload: {} };
   }
@@ -121,7 +125,9 @@ export async function processVendorMatch(invoiceId, extractedData) {
       matchConfidence = result.confidence;
       method = result.method;
       isNewVendor = false;
-      alternates = parsed.slice(1).map((p) => ({ id: p.id, name: p.name, confidence: result.confidence - 0.05 }));
+      alternates = parsed
+        .slice(1)
+        .map((p) => ({ id: p.id, name: p.name, confidence: result.confidence - 0.05 }));
 
       // Flag suspicious if name fuzzy match has many results or low confidence
       if (result.method === 'name_fuzzy' && result.matches.length > 3) {
@@ -134,9 +140,9 @@ export async function processVendorMatch(invoiceId, extractedData) {
     if (result) {
       explanationParts.push(
         `Vendor matched via ${method.replace('_', ' ').toUpperCase()}` +
-        (vendorGstin && method === 'gstin_exact' ? ` ${vendorGstin}` : '') +
-        (vendorPan && method === 'pan_exact' ? ` ${vendorPan}` : '') +
-        ` with ${Math.round(matchConfidence * 100)}% confidence`
+          (vendorGstin && method === 'gstin_exact' ? ` ${vendorGstin}` : '') +
+          (vendorPan && method === 'pan_exact' ? ` ${vendorPan}` : '') +
+          ` with ${Math.round(matchConfidence * 100)}% confidence`
       );
       explanationParts.push(`matched to "${matchedVendorName}" (${matchedVendorId})`);
       if (alternates.length > 0) {
@@ -144,7 +150,9 @@ export async function processVendorMatch(invoiceId, extractedData) {
       }
     } else {
       explanationParts.push('No vendor match found in master data');
-      explanationParts.push(`searched: GSTIN=${vendorGstin || 'N/A'}, PAN=${vendorPan || 'N/A'}, name="${vendorName || 'N/A'}", email=${vendorEmail || 'N/A'}`);
+      explanationParts.push(
+        `searched: GSTIN=${vendorGstin || 'N/A'}, PAN=${vendorPan || 'N/A'}, name="${vendorName || 'N/A'}", email=${vendorEmail || 'N/A'}`
+      );
       explanationParts.push('flagged as new vendor');
     }
     if (isSuspicious) {
@@ -160,9 +168,16 @@ export async function processVendorMatch(invoiceId, extractedData) {
           method, is_new_vendor, is_suspicious, alternate_candidates, explanation, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        vendorMatchId, invoiceId, matchedVendorId, matchedVendorName,
-        matchConfidence, method, isNewVendor ? 1 : 0, isSuspicious ? 1 : 0,
-        JSON.stringify(alternates), explanation,
+        vendorMatchId,
+        invoiceId,
+        matchedVendorId,
+        matchedVendorName,
+        matchConfidence,
+        method,
+        isNewVendor ? 1 : 0,
+        isSuspicious ? 1 : 0,
+        JSON.stringify(alternates),
+        explanation,
       ]
     );
 
@@ -176,20 +191,47 @@ export async function processVendorMatch(invoiceId, extractedData) {
           input_summary, output_summary, processing_time_ms, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        randomUUID(), invoiceId, AGENT_NAME, AGENT_VERSION,
-        decision, matchConfidence, explanation,
+        randomUUID(),
+        invoiceId,
+        AGENT_NAME,
+        AGENT_VERSION,
+        decision,
+        matchConfidence,
+        explanation,
         JSON.stringify({ vendorName, vendorGstin, vendorPan, vendorEmail }),
-        JSON.stringify({ vendorMatchId, matchedVendorId, method, isNewVendor, isSuspicious, alternateCount: alternates.length }),
+        JSON.stringify({
+          vendorMatchId,
+          matchedVendorId,
+          method,
+          isNewVendor,
+          isSuspicious,
+          alternateCount: alternates.length,
+        }),
         processingTimeMs,
       ]
     );
 
-    console.log(`[${AGENT_NAME}] invoice ${invoiceId}: ${decision} — ${method}, confidence ${matchConfidence}${isNewVendor ? ', NEW VENDOR' : ''}`);
+    console.log(
+      `[${AGENT_NAME}] invoice ${invoiceId}: ${decision} — ${method}, confidence ${matchConfidence}${isNewVendor ? ', NEW VENDOR' : ''}`
+    );
 
-    return { vendorMatchId, matchedVendorId, matchedVendorName, matchConfidence, method, isNewVendor, isSuspicious, alternates, explanation };
+    return {
+      vendorMatchId,
+      matchedVendorId,
+      matchedVendorName,
+      matchConfidence,
+      method,
+      isNewVendor,
+      isSuspicious,
+      alternates,
+      explanation,
+    };
   } catch (err) {
     const processingTimeMs = Date.now() - startTime;
-    console.error(`[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`, err.message);
+    console.error(
+      `[${AGENT_NAME}] invoice ${invoiceId}: error after ${processingTimeMs}ms —`,
+      err.message
+    );
 
     try {
       await query(
@@ -198,13 +240,18 @@ export async function processVendorMatch(invoiceId, extractedData) {
             input_summary, output_summary, processing_time_ms, created_at)
          VALUES (?, ?, ?, ?, 'error', 0, ?, ?, NULL, ?, NOW())`,
         [
-          randomUUID(), invoiceId, AGENT_NAME, AGENT_VERSION,
+          randomUUID(),
+          invoiceId,
+          AGENT_NAME,
+          AGENT_VERSION,
           `Vendor match failed: ${err.message}`,
           JSON.stringify({ vendorName: extractedData?.vendor_name }),
           processingTimeMs,
         ]
       );
-    } catch (_) { /* swallow logging failure */ }
+    } catch (_) {
+      /* swallow logging failure */
+    }
 
     throw err;
   }

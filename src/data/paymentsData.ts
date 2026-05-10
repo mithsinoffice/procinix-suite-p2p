@@ -33,7 +33,7 @@ export const mockPayments: PaymentInvoice[] = [
     priority: 'critical',
     paymentMode: 'RTGS',
     riskFlag: 'statutory',
-    category: 'Statutory'
+    category: 'Statutory',
   },
   {
     id: 'INV-2024-002',
@@ -47,7 +47,7 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'pending',
     priority: 'critical',
     paymentMode: 'NEFT',
-    category: 'Payroll'
+    category: 'Payroll',
   },
   {
     id: 'INV-2024-003',
@@ -62,7 +62,7 @@ export const mockPayments: PaymentInvoice[] = [
     priority: 'high',
     paymentMode: 'Wire',
     riskFlag: 'sla-breach',
-    category: 'Strategic Vendor'
+    category: 'Strategic Vendor',
   },
   {
     id: 'INV-2024-004',
@@ -78,9 +78,9 @@ export const mockPayments: PaymentInvoice[] = [
     paymentMode: 'Wire',
     category: 'Strategic Vendor',
     approvedBy: 'CFO',
-    approvedDate: '2024-12-08'
+    approvedDate: '2024-12-08',
   },
-  
+
   // Due This Week
   {
     id: 'INV-2024-005',
@@ -98,7 +98,7 @@ export const mockPayments: PaymentInvoice[] = [
     discountDate: '2024-12-12',
     category: 'Services',
     approvedBy: 'CFO',
-    approvedDate: '2024-12-09'
+    approvedDate: '2024-12-09',
   },
   {
     id: 'INV-2024-006',
@@ -112,7 +112,7 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'approved',
     priority: 'medium',
     paymentMode: 'NEFT',
-    category: 'Operational'
+    category: 'Operational',
   },
   {
     id: 'INV-2024-007',
@@ -126,7 +126,7 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'pending',
     priority: 'medium',
     paymentMode: 'NEFT',
-    category: 'Operational'
+    category: 'Operational',
   },
   {
     id: 'INV-2024-008',
@@ -144,9 +144,9 @@ export const mockPayments: PaymentInvoice[] = [
     discountDate: '2024-12-13',
     category: 'Strategic Vendor',
     approvedBy: 'VP Finance',
-    approvedDate: '2024-12-10'
+    approvedDate: '2024-12-10',
   },
-  
+
   // Near Future
   {
     id: 'INV-2024-009',
@@ -162,7 +162,7 @@ export const mockPayments: PaymentInvoice[] = [
     paymentMode: 'RTGS',
     category: 'Services',
     approvedBy: 'CFO',
-    approvedDate: '2024-12-11'
+    approvedDate: '2024-12-11',
   },
   {
     id: 'INV-2024-010',
@@ -176,7 +176,7 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'approved',
     priority: 'medium',
     paymentMode: 'RTGS',
-    category: 'Operational'
+    category: 'Operational',
   },
   {
     id: 'INV-2024-011',
@@ -190,7 +190,7 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'pending',
     priority: 'high',
     paymentMode: 'Wire',
-    category: 'Strategic Vendor'
+    category: 'Strategic Vendor',
   },
   {
     id: 'INV-2024-012',
@@ -204,9 +204,9 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'pending',
     priority: 'high',
     paymentMode: 'RTGS',
-    category: 'Strategic Vendor'
+    category: 'Strategic Vendor',
   },
-  
+
   // 30-60 Days
   {
     id: 'INV-2024-013',
@@ -220,7 +220,7 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'pending',
     priority: 'medium',
     paymentMode: 'RTGS',
-    category: 'Services'
+    category: 'Services',
   },
   {
     id: 'INV-2024-014',
@@ -234,7 +234,7 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'pending',
     priority: 'medium',
     paymentMode: 'Wire',
-    category: 'Operational'
+    category: 'Operational',
   },
   {
     id: 'INV-2024-015',
@@ -248,9 +248,9 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'pending',
     priority: 'low',
     paymentMode: 'Wire',
-    category: 'Operational'
+    category: 'Operational',
   },
-  
+
   // Duplicate Risk
   {
     id: 'INV-2024-016',
@@ -265,9 +265,9 @@ export const mockPayments: PaymentInvoice[] = [
     priority: 'high',
     paymentMode: 'RTGS',
     riskFlag: 'duplicate',
-    category: 'Services'
+    category: 'Services',
   },
-  
+
   // Suspicious
   {
     id: 'INV-2024-017',
@@ -282,9 +282,9 @@ export const mockPayments: PaymentInvoice[] = [
     priority: 'medium',
     paymentMode: 'RTGS',
     riskFlag: 'suspicious',
-    category: 'Services'
+    category: 'Services',
   },
-  
+
   // More operational
   {
     id: 'INV-2024-018',
@@ -298,7 +298,7 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'approved',
     priority: 'medium',
     paymentMode: 'NEFT',
-    category: 'Operational'
+    category: 'Operational',
   },
   {
     id: 'INV-2024-019',
@@ -312,7 +312,7 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'approved',
     priority: 'low',
     paymentMode: 'NEFT',
-    category: 'Operational'
+    category: 'Operational',
   },
   {
     id: 'INV-2024-020',
@@ -326,31 +326,31 @@ export const mockPayments: PaymentInvoice[] = [
     status: 'pending',
     priority: 'medium',
     paymentMode: 'RTGS',
-    category: 'CapEx'
-  }
+    category: 'CapEx',
+  },
 ];
 
-// Calculate aging buckets
-export const getAgingData = () => {
-  const today = new Date('2024-12-13');
+/** Aging buckets (amounts in ₹ Lakhs) from payable rows. */
+export function getAgingData(rows: PaymentInvoice[] = mockPayments) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const buckets = {
     '0-30': 0,
     '31-60': 0,
     '61-90': 0,
-    '90+': 0
+    '90+': 0,
   };
 
-  mockPayments.forEach(payment => {
+  rows.forEach((payment) => {
     if (payment.status === 'paid') return;
-    
+    if (!payment.dueDate) return;
+
     const dueDate = new Date(payment.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
     const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    // For future payments, calculate days until due
     const daysUntilDue = Math.floor((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (daysUntilDue >= 0) {
-      // Future payments go into 0-30
       buckets['0-30'] += payment.amount;
     } else if (daysOverdue <= 30) {
       buckets['0-30'] += payment.amount;
@@ -367,11 +367,39 @@ export const getAgingData = () => {
     { period: '0-30 Days', amount: buckets['0-30'] / 100000 },
     { period: '31-60 Days', amount: buckets['31-60'] / 100000 },
     { period: '61-90 Days', amount: buckets['61-90'] / 100000 },
-    { period: '90+ Days', amount: buckets['90+'] / 100000 }
+    { period: '90+ Days', amount: buckets['90+'] / 100000 },
   ];
-};
+}
 
-// Daily payment trend (last 14 days)
+export type TrendPoint = { date: string; paid: number; scheduled: number };
+
+/** Last 14 days: paid (lakhs) from server map; scheduled = payables due that day (lakhs). */
+export function buildPaymentTrendData(
+  rows: PaymentInvoice[],
+  paidByDay: Record<string, number> = {}
+): TrendPoint[] {
+  const result: TrendPoint[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let i = 13; i >= 0; i -= 1) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const paid = paidByDay[key] ?? 0;
+    const scheduled =
+      rows
+        .filter((p) => p.status !== 'paid' && p.dueDate === key)
+        .reduce((s, p) => s + p.amount, 0) / 100000;
+    result.push({
+      date: d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+      paid,
+      scheduled,
+    });
+  }
+  return result;
+}
+
+// Daily payment trend (last 14 days) — mock fallback when no API paidByDay
 export const getPaymentTrend = () => {
   return [
     { date: 'Nov 30', paid: 125, scheduled: 85 },
@@ -387,17 +415,18 @@ export const getPaymentTrend = () => {
     { date: 'Dec 10', paid: 235, scheduled: 120 },
     { date: 'Dec 11', paid: 188, scheduled: 108 },
     { date: 'Dec 12', paid: 202, scheduled: 135 },
-    { date: 'Dec 13', paid: 0, scheduled: 285 }
+    { date: 'Dec 13', paid: 0, scheduled: 285 },
   ];
 };
 
 // Payables by vendor category
-export const getCategoryBreakdown = () => {
+export function getCategoryBreakdown(rows: PaymentInvoice[] = mockPayments) {
   const categories: { [key: string]: number } = {};
-  
-  mockPayments.forEach(payment => {
+
+  rows.forEach((payment) => {
     if (payment.status !== 'paid') {
-      categories[payment.vendorCategory] = (categories[payment.vendorCategory] || 0) + payment.amount;
+      categories[payment.vendorCategory] =
+        (categories[payment.vendorCategory] || 0) + payment.amount;
     }
   });
 
@@ -405,15 +434,40 @@ export const getCategoryBreakdown = () => {
     .map(([name, value]) => ({ name, value: value / 100000 }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
-};
+}
 
-// Projected cash outflow (next 30 days)
-export const getProjectedOutflow = () => {
-  return [
-    { date: 'Week 1', projected: 285, actual: 245 },
-    { date: 'Week 2', projected: 320, actual: 0 },
-    { date: 'Week 3', projected: 410, actual: 0 },
-    { date: 'Week 4', projected: 380, actual: 0 },
-    { date: 'Week 5', projected: 295, actual: 0 }
-  ];
-};
+export type ProjectionPoint = { date: string; projected: number; actual: number };
+
+/** Next 5 weeks of payable amounts (lakhs) from due dates; actual from paid batches not split here → 0. */
+export function getProjectedOutflow(rows: PaymentInvoice[] = mockPayments): ProjectionPoint[] {
+  if (rows.length === 0) {
+    return [
+      { date: 'Week 1', projected: 0, actual: 0 },
+      { date: 'Week 2', projected: 0, actual: 0 },
+      { date: 'Week 3', projected: 0, actual: 0 },
+      { date: 'Week 4', projected: 0, actual: 0 },
+      { date: 'Week 5', projected: 0, actual: 0 },
+    ];
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  const buckets = [0, 0, 0, 0, 0];
+
+  rows.forEach((p) => {
+    if (p.status === 'paid' || !p.dueDate) return;
+    const due = new Date(p.dueDate);
+    due.setHours(0, 0, 0, 0);
+    const diff = due.getTime() - today.getTime();
+    if (diff < 0) return;
+    const w = Math.floor(diff / weekMs);
+    if (w >= 0 && w < 5) buckets[w] += p.amount;
+  });
+
+  return buckets.map((amt, i) => ({
+    date: `Week ${i + 1}`,
+    projected: amt / 100000,
+    actual: 0,
+  }));
+}

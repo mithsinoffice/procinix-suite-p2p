@@ -31,7 +31,11 @@ export function VendorInvitationReviewDetail() {
     return (
       <div className="w-full min-w-0 p-8" style={{ backgroundColor: surface }}>
         <p style={{ color: textMuted }}>Invitation not found.</p>
-        <Link to="/vendor-management/review" className="text-sm mt-2 inline-block" style={{ color: accent }}>
+        <Link
+          to="/vendor-management/review"
+          className="text-sm mt-2 inline-block"
+          style={{ color: accent }}
+        >
           Back to vendor review
         </Link>
       </div>
@@ -49,7 +53,7 @@ export function VendorInvitationReviewDetail() {
       setMsg(`Vendor master created with code ${r.code}.`);
       setTimeout(() => navigate('/vendor-management/master'), 1500);
     } else {
-      setMsg(r.error);
+      setMsg('error' in r ? r.error : 'Unable to create vendor master.');
     }
   };
 
@@ -82,7 +86,10 @@ export function VendorInvitationReviewDetail() {
     inv.status === 'pending_approval';
 
   return (
-    <div className="w-full min-w-0 p-6 md:p-8" style={{ backgroundColor: surface, minHeight: '100%' }}>
+    <div
+      className="w-full min-w-0 p-6 md:p-8"
+      style={{ backgroundColor: surface, minHeight: '100%' }}
+    >
       <Link
         to="/vendor-management/review"
         className="inline-flex items-center gap-2 text-sm mb-6"
@@ -98,9 +105,10 @@ export function VendorInvitationReviewDetail() {
             Review vendor onboarding
           </h1>
           <p className="text-sm mt-1 max-w-3xl" style={{ color: textMuted }}>
-            Submission from the <strong style={{ color: textMain }}>invitation link</strong> using the same onboarding
-            form as Vendor Master (trade name, GSTIN, address, bank). Status:{' '}
-            <strong style={{ color: textMain }}>{inv.status.replace(/_/g, ' ')}</strong> · {inv.basic.legalName}
+            Submission from the <strong style={{ color: textMain }}>invitation link</strong> using
+            the same onboarding form as Vendor Master (trade name, GSTIN, address, bank). Status:{' '}
+            <strong style={{ color: textMain }}>{inv.status.replace(/_/g, ' ')}</strong> ·{' '}
+            {inv.basic.legalName}
           </p>
         </div>
 
@@ -108,7 +116,10 @@ export function VendorInvitationReviewDetail() {
           <InviteBasicsReadonly basic={inv.basic} />
 
           {s && (
-            <section className="rounded-xl p-6" style={{ border: `1px solid ${border}`, backgroundColor: '#fff' }}>
+            <section
+              className="rounded-xl p-6"
+              style={{ border: `1px solid ${border}`, backgroundColor: '#fff' }}
+            >
               <h2 className="text-sm font-semibold mb-4" style={{ color: textMain }}>
                 KYC validation summary
               </h2>
@@ -137,13 +148,19 @@ export function VendorInvitationReviewDetail() {
         )}
 
         {msg && (
-          <p className="text-sm" style={{ color: msg.startsWith('Vendor') ? '#047857' : '#B91C1C' }}>
+          <p
+            className="text-sm"
+            style={{ color: msg.startsWith('Vendor') ? '#047857' : '#B91C1C' }}
+          >
             {msg}
           </p>
         )}
 
         {canAct && s && (
-          <div className="space-y-6 rounded-lg p-5" style={{ border: `1px solid ${border}`, backgroundColor: '#fff' }}>
+          <div
+            className="space-y-6 rounded-lg p-5"
+            style={{ border: `1px solid ${border}`, backgroundColor: '#fff' }}
+          >
             <h3 className="text-sm font-semibold" style={{ color: textMain }}>
               Actions
             </h3>

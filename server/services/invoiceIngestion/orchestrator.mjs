@@ -1,4 +1,4 @@
-import { extractInvoiceData } from './claudeOCR.mjs';
+import { extractInvoiceData } from './geminiOCR.mjs';
 import { validateInvoiceData } from './validator.mjs';
 import { matchToPO } from './poMatcher.mjs';
 import { createInvoiceFromExtraction } from './invoiceCreator.mjs';
@@ -70,7 +70,12 @@ export async function processInvoiceEmail(email) {
       stepResults.steps.invoiceCreated = { invoiceId, status };
 
       // Step 5: Exception handling
-      const exceptions = await handleExceptions(invoiceId, extractedData, validationResult, matchResult);
+      const exceptions = await handleExceptions(
+        invoiceId,
+        extractedData,
+        validationResult,
+        matchResult
+      );
       stepResults.steps.exceptions = exceptions;
 
       // Step 6: Workflow trigger
@@ -78,7 +83,9 @@ export async function processInvoiceEmail(email) {
       stepResults.steps.workflow = workflowResult;
 
       stepResults.success = true;
-      console.log(`[Orchestrator] Successfully processed ${attachment.filename} → invoice ${invoiceId}`);
+      console.log(
+        `[Orchestrator] Successfully processed ${attachment.filename} → invoice ${invoiceId}`
+      );
     } catch (err) {
       stepResults.error = err.message;
       console.error(`[Orchestrator] Failed to process ${attachment.filename}:`, err.message);
@@ -93,9 +100,16 @@ export async function processInvoiceEmail(email) {
   if (allSuccess) {
     await updateIngestionLog(logId, 'processed');
   } else if (anySuccess) {
-    await updateIngestionLog(logId, 'processed', `Partial: ${results.filter((r) => !r.success).length} attachment(s) failed`);
+    await updateIngestionLog(
+      logId,
+      'processed',
+      `Partial: ${results.filter((r) => !r.success).length} attachment(s) failed`
+    );
   } else {
-    const errors = results.map((r) => r.error).filter(Boolean).join('; ');
+    const errors = results
+      .map((r) => r.error)
+      .filter(Boolean)
+      .join('; ');
     await updateIngestionLog(logId, 'failed', errors);
   }
 

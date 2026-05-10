@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { 
-  FileText, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  TrendingUp, 
+import {
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  TrendingUp,
   Target,
   Award,
   Activity,
@@ -15,7 +15,7 @@ import {
   AlertCircle,
   Eye,
   Edit,
-  Send
+  Send,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -45,8 +45,8 @@ const mockCreatorData: CreatorItem[] = [
     details: {
       vendor: 'Tata Motors Ltd.',
       items: 4,
-      deliveryDate: '2024-12-25'
-    }
+      deliveryDate: '2024-12-25',
+    },
   },
   {
     id: 'PO-2024-0160',
@@ -60,8 +60,8 @@ const mockCreatorData: CreatorItem[] = [
     details: {
       vendor: 'Bharat Heavy Electricals Ltd.',
       items: 8,
-      deliveryDate: '2024-12-28'
-    }
+      deliveryDate: '2024-12-28',
+    },
   },
   {
     id: 'PO-2024-0159',
@@ -75,8 +75,8 @@ const mockCreatorData: CreatorItem[] = [
     details: {
       vendor: 'Asian Paints Ltd.',
       items: 7,
-      deliveryDate: '2024-12-22'
-    }
+      deliveryDate: '2024-12-22',
+    },
   },
   {
     id: 'PO-2024-0158',
@@ -91,8 +91,8 @@ const mockCreatorData: CreatorItem[] = [
     details: {
       vendor: 'Larsen & Toubro Ltd.',
       items: 12,
-      deliveryDate: '2024-12-25'
-    }
+      deliveryDate: '2024-12-25',
+    },
   },
   {
     id: 'PO-2024-0157',
@@ -107,8 +107,8 @@ const mockCreatorData: CreatorItem[] = [
     details: {
       vendor: 'Hindustan Unilever Ltd.',
       items: 3,
-      deliveryDate: '2024-12-18'
-    }
+      deliveryDate: '2024-12-18',
+    },
   },
   {
     id: 'PO-2024-0156',
@@ -123,8 +123,8 @@ const mockCreatorData: CreatorItem[] = [
     details: {
       vendor: 'Tata Steel Ltd.',
       items: 5,
-      deliveryDate: '2024-12-20'
-    }
+      deliveryDate: '2024-12-20',
+    },
   },
   {
     id: 'PO-2024-0155',
@@ -139,8 +139,8 @@ const mockCreatorData: CreatorItem[] = [
     details: {
       vendor: 'ABC Suppliers',
       items: 2,
-      deliveryDate: '2024-12-15'
-    }
+      deliveryDate: '2024-12-15',
+    },
   },
   {
     id: 'ITEM-NEW-0089',
@@ -152,8 +152,8 @@ const mockCreatorData: CreatorItem[] = [
     approver: 'Rajesh Kumar',
     details: {
       recordType: 'Item',
-      recordName: 'Steel Rod 12mm'
-    }
+      recordName: 'Steel Rod 12mm',
+    },
   },
   {
     id: 'ITEM-NEW-0088',
@@ -166,8 +166,8 @@ const mockCreatorData: CreatorItem[] = [
     approvalTime: '12.5',
     details: {
       recordType: 'Item',
-      recordName: 'Cement 53 Grade'
-    }
+      recordName: 'Cement 53 Grade',
+    },
   },
   {
     id: 'ITEM-NEW-0087',
@@ -180,61 +180,94 @@ const mockCreatorData: CreatorItem[] = [
     rejectionReason: 'Duplicate item code - already exists',
     details: {
       recordType: 'Item',
-      recordName: 'Paint White'
-    }
-  }
+      recordName: 'Paint White',
+    },
+  },
 ];
 
 export function CreatorDashboard() {
   const { user } = useAuth();
-  const [selectedTab, setSelectedTab] = useState<'All' | 'Draft' | 'Submitted' | 'Approved' | 'Rejected'>('All');
+  const [selectedTab, setSelectedTab] = useState<
+    'All' | 'Draft' | 'Submitted' | 'Approved' | 'Rejected'
+  >('All');
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
   // Filter items based on selected tab
   const getFilteredItems = () => {
     if (selectedTab === 'All') return mockCreatorData;
-    return mockCreatorData.filter(item => item.status === selectedTab);
+    return mockCreatorData.filter((item) => item.status === selectedTab);
   };
 
   const items = getFilteredItems();
 
   const getCountByStatus = (status: string) => {
     if (status === 'All') return mockCreatorData.length;
-    return mockCreatorData.filter(item => item.status === status).length;
+    return mockCreatorData.filter((item) => item.status === status).length;
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Draft': return { bg: 'var(--color-silver)', text: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
-      case 'Submitted': return { bg: '#FEF3C7', text: '#D97706', border: '#FCD34D' };
-      case 'Approved': return { bg: 'var(--color-success-light)', text: 'var(--color-success-dark)', border: '#81C784' };
-      case 'Rejected': return { bg: 'var(--color-error-light)', text: 'var(--color-error-dark)', border: '#FCA5A5' };
-      case 'Info Requested': return { bg: '#E0F2FE', text: '#0284C7', border: '#7DD3FC' };
-      default: return { bg: 'var(--color-cloud)', text: 'var(--color-mercury-grey)', border: 'var(--color-silver)' };
+      case 'Draft':
+        return {
+          bg: 'var(--color-silver)',
+          text: 'var(--color-mercury-grey)',
+          border: 'var(--color-silver)',
+        };
+      case 'Submitted':
+        return { bg: '#FEF3C7', text: '#D97706', border: '#FCD34D' };
+      case 'Approved':
+        return {
+          bg: 'var(--color-success-light)',
+          text: 'var(--color-success-dark)',
+          border: '#81C784',
+        };
+      case 'Rejected':
+        return {
+          bg: 'var(--color-error-light)',
+          text: 'var(--color-error-dark)',
+          border: '#FCA5A5',
+        };
+      case 'Info Requested':
+        return { bg: '#E0F2FE', text: '#0284C7', border: '#7DD3FC' };
+      default:
+        return {
+          bg: 'var(--color-cloud)',
+          text: 'var(--color-mercury-grey)',
+          border: 'var(--color-silver)',
+        };
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'PO': return FileText;
-      case 'Master': return Database;
-      case 'GRN': return Package;
-      default: return FileText;
+      case 'PO':
+        return FileText;
+      case 'Master':
+        return Database;
+      case 'GRN':
+        return Package;
+      default:
+        return FileText;
     }
   };
 
   // Calculate YTD metrics
-  const totalSubmissions = mockCreatorData.filter(i => i.status !== 'Draft').length;
-  const totalApprovals = mockCreatorData.filter(i => i.status === 'Approved').length;
-  const totalRejections = mockCreatorData.filter(i => i.status === 'Rejected').length;
-  const approvalRate = totalSubmissions > 0 ? Math.round((totalApprovals / totalSubmissions) * 100) : 0;
+  const totalSubmissions = mockCreatorData.filter((i) => i.status !== 'Draft').length;
+  const totalApprovals = mockCreatorData.filter((i) => i.status === 'Approved').length;
+  const totalRejections = mockCreatorData.filter((i) => i.status === 'Rejected').length;
+  const approvalRate =
+    totalSubmissions > 0 ? Math.round((totalApprovals / totalSubmissions) * 100) : 0;
   const avgApprovalsPerMonth = Math.round(totalApprovals / 11); // 11 months
-  
+
   // Calculate average time to approval (for approved items only)
-  const approvedItems = mockCreatorData.filter(i => i.status === 'Approved' && i.approvalTime);
-  const avgTimeToApproval = approvedItems.length > 0 
-    ? (approvedItems.reduce((sum, item) => sum + parseFloat(item.approvalTime!), 0) / approvedItems.length).toFixed(1)
-    : '0';
+  const approvedItems = mockCreatorData.filter((i) => i.status === 'Approved' && i.approvalTime);
+  const avgTimeToApproval =
+    approvedItems.length > 0
+      ? (
+          approvedItems.reduce((sum, item) => sum + parseFloat(item.approvalTime!), 0) /
+          approvedItems.length
+        ).toFixed(1)
+      : '0';
 
   return (
     <div className="p-8">
@@ -254,96 +287,144 @@ export function CreatorDashboard() {
           <h2 className="text-lg" style={{ color: 'var(--color-ink)' }}>
             My Creation Performance (YTD 2024)
           </h2>
-          <span className="text-xs px-3 py-1 rounded-full" style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}>
+          <span
+            className="text-xs px-3 py-1 rounded-full"
+            style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)' }}
+          >
             As of Dec 12, 2024
           </span>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* Total Submissions YTD */}
-          <div 
+          <div
             className="bg-white p-4 rounded-lg"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-teal-tint)' }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'var(--color-teal-tint)' }}
+              >
                 <Send className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>{totalSubmissions + 35}</p>
-            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Submissions YTD</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>
+              {totalSubmissions + 35}
+            </p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+              Total Submissions YTD
+            </p>
             <div className="flex items-center gap-1">
               <TrendingUp className="w-3 h-3" style={{ color: '#059669' }} />
-              <span className="text-xs" style={{ color: '#059669' }}>+18%</span>
+              <span className="text-xs" style={{ color: '#059669' }}>
+                +18%
+              </span>
             </div>
           </div>
 
           {/* Approval Rate */}
-          <div 
+          <div
             className="bg-white p-4 rounded-lg"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-success-light)' }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'var(--color-success-light)' }}
+              >
                 <Award className="w-5 h-5" style={{ color: 'var(--color-success-dark)' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>{approvalRate}%</p>
-            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Approval Rate</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>
+              {approvalRate}%
+            </p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+              Approval Rate
+            </p>
             <div>
-              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{totalApprovals} of {totalSubmissions} approved</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                {totalApprovals} of {totalSubmissions} approved
+              </span>
             </div>
           </div>
 
           {/* Avg Submissions Per Month */}
-          <div 
+          <div
             className="bg-white p-4 rounded-lg"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: '#FEF3C7' }}
+              >
                 <Activity className="w-5 h-5" style={{ color: '#D97706' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>{avgApprovalsPerMonth + 3}</p>
-            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Avg Submissions/Month</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>
+              {avgApprovalsPerMonth + 3}
+            </p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+              Avg Submissions/Month
+            </p>
             <div>
-              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>11 months</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                11 months
+              </span>
             </div>
           </div>
 
           {/* Avg Time to Approval */}
-          <div 
+          <div
             className="bg-white p-4 rounded-lg"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#E0F2FE' }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: '#E0F2FE' }}
+              >
                 <Timer className="w-5 h-5" style={{ color: '#0284C7' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>{avgTimeToApproval}h</p>
-            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Avg Time to Approval</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>
+              {avgTimeToApproval}h
+            </p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+              Avg Time to Approval
+            </p>
             <div className="flex items-center gap-1">
               <TrendingUp className="w-3 h-3" style={{ color: '#059669' }} />
-              <span className="text-xs" style={{ color: '#059669' }}>22% faster</span>
+              <span className="text-xs" style={{ color: '#059669' }}>
+                22% faster
+              </span>
             </div>
           </div>
 
           {/* Total Rejections YTD */}
-          <div 
+          <div
             className="bg-white p-4 rounded-lg"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-error-light)' }}>
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'var(--color-error-light)' }}
+              >
                 <ThumbsDown className="w-5 h-5" style={{ color: 'var(--color-error-dark)' }} />
               </div>
             </div>
-            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>{totalRejections + 3}</p>
-            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>Total Rejections YTD</p>
+            <p className="text-2xl mb-1" style={{ color: 'var(--color-ink)' }}>
+              {totalRejections + 3}
+            </p>
+            <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>
+              Total Rejections YTD
+            </p>
             <div>
-              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{100 - approvalRate}% rejection rate</span>
+              <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                {100 - approvalRate}% rejection rate
+              </span>
             </div>
           </div>
         </div>
@@ -351,69 +432,94 @@ export function CreatorDashboard() {
 
       {/* Current Status Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div 
+        <div
           className="bg-white p-6 rounded-lg"
           style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-silver)' }}>
+            <div
+              className="w-12 h-12 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: 'var(--color-silver)' }}
+            >
               <Edit className="w-6 h-6" style={{ color: 'var(--color-mercury-grey)' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByStatus('Draft')}</p>
-          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Drafts</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
+            {getCountByStatus('Draft')}
+          </p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            Drafts
+          </p>
         </div>
 
-        <div 
+        <div
           className="bg-white p-6 rounded-lg"
           style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
+            <div
+              className="w-12 h-12 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: '#FEF3C7' }}
+            >
               <Clock className="w-6 h-6" style={{ color: '#D97706' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByStatus('Submitted')}</p>
-          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Pending Approval</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
+            {getCountByStatus('Submitted')}
+          </p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            Pending Approval
+          </p>
         </div>
 
-        <div 
+        <div
           className="bg-white p-6 rounded-lg"
           style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-success-light)' }}>
+            <div
+              className="w-12 h-12 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: 'var(--color-success-light)' }}
+            >
               <CheckCircle className="w-6 h-6" style={{ color: 'var(--color-success-dark)' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByStatus('Approved')}</p>
-          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approved (Recent)</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
+            {getCountByStatus('Approved')}
+          </p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            Approved (Recent)
+          </p>
         </div>
 
-        <div 
+        <div
           className="bg-white p-6 rounded-lg"
           style={{ border: '1px solid var(--color-silver)' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-error-light)' }}>
+            <div
+              className="w-12 h-12 rounded-lg flex items-center justify-center"
+              style={{ backgroundColor: 'var(--color-error-light)' }}
+            >
               <XCircle className="w-6 h-6" style={{ color: 'var(--color-error-dark)' }} />
             </div>
           </div>
-          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>{getCountByStatus('Rejected')}</p>
-          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Rejected (Recent)</p>
+          <p className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
+            {getCountByStatus('Rejected')}
+          </p>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            Rejected (Recent)
+          </p>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div 
-        className="bg-white rounded-lg mb-6"
-        style={{ border: '1px solid var(--color-silver)' }}
-      >
+      <div className="bg-white rounded-lg mb-6" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="flex items-center gap-2 p-2">
           {['All', 'Draft', 'Submitted', 'Approved', 'Rejected'].map((tab) => {
             const count = getCountByStatus(tab);
             if (count === 0 && tab !== 'All') return null;
-            
+
             const isActive = selectedTab === tab;
             return (
               <button
@@ -423,16 +529,16 @@ export function CreatorDashboard() {
                 style={{
                   backgroundColor: isActive ? 'var(--color-teal-tint)' : 'transparent',
                   color: isActive ? 'var(--color-teal)' : 'var(--color-mercury-grey)',
-                  border: isActive ? '1px solid var(--color-teal)' : '1px solid transparent'
+                  border: isActive ? '1px solid var(--color-teal)' : '1px solid transparent',
                 }}
               >
                 <span className="text-sm">{tab}</span>
                 {count > 0 && (
-                  <span 
+                  <span
                     className="ml-2 px-2 py-0.5 rounded-full text-xs"
                     style={{
                       backgroundColor: isActive ? 'var(--color-teal)' : 'var(--color-silver)',
-                      color: isActive ? '#FFFFFF' : 'var(--color-mercury-grey)'
+                      color: isActive ? '#FFFFFF' : 'var(--color-mercury-grey)',
                     }}
                   >
                     {count}
@@ -447,12 +553,14 @@ export function CreatorDashboard() {
       {/* Items List */}
       <div className="space-y-4">
         {items.length === 0 ? (
-          <div 
+          <div
             className="bg-white p-12 rounded-lg text-center"
             style={{ border: '1px solid var(--color-silver)' }}
           >
             <FileText className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--color-silver)' }} />
-            <p className="text-lg mb-2" style={{ color: 'var(--color-ink)' }}>No Items Found</p>
+            <p className="text-lg mb-2" style={{ color: 'var(--color-ink)' }}>
+              No Items Found
+            </p>
             <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
               No items in this category
             </p>
@@ -474,7 +582,7 @@ export function CreatorDashboard() {
                   <div className="flex items-start justify-between">
                     {/* Left Section */}
                     <div className="flex items-start gap-3 flex-1">
-                      <div 
+                      <div
                         className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                         style={{ backgroundColor: 'var(--color-cloud)' }}
                       >
@@ -486,14 +594,14 @@ export function CreatorDashboard() {
                           <h3 className="text-sm" style={{ color: 'var(--color-ink)' }}>
                             {item.title}
                           </h3>
-                          
+
                           {/* Status Badge */}
                           <span
                             className="px-2 py-1 rounded text-xs"
                             style={{
                               backgroundColor: statusColor.bg,
                               color: statusColor.text,
-                              border: `1px solid ${statusColor.border}`
+                              border: `1px solid ${statusColor.border}`,
                             }}
                           >
                             {item.status}
@@ -506,7 +614,7 @@ export function CreatorDashboard() {
                               style={{
                                 backgroundColor: 'var(--color-success-light)',
                                 color: 'var(--color-success-dark)',
-                                border: '1px solid #81C784'
+                                border: '1px solid #81C784',
                               }}
                             >
                               <Clock className="w-3 h-3" />
@@ -517,25 +625,53 @@ export function CreatorDashboard() {
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                           <div>
-                            <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Created Date</p>
-                            <p style={{ color: 'var(--color-ink)' }} className="text-xs">{new Date(item.createdDate).toLocaleDateString('en-IN')}</p>
+                            <p
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                              className="text-xs mb-0.5"
+                            >
+                              Created Date
+                            </p>
+                            <p style={{ color: 'var(--color-ink)' }} className="text-xs">
+                              {new Date(item.createdDate).toLocaleDateString('en-IN')}
+                            </p>
                           </div>
                           {item.submittedDate && (
                             <div>
-                              <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Submitted Date</p>
-                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">{new Date(item.submittedDate).toLocaleDateString('en-IN')}</p>
+                              <p
+                                style={{ color: 'var(--color-mercury-grey)' }}
+                                className="text-xs mb-0.5"
+                              >
+                                Submitted Date
+                              </p>
+                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">
+                                {new Date(item.submittedDate).toLocaleDateString('en-IN')}
+                              </p>
                             </div>
                           )}
                           {item.value && (
                             <div>
-                              <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Value</p>
-                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">{item.value}</p>
+                              <p
+                                style={{ color: 'var(--color-mercury-grey)' }}
+                                className="text-xs mb-0.5"
+                              >
+                                Value
+                              </p>
+                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">
+                                {item.value}
+                              </p>
                             </div>
                           )}
                           {item.approver && (
                             <div>
-                              <p style={{ color: 'var(--color-mercury-grey)' }} className="text-xs mb-0.5">Approver</p>
-                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">{item.approver}</p>
+                              <p
+                                style={{ color: 'var(--color-mercury-grey)' }}
+                                className="text-xs mb-0.5"
+                              >
+                                Approver
+                              </p>
+                              <p style={{ color: 'var(--color-ink)' }} className="text-xs">
+                                {item.approver}
+                              </p>
                             </div>
                           )}
                         </div>
@@ -552,11 +688,15 @@ export function CreatorDashboard() {
                       >
                         <Eye className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                       </button>
-                      
+
                       {item.status === 'Draft' && (
                         <button
                           className="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
-                          style={{ backgroundColor: 'var(--color-teal-tint)', color: 'var(--color-teal)', border: '1px solid var(--color-teal)' }}
+                          style={{
+                            backgroundColor: 'var(--color-teal-tint)',
+                            color: 'var(--color-teal)',
+                            border: '1px solid var(--color-teal)',
+                          }}
                         >
                           <Edit className="w-4 h-4" />
                           <span className="text-xs">Edit</span>
@@ -566,7 +706,11 @@ export function CreatorDashboard() {
                       {item.status === 'Draft' && (
                         <button
                           className="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
-                          style={{ backgroundColor: 'var(--color-success-light)', color: 'var(--color-success-dark)', border: '1px solid #81C784' }}
+                          style={{
+                            backgroundColor: 'var(--color-success-light)',
+                            color: 'var(--color-success-dark)',
+                            border: '1px solid #81C784',
+                          }}
                         >
                           <Send className="w-4 h-4" />
                           <span className="text-xs">Submit</span>
@@ -578,24 +722,42 @@ export function CreatorDashboard() {
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div 
-                    className="px-4 pb-4"
-                    style={{ borderTop: '1px solid var(--color-silver)' }}
-                  >
+                  <div className="px-4 pb-4" style={{ borderTop: '1px solid var(--color-silver)' }}>
                     <div className="pt-4">
                       {item.type === 'PO' && (
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           <div>
-                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</p>
-                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.details.vendor}</p>
+                            <p
+                              className="text-xs mb-1"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              Vendor
+                            </p>
+                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                              {item.details.vendor}
+                            </p>
                           </div>
                           <div>
-                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Items</p>
-                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.details.items}</p>
+                            <p
+                              className="text-xs mb-1"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              Items
+                            </p>
+                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                              {item.details.items}
+                            </p>
                           </div>
                           <div>
-                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Delivery Date</p>
-                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.details.deliveryDate}</p>
+                            <p
+                              className="text-xs mb-1"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              Delivery Date
+                            </p>
+                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                              {item.details.deliveryDate}
+                            </p>
                           </div>
                         </div>
                       )}
@@ -603,27 +765,54 @@ export function CreatorDashboard() {
                       {item.type === 'Master' && (
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Record Type</p>
-                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.details.recordType}</p>
+                            <p
+                              className="text-xs mb-1"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              Record Type
+                            </p>
+                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                              {item.details.recordType}
+                            </p>
                           </div>
                           <div>
-                            <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Record Name</p>
-                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.details.recordName}</p>
+                            <p
+                              className="text-xs mb-1"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              Record Name
+                            </p>
+                            <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                              {item.details.recordName}
+                            </p>
                           </div>
                         </div>
                       )}
 
                       {/* Rejection Reason */}
                       {item.status === 'Rejected' && item.rejectionReason && (
-                        <div 
+                        <div
                           className="mt-4 p-4 rounded-lg"
-                          style={{ backgroundColor: 'var(--color-error-light)', border: '1px solid #FCA5A5' }}
+                          style={{
+                            backgroundColor: 'var(--color-error-light)',
+                            border: '1px solid #FCA5A5',
+                          }}
                         >
                           <div className="flex items-start gap-2">
-                            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-error-dark)' }} />
+                            <AlertCircle
+                              className="w-4 h-4 flex-shrink-0 mt-0.5"
+                              style={{ color: 'var(--color-error-dark)' }}
+                            />
                             <div>
-                              <p className="text-xs mb-1" style={{ color: 'var(--color-error-dark)' }}>Rejection Reason:</p>
-                              <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{item.rejectionReason}</p>
+                              <p
+                                className="text-xs mb-1"
+                                style={{ color: 'var(--color-error-dark)' }}
+                              >
+                                Rejection Reason:
+                              </p>
+                              <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                                {item.rejectionReason}
+                              </p>
                             </div>
                           </div>
                         </div>

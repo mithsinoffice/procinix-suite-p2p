@@ -13,10 +13,16 @@ import {
 } from 'lucide-react';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { useVendorInvitations } from '../contexts/VendorInvitationContext';
-import { buildVendorGovernanceDeskModel, mergeGovernanceSummary } from '../lib/vendorGovernanceStats';
+import {
+  buildVendorGovernanceDeskModel,
+  mergeGovernanceSummary,
+} from '../lib/vendorGovernanceStats';
 import { fetchVendorGovernanceSummary } from '../lib/vendorGovernanceApi';
 import { isMysqlApiEnabled } from '../lib/mysql/client';
-import type { VendorGovernanceDeskModel, VendorGovernanceSummaryApiPayload } from '../types/vendorGovernance';
+import type {
+  VendorGovernanceDeskModel,
+  VendorGovernanceSummaryApiPayload,
+} from '../types/vendorGovernance';
 
 const surface = 'var(--color-cloud)';
 const border = 'var(--color-silver)';
@@ -24,7 +30,9 @@ const textMuted = 'var(--color-mercury-grey)';
 const textMain = 'var(--color-ink)';
 const accent = 'var(--color-teal)';
 
-function formatTrendLine(pct: number | null): { trend: 'up' | 'down' | 'flat'; label: string } | null {
+function formatTrendLine(
+  pct: number | null
+): { trend: 'up' | 'down' | 'flat'; label: string } | null {
   if (pct === null || Number.isNaN(pct)) {
     return null;
   }
@@ -48,7 +56,13 @@ function KpiCard({
   trend: ReturnType<typeof formatTrendLine>;
 }) {
   const trendColor =
-    trend === null ? textMuted : trend.trend === 'up' ? '#047857' : trend.trend === 'down' ? '#B91C1C' : textMuted;
+    trend === null
+      ? textMuted
+      : trend.trend === 'up'
+        ? '#047857'
+        : trend.trend === 'down'
+          ? '#B91C1C'
+          : textMuted;
   const TrendIcon = trend?.trend === 'up' ? TrendingUp : TrendingDown;
   return (
     <div
@@ -57,10 +71,16 @@ function KpiCard({
     >
       <div className="flex items-start justify-between gap-2 min-w-0">
         <div className="min-w-0 flex-1 pr-1">
-          <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide leading-tight" style={{ color: textMuted }}>
+          <p
+            className="text-[10px] sm:text-xs font-medium uppercase tracking-wide leading-tight"
+            style={{ color: textMuted }}
+          >
             {label}
           </p>
-          <p className="text-2xl sm:text-3xl font-semibold tabular-nums mt-1" style={{ color: textMain }}>
+          <p
+            className="text-2xl sm:text-3xl font-semibold tabular-nums mt-1"
+            style={{ color: textMain }}
+          >
             {value}
           </p>
         </div>
@@ -94,7 +114,13 @@ function KpiCard({
   );
 }
 
-function StatusBadge({ label, tone }: { label: string; tone: 'yellow' | 'blue' | 'gray' | 'green' }) {
+function StatusBadge({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: 'yellow' | 'blue' | 'gray' | 'green';
+}) {
   const map = {
     yellow: { bg: '#FFFBEB', color: '#B45309', border: '#FDE68A' },
     blue: { bg: '#EEF2FF', color: '#4338CA', border: '#C7D2FE' },
@@ -120,7 +146,10 @@ function DueBadge({ label, tone }: { label: string; tone: 'orange' | 'amber' | '
   };
   const s = map[tone];
   return (
-    <span className="text-xs font-semibold px-2 py-0.5 rounded-md" style={{ backgroundColor: s.bg, color: s.color }}>
+    <span
+      className="text-xs font-semibold px-2 py-0.5 rounded-md"
+      style={{ backgroundColor: s.bg, color: s.color }}
+    >
       {label}
     </span>
   );
@@ -130,7 +159,10 @@ function ValidationBar({ value, total, color }: { value: number; total: number; 
   const pct = total > 0 ? (value / total) * 100 : 0;
   return (
     <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: surface }}>
-      <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${pct}%`, backgroundColor: color }} />
+      <div
+        className="h-full rounded-full transition-[width] duration-300"
+        style={{ width: `${pct}%`, backgroundColor: color }}
+      />
     </div>
   );
 }
@@ -210,21 +242,33 @@ export function VendorGovernanceDesk() {
     });
   }, [model.lastUpdatedAt]);
 
-  const vSum = Math.max(1, model.validationSummary.completed + model.validationSummary.inProgress + model.validationSummary.blocked);
+  const vSum = Math.max(
+    1,
+    model.validationSummary.completed +
+      model.validationSummary.inProgress +
+      model.validationSummary.blocked
+  );
 
   return (
     <div className="p-6 md:p-8" style={{ backgroundColor: surface, minHeight: '100%' }}>
       <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between mb-8">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: textMuted }}>
+          <p
+            className="text-xs font-medium uppercase tracking-wide mb-1"
+            style={{ color: textMuted }}
+          >
             Vendor Governance
           </p>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" style={{ color: textMain }}>
+          <h1
+            className="text-2xl md:text-3xl font-semibold tracking-tight"
+            style={{ color: textMain }}
+          >
             Vendor Governance Dashboard
           </h1>
           <p className="text-sm mt-1" style={{ color: textMuted }}>
-            Overview of vendor onboarding and compliance activities. KPIs reflect synced vendor master and invitation
-            data{isMysqlApiEnabled() ? ', with optional server summary when available' : ''}.
+            Overview of vendor onboarding and compliance activities. KPIs reflect synced vendor
+            master and invitation data
+            {isMysqlApiEnabled() ? ', with optional server summary when available' : ''}.
           </p>
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
@@ -234,7 +278,11 @@ export function VendorGovernanceDesk() {
             disabled={apiLoading || !isMysqlApiEnabled()}
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border transition-opacity disabled:opacity-50"
             style={{ borderColor: border, color: textMain, backgroundColor: '#fff' }}
-            title={!isMysqlApiEnabled() ? 'Set VITE_API_BASE_URL to refresh server summary' : 'Refresh server summary'}
+            title={
+              !isMysqlApiEnabled()
+                ? 'Set VITE_API_BASE_URL to refresh server summary'
+                : 'Refresh server summary'
+            }
           >
             <RefreshCw className={`w-3.5 h-3.5 ${apiLoading ? 'animate-spin' : ''}`} />
             Refresh data
@@ -251,7 +299,10 @@ export function VendorGovernanceDesk() {
       </div>
 
       {fetchError && (
-        <p className="text-sm mb-4 rounded-lg px-3 py-2" style={{ backgroundColor: '#FEF2F2', color: '#991B1B' }}>
+        <p
+          className="text-sm mb-4 rounded-lg px-3 py-2"
+          style={{ backgroundColor: '#FEF2F2', color: '#991B1B' }}
+        >
           {fetchError}
         </p>
       )}
@@ -259,30 +310,30 @@ export function VendorGovernanceDesk() {
       {/* Single row: 4 columns always; narrow viewports scroll horizontally (min width) so KPIs never stack */}
       <div className="w-full overflow-x-auto overflow-y-visible mb-8 pb-1">
         <div className="grid w-full min-w-[640px] grid-cols-4 gap-3 sm:gap-4">
-        <KpiCard
-          label="Total Requests"
-          value={model.kpis.totalRequests}
-          icon={<FileText className="w-5 h-5" style={{ color: accent }} />}
-          trend={formatTrendLine(model.kpis.trends.totalRequestsPct)}
-        />
-        <KpiCard
-          label="Active Vendors"
-          value={model.kpis.activeVendors.toLocaleString()}
-          icon={<Users className="w-5 h-5" style={{ color: accent }} />}
-          trend={formatTrendLine(model.kpis.trends.activeVendorsPct)}
-        />
-        <KpiCard
-          label="Pending Approvals"
-          value={model.kpis.pendingApprovals}
-          icon={<Clock className="w-5 h-5" style={{ color: accent }} />}
-          trend={formatTrendLine(model.kpis.trends.pendingApprovalsPct)}
-        />
-        <KpiCard
-          label="High Risk Vendors"
-          value={model.kpis.highRiskVendors}
-          icon={<ShieldAlert className="w-5 h-5" style={{ color: accent }} />}
-          trend={formatTrendLine(model.kpis.trends.highRiskVendorsPct)}
-        />
+          <KpiCard
+            label="Total Requests"
+            value={model.kpis.totalRequests}
+            icon={<FileText className="w-5 h-5" style={{ color: accent }} />}
+            trend={formatTrendLine(model.kpis.trends.totalRequestsPct)}
+          />
+          <KpiCard
+            label="Active Vendors"
+            value={model.kpis.activeVendors.toLocaleString()}
+            icon={<Users className="w-5 h-5" style={{ color: accent }} />}
+            trend={formatTrendLine(model.kpis.trends.activeVendorsPct)}
+          />
+          <KpiCard
+            label="Pending Approvals"
+            value={model.kpis.pendingApprovals}
+            icon={<Clock className="w-5 h-5" style={{ color: accent }} />}
+            trend={formatTrendLine(model.kpis.trends.pendingApprovalsPct)}
+          />
+          <KpiCard
+            label="High Risk Vendors"
+            value={model.kpis.highRiskVendors}
+            icon={<ShieldAlert className="w-5 h-5" style={{ color: accent }} />}
+            trend={formatTrendLine(model.kpis.trends.highRiskVendorsPct)}
+          />
         </div>
       </div>
 
@@ -300,13 +351,18 @@ export function VendorGovernanceDesk() {
                 <h2 className="text-sm font-semibold" style={{ color: textMain }}>
                   Recent Vendor Requests
                 </h2>
-                <Link to="/vendor-management/review" className="text-xs font-medium hover:underline" style={{ color: accent }}>
+                <Link
+                  to="/vendor-management/review"
+                  className="text-xs font-medium hover:underline"
+                  style={{ color: accent }}
+                >
                   View All
                 </Link>
               </div>
               {model.recentRequests.length === 0 ? (
                 <p className="px-5 py-8 text-sm text-center" style={{ color: textMuted }}>
-                  No vendor requests for this entity yet. Invitations appear here after you send invites.
+                  No vendor requests for this entity yet. Invitations appear here after you send
+                  invites.
                 </p>
               ) : (
                 <ul className="divide-y" style={{ borderColor: border }}>
@@ -346,7 +402,10 @@ export function VendorGovernanceDesk() {
                 style={{ backgroundColor: '#E8F8FA', borderTop: `1px solid ${border}` }}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <p className="text-sm font-medium break-words min-w-0" style={{ color: textMain }}>
+                  <p
+                    className="text-sm font-medium break-words min-w-0"
+                    style={{ color: textMain }}
+                  >
                     Preview Vendor Self-Service Portal
                   </p>
                   <Link
@@ -374,7 +433,10 @@ export function VendorGovernanceDesk() {
                 </h2>
               </div>
               {model.upcomingTasks.length === 0 ? (
-                <p className="px-5 py-8 text-sm text-center break-words" style={{ color: textMuted }}>
+                <p
+                  className="px-5 py-8 text-sm text-center break-words"
+                  style={{ color: textMuted }}
+                >
                   No tasks awaiting action. Pending reviews will show here.
                 </p>
               ) : (
@@ -405,8 +467,15 @@ export function VendorGovernanceDesk() {
                   ))}
                 </ul>
               )}
-              <div className="px-5 py-3 text-center shrink-0 rounded-b-xl" style={{ borderTop: `1px solid ${border}` }}>
-                <Link to="/vendor-management/review" className="text-xs font-medium hover:underline" style={{ color: accent }}>
+              <div
+                className="px-5 py-3 text-center shrink-0 rounded-b-xl"
+                style={{ borderTop: `1px solid ${border}` }}
+              >
+                <Link
+                  to="/vendor-management/review"
+                  className="text-xs font-medium hover:underline"
+                  style={{ color: accent }}
+                >
                   View All Tasks
                 </Link>
               </div>
@@ -434,7 +503,10 @@ export function VendorGovernanceDesk() {
                         {row.count} ({row.pct}%)
                       </span>
                     </div>
-                    <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: surface }}>
+                    <div
+                      className="h-2 rounded-full overflow-hidden"
+                      style={{ backgroundColor: surface }}
+                    >
                       <div
                         className="h-full rounded-full"
                         style={{ width: `${Math.min(100, row.pct)}%`, backgroundColor: row.color }}
@@ -455,7 +527,10 @@ export function VendorGovernanceDesk() {
             <h2 className="text-sm font-semibold mb-4" style={{ color: textMain }}>
               Insights
             </h2>
-            <h3 className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: textMuted }}>
+            <h3
+              className="text-xs font-semibold uppercase tracking-wide mb-3"
+              style={{ color: textMuted }}
+            >
               Validation summary
             </h3>
             <div className="space-y-3 mb-6">
@@ -463,7 +538,11 @@ export function VendorGovernanceDesk() {
                 [
                   { label: 'Completed', n: model.validationSummary.completed, color: '#16A34A' },
                   { label: 'In progress', n: model.validationSummary.inProgress, color: '#CA8A04' },
-                  { label: 'Blocked', n: model.validationSummary.blocked, color: 'var(--color-error-dark)' },
+                  {
+                    label: 'Blocked',
+                    n: model.validationSummary.blocked,
+                    color: 'var(--color-error-dark)',
+                  },
                 ] as const
               ).map((row) => (
                 <div key={row.label}>
@@ -476,7 +555,10 @@ export function VendorGovernanceDesk() {
               ))}
             </div>
 
-            <h3 className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: textMuted }}>
+            <h3
+              className="text-xs font-semibold uppercase tracking-wide mb-3"
+              style={{ color: textMuted }}
+            >
               High-risk alerts
             </h3>
             <div className="space-y-3 mb-6">
@@ -486,12 +568,20 @@ export function VendorGovernanceDesk() {
                 </p>
               ) : (
                 model.highRiskAlerts.map((a, i) => (
-                  <AlertCard key={`${a.title}-${i}`} title={a.title} detail={a.detail} severity={a.severity} />
+                  <AlertCard
+                    key={`${a.title}-${i}`}
+                    title={a.title}
+                    detail={a.detail}
+                    severity={a.severity}
+                  />
                 ))
               )}
             </div>
 
-            <h3 className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: textMuted }}>
+            <h3
+              className="text-xs font-semibold uppercase tracking-wide mb-3"
+              style={{ color: textMuted }}
+            >
               Pending approvals
             </h3>
             <p className="text-sm font-medium mb-2" style={{ color: textMain }}>
@@ -533,7 +623,10 @@ export function VendorGovernanceDesk() {
                         {row.count} ({row.pct}%)
                       </span>
                     </div>
-                    <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: surface }}>
+                    <div
+                      className="h-2 rounded-full overflow-hidden"
+                      style={{ backgroundColor: surface }}
+                    >
                       <div
                         className="h-full rounded-full"
                         style={{ width: `${Math.min(100, row.pct)}%`, backgroundColor: row.color }}

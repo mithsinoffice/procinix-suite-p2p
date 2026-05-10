@@ -1,11 +1,30 @@
-import { ArrowLeft, Plus, Trash2, X, RefreshCw, DollarSign, FileText, Edit, Eye, Calendar } from 'lucide-react';
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  X,
+  RefreshCw,
+  DollarSign,
+  FileText,
+  Edit,
+  Eye,
+  Calendar,
+} from 'lucide-react';
+import { MasterListToolbar } from './ui/MasterListToolbar';
 import { useNavigate } from 'react-router-dom';
+import { MasterPageShell } from './ui/MasterPageShell';
 import { useState, useMemo, useCallback } from 'react';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
-import { FormShell, FormSection, PxFormField, CheckCard, type SaveStatus } from './ui/form-primitives';
+import {
+  FormShell,
+  FormSection,
+  PxFormField,
+  CheckCard,
+  type SaveStatus,
+} from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { EntityMappingSelector } from './shared/EntityMappingSelector';
 import type { EntityScopeMapping } from '../lib/masters/entityMapping';
@@ -25,16 +44,23 @@ interface ExchangeRateRecord {
   effectiveFromDate: string;
   isActive: boolean;
   approvalStatus?: 'Draft' | 'Pending Approval' | 'Approved' | 'Rejected' | 'Changes Requested';
+  entityMappings?: EntityScopeMapping[];
   originalData?: ExchangeRateRecord;
 }
 
 export function ExchangeRateMaster() {
   const navigate = useNavigate();
   const { exchangeRates: baseExchangeRates } = useMasterData();
-  const [exchangeRates, setExchangeRates] = useIncrementalMasterRecords<ExchangeRateRecord>('exchange_rate_master', baseExchangeRates as ExchangeRateRecord[]);
+  const [exchangeRates, setExchangeRates] = useIncrementalMasterRecords<ExchangeRateRecord>(
+    'exchange_rate_master',
+    baseExchangeRates as ExchangeRateRecord[]
+  );
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [currentReviewRecord, setCurrentReviewRecord] = useState<ExchangeRateRecord | null>(null);
   const [detectedChanges, setDetectedChanges] = useState<Change[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [approvalFilter, setApprovalFilter] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [fromCurrency, setFromCurrency] = useState('');
@@ -45,6 +71,24 @@ export function ExchangeRateMaster() {
   const [isActive, setIsActive] = useState(true);
   const [entityMappings, setEntityMappings] = useState<EntityScopeMapping[]>([]);
 
+  const filteredExchangeRates = useMemo(() => {
+    return exchangeRates.filter((rate) => {
+      const haystack = [
+        rate.fromCurrency,
+        rate.toCurrency,
+        rate.rateType,
+        String(rate.exchangeRate),
+      ]
+        .join(' ')
+        .toLowerCase();
+      const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+      const statusStr = rate.isActive ? 'Active' : 'Inactive';
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(statusStr);
+      const matchesApproval =
+        approvalFilter.length === 0 || approvalFilter.includes(rate.approvalStatus ?? 'Approved');
+      return matchesSearch && matchesStatus && matchesApproval;
+    });
+  }, [exchangeRates, searchTerm, statusFilter, approvalFilter]);
 
   const resetForm = () => {
     setEditingId(null);
@@ -69,7 +113,9 @@ export function ExchangeRateMaster() {
     setShowForm(true);
   };
 
-  const handleSubmit = (approvalStatus: ExchangeRateRecord['approvalStatus'] = 'Pending Approval') => {
+  const handleSubmit = (
+    approvalStatus: ExchangeRateRecord['approvalStatus'] = 'Pending Approval'
+  ) => {
     const originalRecord = exchangeRates.find((rate) => rate.id === editingId);
     const record: ExchangeRateRecord = {
       id: editingId || Date.now().toString(),
@@ -85,7 +131,7 @@ export function ExchangeRateMaster() {
     };
 
     if (editingId) {
-      setExchangeRates(exchangeRates.map((rate: any) => rate.id === editingId ? record : rate));
+      setExchangeRates(exchangeRates.map((rate: any) => (rate.id === editingId ? record : rate)));
     } else {
       setExchangeRates([...exchangeRates, record]);
     }
@@ -113,12 +159,38 @@ export function ExchangeRateMaster() {
     const changes: Change[] = [];
     const original = rate.originalData;
     if (original) {
-      if (original.fromCurrency !== rate.fromCurrency) changes.push({ field: 'From Currency', oldValue: original.fromCurrency, newValue: rate.fromCurrency });
-      if (original.toCurrency !== rate.toCurrency) changes.push({ field: 'To Currency', oldValue: original.toCurrency, newValue: rate.toCurrency });
-      if (original.exchangeRate !== rate.exchangeRate) changes.push({ field: 'Exchange Rate', oldValue: original.exchangeRate.toFixed(4), newValue: rate.exchangeRate.toFixed(4) });
-      if (original.rateType !== rate.rateType) changes.push({ field: 'Rate Type', oldValue: original.rateType, newValue: rate.rateType });
-      if (original.effectiveFromDate !== rate.effectiveFromDate) changes.push({ field: 'Effective From', oldValue: original.effectiveFromDate, newValue: rate.effectiveFromDate });
-      if (original.isActive !== rate.isActive) changes.push({ field: 'Status', oldValue: original.isActive ? 'Active' : 'Inactive', newValue: rate.isActive ? 'Active' : 'Inactive' });
+      if (original.fromCurrency !== rate.fromCurrency)
+        changes.push({
+          field: 'From Currency',
+          oldValue: original.fromCurrency,
+          newValue: rate.fromCurrency,
+        });
+      if (original.toCurrency !== rate.toCurrency)
+        changes.push({
+          field: 'To Currency',
+          oldValue: original.toCurrency,
+          newValue: rate.toCurrency,
+        });
+      if (original.exchangeRate !== rate.exchangeRate)
+        changes.push({
+          field: 'Exchange Rate',
+          oldValue: original.exchangeRate.toFixed(4),
+          newValue: rate.exchangeRate.toFixed(4),
+        });
+      if (original.rateType !== rate.rateType)
+        changes.push({ field: 'Rate Type', oldValue: original.rateType, newValue: rate.rateType });
+      if (original.effectiveFromDate !== rate.effectiveFromDate)
+        changes.push({
+          field: 'Effective From',
+          oldValue: original.effectiveFromDate,
+          newValue: rate.effectiveFromDate,
+        });
+      if (original.isActive !== rate.isActive)
+        changes.push({
+          field: 'Status',
+          oldValue: original.isActive ? 'Active' : 'Inactive',
+          newValue: rate.isActive ? 'Active' : 'Inactive',
+        });
     }
     setCurrentReviewRecord(rate);
     setDetectedChanges(changes);
@@ -127,7 +199,12 @@ export function ExchangeRateMaster() {
 
   const handleApprove = async () => {
     if (!currentReviewRecord) return;
-    const nextRecords = await applyMasterApprovalAction('exchange_rate_master', exchangeRates, currentReviewRecord.id, 'approve');
+    const nextRecords = await applyMasterApprovalAction(
+      'exchange_rate_master',
+      exchangeRates,
+      currentReviewRecord.id,
+      'approve'
+    );
     setExchangeRates(nextRecords);
     setShowApprovalModal(false);
     setCurrentReviewRecord(null);
@@ -135,7 +212,12 @@ export function ExchangeRateMaster() {
 
   const handleReject = async () => {
     if (!currentReviewRecord) return;
-    const nextRecords = await applyMasterApprovalAction('exchange_rate_master', exchangeRates, currentReviewRecord.id, 'reject');
+    const nextRecords = await applyMasterApprovalAction(
+      'exchange_rate_master',
+      exchangeRates,
+      currentReviewRecord.id,
+      'reject'
+    );
     setExchangeRates(nextRecords);
     setShowApprovalModal(false);
     setCurrentReviewRecord(null);
@@ -145,7 +227,13 @@ export function ExchangeRateMaster() {
     if (!currentReviewRecord) return;
     const comments = window.prompt('Enter comments for the request:', '');
     if (comments === null) return;
-    const nextRecords = await applyMasterApprovalAction('exchange_rate_master', exchangeRates, currentReviewRecord.id, 'request_info', comments);
+    const nextRecords = await applyMasterApprovalAction(
+      'exchange_rate_master',
+      exchangeRates,
+      currentReviewRecord.id,
+      'request_info',
+      comments
+    );
     setExchangeRates(nextRecords);
     setShowApprovalModal(false);
     setCurrentReviewRecord(null);
@@ -183,6 +271,7 @@ export function ExchangeRateMaster() {
   if (showForm) {
     return (
       <FormShell
+        masterName="Exchange Rate Master"
         title={editingId ? 'Edit Exchange Rate' : 'Create Exchange Rate'}
         subtitle="Manage exchange rates between currencies for multi-entity operations"
         modeLabel={editingId ? 'Edit Master Record' : 'Create Master Record'}
@@ -201,23 +290,51 @@ export function ExchangeRateMaster() {
       >
         <FormSection title="Rate Details" columns={2}>
           <PxFormField label="From Currency" required filled={!!fromCurrency.trim()}>
-            <input type="text" value={fromCurrency} onChange={(e) => setFromCurrency(e.target.value)} placeholder="e.g., USD" className="px-input" />
+            <input
+              type="text"
+              value={fromCurrency}
+              onChange={(e) => setFromCurrency(e.target.value)}
+              placeholder="e.g., USD"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="To Currency" required filled={!!toCurrency.trim()}>
-            <input type="text" value={toCurrency} onChange={(e) => setToCurrency(e.target.value)} placeholder="e.g., INR" className="px-input" />
+            <input
+              type="text"
+              value={toCurrency}
+              onChange={(e) => setToCurrency(e.target.value)}
+              placeholder="e.g., INR"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Exchange Rate" required filled={!!exchangeRate.trim()}>
-            <input type="number" step="0.0001" value={exchangeRate} onChange={(e) => setExchangeRate(e.target.value)} placeholder="e.g., 83.1250" className="px-input" />
+            <input
+              type="number"
+              step="0.0001"
+              value={exchangeRate}
+              onChange={(e) => setExchangeRate(e.target.value)}
+              placeholder="e.g., 83.1250"
+              className="px-input"
+            />
           </PxFormField>
           <PxFormField label="Rate Type" required filled={!!rateType}>
-            <select value={rateType} onChange={(e) => setRateType(e.target.value)} className="px-select">
+            <select
+              value={rateType}
+              onChange={(e) => setRateType(e.target.value)}
+              className="px-select"
+            >
               <option value="Standard">Standard</option>
               <option value="Closing">Closing</option>
               <option value="Average">Average</option>
             </select>
           </PxFormField>
           <PxFormField label="Effective From" required filled={!!effectiveFromDate.trim()}>
-            <input type="date" value={effectiveFromDate} onChange={(e) => setEffectiveFromDate(e.target.value)} className="px-input" />
+            <input
+              type="date"
+              value={effectiveFromDate}
+              onChange={(e) => setEffectiveFromDate(e.target.value)}
+              className="px-input"
+            />
           </PxFormField>
           <CheckCard
             title="Rate is Active"
@@ -225,24 +342,15 @@ export function ExchangeRateMaster() {
             checked={isActive}
             onChange={setIsActive}
           />
-                  <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
+          <EntityMappingSelector value={entityMappings} onChange={setEntityMappings} />
         </FormSection>
       </FormShell>
     );
   }
 
   return (
-    <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)' }}>
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/masters')} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--color-mercury-grey)' }}>
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-3xl" style={{ color: 'var(--color-ink)' }}>Exchange Rate Master</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Manage exchange rates between currencies for multi-entity operations</p>
-          </div>
-        </div>
+    <MasterPageShell masterName="Exchange Rate Master" description="Manage currency exchange rates">
+      <div className="flex items-center justify-end mb-8">
         <button
           onClick={() => {
             resetForm();
@@ -250,41 +358,146 @@ export function ExchangeRateMaster() {
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white transition-colors"
           style={{ backgroundColor: 'var(--color-teal)' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-teal)')}
         >
           <Plus className="w-5 h-5" />
           Add Exchange Rate
         </button>
       </div>
 
+      <MasterListToolbar
+        masterName="Exchange Rate Master"
+        masterKey="exchange_rate_master"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        filters={[
+          {
+            key: 'status',
+            label: 'Status',
+            options: ['Active', 'Inactive'],
+            selected: statusFilter,
+          },
+          {
+            key: 'approval',
+            label: 'Approval',
+            options: ['Draft', 'Pending Approval', 'Approved', 'Rejected'],
+            selected: approvalFilter,
+          },
+        ]}
+        onFilterChange={(key, values) => {
+          if (key === 'status') setStatusFilter(values);
+          if (key === 'approval') setApprovalFilter(values);
+        }}
+        records={filteredExchangeRates}
+        columns={[
+          { key: 'fromCurrency', label: 'From Currency' },
+          { key: 'toCurrency', label: 'To Currency' },
+          { key: 'exchangeRate', label: 'Exchange Rate' },
+          { key: 'rateType', label: 'Rate Type' },
+          { key: 'effectiveFromDate', label: 'Effective From' },
+          { key: 'isActive', label: 'Status' },
+          { key: 'entityMappings', label: 'Entity Mappings' },
+          { key: 'approvalStatus', label: 'Approval Status' },
+        ]}
+      />
+
       <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
               <tr>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>From Currency</th>
-                <th className="px-6 py-4 text-center text-sm" style={{ color: 'var(--color-mercury-grey)' }}>→</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>To Currency</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Exchange Rate</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Rate Type</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Effective From</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Status</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Approval</th>
-                <th className="px-6 py-4 text-left text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Actions</th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  From Currency
+                </th>
+                <th
+                  className="px-6 py-4 text-center text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  →
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  To Currency
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Exchange Rate
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Rate Type
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Effective From
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Status
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Approval
+                </th>
+                <th
+                  className="px-6 py-4 text-left text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
-              {exchangeRates.map((rate, index) => (
-                <tr key={rate.id} style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{rate.fromCurrency}</td>
-                  <td className="px-6 py-4 text-center">
-                    <RefreshCw className="w-4 h-4 inline" style={{ color: 'var(--color-mercury-grey)' }} />
+              {filteredExchangeRates.map((rate, index) => (
+                <tr
+                  key={rate.id}
+                  style={{ borderTop: index === 0 ? 'none' : '1px solid var(--color-silver)' }}
+                >
+                  <td
+                    className="px-6 py-4"
+                    style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                  >
+                    {rate.fromCurrency}
                   </td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{rate.toCurrency}</td>
-                  <td className="px-6 py-4" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{rate.exchangeRate.toFixed(4)}</td>
+                  <td className="px-6 py-4 text-center">
+                    <RefreshCw
+                      className="w-4 h-4 inline"
+                      style={{ color: 'var(--color-mercury-grey)' }}
+                    />
+                  </td>
+                  <td
+                    className="px-6 py-4"
+                    style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                  >
+                    {rate.toCurrency}
+                  </td>
+                  <td
+                    className="px-6 py-4"
+                    style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                  >
+                    {rate.exchangeRate.toFixed(4)}
+                  </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={getRateTypeBadgeStyle(rate.rateType)}>
+                    <span
+                      className="px-3 py-1 rounded-full text-sm"
+                      style={getRateTypeBadgeStyle(rate.rateType)}
+                    >
                       {rate.rateType}
                     </span>
                   </td>
@@ -295,12 +508,18 @@ export function ExchangeRateMaster() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={getStatusBadgeStyle(rate.isActive)}>
+                    <span
+                      className="px-3 py-1 rounded-full text-sm"
+                      style={getStatusBadgeStyle(rate.isActive)}
+                    >
                       {rate.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-sm" style={getApprovalBadgeStyle(rate.approvalStatus)}>
+                    <span
+                      className="px-3 py-1 rounded-full text-sm"
+                      style={getApprovalBadgeStyle(rate.approvalStatus)}
+                    >
                       {rate.approvalStatus ?? 'Approved'}
                     </span>
                   </td>
@@ -321,7 +540,9 @@ export function ExchangeRateMaster() {
                       >
                         <Edit className="w-4 h-4" />
                       </button>
-                      {(rate.approvalStatus === 'Pending Approval' || rate.approvalStatus === 'Changes Requested' || rate.approvalStatus === 'Draft') && (
+                      {(rate.approvalStatus === 'Pending Approval' ||
+                        rate.approvalStatus === 'Changes Requested' ||
+                        rate.approvalStatus === 'Draft') && (
                         <button
                           className="p-2 rounded-lg transition-colors"
                           style={{ color: 'var(--color-teal)' }}
@@ -347,15 +568,20 @@ export function ExchangeRateMaster() {
           style={{ backgroundColor: '#FFF9E6', border: '1px solid #FCD34D' }}
         >
           <p className="text-sm" style={{ color: '#D97706' }}>
-            ℹ️ Exchange rates are used for consolidated reporting and cross-entity analytics only. Not auto-applied to transactions.
+            ℹ️ Exchange rates are used for consolidated reporting and cross-entity analytics only.
+            Not auto-applied to transactions.
           </p>
         </div>
         <div
           className="p-4 rounded-lg"
-          style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}
+          style={{
+            backgroundColor: 'var(--color-teal-tint)',
+            border: '1px solid var(--color-teal)',
+          }}
         >
           <p className="text-sm" style={{ color: 'var(--color-teal-dark)' }}>
-            💡 Showing {exchangeRates.length} exchange rate mappings. Bidirectional rates available for INR ↔ AED, INR ↔ USD, AED ↔ USD.
+            💡 Showing {exchangeRates.length} exchange rate mappings. Bidirectional rates available
+            for INR ↔ AED, INR ↔ USD, AED ↔ USD.
           </p>
         </div>
       </div>
@@ -370,6 +596,6 @@ export function ExchangeRateMaster() {
         onReject={handleReject}
         onRequestInfo={handleRequestInfo}
       />
-    </div>
+    </MasterPageShell>
   );
 }

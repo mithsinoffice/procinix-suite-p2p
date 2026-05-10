@@ -1,6 +1,6 @@
 /**
  * SUBKO COFFEE - STANDARDIZED STATUS LABELS & COLORS
- * 
+ *
  * Canonical status definitions and visual styling for all transaction types
  * NO AI, NO CUSTOM STYLES - Strict enterprise-grade standards
  */
@@ -17,7 +17,14 @@ export type AdvanceStatus = 'Draft' | 'Requested' | 'Adjusted' | 'Closed';
 export type DebitNoteStatus = 'Draft' | 'Issued' | 'Adjusted' | 'Closed';
 export type PaymentStatus = 'Draft' | 'Released' | 'Paid' | 'Failed';
 
-export type AllStatuses = PRStatus | POStatus | GRNStatus | InvoiceStatus | AdvanceStatus | DebitNoteStatus | PaymentStatus;
+export type AllStatuses =
+  | PRStatus
+  | POStatus
+  | GRNStatus
+  | InvoiceStatus
+  | AdvanceStatus
+  | DebitNoteStatus
+  | PaymentStatus;
 
 // =============================================================================
 // STATUS COLOR MAPPING (CANONICAL)
@@ -33,32 +40,37 @@ export const getStatusStyle = (status: AllStatuses): StatusStyle => {
   if (status === 'Draft') {
     return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' };
   }
-  
+
   // Pending / Requested → amber
   if (status === 'Pending Approval' || status === 'Requested') {
     return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' };
   }
-  
+
   // Approved / Issued / Released → blue
-  if (status === 'Approved' || status === 'Issued' || status === 'Released' || status === 'Confirmed') {
+  if (
+    status === 'Approved' ||
+    status === 'Issued' ||
+    status === 'Released' ||
+    status === 'Confirmed'
+  ) {
     return { bg: '#E3F2FD', color: '#1976D2' };
   }
-  
+
   // Paid / Closed / Adjusted → green
   if (status === 'Paid' || status === 'Closed' || status === 'Adjusted') {
     return { bg: 'var(--color-success-light)', color: 'var(--color-success-dark)' };
   }
-  
+
   // Failed / Rejected / Cancelled → red
   if (status === 'Failed' || status === 'Rejected' || status === 'Cancelled') {
     return { bg: 'var(--color-error-light)', color: 'var(--color-error-dark)' };
   }
-  
+
   // On Hold / Partially Received → amber
   if (status === 'On Hold' || status === 'Partially Received') {
     return { bg: 'var(--color-warning-light)', color: 'var(--color-warning-dark)' };
   }
-  
+
   // Fallback
   return { bg: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' };
 };
@@ -80,7 +92,7 @@ export function StatusBadge({ status, className = '' }: StatusBadgeProps) {
       style={{
         backgroundColor: style.bg,
         color: style.color,
-        fontWeight: '500'
+        fontWeight: '500',
       }}
     >
       {status}
@@ -106,11 +118,11 @@ export const ButtonLabels = {
     RELEASE_PAYMENT: 'Release Payment',
     MARK_AS_PAID: 'Mark as Paid',
   },
-  
+
   // Secondary Actions
   SECONDARY: {
     SAVE_DRAFT: 'Save Draft',
     CANCEL: 'Cancel',
     BACK: 'Back',
-  }
+  },
 } as const;

@@ -1,9 +1,22 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  ArrowLeft, FileText, Building2, Calendar, DollarSign,
-  CheckCircle, Clock, AlertTriangle, User, MessageSquare,
-  Download, Eye, Zap, TrendingUp, Shield
+import { useAPData } from '../contexts/APDataContext';
+import {
+  ArrowLeft,
+  FileText,
+  Building2,
+  Calendar,
+  DollarSign,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  User,
+  MessageSquare,
+  Download,
+  Eye,
+  Zap,
+  TrendingUp,
+  Shield,
 } from 'lucide-react';
 import { AIInsightsPanel } from './AIInsightsPanel';
 
@@ -29,30 +42,51 @@ interface AuditEntry {
 export function InvoiceWorkflowView() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { invoices } = useAPData();
 
-  // Mock invoice data
-  const invoice = {
-    id: 'INV-001',
-    invoiceNumber: 'INV-2024-00123',
-    vendorName: 'Tech Solutions Pvt Ltd',
-    vendorCode: 'VEN-1001',
-    vendorGSTIN: '29AABCT1234F1Z5',
-    poNumber: 'PO-2024-001',
-    grnNumber: 'GRN-2024-056',
-    invoiceDate: '2024-12-10',
-    invoiceAmount: 125000,
-    gstAmount: 11250,
-    tdsAmount: 2250,
-    netPayable: 134000,
-    status: 'In Review',
-    aiRisk: 'Low',
-    createdBy: 'John Doe',
-    createdDate: '2024-12-11 10:30 AM',
-    submittedDate: '2024-12-11 11:00 AM',
-    currency: 'INR',
-    paymentTerms: 'Net 30 Days',
-    dueDate: '2025-01-09'
-  };
+  const sourceInvoice = invoices.find((entry) => entry.id === id) ?? invoices[0];
+  const invoice = sourceInvoice
+    ? {
+        id: sourceInvoice.id,
+        invoiceNumber: sourceInvoice.invoiceNumber,
+        vendorName: sourceInvoice.vendorName,
+        vendorCode: sourceInvoice.vendorCode,
+        vendorGSTIN: '',
+        poNumber: sourceInvoice.poNumber || 'Direct',
+        grnNumber: 'Pending',
+        invoiceDate: sourceInvoice.invoiceDate,
+        invoiceAmount: sourceInvoice.totalAmount,
+        gstAmount: 0,
+        tdsAmount: 0,
+        netPayable: sourceInvoice.totalAmount,
+        status:
+          sourceInvoice.status === 'Pending Approval'
+            ? 'Submitted'
+            : sourceInvoice.status === 'Under Review'
+              ? 'In Review'
+              : sourceInvoice.status,
+        aiRisk:
+          sourceInvoice.matchStatus === 'Unmatched'
+            ? 'High'
+            : sourceInvoice.matchStatus === 'Partially Matched'
+              ? 'Medium'
+              : 'Low',
+        createdBy: sourceInvoice.approver || 'Current User',
+        createdDate: sourceInvoice.invoiceDate,
+        submittedDate: sourceInvoice.invoiceDate,
+        currency: sourceInvoice.currency,
+        paymentTerms: 'Net 30 Days',
+        dueDate: sourceInvoice.dueDate || '',
+      }
+    : null;
+
+  if (!invoice) {
+    return (
+      <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
+        <p style={{ color: 'var(--color-mercury-grey)' }}>No invoice found.</p>
+      </div>
+    );
+  }
 
   const workflowSteps: WorkflowStep[] = [
     {
@@ -62,7 +96,7 @@ export function InvoiceWorkflowView() {
       action: 'Created',
       timestamp: '2024-12-11 10:30 AM',
       slaHours: 0,
-      elapsedHours: 0
+      elapsedHours: 0,
     },
     {
       stage: 'Submitted',
@@ -71,7 +105,7 @@ export function InvoiceWorkflowView() {
       action: 'Submitted for Approval',
       timestamp: '2024-12-11 11:00 AM',
       slaHours: 0,
-      elapsedHours: 0
+      elapsedHours: 0,
     },
     {
       stage: 'L1 Review',
@@ -79,25 +113,25 @@ export function InvoiceWorkflowView() {
       approver: 'Sarah Manager',
       slaHours: 24,
       elapsedHours: 14,
-      comments: 'Awaiting review'
+      comments: 'Awaiting review',
     },
     {
       stage: 'L2 Approval',
       status: 'pending',
       approver: 'Finance Head',
-      slaHours: 48
+      slaHours: 48,
     },
     {
       stage: 'CFO Approval',
       status: 'pending',
       approver: 'CFO',
-      slaHours: 24
+      slaHours: 24,
     },
     {
       stage: 'Ready for Payment',
       status: 'pending',
-      slaHours: 0
-    }
+      slaHours: 0,
+    },
   ];
 
   const auditTrail: AuditEntry[] = [
@@ -105,26 +139,26 @@ export function InvoiceWorkflowView() {
       timestamp: '2024-12-11 10:30 AM',
       user: 'John Doe',
       action: 'Invoice created',
-      comments: 'PO-based invoice for Tech Solutions'
+      comments: 'PO-based invoice for Tech Solutions',
     },
     {
       timestamp: '2024-12-11 10:45 AM',
       user: 'AI System',
       action: 'AI Validation completed',
-      aiRecommendation: 'No blockers found. Low risk invoice. 3-way match successful.'
+      aiRecommendation: 'No blockers found. Low risk invoice. 3-way match successful.',
     },
     {
       timestamp: '2024-12-11 11:00 AM',
       user: 'John Doe',
       action: 'Submitted for approval',
-      comments: 'All validations passed'
+      comments: 'All validations passed',
     },
     {
       timestamp: '2024-12-12 09:15 AM',
       user: 'System',
       action: 'Assigned to L1 Reviewer',
-      comments: 'Auto-assigned to Sarah Manager based on approval matrix'
-    }
+      comments: 'Auto-assigned to Sarah Manager based on approval matrix',
+    },
   ];
 
   const aiInsights = [
@@ -134,16 +168,15 @@ export function InvoiceWorkflowView() {
       category: '3-Way Matching',
       title: '3-Way Match Successful',
       description: 'PO, GRN, and Invoice quantities and amounts match within tolerance',
-      reason: 'All line items verified across PO-2024-001, GRN-2024-056, and invoice. Quantity variance is within ±2% threshold.',
+      reason:
+        'All line items verified across PO-2024-001, GRN-2024-056, and invoice. Quantity variance is within ±2% threshold.',
       confidence: 98,
       evidence: [
         'PO Qty: 100 units, GRN Qty: 100 units, Invoice Qty: 100 units',
         'PO Amount: ₹125,000, Invoice Amount: ₹125,000 (0% variance)',
-        'All HSN codes match across documents'
+        'All HSN codes match across documents',
       ],
-      recommendedActions: [
-        'Proceed with approval - no action needed'
-      ]
+      recommendedActions: ['Proceed with approval - no action needed'],
     },
     {
       id: 'insight-2',
@@ -151,18 +184,19 @@ export function InvoiceWorkflowView() {
       category: 'Vendor History',
       title: 'Reliable Vendor Performance',
       description: 'Vendor has 100% on-time delivery record with no payment disputes',
-      reason: 'Historical analysis of 12 prior transactions with Tech Solutions Pvt Ltd shows excellent track record.',
+      reason:
+        'Historical analysis of 12 prior transactions with Tech Solutions Pvt Ltd shows excellent track record.',
       confidence: 100,
       evidence: [
         '12 previous POs completed without issues',
         '100% on-time delivery rate',
         'Zero payment disputes or chargebacks',
-        'Average payment received: 28 days (within terms)'
+        'Average payment received: 28 days (within terms)',
       ],
       recommendedActions: [
         'Consider for preferred vendor status',
-        'Eligible for extended credit terms'
-      ]
+        'Eligible for extended credit terms',
+      ],
     },
     {
       id: 'insight-3',
@@ -170,43 +204,52 @@ export function InvoiceWorkflowView() {
       category: 'Compliance',
       title: 'Tax Compliance Verified',
       description: 'All tax calculations verified. TDS section correctly applied.',
-      reason: 'GST @ 9% (CGST + SGST) correctly calculated. TDS Section 194Q applied at 0.1% for goods >₹50L.',
+      reason:
+        'GST @ 9% (CGST + SGST) correctly calculated. TDS Section 194Q applied at 0.1% for goods >₹50L.',
       confidence: 95,
       evidence: [
         'Vendor GSTIN validated: 29AABCT1234F1Z5 (Active)',
         'GST calculation: Base ₹125,000 × 9% = ₹11,250 ✓',
         'TDS Section 194Q @ 0.1% correctly applied',
-        'Place of supply matches billing state'
+        'Place of supply matches billing state',
       ],
-      recommendedActions: [
-        'Proceed with standard compliance approval'
-      ]
-    }
+      recommendedActions: ['Proceed with standard compliance approval'],
+    },
   ];
 
   const getStepIcon = (status: WorkflowStep['status']) => {
     switch (status) {
-      case 'completed': return CheckCircle;
-      case 'current': return Clock;
-      default: return Clock;
+      case 'completed':
+        return CheckCircle;
+      case 'current':
+        return Clock;
+      default:
+        return Clock;
     }
   };
 
   const getStepColor = (status: WorkflowStep['status']) => {
     switch (status) {
-      case 'completed': return '#047857';
-      case 'current': return '#D97706';
-      default: return '#9CA3AF';
+      case 'completed':
+        return '#047857';
+      case 'current':
+        return '#D97706';
+      default:
+        return '#9CA3AF';
     }
   };
 
   const getSLAStatus = (step: WorkflowStep) => {
     if (step.status !== 'current' || !step.elapsedHours) return null;
-    
+
     const percentElapsed = (step.elapsedHours / step.slaHours) * 100;
-    
+
     if (percentElapsed >= 90) {
-      return { label: 'SLA Critical', color: 'var(--color-error-dark)', bg: 'var(--color-error-light)' };
+      return {
+        label: 'SLA Critical',
+        color: 'var(--color-error-dark)',
+        bg: 'var(--color-error-light)',
+      };
     } else if (percentElapsed >= 70) {
       return { label: 'SLA Warning', color: '#D97706', bg: '#FEF3C7' };
     }
@@ -226,8 +269,12 @@ export function InvoiceWorkflowView() {
         </button>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>Invoice Workflow</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Track approval progress and audit trail</p>
+            <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
+              Invoice Workflow
+            </h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>
+              Track approval progress and audit trail
+            </p>
           </div>
           <div className="flex gap-3">
             <button
@@ -252,10 +299,13 @@ export function InvoiceWorkflowView() {
         {/* Left Column - Invoice Summary */}
         <div className="space-y-6">
           {/* Invoice Header */}
-          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
+          <div
+            className="bg-white rounded-xl border-2 p-6"
+            style={{ borderColor: 'var(--color-silver)' }}
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 style={{ color: 'var(--color-ink)' }}>Invoice Details</h3>
-              <span 
+              <span
                 className="px-3 py-1 rounded-full text-sm"
                 style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}
               >
@@ -265,7 +315,12 @@ export function InvoiceWorkflowView() {
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Number</label>
+                <label
+                  className="text-sm mb-1 block"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Invoice Number
+                </label>
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[var(--color-teal)]" />
                   <span style={{ color: 'var(--color-ink)' }}>{invoice.invoiceNumber}</span>
@@ -273,29 +328,51 @@ export function InvoiceWorkflowView() {
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Vendor</label>
+                <label
+                  className="text-sm mb-1 block"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Vendor
+                </label>
                 <div className="flex items-center gap-2">
                   <Building2 className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   <div>
                     <p style={{ color: 'var(--color-ink)' }}>{invoice.vendorName}</p>
-                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{invoice.vendorCode}</p>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                      {invoice.vendorCode}
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>PO Number</label>
+                  <label
+                    className="text-sm mb-1 block"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    PO Number
+                  </label>
                   <p style={{ color: 'var(--color-ink)' }}>{invoice.poNumber}</p>
                 </div>
                 <div>
-                  <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>GRN Number</label>
+                  <label
+                    className="text-sm mb-1 block"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  >
+                    GRN Number
+                  </label>
                   <p style={{ color: 'var(--color-ink)' }}>{invoice.grnNumber}</p>
                 </div>
               </div>
 
               <div>
-                <label className="text-sm mb-1 block" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Date</label>
+                <label
+                  className="text-sm mb-1 block"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
+                  Invoice Date
+                </label>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   <span style={{ color: 'var(--color-ink)' }}>{invoice.invoiceDate}</span>
@@ -305,21 +382,32 @@ export function InvoiceWorkflowView() {
           </div>
 
           {/* Amount Summary */}
-          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
-            <h3 className="mb-4" style={{ color: 'var(--color-ink)' }}>Amount Summary</h3>
-            
+          <div
+            className="bg-white rounded-xl border-2 p-6"
+            style={{ borderColor: 'var(--color-silver)' }}
+          >
+            <h3 className="mb-4" style={{ color: 'var(--color-ink)' }}>
+              Amount Summary
+            </h3>
+
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span style={{ color: 'var(--color-mercury-grey)' }}>Invoice Amount</span>
-                <span style={{ color: 'var(--color-ink)' }}>₹{invoice.invoiceAmount.toLocaleString('en-IN')}</span>
+                <span style={{ color: 'var(--color-ink)' }}>
+                  ₹{invoice.invoiceAmount.toLocaleString('en-IN')}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span style={{ color: 'var(--color-mercury-grey)' }}>GST</span>
-                <span style={{ color: 'var(--color-ink)' }}>₹{invoice.gstAmount.toLocaleString('en-IN')}</span>
+                <span style={{ color: 'var(--color-ink)' }}>
+                  ₹{invoice.gstAmount.toLocaleString('en-IN')}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span style={{ color: 'var(--color-mercury-grey)' }}>TDS</span>
-                <span style={{ color: 'var(--color-error-dark)' }}>-₹{invoice.tdsAmount.toLocaleString('en-IN')}</span>
+                <span style={{ color: 'var(--color-error-dark)' }}>
+                  -₹{invoice.tdsAmount.toLocaleString('en-IN')}
+                </span>
               </div>
               <div className="border-t-2 pt-3" style={{ borderColor: 'var(--color-silver)' }}>
                 <div className="flex justify-between items-center">
@@ -342,8 +430,13 @@ export function InvoiceWorkflowView() {
         {/* Middle Column - Workflow Timeline */}
         <div className="col-span-2 space-y-6">
           {/* Workflow Progress */}
-          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
-            <h3 className="mb-6" style={{ color: 'var(--color-ink)' }}>Approval Workflow</h3>
+          <div
+            className="bg-white rounded-xl border-2 p-6"
+            style={{ borderColor: 'var(--color-silver)' }}
+          >
+            <h3 className="mb-6" style={{ color: 'var(--color-ink)' }}>
+              Approval Workflow
+            </h3>
 
             <div className="space-y-6">
               {workflowSteps.map((step, idx) => {
@@ -354,18 +447,22 @@ export function InvoiceWorkflowView() {
                 return (
                   <div key={idx} className="relative">
                     {idx < workflowSteps.length - 1 && (
-                      <div 
+                      <div
                         className="absolute left-4 top-8 bottom-0 w-0.5"
-                        style={{ backgroundColor: step.status === 'completed' ? '#047857' : 'var(--color-silver)' }}
+                        style={{
+                          backgroundColor:
+                            step.status === 'completed' ? '#047857' : 'var(--color-silver)',
+                        }}
                       />
                     )}
-                    
+
                     <div className="flex gap-4">
-                      <div 
+                      <div
                         className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 relative z-10"
-                        style={{ 
-                          backgroundColor: step.status === 'pending' ? 'var(--color-cloud)' : `${stepColor}20`,
-                          border: `2px solid ${stepColor}`
+                        style={{
+                          backgroundColor:
+                            step.status === 'pending' ? 'var(--color-cloud)' : `${stepColor}20`,
+                          border: `2px solid ${stepColor}`,
                         }}
                       >
                         <StepIcon className="w-4 h-4" style={{ color: stepColor }} />
@@ -377,13 +474,21 @@ export function InvoiceWorkflowView() {
                             <h4 style={{ color: 'var(--color-ink)' }}>{step.stage}</h4>
                             {step.approver && (
                               <div className="flex items-center gap-2 mt-1">
-                                <User className="w-3 h-3" style={{ color: 'var(--color-mercury-grey)' }} />
-                                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{step.approver}</span>
+                                <User
+                                  className="w-3 h-3"
+                                  style={{ color: 'var(--color-mercury-grey)' }}
+                                />
+                                <span
+                                  className="text-sm"
+                                  style={{ color: 'var(--color-mercury-grey)' }}
+                                >
+                                  {step.approver}
+                                </span>
                               </div>
                             )}
                           </div>
                           {slaStatus && (
-                            <span 
+                            <span
                               className="text-xs px-2 py-1 rounded"
                               style={{ backgroundColor: slaStatus.bg, color: slaStatus.color }}
                             >
@@ -393,27 +498,39 @@ export function InvoiceWorkflowView() {
                         </div>
 
                         {step.action && (
-                          <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>{step.action}</p>
+                          <p
+                            className="text-sm mb-1"
+                            style={{ color: 'var(--color-mercury-grey)' }}
+                          >
+                            {step.action}
+                          </p>
                         )}
 
                         {step.timestamp && (
-                          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{step.timestamp}</p>
+                          <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                            {step.timestamp}
+                          </p>
                         )}
 
                         {step.status === 'current' && step.slaHours > 0 && (
-                          <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
+                          <div
+                            className="mt-3 p-3 rounded-lg"
+                            style={{ backgroundColor: 'var(--color-cloud)' }}
+                          >
                             <div className="flex items-center justify-between text-xs mb-2">
-                              <span style={{ color: 'var(--color-mercury-grey)' }}>SLA Progress</span>
+                              <span style={{ color: 'var(--color-mercury-grey)' }}>
+                                SLA Progress
+                              </span>
                               <span style={{ color: 'var(--color-ink)' }}>
                                 {step.elapsedHours}h / {step.slaHours}h
                               </span>
                             </div>
                             <div className="w-full bg-[var(--color-silver)] rounded-full h-2">
-                              <div 
+                              <div
                                 className="h-2 rounded-full transition-all"
-                                style={{ 
+                                style={{
                                   width: `${Math.min((step.elapsedHours! / step.slaHours) * 100, 100)}%`,
-                                  backgroundColor: slaStatus?.color || '#047857'
+                                  backgroundColor: slaStatus?.color || '#047857',
                                 }}
                               />
                             </div>
@@ -422,8 +539,13 @@ export function InvoiceWorkflowView() {
 
                         {step.comments && (
                           <div className="mt-2 flex items-start gap-2">
-                            <MessageSquare className="w-3 h-3 mt-0.5" style={{ color: 'var(--color-mercury-grey)' }} />
-                            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{step.comments}</p>
+                            <MessageSquare
+                              className="w-3 h-3 mt-0.5"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            />
+                            <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                              {step.comments}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -435,18 +557,23 @@ export function InvoiceWorkflowView() {
           </div>
 
           {/* Audit Trail */}
-          <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
-            <h3 className="mb-4" style={{ color: 'var(--color-ink)' }}>Audit Trail</h3>
+          <div
+            className="bg-white rounded-xl border-2 p-6"
+            style={{ borderColor: 'var(--color-silver)' }}
+          >
+            <h3 className="mb-4" style={{ color: 'var(--color-ink)' }}>
+              Audit Trail
+            </h3>
 
             <div className="space-y-4">
               {auditTrail.map((entry, idx) => (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className="flex gap-4 p-4 rounded-lg border-2"
                   style={{ borderColor: 'var(--color-silver)' }}
                 >
                   <div className="flex-shrink-0">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full flex items-center justify-center"
                       style={{ backgroundColor: 'var(--color-teal)10' }}
                     >
@@ -457,28 +584,44 @@ export function InvoiceWorkflowView() {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-1">
                       <p style={{ color: 'var(--color-ink)' }}>{entry.action}</p>
-                      <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>{entry.timestamp}</span>
+                      <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                        {entry.timestamp}
+                      </span>
                     </div>
-                    
+
                     <p className="text-sm mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
                       by {entry.user}
                     </p>
-                    
+
                     {entry.comments && (
-                      <p className="text-sm mt-2 p-2 rounded" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}>
+                      <p
+                        className="text-sm mt-2 p-2 rounded"
+                        style={{
+                          backgroundColor: 'var(--color-cloud)',
+                          color: 'var(--color-mercury-grey)',
+                        }}
+                      >
                         {entry.comments}
                       </p>
                     )}
-                    
+
                     {entry.aiRecommendation && (
-                      <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-teal)10', borderLeft: '3px solid var(--color-teal)' }}>
+                      <div
+                        className="mt-2 p-3 rounded-lg"
+                        style={{
+                          backgroundColor: 'var(--color-teal)10',
+                          borderLeft: '3px solid var(--color-teal)',
+                        }}
+                      >
                         <div className="flex items-start gap-2">
                           <Zap className="w-4 h-4 flex-shrink-0 mt-0.5 text-[var(--color-teal)]" />
-                          <p className="text-sm" style={{ color: 'var(--color-ink)' }}>{entry.aiRecommendation}</p>
+                          <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
+                            {entry.aiRecommendation}
+                          </p>
                         </div>
                       </div>
                     )}

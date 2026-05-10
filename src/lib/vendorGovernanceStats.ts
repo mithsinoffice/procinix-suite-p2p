@@ -12,7 +12,10 @@ import { isPendingBuyerReview } from './vendorSubmissionReview';
 
 const accent = 'var(--color-teal)';
 
-function invitationMatchesEntity(inv: VendorInvitation, entityId: string | null | undefined): boolean {
+function invitationMatchesEntity(
+  inv: VendorInvitation,
+  entityId: string | null | undefined
+): boolean {
   if (!entityId || entityId === 'CONSOLIDATED') return true;
   const eid = inv.basic.entityId?.trim();
   if (!eid) return true;
@@ -41,7 +44,11 @@ function countInDateRange(
   }).length;
 }
 
-function countInvitationsCreatedInRange(invitations: VendorInvitation[], start: Date, end: Date): number {
+function countInvitationsCreatedInRange(
+  invitations: VendorInvitation[],
+  start: Date,
+  end: Date
+): number {
   return invitations.filter((inv) => {
     const d = new Date(inv.createdAt);
     return d >= start && d < end;
@@ -76,7 +83,10 @@ function statusUi(inv: VendorInvitation): { label: string; tone: GovernanceStatu
   }
 }
 
-function dueFromExpires(expiresAt?: string): { label: string; dueTone: 'orange' | 'amber' | 'soft' } {
+function dueFromExpires(expiresAt?: string): {
+  label: string;
+  dueTone: 'orange' | 'amber' | 'soft';
+} {
   if (!expiresAt) {
     return { label: 'Due soon', dueTone: 'soft' };
   }
@@ -224,7 +234,12 @@ export function buildVendorGovernanceDeskModel(
   const riskDistribution = [
     { label: 'Low risk', count: low, pct: Math.round((low / vr) * 1000) / 10, color: '#16A34A' },
     { label: 'Medium risk', count: med, pct: Math.round((med / vr) * 1000) / 10, color: '#CA8A04' },
-    { label: 'High risk', count: high, pct: Math.round((high / vr) * 1000) / 10, color: 'var(--color-error-dark)' },
+    {
+      label: 'High risk',
+      count: high,
+      pct: Math.round((high / vr) * 1000) / 10,
+      color: 'var(--color-error-dark)',
+    },
   ];
 
   const blockedVendors = scopedVendors.filter((v) => v.status === 'Blocked').slice(0, 3);

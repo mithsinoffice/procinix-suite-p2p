@@ -1,10 +1,26 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Save, X, Plus, Trash2, Upload, Download, AlertCircle,
-  Building2, DollarSign, Calendar, User, FileText, ChevronDown
+  Save,
+  X,
+  Plus,
+  Trash2,
+  Upload,
+  Download,
+  AlertCircle,
+  Building2,
+  DollarSign,
+  Calendar,
+  User,
+  FileText,
+  ChevronDown,
 } from 'lucide-react';
-import { useBudgetData, Budget, BudgetAllocation, AllocationPeriod } from '../contexts/BudgetDataContext';
+import {
+  useBudgetData,
+  Budget,
+  BudgetAllocation,
+  AllocationPeriod,
+} from '../contexts/BudgetDataContext';
 
 export function BudgetPlanningCreation() {
   const navigate = useNavigate();
@@ -13,7 +29,9 @@ export function BudgetPlanningCreation() {
   const [budgetName, setBudgetName] = useState('');
   const [budgetOwner, setBudgetOwner] = useState('');
   const [financialYear, setFinancialYear] = useState('FY2025');
-  const [budgetType, setBudgetType] = useState<'Original' | 'Interim' | 'Revised' | 'Forecast'>('Original');
+  const [budgetType, setBudgetType] = useState<'Original' | 'Interim' | 'Revised' | 'Forecast'>(
+    'Original'
+  );
   const [currency, setCurrency] = useState('INR');
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [allocationPeriod, setAllocationPeriod] = useState<AllocationPeriod>('Monthly');
@@ -40,7 +58,7 @@ export function BudgetPlanningCreation() {
     { period: 'Dec 2025', plannedAmount: 0, comments: '' },
     { period: 'Jan 2026', plannedAmount: 0, comments: '' },
     { period: 'Feb 2026', plannedAmount: 0, comments: '' },
-    { period: 'Mar 2026', plannedAmount: 0, comments: '' }
+    { period: 'Mar 2026', plannedAmount: 0, comments: '' },
   ]);
 
   const [showValidation, setShowValidation] = useState(false);
@@ -55,11 +73,11 @@ export function BudgetPlanningCreation() {
 
     const periodsCount = lineItems.length;
     const evenAmount = Math.floor(totalAmount / periodsCount);
-    const remainder = totalAmount - (evenAmount * periodsCount);
+    const remainder = totalAmount - evenAmount * periodsCount;
 
     const distributed = lineItems.map((item, index) => ({
       ...item,
-      plannedAmount: index === periodsCount - 1 ? evenAmount + remainder : evenAmount
+      plannedAmount: index === periodsCount - 1 ? evenAmount + remainder : evenAmount,
     }));
 
     setLineItems(distributed);
@@ -80,33 +98,38 @@ export function BudgetPlanningCreation() {
   // Validation
   const validateBudget = () => {
     const messages: string[] = [];
-    
+
     if (!budgetName.trim()) messages.push('Budget name is required');
     if (!budgetOwner.trim()) messages.push('Budget owner is required');
     if (!department.trim()) messages.push('Department is required');
     if (totalAmount <= 0) messages.push('Total budget amount must be greater than 0');
-    
+
     const calculatedTotal = calculateTotal();
     if (Math.abs(calculatedTotal - totalAmount) > 1) {
-      messages.push(`Line items total (${currency} ${calculatedTotal.toLocaleString()}) does not match budget amount (${currency} ${totalAmount.toLocaleString()})`);
+      messages.push(
+        `Line items total (${currency} ${calculatedTotal.toLocaleString()}) does not match budget amount (${currency} ${totalAmount.toLocaleString()})`
+      );
     }
 
     // Check for duplicate budgets
-    const duplicate = budgets.find(b => 
-      b.dimensions.department === department &&
-      b.dimensions.expenseCategory === expenseCategory &&
-      b.dimensions.costCentre === costCentre &&
-      b.financialYear === financialYear &&
-      b.status !== 'Rejected'
+    const duplicate = budgets.find(
+      (b) =>
+        b.dimensions.department === department &&
+        b.dimensions.expenseCategory === expenseCategory &&
+        b.dimensions.costCentre === costCentre &&
+        b.financialYear === financialYear &&
+        b.status !== 'Rejected'
     );
 
     if (duplicate) {
-      messages.push(`A similar budget already exists: ${duplicate.budgetNumber} - ${duplicate.budgetName}`);
+      messages.push(
+        `A similar budget already exists: ${duplicate.budgetNumber} - ${duplicate.budgetName}`
+      );
     }
 
     setValidationMessages(messages);
     setShowValidation(messages.length > 0);
-    
+
     return messages.length === 0;
   };
 
@@ -129,7 +152,7 @@ export function BudgetPlanningCreation() {
         location,
         costCentre,
         profitCentre,
-        project
+        project,
       },
       allocations: lineItems,
       allocationPeriod,
@@ -143,7 +166,7 @@ export function BudgetPlanningCreation() {
       linkedPOs: [],
       linkedInvoices: [],
       revisionHistory: [],
-      approvalWorkflow: []
+      approvalWorkflow: [],
     };
 
     addBudget(newBudget);
@@ -170,7 +193,7 @@ export function BudgetPlanningCreation() {
         location,
         costCentre,
         profitCentre,
-        project
+        project,
       },
       allocations: lineItems,
       allocationPeriod,
@@ -192,7 +215,7 @@ export function BudgetPlanningCreation() {
           status: 'Pending',
           slaHours: 48,
           slaDue: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString().split('T')[0],
-          overdue: false
+          overdue: false,
         },
         {
           level: 2,
@@ -201,7 +224,7 @@ export function BudgetPlanningCreation() {
           status: 'Pending',
           slaHours: 72,
           slaDue: new Date(Date.now() + 120 * 60 * 60 * 1000).toISOString().split('T')[0],
-          overdue: false
+          overdue: false,
         },
         {
           level: 3,
@@ -210,9 +233,9 @@ export function BudgetPlanningCreation() {
           status: 'Pending',
           slaHours: 96,
           slaDue: new Date(Date.now() + 216 * 60 * 60 * 1000).toISOString().split('T')[0],
-          overdue: false
-        }
-      ]
+          overdue: false,
+        },
+      ],
     };
 
     addBudget(newBudget);
@@ -231,7 +254,9 @@ export function BudgetPlanningCreation() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-[var(--color-ink)]">Budget Planning & Creation</h1>
-              <p className="text-[var(--color-mercury-grey)] text-sm">Create new budget with multi-dimensional planning and allocation</p>
+              <p className="text-[var(--color-mercury-grey)] text-sm">
+                Create new budget with multi-dimensional planning and allocation
+              </p>
             </div>
             <div className="flex gap-3">
               <button
@@ -270,7 +295,9 @@ export function BudgetPlanningCreation() {
                 <h4 className="text-red-900 mb-2">Validation Errors</h4>
                 <ul className="space-y-1">
                   {validationMessages.map((msg, idx) => (
-                    <li key={idx} className="text-sm text-red-700">• {msg}</li>
+                    <li key={idx} className="text-sm text-red-700">
+                      • {msg}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -290,10 +317,12 @@ export function BudgetPlanningCreation() {
                 <FileText className="w-5 h-5 text-[var(--color-teal)]" />
                 Budget Details
               </h2>
-              
+
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Budget Name <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Budget Name <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <input
                     type="text"
                     value={budgetName}
@@ -304,7 +333,9 @@ export function BudgetPlanningCreation() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Budget Owner <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Budget Owner <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <select
                     value={budgetOwner}
                     onChange={(e) => setBudgetOwner(e.target.value)}
@@ -320,7 +351,9 @@ export function BudgetPlanningCreation() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm text-[var(--color-ink)] mb-2">Financial Year <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">
+                      Financial Year <span style={{ color: 'var(--color-error)' }}>*</span>
+                    </label>
                     <select
                       value={financialYear}
                       onChange={(e) => setFinancialYear(e.target.value)}
@@ -333,7 +366,9 @@ export function BudgetPlanningCreation() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-[var(--color-ink)] mb-2">Budget Type <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">
+                      Budget Type <span style={{ color: 'var(--color-error)' }}>*</span>
+                    </label>
                     <select
                       value={budgetType}
                       onChange={(e) => setBudgetType(e.target.value as any)}
@@ -349,7 +384,9 @@ export function BudgetPlanningCreation() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm text-[var(--color-ink)] mb-2">Currency <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">
+                      Currency <span style={{ color: 'var(--color-error)' }}>*</span>
+                    </label>
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
@@ -362,7 +399,9 @@ export function BudgetPlanningCreation() {
                   </div>
 
                   <div>
-                    <label className="block text-sm text-[var(--color-ink)] mb-2">Allocation Period</label>
+                    <label className="block text-sm text-[var(--color-ink)] mb-2">
+                      Allocation Period
+                    </label>
                     <select
                       value={allocationPeriod}
                       onChange={(e) => setAllocationPeriod(e.target.value as AllocationPeriod)}
@@ -376,7 +415,9 @@ export function BudgetPlanningCreation() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Total Budget Amount <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Total Budget Amount <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <div className="relative">
                     <DollarSign className="w-4 h-4 absolute left-3 top-3 text-[var(--color-mercury-grey)]" />
                     <input
@@ -405,7 +446,9 @@ export function BudgetPlanningCreation() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Department <span style={{ color: 'var(--color-error)' }}>*</span></label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Department <span style={{ color: 'var(--color-error)' }}>*</span>
+                  </label>
                   <select
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
@@ -421,7 +464,9 @@ export function BudgetPlanningCreation() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Expense Category</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Expense Category
+                  </label>
                   <select
                     value={expenseCategory}
                     onChange={(e) => setExpenseCategory(e.target.value)}
@@ -436,7 +481,9 @@ export function BudgetPlanningCreation() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">GL Account Code</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    GL Account Code
+                  </label>
                   <input
                     type="text"
                     value={glAccountCode}
@@ -473,7 +520,9 @@ export function BudgetPlanningCreation() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Profit Centre</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Profit Centre
+                  </label>
                   <input
                     type="text"
                     value={profitCentre}
@@ -484,7 +533,9 @@ export function BudgetPlanningCreation() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[var(--color-ink)] mb-2">Project (Optional)</label>
+                  <label className="block text-sm text-[var(--color-ink)] mb-2">
+                    Project (Optional)
+                  </label>
                   <input
                     type="text"
                     value={project}
@@ -503,7 +554,9 @@ export function BudgetPlanningCreation() {
               <div className="px-6 py-4 border-b border-[var(--color-silver)]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-[var(--color-ink)]">Budget Allocation - {allocationPeriod}</h2>
+                    <h2 className="text-[var(--color-ink)]">
+                      Budget Allocation - {allocationPeriod}
+                    </h2>
                     <p className="text-sm text-[var(--color-mercury-grey)] mt-1">
                       Enter planned budget amounts for each period
                     </p>
@@ -533,9 +586,15 @@ export function BudgetPlanningCreation() {
                 <table className="w-full">
                   <thead className="bg-[var(--color-cloud)] sticky top-0">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase w-32">Period</th>
-                      <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase w-48">Planned Amount ({currency})</th>
-                      <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">Comments</th>
+                      <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase w-32">
+                        Period
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs text-[var(--color-mercury-grey)] uppercase w-48">
+                        Planned Amount ({currency})
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs text-[var(--color-mercury-grey)] uppercase">
+                        Comments
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--color-silver)]">
@@ -548,7 +607,9 @@ export function BudgetPlanningCreation() {
                           <input
                             type="number"
                             value={item.plannedAmount || ''}
-                            onChange={(e) => updateLineItem(index, 'plannedAmount', Number(e.target.value))}
+                            onChange={(e) =>
+                              updateLineItem(index, 'plannedAmount', Number(e.target.value))
+                            }
                             className="w-full px-3 py-2 text-right border border-[var(--color-silver)] rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-teal)]/20 focus:border-[var(--color-teal)]"
                             placeholder="0"
                           />
@@ -587,17 +648,31 @@ export function BudgetPlanningCreation() {
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Budget Amount</p>
-                    <p className="text-[var(--color-ink)]">{currency} {totalAmount.toLocaleString()}</p>
+                    <p className="text-[var(--color-ink)]">
+                      {currency} {totalAmount.toLocaleString()}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Allocated</p>
-                    <p className={calculatedTotal === totalAmount ? 'text-green-600' : 'text-[var(--color-ink)]'}>
+                    <p
+                      className={
+                        calculatedTotal === totalAmount
+                          ? 'text-green-600'
+                          : 'text-[var(--color-ink)]'
+                      }
+                    >
                       {currency} {calculatedTotal.toLocaleString()}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-[var(--color-mercury-grey)] mb-1">Difference</p>
-                    <p className={Math.abs(calculatedTotal - totalAmount) < 1 ? 'text-green-600' : 'text-red-600'}>
+                    <p
+                      className={
+                        Math.abs(calculatedTotal - totalAmount) < 1
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }
+                    >
                       {currency} {Math.abs(calculatedTotal - totalAmount).toLocaleString()}
                     </p>
                   </div>
@@ -613,9 +688,13 @@ export function BudgetPlanningCreation() {
                   <h4 className="text-blue-900 mb-1">Budget Creation Tips</h4>
                   <ul className="text-sm text-blue-700 space-y-1">
                     <li>• Use "Auto Distribute" to evenly split the budget across all periods</li>
-                    <li>• Ensure line items total matches the total budget amount before submission</li>
+                    <li>
+                      • Ensure line items total matches the total budget amount before submission
+                    </li>
                     <li>• Budget will go through Department Head → Finance → CFO approval flow</li>
-                    <li>• Once approved, budget will be available for PO consumption and tracking</li>
+                    <li>
+                      • Once approved, budget will be available for PO consumption and tracking
+                    </li>
                   </ul>
                 </div>
               </div>

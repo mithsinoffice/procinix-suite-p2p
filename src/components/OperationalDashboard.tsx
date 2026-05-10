@@ -12,16 +12,20 @@ export function OperationalDashboard() {
   return (
     <div className="p-8" style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}>
       <div className="flex items-center gap-4 mb-8">
-        <button 
-          onClick={() => navigate('/reports')} 
-          className="p-2 rounded-lg transition-colors hover:bg-white" 
+        <button
+          onClick={() => navigate('/reports')}
+          className="p-2 rounded-lg transition-colors hover:bg-white"
           style={{ color: 'var(--color-mercury-grey)' }}
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>Operational Dashboard</h1>
-          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Real-time procurement operations overview</p>
+          <h1 className="text-3xl mb-1" style={{ color: 'var(--color-ink)' }}>
+            Operational Dashboard
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+            Real-time procurement operations overview
+          </p>
         </div>
       </div>
 

@@ -1,20 +1,51 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  ArrowLeft, Save, Send, X, Upload, Plus, Trash2,
-  FileText, AlertCircle, CheckCircle, DollarSign, Calendar,
-  User, Building2, Hash, CreditCard, Package, Clock, Receipt, Lock, Info, Shield,
-  ZoomIn, ZoomOut, RotateCw, Eye, ChevronRight, Edit2, RefreshCw, Sparkles
+  ArrowLeft,
+  Save,
+  Send,
+  X,
+  Upload,
+  Plus,
+  Trash2,
+  FileText,
+  AlertCircle,
+  CheckCircle,
+  DollarSign,
+  Calendar,
+  User,
+  Building2,
+  Hash,
+  CreditCard,
+  Package,
+  Clock,
+  Receipt,
+  Lock,
+  Info,
+  Shield,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  Eye,
+  ChevronRight,
+  Edit2,
+  RefreshCw,
+  Sparkles,
 } from 'lucide-react';
 import { useAPData } from '../contexts/APDataContext';
+import { mysqlApiRequest } from '../lib/mysql/client';
 import { POInvoiceExceptionModal, ExceptionRequestData } from './POInvoiceExceptionModal';
+import { isMsmeVendor, maxMsmeDueDate, msmeDueDateWarning } from '../lib/msmeDueDate';
 import { AIInsightsPanel, AIInsight, AIAction } from './AIInsightsPanel';
 import { generateAIInsights, generateAIActions } from '../utils/aiInsightsGenerator';
 import { GSTDetermination } from './GSTDetermination';
 import { EntityCurrencyBadge } from './shared/EntityCurrencyBadge';
 import { useMasterData } from '../contexts/MasterDataContext';
+import { isRecordMappedToEntity } from '../lib/masters/entityMapping';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
+import { JournalEntryPreview, TDSThresholdTracker } from './invoice';
+import { deriveApprovalMatrix } from '../utils/poInvoicePolicy';
 
 // OCR Types
 interface ExtractedField {
@@ -56,6 +87,7 @@ interface OCRData {
 
 interface LineItem {
   id: string;
+  selected?: boolean;
   itemName: string;
   itemCode: string;
   itemDescription: string;
@@ -90,16 +122,44 @@ interface LineItem {
 
 // Helper functions for GST determination
 const stateCodeMapping: { [key: string]: string } = {
-  '01': 'Jammu and Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh',
-  '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi', '08': 'Rajasthan',
-  '09': 'Uttar Pradesh', '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh',
-  '13': 'Nagaland', '14': 'Manipur', '15': 'Mizoram', '16': 'Tripura',
-  '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal', '20': 'Jharkhand',
-  '21': 'Odisha', '22': 'Chhattisgarh', '23': 'Madhya Pradesh', '24': 'Gujarat',
-  '25': 'Daman and Diu', '26': 'Dadra and Nagar Haveli', '27': 'Maharashtra', '28': 'Andhra Pradesh (Old)',
-  '29': 'Karnataka', '30': 'Goa', '31': 'Lakshadweep', '32': 'Kerala',
-  '33': 'Tamil Nadu', '34': 'Puducherry', '35': 'Andaman and Nicobar Islands', '36': 'Telangana',
-  '37': 'Andhra Pradesh', '38': 'Ladakh'
+  '01': 'Jammu and Kashmir',
+  '02': 'Himachal Pradesh',
+  '03': 'Punjab',
+  '04': 'Chandigarh',
+  '05': 'Uttarakhand',
+  '06': 'Haryana',
+  '07': 'Delhi',
+  '08': 'Rajasthan',
+  '09': 'Uttar Pradesh',
+  '10': 'Bihar',
+  '11': 'Sikkim',
+  '12': 'Arunachal Pradesh',
+  '13': 'Nagaland',
+  '14': 'Manipur',
+  '15': 'Mizoram',
+  '16': 'Tripura',
+  '17': 'Meghalaya',
+  '18': 'Assam',
+  '19': 'West Bengal',
+  '20': 'Jharkhand',
+  '21': 'Odisha',
+  '22': 'Chhattisgarh',
+  '23': 'Madhya Pradesh',
+  '24': 'Gujarat',
+  '25': 'Daman and Diu',
+  '26': 'Dadra and Nagar Haveli',
+  '27': 'Maharashtra',
+  '28': 'Andhra Pradesh (Old)',
+  '29': 'Karnataka',
+  '30': 'Goa',
+  '31': 'Lakshadweep',
+  '32': 'Kerala',
+  '33': 'Tamil Nadu',
+  '34': 'Puducherry',
+  '35': 'Andaman and Nicobar Islands',
+  '36': 'Telangana',
+  '37': 'Andhra Pradesh',
+  '38': 'Ladakh',
 };
 
 const extractStateFromGSTIN = (gstin: string): { stateCode: string; stateName: string } | null => {
@@ -120,9 +180,25 @@ const getStatesListWithCodes = (): Array<{ code: string; name: string }> => {
 export function InvoiceFormPO() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { vendors, getPOsByVendor, getGRNsByPO, getAdvancesByVendor, getVendorByCode, getPOByNumber } = useAPData();
-  const { costCentres: liveCostCentres, profitCentres: liveProfitCentres, accountCodes: liveAccountCodes } = useMasterData();
-  
+  const {
+    vendors,
+    getPOsByVendor,
+    getGRNsByPO,
+    getAdvancesByVendor,
+    getVendorByCode,
+    getPOByNumber,
+    addInvoice,
+  } = useAPData();
+  const {
+    costCentres: liveCostCentres,
+    profitCentres: liveProfitCentres,
+    accountCodes: liveAccountCodes,
+    getActiveTDSSections,
+    getTDSSectionByCode,
+    currentCompany,
+  } = useMasterData();
+  const invoiceEntityId = currentCompany?.id ?? undefined;
+
   // OCR Upload Mode State
   const [entryMode, setEntryMode] = useState<'choose' | 'upload' | 'manual'>('choose');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -133,13 +209,15 @@ export function InvoiceFormPO() {
   const [zoomLevel, setZoomLevel] = useState(100);
   const [rotation, setRotation] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [invoiceType, setInvoiceType] = useState<'PO' | 'Non PO' | 'Rent' | 'Utilities'>('PO');
   const [selectedVendor, setSelectedVendor] = useState('');
   const [selectedPO, setSelectedPO] = useState('');
   const [selectedGRNs, setSelectedGRNs] = useState<string[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
+  const [paymentDueDate, setPaymentDueDate] = useState('');
+  const [paymentDueDateManuallySet, setPaymentDueDateManuallySet] = useState(false);
   const [vendorGSTNumber, setVendorGSTNumber] = useState('');
   const [expensePeriod, setExpensePeriod] = useState('');
   const [narration, setNarration] = useState('');
@@ -148,16 +226,16 @@ export function InvoiceFormPO() {
     GST: 0,
     PF: 0,
     ESI: 0,
-    Other: 0
+    Other: 0,
   });
 
   // New fields for enhanced vendor & invoice context
   const [vendorCode, setVendorCode] = useState('');
   const [invoiceCurrency, setInvoiceCurrency] = useState('INR');
   const [showOpenPOs, setShowOpenPOs] = useState(false);
-  
+
   // GST Determination state
-  const [companyGSTIN, setCompanyGSTIN] = useState('27AABCU9603R1ZM'); // Example company GSTIN (Maharashtra)
+  const [companyGSTIN, setCompanyGSTIN] = useState(''); // Populated from entity master
   const [companyState, setCompanyState] = useState('');
   const [supplierState, setSupplierState] = useState('');
   const [placeOfSupply, setPlaceOfSupply] = useState('');
@@ -172,22 +250,26 @@ export function InvoiceFormPO() {
   const [gstOverrideReason, setGstOverrideReason] = useState('');
   const [gstOverrideComments, setGstOverrideComments] = useState('');
   const [showGSTOverride, setShowGSTOverride] = useState(false);
-  const [gstValidationIssues, setGstValidationIssues] = useState<{ type: 'blocker' | 'warning'; message: string; action?: string }[]>([]);
-  
+  const [gstValidationIssues, setGstValidationIssues] = useState<
+    { type: 'blocker' | 'warning'; message: string; action?: string }[]
+  >([]);
+
   // Advance adjustment state
-  const [advanceAdjustments, setAdvanceAdjustments] = useState<{[key: string]: number}>({});
-  
+  const [advanceAdjustments, setAdvanceAdjustments] = useState<{ [key: string]: number }>({});
+
   // Smart validation state
   const [policyConfig] = useState({
     hardLockRate: true, // Hard lock rate by default
     allowToleranceOverride: false,
     maxTolerancePercent: 2,
     maxToleranceAmount: 1000,
-    enforce3WayMatch: true
+    enforce3WayMatch: true,
   });
   const [exceptionModalOpen, setExceptionModalOpen] = useState(false);
   const [exceptionLineItem, setExceptionLineItem] = useState<LineItem | null>(null);
-  const [rateErrors, setRateErrors] = useState<{[key: string]: string}>({});
+  const [rateErrors, setRateErrors] = useState<{ [key: string]: string }>({});
+  const [gstr2bMatched, setGstr2bMatched] = useState(false);
+  const [requiredApprovers, setRequiredApprovers] = useState<string[]>([]);
 
   // AI Insights state
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
@@ -203,9 +285,9 @@ export function InvoiceFormPO() {
 
     const fetchAIInvoice = async () => {
       try {
-        const res = await fetch(`http://127.0.0.1:8787/api/invoices/${state.dbId}`);
-        if (!res.ok) return;
-        const json = await res.json();
+        const json = await mysqlApiRequest<{ success: boolean; data: any }>(
+          `/invoices/${state.dbId}`
+        );
         if (!json.success) return;
         const inv = json.data;
 
@@ -218,9 +300,10 @@ export function InvoiceFormPO() {
 
         // Try to match vendor from vendors list
         if (inv.vendor_name) {
-          const match = vendors.find((v) =>
-            v.name.toLowerCase().includes(inv.vendor_name.toLowerCase()) ||
-            inv.vendor_name.toLowerCase().includes(v.name.toLowerCase())
+          const match = vendors.find(
+            (v) =>
+              v.name.toLowerCase().includes(inv.vendor_name.toLowerCase()) ||
+              inv.vendor_name.toLowerCase().includes(v.name.toLowerCase())
           );
           if (match) {
             setSelectedVendor(match.code);
@@ -230,32 +313,38 @@ export function InvoiceFormPO() {
 
         // Pre-fill line items from extracted data
         if (Array.isArray(inv.line_items) && inv.line_items.length > 0) {
-          setLineItems(inv.line_items.map((li: any, i: number) => ({
-            id: String(i + 1),
-            itemName: li.description || '',
-            itemCode: '',
-            itemDescription: li.description || '',
-            accountCode: '',
-            accountDescription: '',
-            unitPrice: Number(li.unit_price) || 0,
-            poQty: Number(li.quantity) || 1,
-            grnQty: Number(li.quantity) || 1,
-            qty: Number(li.quantity) || 1,
-            gstPercent: li.gst_rate != null ? Number(li.gst_rate) * 100 : 18,
-            amount: Number(li.amount) || 0,
-            hsnSac: li.hsn_sac || '',
-            poRate: Number(li.unit_price) || 0,
-            rateVariance: 0,
-            selected: true,
-            costCentre: '',
-            profitCentre: '',
-          })));
+          setLineItems(
+            inv.line_items.map((li: any, i: number) => ({
+              id: String(i + 1),
+              itemName: li.description || '',
+              itemCode: '',
+              itemDescription: li.description || '',
+              accountCode: '',
+              accountDescription: '',
+              unitPrice: Number(li.unit_price) || 0,
+              poQty: Number(li.quantity) || 1,
+              grnQty: Number(li.quantity) || 1,
+              qty: Number(li.quantity) || 1,
+              gstPercent: li.gst_rate != null ? Number(li.gst_rate) * 100 : 18,
+              amount: Number(li.amount) || 0,
+              hsnSac: li.hsn_sac || '',
+              poRate: Number(li.unit_price) || 0,
+              rateVariance: 0,
+              selected: true,
+              costCentre: '',
+              profitCentre: '',
+            }))
+          );
         }
 
         // Jump to manual entry mode so the form shows
         setEntryMode('manual');
 
-        console.log('[InvoiceFormPO] Hydrated from AI invoice:', inv.invoice_number, inv.vendor_name);
+        console.log(
+          '[InvoiceFormPO] Hydrated from AI invoice:',
+          inv.invoice_number,
+          inv.vendor_name
+        );
       } catch (err) {
         console.error('[InvoiceFormPO] Failed to hydrate AI invoice:', err);
       }
@@ -264,78 +353,33 @@ export function InvoiceFormPO() {
     fetchAIInvoice();
   }, [location.state, vendors]);
 
-  // Mock PO-wise line items (would be populated from backend)
-  const [lineItems, setLineItems] = useState<LineItem[]>([
-    {
-      id: '1',
-      itemName: 'Cotton Fabric - Premium Quality',
-      itemCode: 'ITM-FAB-001',
-      itemDescription: 'High quality cotton fabric for garment production',
-      accountCode: '5100',
-      accountDescription: 'Raw Materials - Fabrics',
-      unitPrice: 450.00,
-      poRate: 450.00,
-      qty: 100,
-      amount: 45000.00,
-      gstPercent: 12,
-      gstTotal: 5400.00,
-      cgst: 2700.00,
-      sgst: 2700.00,
-      igst: 0,
-      grossAmount: 50400.00,
-      tdsPercent: 2,
-      tdsSection: '194C',
-      tds: 900.00,
-      netPayable: 49500.00,
-      costCentre: 'CC-MFG-001',
-      profitCentre: 'PC-APPAREL-01',
-      project: 'PRJ-2024-Q4',
-      poNumber: 'PO-2024-001',
-      grnNumber: 'GRN-2024-056',
-      poQty: 150,
-      grnQty: 100,
-      previouslyInvoicedQty: 0,
-      remainingQtyBalance: 100,
-      remainingAmountBalance: 45000
-    },
-    {
-      id: '2',
-      itemName: 'Polyester Thread Spools',
-      itemCode: 'ITM-THR-045',
-      itemDescription: 'Industrial grade polyester thread - 1000m spools',
-      accountCode: '5120',
-      accountDescription: 'Raw Materials - Accessories',
-      unitPrice: 85.00,
-      poRate: 85.00,
-      qty: 500,
-      amount: 42500.00,
-      gstPercent: 18,
-      gstTotal: 7650.00,
-      cgst: 3825.00,
-      sgst: 3825.00,
-      igst: 0,
-      grossAmount: 50150.00,
-      tdsPercent: 2,
-      tdsSection: '194C',
-      tds: 850.00,
-      netPayable: 49300.00,
-      costCentre: 'CC-MFG-001',
-      profitCentre: 'PC-APPAREL-01',
-      project: 'PRJ-2024-Q4',
-      poNumber: 'PO-2024-001',
-      grnNumber: 'GRN-2024-057',
-      poQty: 600,
-      grnQty: 500,
-      previouslyInvoicedQty: 0,
-      remainingQtyBalance: 500,
-      remainingAmountBalance: 42500
-    }
-  ]);
+  // Line items (populated from PO/GRN selection or manual entry)
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const activeTdsSections = getActiveTDSSections();
+  const defaultTdsSection = activeTdsSections[0];
+  const defaultTdsSectionCode = defaultTdsSection?.sectionCode || '';
+  const tdsSectionNameMap = useMemo(
+    () =>
+      activeTdsSections.reduce<Record<string, string>>((acc, section) => {
+        acc[section.sectionCode] = section.sectionName;
+        return acc;
+      }, {}),
+    [activeTdsSections]
+  );
+  const tdsRateOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          activeTdsSections.map((section) => section.rateCompany || section.rateIndividual || 0)
+        )
+      ).sort((a, b) => a - b),
+    [activeTdsSections]
+  );
 
   // OCR Upload Handlers
   const handleFileSelect = (file: File) => {
     if (!file) return;
-    
+
     const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
     if (!validTypes.includes(file.type)) {
       alert('Please upload a PDF or image file (PNG, JPG)');
@@ -343,7 +387,7 @@ export function InvoiceFormPO() {
     }
 
     setUploadedFile(file);
-    
+
     // Simulate upload progress
     let progress = 0;
     const interval = setInterval(() => {
@@ -372,7 +416,7 @@ export function InvoiceFormPO() {
 
   const startOCRExtraction = (file: File) => {
     setIsExtracting(true);
-    
+
     // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -392,19 +436,17 @@ export function InvoiceFormPO() {
 
   const generateMockOCRData = (): OCRData => {
     return {
-      vendorName: { value: 'Tech Solutions Pvt Ltd', confidence: 'High', isEdited: false },
-      vendorGSTIN: { value: '29AABCT1234F1Z5', confidence: 'High', isEdited: false },
-      invoiceNumber: { value: 'INV-2025-00123', confidence: 'High', isEdited: false },
-      invoiceDate: { value: '2025-01-10', confidence: 'High', isEdited: false },
-      invoiceAmount: { value: '125000.00', confidence: 'High', isEdited: false },
-      currency: { value: 'INR', confidence: 'High', isEdited: false },
-      poNumber: { value: 'PO-2024-001', confidence: 'Medium', isEdited: false },
-      grnNumber: { value: 'GRN-2024-056', confidence: 'Medium', isEdited: false },
-      paymentTerms: { value: 'Net 30 Days', confidence: 'Medium', isEdited: false },
-      dueDate: { value: '2025-02-09', confidence: 'High', isEdited: false },
-      cgstTotal: { value: '5625.00', confidence: 'High', isEdited: false },
-      sgstTotal: { value: '5625.00', confidence: 'High', isEdited: false },
-      lineItems: []
+      vendorName: { value: '', confidence: 'Low', isEdited: false },
+      vendorGSTIN: { value: '', confidence: 'Low', isEdited: false },
+      invoiceNumber: { value: '', confidence: 'Low', isEdited: false },
+      invoiceDate: { value: '', confidence: 'Low', isEdited: false },
+      invoiceAmount: { value: '', confidence: 'Low', isEdited: false },
+      currency: { value: '', confidence: 'Low', isEdited: false },
+      poNumber: { value: '', confidence: 'Low', isEdited: false },
+      grnNumber: { value: '', confidence: 'Low', isEdited: false },
+      paymentTerms: { value: '', confidence: 'Low', isEdited: false },
+      dueDate: { value: '', confidence: 'Low', isEdited: false },
+      lineItems: [],
     };
   };
 
@@ -413,16 +455,17 @@ export function InvoiceFormPO() {
     setInvoiceNumber(data.invoiceNumber.value);
     setInvoiceDate(data.invoiceDate.value);
     setVendorGSTNumber(data.vendorGSTIN.value);
-    
+
     // Try to match vendor from masters
-    const matchedVendor = vendors.find(v => 
-      v.gstin === data.vendorGSTIN.value || 
-      v.name.toLowerCase().includes(data.vendorName.value.toLowerCase())
+    const matchedVendor = vendors.find(
+      (v) =>
+        v.gstin === data.vendorGSTIN.value ||
+        v.name.toLowerCase().includes(data.vendorName.value.toLowerCase())
     );
     if (matchedVendor) {
       setSelectedVendor(matchedVendor.code);
     }
-    
+
     // Try to match PO
     if (data.poNumber.value) {
       setSelectedPO(data.poNumber.value);
@@ -442,21 +485,49 @@ export function InvoiceFormPO() {
   const availableGRNs = selectedPO ? getGRNsByPO(selectedPO) : [];
   const vendorAdvances = selectedVendor ? getAdvancesByVendor(selectedVendor) : [];
 
-  const costCentres = liveCostCentres.length > 0
-    ? liveCostCentres.map((costCentre) => costCentre.code)
-    : ['CC-MFG-001', 'CC-MFG-002', 'CC-ADMIN-001', 'CC-SALES-001'];
-  const profitCentres = liveProfitCentres.length > 0
-    ? liveProfitCentres.map((profitCentre) => profitCentre.code)
-    : ['PC-APPAREL-01', 'PC-APPAREL-02', 'PC-HOME-01', 'PC-EXPORT-01'];
-  const accountCodes = liveAccountCodes.length > 0
-    ? liveAccountCodes.map((accountCode) => ({ code: accountCode.code, description: accountCode.name }))
-    : [
-        { code: '5100', description: 'Raw Materials - Fabrics' },
-        { code: '5120', description: 'Raw Materials - Accessories' },
-        { code: '5200', description: 'Packaging Materials' },
-        { code: '6100', description: 'Utilities - Electricity' },
-        { code: '6200', description: 'Professional Services' }
-      ];
+  // MSME 45-day rule: warn (don't block) when due date exceeds invoiceDate + 45 days
+  const _msmeVendor = getVendorByCode(vendorCode || selectedVendor);
+  const vendorIsMsme = isMsmeVendor(_msmeVendor as any);
+  useEffect(() => {
+    if (!invoiceDate || paymentDueDateManuallySet) return;
+    if (!vendorIsMsme) return;
+    const suggested = maxMsmeDueDate(invoiceDate);
+    if (suggested) setPaymentDueDate(suggested);
+  }, [invoiceDate, vendorIsMsme, paymentDueDateManuallySet]);
+  const msmeWarning = msmeDueDateWarning({
+    invoiceDate,
+    dueDate: paymentDueDate,
+    msmeRegistered: vendorIsMsme,
+  });
+
+  const costCentres = useMemo(() => {
+    const scoped = liveCostCentres.filter(
+      (cc) => cc.isActive && (!invoiceEntityId || isRecordMappedToEntity(cc, invoiceEntityId))
+    );
+    if (scoped.length > 0) return scoped.map((cc) => cc.code);
+    return [];
+  }, [liveCostCentres, invoiceEntityId]);
+
+  const profitCentres = useMemo(() => {
+    const scoped = liveProfitCentres.filter(
+      (pc) => pc.isActive && (!invoiceEntityId || isRecordMappedToEntity(pc, invoiceEntityId))
+    );
+    if (scoped.length > 0) return scoped.map((pc) => pc.code);
+    return [];
+  }, [liveProfitCentres, invoiceEntityId]);
+
+  const accountCodes = useMemo(() => {
+    const scoped = liveAccountCodes.filter(
+      (ac) => ac.isActive && (!invoiceEntityId || isRecordMappedToEntity(ac, invoiceEntityId))
+    );
+    if (scoped.length > 0) {
+      return scoped.map((accountCode) => ({
+        code: accountCode.code,
+        description: accountCode.name,
+      }));
+    }
+    return [];
+  }, [liveAccountCodes, invoiceEntityId]);
 
   // Auto-derive states from GSTINs
   useEffect(() => {
@@ -491,47 +562,81 @@ export function InvoiceFormPO() {
 
     // Blockers
     if (selectedVendor && !placeOfSupply) {
-      issues.push({ type: 'blocker', message: 'Place of Supply is mandatory', action: 'select-place-of-supply' });
+      issues.push({
+        type: 'blocker',
+        message: 'Place of Supply is mandatory',
+        action: 'select-place-of-supply',
+      });
     }
 
     if (vendorGSTNumber && vendorGSTNumber.length !== 15) {
-      issues.push({ type: 'blocker', message: 'Invalid GSTIN format - must be 15 characters', action: 'fix-gstin' });
+      issues.push({
+        type: 'blocker',
+        message: 'Invalid GSTIN format - must be 15 characters',
+        action: 'fix-gstin',
+      });
     }
 
     if (vendorGSTNumber && !supplierState) {
-      issues.push({ type: 'blocker', message: 'Supplier state cannot be derived from GSTIN', action: 'verify-gstin' });
+      issues.push({
+        type: 'blocker',
+        message: 'Supplier state cannot be derived from GSTIN',
+        action: 'verify-gstin',
+      });
     }
 
     if (placeOfSupply && shipToState && !gstType) {
-      issues.push({ type: 'blocker', message: 'GST type cannot be determined due to missing states', action: 'review-states' });
+      issues.push({
+        type: 'blocker',
+        message: 'GST type cannot be determined due to missing states',
+        action: 'review-states',
+      });
     }
 
     // Warnings
     if (selectedPO && shipToState && placeOfSupply && placeOfSupply !== shipToState) {
-      issues.push({ type: 'warning', message: 'Place of supply differs from PO ship-to state - needs confirmation', action: 'confirm-supply-state' });
+      issues.push({
+        type: 'warning',
+        message: 'Place of supply differs from PO ship-to state - needs confirmation',
+        action: 'confirm-supply-state',
+      });
     }
 
     const vendor = getVendorByCode(selectedVendor);
     if (vendor && vendorGSTNumber && vendor.gstin !== vendorGSTNumber) {
-      issues.push({ type: 'warning', message: 'Supplier GSTIN differs from Vendor Master', action: 'use-master-gstin' });
+      issues.push({
+        type: 'warning',
+        message: 'Supplier GSTIN differs from Vendor Master',
+        action: 'use-master-gstin',
+      });
     }
 
     setGstValidationIssues(issues);
-  }, [placeOfSupply, shipToState, vendorGSTNumber, supplierState, gstType, selectedVendor, selectedPO]);
+  }, [
+    placeOfSupply,
+    shipToState,
+    vendorGSTNumber,
+    supplierState,
+    gstType,
+    selectedVendor,
+    selectedPO,
+  ]);
 
   const recalculateAllLineItemsGST = (type: 'CGST+SGST' | 'IGST') => {
-    setLineItems(items => items.map(item => {
-      const gstTotal = (item.amount * item.gstPercent) / 100;
-      return {
-        ...item,
-        gstTotal,
-        cgst: type === 'CGST+SGST' ? gstTotal / 2 : 0,
-        sgst: type === 'CGST+SGST' ? gstTotal / 2 : 0,
-        igst: type === 'IGST' ? gstTotal : 0,
-        grossAmount: item.amount + gstTotal,
-        netPayable: item.amount + gstTotal - item.tds
-      };
-    }));
+    setLineItems((items) =>
+      items.map((item) => {
+        const gstTotal = (item.amount * item.gstPercent) / 100;
+        return {
+          ...item,
+          gstTotal,
+          cgst: type === 'CGST+SGST' ? gstTotal / 2 : 0,
+          sgst: type === 'CGST+SGST' ? gstTotal / 2 : 0,
+          igst: type === 'IGST' ? gstTotal : 0,
+          grossAmount: item.amount + gstTotal,
+          netPayable: item.amount + gstTotal - item.tds,
+        };
+      })
+    );
   };
 
   const handleGSTTypeOverride = (newType: 'CGST+SGST' | 'IGST') => {
@@ -544,7 +649,11 @@ export function InvoiceFormPO() {
     setShowGSTOverride(false);
     recalculateAllLineItemsGST(newType);
     // Log to audit trail in production
-    console.log('GST Type Override:', { newType, reason: gstOverrideReason, comments: gstOverrideComments });
+    console.log('GST Type Override:', {
+      newType,
+      reason: gstOverrideReason,
+      comments: gstOverrideComments,
+    });
   };
 
   const handleVendorChange = (vendorCode: string) => {
@@ -570,10 +679,10 @@ export function InvoiceFormPO() {
       setLineItems([]);
       return;
     }
-    
+
     setSelectedPO(poNumber);
     setSelectedGRNs([]);
-    
+
     // Auto-populate line items from PO
     const po = getPOByNumber(poNumber);
     if (po && po.lineItems) {
@@ -585,8 +694,8 @@ export function InvoiceFormPO() {
           setPlaceOfSupply(po.shipToState);
         }
       }
-      
-      const invoiceLineItems: LineItem[] = po.lineItems.map(poLine => ({
+
+      const invoiceLineItems: LineItem[] = po.lineItems.map((poLine) => ({
         id: poLine.id,
         itemName: poLine.itemName,
         itemCode: poLine.itemCode,
@@ -604,7 +713,7 @@ export function InvoiceFormPO() {
         igst: poLine.igst,
         grossAmount: poLine.grossAmount,
         tdsPercent: poLine.tdsPercent || 0,
-        tdsSection: poLine.tdsSection || '194C',
+        tdsSection: poLine.tdsSection || defaultTdsSectionCode,
         tds: poLine.tdsAmount || 0,
         netPayable: poLine.netAmount,
         costCentre: poLine.costCentre,
@@ -617,7 +726,7 @@ export function InvoiceFormPO() {
         grnQty: poLine.receivedQty,
         previouslyInvoicedQty: poLine.invoicedQty,
         remainingQtyBalance: poLine.remainingQty,
-        remainingAmountBalance: poLine.amount - (poLine.invoicedQty * poLine.unitPrice)
+        remainingAmountBalance: poLine.amount - poLine.invoicedQty * poLine.unitPrice,
       }));
       setLineItems(invoiceLineItems);
     }
@@ -625,7 +734,7 @@ export function InvoiceFormPO() {
 
   const handleGRNToggle = (grnNumber: string) => {
     if (selectedGRNs.includes(grnNumber)) {
-      setSelectedGRNs(selectedGRNs.filter(g => g !== grnNumber));
+      setSelectedGRNs(selectedGRNs.filter((g) => g !== grnNumber));
     } else {
       setSelectedGRNs([...selectedGRNs, grnNumber]);
     }
@@ -638,12 +747,12 @@ export function InvoiceFormPO() {
       if (!po) return;
 
       const updatedLineItems: LineItem[] = [];
-      
-      selectedGRNs.forEach(grnNumber => {
-        const grn = availableGRNs.find(g => g.grnNumber === grnNumber);
+
+      selectedGRNs.forEach((grnNumber) => {
+        const grn = availableGRNs.find((g) => g.grnNumber === grnNumber);
         if (grn && grn.lineItems) {
-          grn.lineItems.forEach(grnLine => {
-            const poLine = po.lineItems.find(pl => pl.id === grnLine.poLineItemId);
+          grn.lineItems.forEach((grnLine) => {
+            const poLine = po.lineItems.find((pl) => pl.id === grnLine.poLineItemId);
             if (poLine) {
               // Calculate GST based on determined GST type
               const itemGstTotal = (grnLine.amount * poLine.gstPercent) / 100;
@@ -651,7 +760,7 @@ export function InvoiceFormPO() {
               const itemSgst = gstType === 'CGST+SGST' ? itemGstTotal / 2 : 0;
               const itemIgst = gstType === 'IGST' ? itemGstTotal : 0;
               const itemTds = (grnLine.amount * (poLine.tdsPercent || 0)) / 100;
-              
+
               updatedLineItems.push({
                 id: `${grnLine.id}`,
                 itemName: grnLine.itemName,
@@ -670,7 +779,7 @@ export function InvoiceFormPO() {
                 igst: itemIgst,
                 grossAmount: grnLine.amount + itemGstTotal,
                 tdsPercent: poLine.tdsPercent || 0,
-                tdsSection: poLine.tdsSection || '194C',
+                tdsSection: poLine.tdsSection || defaultTdsSectionCode,
                 tds: itemTds,
                 netPayable: grnLine.amount + itemGstTotal - itemTds,
                 costCentre: poLine.costCentre,
@@ -682,14 +791,14 @@ export function InvoiceFormPO() {
                 poQty: poLine.qty,
                 grnQty: grnLine.qtyAccepted,
                 previouslyInvoicedQty: poLine.invoicedQty || 0,
-                remainingQtyBalance: poLine.remainingQty || (poLine.qty - (poLine.invoicedQty || 0)),
-                remainingAmountBalance: (poLine.qty - (poLine.invoicedQty || 0)) * poLine.unitPrice
+                remainingQtyBalance: poLine.remainingQty || poLine.qty - (poLine.invoicedQty || 0),
+                remainingAmountBalance: (poLine.qty - (poLine.invoicedQty || 0)) * poLine.unitPrice,
               });
             }
           });
         }
       });
-      
+
       setLineItems(updatedLineItems);
     }
   }, [selectedGRNs, selectedPO, gstType]);
@@ -697,100 +806,126 @@ export function InvoiceFormPO() {
   const updateLineItem = (id: string, field: keyof LineItem, value: any) => {
     // Validate rate changes
     if (field === 'unitPrice') {
-      const item = lineItems.find(lineItem => lineItem.id === id);
+      const item = lineItems.find((lineItem) => lineItem.id === id);
       if (item && item.poRate !== undefined) {
         if (policyConfig.hardLockRate && value > item.poRate) {
           // Hard lock - prevent rate increase
-          setRateErrors({...rateErrors, [id]: `Rate cannot exceed PO rate of ₹${item.poRate.toFixed(2)}`});
+          setRateErrors({
+            ...rateErrors,
+            [id]: `Rate cannot exceed PO rate of ₹${item.poRate.toFixed(2)}`,
+          });
           return; // Don't update
         } else if (policyConfig.allowToleranceOverride && !policyConfig.hardLockRate) {
           const variancePercent = ((value - item.poRate) / item.poRate) * 100;
           const varianceAmount = value - item.poRate;
-          if (variancePercent > policyConfig.maxTolerancePercent || varianceAmount > policyConfig.maxToleranceAmount) {
-            setRateErrors({...rateErrors, [id]: `Rate exceeds tolerance. Max: ${policyConfig.maxTolerancePercent}% or ₹${policyConfig.maxToleranceAmount}`});
+          if (
+            variancePercent > policyConfig.maxTolerancePercent ||
+            varianceAmount > policyConfig.maxToleranceAmount
+          ) {
+            setRateErrors({
+              ...rateErrors,
+              [id]: `Rate exceeds tolerance. Max: ${policyConfig.maxTolerancePercent}% or ₹${policyConfig.maxToleranceAmount}`,
+            });
             return; // Don't update
           }
         }
         // Clear error if validation passes
-        const newErrors = {...rateErrors};
+        const newErrors = { ...rateErrors };
         delete newErrors[id];
         setRateErrors(newErrors);
       }
     }
-    
-    setLineItems(lineItems.map(item => {
-      if (item.id === id) {
-        const updated = { ...item, [field]: value };
-        
-        // Recalculate amounts when qty or unitPrice changes
-        if (field === 'qty' || field === 'unitPrice') {
-          updated.amount = updated.qty * updated.unitPrice;
-        }
-        
-        // Recalculate GST when amount or gstPercent changes
-        if (field === 'qty' || field === 'unitPrice' || field === 'gstPercent') {
-          updated.gstTotal = (updated.amount * updated.gstPercent) / 100;
-          // Use the determined GST type for tax split
-          if (gstType === 'CGST+SGST') {
-            updated.cgst = updated.gstTotal / 2;
-            updated.sgst = updated.gstTotal / 2;
-            updated.igst = 0;
-          } else {
-            updated.cgst = 0;
-            updated.sgst = 0;
-            updated.igst = updated.gstTotal;
+
+    setLineItems(
+      lineItems.map((item) => {
+        if (item.id === id) {
+          const updated = { ...item, [field]: value };
+
+          // Recalculate amounts when qty or unitPrice changes
+          if (field === 'qty' || field === 'unitPrice') {
+            updated.amount = updated.qty * updated.unitPrice;
           }
+
+          // Recalculate GST when amount or gstPercent changes
+          if (field === 'qty' || field === 'unitPrice' || field === 'gstPercent') {
+            updated.gstTotal = (updated.amount * updated.gstPercent) / 100;
+            // Use the determined GST type for tax split
+            if (gstType === 'CGST+SGST') {
+              updated.cgst = updated.gstTotal / 2;
+              updated.sgst = updated.gstTotal / 2;
+              updated.igst = 0;
+            } else {
+              updated.cgst = 0;
+              updated.sgst = 0;
+              updated.igst = updated.gstTotal;
+            }
+          }
+
+          // Calculate gross amount
+          updated.grossAmount = updated.amount + updated.gstTotal;
+
+          // Suggest TDS Section based on configured TDS section master rates.
+          if (field === 'tdsPercent') {
+            if (value === 0) {
+              updated.tdsSection = '';
+            } else {
+              const matched = activeTdsSections.find(
+                (section) => (section.rateCompany || section.rateIndividual || 0) === value
+              );
+              if (matched) {
+                updated.tdsSection = matched.sectionCode;
+              } else if (!updated.tdsSection && defaultTdsSectionCode) {
+                updated.tdsSection = defaultTdsSectionCode;
+              }
+            }
+          }
+
+          if (field === 'tdsSection') {
+            const selectedSection = getTDSSectionByCode(String(value));
+            if (selectedSection) {
+              updated.tdsPercent =
+                selectedSection.rateCompany || selectedSection.rateIndividual || 0;
+            }
+          }
+
+          // Calculate TDS
+          if (field === 'qty' || field === 'unitPrice' || field === 'tdsPercent') {
+            updated.tds = (updated.amount * updated.tdsPercent) / 100;
+          }
+
+          // Calculate net payable
+          updated.netPayable = updated.grossAmount - updated.tds;
+
+          return updated;
         }
-        
-        // Calculate gross amount
-        updated.grossAmount = updated.amount + updated.gstTotal;
-        
-        // Smart TDS Section suggestion when TDS rate changes
-        if (field === 'tdsPercent') {
-          // Auto-suggest TDS section based on common rate-to-section mappings
-          if (value === 0.1) updated.tdsSection = '194Q'; // Purchase of goods
-          else if (value === 1) updated.tdsSection = '194I'; // Rent
-          else if (value === 2) updated.tdsSection = '194C'; // Contractors (most common)
-          else if (value === 5) updated.tdsSection = '194J'; // Professional services
-          else if (value === 10) updated.tdsSection = '194J'; // Professional services
-          else if (value === 20) updated.tdsSection = '194C'; // Higher rate contractors
-          else if (value === 0) updated.tdsSection = '194C'; // Default when no TDS
-        }
-        
-        // Calculate TDS
-        if (field === 'qty' || field === 'unitPrice' || field === 'tdsPercent') {
-          updated.tds = (updated.amount * updated.tdsPercent) / 100;
-        }
-        
-        // Calculate net payable
-        updated.netPayable = updated.grossAmount - updated.tds;
-        
-        return updated;
-      }
-      return item;
-    }));
+        return item;
+      })
+    );
   };
 
   const calculateTotals = () => {
-    const totals = lineItems.reduce((acc, item) => ({
-      amount: acc.amount + item.amount,
-      gstTotal: acc.gstTotal + item.gstTotal,
-      cgst: acc.cgst + item.cgst,
-      sgst: acc.sgst + item.sgst,
-      igst: acc.igst + item.igst,
-      grossAmount: acc.grossAmount + item.grossAmount,
-      tds: acc.tds + item.tds,
-      netPayable: acc.netPayable + item.netPayable
-    }), {
-      amount: 0,
-      gstTotal: 0,
-      cgst: 0,
-      sgst: 0,
-      igst: 0,
-      grossAmount: 0,
-      tds: 0,
-      netPayable: 0
-    });
+    const totals = lineItems.reduce(
+      (acc, item) => ({
+        amount: acc.amount + item.amount,
+        gstTotal: acc.gstTotal + item.gstTotal,
+        cgst: acc.cgst + item.cgst,
+        sgst: acc.sgst + item.sgst,
+        igst: acc.igst + item.igst,
+        grossAmount: acc.grossAmount + item.grossAmount,
+        tds: acc.tds + item.tds,
+        netPayable: acc.netPayable + item.netPayable,
+      }),
+      {
+        amount: 0,
+        gstTotal: 0,
+        cgst: 0,
+        sgst: 0,
+        igst: 0,
+        grossAmount: 0,
+        tds: 0,
+        netPayable: 0,
+      }
+    );
 
     // Subtract retention amounts
     const totalRetention = Object.values(retentionAmounts).reduce((sum, val) => sum + val, 0);
@@ -799,22 +934,175 @@ export function InvoiceFormPO() {
     return totals;
   };
 
+  const getTDSLineError = (item: LineItem, index: number): string => {
+    const rate = Number(item.tdsPercent || 0);
+    if (rate <= 0) {
+      return '';
+    }
+
+    if (!item.tdsSection) {
+      return `Line ${index + 1}: TDS section is required when TDS rate is applied.`;
+    }
+
+    const section = getTDSSectionByCode(item.tdsSection);
+    if (
+      !section ||
+      section.status !== 'Active' ||
+      (section.approvalStatus ?? 'Approved') !== 'Approved'
+    ) {
+      return `Line ${index + 1}: TDS section ${item.tdsSection} is inactive or not approved.`;
+    }
+
+    const thresholdAmount = Number(section.thresholdAmount || 0);
+    if (thresholdAmount > 0 && item.amount < thresholdAmount) {
+      return `Line ${index + 1}: ${item.tdsSection} threshold ₹${thresholdAmount.toLocaleString('en-IN')} not met (base ₹${item.amount.toLocaleString('en-IN')}).`;
+    }
+
+    return '';
+  };
+
+  const validateTDSRules = (items: LineItem[]) => {
+    const tdsErrors: string[] = [];
+    items.forEach((item, index) => {
+      const lineError = getTDSLineError(item, index);
+      if (lineError) {
+        tdsErrors.push(lineError);
+      }
+    });
+
+    return tdsErrors;
+  };
+
+  const tdsLineErrors = useMemo(
+    () =>
+      lineItems.reduce<Record<string, string>>((acc, item, index) => {
+        const lineError = getTDSLineError(item, index);
+        if (lineError) {
+          acc[item.id] = lineError;
+        }
+        return acc;
+      }, {}),
+    [lineItems]
+  );
+
   const handleRetentionToggle = (type: string) => {
     if (retentionRequired.includes(type)) {
-      setRetentionRequired(retentionRequired.filter(r => r !== type));
+      setRetentionRequired(retentionRequired.filter((r) => r !== type));
       setRetentionAmounts({ ...retentionAmounts, [type]: 0 });
     } else {
       setRetentionRequired([...retentionRequired, type]);
     }
   };
 
-  const handleSubmit = () => {
-    alert('Invoice submitted for approval');
-    navigate('/invoices');
+  const checkDuplicateInvoice = async () => {
+    const vendor = getVendorByCode(vendorCode || selectedVendor);
+    const vendorId = (vendor as { id?: string } | null | undefined)?.id;
+    if (!vendor || !vendorId || !invoiceNumber) return true;
+    try {
+      const json = await mysqlApiRequest<{ success: boolean; data: any[] }>(
+        `/invoices?vendorId=${encodeURIComponent(vendorId)}&invoiceNo=${encodeURIComponent(invoiceNumber)}`
+      );
+      const matches = Array.isArray(json?.data) ? json.data : [];
+      if (matches.length === 0) return true;
+      const confirmProceed = window.confirm(
+        `Duplicate invoice detected (${matches[0].invoice_number}) for vendor ${matches[0].vendor_name}. Proceed anyway?`
+      );
+      return confirmProceed;
+    } catch {
+      return true;
+    }
+  };
+
+  const runThreeWayMatchValidation = () => {
+    const errors: string[] = [];
+    for (const item of lineItems) {
+      if (!item.selected) continue;
+      if (item.grnQty != null && item.qty > item.grnQty) {
+        errors.push(
+          `${item.itemName || item.itemCode}: Invoice qty (${item.qty}) exceeds GRN qty (${item.grnQty})`
+        );
+      }
+      if (
+        item.poRate != null &&
+        item.unitPrice > item.poRate * (1 + policyConfig.maxTolerancePercent / 100)
+      ) {
+        setExceptionLineItem(item);
+        setExceptionModalOpen(true);
+      }
+    }
+    return errors;
+  };
+
+  const computeMsmeDueDate = () => {
+    const vendor = getVendorByCode(vendorCode || selectedVendor);
+    if (!vendor || vendor.category !== 'MSME' || !invoiceDate) return null;
+    const due = new Date(invoiceDate);
+    due.setDate(due.getDate() + 45);
+    return due;
+  };
+
+  const persistInvoice = (status: 'Draft' | 'Pending Approval') => {
+    const resolvedVendorCode = vendorCode || selectedVendor;
+    const vendor = getVendorByCode(resolvedVendorCode);
+    if (!vendor || !invoiceNumber || !invoiceDate) {
+      alert('Vendor, invoice number, and invoice date are required.');
+      return false;
+    }
+
+    addInvoice({
+      id: `PO-INV-${Date.now()}`,
+      invoiceNumber,
+      invoiceDate,
+      vendorName: vendor.name,
+      vendorCode: vendor.code,
+      invoiceType: 'PO',
+      poNumber: selectedPO || undefined,
+      totalAmount: calculateTotals().netPayable,
+      currency: invoiceCurrency,
+      status,
+      approver: 'AP Team',
+      paymentStatus: 'Unpaid',
+      matchStatus: selectedGRNs.length > 0 ? '3-Way Matched' : 'Partially Matched',
+    });
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    const tdsErrors = validateTDSRules(lineItems);
+    if (tdsErrors.length > 0) {
+      alert(`Cannot submit due to TDS validation errors:\n${tdsErrors.join('\n')}`);
+      return;
+    }
+
+    if (!gstr2bMatched) {
+      alert(
+        'Warning: ITC claim at risk — vendor has not filed GSTR-1 for this period. ITC may be reversed under Rule 37A.'
+      );
+    }
+
+    const dueDate = computeMsmeDueDate();
+    if (dueDate && dueDate < new Date()) {
+      alert(
+        `MSME due date breached (${dueDate.toISOString().slice(0, 10)}). MSMED Act interest may apply at 3x bank rate.`
+      );
+    }
+
+    const canProceed = await checkDuplicateInvoice();
+    if (!canProceed) return;
+
+    const threeWayErrors = runThreeWayMatchValidation();
+    if (threeWayErrors.length > 0) {
+      alert(`3-way match failed:\n${threeWayErrors.join('\n')}`);
+      return;
+    }
+
+    if (persistInvoice('Pending Approval')) {
+      navigate('/invoices');
+    }
   };
 
   const handleSaveDraft = () => {
-    alert('Invoice saved as draft');
+    persistInvoice('Draft');
   };
 
   const handleCancel = () => {
@@ -825,16 +1113,18 @@ export function InvoiceFormPO() {
   useEffect(() => {
     if (!selectedVendor) {
       setAiInsights([]);
-      setAiActions(generateAIActions({
-        vendorCode: '',
-        vendorName: '',
-        vendorGSTIN: '',
-        invoiceNumber: '',
-        invoiceDate: '',
-        invoiceAmount: 0,
-        currency: 'INR',
-        lineItems: []
-      }));
+      setAiActions(
+        generateAIActions({
+          vendorCode: '',
+          vendorName: '',
+          vendorGSTIN: '',
+          invoiceNumber: '',
+          invoiceDate: '',
+          invoiceAmount: 0,
+          currency: 'INR',
+          lineItems: [],
+        })
+      );
       return;
     }
 
@@ -853,7 +1143,7 @@ export function InvoiceFormPO() {
       currency: invoiceCurrency,
       poNumber: selectedPO,
       lineItems,
-      selectedGRNs
+      selectedGRNs,
     };
 
     const vendorDataEnhanced = {
@@ -862,7 +1152,7 @@ export function InvoiceFormPO() {
       msmeRegNumber: vendor.category === 'MSME' ? 'MSME-' + vendor.code : undefined,
       bankAccountChanged: false,
       averageInvoiceAmount: 75000,
-      paymentTerms: 'Net 30'
+      paymentTerms: 'Net 30',
     };
 
     // Mock historical invoices for duplicate detection
@@ -871,7 +1161,7 @@ export function InvoiceFormPO() {
     ];
 
     const po = selectedPO ? getPOByNumber(selectedPO) : undefined;
-    const grns = selectedGRNs.length > 0 ? selectedGRNs.map(g => ({ number: g })) : undefined;
+    const grns = selectedGRNs.length > 0 ? selectedGRNs.map((g) => ({ number: g })) : undefined;
 
     const insights = generateAIInsights(
       invoiceData,
@@ -882,15 +1172,15 @@ export function InvoiceFormPO() {
     );
 
     // Filter out ignored insights
-    const activeInsights = insights.filter(insight => !ignoredInsights.has(insight.id));
+    const activeInsights = insights.filter((insight) => !ignoredInsights.has(insight.id));
 
     setAiInsights(activeInsights);
     setAiActions(generateAIActions(invoiceData));
 
     // Set overall confidence based on insights
-    const blockerCount = activeInsights.filter(insight => insight.severity === 'blocker').length;
-    const warningCount = activeInsights.filter(insight => insight.severity === 'warning').length;
-    
+    const blockerCount = activeInsights.filter((insight) => insight.severity === 'blocker').length;
+    const warningCount = activeInsights.filter((insight) => insight.severity === 'warning').length;
+
     if (blockerCount > 0) {
       setOverallConfidence('low');
     } else if (warningCount > 2) {
@@ -898,11 +1188,25 @@ export function InvoiceFormPO() {
     } else {
       setOverallConfidence('high');
     }
-  }, [selectedVendor, invoiceNumber, invoiceDate, lineItems, selectedPO, selectedGRNs, vendorGSTNumber, ignoredInsights]);
+  }, [
+    selectedVendor,
+    invoiceNumber,
+    invoiceDate,
+    lineItems,
+    selectedPO,
+    selectedGRNs,
+    vendorGSTNumber,
+    ignoredInsights,
+  ]);
+
+  useEffect(() => {
+    const totalAmount = lineItems.reduce((sum, item) => sum + (item.netPayable || 0), 0);
+    setRequiredApprovers(deriveApprovalMatrix(totalAmount));
+  }, [lineItems]);
 
   // Handle AI action clicks
   const handleAIActionClick = (insightId: string, action: string) => {
-    const insight = aiInsights.find(ins => ins.id === insightId);
+    const insight = aiInsights.find((ins) => ins.id === insightId);
     if (!insight) return;
 
     switch (action) {
@@ -911,10 +1215,11 @@ export function InvoiceFormPO() {
         break;
       case 'apply-tds':
         if (insight.relatedData) {
-          const updatedItems = lineItems.map(item => ({
+          const tdsRecommendation = insight.relatedData as { section?: string; rate?: number };
+          const updatedItems = lineItems.map((item) => ({
             ...item,
-            tdsSection: insight.relatedData.section,
-            tdsPercent: insight.relatedData.rate
+            tdsSection: tdsRecommendation.section ?? item.tdsSection,
+            tdsPercent: tdsRecommendation.rate ?? item.tdsPercent,
           }));
           setLineItems(updatedItems);
         }
@@ -947,12 +1252,8 @@ export function InvoiceFormPO() {
 
   // Handle AI action runs
   const handleRunAIAction = (actionId: string) => {
-    setAiActions(actions => 
-      actions.map(a => 
-        a.id === actionId 
-          ? { ...a, status: 'running' as const }
-          : a
-      )
+    setAiActions((actions) =>
+      actions.map((a) => (a.id === actionId ? { ...a, status: 'running' as const } : a))
     );
 
     // Simulate action processing
@@ -973,28 +1274,26 @@ export function InvoiceFormPO() {
           break;
       }
 
-      setAiActions(actions => 
-        actions.map(a => 
-          a.id === actionId 
-            ? { ...a, status: 'completed' as const, result }
-            : a
-        )
+      setAiActions((actions) =>
+        actions.map((a) => (a.id === actionId ? { ...a, status: 'completed' as const, result } : a))
       );
     }, 2000);
   };
 
   // Handle insight ignore
   const handleIgnoreInsight = (insightId: string, justification: string) => {
-    setIgnoredInsights(prev => new Set([...prev, insightId]));
+    setIgnoredInsights((prev) => new Set([...prev, insightId]));
     console.log('Ignored insight:', insightId, 'Reason:', justification);
     // In production, this would be logged to audit trail
   };
 
   // Handle explain insight
   const handleExplainInsight = (insightId: string) => {
-    const insight = aiInsights.find(ins => ins.id === insightId);
+    const insight = aiInsights.find((ins) => ins.id === insightId);
     if (insight) {
-      alert(`Insight Explanation:\n\n${insight.explanation}\n\nEvidence:\n${insight.evidence?.join('\n')}`);
+      alert(
+        `Insight Explanation:\n\n${insight.explanation}\n\nEvidence:\n${insight.evidence?.join('\n')}`
+      );
     }
   };
 
@@ -1018,24 +1317,27 @@ export function InvoiceFormPO() {
   const totals = calculateTotals();
 
   // Check if there are blocking insights
-  const hasBlockers = aiInsights.some(insight => insight.severity === 'blocker');
+  const hasBlockers = aiInsights.some((insight) => insight.severity === 'blocker');
 
   // Helper component for OCR field display
   const OCRField = ({ label, field }: { label: string; field: ExtractedField }) => {
     const confidenceColor = {
       High: 'bg-green-50 border-green-200',
       Medium: 'bg-yellow-50 border-yellow-200',
-      Low: 'bg-red-50 border-red-200'
+      Low: 'bg-red-50 border-red-200',
     };
     const badgeColor = {
       High: 'bg-green-100 text-green-700',
       Medium: 'bg-yellow-100 text-yellow-700',
-      Low: 'bg-red-100 text-red-700'
+      Low: 'bg-red-100 text-red-700',
     };
-    
+
     return (
       <div>
-        <label className="text-sm mb-1 flex items-center justify-between" style={{ color: 'var(--color-mercury-grey)' }}>
+        <label
+          className="text-sm mb-1 flex items-center justify-between"
+          style={{ color: 'var(--color-mercury-grey)' }}
+        >
           <span>{label}</span>
           <span className={`px-2 py-0.5 rounded text-xs ${badgeColor[field.confidence]}`}>
             {field.confidence}
@@ -1051,11 +1353,18 @@ export function InvoiceFormPO() {
   // Render upload/OCR mode first
   if (entryMode === 'choose') {
     return (
-      <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="flex items-center justify-center p-8">
+      <div
+        style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }}
+        className="flex items-center justify-center p-8"
+      >
         <div className="max-w-4xl w-full">
           <div className="text-center mb-8">
-            <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>Create PO-Based Invoice</h1>
-            <p className="text-lg" style={{ color: 'var(--color-mercury-grey)' }}>Choose how you'd like to enter invoice data</p>
+            <h1 className="text-3xl mb-2" style={{ color: 'var(--color-ink)' }}>
+              Create PO-Based Invoice
+            </h1>
+            <p className="text-lg" style={{ color: 'var(--color-mercury-grey)' }}>
+              Choose how you'd like to enter invoice data
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-6">
@@ -1069,7 +1378,9 @@ export function InvoiceFormPO() {
                 <div className="w-20 h-20 rounded-full bg-[var(--color-teal)10] flex items-center justify-center mb-4 group-hover:bg-[var(--color-teal)] transition-colors">
                   <Upload className="w-10 h-10 text-[var(--color-teal)] group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="text-xl mb-2" style={{ color: 'var(--color-ink)' }}>Upload Invoice</h3>
+                <h3 className="text-xl mb-2" style={{ color: 'var(--color-ink)' }}>
+                  Upload Invoice
+                </h3>
                 <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
                   Upload a PDF or image and let AI extract data automatically
                 </p>
@@ -1090,11 +1401,16 @@ export function InvoiceFormPO() {
                 <div className="w-20 h-20 rounded-full bg-[var(--color-mercury-grey)10] flex items-center justify-center mb-4 group-hover:bg-[var(--color-mercury-grey)] transition-colors">
                   <Edit2 className="w-10 h-10 text-[var(--color-mercury-grey)] group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="text-xl mb-2" style={{ color: 'var(--color-ink)' }}>Manual Entry</h3>
+                <h3 className="text-xl mb-2" style={{ color: 'var(--color-ink)' }}>
+                  Manual Entry
+                </h3>
                 <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
                   Enter invoice details manually using the form
                 </p>
-                <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                <div
+                  className="flex items-center gap-2 text-sm"
+                  style={{ color: 'var(--color-mercury-grey)' }}
+                >
                   <FileText className="w-4 h-4" />
                   <span>Traditional Method</span>
                 </div>
@@ -1128,11 +1444,18 @@ export function InvoiceFormPO() {
               <ArrowLeft className="w-4 h-4" />
               Back to Options
             </button>
-            <h1 className="text-2xl mb-2" style={{ color: 'var(--color-ink)' }}>Upload Supplier Invoice</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Upload a PDF or image for automatic data extraction</p>
+            <h1 className="text-2xl mb-2" style={{ color: 'var(--color-ink)' }}>
+              Upload Supplier Invoice
+            </h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>
+              Upload a PDF or image for automatic data extraction
+            </p>
           </div>
 
-          <div className="bg-white rounded-xl border-2 p-8" style={{ borderColor: 'var(--color-silver)' }}>
+          <div
+            className="bg-white rounded-xl border-2 p-8"
+            style={{ borderColor: 'var(--color-silver)' }}
+          >
             {!uploadedFile ? (
               <div
                 onDragOver={handleDragOver}
@@ -1142,9 +1465,16 @@ export function InvoiceFormPO() {
                 style={{ borderColor: 'var(--color-silver)' }}
               >
                 <FileText className="w-12 h-12 text-[var(--color-mercury-grey)] mx-auto mb-4" />
-                <p className="mb-2" style={{ color: 'var(--color-ink)' }}>Drag and drop your invoice here, or click to browse</p>
-                <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>Supported formats: PDF, PNG, JPG (Max 10MB)</p>
-                <button className="px-6 py-2 rounded-lg text-white" style={{ backgroundColor: 'var(--color-teal)' }}>
+                <p className="mb-2" style={{ color: 'var(--color-ink)' }}>
+                  Drag and drop your invoice here, or click to browse
+                </p>
+                <p className="text-sm mb-4" style={{ color: 'var(--color-mercury-grey)' }}>
+                  Supported formats: PDF, PNG, JPG (Max 10MB)
+                </p>
+                <button
+                  className="px-6 py-2 rounded-lg text-white"
+                  style={{ backgroundColor: 'var(--color-teal)' }}
+                >
                   Choose File
                 </button>
                 <input
@@ -1162,7 +1492,9 @@ export function InvoiceFormPO() {
                     <FileText className="w-8 h-8 text-[var(--color-teal)]" />
                     <div>
                       <p style={{ color: 'var(--color-ink)' }}>{uploadedFile.name}</p>
-                      <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{(uploadedFile.size / 1024).toFixed(2)} KB</p>
+                      <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                        {(uploadedFile.size / 1024).toFixed(2)} KB
+                      </p>
                     </div>
                   </div>
                   {!isExtracting && (
@@ -1187,7 +1519,10 @@ export function InvoiceFormPO() {
                     <div className="w-full bg-[var(--color-silver)] rounded-full h-2">
                       <div
                         className="h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${uploadProgress}%`, backgroundColor: 'var(--color-teal)' }}
+                        style={{
+                          width: `${uploadProgress}%`,
+                          backgroundColor: 'var(--color-teal)',
+                        }}
                       />
                     </div>
                   </div>
@@ -1195,8 +1530,13 @@ export function InvoiceFormPO() {
 
                 {isExtracting && (
                   <div className="flex items-center justify-center gap-3 py-8">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: 'var(--color-teal)' }}></div>
-                    <span style={{ color: 'var(--color-mercury-grey)' }}>Extracting data from invoice...</span>
+                    <div
+                      className="animate-spin rounded-full h-6 w-6 border-b-2"
+                      style={{ borderColor: 'var(--color-teal)' }}
+                    ></div>
+                    <span style={{ color: 'var(--color-mercury-grey)' }}>
+                      Extracting data from invoice...
+                    </span>
                   </div>
                 )}
               </div>
@@ -1221,24 +1561,42 @@ export function InvoiceFormPO() {
       <div style={{ backgroundColor: 'var(--color-cloud)', minHeight: '100vh' }} className="p-8">
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
-            <h1 className="text-2xl mb-2" style={{ color: 'var(--color-ink)' }}>Review Extracted Data</h1>
-            <p style={{ color: 'var(--color-mercury-grey)' }}>Verify the extracted information before proceeding</p>
+            <h1 className="text-2xl mb-2" style={{ color: 'var(--color-ink)' }}>
+              Review Extracted Data
+            </h1>
+            <p style={{ color: 'var(--color-mercury-grey)' }}>
+              Verify the extracted information before proceeding
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-6 mb-6">
             {/* Document Preview */}
-            <div className="bg-white rounded-xl border-2 p-6" style={{ borderColor: 'var(--color-silver)' }}>
+            <div
+              className="bg-white rounded-xl border-2 p-6"
+              style={{ borderColor: 'var(--color-silver)' }}
+            >
               <div className="flex items-center justify-between mb-4">
                 <h3 style={{ color: 'var(--color-ink)' }}>Document Preview</h3>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setZoomLevel(prev => Math.max(prev - 10, 50))} className="p-2 hover:bg-[var(--color-cloud)] rounded">
+                  <button
+                    onClick={() => setZoomLevel((prev) => Math.max(prev - 10, 50))}
+                    className="p-2 hover:bg-[var(--color-cloud)] rounded"
+                  >
                     <ZoomOut className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   </button>
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>{zoomLevel}%</span>
-                  <button onClick={() => setZoomLevel(prev => Math.min(prev + 10, 200))} className="p-2 hover:bg-[var(--color-cloud)] rounded">
+                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                    {zoomLevel}%
+                  </span>
+                  <button
+                    onClick={() => setZoomLevel((prev) => Math.min(prev + 10, 200))}
+                    className="p-2 hover:bg-[var(--color-cloud)] rounded"
+                  >
                     <ZoomIn className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   </button>
-                  <button onClick={() => setRotation(prev => (prev + 90) % 360)} className="p-2 hover:bg-[var(--color-cloud)] rounded">
+                  <button
+                    onClick={() => setRotation((prev) => (prev + 90) % 360)}
+                    className="p-2 hover:bg-[var(--color-cloud)] rounded"
+                  >
                     <RotateCw className="w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
                   </button>
                 </div>
@@ -1251,7 +1609,7 @@ export function InvoiceFormPO() {
                     className="max-w-full h-auto shadow-lg"
                     style={{
                       transform: `scale(${zoomLevel / 100}) rotate(${rotation}deg)`,
-                      transition: 'transform 0.2s'
+                      transition: 'transform 0.2s',
                     }}
                   />
                 )}
@@ -1259,7 +1617,10 @@ export function InvoiceFormPO() {
             </div>
 
             {/* Extracted Data */}
-            <div className="bg-white rounded-xl border-2 p-6 overflow-auto h-[600px]" style={{ borderColor: 'var(--color-silver)' }}>
+            <div
+              className="bg-white rounded-xl border-2 p-6 overflow-auto h-[600px]"
+              style={{ borderColor: 'var(--color-silver)' }}
+            >
               <div className="flex items-center justify-between mb-4">
                 <h3 style={{ color: 'var(--color-ink)' }}>Extracted Data</h3>
                 <div className="flex items-center gap-2">
@@ -1287,20 +1648,23 @@ export function InvoiceFormPO() {
                 setUploadedFile(null);
                 setEntryMode('choose');
               }}
-              className="px-6 py-2 rounded-lg" style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
+              className="px-6 py-2 rounded-lg"
+              style={{ backgroundColor: 'var(--color-silver)', color: 'var(--color-ink)' }}
             >
               Cancel
             </button>
             <div className="flex gap-3">
               <button
                 onClick={handleSkipOCR}
-                className="px-6 py-2 rounded-lg border-2" style={{ borderColor: 'var(--color-silver)', color: 'var(--color-mercury-grey)' }}
+                className="px-6 py-2 rounded-lg border-2"
+                style={{ borderColor: 'var(--color-silver)', color: 'var(--color-mercury-grey)' }}
               >
                 Start Fresh
               </button>
               <button
                 onClick={handleContinueFromOCR}
-                className="px-6 py-2 rounded-lg text-white flex items-center gap-2" style={{ backgroundColor: 'var(--color-teal)' }}
+                className="px-6 py-2 rounded-lg text-white flex items-center gap-2"
+                style={{ backgroundColor: 'var(--color-teal)' }}
               >
                 Continue with This Data
                 <ChevronRight className="w-4 h-4" />
@@ -1332,168 +1696,362 @@ export function InvoiceFormPO() {
       <div className="flex flex-1 overflow-hidden">
         {/* Form Content */}
         <div className="flex-1 overflow-y-auto">
-        {/* Vendor & Invoice Context */}
-        <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>Vendor & Invoice Context</h2>
-              <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Select vendor and enter invoice details</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <EntityCurrencyBadge entityId="ENT-SUBKO-IN" variant="compact" />
-              <div className="px-4 py-2 rounded-lg" style={{ backgroundColor: 'var(--color-teal)10', border: '1px solid var(--color-teal)' }}>
-                <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>Invoice Type</p>
-                <p className="text-sm" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>PO-Based</p>
-              </div>
-            </div>
-          </div>
-
-          <FormSection title="Vendor Details" columns={3}>
-            <PxFormField label="Vendor Name" required filled={!!selectedVendor} hint={!selectedVendor ? 'Vendor selection is mandatory to proceed' : undefined}>
-              <select
-                value={selectedVendor}
-                onChange={(e) => handleVendorChange(e.target.value)}
-                className="px-input"
-                required
-              >
-                <option value="">-- Select Vendor --</option>
-                {vendors.map(vendor => (
-                  <option key={vendor.code} value={vendor.code}>
-                    {vendor.name}
-                  </option>
-                ))}
-              </select>
-            </PxFormField>
-
-            <PxFormField label="Vendor Code" filled={!!vendorCode}>
-              <div className="relative">
-                <input type="text" value={vendorCode} disabled placeholder="Auto-populated" className="px-input" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }} />
-                {vendorCode && (
-                  <CheckCircle className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2" style={{ color: 'var(--color-teal)' }} />
-                )}
-              </div>
-            </PxFormField>
-
-            <PxFormField label="Vendor GSTIN" filled={!!vendorGSTNumber}>
-              <div className="relative">
-                <input type="text" value={vendorGSTNumber} disabled placeholder="Auto-populated" className="px-input" style={{ backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }} />
-                {vendorGSTNumber && (
-                  <CheckCircle className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2" style={{ color: 'var(--color-teal)' }} />
-                )}
-              </div>
-            </PxFormField>
-          </FormSection>
-
-          <FormSection title="Invoice Details" columns={3}>
-            <PxFormField label="Invoice Number" required filled={!!invoiceNumber.trim()}>
-              <div className="relative">
-                <Hash className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: 'var(--color-mercury-grey)' }} />
-                <input
-                  type="text"
-                  value={invoiceNumber}
-                  onChange={(e) => setInvoiceNumber(e.target.value)}
-                  placeholder="e.g., INV-2024-001"
-                  className="px-input pl-11"
-                  required
-                />
-              </div>
-            </PxFormField>
-
-            <PxFormField label="Invoice Date" required filled={!!invoiceDate}>
-              <div className="relative">
-                <Calendar className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" style={{ color: 'var(--color-mercury-grey)' }} />
-                <input
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                  className="px-input pl-11"
-                  required
-                />
-              </div>
-            </PxFormField>
-
-            <PxFormField label="Invoice Currency" required filled={!!invoiceCurrency}>
-              <div className="relative">
-                <DollarSign className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none" style={{ color: 'var(--color-mercury-grey)' }} />
-                <select
-                  value={invoiceCurrency}
-                  onChange={(e) => setInvoiceCurrency(e.target.value)}
-                  className="px-input pl-11"
-                  required
+          {/* Vendor & Invoice Context */}
+          <div
+            className="bg-white rounded-xl p-6 mb-6"
+            style={{ border: '2px solid var(--color-silver)' }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2
+                  className="text-xl mb-1"
+                  style={{ color: 'var(--color-ink)', fontWeight: '700' }}
                 >
-                  <option value="INR">INR - Indian Rupee (₹)</option>
-                  <option value="USD">USD - US Dollar ($)</option>
-                  <option value="EUR">EUR - Euro (€)</option>
-                  <option value="GBP">GBP - British Pound (£)</option>
-                </select>
+                  Vendor & Invoice Context
+                </h2>
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                  Select vendor and enter invoice details
+                </p>
               </div>
-            </PxFormField>
-          </FormSection>
-
-          {/* Open POs Alert */}
-          {selectedVendor && showOpenPOs && purchaseOrders.length > 0 && (
-            <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-teal)10', border: '1px solid var(--color-teal)' }}>
-              <div className="flex items-start gap-3">
-                <Package className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-teal)' }} />
-                <div className="flex-1">
-                  <p className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Open Purchase Orders Available</p>
-                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                    This vendor has {purchaseOrders.length} open purchase order(s). Proceed to the next step to select PO and GRN.
+              <div className="flex items-center gap-4">
+                <EntityCurrencyBadge entityId="entity-ptpl-001" variant="compact" />
+                <div
+                  className="px-4 py-2 rounded-lg"
+                  style={{
+                    backgroundColor: 'var(--color-teal)10',
+                    border: '1px solid var(--color-teal)',
+                  }}
+                >
+                  <p className="text-xs mb-1" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Invoice Type
+                  </p>
+                  <p className="text-sm" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
+                    PO-Based
                   </p>
                 </div>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Open Purchase Orders Section */}
-        {selectedVendor && (
-          <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>Open Purchase Orders</h2>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Select one or multiple POs for this invoice</p>
-              </div>
-              <div className="px-3 py-1 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
-                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                  {purchaseOrders.length} Open PO(s)
-                </p>
-              </div>
-            </div>
+            <FormSection title="Vendor Details" columns={3}>
+              <PxFormField
+                label="Vendor Name"
+                required
+                filled={!!selectedVendor}
+                hint={!selectedVendor ? 'Vendor selection is mandatory to proceed' : undefined}
+              >
+                <select
+                  value={selectedVendor}
+                  onChange={(e) => handleVendorChange(e.target.value)}
+                  className="px-input"
+                  required
+                >
+                  <option value="">-- Select Vendor --</option>
+                  {vendors.map((vendor) => (
+                    <option key={vendor.code} value={vendor.code}>
+                      {vendor.name}
+                    </option>
+                  ))}
+                </select>
+              </PxFormField>
 
-            {/* PO Selection Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: '0' }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                  <tr style={{ backgroundColor: 'var(--color-cloud)' }}>
-                    <th className="px-4 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>
-                      Select
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>PO Number</th>
-                    <th className="px-4 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>PO Date</th>
-                    <th className="px-4 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>PO Type</th>
-                    <th className="px-4 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>PO Value</th>
-                    <th className="px-4 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>Open PO Amount</th>
-                    <th className="px-4 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>PO Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {purchaseOrders.map((po, index) => {
+              <PxFormField label="Vendor Code" filled={!!vendorCode}>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={vendorCode}
+                    disabled
+                    placeholder="Auto-populated"
+                    className="px-input"
+                    style={{
+                      backgroundColor: 'var(--color-cloud)',
+                      color: 'var(--color-mercury-grey)',
+                    }}
+                  />
+                  {vendorCode && (
+                    <CheckCircle
+                      className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2"
+                      style={{ color: 'var(--color-teal)' }}
+                    />
+                  )}
+                </div>
+              </PxFormField>
+
+              <PxFormField label="Vendor GSTIN" filled={!!vendorGSTNumber}>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={vendorGSTNumber}
+                    disabled
+                    placeholder="Auto-populated"
+                    className="px-input"
+                    style={{
+                      backgroundColor: 'var(--color-cloud)',
+                      color: 'var(--color-mercury-grey)',
+                    }}
+                  />
+                  {vendorGSTNumber && (
+                    <CheckCircle
+                      className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2"
+                      style={{ color: 'var(--color-teal)' }}
+                    />
+                  )}
+                </div>
+              </PxFormField>
+            </FormSection>
+
+            <FormSection title="Invoice Details" columns={3}>
+              <PxFormField label="Invoice Number" required filled={!!invoiceNumber.trim()}>
+                <div className="relative">
+                  <Hash
+                    className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  />
+                  <input
+                    type="text"
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                    placeholder="e.g., INV-2024-001"
+                    className="px-input pl-11"
+                    required
+                  />
+                </div>
+              </PxFormField>
+
+              <PxFormField label="Invoice Date" required filled={!!invoiceDate}>
+                <div className="relative">
+                  <Calendar
+                    className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  />
+                  <input
+                    type="date"
+                    value={invoiceDate}
+                    onChange={(e) => setInvoiceDate(e.target.value)}
+                    className="px-input pl-11"
+                    required
+                  />
+                </div>
+              </PxFormField>
+
+              <PxFormField label="Payment Due Date" filled={!!paymentDueDate}>
+                <div className="relative">
+                  <Calendar
+                    className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  />
+                  <input
+                    type="date"
+                    value={paymentDueDate}
+                    onChange={(e) => {
+                      setPaymentDueDate(e.target.value);
+                      setPaymentDueDateManuallySet(true);
+                    }}
+                    className="px-input pl-11"
+                    style={msmeWarning.violated ? { borderColor: '#F59E0B' } : undefined}
+                  />
+                </div>
+                {msmeWarning.violated && msmeWarning.message && (
+                  <div
+                    className="mt-2 p-3 rounded-lg text-sm flex items-start gap-2"
+                    style={{
+                      backgroundColor: '#FEF3C7',
+                      border: '1px solid #F59E0B',
+                      color: '#92400E',
+                    }}
+                    role="alert"
+                  >
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{msmeWarning.message}</span>
+                  </div>
+                )}
+              </PxFormField>
+
+              <PxFormField label="Invoice Currency" required filled={!!invoiceCurrency}>
+                <div className="relative">
+                  <DollarSign
+                    className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
+                    style={{ color: 'var(--color-mercury-grey)' }}
+                  />
+                  <select
+                    value={invoiceCurrency}
+                    onChange={(e) => setInvoiceCurrency(e.target.value)}
+                    className="px-input pl-11"
+                    required
+                  >
+                    <option value="INR">INR - Indian Rupee (₹)</option>
+                    <option value="USD">USD - US Dollar ($)</option>
+                    <option value="EUR">EUR - Euro (€)</option>
+                    <option value="GBP">GBP - British Pound (£)</option>
+                  </select>
+                </div>
+              </PxFormField>
+            </FormSection>
+
+            {/* Open POs Alert */}
+            {selectedVendor && showOpenPOs && purchaseOrders.length > 0 && (
+              <div
+                className="mt-6 p-4 rounded-lg"
+                style={{
+                  backgroundColor: 'var(--color-teal)10',
+                  border: '1px solid var(--color-teal)',
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <Package className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-teal)' }} />
+                  <div className="flex-1">
+                    <p
+                      className="text-sm mb-1"
+                      style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                    >
+                      Open Purchase Orders Available
+                    </p>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                      This vendor has {purchaseOrders.length} open purchase order(s). Proceed to the
+                      next step to select PO and GRN.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Open Purchase Orders Section */}
+          {selectedVendor && (
+            <div
+              className="bg-white rounded-xl p-6 mb-6"
+              style={{ border: '2px solid var(--color-silver)' }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2
+                    className="text-xl mb-1"
+                    style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                  >
+                    Open Purchase Orders
+                  </h2>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Select one or multiple POs for this invoice
+                  </p>
+                </div>
+                <div
+                  className="px-3 py-1 rounded-lg"
+                  style={{
+                    backgroundColor: 'var(--color-cloud)',
+                    border: '1px solid var(--color-silver)',
+                  }}
+                >
+                  <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                    {purchaseOrders.length} Open PO(s)
+                  </p>
+                </div>
+              </div>
+
+              {/* PO Selection Table */}
+              <div className="overflow-x-auto">
+                <table
+                  className="w-full"
+                  style={{ borderCollapse: 'separate', borderSpacing: '0' }}
+                >
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                    <tr style={{ backgroundColor: 'var(--color-cloud)' }}>
+                      <th
+                        className="px-4 py-3 text-left text-xs"
+                        style={{
+                          color: 'var(--color-mercury-grey)',
+                          fontWeight: '600',
+                          borderBottom: '2px solid var(--color-silver)',
+                        }}
+                      >
+                        Select
+                      </th>
+                      <th
+                        className="px-4 py-3 text-left text-xs"
+                        style={{
+                          color: 'var(--color-mercury-grey)',
+                          fontWeight: '600',
+                          borderBottom: '2px solid var(--color-silver)',
+                        }}
+                      >
+                        PO Number
+                      </th>
+                      <th
+                        className="px-4 py-3 text-left text-xs"
+                        style={{
+                          color: 'var(--color-mercury-grey)',
+                          fontWeight: '600',
+                          borderBottom: '2px solid var(--color-silver)',
+                        }}
+                      >
+                        PO Date
+                      </th>
+                      <th
+                        className="px-4 py-3 text-left text-xs"
+                        style={{
+                          color: 'var(--color-mercury-grey)',
+                          fontWeight: '600',
+                          borderBottom: '2px solid var(--color-silver)',
+                        }}
+                      >
+                        PO Type
+                      </th>
+                      <th
+                        className="px-4 py-3 text-right text-xs"
+                        style={{
+                          color: 'var(--color-mercury-grey)',
+                          fontWeight: '600',
+                          borderBottom: '2px solid var(--color-silver)',
+                        }}
+                      >
+                        PO Value
+                      </th>
+                      <th
+                        className="px-4 py-3 text-right text-xs"
+                        style={{
+                          color: 'var(--color-mercury-grey)',
+                          fontWeight: '600',
+                          borderBottom: '2px solid var(--color-silver)',
+                        }}
+                      >
+                        Open PO Amount
+                      </th>
+                      <th
+                        className="px-4 py-3 text-left text-xs"
+                        style={{
+                          color: 'var(--color-mercury-grey)',
+                          fontWeight: '600',
+                          borderBottom: '2px solid var(--color-silver)',
+                        }}
+                      >
+                        PO Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {purchaseOrders.map((po, index) => {
                       const isSelected = selectedPO === po.poNumber;
-                      
+
                       return (
-                        <tr 
+                        <tr
                           key={po.poNumber}
                           onClick={() => handlePOSelection(po.poNumber)}
                           className="cursor-pointer transition-colors hover:bg-opacity-50"
-                          style={{ 
-                            backgroundColor: isSelected ? 'var(--color-teal)10' : index % 2 === 0 ? '#FFFFFF' : 'var(--color-cloud)',
-                            borderLeft: isSelected ? '3px solid var(--color-teal)' : '3px solid transparent'
+                          style={{
+                            backgroundColor: isSelected
+                              ? 'var(--color-teal)10'
+                              : index % 2 === 0
+                                ? '#FFFFFF'
+                                : 'var(--color-cloud)',
+                            borderLeft: isSelected
+                              ? '3px solid var(--color-teal)'
+                              : '3px solid transparent',
                           }}
                         >
-                          <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-                            <input 
-                              type="checkbox" 
+                          <td
+                            className="px-4 py-3"
+                            style={{ borderBottom: '1px solid var(--color-silver)' }}
+                          >
+                            <input
+                              type="checkbox"
                               checked={isSelected}
                               onChange={() => handlePOSelection(po.poNumber)}
                               className="w-4 h-4"
@@ -1501,98 +2059,227 @@ export function InvoiceFormPO() {
                               onClick={(e) => e.stopPropagation()}
                             />
                           </td>
-                          <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-                            <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{po.poNumber}</p>
+                          <td
+                            className="px-4 py-3"
+                            style={{ borderBottom: '1px solid var(--color-silver)' }}
+                          >
+                            <p
+                              className="text-sm"
+                              style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                            >
+                              {po.poNumber}
+                            </p>
                           </td>
-                          <td className="px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>{po.date}</td>
-                          <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-                            <span className="px-2 py-1 rounded text-xs" style={{ 
-                              backgroundColor: po.type === 'Goods' ? '#10B98110' : '#007D8710',
-                              color: po.type === 'Goods' ? '#10B981' : '#007D87',
-                              fontWeight: '600'
-                            }}>
+                          <td
+                            className="px-4 py-3 text-sm"
+                            style={{
+                              color: 'var(--color-mercury-grey)',
+                              borderBottom: '1px solid var(--color-silver)',
+                            }}
+                          >
+                            {po.date}
+                          </td>
+                          <td
+                            className="px-4 py-3"
+                            style={{ borderBottom: '1px solid var(--color-silver)' }}
+                          >
+                            <span
+                              className="px-2 py-1 rounded text-xs"
+                              style={{
+                                backgroundColor: po.type === 'Goods' ? '#10B98110' : '#007D8710',
+                                color: po.type === 'Goods' ? '#10B981' : '#007D87',
+                                fontWeight: '600',
+                              }}
+                            >
                               {po.type}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-ink)', fontWeight: '600', borderBottom: '1px solid var(--color-silver)' }}>
+                          <td
+                            className="px-4 py-3 text-sm text-right"
+                            style={{
+                              color: 'var(--color-ink)',
+                              fontWeight: '600',
+                              borderBottom: '1px solid var(--color-silver)',
+                            }}
+                          >
                             ₹{po.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-teal)', fontWeight: '600', borderBottom: '1px solid var(--color-silver)' }}>
+                          <td
+                            className="px-4 py-3 text-sm text-right"
+                            style={{
+                              color: 'var(--color-teal)',
+                              fontWeight: '600',
+                              borderBottom: '1px solid var(--color-silver)',
+                            }}
+                          >
                             ₹{po.openAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-                            <span className="px-2 py-1 rounded text-xs" style={{ 
-                              backgroundColor: 'var(--color-teal)10',
-                              color: 'var(--color-teal)',
-                              fontWeight: '600'
-                            }}>
+                          <td
+                            className="px-4 py-3"
+                            style={{ borderBottom: '1px solid var(--color-silver)' }}
+                          >
+                            <span
+                              className="px-2 py-1 rounded text-xs"
+                              style={{
+                                backgroundColor: 'var(--color-teal)10',
+                                color: 'var(--color-teal)',
+                                fontWeight: '600',
+                              }}
+                            >
                               {po.status}
                             </span>
                           </td>
                         </tr>
                       );
                     })}
-                </tbody>
-              </table>
-            </div>
-
-            {purchaseOrders.length === 0 && (
-              <div className="py-12 text-center">
-                <Package className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--color-silver)' }} />
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>No open purchase orders found for this vendor</p>
+                  </tbody>
+                </table>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* GRN-SRN Selection Section */}
-        {selectedPO && (
-          <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>GRN - SRN Selection</h2>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Select goods-service receipt notes linked to PO {selectedPO}</p>
-              </div>
-              {availableGRNs.length > 0 && (
-                <div className="px-3 py-1 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
-                  <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                    {selectedGRNs.length} / {availableGRNs.length} Selected
+              {purchaseOrders.length === 0 && (
+                <div className="py-12 text-center">
+                  <Package
+                    className="w-12 h-12 mx-auto mb-3"
+                    style={{ color: 'var(--color-silver)' }}
+                  />
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                    No open purchase orders found for this vendor
                   </p>
                 </div>
               )}
             </div>
+          )}
 
-            {availableGRNs.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: '0' }}>
-                  <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                    <tr style={{ backgroundColor: 'var(--color-cloud)' }}>
-                      <th className="px-4 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>Select</th>
-                      <th className="px-4 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>GRN-SRN Number</th>
-                      <th className="px-4 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>Date</th>
-                      <th className="px-4 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>Item Count</th>
-                      <th className="px-4 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>Quantity Received</th>
-                      <th className="px-4 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600', borderBottom: '2px solid var(--color-silver)' }}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {availableGRNs.map((grn, index) => {
+          {/* GRN-SRN Selection Section */}
+          {selectedPO && (
+            <div
+              className="bg-white rounded-xl p-6 mb-6"
+              style={{ border: '2px solid var(--color-silver)' }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2
+                    className="text-xl mb-1"
+                    style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                  >
+                    GRN - SRN Selection
+                  </h2>
+                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                    Select goods-service receipt notes linked to PO {selectedPO}
+                  </p>
+                </div>
+                {availableGRNs.length > 0 && (
+                  <div
+                    className="px-3 py-1 rounded-lg"
+                    style={{
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                    }}
+                  >
+                    <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                      {selectedGRNs.length} / {availableGRNs.length} Selected
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {availableGRNs.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table
+                    className="w-full"
+                    style={{ borderCollapse: 'separate', borderSpacing: '0' }}
+                  >
+                    <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                      <tr style={{ backgroundColor: 'var(--color-cloud)' }}>
+                        <th
+                          className="px-4 py-3 text-left text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '600',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Select
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '600',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          GRN-SRN Number
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '600',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Date
+                        </th>
+                        <th
+                          className="px-4 py-3 text-right text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '600',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Item Count
+                        </th>
+                        <th
+                          className="px-4 py-3 text-right text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '600',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Quantity Received
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '600',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {availableGRNs.map((grn, index) => {
                         const isSelected = selectedGRNs.includes(grn.grnNumber);
                         const itemCount = grn.lineItems?.length || 0;
-                        
+
                         return (
-                          <tr 
+                          <tr
                             key={grn.grnNumber}
                             onClick={() => handleGRNToggle(grn.grnNumber)}
                             className="cursor-pointer transition-colors hover:bg-opacity-50"
-                            style={{ 
-                              backgroundColor: isSelected ? 'var(--color-teal)10' : index % 2 === 0 ? '#FFFFFF' : 'var(--color-cloud)',
-                              borderLeft: isSelected ? '3px solid var(--color-teal)' : '3px solid transparent'
+                            style={{
+                              backgroundColor: isSelected
+                                ? 'var(--color-teal)10'
+                                : index % 2 === 0
+                                  ? '#FFFFFF'
+                                  : 'var(--color-cloud)',
+                              borderLeft: isSelected
+                                ? '3px solid var(--color-teal)'
+                                : '3px solid transparent',
                             }}
                           >
-                            <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-                              <input 
-                                type="checkbox" 
+                            <td
+                              className="px-4 py-3"
+                              style={{ borderBottom: '1px solid var(--color-silver)' }}
+                            >
+                              <input
+                                type="checkbox"
                                 checked={isSelected}
                                 onChange={() => handleGRNToggle(grn.grnNumber)}
                                 className="w-4 h-4"
@@ -1600,1048 +2287,2116 @@ export function InvoiceFormPO() {
                                 onClick={(e) => e.stopPropagation()}
                               />
                             </td>
-                            <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-                              <p className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{grn.grnNumber}</p>
+                            <td
+                              className="px-4 py-3"
+                              style={{ borderBottom: '1px solid var(--color-silver)' }}
+                            >
+                              <p
+                                className="text-sm"
+                                style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                              >
+                                {grn.grnNumber}
+                              </p>
                             </td>
-                            <td className="px-4 py-3 text-sm" style={{ color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>{grn.receiptDate}</td>
-                            <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-ink)', borderBottom: '1px solid var(--color-silver)' }}>{itemCount}</td>
-                            <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-ink)', fontWeight: '600', borderBottom: '1px solid var(--color-silver)' }}>{grn.qtyReceived}</td>
-                            <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-                              <span className="px-2 py-1 rounded text-xs" style={{ 
-                                backgroundColor: '#10B98110',
-                                color: '#10B981',
-                                fontWeight: '600'
-                              }}>
+                            <td
+                              className="px-4 py-3 text-sm"
+                              style={{
+                                color: 'var(--color-mercury-grey)',
+                                borderBottom: '1px solid var(--color-silver)',
+                              }}
+                            >
+                              {grn.receiptDate}
+                            </td>
+                            <td
+                              className="px-4 py-3 text-sm text-right"
+                              style={{
+                                color: 'var(--color-ink)',
+                                borderBottom: '1px solid var(--color-silver)',
+                              }}
+                            >
+                              {itemCount}
+                            </td>
+                            <td
+                              className="px-4 py-3 text-sm text-right"
+                              style={{
+                                color: 'var(--color-ink)',
+                                fontWeight: '600',
+                                borderBottom: '1px solid var(--color-silver)',
+                              }}
+                            >
+                              {grn.qtyReceived}
+                            </td>
+                            <td
+                              className="px-4 py-3"
+                              style={{ borderBottom: '1px solid var(--color-silver)' }}
+                            >
+                              <span
+                                className="px-2 py-1 rounded text-xs"
+                                style={{
+                                  backgroundColor: '#10B98110',
+                                  color: '#10B981',
+                                  fontWeight: '600',
+                                }}
+                              >
                                 {grn.status}
                               </span>
                             </td>
                           </tr>
                         );
                       })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-6 rounded-lg" style={{ backgroundColor: '#FEF3C7', border: '1px solid #F59E0B' }}>
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: '#F59E0B' }} />
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div
+                  className="p-6 rounded-lg"
+                  style={{ backgroundColor: '#FEF3C7', border: '1px solid #F59E0B' }}
+                >
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: '#F59E0B' }} />
+                    <div>
+                      <p
+                        className="text-sm mb-1"
+                        style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                      >
+                        No GRN-SRN Available
+                      </p>
+                      <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                        Invoice can proceed with PO quantities. Line items will be populated from
+                        the PO.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* GST Determination Section */}
+          {selectedPO && (
+            <GSTDetermination
+              companyGSTIN={companyGSTIN}
+              setCompanyGSTIN={setCompanyGSTIN}
+              companyState={companyState}
+              vendorGSTNumber={vendorGSTNumber}
+              supplierState={supplierState}
+              placeOfSupply={placeOfSupply}
+              setPlaceOfSupply={setPlaceOfSupply}
+              shipToState={shipToState}
+              setShipToState={setShipToState}
+              supplyType={supplyType}
+              setSupplyType={setSupplyType}
+              reverseChargeApplicable={reverseChargeApplicable}
+              setReverseChargeApplicable={setReverseChargeApplicable}
+              isSEZ={isSEZ}
+              setIsSEZ={setIsSEZ}
+              isExport={isExport}
+              setIsExport={setIsExport}
+              gstType={gstType}
+              gstTypeOverridden={gstTypeOverridden}
+              showGSTOverride={showGSTOverride}
+              setShowGSTOverride={setShowGSTOverride}
+              gstOverrideReason={gstOverrideReason}
+              setGstOverrideReason={setGstOverrideReason}
+              gstOverrideComments={gstOverrideComments}
+              setGstOverrideComments={setGstOverrideComments}
+              handleGSTTypeOverride={handleGSTTypeOverride}
+              gstValidationIssues={gstValidationIssues}
+              selectedPO={selectedPO}
+              statesList={getStatesListWithCodes()}
+            />
+          )}
+
+          {/* Line Items Table (Auto-populated from PO and GRN) */}
+          {selectedPO &&
+            (selectedGRNs.length > 0 ||
+              availableGRNs.filter((grn) => grn.poNumber === selectedPO).length === 0) && (
+              <div
+                className="bg-white rounded-xl p-6 mb-6"
+                style={{ border: '2px solid var(--color-silver)' }}
+              >
+                {/* Smart Validation Info Banner */}
+                {policyConfig.hardLockRate && (
+                  <div
+                    className="mb-4 p-4 rounded-lg flex items-start gap-3"
+                    style={{
+                      backgroundColor: 'var(--color-teal-tint)',
+                      border: '1px solid var(--color-teal)',
+                    }}
+                  >
+                    <Lock
+                      className="w-5 h-5 flex-shrink-0 mt-0.5"
+                      style={{ color: 'var(--color-teal)' }}
+                    />
+                    <div>
+                      <p
+                        className="text-sm mb-1"
+                        style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                      >
+                        Smart Rate Validation Active - 3-Way Match Control
+                      </p>
+                      <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                        Invoice rates are locked to PO rates for audit compliance. Rate fields are
+                        read-only and cannot exceed PO values. To change a rate, you must either
+                        amend the PO or request an exception approval from CFO.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Smart TDS Info Banner */}
+                <div
+                  className="mb-6 p-4 rounded-lg flex items-start gap-3"
+                  style={{ backgroundColor: '#FEF3F2', border: '1px solid #FCA5A5' }}
+                >
+                  <Info className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} />
                   <div>
-                    <p className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>No GRN-SRN Available</p>
+                    <p
+                      className="text-sm mb-1"
+                      style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                    >
+                      Smart TDS Section Auto-Suggestion Enabled
+                    </p>
                     <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                      Invoice can proceed with PO quantities. Line items will be populated from the PO.
+                      When you select a TDS Rate, the system will automatically suggest the most
+                      appropriate TDS Section based on common tax regulations. You can override the
+                      suggestion by manually selecting a different section. TDS is calculated on the
+                      base amount (before GST).
                     </p>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* GST Determination Section */}
-        {selectedPO && (
-          <GSTDetermination
-            companyGSTIN={companyGSTIN}
-            setCompanyGSTIN={setCompanyGSTIN}
-            companyState={companyState}
-            vendorGSTNumber={vendorGSTNumber}
-            supplierState={supplierState}
-            placeOfSupply={placeOfSupply}
-            setPlaceOfSupply={setPlaceOfSupply}
-            shipToState={shipToState}
-            setShipToState={setShipToState}
-            supplyType={supplyType}
-            setSupplyType={setSupplyType}
-            reverseChargeApplicable={reverseChargeApplicable}
-            setReverseChargeApplicable={setReverseChargeApplicable}
-            isSEZ={isSEZ}
-            setIsSEZ={setIsSEZ}
-            isExport={isExport}
-            setIsExport={setIsExport}
-            gstType={gstType}
-            gstTypeOverridden={gstTypeOverridden}
-            showGSTOverride={showGSTOverride}
-            setShowGSTOverride={setShowGSTOverride}
-            gstOverrideReason={gstOverrideReason}
-            setGstOverrideReason={setGstOverrideReason}
-            gstOverrideComments={gstOverrideComments}
-            setGstOverrideComments={setGstOverrideComments}
-            handleGSTTypeOverride={handleGSTTypeOverride}
-            gstValidationIssues={gstValidationIssues}
-            selectedPO={selectedPO}
-            statesList={getStatesListWithCodes()}
-          />
-        )}
-
-        {/* Line Items Table (Auto-populated from PO and GRN) */}
-        {selectedPO && (selectedGRNs.length > 0 || availableGRNs.filter(grn => grn.po === selectedPO).length === 0) && (
-          <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
-            {/* Smart Validation Info Banner */}
-            {policyConfig.hardLockRate && (
-              <div className="mb-4 p-4 rounded-lg flex items-start gap-3" style={{ backgroundColor: 'var(--color-teal-tint)', border: '1px solid var(--color-teal)' }}>
-                <Lock className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-teal)' }} />
-                <div>
-                  <p className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
-                    Smart Rate Validation Active - 3-Way Match Control
-                  </p>
-                  <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                    Invoice rates are locked to PO rates for audit compliance. Rate fields are read-only and cannot exceed PO values. 
-                    To change a rate, you must either amend the PO or request an exception approval from CFO.
-                  </p>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2
+                      className="text-xl mb-1"
+                      style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                    >
+                      Invoice Line Items
+                    </h2>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                      {selectedGRNs.length > 0
+                        ? 'Auto-populated from selected PO and GRN(s) - editable quantities within limits'
+                        : 'Auto-populated from PO - no GRN available'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <div
+                      className="px-3 py-1 rounded-lg"
+                      style={{
+                        backgroundColor: 'var(--color-cloud)',
+                        border: '1px solid var(--color-silver)',
+                      }}
+                    >
+                      <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                        {
+                          lineItems.filter((item) =>
+                            selectedGRNs.length > 0 ? selectedGRNs.includes(item.grnNumber) : true
+                          ).length
+                        }{' '}
+                        Line Item(s)
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {/* Smart TDS Info Banner */}
-            <div className="mb-6 p-4 rounded-lg flex items-start gap-3" style={{ backgroundColor: '#FEF3F2', border: '1px solid #FCA5A5' }}>
-              <Info className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} />
-              <div>
-                <p className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
-                  Smart TDS Section Auto-Suggestion Enabled
-                </p>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                  When you select a TDS Rate, the system will automatically suggest the most appropriate TDS Section based on common tax regulations. You can override the suggestion by manually selecting a different section. TDS is calculated on the base amount (before GST).
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>Invoice Line Items</h2>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                  {selectedGRNs.length > 0 
-                    ? 'Auto-populated from selected PO and GRN(s) - editable quantities within limits' 
-                    : 'Auto-populated from PO - no GRN available'}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <div className="px-3 py-1 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
-                  <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                    {lineItems.filter(item => selectedGRNs.length > 0 ? selectedGRNs.includes(item.grnNumber) : true).length} Line Item(s)
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto" style={{ maxHeight: '500px', position: 'relative' }}>
-              <table className="w-full" style={{ minWidth: '2600px', borderCollapse: 'separate', borderSpacing: '0' }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 20, backgroundColor: 'var(--color-cloud)' }}>
-                  <tr>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '140px', borderBottom: '2px solid var(--color-silver)', position: 'sticky', left: 0, backgroundColor: 'var(--color-cloud)', zIndex: 21 }}>Item Field</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '200px', borderBottom: '2px solid var(--color-silver)' }}>Item Description</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '120px', borderBottom: '2px solid var(--color-silver)' }}>Account Code</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '80px', borderBottom: '2px solid var(--color-silver)' }}>Qty</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '100px', borderBottom: '2px solid var(--color-silver)' }}>Rate</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '120px', borderBottom: '2px solid var(--color-silver)' }}>Base Amount</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '90px', borderBottom: '2px solid var(--color-silver)' }}>GST Rate</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '120px', borderBottom: '2px solid var(--color-silver)' }}>GST Amount</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '100px', borderBottom: '2px solid var(--color-silver)' }}>CGST</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '100px', borderBottom: '2px solid var(--color-silver)' }}>SGST</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '100px', borderBottom: '2px solid var(--color-silver)' }}>IGST</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '130px', borderBottom: '2px solid var(--color-silver)' }}>Gross Amount</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '100px', borderBottom: '2px solid var(--color-silver)' }}>TDS Rate</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '110px', borderBottom: '2px solid var(--color-silver)' }}>TDS Section</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '120px', borderBottom: '2px solid var(--color-silver)' }}>TDS Amount</th>
-                    <th className="text-right px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '130px', borderBottom: '2px solid var(--color-silver)' }}>Net Payable</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '130px', borderBottom: '2px solid var(--color-silver)' }}>Cost Centre</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '130px', borderBottom: '2px solid var(--color-silver)' }}>Profit Centre</th>
-                    <th className="text-left px-3 py-3 text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', width: '120px', borderBottom: '2px solid var(--color-silver)' }}>Project</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineItems.filter(item => selectedGRNs.includes(item.grnNumber)).map((item, index) => (
-                    <tr key={item.id} style={{ borderTop: index > 0 ? '1px solid var(--color-silver)' : 'none' }}>
-                      {/* 1. Item Name */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={item.itemName}
-                          disabled
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', backgroundColor: 'var(--color-cloud)', color: 'var(--color-mercury-grey)' }}
-                        />
-                      </td>
-                      {/* 2. Item Description */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={item.itemDescription}
-                          onChange={(e) => updateLineItem(item.id, 'itemDescription', e.target.value)}
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                        />
-                      </td>
-                      {/* 3. Account Code */}
-                      <td className="px-3 py-3">
-                        <select
-                          value={item.accountCode}
-                          onChange={(e) => updateLineItem(item.id, 'accountCode', e.target.value)}
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
+                <div
+                  className="overflow-x-auto"
+                  style={{ maxHeight: '500px', position: 'relative' }}
+                >
+                  <table
+                    className="w-full"
+                    style={{ minWidth: '2600px', borderCollapse: 'separate', borderSpacing: '0' }}
+                  >
+                    <thead
+                      style={{
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 20,
+                        backgroundColor: 'var(--color-cloud)',
+                      }}
+                    >
+                      <tr>
+                        <th
+                          className="text-left px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '140px',
+                            borderBottom: '2px solid var(--color-silver)',
+                            position: 'sticky',
+                            left: 0,
+                            backgroundColor: 'var(--color-cloud)',
+                            zIndex: 21,
+                          }}
                         >
-                          {accountCodes.map(acc => (
-                            <option key={acc.code} value={acc.code}>{acc.code}</option>
-                          ))}
-                        </select>
-                      </td>
-                      {/* 4. Qty */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="number"
-                          value={item.qty}
-                          onChange={(e) => updateLineItem(item.id, 'qty', parseFloat(e.target.value) || 0)}
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                        />
-                      </td>
-                      {/* 5. Rate (Unit Price) - LOCKED TO PO */}
-                      <td className="px-3 py-3" style={{ verticalAlign: 'top' }}>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            value={item.unitPrice}
-                            disabled={policyConfig.hardLockRate}
-                            onChange={(e) => updateLineItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                            className="w-full px-2 py-2 pr-8 rounded text-sm"
-                            style={{ 
-                              border: rateErrors[item.id] ? '2px solid var(--color-error)' : '1px solid var(--color-silver)', 
-                              color: 'var(--color-ink)',
-                              backgroundColor: policyConfig.hardLockRate ? 'var(--color-cloud)' : (rateErrors[item.id] ? 'var(--color-error-light)' : 'white'),
-                              cursor: policyConfig.hardLockRate ? 'not-allowed' : 'text'
+                          Item Field
+                        </th>
+                        <th
+                          className="text-left px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '200px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Item Description
+                        </th>
+                        <th
+                          className="text-left px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '120px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Account Code
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '80px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Qty
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '100px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Rate
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '120px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Base Amount
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '90px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          GST Rate
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '120px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          GST Amount
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '100px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          CGST
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '100px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          SGST
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '100px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          IGST
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '130px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Gross Amount
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '100px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          TDS Rate
+                        </th>
+                        <th
+                          className="text-left px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '110px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          TDS Section
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '120px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          TDS Amount
+                        </th>
+                        <th
+                          className="text-right px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '130px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Net Payable
+                        </th>
+                        <th
+                          className="text-left px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '130px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Cost Centre
+                        </th>
+                        <th
+                          className="text-left px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '130px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Profit Centre
+                        </th>
+                        <th
+                          className="text-left px-3 py-3 text-xs"
+                          style={{
+                            color: 'var(--color-mercury-grey)',
+                            fontWeight: '700',
+                            width: '120px',
+                            borderBottom: '2px solid var(--color-silver)',
+                          }}
+                        >
+                          Project
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lineItems
+                        .filter((item) => selectedGRNs.includes(item.grnNumber))
+                        .map((item, index) => (
+                          <tr
+                            key={item.id}
+                            style={{
+                              borderTop: index > 0 ? '1px solid var(--color-silver)' : 'none',
+                              backgroundColor: tdsLineErrors[item.id]
+                                ? 'var(--color-error-light)'
+                                : 'transparent',
                             }}
-                            title={policyConfig.hardLockRate ? 'Rate locked to PO. To change rate, amend the PO or request an exception.' : ''}
-                          />
-                          {policyConfig.hardLockRate && (
-                            <Lock className="absolute right-2 top-2.5 w-4 h-4" style={{ color: 'var(--color-mercury-grey)' }} />
-                          )}
-                          {item.poRate !== undefined && (
-                            <div className="flex items-center justify-between mt-1">
-                              <div className="flex items-center gap-1">
-                                <Info className="w-3 h-3" style={{ color: 'var(--color-mercury-grey)' }} />
-                                <span className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                                  PO: ₹{item.poRate.toFixed(2)}
-                                </span>
-                              </div>
-                              {item.unitPrice > item.poRate && (
-                                <span className="text-xs" style={{ color: 'var(--color-error)', fontWeight: '600' }}>
-                                  +{(((item.unitPrice - item.poRate) / item.poRate) * 100).toFixed(1)}%
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          {rateErrors[item.id] && (
-                            <div className="mt-2 p-2 rounded text-xs" style={{ backgroundColor: 'var(--color-error-light)', border: '1px solid var(--color-error)' }}>
-                              <div className="flex items-start gap-1 mb-2">
-                                <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-error)' }} />
-                                <span style={{ color: 'var(--color-error)' }}>{rateErrors[item.id]}</span>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  setExceptionLineItem(item);
-                                  setExceptionModalOpen(true);
+                          >
+                            {/* 1. Item Name */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={item.itemName}
+                                disabled
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  backgroundColor: 'var(--color-cloud)',
+                                  color: 'var(--color-mercury-grey)',
                                 }}
-                                className="w-full px-2 py-1.5 rounded text-xs transition-colors"
-                                style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF', fontWeight: '600' }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)'}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-teal)'}
-                              >
-                                Request Exception Approval
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      {/* 6. Base Amount */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={`₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
-                          disabled
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', backgroundColor: 'var(--color-cloud)', color: 'var(--color-ink)', fontWeight: '600' }}
-                        />
-                      </td>
-                      {/* 7. GST Rate */}
-                      <td className="px-3 py-3">
-                        <select
-                          value={item.gstPercent}
-                          onChange={(e) => updateLineItem(item.id, 'gstPercent', parseFloat(e.target.value))}
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                        >
-                          <option value={0}>0%</option>
-                          <option value={5}>5%</option>
-                          <option value={12}>12%</option>
-                          <option value={18}>18%</option>
-                          <option value={28}>28%</option>
-                        </select>
-                      </td>
-                      {/* 8. GST Amount (Total) */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={`₹${item.gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
-                          disabled
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', backgroundColor: '#FEF3C7', color: '#92400E', fontWeight: '600' }}
-                        />
-                      </td>
-                      {/* 9. CGST */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={`₹${item.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
-                          disabled
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', backgroundColor: '#FEF3C7', color: '#92400E', fontWeight: '600' }}
-                        />
-                      </td>
-                      {/* 10. SGST */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={`₹${item.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
-                          disabled
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', backgroundColor: '#FEF3C7', color: '#92400E', fontWeight: '600' }}
-                        />
-                      </td>
-                      {/* 11. IGST */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={`₹${item.igst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
-                          disabled
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', backgroundColor: '#FEF3C7', color: '#92400E', fontWeight: '600' }}
-                        />
-                      </td>
-                      {/* 12. Gross Amount */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={`₹${item.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
-                          disabled
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', backgroundColor: 'var(--color-teal)10', color: 'var(--color-teal)', fontWeight: '700' }}
-                        />
-                      </td>
-                      {/* 13. TDS Rate */}
-                      <td className="px-3 py-3">
-                        <select
-                          value={item.tdsPercent}
-                          onChange={(e) => updateLineItem(item.id, 'tdsPercent', parseFloat(e.target.value))}
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                          title="Select TDS rate - Section will be auto-suggested"
-                        >
-                          <option value={0}>0%</option>
-                          <option value={0.1}>0.1%</option>
-                          <option value={1}>1%</option>
-                          <option value={2}>2%</option>
-                          <option value={5}>5%</option>
-                          <option value={10}>10%</option>
-                          <option value={20}>20%</option>
-                        </select>
-                      </td>
-                      {/* 14. TDS Section */}
-                      <td className="px-3 py-3">
-                        <select
-                          value={item.tdsSection}
-                          onChange={(e) => updateLineItem(item.id, 'tdsSection', e.target.value)}
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                          title="TDS Section determines the nature of payment and applicable rate"
-                        >
-                          <option value="194C">194C - Contractors</option>
-                          <option value="194J">194J - Professional Services</option>
-                          <option value="194H">194H - Commission/Brokerage</option>
-                          <option value="194I">194I - Rent</option>
-                          <option value="194A">194A - Interest</option>
-                          <option value="194Q">194Q - Purchase of Goods</option>
-                          <option value="194O">194O - E-commerce</option>
-                        </select>
-                      </td>
-                      {/* 15. TDS Amount */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={`₹${item.tds.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
-                          disabled
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', backgroundColor: 'var(--color-error-light)', color: '#EF4444', fontWeight: '600' }}
-                        />
-                      </td>
-                      {/* 16. Net Payable */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={`₹${item.netPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
-                          disabled
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', backgroundColor: '#DCFCE7', color: '#166534', fontWeight: '700' }}
-                        />
-                      </td>
-                      {/* 17. Cost Centre */}
-                      <td className="px-3 py-3">
-                        <select
-                          value={item.costCentre}
-                          onChange={(e) => updateLineItem(item.id, 'costCentre', e.target.value)}
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                        >
-                          {costCentres.map(cc => (
-                            <option key={cc} value={cc}>{cc}</option>
-                          ))}
-                        </select>
-                      </td>
-                      {/* 18. Profit Centre */}
-                      <td className="px-3 py-3">
-                        <select
-                          value={item.profitCentre}
-                          onChange={(e) => updateLineItem(item.id, 'profitCentre', e.target.value)}
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                        >
-                          {profitCentres.map(pc => (
-                            <option key={pc} value={pc}>{pc}</option>
-                          ))}
-                        </select>
-                      </td>
-                      {/* 19. Project */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={item.project}
-                          onChange={(e) => updateLineItem(item.id, 'project', e.target.value)}
-                          className="w-full px-2 py-2 rounded text-sm"
-                          style={{ border: '1px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot style={{ backgroundColor: 'var(--color-cloud)', borderTop: '2px solid var(--color-silver)' }}>
-                  <tr>
-                    <td colSpan={5} className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
-                      TOTALS:
-                    </td>
-                    {/* Base Amount */}
-                    <td className="px-3 py-3">
-                      <div className="px-2 py-2 rounded text-sm" style={{ backgroundColor: '#FFFFFF', border: '2px solid var(--color-teal)', color: 'var(--color-teal)', fontWeight: '700', textAlign: 'center' }}>
-                        ₹{totals.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3"></td>
-                    {/* GST Amount */}
-                    <td className="px-3 py-3">
-                      <div className="px-2 py-2 rounded text-sm" style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontWeight: '700', textAlign: 'center' }}>
-                        ₹{totals.gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
-                    </td>
-                    {/* CGST */}
-                    <td className="px-3 py-3">
-                      <div className="px-2 py-2 rounded text-sm" style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontWeight: '700', textAlign: 'center' }}>
-                        ₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
-                    </td>
-                    {/* SGST */}
-                    <td className="px-3 py-3">
-                      <div className="px-2 py-2 rounded text-sm" style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontWeight: '700', textAlign: 'center' }}>
-                        ₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
-                    </td>
-                    {/* IGST */}
-                    <td className="px-3 py-3">
-                      <div className="px-2 py-2 rounded text-sm" style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontWeight: '700', textAlign: 'center' }}>
-                        ₹{totals.igst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
-                    </td>
-                    {/* Gross Amount */}
-                    <td className="px-3 py-3">
-                      <div className="px-2 py-2 rounded text-sm" style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF', fontWeight: '700', textAlign: 'center' }}>
-                        ₹{totals.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
-                    </td>
-                    {/* TDS Rate - Empty */}
-                    <td className="px-3 py-3"></td>
-                    {/* TDS Section - Empty */}
-                    <td className="px-3 py-3"></td>
-                    {/* TDS Amount */}
-                    <td className="px-3 py-3">
-                      <div className="px-2 py-2 rounded text-sm" style={{ backgroundColor: 'var(--color-error-light)', color: '#EF4444', fontWeight: '700', textAlign: 'center' }}>
-                        ₹{totals.tds.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
-                    </td>
-                    {/* Net Payable */}
-                    <td className="px-3 py-3">
-                      <div className="px-2 py-2 rounded text-sm" style={{ backgroundColor: '#166534', color: '#FFFFFF', fontWeight: '700', textAlign: 'center' }}>
-                        ₹{totals.netPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
-                    </td>
-                    <td colSpan={3}></td>
-                  </tr>
-                  
-                  {/* Tax Summary Rows */}
-                  <tr style={{ borderTop: '1px solid var(--color-silver)' }}>
-                    <td colSpan={6} className="px-3 py-3 text-right" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
-                      Taxable Amount:
-                    </td>
-                    <td colSpan={13} className="px-3 py-3">
-                      <span style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
-                        ₹{totals.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                  </tr>
-                  
-                  <tr>
-                    <td colSpan={6} className="px-3 py-3 text-right" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
-                      Total CGST:
-                    </td>
-                    <td colSpan={13} className="px-3 py-3">
-                      <span style={{ color: '#92400E', fontWeight: '700' }}>
-                        ₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                  </tr>
-                  
-                  <tr>
-                    <td colSpan={6} className="px-3 py-3 text-right" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
-                      Total SGST:
-                    </td>
-                    <td colSpan={13} className="px-3 py-3">
-                      <span style={{ color: '#92400E', fontWeight: '700' }}>
-                        ₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                  </tr>
-                  
-                  <tr>
-                    <td colSpan={6} className="px-3 py-3 text-right" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
-                      Total IGST:
-                    </td>
-                    <td colSpan={13} className="px-3 py-3">
-                      <span style={{ color: '#92400E', fontWeight: '700' }}>
-                        ₹{totals.igst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                  </tr>
-                  
-                  <tr>
-                    <td colSpan={6} className="px-3 py-3 text-right" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
-                      Total GST:
-                    </td>
-                    <td colSpan={13} className="px-3 py-3">
-                      <span style={{ color: '#92400E', fontWeight: '700' }}>
-                        ₹{totals.gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                  </tr>
-                  
-                  <tr style={{ borderTop: '2px solid var(--color-silver)' }}>
-                    <td colSpan={6} className="px-3 py-3 text-right" style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}>
-                      Gross Invoice Amount:
-                    </td>
-                    <td colSpan={13} className="px-3 py-3">
-                      <span style={{ color: 'var(--color-teal)', fontWeight: '700', fontSize: '18px' }}>
-                        ₹{totals.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                  </tr>
-                  
-                  <tr style={{ borderTop: '1px solid var(--color-silver)' }}>
-                    <td colSpan={6} className="px-3 py-3 text-right" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
-                      Less: TDS:
-                    </td>
-                    <td colSpan={13} className="px-3 py-3">
-                      <span style={{ color: '#EF4444', fontWeight: '700' }}>
-                        -₹{totals.tds.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                  </tr>
-                  
-                  {retentionRequired.length > 0 && Object.values(retentionAmounts).reduce((sum, val) => sum + val, 0) > 0 && (
-                    <>
-                      {retentionRequired.map(type => (
-                        retentionAmounts[type as keyof typeof retentionAmounts] > 0 && (
-                          <tr key={type}>
-                            <td colSpan={6} className="px-3 py-3 text-right" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
-                              Less: {type} Retention:
+                              />
                             </td>
-                            <td colSpan={13} className="px-3 py-3">
-                              <span style={{ color: '#EF4444', fontWeight: '700' }}>
-                                -₹{retentionAmounts[type as keyof typeof retentionAmounts].toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                              </span>
+                            {/* 2. Item Description */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={item.itemDescription}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, 'itemDescription', e.target.value)
+                                }
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
+                              />
+                            </td>
+                            {/* 3. Account Code */}
+                            <td className="px-3 py-3">
+                              <select
+                                value={item.accountCode}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, 'accountCode', e.target.value)
+                                }
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
+                              >
+                                {accountCodes.map((acc) => (
+                                  <option key={acc.code} value={acc.code}>
+                                    {acc.code}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            {/* 4. Qty */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="number"
+                                value={item.qty}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, 'qty', parseFloat(e.target.value) || 0)
+                                }
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
+                              />
+                            </td>
+                            {/* 5. Rate (Unit Price) - LOCKED TO PO */}
+                            <td className="px-3 py-3" style={{ verticalAlign: 'top' }}>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  value={item.unitPrice}
+                                  disabled={policyConfig.hardLockRate}
+                                  onChange={(e) =>
+                                    updateLineItem(
+                                      item.id,
+                                      'unitPrice',
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                  className="w-full px-2 py-2 pr-8 rounded text-sm"
+                                  style={{
+                                    border: rateErrors[item.id]
+                                      ? '2px solid var(--color-error)'
+                                      : '1px solid var(--color-silver)',
+                                    color: 'var(--color-ink)',
+                                    backgroundColor: policyConfig.hardLockRate
+                                      ? 'var(--color-cloud)'
+                                      : rateErrors[item.id]
+                                        ? 'var(--color-error-light)'
+                                        : 'white',
+                                    cursor: policyConfig.hardLockRate ? 'not-allowed' : 'text',
+                                  }}
+                                  title={
+                                    policyConfig.hardLockRate
+                                      ? 'Rate locked to PO. To change rate, amend the PO or request an exception.'
+                                      : ''
+                                  }
+                                />
+                                {policyConfig.hardLockRate && (
+                                  <Lock
+                                    className="absolute right-2 top-2.5 w-4 h-4"
+                                    style={{ color: 'var(--color-mercury-grey)' }}
+                                  />
+                                )}
+                                {item.poRate !== undefined && (
+                                  <div className="flex items-center justify-between mt-1">
+                                    <div className="flex items-center gap-1">
+                                      <Info
+                                        className="w-3 h-3"
+                                        style={{ color: 'var(--color-mercury-grey)' }}
+                                      />
+                                      <span
+                                        className="text-xs"
+                                        style={{ color: 'var(--color-mercury-grey)' }}
+                                      >
+                                        PO: ₹{item.poRate.toFixed(2)}
+                                      </span>
+                                    </div>
+                                    {item.unitPrice > item.poRate && (
+                                      <span
+                                        className="text-xs"
+                                        style={{ color: 'var(--color-error)', fontWeight: '600' }}
+                                      >
+                                        +
+                                        {(
+                                          ((item.unitPrice - item.poRate) / item.poRate) *
+                                          100
+                                        ).toFixed(1)}
+                                        %
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                {rateErrors[item.id] && (
+                                  <div
+                                    className="mt-2 p-2 rounded text-xs"
+                                    style={{
+                                      backgroundColor: 'var(--color-error-light)',
+                                      border: '1px solid var(--color-error)',
+                                    }}
+                                  >
+                                    <div className="flex items-start gap-1 mb-2">
+                                      <AlertCircle
+                                        className="w-3 h-3 flex-shrink-0 mt-0.5"
+                                        style={{ color: 'var(--color-error)' }}
+                                      />
+                                      <span style={{ color: 'var(--color-error)' }}>
+                                        {rateErrors[item.id]}
+                                      </span>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        setExceptionLineItem(item);
+                                        setExceptionModalOpen(true);
+                                      }}
+                                      className="w-full px-2 py-1.5 rounded text-xs transition-colors"
+                                      style={{
+                                        backgroundColor: 'var(--color-teal)',
+                                        color: '#FFFFFF',
+                                        fontWeight: '600',
+                                      }}
+                                      onMouseEnter={(e) =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          'var(--color-teal-dark)')
+                                      }
+                                      onMouseLeave={(e) =>
+                                        (e.currentTarget.style.backgroundColor =
+                                          'var(--color-teal)')
+                                      }
+                                    >
+                                      Request Exception Approval
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            {/* 6. Base Amount */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={`₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                                disabled
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  backgroundColor: 'var(--color-cloud)',
+                                  color: 'var(--color-ink)',
+                                  fontWeight: '600',
+                                }}
+                              />
+                            </td>
+                            {/* 7. GST Rate */}
+                            <td className="px-3 py-3">
+                              <select
+                                value={item.gstPercent}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, 'gstPercent', parseFloat(e.target.value))
+                                }
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
+                              >
+                                <option value={0}>0%</option>
+                                <option value={5}>5%</option>
+                                <option value={12}>12%</option>
+                                <option value={18}>18%</option>
+                                <option value={28}>28%</option>
+                              </select>
+                            </td>
+                            {/* 8. GST Amount (Total) */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={`₹${item.gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                                disabled
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  backgroundColor: '#FEF3C7',
+                                  color: '#92400E',
+                                  fontWeight: '600',
+                                }}
+                              />
+                            </td>
+                            {/* 9. CGST */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={`₹${item.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                                disabled
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  backgroundColor: '#FEF3C7',
+                                  color: '#92400E',
+                                  fontWeight: '600',
+                                }}
+                              />
+                            </td>
+                            {/* 10. SGST */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={`₹${item.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                                disabled
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  backgroundColor: '#FEF3C7',
+                                  color: '#92400E',
+                                  fontWeight: '600',
+                                }}
+                              />
+                            </td>
+                            {/* 11. IGST */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={`₹${item.igst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                                disabled
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  backgroundColor: '#FEF3C7',
+                                  color: '#92400E',
+                                  fontWeight: '600',
+                                }}
+                              />
+                            </td>
+                            {/* 12. Gross Amount */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={`₹${item.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                                disabled
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  backgroundColor: 'var(--color-teal)10',
+                                  color: 'var(--color-teal)',
+                                  fontWeight: '700',
+                                }}
+                              />
+                            </td>
+                            {/* 13. TDS Rate */}
+                            <td className="px-3 py-3">
+                              <select
+                                value={item.tdsPercent}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, 'tdsPercent', parseFloat(e.target.value))
+                                }
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
+                                title="Select TDS rate from configured TDS master sections"
+                              >
+                                <option value={0}>0%</option>
+                                {tdsRateOptions.map((rate) => (
+                                  <option key={rate} value={rate}>
+                                    {rate}%
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            {/* 14. TDS Section */}
+                            <td className="px-3 py-3">
+                              <select
+                                value={item.tdsSection}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, 'tdsSection', e.target.value)
+                                }
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
+                                title="TDS Section determines the nature of payment and applicable rate"
+                              >
+                                <option value="">Select section</option>
+                                {activeTdsSections.map((section) => (
+                                  <option key={section.id} value={section.sectionCode}>
+                                    {section.sectionCode} - {section.sectionName}
+                                  </option>
+                                ))}
+                              </select>
+                              {tdsLineErrors[item.id] && (
+                                <p
+                                  className="mt-1 text-xs"
+                                  style={{ color: 'var(--color-error-dark)' }}
+                                >
+                                  {tdsLineErrors[item.id]}
+                                </p>
+                              )}
+                            </td>
+                            {/* 15. TDS Amount */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={`₹${item.tds.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                                disabled
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  backgroundColor: 'var(--color-error-light)',
+                                  color: '#EF4444',
+                                  fontWeight: '600',
+                                }}
+                              />
+                            </td>
+                            {/* 16. Net Payable */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={`₹${item.netPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                                disabled
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  backgroundColor: '#DCFCE7',
+                                  color: '#166534',
+                                  fontWeight: '700',
+                                }}
+                              />
+                            </td>
+                            {/* 17. Cost Centre */}
+                            <td className="px-3 py-3">
+                              <select
+                                value={item.costCentre}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, 'costCentre', e.target.value)
+                                }
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
+                              >
+                                {costCentres.map((cc) => (
+                                  <option key={cc} value={cc}>
+                                    {cc}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            {/* 18. Profit Centre */}
+                            <td className="px-3 py-3">
+                              <select
+                                value={item.profitCentre}
+                                onChange={(e) =>
+                                  updateLineItem(item.id, 'profitCentre', e.target.value)
+                                }
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
+                              >
+                                {profitCentres.map((pc) => (
+                                  <option key={pc} value={pc}>
+                                    {pc}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            {/* 19. Project */}
+                            <td className="px-3 py-3">
+                              <input
+                                type="text"
+                                value={item.project}
+                                onChange={(e) => updateLineItem(item.id, 'project', e.target.value)}
+                                className="w-full px-2 py-2 rounded text-sm"
+                                style={{
+                                  border: '1px solid var(--color-silver)',
+                                  color: 'var(--color-ink)',
+                                }}
+                              />
                             </td>
                           </tr>
-                        )
-                      ))}
+                        ))}
+                    </tbody>
+                    <tfoot
+                      style={{
+                        backgroundColor: 'var(--color-cloud)',
+                        borderTop: '2px solid var(--color-silver)',
+                      }}
+                    >
                       <tr>
-                        <td colSpan={6} className="px-3 py-3 text-right" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
-                          Total Retention:
+                        <td
+                          colSpan={5}
+                          className="px-3 py-3 text-right"
+                          style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                        >
+                          TOTALS:
+                        </td>
+                        {/* Base Amount */}
+                        <td className="px-3 py-3">
+                          <div
+                            className="px-2 py-2 rounded text-sm"
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              border: '2px solid var(--color-teal)',
+                              color: 'var(--color-teal)',
+                              fontWeight: '700',
+                              textAlign: 'center',
+                            }}
+                          >
+                            ₹{totals.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3"></td>
+                        {/* GST Amount */}
+                        <td className="px-3 py-3">
+                          <div
+                            className="px-2 py-2 rounded text-sm"
+                            style={{
+                              backgroundColor: '#FEF3C7',
+                              color: '#92400E',
+                              fontWeight: '700',
+                              textAlign: 'center',
+                            }}
+                          >
+                            ₹{totals.gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </div>
+                        </td>
+                        {/* CGST */}
+                        <td className="px-3 py-3">
+                          <div
+                            className="px-2 py-2 rounded text-sm"
+                            style={{
+                              backgroundColor: '#FEF3C7',
+                              color: '#92400E',
+                              fontWeight: '700',
+                              textAlign: 'center',
+                            }}
+                          >
+                            ₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </div>
+                        </td>
+                        {/* SGST */}
+                        <td className="px-3 py-3">
+                          <div
+                            className="px-2 py-2 rounded text-sm"
+                            style={{
+                              backgroundColor: '#FEF3C7',
+                              color: '#92400E',
+                              fontWeight: '700',
+                              textAlign: 'center',
+                            }}
+                          >
+                            ₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </div>
+                        </td>
+                        {/* IGST */}
+                        <td className="px-3 py-3">
+                          <div
+                            className="px-2 py-2 rounded text-sm"
+                            style={{
+                              backgroundColor: '#FEF3C7',
+                              color: '#92400E',
+                              fontWeight: '700',
+                              textAlign: 'center',
+                            }}
+                          >
+                            ₹{totals.igst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </div>
+                        </td>
+                        {/* Gross Amount */}
+                        <td className="px-3 py-3">
+                          <div
+                            className="px-2 py-2 rounded text-sm"
+                            style={{
+                              backgroundColor: 'var(--color-teal)',
+                              color: '#FFFFFF',
+                              fontWeight: '700',
+                              textAlign: 'center',
+                            }}
+                          >
+                            ₹
+                            {totals.grossAmount.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </div>
+                        </td>
+                        {/* TDS Rate - Empty */}
+                        <td className="px-3 py-3"></td>
+                        {/* TDS Section - Empty */}
+                        <td className="px-3 py-3"></td>
+                        {/* TDS Amount */}
+                        <td className="px-3 py-3">
+                          <div
+                            className="px-2 py-2 rounded text-sm"
+                            style={{
+                              backgroundColor: 'var(--color-error-light)',
+                              color: '#EF4444',
+                              fontWeight: '700',
+                              textAlign: 'center',
+                            }}
+                          >
+                            ₹{totals.tds.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </div>
+                        </td>
+                        {/* Net Payable */}
+                        <td className="px-3 py-3">
+                          <div
+                            className="px-2 py-2 rounded text-sm"
+                            style={{
+                              backgroundColor: '#166534',
+                              color: '#FFFFFF',
+                              fontWeight: '700',
+                              textAlign: 'center',
+                            }}
+                          >
+                            ₹
+                            {totals.netPayable.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </div>
+                        </td>
+                        <td colSpan={3}></td>
+                      </tr>
+
+                      {/* Tax Summary Rows */}
+                      <tr style={{ borderTop: '1px solid var(--color-silver)' }}>
+                        <td
+                          colSpan={6}
+                          className="px-3 py-3 text-right"
+                          style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                        >
+                          Taxable Amount:
                         </td>
                         <td colSpan={13} className="px-3 py-3">
-                          <span style={{ color: '#EF4444', fontWeight: '700' }}>
-                            -₹{Object.values(retentionAmounts).reduce((sum, val) => sum + val, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          <span style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
+                            ₹{totals.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </span>
                         </td>
                       </tr>
-                    </>
-                  )}
-                  
-                  <tr style={{ borderTop: '2px solid #166534', backgroundColor: '#166534' }}>
-                    <td colSpan={6} className="px-3 py-4 text-right" style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '18px' }}>
-                      NET PAYABLE AMOUNT:
-                    </td>
-                    <td colSpan={13} className="px-3 py-4">
-                      <span style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '20px' }}>
-                        ₹{totals.netPayable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
 
-            {/* TDS Summary Section */}
-            {lineItems.filter(item => selectedGRNs.includes(item.grnNumber) && item.tdsPercent > 0).length > 0 && (
-              <div className="mt-6 p-5 rounded-xl" style={{ backgroundColor: '#FEF3F2', border: '2px solid #FCA5A5' }}>
-                <div className="flex items-start gap-3 mb-4">
-                  <Receipt className="w-5 h-5 mt-0.5" style={{ color: '#EF4444' }} />
-                  <div>
-                    <h3 className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>TDS Summary by Section</h3>
-                    <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>Tax deducted at source breakdown for compliance reporting</p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {Array.from(new Set(lineItems.filter(item => selectedGRNs.includes(item.grnNumber) && item.tdsPercent > 0).map(item => item.tdsSection))).map(section => {
-                    const sectionItems = lineItems.filter(item => selectedGRNs.includes(item.grnNumber) && item.tdsSection === section && item.tdsPercent > 0);
-                    const sectionTDS = sectionItems.reduce((sum, item) => sum + item.tds, 0);
-                    const sectionBase = sectionItems.reduce((sum, item) => sum + item.amount, 0);
-                    const avgRate = sectionItems.length > 0 ? sectionItems[0].tdsPercent : 0;
-                    
-                    const sectionNames: {[key: string]: string} = {
-                      '194C': 'Contractors',
-                      '194J': 'Professional Services',
-                      '194H': 'Commission',
-                      '194I': 'Rent',
-                      '194A': 'Interest',
-                      '194Q': 'Purchase of Goods',
-                      '194O': 'E-commerce'
-                    };
-                    
-                    return (
-                      <div key={section} className="p-3 rounded-lg" style={{ backgroundColor: '#FFFFFF', border: '1px solid #FCA5A5' }}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--color-error-light)', color: '#991B1B', fontWeight: '700' }}>
-                            {section}
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="px-3 py-3 text-right"
+                          style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                        >
+                          Total CGST:
+                        </td>
+                        <td colSpan={13} className="px-3 py-3">
+                          <span style={{ color: '#92400E', fontWeight: '700' }}>
+                            ₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </span>
-                          <span className="text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>
-                            {avgRate}%
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="px-3 py-3 text-right"
+                          style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                        >
+                          Total SGST:
+                        </td>
+                        <td colSpan={13} className="px-3 py-3">
+                          <span style={{ color: '#92400E', fontWeight: '700' }}>
+                            ₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </span>
-                        </div>
-                        <p className="text-xs mb-2" style={{ color: 'var(--color-mercury-grey)' }}>{sectionNames[section]}</p>
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span style={{ color: 'var(--color-mercury-grey)' }}>Base Amount:</span>
-                            <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>₹{sectionBase.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span style={{ color: 'var(--color-mercury-grey)' }}>TDS Amount:</span>
-                            <span style={{ color: '#EF4444', fontWeight: '700' }}>₹{sectionTDS.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="px-3 py-3 text-right"
+                          style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                        >
+                          Total IGST:
+                        </td>
+                        <td colSpan={13} className="px-3 py-3">
+                          <span style={{ color: '#92400E', fontWeight: '700' }}>
+                            ₹{totals.igst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </span>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="px-3 py-3 text-right"
+                          style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                        >
+                          Total GST:
+                        </td>
+                        <td colSpan={13} className="px-3 py-3">
+                          <span style={{ color: '#92400E', fontWeight: '700' }}>
+                            ₹{totals.gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </span>
+                        </td>
+                      </tr>
+
+                      <tr style={{ borderTop: '2px solid var(--color-silver)' }}>
+                        <td
+                          colSpan={6}
+                          className="px-3 py-3 text-right"
+                          style={{ color: 'var(--color-ink)', fontWeight: '700', fontSize: '16px' }}
+                        >
+                          Gross Invoice Amount:
+                        </td>
+                        <td colSpan={13} className="px-3 py-3">
+                          <span
+                            style={{
+                              color: 'var(--color-teal)',
+                              fontWeight: '700',
+                              fontSize: '18px',
+                            }}
+                          >
+                            ₹
+                            {totals.grossAmount.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                        </td>
+                      </tr>
+
+                      <tr style={{ borderTop: '1px solid var(--color-silver)' }}>
+                        <td
+                          colSpan={6}
+                          className="px-3 py-3 text-right"
+                          style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                        >
+                          Less: TDS:
+                        </td>
+                        <td colSpan={13} className="px-3 py-3">
+                          <span style={{ color: '#EF4444', fontWeight: '700' }}>
+                            -₹{totals.tds.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </span>
+                        </td>
+                      </tr>
+
+                      {retentionRequired.length > 0 &&
+                        Object.values(retentionAmounts).reduce((sum, val) => sum + val, 0) > 0 && (
+                          <>
+                            {retentionRequired.map(
+                              (type) =>
+                                retentionAmounts[type as keyof typeof retentionAmounts] > 0 && (
+                                  <tr key={type}>
+                                    <td
+                                      colSpan={6}
+                                      className="px-3 py-3 text-right"
+                                      style={{
+                                        color: 'var(--color-mercury-grey)',
+                                        fontWeight: '600',
+                                      }}
+                                    >
+                                      Less: {type} Retention:
+                                    </td>
+                                    <td colSpan={13} className="px-3 py-3">
+                                      <span style={{ color: '#EF4444', fontWeight: '700' }}>
+                                        -₹
+                                        {retentionAmounts[
+                                          type as keyof typeof retentionAmounts
+                                        ].toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                )
+                            )}
+                            <tr>
+                              <td
+                                colSpan={6}
+                                className="px-3 py-3 text-right"
+                                style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                              >
+                                Total Retention:
+                              </td>
+                              <td colSpan={13} className="px-3 py-3">
+                                <span style={{ color: '#EF4444', fontWeight: '700' }}>
+                                  -₹
+                                  {Object.values(retentionAmounts)
+                                    .reduce((sum, val) => sum + val, 0)
+                                    .toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </span>
+                              </td>
+                            </tr>
+                          </>
+                        )}
+
+                      <tr style={{ borderTop: '2px solid #166534', backgroundColor: '#166534' }}>
+                        <td
+                          colSpan={6}
+                          className="px-3 py-4 text-right"
+                          style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '18px' }}
+                        >
+                          NET PAYABLE AMOUNT:
+                        </td>
+                        <td colSpan={13} className="px-3 py-4">
+                          <span style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '20px' }}>
+                            ₹
+                            {totals.netPayable.toLocaleString('en-IN', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* Retention Capture Section */}
-        {selectedPO && (selectedGRNs.length > 0 || availableGRNs.filter(grn => grn.po === selectedPO).length === 0) && (
-          <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>Retention Management</h2>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Contract-based retention for this invoice</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={retentionRequired.length > 0}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        // Default to enabling at least one type
-                      } else {
-                        setRetentionRequired([]);
-                        setRetentionAmounts({ GST: 0, PF: 0, ESI: 0, Other: 0 });
-                      }
-                    }}
-                    className="w-5 h-5"
-                    style={{ accentColor: 'var(--color-teal)' }}
-                  />
-                  <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Retention Applicable</span>
-                </label>
-              </div>
-            </div>
-
-            {retentionRequired.length > 0 ? (
-              <div className="space-y-6">
-                {/* Retention Type Selection */}
-                <div>
-                  <label className="block text-sm mb-3" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
-                    Retention Type
-                  </label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {['GST', 'PF', 'ESI', 'Other'].map(type => (
-                      <label
-                        key={type}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all"
-                        style={{
-                          border: `2px solid ${retentionRequired.includes(type) ? 'var(--color-teal)' : 'var(--color-silver)'}`,
-                          backgroundColor: retentionRequired.includes(type) ? 'var(--color-teal)10' : '#FFFFFF'
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={retentionRequired.includes(type)}
-                          onChange={() => handleRetentionToggle(type)}
-                          className="w-5 h-5"
-                          style={{ accentColor: 'var(--color-teal)' }}
-                        />
-                        <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>{type}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Retention Amount Fields */}
-                {retentionRequired.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {retentionRequired.map(type => (
-                      <div key={type}>
-                        <label className="block text-sm mb-2" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
-                          {type} Retention Amount (₹)
-                        </label>
-                        <input
-                          type="number"
-                          value={retentionAmounts[type as keyof typeof retentionAmounts] || ''}
-                          onChange={(e) => setRetentionAmounts({
-                            ...retentionAmounts,
-                            [type]: parseFloat(e.target.value) || 0
-                          })}
-                          placeholder="0.00"
-                          className="w-full px-4 py-3 rounded-lg text-base"
-                          style={{ border: '2px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                        />
+                {/* TDS Summary Section */}
+                {lineItems.filter(
+                  (item) => selectedGRNs.includes(item.grnNumber) && item.tdsPercent > 0
+                ).length > 0 && (
+                  <div
+                    className="mt-6 p-5 rounded-xl"
+                    style={{ backgroundColor: '#FEF3F2', border: '2px solid #FCA5A5' }}
+                  >
+                    <div className="flex items-start gap-3 mb-4">
+                      <Receipt className="w-5 h-5 mt-0.5" style={{ color: '#EF4444' }} />
+                      <div>
+                        <h3
+                          className="text-sm mb-1"
+                          style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                        >
+                          TDS Summary by Section
+                        </h3>
+                        <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                          Tax deducted at source breakdown for compliance reporting
+                        </p>
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {Array.from(
+                        new Set(
+                          lineItems
+                            .filter(
+                              (item) => selectedGRNs.includes(item.grnNumber) && item.tdsPercent > 0
+                            )
+                            .map((item) => item.tdsSection)
+                        )
+                      ).map((section) => {
+                        const sectionItems = lineItems.filter(
+                          (item) =>
+                            selectedGRNs.includes(item.grnNumber) &&
+                            item.tdsSection === section &&
+                            item.tdsPercent > 0
+                        );
+                        const sectionTDS = sectionItems.reduce((sum, item) => sum + item.tds, 0);
+                        const sectionBase = sectionItems.reduce(
+                          (sum, item) => sum + item.amount,
+                          0
+                        );
+                        const avgRate = sectionItems.length > 0 ? sectionItems[0].tdsPercent : 0;
+
+                        return (
+                          <div
+                            key={section}
+                            className="p-3 rounded-lg"
+                            style={{ backgroundColor: '#FFFFFF', border: '1px solid #FCA5A5' }}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span
+                                className="text-xs px-2 py-1 rounded"
+                                style={{
+                                  backgroundColor: 'var(--color-error-light)',
+                                  color: '#991B1B',
+                                  fontWeight: '700',
+                                }}
+                              >
+                                {section}
+                              </span>
+                              <span
+                                className="text-xs"
+                                style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                              >
+                                {avgRate}%
+                              </span>
+                            </div>
+                            <p
+                              className="text-xs mb-2"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              {tdsSectionNameMap[section] || 'Configured section'}
+                            </p>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span style={{ color: 'var(--color-mercury-grey)' }}>
+                                  Base Amount:
+                                </span>
+                                <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                                  ₹
+                                  {sectionBase.toLocaleString('en-IN', {
+                                    minimumFractionDigits: 2,
+                                  })}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-xs">
+                                <span style={{ color: 'var(--color-mercury-grey)' }}>
+                                  TDS Amount:
+                                </span>
+                                <span style={{ color: '#EF4444', fontWeight: '700' }}>
+                                  ₹
+                                  {sectionTDS.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 
-                {/* Retention Summary */}
-                {Object.values(retentionAmounts).reduce((sum, val) => sum + val, 0) > 0 && (
-                  <div className="p-4 rounded-lg" style={{ backgroundColor: '#FEF3C7', border: '1px solid #F59E0B' }}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Total Retention Deducted:</span>
-                      <span className="text-lg" style={{ color: '#92400E', fontWeight: '700' }}>
-                        -₹{Object.values(retentionAmounts).reduce((sum, val) => sum + val, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                <div className="mt-6 grid gap-4">
+                  <TDSThresholdTracker
+                    lineItems={lineItems.map(
+                      (line) =>
+                        ({
+                          id: line.id,
+                          qty: line.qty,
+                          rate: line.unitPrice,
+                          taxableAmount: line.amount,
+                          tdsSection: line.tdsSection || 'None',
+                          tdsRate: line.tdsPercent || 0,
+                          tdsAmount: line.tds || 0,
+                          netPayable: line.netPayable || 0,
+                          description: line.itemDescription || line.itemName || '',
+                        }) as any
+                    )}
+                  />
+                  <JournalEntryPreview
+                    compact
+                    formValues={{
+                      header: {
+                        invoiceType,
+                        invoiceNumber,
+                        invoiceDate,
+                        rcm: reverseChargeApplicable,
+                        exempt: false,
+                        sez: isSEZ,
+                      } as any,
+                      vendor: {
+                        id: selectedVendor || 'vendor',
+                        name: selectedVendor || '',
+                        vendorType: 'company',
+                        panValid: true,
+                        lowerCert: false,
+                        lowerRate: 0,
+                        tdsExempt: false,
+                        itrFiled: true,
+                        gstReg: 'reg',
+                      } as any,
+                      lineItems: lineItems.map((line) => ({
+                        id: line.id,
+                        description: line.itemDescription || line.itemName || '',
+                        qty: line.qty,
+                        rate: line.unitPrice,
+                        taxableAmount: line.amount,
+                        gstRate: line.gstPercent,
+                        igst: line.igst,
+                        cgst: line.cgst,
+                        sgst: line.sgst,
+                        tdsSection: line.tdsSection || 'None',
+                        tdsRate: line.tdsPercent || 0,
+                        tdsAmount: line.tds || 0,
+                        netPayable: line.netPayable || 0,
+                        glCode: line.accountCode || '',
+                        costCentre: line.costCentre || '',
+                      })),
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+          {/* Retention Capture Section */}
+          {selectedPO &&
+            (selectedGRNs.length > 0 ||
+              availableGRNs.filter((grn) => grn.poNumber === selectedPO).length === 0) && (
+              <div
+                className="bg-white rounded-xl p-6 mb-6"
+                style={{ border: '2px solid var(--color-silver)' }}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2
+                      className="text-xl mb-1"
+                      style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                    >
+                      Retention Management
+                    </h2>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                      Contract-based retention for this invoice
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={retentionRequired.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            // Default to enabling at least one type
+                          } else {
+                            setRetentionRequired([]);
+                            setRetentionAmounts({ GST: 0, PF: 0, ESI: 0, Other: 0 });
+                          }
+                        }}
+                        className="w-5 h-5"
+                        style={{ accentColor: 'var(--color-teal)' }}
+                      />
+                      <span
+                        className="text-sm"
+                        style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                      >
+                        Retention Applicable
                       </span>
+                    </label>
+                  </div>
+                </div>
+
+                {retentionRequired.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Retention Type Selection */}
+                    <div>
+                      <label
+                        className="block text-sm mb-3"
+                        style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                      >
+                        Retention Type
+                      </label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {['GST', 'PF', 'ESI', 'Other'].map((type) => (
+                          <label
+                            key={type}
+                            className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all"
+                            style={{
+                              border: `2px solid ${retentionRequired.includes(type) ? 'var(--color-teal)' : 'var(--color-silver)'}`,
+                              backgroundColor: retentionRequired.includes(type)
+                                ? 'var(--color-teal)10'
+                                : '#FFFFFF',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={retentionRequired.includes(type)}
+                              onChange={() => handleRetentionToggle(type)}
+                              className="w-5 h-5"
+                              style={{ accentColor: 'var(--color-teal)' }}
+                            />
+                            <span style={{ color: 'var(--color-ink)', fontWeight: '600' }}>
+                              {type}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                    <p className="text-xs mt-2" style={{ color: 'var(--color-mercury-grey)' }}>
-                      Retention will impact net payable but remains as a liability on the books.
+
+                    {/* Retention Amount Fields */}
+                    {retentionRequired.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {retentionRequired.map((type) => (
+                          <div key={type}>
+                            <label
+                              className="block text-sm mb-2"
+                              style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                            >
+                              {type} Retention Amount (₹)
+                            </label>
+                            <input
+                              type="number"
+                              value={retentionAmounts[type as keyof typeof retentionAmounts] || ''}
+                              onChange={(e) =>
+                                setRetentionAmounts({
+                                  ...retentionAmounts,
+                                  [type]: parseFloat(e.target.value) || 0,
+                                })
+                              }
+                              placeholder="0.00"
+                              className="w-full px-4 py-3 rounded-lg text-base"
+                              style={{
+                                border: '2px solid var(--color-silver)',
+                                color: 'var(--color-ink)',
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Retention Summary */}
+                    {Object.values(retentionAmounts).reduce((sum, val) => sum + val, 0) > 0 && (
+                      <div
+                        className="p-4 rounded-lg"
+                        style={{ backgroundColor: '#FEF3C7', border: '1px solid #F59E0B' }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span
+                            className="text-sm"
+                            style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                          >
+                            Total Retention Deducted:
+                          </span>
+                          <span className="text-lg" style={{ color: '#92400E', fontWeight: '700' }}>
+                            -₹
+                            {Object.values(retentionAmounts)
+                              .reduce((sum, val) => sum + val, 0)
+                              .toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        <p className="text-xs mt-2" style={{ color: 'var(--color-mercury-grey)' }}>
+                          Retention will impact net payable but remains as a liability on the books.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    className="p-6 rounded-lg text-center"
+                    style={{ backgroundColor: 'var(--color-cloud)' }}
+                  >
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                      No retention applicable for this invoice. Toggle "Retention Applicable" to
+                      configure.
                     </p>
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="p-6 rounded-lg text-center" style={{ backgroundColor: 'var(--color-cloud)' }}>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                  No retention applicable for this invoice. Toggle "Retention Applicable" to configure.
-                </p>
-              </div>
             )}
-          </div>
-        )}
 
-        {/* Advance Adjustment Section */}
-        {selectedPO && (selectedGRNs.length > 0 || availableGRNs.filter(grn => grn.po === selectedPO).length === 0) && (
-          <div className="bg-white rounded-xl p-6 mb-6" style={{ border: '2px solid var(--color-silver)' }}>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl mb-1" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>Advance Adjustment</h2>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Adjust open advances for the selected vendor</p>
-              </div>
-              <div className="px-3 py-1 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)', border: '1px solid var(--color-silver)' }}>
-                <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
-                  {vendorAdvances.length} Open Advance(s)
-                </p>
-              </div>
-            </div>
+          {/* Advance Adjustment Section */}
+          {selectedPO &&
+            (selectedGRNs.length > 0 ||
+              availableGRNs.filter((grn) => grn.poNumber === selectedPO).length === 0) && (
+              <div
+                className="bg-white rounded-xl p-6 mb-6"
+                style={{ border: '2px solid var(--color-silver)' }}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2
+                      className="text-xl mb-1"
+                      style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                    >
+                      Advance Adjustment
+                    </h2>
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                      Adjust open advances for the selected vendor
+                    </p>
+                  </div>
+                  <div
+                    className="px-3 py-1 rounded-lg"
+                    style={{
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                    }}
+                  >
+                    <p className="text-xs" style={{ color: 'var(--color-mercury-grey)' }}>
+                      {vendorAdvances.length} Open Advance(s)
+                    </p>
+                  </div>
+                </div>
 
-            {selectedVendor ? (
-              vendorAdvances.length > 0 ? (
-                <>
-                  <div className="overflow-x-auto mb-4">
-                      <table className="w-full" style={{ borderCollapse: 'separate', borderSpacing: '0' }}>
-                        <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', borderBottom: '2px solid var(--color-silver)' }}>Advance Type</th>
-                            <th className="px-4 py-3 text-left text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', borderBottom: '2px solid var(--color-silver)' }}>Reference</th>
-                            <th className="px-4 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', borderBottom: '2px solid var(--color-silver)' }}>Original Advance</th>
-                            <th className="px-4 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', borderBottom: '2px solid var(--color-silver)' }}>Adjusted Till Date</th>
-                            <th className="px-4 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', borderBottom: '2px solid var(--color-silver)' }}>Open Balance</th>
-                            <th className="px-4 py-3 text-right text-xs" style={{ color: 'var(--color-mercury-grey)', fontWeight: '700', borderBottom: '2px solid var(--color-silver)', width: '150px' }}>Adjustment Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {vendorAdvances.map((advance, index) => {
-                            const adjustmentAmount = advanceAdjustments[advance.id] || 0;
-                            const isPOLinked = advance.type === 'PO-linked';
-                            
-                            return (
-                              <tr 
-                                key={advance.id}
-                                style={{ backgroundColor: index % 2 === 0 ? '#FFFFFF' : 'var(--color-cloud)' }}
+                {selectedVendor ? (
+                  vendorAdvances.length > 0 ? (
+                    <>
+                      <div className="overflow-x-auto mb-4">
+                        <table
+                          className="w-full"
+                          style={{ borderCollapse: 'separate', borderSpacing: '0' }}
+                        >
+                          <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
+                            <tr>
+                              <th
+                                className="px-4 py-3 text-left text-xs"
+                                style={{
+                                  color: 'var(--color-mercury-grey)',
+                                  fontWeight: '700',
+                                  borderBottom: '2px solid var(--color-silver)',
+                                }}
                               >
-                                <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-                                  <span className="px-2 py-1 rounded text-xs" style={{ 
-                                    backgroundColor: isPOLinked ? 'var(--color-teal)10' : '#007D8710',
-                                    color: isPOLinked ? 'var(--color-teal)' : '#007D87',
-                                    fontWeight: '600'
-                                  }}>
-                                    {advance.type}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-sm" style={{ color: 'var(--color-ink)', fontWeight: '600', borderBottom: '1px solid var(--color-silver)' }}>
-                                  {advance.reference}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-ink)', borderBottom: '1px solid var(--color-silver)' }}>
-                                  ₹{advance.originalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-mercury-grey)', borderBottom: '1px solid var(--color-silver)' }}>
-                                  ₹{advance.adjustedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-right" style={{ color: 'var(--color-teal)', fontWeight: '600', borderBottom: '1px solid var(--color-silver)' }}>
-                                  ₹{advance.openBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                </td>
-                                <td className="px-4 py-3" style={{ borderBottom: '1px solid var(--color-silver)' }}>
-                                  <input
-                                    type="number"
-                                    value={adjustmentAmount || ''}
-                                    onChange={(e) => {
-                                      const value = parseFloat(e.target.value) || 0;
-                                      const maxAdjustment = Math.min(advance.openBalance, totals.grossAmount);
-                                      setAdvanceAdjustments({
-                                        ...advanceAdjustments,
-                                        [advance.id]: Math.min(value, maxAdjustment)
-                                      });
-                                    }}
-                                    placeholder="0.00"
-                                    max={Math.min(advance.openBalance, totals.grossAmount)}
-                                    className="w-full px-3 py-2 rounded-lg text-sm text-right"
-                                    style={{ border: '2px solid var(--color-silver)', color: 'var(--color-ink)' }}
-                                  />
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                        <tfoot style={{ backgroundColor: 'var(--color-cloud)' }}>
-                          <tr>
-                            <td colSpan={5} className="px-4 py-3 text-right" style={{ color: 'var(--color-ink)', fontWeight: '700', borderTop: '2px solid var(--color-silver)' }}>
-                              Total Advance Adjustment:
-                            </td>
-                            <td className="px-4 py-3 text-right" style={{ borderTop: '2px solid var(--color-silver)' }}>
-                              <span className="text-sm" style={{ color: '#EF4444', fontWeight: '700' }}>
-                                -₹{Object.values(advanceAdjustments).reduce((sum, val) => sum + val, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                              </span>
-                            </td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
+                                Advance Type
+                              </th>
+                              <th
+                                className="px-4 py-3 text-left text-xs"
+                                style={{
+                                  color: 'var(--color-mercury-grey)',
+                                  fontWeight: '700',
+                                  borderBottom: '2px solid var(--color-silver)',
+                                }}
+                              >
+                                Reference
+                              </th>
+                              <th
+                                className="px-4 py-3 text-right text-xs"
+                                style={{
+                                  color: 'var(--color-mercury-grey)',
+                                  fontWeight: '700',
+                                  borderBottom: '2px solid var(--color-silver)',
+                                }}
+                              >
+                                Original Advance
+                              </th>
+                              <th
+                                className="px-4 py-3 text-right text-xs"
+                                style={{
+                                  color: 'var(--color-mercury-grey)',
+                                  fontWeight: '700',
+                                  borderBottom: '2px solid var(--color-silver)',
+                                }}
+                              >
+                                Adjusted Till Date
+                              </th>
+                              <th
+                                className="px-4 py-3 text-right text-xs"
+                                style={{
+                                  color: 'var(--color-mercury-grey)',
+                                  fontWeight: '700',
+                                  borderBottom: '2px solid var(--color-silver)',
+                                }}
+                              >
+                                Open Balance
+                              </th>
+                              <th
+                                className="px-4 py-3 text-right text-xs"
+                                style={{
+                                  color: 'var(--color-mercury-grey)',
+                                  fontWeight: '700',
+                                  borderBottom: '2px solid var(--color-silver)',
+                                  width: '150px',
+                                }}
+                              >
+                                Adjustment Amount
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {vendorAdvances.map((advance, index) => {
+                              const adjustmentAmount = advanceAdjustments[advance.id] || 0;
+                              const isPOLinked = advance.type === 'PO-linked';
 
-                    <div className="p-4 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #3B82F6' }}>
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: '#3B82F6' }} />
-                        <div className="flex-1">
-                          <p className="text-sm mb-1" style={{ color: 'var(--color-ink)', fontWeight: '600' }}>Adjustment Rules</p>
-                          <ul className="text-xs space-y-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                            <li>• PO-linked advances are displayed first for easy identification</li>
-                            <li>• Adjustment amount cannot exceed open balance or invoice gross amount</li>
-                            <li>• Net payable updates in real-time as you adjust advances</li>
-                          </ul>
+                              return (
+                                <tr
+                                  key={advance.id}
+                                  style={{
+                                    backgroundColor:
+                                      index % 2 === 0 ? '#FFFFFF' : 'var(--color-cloud)',
+                                  }}
+                                >
+                                  <td
+                                    className="px-4 py-3"
+                                    style={{ borderBottom: '1px solid var(--color-silver)' }}
+                                  >
+                                    <span
+                                      className="px-2 py-1 rounded text-xs"
+                                      style={{
+                                        backgroundColor: isPOLinked
+                                          ? 'var(--color-teal)10'
+                                          : '#007D8710',
+                                        color: isPOLinked ? 'var(--color-teal)' : '#007D87',
+                                        fontWeight: '600',
+                                      }}
+                                    >
+                                      {advance.type}
+                                    </span>
+                                  </td>
+                                  <td
+                                    className="px-4 py-3 text-sm"
+                                    style={{
+                                      color: 'var(--color-ink)',
+                                      fontWeight: '600',
+                                      borderBottom: '1px solid var(--color-silver)',
+                                    }}
+                                  >
+                                    {advance.reference}
+                                  </td>
+                                  <td
+                                    className="px-4 py-3 text-sm text-right"
+                                    style={{
+                                      color: 'var(--color-ink)',
+                                      borderBottom: '1px solid var(--color-silver)',
+                                    }}
+                                  >
+                                    ₹
+                                    {advance.originalAmount.toLocaleString('en-IN', {
+                                      minimumFractionDigits: 2,
+                                    })}
+                                  </td>
+                                  <td
+                                    className="px-4 py-3 text-sm text-right"
+                                    style={{
+                                      color: 'var(--color-mercury-grey)',
+                                      borderBottom: '1px solid var(--color-silver)',
+                                    }}
+                                  >
+                                    ₹
+                                    {advance.adjustedAmount.toLocaleString('en-IN', {
+                                      minimumFractionDigits: 2,
+                                    })}
+                                  </td>
+                                  <td
+                                    className="px-4 py-3 text-sm text-right"
+                                    style={{
+                                      color: 'var(--color-teal)',
+                                      fontWeight: '600',
+                                      borderBottom: '1px solid var(--color-silver)',
+                                    }}
+                                  >
+                                    ₹
+                                    {advance.openBalance.toLocaleString('en-IN', {
+                                      minimumFractionDigits: 2,
+                                    })}
+                                  </td>
+                                  <td
+                                    className="px-4 py-3"
+                                    style={{ borderBottom: '1px solid var(--color-silver)' }}
+                                  >
+                                    <input
+                                      type="number"
+                                      value={adjustmentAmount || ''}
+                                      onChange={(e) => {
+                                        const value = parseFloat(e.target.value) || 0;
+                                        const maxAdjustment = Math.min(
+                                          advance.openBalance,
+                                          totals.grossAmount
+                                        );
+                                        setAdvanceAdjustments({
+                                          ...advanceAdjustments,
+                                          [advance.id]: Math.min(value, maxAdjustment),
+                                        });
+                                      }}
+                                      placeholder="0.00"
+                                      max={Math.min(advance.openBalance, totals.grossAmount)}
+                                      className="w-full px-3 py-2 rounded-lg text-sm text-right"
+                                      style={{
+                                        border: '2px solid var(--color-silver)',
+                                        color: 'var(--color-ink)',
+                                      }}
+                                    />
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot style={{ backgroundColor: 'var(--color-cloud)' }}>
+                            <tr>
+                              <td
+                                colSpan={5}
+                                className="px-4 py-3 text-right"
+                                style={{
+                                  color: 'var(--color-ink)',
+                                  fontWeight: '700',
+                                  borderTop: '2px solid var(--color-silver)',
+                                }}
+                              >
+                                Total Advance Adjustment:
+                              </td>
+                              <td
+                                className="px-4 py-3 text-right"
+                                style={{ borderTop: '2px solid var(--color-silver)' }}
+                              >
+                                <span
+                                  className="text-sm"
+                                  style={{ color: '#EF4444', fontWeight: '700' }}
+                                >
+                                  -₹
+                                  {Object.values(advanceAdjustments)
+                                    .reduce((sum, val) => sum + val, 0)
+                                    .toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </span>
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+
+                      <div
+                        className="p-4 rounded-lg"
+                        style={{ backgroundColor: '#EFF6FF', border: '1px solid #3B82F6' }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: '#3B82F6' }} />
+                          <div className="flex-1">
+                            <p
+                              className="text-sm mb-1"
+                              style={{ color: 'var(--color-ink)', fontWeight: '600' }}
+                            >
+                              Adjustment Rules
+                            </p>
+                            <ul
+                              className="text-xs space-y-1"
+                              style={{ color: 'var(--color-mercury-grey)' }}
+                            >
+                              <li>
+                                • PO-linked advances are displayed first for easy identification
+                              </li>
+                              <li>
+                                • Adjustment amount cannot exceed open balance or invoice gross
+                                amount
+                              </li>
+                              <li>• Net payable updates in real-time as you adjust advances</li>
+                            </ul>
+                          </div>
                         </div>
                       </div>
+                    </>
+                  ) : (
+                    <div
+                      className="p-6 rounded-lg text-center"
+                      style={{ backgroundColor: 'var(--color-cloud)' }}
+                    >
+                      <Receipt
+                        className="w-12 h-12 mx-auto mb-3"
+                        style={{ color: 'var(--color-silver)' }}
+                      />
+                      <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                        No open advances found for this vendor
+                      </p>
                     </div>
-                  </>
+                  )
                 ) : (
-                  <div className="p-6 rounded-lg text-center" style={{ backgroundColor: 'var(--color-cloud)' }}>
-                    <Receipt className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--color-silver)' }} />
-                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>No open advances found for this vendor</p>
+                  <div
+                    className="p-6 rounded-lg text-center"
+                    style={{ backgroundColor: 'var(--color-cloud)' }}
+                  >
+                    <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                      Select a vendor to view open advances
+                    </p>
                   </div>
-                )
-            ) : (
-              <div className="p-6 rounded-lg text-center" style={{ backgroundColor: 'var(--color-cloud)' }}>
-                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>Select a vendor to view open advances</p>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {/* Final Summary */}
-        {selectedPO && (selectedGRNs.length > 0 || availableGRNs.length === 0) && (
-          <div className="bg-white rounded-xl p-6" style={{ border: '2px solid var(--color-teal)' }}>
-            <h3 className="text-lg mb-4" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>Invoice Summary</h3>
-            
-            {/* Summary Grid */}
-            <div className="space-y-3 mb-4">
-              <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
-                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Total Base Amount</span>
-                <span className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
-                  ₹{totals.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
-                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Total GST</span>
-                <span className="text-lg" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
-                  +₹{totals.gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
+          {/* Final Summary */}
+          {selectedPO && (selectedGRNs.length > 0 || availableGRNs.length === 0) && (
+            <div
+              className="bg-white rounded-xl p-6"
+              style={{ border: '2px solid var(--color-teal)' }}
+            >
+              <h3 className="text-lg mb-4" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>
+                Invoice Summary
+              </h3>
 
-              <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-teal)10', border: '2px solid var(--color-teal)' }}>
-                <span className="text-sm" style={{ color: 'var(--color-ink)', fontWeight: '700' }}>Gross Invoice Amount</span>
-                <span className="text-xl" style={{ color: 'var(--color-teal)', fontWeight: '700' }}>
-                  ₹{totals.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              {Object.values(retentionAmounts).reduce((sum, val) => sum + val, 0) > 0 && (
-                <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Retention Deducted</span>
-                  <span className="text-lg" style={{ color: '#92400E', fontWeight: '700' }}>
-                    -₹{Object.values(retentionAmounts).reduce((sum, val) => sum + val, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              {/* Summary Grid */}
+              <div className="space-y-3 mb-4">
+                <div
+                  className="flex items-center justify-between p-4 rounded-lg"
+                  style={{ backgroundColor: 'var(--color-cloud)' }}
+                >
+                  <span
+                    className="text-sm"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
+                    Total Base Amount
+                  </span>
+                  <span
+                    className="text-lg"
+                    style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                  >
+                    ₹{totals.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
-              )}
 
-              {Object.values(advanceAdjustments).reduce((sum, val) => sum + val, 0) > 0 && (
-                <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: '#EFF6FF' }}>
-                  <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>Advance Adjusted</span>
-                  <span className="text-lg" style={{ color: '#3B82F6', fontWeight: '700' }}>
-                    -₹{Object.values(advanceAdjustments).reduce((sum, val) => sum + val, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                <div
+                  className="flex items-center justify-between p-4 rounded-lg"
+                  style={{ backgroundColor: 'var(--color-cloud)' }}
+                >
+                  <span
+                    className="text-sm"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
+                    Total GST
+                  </span>
+                  <span
+                    className="text-lg"
+                    style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                  >
+                    +₹{totals.gstTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
-              )}
 
-              <div className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--color-error-light)' }}>
-                <span className="text-sm" style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}>TDS Deducted</span>
-                <span className="text-lg" style={{ color: '#EF4444', fontWeight: '700' }}>
-                  -₹{totals.tds.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </span>
+                <div
+                  className="flex items-center justify-between p-4 rounded-lg"
+                  style={{
+                    backgroundColor: 'var(--color-teal)10',
+                    border: '2px solid var(--color-teal)',
+                  }}
+                >
+                  <span
+                    className="text-sm"
+                    style={{ color: 'var(--color-ink)', fontWeight: '700' }}
+                  >
+                    Gross Invoice Amount
+                  </span>
+                  <span
+                    className="text-xl"
+                    style={{ color: 'var(--color-teal)', fontWeight: '700' }}
+                  >
+                    ₹{totals.grossAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                {Object.values(retentionAmounts).reduce((sum, val) => sum + val, 0) > 0 && (
+                  <div
+                    className="flex items-center justify-between p-4 rounded-lg"
+                    style={{ backgroundColor: '#FEF3C7' }}
+                  >
+                    <span
+                      className="text-sm"
+                      style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                    >
+                      Retention Deducted
+                    </span>
+                    <span className="text-lg" style={{ color: '#92400E', fontWeight: '700' }}>
+                      -₹
+                      {Object.values(retentionAmounts)
+                        .reduce((sum, val) => sum + val, 0)
+                        .toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+
+                {Object.values(advanceAdjustments).reduce((sum, val) => sum + val, 0) > 0 && (
+                  <div
+                    className="flex items-center justify-between p-4 rounded-lg"
+                    style={{ backgroundColor: '#EFF6FF' }}
+                  >
+                    <span
+                      className="text-sm"
+                      style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                    >
+                      Advance Adjusted
+                    </span>
+                    <span className="text-lg" style={{ color: '#3B82F6', fontWeight: '700' }}>
+                      -₹
+                      {Object.values(advanceAdjustments)
+                        .reduce((sum, val) => sum + val, 0)
+                        .toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+
+                <div
+                  className="flex items-center justify-between p-4 rounded-lg"
+                  style={{ backgroundColor: 'var(--color-error-light)' }}
+                >
+                  <span
+                    className="text-sm"
+                    style={{ color: 'var(--color-mercury-grey)', fontWeight: '600' }}
+                  >
+                    TDS Deducted
+                  </span>
+                  <span className="text-lg" style={{ color: '#EF4444', fontWeight: '700' }}>
+                    -₹{totals.tds.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                <div
+                  className="flex items-center justify-between p-5 rounded-lg"
+                  style={{ backgroundColor: '#166534' }}
+                >
+                  <span style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '18px' }}>
+                    Net Payable Amount
+                  </span>
+                  <span style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '24px' }}>
+                    ₹
+                    {(
+                      totals.netPayable -
+                      Object.values(advanceAdjustments).reduce((sum, val) => sum + val, 0)
+                    ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between p-5 rounded-lg" style={{ backgroundColor: '#166534' }}>
-                <span style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '18px' }}>Net Payable Amount</span>
-                <span style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '24px' }}>
-                  ₹{(totals.netPayable - Object.values(advanceAdjustments).reduce((sum, val) => sum + val, 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </span>
+              <div className="mb-4 space-y-3">
+                <label
+                  className="flex items-center gap-2 text-sm"
+                  style={{ color: 'var(--color-ink)' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={gstr2bMatched}
+                    onChange={(e) => setGstr2bMatched(e.target.checked)}
+                    style={{ accentColor: 'var(--color-teal)' }}
+                  />
+                  Vendor invoice appears in GSTR-2B
+                </label>
+                {!gstr2bMatched && (
+                  <div
+                    className="px-3 py-2 rounded-lg text-xs"
+                    style={{ backgroundColor: '#FEF3C7', color: '#92400E' }}
+                  >
+                    ITC claim at risk — vendor has not filed GSTR-1 for this period. ITC may be
+                    reversed under Rule 37A.
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {requiredApprovers.map((approver) => (
+                    <span
+                      key={approver}
+                      className="px-2 py-1 rounded-full text-xs"
+                      style={{ backgroundColor: '#E0F2FE', color: '#075985' }}
+                    >
+                      Required approver: {approver}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div
+                className="flex gap-3 pt-4"
+                style={{ borderTop: '2px solid var(--color-silver)' }}
+              >
+                <button
+                  onClick={() => {
+                    handleSaveDraft();
+                    alert('Invoice saved as draft');
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '2px solid var(--color-silver)',
+                    color: 'var(--color-ink)',
+                  }}
+                >
+                  <Save className="w-5 h-5" />
+                  Save as Draft
+                </button>
+
+                <button
+                  onClick={() => {
+                    // Validate logic
+                    const errors = [];
+                    if (!selectedVendor) errors.push('Vendor not selected');
+                    if (!selectedPO) errors.push('PO not selected');
+                    if (!invoiceNumber) errors.push('Invoice number missing');
+                    if (!invoiceDate) errors.push('Invoice date missing');
+                    const tdsErrors = validateTDSRules(lineItems);
+                    if (tdsErrors.length > 0) {
+                      errors.push(...tdsErrors);
+                    }
+
+                    if (errors.length > 0) {
+                      alert('Validation Errors:\n' + errors.join('\n'));
+                    } else {
+                      alert('✓ Invoice validated successfully!');
+                    }
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors"
+                  style={{ backgroundColor: '#F59E0B', color: '#FFFFFF' }}
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  Validate Invoice
+                </button>
+
+                <button
+                  onClick={async () => {
+                    // Submit logic
+                    const errors = [];
+                    if (!selectedVendor) errors.push('Vendor not selected');
+                    if (!selectedPO) errors.push('PO not selected');
+                    if (!invoiceNumber) errors.push('Invoice number missing');
+                    if (!invoiceDate) errors.push('Invoice date missing');
+                    const tdsErrors = validateTDSRules(lineItems);
+                    if (tdsErrors.length > 0) {
+                      errors.push(...tdsErrors);
+                    }
+
+                    if (errors.length > 0) {
+                      alert('Cannot Submit - Validation Errors:\n' + errors.join('\n'));
+                    } else {
+                      await handleSubmit();
+                    }
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors"
+                  style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF' }}
+                >
+                  <Send className="w-5 h-5" />
+                  Submit for Approval
+                </button>
               </div>
             </div>
+          )}
+        </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4" style={{ borderTop: '2px solid var(--color-silver)' }}>
-              <button
-                onClick={() => {
-                  // Save as draft logic
-                  alert('Invoice saved as draft');
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors"
-                style={{ backgroundColor: '#FFFFFF', border: '2px solid var(--color-silver)', color: 'var(--color-ink)' }}
-              >
-                <Save className="w-5 h-5" />
-                Save as Draft
-              </button>
-              
-              <button
-                onClick={() => {
-                  // Validate logic
-                  const errors = [];
-                  if (!selectedVendor) errors.push('Vendor not selected');
-                  if (!selectedPO) errors.push('PO not selected');
-                  if (!invoiceNumber) errors.push('Invoice number missing');
-                  if (!invoiceDate) errors.push('Invoice date missing');
-                  
-                  if (errors.length > 0) {
-                    alert('Validation Errors:\n' + errors.join('\n'));
-                  } else {
-                    alert('✓ Invoice validated successfully!');
-                  }
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors"
-                style={{ backgroundColor: '#F59E0B', color: '#FFFFFF' }}
-              >
-                <CheckCircle className="w-5 h-5" />
-                Validate Invoice
-              </button>
-              
-              <button
-                onClick={() => {
-                  // Submit logic
-                  const errors = [];
-                  if (!selectedVendor) errors.push('Vendor not selected');
-                  if (!selectedPO) errors.push('PO not selected');
-                  if (!invoiceNumber) errors.push('Invoice number missing');
-                  if (!invoiceDate) errors.push('Invoice date missing');
-                  
-                  if (errors.length > 0) {
-                    alert('Cannot Submit - Validation Errors:\n' + errors.join('\n'));
-                  } else {
-                    alert('✓ Invoice submitted for approval!');
-                    navigate('/invoices');
-                  }
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors"
-                style={{ backgroundColor: 'var(--color-teal)', color: '#FFFFFF' }}
-              >
-                <Send className="w-5 h-5" />
-                Submit for Approval
-              </button>
-            </div>
-          </div>
+        {/* Exception Request Modal */}
+        {exceptionModalOpen && exceptionLineItem && exceptionLineItem.poRate !== undefined && (
+          <POInvoiceExceptionModal
+            isOpen={exceptionModalOpen}
+            onClose={() => {
+              setExceptionModalOpen(false);
+              setExceptionLineItem(null);
+            }}
+            onSubmit={(data: ExceptionRequestData) => {
+              console.log('Exception request submitted:', data);
+              // In real implementation, this would trigger approval workflow
+              alert(
+                'Exception request submitted for CFO approval. Invoice will be held in Pending Exception Approval status.'
+              );
+              setExceptionModalOpen(false);
+              setExceptionLineItem(null);
+            }}
+            lineItem={{
+              itemName: exceptionLineItem.itemName,
+              itemCode: exceptionLineItem.itemCode,
+              poRate: exceptionLineItem.poRate,
+              requestedRate: exceptionLineItem.unitPrice,
+              quantity: exceptionLineItem.qty,
+            }}
+          />
         )}
-      </div>
-
-      {/* Exception Request Modal */}
-      {exceptionModalOpen && exceptionLineItem && exceptionLineItem.poRate !== undefined && (
-        <POInvoiceExceptionModal
-          isOpen={exceptionModalOpen}
-          onClose={() => {
-            setExceptionModalOpen(false);
-            setExceptionLineItem(null);
-          }}
-          onSubmit={(data: ExceptionRequestData) => {
-            console.log('Exception request submitted:', data);
-            // In real implementation, this would trigger approval workflow
-            alert('Exception request submitted for CFO approval. Invoice will be held in Pending Exception Approval status.');
-            setExceptionModalOpen(false);
-            setExceptionLineItem(null);
-          }}
-          lineItem={{
-            itemName: exceptionLineItem.itemName,
-            itemCode: exceptionLineItem.itemCode,
-            poRate: exceptionLineItem.poRate,
-            requestedRate: exceptionLineItem.unitPrice,
-            quantity: exceptionLineItem.qty
-          }}
-        />
-      )}
 
         {/* AI Insights Panel */}
         <AIInsightsPanel

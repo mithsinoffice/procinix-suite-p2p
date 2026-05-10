@@ -1,19 +1,20 @@
 /**
  * MULTI-ENTITY & MULTI-COUNTRY MASTER DATA
- * 
+ *
  * Comprehensive master data for:
  * - Subko Coffee Pvt Ltd – India (INR, GST)
  * - Subko Coffee – Dubai (AED, VAT)
  * - Procinix Ltd – India (INR, GST)
- * 
+ *
  * SAFETY: All data is ADDITIVE. Existing masters remain unchanged.
  */
 
-import { 
-  VendorMaster, 
-  BankMaster, 
+import type {
+  VendorMaster,
+  BankMaster,
   CostCentreMaster,
-  TaxCodeMaster 
+  TaxCodeMaster,
+  DepartmentMaster,
 } from './MasterDataContext';
 
 // ============================================================================
@@ -39,6 +40,7 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     msmeNumber: 'MSME-KA-001234',
     msmeCategory: 'Small',
     status: 'Active',
+    approvalStatus: 'Approved',
     paymentTerms: 'Net 30',
     creditDays: 30,
     entityId: 'ENT-SUBKO-IN',
@@ -47,34 +49,38 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     currency: 'INR',
     tdsApplicable: true,
     tdsSection: '194C',
-    bankAccounts: [{
-      id: 'BA-SUBKO-IN-001',
-      accountNumber: '123456789012',
-      accountName: 'Coorg Coffee Estates Pvt Ltd',
-      ifscCode: 'HDFC0001234',
-      bankName: 'HDFC Bank',
-      branchName: 'Coorg Branch',
-      accountType: 'Current',
-      isPrimary: true,
-      verified: true,
-      verifiedDate: '2024-01-15'
-    }],
-    addresses: [{
-      id: 'ADDR-SUBKO-IN-001',
-      type: 'Registered',
-      addressLine1: 'Estate Road, Madikeri',
-      city: 'Coorg',
-      state: 'Karnataka',
-      stateCode: 'KA',
-      pincode: '571201',
-      country: 'India',
-      gstin: '29AABCC1234D1Z1',
-      isPrimary: true
-    }],
+    bankAccounts: [
+      {
+        id: 'BA-SUBKO-IN-001',
+        accountNumber: '123456789012',
+        accountName: 'Coorg Coffee Estates Pvt Ltd',
+        ifscCode: 'HDFC0001234',
+        bankName: 'HDFC Bank',
+        branchName: 'Coorg Branch',
+        accountType: 'Current',
+        isPrimary: true,
+        verified: true,
+        verifiedDate: '2024-01-15',
+      },
+    ],
+    addresses: [
+      {
+        id: 'ADDR-SUBKO-IN-001',
+        type: 'Registered',
+        addressLine1: 'Estate Road, Madikeri',
+        city: 'Coorg',
+        state: 'Karnataka',
+        stateCode: 'KA',
+        pincode: '571201',
+        country: 'India',
+        gstin: '29AABCC1234D1Z1',
+        isPrimary: true,
+      },
+    ],
     createdBy: 'Admin',
     createdDate: '2024-01-10',
     approvedBy: 'Procurement Head',
-    approvedDate: '2024-01-12'
+    approvedDate: '2024-01-12',
   },
   {
     id: 'VEN-SUBKO-IN-002',
@@ -89,6 +95,7 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     vendorType: 'Domestic',
     msmeRegistered: false,
     status: 'Active',
+    approvalStatus: 'Changes Requested',
     paymentTerms: 'Net 45',
     creditDays: 45,
     entityId: 'ENT-SUBKO-IN',
@@ -96,34 +103,36 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     country: 'India',
     currency: 'INR',
     tdsApplicable: false,
-    bankAccounts: [{
-      id: 'BA-SUBKO-IN-002',
-      accountNumber: '234567890123',
-      accountName: 'Premium Packaging Solutions India Pvt Ltd',
-      ifscCode: 'ICIC0005678',
-      bankName: 'ICICI Bank',
-      branchName: 'Bangalore',
-      accountType: 'Current',
-      isPrimary: true,
-      verified: true,
-      verifiedDate: '2024-02-01'
-    }],
-    addresses: [{
-      id: 'ADDR-SUBKO-IN-002',
-      type: 'Registered',
-      addressLine1: 'Peenya Industrial Area, Phase 2',
-      city: 'Bangalore',
-      state: 'Karnataka',
-      stateCode: 'KA',
-      pincode: '560058',
-      country: 'India',
-      gstin: '29AABPP5678E1Z2',
-      isPrimary: true
-    }],
+    bankAccounts: [
+      {
+        id: 'BA-SUBKO-IN-002',
+        accountNumber: '234567890123',
+        accountName: 'Premium Packaging Solutions India Pvt Ltd',
+        ifscCode: 'ICIC0005678',
+        bankName: 'ICICI Bank',
+        branchName: 'Bangalore',
+        accountType: 'Current',
+        isPrimary: true,
+        verified: true,
+        verifiedDate: '2024-02-01',
+      },
+    ],
+    addresses: [
+      {
+        id: 'ADDR-SUBKO-IN-002',
+        type: 'Registered',
+        addressLine1: 'Peenya Industrial Area, Phase 2',
+        city: 'Bangalore',
+        state: 'Karnataka',
+        stateCode: 'KA',
+        pincode: '560058',
+        country: 'India',
+        gstin: '29AABPP5678E1Z2',
+        isPrimary: true,
+      },
+    ],
     createdBy: 'Admin',
     createdDate: '2024-02-01',
-    approvedBy: 'Procurement Head',
-    approvedDate: '2024-02-03'
   },
   {
     id: 'VEN-SUBKO-IN-003',
@@ -148,34 +157,38 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     currency: 'INR',
     tdsApplicable: true,
     tdsSection: '194C',
-    bankAccounts: [{
-      id: 'BA-SUBKO-IN-003',
-      accountNumber: '345678901234',
-      accountName: 'Urban Logistics Pvt Ltd',
-      ifscCode: 'SBIN0012345',
-      bankName: 'State Bank of India',
-      branchName: 'Indiranagar',
-      accountType: 'Current',
-      isPrimary: true,
-      verified: true,
-      verifiedDate: '2024-03-10'
-    }],
-    addresses: [{
-      id: 'ADDR-SUBKO-IN-003',
-      type: 'Registered',
-      addressLine1: 'Transport Nagar, Whitefield',
-      city: 'Bangalore',
-      state: 'Karnataka',
-      stateCode: 'KA',
-      pincode: '560066',
-      country: 'India',
-      gstin: '29AABUL9012F1Z3',
-      isPrimary: true
-    }],
+    bankAccounts: [
+      {
+        id: 'BA-SUBKO-IN-003',
+        accountNumber: '345678901234',
+        accountName: 'Urban Logistics Pvt Ltd',
+        ifscCode: 'SBIN0012345',
+        bankName: 'State Bank of India',
+        branchName: 'Indiranagar',
+        accountType: 'Current',
+        isPrimary: true,
+        verified: true,
+        verifiedDate: '2024-03-10',
+      },
+    ],
+    addresses: [
+      {
+        id: 'ADDR-SUBKO-IN-003',
+        type: 'Registered',
+        addressLine1: 'Transport Nagar, Whitefield',
+        city: 'Bangalore',
+        state: 'Karnataka',
+        stateCode: 'KA',
+        pincode: '560066',
+        country: 'India',
+        gstin: '29AABUL9012F1Z3',
+        isPrimary: true,
+      },
+    ],
     createdBy: 'Admin',
     createdDate: '2024-03-05',
     approvedBy: 'Procurement Head',
-    approvedDate: '2024-03-08'
+    approvedDate: '2024-03-08',
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -202,33 +215,37 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     currency: 'AED',
     vatRegistrationNumber: '100234567800001',
     emiratesId: 'AE-DXB-12345',
-    bankAccounts: [{
-      id: 'BA-SUBKO-UAE-001',
-      accountNumber: 'AE070331234567890123456',
-      accountName: 'Arabian Coffee Trading LLC',
-      ifscCode: '', // Not applicable for UAE
-      bankName: 'Emirates NBD',
-      branchName: 'Dubai Investment Park',
-      accountType: 'Current',
-      isPrimary: true,
-      verified: true,
-      verifiedDate: '2024-01-20'
-    }],
-    addresses: [{
-      id: 'ADDR-SUBKO-UAE-001',
-      type: 'Registered',
-      addressLine1: 'Dubai Investment Park 1, Building 12',
-      city: 'Dubai',
-      state: 'Dubai',
-      stateCode: 'DXB',
-      pincode: '00000',
-      country: 'UAE',
-      isPrimary: true
-    }],
+    bankAccounts: [
+      {
+        id: 'BA-SUBKO-UAE-001',
+        accountNumber: 'AE070331234567890123456',
+        accountName: 'Arabian Coffee Trading LLC',
+        ifscCode: '', // Not applicable for UAE
+        bankName: 'Emirates NBD',
+        branchName: 'Dubai Investment Park',
+        accountType: 'Current',
+        isPrimary: true,
+        verified: true,
+        verifiedDate: '2024-01-20',
+      },
+    ],
+    addresses: [
+      {
+        id: 'ADDR-SUBKO-UAE-001',
+        type: 'Registered',
+        addressLine1: 'Dubai Investment Park 1, Building 12',
+        city: 'Dubai',
+        state: 'Dubai',
+        stateCode: 'DXB',
+        pincode: '00000',
+        country: 'UAE',
+        isPrimary: true,
+      },
+    ],
     createdBy: 'Admin',
     createdDate: '2024-01-15',
     approvedBy: 'Procurement Head',
-    approvedDate: '2024-01-18'
+    approvedDate: '2024-01-18',
   },
   {
     id: 'VEN-SUBKO-UAE-002',
@@ -251,33 +268,37 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     currency: 'AED',
     vatRegistrationNumber: '100345678900002',
     emiratesId: 'AE-DXB-23456',
-    bankAccounts: [{
-      id: 'BA-SUBKO-UAE-002',
-      accountNumber: 'AE080331234567890234567',
-      accountName: 'Gulf Packaging Industries LLC',
-      ifscCode: '',
-      bankName: 'Mashreq Bank',
-      branchName: 'Jebel Ali',
-      accountType: 'Current',
-      isPrimary: true,
-      verified: true,
-      verifiedDate: '2024-02-10'
-    }],
-    addresses: [{
-      id: 'ADDR-SUBKO-UAE-002',
-      type: 'Registered',
-      addressLine1: 'Jebel Ali Free Zone, Unit 45',
-      city: 'Dubai',
-      state: 'Dubai',
-      stateCode: 'DXB',
-      pincode: '00000',
-      country: 'UAE',
-      isPrimary: true
-    }],
+    bankAccounts: [
+      {
+        id: 'BA-SUBKO-UAE-002',
+        accountNumber: 'AE080331234567890234567',
+        accountName: 'Gulf Packaging Industries LLC',
+        ifscCode: '',
+        bankName: 'Mashreq Bank',
+        branchName: 'Jebel Ali',
+        accountType: 'Current',
+        isPrimary: true,
+        verified: true,
+        verifiedDate: '2024-02-10',
+      },
+    ],
+    addresses: [
+      {
+        id: 'ADDR-SUBKO-UAE-002',
+        type: 'Registered',
+        addressLine1: 'Jebel Ali Free Zone, Unit 45',
+        city: 'Dubai',
+        state: 'Dubai',
+        stateCode: 'DXB',
+        pincode: '00000',
+        country: 'UAE',
+        isPrimary: true,
+      },
+    ],
     createdBy: 'Admin',
     createdDate: '2024-02-05',
     approvedBy: 'Procurement Head',
-    approvedDate: '2024-02-08'
+    approvedDate: '2024-02-08',
   },
   {
     id: 'VEN-SUBKO-UAE-003',
@@ -300,33 +321,37 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     currency: 'AED',
     vatRegistrationNumber: '100456789000003',
     emiratesId: 'AE-DXB-34567',
-    bankAccounts: [{
-      id: 'BA-SUBKO-UAE-003',
-      accountNumber: 'AE090331234567890345678',
-      accountName: 'Emirates Logistics Services LLC',
-      ifscCode: '',
-      bankName: 'Abu Dhabi Commercial Bank',
-      branchName: 'Dubai Main',
-      accountType: 'Current',
-      isPrimary: true,
-      verified: true,
-      verifiedDate: '2024-03-01'
-    }],
-    addresses: [{
-      id: 'ADDR-SUBKO-UAE-003',
-      type: 'Registered',
-      addressLine1: 'Al Quoz Industrial Area 3',
-      city: 'Dubai',
-      state: 'Dubai',
-      stateCode: 'DXB',
-      pincode: '00000',
-      country: 'UAE',
-      isPrimary: true
-    }],
+    bankAccounts: [
+      {
+        id: 'BA-SUBKO-UAE-003',
+        accountNumber: 'AE090331234567890345678',
+        accountName: 'Emirates Logistics Services LLC',
+        ifscCode: '',
+        bankName: 'Abu Dhabi Commercial Bank',
+        branchName: 'Dubai Main',
+        accountType: 'Current',
+        isPrimary: true,
+        verified: true,
+        verifiedDate: '2024-03-01',
+      },
+    ],
+    addresses: [
+      {
+        id: 'ADDR-SUBKO-UAE-003',
+        type: 'Registered',
+        addressLine1: 'Al Quoz Industrial Area 3',
+        city: 'Dubai',
+        state: 'Dubai',
+        stateCode: 'DXB',
+        pincode: '00000',
+        country: 'UAE',
+        isPrimary: true,
+      },
+    ],
     createdBy: 'Admin',
     createdDate: '2024-02-25',
     approvedBy: 'Procurement Head',
-    approvedDate: '2024-02-28'
+    approvedDate: '2024-02-28',
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -353,34 +378,38 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     currency: 'INR',
     tdsApplicable: true,
     tdsSection: '194J',
-    bankAccounts: [{
-      id: 'BA-PROC-IN-001',
-      accountNumber: '456789012345',
-      accountName: 'Tech Solutions India Pvt Ltd',
-      ifscCode: 'HDFC0002468',
-      bankName: 'HDFC Bank',
-      branchName: 'Andheri',
-      accountType: 'Current',
-      isPrimary: true,
-      verified: true,
-      verifiedDate: '2024-01-25'
-    }],
-    addresses: [{
-      id: 'ADDR-PROC-IN-001',
-      type: 'Registered',
-      addressLine1: 'Andheri East, IT Park, Building A',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      stateCode: 'MH',
-      pincode: '400093',
-      country: 'India',
-      gstin: '27AABTS1234G1Z1',
-      isPrimary: true
-    }],
+    bankAccounts: [
+      {
+        id: 'BA-PROC-IN-001',
+        accountNumber: '456789012345',
+        accountName: 'Tech Solutions India Pvt Ltd',
+        ifscCode: 'HDFC0002468',
+        bankName: 'HDFC Bank',
+        branchName: 'Andheri',
+        accountType: 'Current',
+        isPrimary: true,
+        verified: true,
+        verifiedDate: '2024-01-25',
+      },
+    ],
+    addresses: [
+      {
+        id: 'ADDR-PROC-IN-001',
+        type: 'Registered',
+        addressLine1: 'Andheri East, IT Park, Building A',
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        stateCode: 'MH',
+        pincode: '400093',
+        country: 'India',
+        gstin: '27AABTS1234G1Z1',
+        isPrimary: true,
+      },
+    ],
     createdBy: 'Admin',
     createdDate: '2024-01-20',
     approvedBy: 'Procurement Head',
-    approvedDate: '2024-01-23'
+    approvedDate: '2024-01-23',
   },
   {
     id: 'VEN-PROC-IN-002',
@@ -404,35 +433,39 @@ export const MULTI_ENTITY_VENDORS: VendorMaster[] = [
     country: 'India',
     currency: 'INR',
     tdsApplicable: false,
-    bankAccounts: [{
-      id: 'BA-PROC-IN-002',
-      accountNumber: '567890123456',
-      accountName: 'Office Mart Supplies Pvt Ltd',
-      ifscCode: 'ICIC0001357',
-      bankName: 'ICICI Bank',
-      branchName: 'Bandra',
-      accountType: 'Current',
-      isPrimary: true,
-      verified: true,
-      verifiedDate: '2024-02-15'
-    }],
-    addresses: [{
-      id: 'ADDR-PROC-IN-002',
-      type: 'Registered',
-      addressLine1: 'Bandra Kurla Complex, Unit 23',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      stateCode: 'MH',
-      pincode: '400051',
-      country: 'India',
-      gstin: '27AABOM5678H1Z2',
-      isPrimary: true
-    }],
+    bankAccounts: [
+      {
+        id: 'BA-PROC-IN-002',
+        accountNumber: '567890123456',
+        accountName: 'Office Mart Supplies Pvt Ltd',
+        ifscCode: 'ICIC0001357',
+        bankName: 'ICICI Bank',
+        branchName: 'Bandra',
+        accountType: 'Current',
+        isPrimary: true,
+        verified: true,
+        verifiedDate: '2024-02-15',
+      },
+    ],
+    addresses: [
+      {
+        id: 'ADDR-PROC-IN-002',
+        type: 'Registered',
+        addressLine1: 'Bandra Kurla Complex, Unit 23',
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        stateCode: 'MH',
+        pincode: '400051',
+        country: 'India',
+        gstin: '27AABOM5678H1Z2',
+        isPrimary: true,
+      },
+    ],
     createdBy: 'Admin',
     createdDate: '2024-02-10',
     approvedBy: 'Procurement Head',
-    approvedDate: '2024-02-13'
-  }
+    approvedDate: '2024-02-13',
+  },
 ];
 
 // ============================================================================
@@ -453,7 +486,7 @@ export const MULTI_ENTITY_BANKS: BankMaster[] = [
     entityName: 'Subko Coffee Pvt Ltd – India',
     currency: 'INR',
     isActive: true,
-    isPrimary: true
+    isPrimary: true,
   },
   {
     id: 'BANK-SUBKO-IN-002',
@@ -467,7 +500,7 @@ export const MULTI_ENTITY_BANKS: BankMaster[] = [
     entityName: 'Subko Coffee Pvt Ltd – India',
     currency: 'INR',
     isActive: true,
-    isPrimary: false
+    isPrimary: false,
   },
   // Subko Coffee UAE Banks
   {
@@ -482,7 +515,7 @@ export const MULTI_ENTITY_BANKS: BankMaster[] = [
     entityName: 'Subko Coffee – Dubai',
     currency: 'AED',
     isActive: true,
-    isPrimary: true
+    isPrimary: true,
   },
   {
     id: 'BANK-SUBKO-UAE-002',
@@ -496,7 +529,7 @@ export const MULTI_ENTITY_BANKS: BankMaster[] = [
     entityName: 'Subko Coffee – Dubai',
     currency: 'AED',
     isActive: true,
-    isPrimary: false
+    isPrimary: false,
   },
   // Procinix India Banks
   {
@@ -511,7 +544,7 @@ export const MULTI_ENTITY_BANKS: BankMaster[] = [
     entityName: 'Procinix Ltd – India',
     currency: 'INR',
     isActive: true,
-    isPrimary: true
+    isPrimary: true,
   },
   {
     id: 'BANK-PROC-IN-002',
@@ -525,8 +558,8 @@ export const MULTI_ENTITY_BANKS: BankMaster[] = [
     entityName: 'Procinix Ltd – India',
     currency: 'INR',
     isActive: true,
-    isPrimary: false
-  }
+    isPrimary: false,
+  },
 ];
 
 // ============================================================================
@@ -544,7 +577,7 @@ export const MULTI_ENTITY_COST_CENTRES: CostCentreMaster[] = [
     departmentName: 'Production',
     headOfCentre: 'Rajesh Kumar',
     isActive: true,
-    budgetAllocated: 5000000
+    budgetAllocated: 5000000,
   },
   {
     id: 'CC-SUBKO-IN-002',
@@ -555,7 +588,7 @@ export const MULTI_ENTITY_COST_CENTRES: CostCentreMaster[] = [
     departmentName: 'Sales',
     headOfCentre: 'Priya Sharma',
     isActive: true,
-    budgetAllocated: 3000000
+    budgetAllocated: 3000000,
   },
   {
     id: 'CC-SUBKO-IN-003',
@@ -566,7 +599,7 @@ export const MULTI_ENTITY_COST_CENTRES: CostCentreMaster[] = [
     departmentName: 'Administration',
     headOfCentre: 'Amit Patel',
     isActive: true,
-    budgetAllocated: 2000000
+    budgetAllocated: 2000000,
   },
   // Subko Coffee UAE Cost Centres
   {
@@ -578,7 +611,7 @@ export const MULTI_ENTITY_COST_CENTRES: CostCentreMaster[] = [
     departmentName: 'Retail',
     headOfCentre: 'Ahmed Al Maktoum',
     isActive: true,
-    budgetAllocated: 500000 // AED
+    budgetAllocated: 500000, // AED
   },
   {
     id: 'CC-SUBKO-UAE-002',
@@ -589,7 +622,7 @@ export const MULTI_ENTITY_COST_CENTRES: CostCentreMaster[] = [
     departmentName: 'Marketing',
     headOfCentre: 'Sara Khan',
     isActive: true,
-    budgetAllocated: 300000 // AED
+    budgetAllocated: 300000, // AED
   },
   // Procinix India Cost Centres
   {
@@ -601,7 +634,7 @@ export const MULTI_ENTITY_COST_CENTRES: CostCentreMaster[] = [
     departmentName: 'Technology',
     headOfCentre: 'Sanjay Verma',
     isActive: true,
-    budgetAllocated: 8000000
+    budgetAllocated: 8000000,
   },
   {
     id: 'CC-PROC-IN-002',
@@ -612,8 +645,8 @@ export const MULTI_ENTITY_COST_CENTRES: CostCentreMaster[] = [
     departmentName: 'Consulting',
     headOfCentre: 'Meera Iyer',
     isActive: true,
-    budgetAllocated: 6000000
-  }
+    budgetAllocated: 6000000,
+  },
 ];
 
 // ============================================================================
@@ -632,7 +665,7 @@ export const MULTI_ENTITY_TAX_CODES: TaxCodeMaster[] = [
     applicableFrom: '2017-07-01',
     cgstRate: 9,
     sgstRate: 9,
-    igstRate: 18
+    igstRate: 18,
   },
   {
     id: 'TAX-IN-GST12',
@@ -644,7 +677,7 @@ export const MULTI_ENTITY_TAX_CODES: TaxCodeMaster[] = [
     applicableFrom: '2017-07-01',
     cgstRate: 6,
     sgstRate: 6,
-    igstRate: 12
+    igstRate: 12,
   },
   {
     id: 'TAX-IN-GST5',
@@ -656,7 +689,7 @@ export const MULTI_ENTITY_TAX_CODES: TaxCodeMaster[] = [
     applicableFrom: '2017-07-01',
     cgstRate: 2.5,
     sgstRate: 2.5,
-    igstRate: 5
+    igstRate: 5,
   },
   {
     id: 'TAX-IN-TDS194C',
@@ -667,7 +700,7 @@ export const MULTI_ENTITY_TAX_CODES: TaxCodeMaster[] = [
     isActive: true,
     applicableFrom: '2020-04-01',
     tdsSection: '194C',
-    tdsNature: 'Payments to Contractors'
+    tdsNature: 'Payments to Contractors',
   },
   {
     id: 'TAX-IN-TDS194J',
@@ -678,7 +711,7 @@ export const MULTI_ENTITY_TAX_CODES: TaxCodeMaster[] = [
     isActive: true,
     applicableFrom: '2020-04-01',
     tdsSection: '194J',
-    tdsNature: 'Professional/Technical Services'
+    tdsNature: 'Professional/Technical Services',
   },
   // UAE VAT Codes (applicable for Subko UAE)
   {
@@ -688,7 +721,7 @@ export const MULTI_ENTITY_TAX_CODES: TaxCodeMaster[] = [
     taxName: 'VAT @ 5% (Standard)',
     taxRate: 5,
     isActive: true,
-    applicableFrom: '2018-01-01'
+    applicableFrom: '2018-01-01',
   },
   {
     id: 'TAX-UAE-VAT0',
@@ -697,7 +730,7 @@ export const MULTI_ENTITY_TAX_CODES: TaxCodeMaster[] = [
     taxName: 'VAT @ 0% (Zero-rated)',
     taxRate: 0,
     isActive: true,
-    applicableFrom: '2018-01-01'
+    applicableFrom: '2018-01-01',
   },
   {
     id: 'TAX-UAE-EXEMPT',
@@ -706,6 +739,33 @@ export const MULTI_ENTITY_TAX_CODES: TaxCodeMaster[] = [
     taxName: 'VAT Exempt',
     taxRate: 0,
     isActive: true,
-    applicableFrom: '2018-01-01'
-  }
+    applicableFrom: '2018-01-01',
+  },
+];
+
+// ============================================================================
+// ENTITY-SCOPED DEPARTMENTS (Dubai / multi-entity)
+// ============================================================================
+
+export const MULTI_ENTITY_DEPARTMENTS: DepartmentMaster[] = [
+  {
+    id: 'DEPT-UAE-001',
+    code: 'DEPT-UAE-LOG',
+    name: 'Logistics — Dubai',
+    description: 'Import, freight and warehouse — UAE entity',
+    headOfDepartment: 'UAE Operations Lead',
+    isActive: true,
+    entityId: 'ENT-SUBKO-UAE',
+    entityName: 'Subko Coffee – Dubai',
+  },
+  {
+    id: 'DEPT-UAE-002',
+    code: 'DEPT-UAE-OPS',
+    name: 'Cafe Operations — Dubai',
+    description: 'Retail and cafe operations — UAE',
+    headOfDepartment: 'Regional Manager',
+    isActive: true,
+    entityId: 'ENT-SUBKO-UAE',
+    entityName: 'Subko Coffee – Dubai',
+  },
 ];
