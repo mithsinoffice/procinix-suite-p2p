@@ -38,6 +38,7 @@ import { CreateVendor } from './components/CreateVendor';
 import { Invoices } from './components/Invoices';
 import { InvoiceFormPO } from './components/InvoiceFormPO';
 import { InvoiceFormDirectV2 } from './components/InvoiceFormDirectV2';
+import InvoiceEditLoader from './components/InvoiceEditLoader';
 import { AIInvoiceCapture } from './components/AIInvoiceCapture';
 import { AIIngestionDashboard } from './components/AIIngestionDashboard';
 import { APValidationWorkbench } from './components/APValidationWorkbench';
@@ -737,7 +738,7 @@ function App() {
                                   path="invoices/agent-config"
                                   element={<AgentConfigEngine />}
                                 />
-                                <Route path="invoices/edit/:id" element={<InvoiceFormPO />} />
+                                <Route path="invoices/edit/:id" element={<InvoiceEditLoader />} />
                                 <Route path="invoices/:id" element={<InvoiceDetail />} />
 
                                 {/* Approvals */}

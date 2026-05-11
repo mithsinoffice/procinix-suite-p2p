@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Save,
@@ -91,6 +91,7 @@ interface LineItem {
   itemName: string;
   itemCode: string;
   itemDescription: string;
+  hsnSac?: string;
   accountCode: string;
   accountDescription: string;
   unitPrice: number;
@@ -180,6 +181,8 @@ const getStatesListWithCodes = (): Array<{ code: string; name: string }> => {
 export function InvoiceFormPO() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id: editingId } = useParams<{ id?: string }>();
+  const isEditMode = Boolean(editingId);
   const {
     vendors,
     getPOsByVendor,
@@ -187,7 +190,6 @@ export function InvoiceFormPO() {
     getAdvancesByVendor,
     getVendorByCode,
     getPOByNumber,
-    addInvoice,
   } = useAPData();
   const {
     costCentres: liveCostCentres,
@@ -372,6 +374,98 @@ export function InvoiceFormPO() {
 
   // Line items (populated from PO/GRN selection or manual entry)
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+
+  // ── Edit-mode prefill ─────────────────────────────────────────────────────
+  // When mounted at /invoices/edit/:id, GET the existing invoice and map
+  // every editable field back into form state. No second fetch path — the
+  // AI-hydration flow above uses location.state.fromAI, this branch keys
+  // off the URL param.
+  useEffect(() => {
+    if (!isEditMode || !editingId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const json = await mysqlApiRequest<{ success: boolean; data: any }>(
+          `/invoices/${encodeURIComponent(editingId)}`
+        );
+        if (cancelled || !json?.success || !json.data) return;
+        const inv = json.data;
+
+        setInvoiceNumber(inv.invoice_number || '');
+        setInvoiceDate(inv.invoice_date ? String(inv.invoice_date).split('T')[0] : '');
+        setPaymentDueDate(inv.due_date ? String(inv.due_date).split('T')[0] : '');
+        setPaymentDueDateManuallySet(Boolean(inv.due_date));
+        setInvoiceCurrency(inv.currency || 'INR');
+        if (inv.vendor_gstin) setVendorGSTNumber(inv.vendor_gstin);
+        if (inv.po_number) setSelectedPO(inv.po_number);
+        if (inv.notes) setNarration(inv.notes);
+
+        // Vendor lookup — prefer relational vendor by UUID (vendor_id), fall
+        // back to AP-blob vendor by name. The form's selectedVendor is keyed
+        // on vendor.code, so resolve to that.
+        if (inv.vendor_id) {
+          const relVendor = relationalVendors?.find((v) => v.id === inv.vendor_id);
+          if (relVendor) {
+            setSelectedVendor(relVendor.code);
+            setVendorCode(relVendor.code);
+          }
+        }
+        if (!vendorCode && inv.vendor_name) {
+          const match = vendors.find(
+            (v) =>
+              v.name.toLowerCase() === String(inv.vendor_name).toLowerCase() ||
+              v.name.toLowerCase().includes(String(inv.vendor_name).toLowerCase()) ||
+              String(inv.vendor_name).toLowerCase().includes(v.name.toLowerCase())
+          );
+          if (match) {
+            setSelectedVendor(match.code);
+            setVendorCode(match.code);
+          }
+        }
+
+        if (Array.isArray(inv.line_items) && inv.line_items.length > 0) {
+          setLineItems(
+            inv.line_items.map((li: any, i: number) => ({
+              id: String(li.id ?? i + 1),
+              itemName: li.description || '',
+              itemCode: '',
+              itemDescription: li.description || '',
+              accountCode: '',
+              accountDescription: '',
+              unitPrice: Number(li.unit_price) || 0,
+              poQty: Number(li.quantity) || 1,
+              grnQty: Number(li.quantity) || 1,
+              qty: Number(li.quantity) || 1,
+              gstPercent:
+                li.gst_rate != null
+                  ? Number(li.gst_rate) > 1
+                    ? Number(li.gst_rate)
+                    : Number(li.gst_rate) * 100
+                  : 18,
+              amount: Number(li.amount) || 0,
+              hsnSac: li.hsn_sac || '',
+              poRate: Number(li.unit_price) || 0,
+              rateVariance: 0,
+              selected: true,
+              costCentre: '',
+              profitCentre: '',
+            }))
+          );
+        }
+
+        // Skip the entry-mode landing screen — go straight to the form.
+        setEntryMode('manual');
+      } catch (err) {
+        console.error('[InvoiceFormPO] Edit-mode prefill failed:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Runs once on mount with whatever masters are hydrated at that point;
+    // we deliberately don't re-run on vendors/relationalVendors changes
+    // because that would clobber user edits mid-session.
+  }, [isEditMode, editingId]);
   const activeTdsSections = getActiveTDSSections();
   const defaultTdsSection = activeTdsSections[0];
   const defaultTdsSectionCode = defaultTdsSection?.sectionCode || '';
@@ -1058,65 +1152,103 @@ export function InvoiceFormPO() {
     return due;
   };
 
-  const persistInvoice = async (status: 'Draft' | 'Pending Approval'): Promise<boolean> => {
+  /**
+   * Build the flat payload shared by POST (create) and PUT (edit). Note:
+   *   • POST stores `total_amount = netPayable` (status-quo behaviour kept
+   *     so existing rows stay consistent).
+   *   • PUT stores `total_amount = grossAmount` (subtotal + GST) because the
+   *     server's PUT reconciler enforces lineTaxable + lineGST ≈ total_amount.
+   *     `invoice_number` is included only on PUT — server generates / leaves
+   *     null on create (universal-master-rule: read-only on the form).
+   */
+  const buildPayload = (status: 'Draft' | 'Pending Approval', mode: 'create' | 'edit') => {
     const resolvedVendorCode = vendorCode || selectedVendor;
     const vendor = getVendorByCode(resolvedVendorCode);
-    if (!vendor || !invoiceNumber || !invoiceDate) {
-      alert('Vendor, invoice number, and invoice date are required.');
-      return false;
-    }
-
-    // Persist to relational p2p_schema_mt.invoices via POST /api/invoices.
-    // Blob fallback removed — see FIX-spec 2026-05-10 (modules-batch).
+    if (!vendor || !invoiceDate) return null;
     const totals = calculateTotals();
     const lifecycleState = status === 'Draft' ? 'Ingested' : 'Under Verification';
-    try {
-      // Resolve relational vendor UUID — AP Vendor type only carries `code`,
-      // not `id`. Look the real UUID up in MasterDataContext.liveVendors
-      // (sourced from /api/vendors) so the POST writes the proper FK.
-      const relVendor = relationalVendors?.find(
-        (v) => v.code === vendor.code || v.name === vendor.name
-      );
-      const vendorUuid = relVendor?.id ?? vendor.code;
+    const relVendor = relationalVendors?.find(
+      (v) => v.code === vendor.code || v.name === vendor.name
+    );
+    const vendorUuid = relVendor?.id ?? vendor.code;
 
+    const flat: Record<string, unknown> = {
+      invoice_date: invoiceDate,
+      due_date: paymentDueDate || null,
+      vendor_id: vendorUuid,
+      vendor_name: vendor.name,
+      vendor_code: vendor.code,
+      vendor_gstin: vendorGSTNumber || null,
+      invoice_type: 'po',
+      po_number: selectedPO || null,
+      subtotal: totals.amount,
+      tax_amount: totals.gstTotal,
+      total_amount: mode === 'edit' ? totals.grossAmount : totals.netPayable,
+      currency: invoiceCurrency,
+      entity_id: currentCompany?.id ?? '',
+      status: status === 'Draft' ? 'draft' : 'pending_approval',
+      lifecycle_state: lifecycleState,
+      notes: narration || null,
+    };
+    if (mode === 'edit') {
+      flat.invoice_number = invoiceNumber || null;
+    }
+    return { vendor, flat, totals };
+  };
+
+  const buildLineItemsForPut = () =>
+    lineItems.map((li) => ({
+      id: li.id,
+      description: li.itemDescription || li.itemName || '',
+      quantity: li.qty,
+      unit_price: li.unitPrice,
+      amount: li.amount,
+      hsn_sac: li.hsnSac || null,
+      gst_rate: li.gstPercent != null ? Number(li.gstPercent) / 100 : null,
+      // The server's PUT reconciliation reads these to verify
+      // lineTaxable + lineGST ≈ header total_amount. They aren't persisted
+      // on the line item but the math runs server-side.
+      cgst: li.cgst ?? 0,
+      sgst: li.sgst ?? 0,
+      igst: li.igst ?? 0,
+    }));
+
+  const persistInvoice = async (status: 'Draft' | 'Pending Approval'): Promise<boolean> => {
+    if (isEditMode && !editingId) {
+      alert('Missing invoice id for edit.');
+      return false;
+    }
+    const built = buildPayload(status, isEditMode ? 'edit' : 'create');
+    if (!built) {
+      alert('Vendor and invoice date are required.');
+      return false;
+    }
+    try {
+      if (isEditMode && editingId) {
+        const res = await mysqlApiRequest<{ success: boolean; data: { id: string } }>(
+          `/invoices/${encodeURIComponent(editingId)}`,
+          {
+            method: 'PUT',
+            body: JSON.stringify({
+              invoice: built.flat,
+              line_items: buildLineItemsForPut(),
+            }),
+          }
+        );
+        if (!res?.success) {
+          alert('Failed to update invoice.');
+          return false;
+        }
+        return true;
+      }
       const res = await mysqlApiRequest<{ success: boolean; data: { id: string } }>('/invoices', {
         method: 'POST',
-        body: JSON.stringify({
-          invoice_number: invoiceNumber,
-          invoice_date: invoiceDate,
-          vendor_id: vendorUuid,
-          vendor_name: vendor.name,
-          vendor_code: vendor.code,
-          invoice_type: 'po',
-          po_number: selectedPO || null,
-          total_amount: totals.netPayable,
-          currency: invoiceCurrency,
-          entity_id: currentCompany?.id ?? '',
-          status: status === 'Draft' ? 'draft' : 'pending_approval',
-          lifecycle_state: lifecycleState,
-        }),
+        body: JSON.stringify(built.flat),
       });
       if (!res?.success) {
         alert('Failed to save invoice.');
         return false;
       }
-      // Also push into local APData state so the listing refreshes immediately;
-      // the next mount-time API fetch reconciles authoritatively.
-      addInvoice({
-        id: res.data.id,
-        invoiceNumber,
-        invoiceDate,
-        vendorName: vendor.name,
-        vendorCode: vendor.code,
-        invoiceType: 'PO',
-        poNumber: selectedPO || undefined,
-        totalAmount: totals.netPayable,
-        currency: invoiceCurrency,
-        status,
-        approver: 'AP Team',
-        paymentStatus: 'Unpaid',
-        matchStatus: selectedGRNs.length > 0 ? '3-Way Matched' : 'Partially Matched',
-      });
       return true;
     } catch (err) {
       const apiErr = err as { message?: string; details?: string[] };
@@ -1159,12 +1291,14 @@ export function InvoiceFormPO() {
     }
 
     if (await persistInvoice('Pending Approval')) {
-      navigate('/invoices');
+      navigate(isEditMode && editingId ? `/invoices/${editingId}` : '/invoices');
     }
   };
 
   const handleSaveDraft = async () => {
-    await persistInvoice('Draft');
+    if (await persistInvoice('Draft')) {
+      navigate(isEditMode && editingId ? `/invoices/${editingId}` : '/invoices');
+    }
   };
 
   const handleCancel = () => {
@@ -1863,7 +1997,9 @@ export function InvoiceFormPO() {
             </FormSection>
 
             <FormSection title="Invoice Details" columns={3}>
-              <PxFormField label="Invoice Number" required filled={!!invoiceNumber.trim()}>
+              {/* System-generated. Read-only always — placeholder on create,
+                  real value on edit (still not editable). */}
+              <PxFormField label="Invoice Number" filled={!!invoiceNumber.trim()}>
                 <div className="relative">
                   <Hash
                     className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2"
@@ -1872,10 +2008,9 @@ export function InvoiceFormPO() {
                   <input
                     type="text"
                     value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                    placeholder="e.g., INV-2024-001"
-                    className="px-input pl-11"
-                    required
+                    readOnly
+                    placeholder="Auto-generated on save"
+                    className="px-input pl-11 px-input-readonly"
                   />
                 </div>
               </PxFormField>

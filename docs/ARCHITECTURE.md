@@ -132,6 +132,9 @@ Key clusters:
 /dashboard                        → DashboardsHub
 /invoices                         → Invoices
 /invoices/:id                     → InvoiceDetail (lazy)
+/invoices/edit/:id                → InvoiceEditLoader → InvoiceFormPO | NonPOInvoiceForm
+/invoices/create-po               → InvoiceFormPO (create)
+/invoices/create-direct           → InvoiceFormDirectV2 (non-PO create)
 /ap/payments/queue                → PaymentQueue (under PaymentsLayout)
 /ap/payments/forecast             → PaymentForecast
 /ap/payments/banking              → PaymentBanking
@@ -415,6 +418,44 @@ The deferral queue is the source of truth. Highlights:
    `tenant_id`.
 8. Run `npm run lint` and `npm run format:check` before pushing — Husky
    handles staged files automatically.
+9. **Universal master rule** — system-generated fields (`id`, `code`, ref
+   numbers, document numbers like invoice number / debit note number / GRN
+   ref / PR ref / PO ref) MUST render on every create/edit form as a
+   read-only input. On create: placeholder `Auto-generated on save`. On
+   edit: show the real value, still not editable. Never accept user input
+   into these fields. Pattern applied so far: `InvoiceFormPO.invoiceNumber`,
+   `InvoiceFormDirectV2.invoiceNumber`, `NonPOInvoiceForm.invoiceNumber`,
+   `DebitNoteFormV2Enhanced.debitNoteNumber`.
+
+### Invoice form routing
+
+`/invoices/edit/:id` mounts `<InvoiceEditLoader>` (`src/components/InvoiceEditLoader.tsx`),
+a thin wrapper that GETs `/api/invoices/:id` once to inspect the row, then
+renders `<NonPOInvoiceForm>` when `po_number` is empty or `<InvoiceFormPO>`
+when a PO is attached. The form itself does a second GET on mount to hydrate
+state — this is the only cleanly typed way to share the prefill path with
+the AI-capture flow (`location.state.fromAI`).
+
+Both forms branch on `isEditMode = Boolean(useParams().id)`:
+
+- **Create** — POST `/api/invoices` with flat fields. `total_amount`
+  stays as `netPayable` (status-quo PO form) or `finalNetPayable`
+  (non-PO) so existing list/detail rendering is preserved.
+- **Edit** — PUT `/api/invoices/:id` with
+  `{ invoice: {...flatFields}, line_items: [...] }`. `total_amount` is
+  `grossAmount` (subtotal + GST) so the server's PUT reconciler
+  (`lineTaxable + lineGST ≈ total_amount`, ±₹1) passes. The form sends
+  `cgst/sgst/igst` on each line for the reconciler — these are read
+  but not persisted at the line level (server's `invoice_line_items`
+  table has only `description / quantity / unit_price / amount /
+hsn_sac / gst_rate`).
+- **Success** — POST navigates to `/invoices` (listing); PUT navigates
+  to `/invoices/:id` (detail).
+- **Errors** — `ApiRequestError.details[]` surfaced verbatim via
+  `alert()` in both forms (legacy UX; future cleanup: inline banner).
+- **`addInvoice()` from `useAPData()` is no longer called by either
+  form.** `useAPData` import dropped entirely from `NonPOInvoiceForm`;
+  retained in `InvoiceFormPO` only for vendor/PO/GRN lookups.
 
 ---
 

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Upload,
@@ -30,7 +30,6 @@ import {
   DepartmentSelector,
 } from './shared';
 import { useMasterData } from '../contexts/MasterDataContext';
-import { useAPData } from '../contexts/APDataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { isMsmeVendor, maxMsmeDueDate, msmeDueDateWarning } from '../lib/msmeDueDate';
 import {
@@ -209,6 +208,8 @@ function extractEntityStateAbbrev(gstin?: string | null): string | null {
 
 export function NonPOInvoiceForm() {
   const navigate = useNavigate();
+  const { id: editingId } = useParams<{ id?: string }>();
+  const isEditMode = Boolean(editingId);
   const {
     vendors,
     getVendorById,
@@ -227,7 +228,6 @@ export function NonPOInvoiceForm() {
           String(r.recordName ?? r.name ?? r.recordCode ?? r.code ?? '')
         )
       : ['Professional Services', 'Consulting', 'Marketing', 'Travel', 'Maintenance', 'Utilities'];
-  const { addInvoice } = useAPData();
   const { user } = useAuth();
 
   // Resolve the user's current entity → state abbreviation (e.g., "MH" for Maharashtra).
@@ -309,6 +309,87 @@ export function NonPOInvoiceForm() {
   // Line Items
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const selectedVendor = vendorId ? getVendorById(vendorId) : undefined;
+
+  // ── Edit-mode prefill ─────────────────────────────────────────────────────
+  // When mounted at /invoices/edit/:id (via InvoiceEditLoader), GET the
+  // existing invoice and map every editable field into form state.
+  useEffect(() => {
+    if (!isEditMode || !editingId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const json = await mysqlApiRequest<{ success: boolean; data: any }>(
+          `/invoices/${encodeURIComponent(editingId)}`
+        );
+        if (cancelled || !json?.success || !json.data) return;
+        const inv = json.data;
+
+        setInvoiceNumber(inv.invoice_number || '');
+        setInvoiceDate(inv.invoice_date ? String(inv.invoice_date).split('T')[0] : '');
+        setDueDate(inv.due_date ? String(inv.due_date).split('T')[0] : '');
+        setDueDateManuallySet(Boolean(inv.due_date));
+        setCurrency(inv.currency || 'INR');
+        if (inv.entity_id) setEntityId(inv.entity_id);
+        if (inv.payment_terms) setPaymentTerms(inv.payment_terms);
+        if (inv.notes) setNarration(inv.notes);
+
+        // Resolve vendor by UUID first (server stores vendor_id), then by name.
+        if (inv.vendor_id) {
+          const byId = vendors.find((v) => v.id === inv.vendor_id);
+          if (byId) setVendorId(byId.id);
+        }
+        if (!vendorId && inv.vendor_name) {
+          const byName = vendors.find(
+            (v) =>
+              v.name.toLowerCase() === String(inv.vendor_name).toLowerCase() ||
+              v.name.toLowerCase().includes(String(inv.vendor_name).toLowerCase())
+          );
+          if (byName) setVendorId(byName.id);
+        }
+
+        if (Array.isArray(inv.line_items) && inv.line_items.length > 0) {
+          setLineItems(
+            inv.line_items.map((li: any, i: number) => {
+              const baseAmount = Number(li.amount) || 0;
+              const gstRatePct =
+                li.gst_rate != null
+                  ? Number(li.gst_rate) > 1
+                    ? Number(li.gst_rate)
+                    : Number(li.gst_rate) * 100
+                  : 18;
+              const gstAmount = +(baseAmount * gstRatePct) / 100;
+              return {
+                id: String(li.id ?? i + 1),
+                itemId: '',
+                itemCode: '',
+                description: li.description || '',
+                quantity: Number(li.quantity) || 1,
+                unitRate: Number(li.unit_price) || 0,
+                baseAmount,
+                gstRate: gstRatePct,
+                gstAmount,
+                cgst: 0,
+                sgst: 0,
+                igst: gstAmount,
+                grossAmount: baseAmount + gstAmount,
+                tdsSection: '',
+                tdsRate: 0,
+                tdsAmount: 0,
+                netPayable: baseAmount + gstAmount,
+                costCentreId: '',
+              };
+            })
+          );
+        }
+      } catch (err) {
+        console.error('[NonPOInvoiceForm] Edit-mode prefill failed:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Runs once on mount with whatever masters are hydrated at that point.
+  }, [isEditMode, editingId]);
 
   // MSME 45-day rule: auto-suggest due date for MSME vendors when user hasn't set one
   const vendorIsMsme = isMsmeVendor(selectedVendor as any);
@@ -764,7 +845,6 @@ export function NonPOInvoiceForm() {
     const newErrors: Record<string, string> = {};
 
     if (!vendorId) newErrors.vendor = 'Vendor is required';
-    if (!invoiceNumber) newErrors.invoiceNumber = 'Invoice number is required';
     if (!invoiceDate) newErrors.invoiceDate = 'Invoice date is required';
     if (!costCentreId) newErrors.costCentre = 'Cost centre is required';
     if (!departmentName) newErrors.department = 'Department is required';
@@ -787,51 +867,90 @@ export function NonPOInvoiceForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const persistInvoice = async (status: 'Draft' | 'Pending Approval'): Promise<boolean> => {
+  /**
+   * Build the flat payload shared by POST (create) and PUT (edit).
+   * POST stores `total_amount = finalNetPayable` (status-quo). PUT stores
+   * `total_amount = totals.grossAmount` because the server's PUT reconciler
+   * enforces lineTaxable + lineGST ≈ total_amount.
+   */
+  const buildPayload = (status: 'Draft' | 'Pending Approval', mode: 'create' | 'edit') => {
     const vendor = vendorId ? getVendorById(vendorId) : undefined;
-    if (!vendor || !invoiceNumber || !invoiceDate) {
-      alert('Vendor, invoice number, and invoice date are required.');
+    if (!vendor || !invoiceDate) return null;
+    const lifecycleState = status === 'Draft' ? 'Ingested' : 'Under Verification';
+    const flat: Record<string, unknown> = {
+      invoice_date: invoiceDate,
+      due_date: dueDate || null,
+      vendor_id: vendor.id,
+      vendor_name: vendor.name,
+      vendor_code: vendor.code,
+      invoice_type: 'non_po',
+      subtotal: totals.baseAmount,
+      tax_amount: totals.gstAmount,
+      total_amount: mode === 'edit' ? totals.grossAmount : finalNetPayable,
+      currency,
+      entity_id: entityId || currentCompany?.id || '',
+      status: status === 'Draft' ? 'draft' : 'pending_approval',
+      lifecycle_state: lifecycleState,
+      payment_terms: paymentTerms || null,
+      notes: narration || null,
+    };
+    if (mode === 'edit') {
+      flat.invoice_number = invoiceNumber || null;
+    }
+    return { vendor, flat };
+  };
+
+  const buildLineItemsForPut = () =>
+    lineItems.map((li) => ({
+      id: li.id,
+      description: li.description || '',
+      quantity: li.quantity,
+      unit_price: li.unitRate,
+      amount: li.baseAmount,
+      hsn_sac: null,
+      gst_rate: li.gstRate != null ? Number(li.gstRate) / 100 : null,
+      // Server-side reconciliation reads these but does not persist them.
+      cgst: li.cgst ?? 0,
+      sgst: li.sgst ?? 0,
+      igst: li.igst ?? 0,
+    }));
+
+  const persistInvoice = async (status: 'Draft' | 'Pending Approval'): Promise<boolean> => {
+    if (isEditMode && !editingId) {
+      alert('Missing invoice id for edit.');
       return false;
     }
-
-    // Persist to relational p2p_schema_mt.invoices via POST /api/invoices.
-    const lifecycleState = status === 'Draft' ? 'Ingested' : 'Under Verification';
+    const built = buildPayload(status, isEditMode ? 'edit' : 'create');
+    if (!built) {
+      alert('Vendor and invoice date are required.');
+      return false;
+    }
     try {
+      if (isEditMode && editingId) {
+        const res = await mysqlApiRequest<{ success: boolean; data: { id: string } }>(
+          `/invoices/${encodeURIComponent(editingId)}`,
+          {
+            method: 'PUT',
+            body: JSON.stringify({
+              invoice: built.flat,
+              line_items: buildLineItemsForPut(),
+            }),
+          }
+        );
+        if (!res?.success) {
+          alert('Failed to update invoice.');
+          return false;
+        }
+        return true;
+      }
       const res = await mysqlApiRequest<{ success: boolean; data: { id: string } }>('/invoices', {
         method: 'POST',
-        body: JSON.stringify({
-          invoice_number: invoiceNumber,
-          invoice_date: invoiceDate,
-          vendor_id: vendor.id,
-          vendor_name: vendor.name,
-          vendor_code: vendor.code,
-          invoice_type: 'non_po',
-          total_amount: finalNetPayable,
-          currency,
-          entity_id: currentCompany?.id ?? '',
-          status: status === 'Draft' ? 'draft' : 'pending_approval',
-          lifecycle_state: lifecycleState,
-        }),
+        body: JSON.stringify(built.flat),
       });
       if (!res?.success) {
         alert('Failed to save invoice.');
         return false;
       }
-      addInvoice({
-        id: res.data.id,
-        invoiceNumber,
-        invoiceDate,
-        vendorName: vendor.name,
-        vendorCode: vendor.code,
-        invoiceType: 'Non-PO',
-        totalAmount: finalNetPayable,
-        currency,
-        status,
-        approver: 'AP Team',
-        paymentStatus: 'Unpaid',
-        matchStatus: 'Unmatched',
-        _source: 'manual',
-      });
       return true;
     } catch (err) {
       const apiErr = err as { message?: string; details?: string[] };
@@ -844,10 +963,12 @@ export function NonPOInvoiceForm() {
     }
   };
 
+  const successNavigateTo = isEditMode && editingId ? `/invoices/${editingId}` : '/ap/my-invoices';
+
   // Save draft
   const handleSaveDraft = async () => {
     if (await persistInvoice('Draft')) {
-      navigate('/ap/my-invoices');
+      navigate(successNavigateTo);
     }
   };
 
@@ -861,7 +982,7 @@ export function NonPOInvoiceForm() {
         return;
       }
       if (await persistInvoice('Pending Approval')) {
-        navigate('/ap/my-invoices');
+        navigate(successNavigateTo);
       }
     } else {
       const tdsErrors = validateTDSRules(lineItems);
@@ -1559,29 +1680,23 @@ export function NonPOInvoiceForm() {
           })}
         </div>
 
-        <PxFormField
-          label="Invoice Number"
-          required
-          error={showValidation ? errors.invoiceNumber : undefined}
-        >
+        {/* System-generated. Read-only always — placeholder on create,
+            real value on edit (still not editable). */}
+        <PxFormField label="Invoice Number">
           <div className="flex items-center gap-2">
             <input
               type="text"
               value={invoiceNumber}
-              onChange={(e) => setInvoiceNumber(e.target.value)}
-              placeholder="Enter invoice number"
-              className="px-input flex-1 px-4 py-2 rounded-lg border-2"
+              readOnly
+              placeholder="Auto-generated on save"
+              className="px-input px-input-readonly flex-1 px-4 py-2 rounded-lg border-2"
               style={{
-                borderColor:
-                  showValidation && errors.invoiceNumber
-                    ? 'var(--color-error-dark)'
-                    : 'var(--color-silver)',
+                borderColor: 'var(--color-silver)',
                 color: 'var(--color-ink)',
               }}
             />
             {ocrFields.invoiceNumber && getConfidencePill('invoiceNumber')}
           </div>
-          {getSuggestionChips('invoiceNumber', setInvoiceNumber)}
         </PxFormField>
 
         <PxFormField label="Invoice Date" required>
