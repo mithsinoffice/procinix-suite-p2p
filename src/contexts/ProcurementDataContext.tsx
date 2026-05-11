@@ -266,6 +266,37 @@ export async function fetchGRNs(): Promise<GoodsReceiptNote[]> {
   return res && res.success ? res.data || [] : [];
 }
 
+export interface CreateGRNPayload {
+  poId: string;
+  receiptDate: string;
+  entityId: string;
+  entityCode: string;
+  vendorId?: string;
+  receivedBy?: string;
+  deliveryNoteNo?: string;
+  vehicleNo?: string;
+  remarks?: string;
+  items: Array<{
+    poItemId: string;
+    qtyReceived: number;
+    qtyAccepted?: number;
+    qtyRejected?: number;
+    rejectionReason?: string;
+    itemDescription?: string;
+    unit?: string;
+    unitPrice?: number;
+  }>;
+}
+
+export async function createGRNApi(payload: CreateGRNPayload): Promise<GoodsReceiptNote | null> {
+  const res = (await mysqlApiRequest('/procurement/grns', {
+    method: 'POST',
+    headers: tenantHeaders(),
+    body: JSON.stringify(payload),
+  })) as ApiResult<GoodsReceiptNote> | undefined;
+  return res && res.success ? res.data : null;
+}
+
 export async function fetchSRNs(): Promise<ServiceReceiptNote[]> {
   const res = (await mysqlApiRequest('/procurement/srns', { headers: tenantHeaders() })) as
     | ApiResult<ServiceReceiptNote[]>

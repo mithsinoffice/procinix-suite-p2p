@@ -1,18 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Search, Filter, Plus, Package, X, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useMasterData } from '../contexts/MasterDataContext';
 import {
-  Search,
-  Filter,
-  Plus,
-  Package,
-  X,
-  ChevronDown,
-  MapPin,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-} from 'lucide-react';
-import { useAPData } from '../contexts/APDataContext';
-import { useProcurementData } from '../contexts/ProcurementDataContext';
+  useProcurementData,
+  fetchPO,
+  createGRNApi,
+  type CreateGRNPayload,
+} from '../contexts/ProcurementDataContext';
 import { FormSection, PxFormField } from './ui/form-primitives';
 import {
   listingHeader,
@@ -25,8 +20,10 @@ import {
   listingTh,
   listingTd,
 } from './ui/listingStyles';
+import type { ApiRequestError } from '../lib/mysql/client';
+import type { POLineItem, PurchaseOrder } from '../types/procurement';
 
-interface GRN {
+interface GRNRow {
   id: string;
   grnNumber: string;
   poNumber: string;
@@ -35,63 +32,22 @@ interface GRN {
   amount: number;
   qtyReceived: number;
   poQty: number;
-  status: 'Pending' | 'Partial' | 'Complete';
-  allocationStatus: 'Not Allocated' | 'Partially Allocated' | 'Fully Allocated' | 'Accepted';
-  allocations?: LocationAllocation[];
+  allocationStatus: 'Not Allocated' | 'Partially Allocated' | 'Accepted';
 }
 
-interface LocationAllocation {
-  id: string;
-  location: string;
-  allocatedQty: number;
-  acceptedQty: number;
-  status: 'Pending Acceptance' | 'Accepted' | 'Rejected';
-  acceptedBy?: string;
-  acceptedDate?: string;
+interface ReceiptLineDraft {
+  poItemId: string;
+  qtyReceived: number;
 }
 
-interface POItem {
-  id: string;
-  poNumber: string;
-  vendor: string;
-  orderQty: number;
-  receivedQty: number;
-  remainingQty: number;
-  unitPrice: number;
-  itemName: string;
-  deliveryLocation: string;
-}
+const todayIso = () => new Date().toISOString().split('T')[0];
 
-const locations = [
-  'Mumbai Warehouse',
-  'Bangalore Store',
-  'Pune Store',
-  'Delhi Hub',
-  'Chennai Depot',
-  'Kolkata Branch',
-];
-
-const getStatusColor = (status: GRN['status']) => {
-  switch (status) {
-    case 'Pending':
-      return 'var(--color-slate)';
-    case 'Partial':
-      return 'var(--color-teal-dark)';
-    case 'Complete':
-      return 'var(--color-teal)';
-    default:
-      return 'var(--color-mercury-grey)';
-  }
-};
-
-const getAllocationStatusColor = (status: GRN['allocationStatus']) => {
+const getAllocationStatusColor = (status: GRNRow['allocationStatus']) => {
   switch (status) {
     case 'Not Allocated':
       return 'var(--color-error)';
     case 'Partially Allocated':
       return '#D97706';
-    case 'Fully Allocated':
-      return 'var(--color-teal)';
     case 'Accepted':
       return 'var(--color-teal)';
     default:
@@ -100,73 +56,87 @@ const getAllocationStatusColor = (status: GRN['allocationStatus']) => {
 };
 
 export function GoodsReceipt() {
-  const { purchaseOrders, addGRN } = useAPData();
-  const { grns: relationalGrns, pos: relationalPOs } = useProcurementData();
+  const { user } = useAuth();
+  const { entities, currentCompany } = useMasterData();
+  const { pos: relationalPOs, grns: relationalGrns, refresh } = useProcurementData();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedPO, setSelectedPO] = useState<POItem | null>(null);
-  const [qtyReceived, setQtyReceived] = useState(0);
 
-  // Part B - Allocation states
-  const [currentStep, setCurrentStep] = useState<'partA' | 'partB'>('partA');
-  const [allocations, setAllocations] = useState<LocationAllocation[]>([]);
-  const [showAllocationModal, setShowAllocationModal] = useState(false);
-  const [selectedGRN, setSelectedGRN] = useState<GRN | null>(null);
+  // Modal state — single PO + N receipt lines
+  const [selectedPOId, setSelectedPOId] = useState<string>('');
+  const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
+  const [loadingPO, setLoadingPO] = useState(false);
+  const [receiptDate, setReceiptDate] = useState<string>(todayIso());
+  const [receivedBy, setReceivedBy] = useState<string>('');
+  const [deliveryNoteNo, setDeliveryNoteNo] = useState<string>('');
+  const [vehicleNo, setVehicleNo] = useState<string>('');
+  const [remarks, setRemarks] = useState<string>('');
+  const [lines, setLines] = useState<ReceiptLineDraft[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Source of truth: relational GRNs from /api/procurement/grns via
-  // ProcurementDataContext. The APData blob path is no longer read.
-  const grns: GRN[] = relationalGrns.map((g) => {
-    const po = relationalPOs.find((p) => p.id === g.poId);
-    const totalReceivedQty = (g.items || []).reduce(
-      (sum, li) => sum + Number(li.qtyReceived || 0),
-      0
-    );
-    const totalAcceptedQty = (g.items || []).reduce(
-      (sum, li) => sum + Number(li.qtyAccepted || 0),
-      0
-    );
-    const totalAmount = (g.items || []).reduce((sum, li) => sum + Number(li.lineAmount || 0), 0);
-    const allAccepted = totalAcceptedQty > 0 && totalAcceptedQty >= totalReceivedQty;
-    const partialAccepted = totalAcceptedQty > 0 && totalAcceptedQty < totalReceivedQty;
-    return {
-      id: g.id, // relational UUID
-      grnNumber: g.grnRef,
-      poNumber: po?.poRef ?? '',
-      vendor: po?.vendorName ?? '',
-      receiptDate: g.receiptDate ?? '',
-      amount: totalAmount,
-      qtyReceived: totalReceivedQty,
-      poQty: totalReceivedQty,
-      status: g.status === 'confirmed' ? 'Complete' : 'Pending',
-      allocationStatus: allAccepted
-        ? 'Accepted'
-        : partialAccepted
-          ? 'Partially Allocated'
-          : 'Not Allocated',
-      allocations: (g.items || []).map((li) => ({
-        id: li.id,
-        location: '',
-        allocatedQty: Number(li.qtyReceived || 0),
-        acceptedQty: Number(li.qtyAccepted || 0),
-        status: Number(li.qtyAccepted || 0) > 0 ? 'Accepted' : 'Pending Acceptance',
-      })),
-    };
-  });
+  // Entity context — same pattern used by RegularPRForm/CreatePurchaseOrder.
+  // Fall back to the auth user's default platform entity when MasterDataContext
+  // hasn't surfaced a currentCompany yet (e.g. fresh login).
+  const entityRecord = useMemo(() => {
+    const lookup =
+      entities.find(
+        (e) =>
+          e.id === currentCompany?.id ||
+          e.id === user?.currentPlatformEntityId ||
+          e.name === currentCompany?.name
+      ) ?? entities[0];
+    return lookup;
+  }, [entities, currentCompany?.id, currentCompany?.name, user?.currentPlatformEntityId]);
 
-  const availablePOItems: POItem[] = purchaseOrders.flatMap((po) =>
-    po.lineItems
-      .filter((lineItem) => lineItem.remainingQty > 0)
-      .map((lineItem) => ({
-        id: `${po.id}:${lineItem.id}`,
-        poNumber: po.poNumber,
-        vendor: po.vendor,
-        orderQty: lineItem.qty,
-        receivedQty: lineItem.receivedQty,
-        remainingQty: lineItem.remainingQty,
-        unitPrice: lineItem.unitPrice,
-        itemName: lineItem.itemName,
-        deliveryLocation: lineItem.project || po.department || 'Primary Location',
-      }))
+  const entityId = currentCompany?.id ?? user?.currentPlatformEntityId ?? entityRecord?.id ?? '';
+  const entityCode = entityRecord?.code ?? currentCompany?.code ?? '';
+
+  // Only POs that can still receive material/service are pickable.
+  const pickablePOs = useMemo(
+    () =>
+      relationalPOs.filter((po) => po.status === 'issued' || po.status === 'partially_received'),
+    [relationalPOs]
+  );
+
+  // Listing data — source of truth is the relational GRN list from
+  // useProcurementData().grns. Newly-created GRNs land here after refresh().
+  const grns: GRNRow[] = useMemo(
+    () =>
+      relationalGrns.map((g) => {
+        const po = relationalPOs.find((p) => p.id === g.poId);
+        const totalReceivedQty = (g.items || []).reduce(
+          (sum, li) => sum + Number(li.qtyReceived || 0),
+          0
+        );
+        const totalAcceptedQty = (g.items || []).reduce(
+          (sum, li) => sum + Number(li.qtyAccepted || 0),
+          0
+        );
+        const totalAmount = (g.items || []).reduce(
+          (sum, li) => sum + Number(li.lineAmount || 0),
+          0
+        );
+        const allAccepted = totalAcceptedQty > 0 && totalAcceptedQty >= totalReceivedQty;
+        const partialAccepted = totalAcceptedQty > 0 && totalAcceptedQty < totalReceivedQty;
+        return {
+          id: g.id,
+          grnNumber: g.grnRef,
+          poNumber: po?.poRef ?? '',
+          vendor: po?.vendorName ?? '',
+          receiptDate: g.receiptDate ?? '',
+          amount: totalAmount,
+          qtyReceived: totalReceivedQty,
+          poQty: totalReceivedQty,
+          allocationStatus: allAccepted
+            ? 'Accepted'
+            : partialAccepted
+              ? 'Partially Allocated'
+              : 'Not Allocated',
+        };
+      }),
+    [relationalGrns, relationalPOs]
   );
 
   const filteredGRNs = grns.filter(
@@ -176,127 +146,141 @@ export function GoodsReceipt() {
       grn.vendor.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const addAllocationLine = () => {
-    const newAllocation: LocationAllocation = {
-      id: Date.now().toString(),
-      location: '',
-      allocatedQty: 0,
-      acceptedQty: 0,
-      status: 'Pending Acceptance',
-    };
-    setAllocations([...allocations, newAllocation]);
+  // ── Modal helpers ─────────────────────────────────────────────────────────
+
+  const resetModal = () => {
+    setSelectedPOId('');
+    setSelectedPO(null);
+    setReceiptDate(todayIso());
+    setReceivedBy('');
+    setDeliveryNoteNo('');
+    setVehicleNo('');
+    setRemarks('');
+    setLines([]);
+    setSubmitError(null);
+    setSubmitting(false);
   };
 
-  const updateAllocation = (id: string, field: keyof LocationAllocation, value: any) => {
-    setAllocations(
-      allocations.map((alloc) => (alloc.id === id ? { ...alloc, [field]: value } : alloc))
-    );
+  const closeModal = () => {
+    setShowCreateModal(false);
+    resetModal();
   };
 
-  const removeAllocation = (id: string) => {
-    setAllocations(allocations.filter((alloc) => alloc.id !== id));
-  };
-
-  const getTotalAllocated = () => {
-    return allocations.reduce((sum, alloc) => sum + (alloc.allocatedQty || 0), 0);
-  };
-
-  const isAllocationValid = () => {
-    const total = getTotalAllocated();
-    const allHaveLocation = allocations.every((alloc) => alloc.location && alloc.allocatedQty > 0);
-    return total === qtyReceived && allHaveLocation && allocations.length > 0;
-  };
-
-  const handleCreatePartA = () => {
-    if (selectedPO && qtyReceived > 0) {
-      setCurrentStep('partB');
-      // Initialize with original PO location
-      setAllocations([
-        {
-          id: '1',
-          location: selectedPO.deliveryLocation,
-          allocatedQty: qtyReceived,
-          acceptedQty: 0,
-          status: 'Pending Acceptance',
-        },
-      ]);
-    }
-  };
-
-  const handleCreateGRN = () => {
-    if (isAllocationValid()) {
-      const newGRN: GRN = {
-        id: `grn-${Date.now()}`,
-        grnNumber: `GRN-${new Date().getFullYear()}-${String(grns.length + 1).padStart(3, '0')}`,
-        poNumber: selectedPO?.poNumber || '',
-        vendor: selectedPO?.vendor || '',
-        receiptDate: new Date().toISOString().split('T')[0],
-        amount: (selectedPO?.unitPrice || 0) * qtyReceived,
-        qtyReceived,
-        poQty: selectedPO?.orderQty || qtyReceived,
-        status: qtyReceived >= (selectedPO?.remainingQty || qtyReceived) ? 'Complete' : 'Partial',
-        allocationStatus: 'Partially Allocated',
-        allocations,
-      };
-
-      addGRN({
-        id: newGRN.id,
-        grnNumber: newGRN.grnNumber,
-        poNumber: newGRN.poNumber,
-        vendor: newGRN.vendor,
-        receiptDate: newGRN.receiptDate,
-        amount: newGRN.amount,
-        qtyReceived: newGRN.qtyReceived,
-        poQty: newGRN.poQty,
-        status: newGRN.status,
-        allocationStatus: allocations.every(
-          (allocation) => allocation.acceptedQty >= allocation.allocatedQty
-        )
-          ? 'Accepted'
-          : allocations.length > 0
-            ? 'Partially Allocated'
-            : 'Not Allocated',
-        lineItems: allocations.map((allocation) => ({
-          id: allocation.id,
-          grnNumber: newGRN.grnNumber,
-          poLineItemId: selectedPO?.id || '',
-          itemCode: selectedPO?.id || '',
-          itemName: selectedPO?.itemName || '',
-          itemDescription: allocation.location,
-          qtyOrdered: selectedPO?.orderQty || qtyReceived,
-          qtyReceived: allocation.allocatedQty,
-          qtyAccepted: allocation.acceptedQty,
-          qtyRejected: Math.max(0, allocation.allocatedQty - allocation.acceptedQty),
-          unitPrice: selectedPO?.unitPrice || 0,
-          amount: allocation.allocatedQty * (selectedPO?.unitPrice || 0),
-        })),
-      });
-
-      // Reset
-      setShowCreateModal(false);
-      setCurrentStep('partA');
+  // When user picks a PO, fetch full detail (list endpoint returns headers
+  // only — line items come from GET /procurement/pos/:id).
+  useEffect(() => {
+    if (!selectedPOId) {
       setSelectedPO(null);
-      setQtyReceived(0);
-      setAllocations([]);
+      setLines([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingPO(true);
+    fetchPO(selectedPOId)
+      .then((po) => {
+        if (cancelled) return;
+        setSelectedPO(po);
+        // Pre-populate one line draft per PO line with remaining qty > 0,
+        // user can clear individual rows by zeroing the qtyReceived.
+        if (po) {
+          const drafts: ReceiptLineDraft[] = (po.lineItems || [])
+            .filter((li) => Number(li.quantity) - Number(li.qtyReceived || 0) > 0)
+            .map((li) => ({ poItemId: li.id, qtyReceived: 0 }));
+          setLines(drafts);
+        } else {
+          setLines([]);
+        }
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        console.error('[GoodsReceipt] fetchPO failed:', err);
+        setSelectedPO(null);
+        setLines([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPO(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPOId]);
+
+  const setLineQty = (poItemId: string, qty: number) => {
+    setLines((prev) => prev.map((l) => (l.poItemId === poItemId ? { ...l, qtyReceived: qty } : l)));
+  };
+
+  const remainingForLine = (li: POLineItem): number =>
+    Math.max(0, Number(li.quantity || 0) - Number(li.qtyReceived || 0));
+
+  const linesToSubmit = lines.filter((l) => Number(l.qtyReceived) > 0);
+
+  // Validation — empty lines, missing entity context, qty exceeds remaining.
+  const validationError = useMemo<string | null>(() => {
+    if (!selectedPO) return 'Select a purchase order.';
+    if (!receiptDate) return 'Receipt date is required.';
+    if (!entityId || !entityCode) return 'Entity context unavailable — please re-select a company.';
+    if (linesToSubmit.length === 0) return 'Enter quantity received on at least one line.';
+    for (const draft of linesToSubmit) {
+      const poLine = selectedPO.lineItems.find((l) => l.id === draft.poItemId);
+      if (!poLine) return 'Line item not found on PO.';
+      const remaining = remainingForLine(poLine);
+      if (draft.qtyReceived > remaining) {
+        return `Line ${poLine.lineNumber}: cannot receive ${draft.qtyReceived} (remaining ${remaining}).`;
+      }
+    }
+    return null;
+  }, [selectedPO, receiptDate, entityId, entityCode, linesToSubmit]);
+
+  const handleSubmit = async () => {
+    setSubmitError(null);
+    if (validationError || !selectedPO) {
+      setSubmitError(validationError ?? 'Cannot submit GRN.');
+      return;
+    }
+    const payload: CreateGRNPayload = {
+      poId: selectedPO.id,
+      receiptDate,
+      entityId,
+      entityCode,
+      vendorId: selectedPO.vendorId || undefined,
+      receivedBy: receivedBy.trim() || user?.name || undefined,
+      deliveryNoteNo: deliveryNoteNo.trim() || undefined,
+      vehicleNo: vehicleNo.trim() || undefined,
+      remarks: remarks.trim() || undefined,
+      items: linesToSubmit.map((draft) => ({
+        poItemId: draft.poItemId,
+        qtyReceived: Number(draft.qtyReceived),
+      })),
+    };
+    setSubmitting(true);
+    try {
+      const created = await createGRNApi(payload);
+      if (!created) {
+        setSubmitError('GRN creation returned no data.');
+        return;
+      }
+      await refresh();
+      closeModal();
+    } catch (err) {
+      const apiErr = err as ApiRequestError;
+      const detail =
+        Array.isArray(apiErr?.details) && apiErr.details.length
+          ? apiErr.details.join('; ')
+          : apiErr?.message || 'GRN creation failed.';
+      setSubmitError(detail);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleViewAllocations = (grn: GRN) => {
-    setSelectedGRN(grn);
-    setShowAllocationModal(true);
-  };
-
-  const handleAcceptAllocation = (grnId: string, allocationId: string) => {
-    alert(`Allocation accepted for ${allocationId}`);
-    setShowAllocationModal(false);
-  };
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div style={listingPage}>
       <div style={listingHeader}>
         <div>
           <h1 style={listingTitle}>Goods Receipt (GRN)</h1>
-          <p style={listingSubtitle}>Record vendor deliveries and manage location allocations</p>
+          <p style={listingSubtitle}>Record vendor deliveries against issued purchase orders</p>
         </div>
         <button onClick={() => setShowCreateModal(true)} style={listingPrimaryBtn}>
           <Plus size={13} />
@@ -373,7 +357,6 @@ export function GoodsReceipt() {
                 <th style={{ ...listingTh, textAlign: 'right' }}>Qty Received</th>
                 <th style={{ ...listingTh, textAlign: 'right' }}>Amount</th>
                 <th style={listingTh}>Allocation Status</th>
-                <th style={listingTh}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -395,7 +378,7 @@ export function GoodsReceipt() {
                   </td>
                   <td style={listingTd}>{grn.vendor}</td>
                   <td style={{ ...listingTd, color: 'var(--color-mercury-grey)' }}>
-                    {new Date(grn.receiptDate).toLocaleDateString('en-IN')}
+                    {grn.receiptDate ? new Date(grn.receiptDate).toLocaleDateString('en-IN') : '—'}
                   </td>
                   <td style={{ ...listingTd, textAlign: 'right' }}>{grn.qtyReceived}</td>
                   <td style={{ ...listingTd, textAlign: 'right' }}>
@@ -419,18 +402,6 @@ export function GoodsReceipt() {
                       {grn.allocationStatus}
                     </span>
                   </td>
-                  <td style={listingTd}>
-                    <button
-                      onClick={() => handleViewAllocations(grn)}
-                      className="px-3 py-1 rounded text-sm transition-colors"
-                      style={{
-                        backgroundColor: 'var(--color-teal-tint)',
-                        color: 'var(--color-teal)',
-                      }}
-                    >
-                      View Allocations
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -438,359 +409,233 @@ export function GoodsReceipt() {
         </div>
       </div>
 
-      {/* Create GRN Modal - Two Part System */}
+      {/* Create GRN modal — single PO + per-line qty rows */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div
               className="flex items-center justify-between p-6"
               style={{ borderBottom: '1px solid var(--color-silver)' }}
             >
               <div>
                 <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
-                  {currentStep === 'partA'
-                    ? 'Part A: Record Physical Receipt'
-                    : 'Part B: Allocate to Locations'}
+                  Record Goods Receipt
                 </h2>
                 <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                  {currentStep === 'partA'
-                    ? 'Record the actual quantity received from vendor'
-                    : 'Distribute received quantity to multiple locations'}
+                  Pick a PO and enter the quantity received against each line.
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setCurrentStep('partA');
-                  setSelectedPO(null);
-                  setQtyReceived(0);
-                  setAllocations([]);
-                }}
-                style={{ color: 'var(--color-mercury-grey)' }}
-              >
+              <button onClick={closeModal} style={{ color: 'var(--color-mercury-grey)' }}>
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            {/* Step Indicator */}
-            <div className="px-6 pt-4">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-                    style={{
-                      backgroundColor:
-                        currentStep === 'partA' || currentStep === 'partB'
-                          ? 'var(--color-teal)'
-                          : 'var(--color-silver)',
-                      color:
-                        currentStep === 'partA' || currentStep === 'partB'
-                          ? 'white'
-                          : 'var(--color-mercury-grey)',
-                    }}
-                  >
-                    {currentStep === 'partB' ? '✓' : '1'}
-                  </div>
-                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                    Physical Receipt
-                  </span>
-                </div>
-                <div
-                  className="flex-1 h-px"
-                  style={{ backgroundColor: 'var(--color-silver)' }}
-                ></div>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-                    style={{
-                      backgroundColor:
-                        currentStep === 'partB' ? 'var(--color-teal)' : 'var(--color-silver)',
-                      color: currentStep === 'partB' ? 'white' : 'var(--color-mercury-grey)',
-                    }}
-                  >
-                    2
-                  </div>
-                  <span className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                    Location Allocation
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Content */}
             <div className="p-6">
-              {currentStep === 'partA' ? (
+              <FormSection title="PO Selection" columns={1}>
+                <PxFormField label="Purchase Order" required>
+                  <select
+                    value={selectedPOId}
+                    onChange={(e) => setSelectedPOId(e.target.value)}
+                    className="px-select"
+                  >
+                    <option value="">Choose a PO…</option>
+                    {pickablePOs.map((po) => (
+                      <option key={po.id} value={po.id}>
+                        {po.poRef} — {po.vendorName} ({po.status.replace('_', ' ')})
+                      </option>
+                    ))}
+                  </select>
+                </PxFormField>
+              </FormSection>
+
+              {loadingPO && (
+                <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                  Loading PO line items…
+                </p>
+              )}
+
+              {selectedPO && !loadingPO && (
                 <>
-                  {/* Select PO */}
-                  <FormSection title="PO Selection" columns={1}>
-                    <PxFormField label="Select Purchase Order" required>
-                      <select
-                        value={selectedPO?.id || ''}
-                        onChange={(e) => {
-                          const po = availablePOItems.find((p) => p.id === e.target.value);
-                          setSelectedPO(po || null);
-                          setQtyReceived(0);
-                        }}
-                        className="px-select"
-                      >
-                        <option value="">Choose a PO...</option>
-                        {availablePOItems.map((po) => (
-                          <option key={po.id} value={po.id}>
-                            {po.poNumber} - {po.vendor} - {po.itemName} (Remaining:{' '}
-                            {po.remainingQty})
-                          </option>
-                        ))}
-                      </select>
+                  <div
+                    className="mb-4 p-4 rounded-lg"
+                    style={{
+                      backgroundColor: 'var(--color-cloud)',
+                      border: '1px solid var(--color-silver)',
+                    }}
+                  >
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p style={{ color: 'var(--color-mercury-grey)' }}>Vendor</p>
+                        <p style={{ color: 'var(--color-ink)' }}>{selectedPO.vendorName}</p>
+                      </div>
+                      <div>
+                        <p style={{ color: 'var(--color-mercury-grey)' }}>PO Ref</p>
+                        <p style={{ color: 'var(--color-ink)' }}>{selectedPO.poRef}</p>
+                      </div>
+                      <div>
+                        <p style={{ color: 'var(--color-mercury-grey)' }}>Status</p>
+                        <p style={{ color: 'var(--color-ink)' }}>
+                          {selectedPO.status.replace('_', ' ')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <FormSection title="Receipt Details" columns={2}>
+                    <PxFormField label="Receipt Date" required>
+                      <input
+                        type="date"
+                        value={receiptDate}
+                        onChange={(e) => setReceiptDate(e.target.value)}
+                        className="px-input"
+                      />
+                    </PxFormField>
+                    <PxFormField label="Received By">
+                      <input
+                        type="text"
+                        value={receivedBy}
+                        onChange={(e) => setReceivedBy(e.target.value)}
+                        placeholder={user?.name ?? 'Receiver name'}
+                        className="px-input"
+                      />
+                    </PxFormField>
+                    <PxFormField label="Delivery Note No.">
+                      <input
+                        type="text"
+                        value={deliveryNoteNo}
+                        onChange={(e) => setDeliveryNoteNo(e.target.value)}
+                        className="px-input"
+                      />
+                    </PxFormField>
+                    <PxFormField label="Vehicle No.">
+                      <input
+                        type="text"
+                        value={vehicleNo}
+                        onChange={(e) => setVehicleNo(e.target.value)}
+                        className="px-input"
+                      />
                     </PxFormField>
                   </FormSection>
 
-                  {/* PO Details */}
-                  {selectedPO && (
-                    <div
-                      className="mb-6 p-4 rounded-lg"
-                      style={{
-                        backgroundColor: 'var(--color-cloud)',
-                        border: '1px solid var(--color-silver)',
-                      }}
-                    >
-                      <h3 className="mb-3" style={{ color: 'var(--color-ink)' }}>
-                        PO Details
-                      </h3>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <p
-                            className="text-sm mb-1"
-                            style={{ color: 'var(--color-mercury-grey)' }}
-                          >
-                            Item Name
-                          </p>
-                          <p style={{ color: 'var(--color-ink)' }}>{selectedPO.itemName}</p>
-                        </div>
-                        <div>
-                          <p
-                            className="text-sm mb-1"
-                            style={{ color: 'var(--color-mercury-grey)' }}
-                          >
-                            Vendor
-                          </p>
-                          <p style={{ color: 'var(--color-ink)' }}>{selectedPO.vendor}</p>
-                        </div>
-                        <div>
-                          <p
-                            className="text-sm mb-1"
-                            style={{ color: 'var(--color-mercury-grey)' }}
-                          >
-                            Original Delivery Location
-                          </p>
-                          <p
-                            className="flex items-center gap-1"
-                            style={{ color: 'var(--color-teal)' }}
-                          >
-                            <MapPin className="w-4 h-4" />
-                            {selectedPO.deliveryLocation}
-                          </p>
-                        </div>
-                        <div>
-                          <p
-                            className="text-sm mb-1"
-                            style={{ color: 'var(--color-mercury-grey)' }}
-                          >
-                            Order Qty
-                          </p>
-                          <p style={{ color: 'var(--color-ink)' }}>{selectedPO.orderQty}</p>
-                        </div>
-                        <div>
-                          <p
-                            className="text-sm mb-1"
-                            style={{ color: 'var(--color-mercury-grey)' }}
-                          >
-                            Already Received
-                          </p>
-                          <p style={{ color: 'var(--color-ink)' }}>{selectedPO.receivedQty}</p>
-                        </div>
-                        <div>
-                          <p
-                            className="text-sm mb-1"
-                            style={{ color: 'var(--color-mercury-grey)' }}
-                          >
-                            Remaining Qty
-                          </p>
-                          <p style={{ color: 'var(--color-teal)' }}>{selectedPO.remainingQty}</p>
-                        </div>
+                  <FormSection title="Line Items" columns={1}>
+                    {lines.length === 0 ? (
+                      <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
+                        This PO has no lines with remaining quantity.
+                      </p>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={listingTable}>
+                          <thead style={listingThead}>
+                            <tr>
+                              <th style={listingTh}>#</th>
+                              <th style={listingTh}>Item</th>
+                              <th style={{ ...listingTh, textAlign: 'right' }}>Ordered</th>
+                              <th style={{ ...listingTh, textAlign: 'right' }}>Already received</th>
+                              <th style={{ ...listingTh, textAlign: 'right' }}>Remaining</th>
+                              <th style={{ ...listingTh, textAlign: 'right' }}>Receive now</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedPO.lineItems
+                              .filter((li) => remainingForLine(li) > 0)
+                              .map((li) => {
+                                const draft = lines.find((l) => l.poItemId === li.id);
+                                const remaining = remainingForLine(li);
+                                return (
+                                  <tr
+                                    key={li.id}
+                                    style={{ borderTop: '1px solid var(--color-silver)' }}
+                                  >
+                                    <td style={listingTd}>{li.lineNumber}</td>
+                                    <td style={listingTd}>
+                                      <div style={{ color: 'var(--color-ink)' }}>
+                                        {li.itemDescription || li.itemCode}
+                                      </div>
+                                      <div
+                                        style={{
+                                          fontSize: 11,
+                                          color: 'var(--color-mercury-grey)',
+                                        }}
+                                      >
+                                        {li.itemCode} · {li.unit || '—'}
+                                      </div>
+                                    </td>
+                                    <td style={{ ...listingTd, textAlign: 'right' }}>
+                                      {li.quantity}
+                                    </td>
+                                    <td style={{ ...listingTd, textAlign: 'right' }}>
+                                      {li.qtyReceived}
+                                    </td>
+                                    <td style={{ ...listingTd, textAlign: 'right' }}>
+                                      {remaining}
+                                    </td>
+                                    <td style={{ ...listingTd, textAlign: 'right' }}>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={remaining}
+                                        value={draft?.qtyReceived ?? 0}
+                                        onChange={(e) =>
+                                          setLineQty(
+                                            li.id,
+                                            Math.max(
+                                              0,
+                                              Math.min(remaining, parseInt(e.target.value, 10) || 0)
+                                            )
+                                          )
+                                        }
+                                        style={{
+                                          width: 96,
+                                          height: 28,
+                                          padding: '0 8px',
+                                          textAlign: 'right',
+                                          border: '1px solid var(--color-silver)',
+                                          borderRadius: 'var(--border-radius-md)',
+                                          fontSize: 12,
+                                          color: 'var(--color-ink)',
+                                        }}
+                                      />
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </FormSection>
 
-                  {/* Quantity Received */}
-                  {selectedPO && (
-                    <FormSection title="Receipt Details" columns={1}>
-                      <PxFormField
-                        label="Quantity Received from Vendor"
-                        required
-                        hint={`Max: ${selectedPO.remainingQty} units`}
-                      >
-                        <input
-                          type="number"
-                          min="0"
-                          max={selectedPO.remainingQty}
-                          value={qtyReceived}
-                          onChange={(e) =>
-                            setQtyReceived(
-                              Math.min(parseInt(e.target.value) || 0, selectedPO.remainingQty)
-                            )
-                          }
-                          className="px-input"
-                          placeholder="Enter quantity received"
-                        />
-                      </PxFormField>
-                    </FormSection>
-                  )}
+                  <FormSection title="Remarks" columns={1}>
+                    <PxFormField label="Remarks">
+                      <textarea
+                        value={remarks}
+                        onChange={(e) => setRemarks(e.target.value)}
+                        rows={2}
+                        className="px-input"
+                        placeholder="Optional notes about this receipt"
+                      />
+                    </PxFormField>
+                  </FormSection>
                 </>
-              ) : (
-                <>
-                  {/* Part B - Location Allocations */}
-                  <div
-                    className="mb-4 p-4 rounded-lg"
-                    style={{ backgroundColor: '#FFF9E6', border: '1px solid #D97706' }}
-                  >
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: '#D97706' }} />
-                      <div>
-                        <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                          <strong>Total Received: {qtyReceived} units</strong>
-                        </p>
-                        <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                          Allocate the complete quantity to one or more locations. Total allocation
-                          must equal {qtyReceived} units.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+              )}
 
-                  {/* Allocation Lines */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                        Location Allocations
-                      </label>
-                      <button
-                        onClick={addAllocationLine}
-                        className="flex items-center gap-1 px-3 py-1 rounded text-sm transition-colors"
-                        style={{
-                          backgroundColor: 'var(--color-teal-tint)',
-                          color: 'var(--color-teal)',
-                        }}
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add Location
-                      </button>
-                    </div>
-
-                    <div className="space-y-3">
-                      {allocations.map((allocation, index) => (
-                        <div
-                          key={allocation.id}
-                          className="p-4 rounded-lg"
-                          style={{
-                            border: '1px solid var(--color-silver)',
-                            backgroundColor: 'white',
-                          }}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 grid grid-cols-2 gap-3">
-                              <PxFormField label="Location" required>
-                                <select
-                                  value={allocation.location}
-                                  onChange={(e) =>
-                                    updateAllocation(allocation.id, 'location', e.target.value)
-                                  }
-                                  className="px-select-compact"
-                                >
-                                  <option value="">Select location...</option>
-                                  {locations.map((loc) => (
-                                    <option key={loc} value={loc}>
-                                      {loc}
-                                    </option>
-                                  ))}
-                                </select>
-                              </PxFormField>
-                              <PxFormField label="Allocated Quantity" required>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={allocation.allocatedQty || ''}
-                                  onChange={(e) =>
-                                    updateAllocation(
-                                      allocation.id,
-                                      'allocatedQty',
-                                      parseInt(e.target.value) || 0
-                                    )
-                                  }
-                                  className="px-input-compact"
-                                  placeholder="Enter quantity"
-                                />
-                              </PxFormField>
-                            </div>
-                            {allocations.length > 1 && (
-                              <button
-                                onClick={() => removeAllocation(allocation.id)}
-                                className="p-2 rounded transition-colors"
-                                style={{ color: 'var(--color-error)' }}
-                                title="Remove allocation"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Allocation Summary */}
-                  <div
-                    className="p-4 rounded-lg"
-                    style={{
-                      backgroundColor:
-                        getTotalAllocated() === qtyReceived ? 'var(--color-teal-tint)' : '#FFE8EA',
-                      border: `1px solid ${getTotalAllocated() === qtyReceived ? 'var(--color-teal)' : 'var(--color-error)'}`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm" style={{ color: 'var(--color-ink)' }}>
-                          Total Allocated: <strong>{getTotalAllocated()} units</strong>
-                        </p>
-                        <p className="text-xs mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                          {getTotalAllocated() === qtyReceived
-                            ? '✓ Allocation complete - matches received quantity'
-                            : `${qtyReceived - getTotalAllocated()} units ${getTotalAllocated() > qtyReceived ? 'over' : 'remaining'}`}
-                        </p>
-                      </div>
-                      {getTotalAllocated() === qtyReceived && (
-                        <CheckCircle className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
-                      )}
-                    </div>
-                  </div>
-                </>
+              {submitError && (
+                <div
+                  className="mt-4 p-3 rounded-lg text-sm"
+                  style={{
+                    background: '#FCEBEB',
+                    color: '#791F1F',
+                    border: '1px solid #F09595',
+                  }}
+                >
+                  {submitError}
+                </div>
               )}
             </div>
 
-            {/* Modal Footer */}
             <div className="flex gap-3 p-6" style={{ borderTop: '1px solid var(--color-silver)' }}>
               <button
-                onClick={() => {
-                  if (currentStep === 'partB') {
-                    setCurrentStep('partA');
-                  } else {
-                    setShowCreateModal(false);
-                    setCurrentStep('partA');
-                    setSelectedPO(null);
-                    setQtyReceived(0);
-                    setAllocations([]);
-                  }
-                }}
+                onClick={closeModal}
                 className="flex-1 px-4 py-3 rounded-lg"
                 style={{
                   border: '1px solid var(--color-silver)',
@@ -798,134 +643,16 @@ export function GoodsReceipt() {
                   backgroundColor: 'white',
                 }}
               >
-                {currentStep === 'partB' ? 'Back' : 'Cancel'}
+                Cancel
               </button>
-              {currentStep === 'partA' ? (
-                <button
-                  onClick={handleCreatePartA}
-                  disabled={!selectedPO || qtyReceived === 0}
-                  className="flex-1 px-4 py-3 rounded-lg text-white transition-colors disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--color-teal)' }}
-                  onMouseEnter={(e) =>
-                    !e.currentTarget.disabled &&
-                    (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
-                  }
-                  onMouseLeave={(e) =>
-                    !e.currentTarget.disabled &&
-                    (e.currentTarget.style.backgroundColor = 'var(--color-teal)')
-                  }
-                >
-                  Continue to Allocation →
-                </button>
-              ) : (
-                <button
-                  onClick={handleCreateGRN}
-                  disabled={!isAllocationValid()}
-                  className="flex-1 px-4 py-3 rounded-lg text-white transition-colors disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--color-teal)' }}
-                  onMouseEnter={(e) =>
-                    !e.currentTarget.disabled &&
-                    (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
-                  }
-                  onMouseLeave={(e) =>
-                    !e.currentTarget.disabled &&
-                    (e.currentTarget.style.backgroundColor = 'var(--color-teal)')
-                  }
-                >
-                  Create GRN & Notify Locations
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* View Allocations Modal */}
-      {showAllocationModal && selectedGRN && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div
-              className="flex items-center justify-between p-6"
-              style={{ borderBottom: '1px solid var(--color-silver)' }}
-            >
-              <div>
-                <h2 className="text-xl" style={{ color: 'var(--color-ink)' }}>
-                  GRN Allocations - {selectedGRN.grnNumber}
-                </h2>
-                <p className="text-sm mt-1" style={{ color: 'var(--color-mercury-grey)' }}>
-                  Total Received: {selectedGRN.qtyReceived} units
-                </p>
-              </div>
               <button
-                onClick={() => setShowAllocationModal(false)}
-                style={{ color: 'var(--color-mercury-grey)' }}
+                onClick={handleSubmit}
+                disabled={!!validationError || submitting}
+                className="flex-1 px-4 py-3 rounded-lg text-white transition-colors disabled:opacity-50"
+                style={{ backgroundColor: 'var(--color-teal)' }}
               >
-                <X className="w-6 h-6" />
+                {submitting ? 'Creating…' : 'Create GRN'}
               </button>
-            </div>
-
-            <div className="p-6">
-              <div className="space-y-4">
-                {selectedGRN.allocations?.map((allocation) => (
-                  <div
-                    key={allocation.id}
-                    className="p-4 rounded-lg"
-                    style={{ border: '1px solid var(--color-silver)' }}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-5 h-5" style={{ color: 'var(--color-teal)' }} />
-                        <div>
-                          <p style={{ color: 'var(--color-ink)' }}>{allocation.location}</p>
-                          <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                            Allocated: {allocation.allocatedQty} units
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className="px-3 py-1 rounded-full text-sm"
-                        style={{
-                          backgroundColor:
-                            allocation.status === 'Accepted' ? 'var(--color-teal-tint)' : '#FFF9E6',
-                          color: allocation.status === 'Accepted' ? 'var(--color-teal)' : '#D97706',
-                        }}
-                      >
-                        {allocation.status}
-                      </span>
-                    </div>
-
-                    {allocation.status === 'Accepted' && (
-                      <div className="pt-3" style={{ borderTop: '1px solid var(--color-silver)' }}>
-                        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                          Accepted by:{' '}
-                          <strong style={{ color: 'var(--color-ink)' }}>
-                            {allocation.acceptedBy}
-                          </strong>
-                        </p>
-                        <p className="text-sm" style={{ color: 'var(--color-mercury-grey)' }}>
-                          Date: {allocation.acceptedDate}
-                        </p>
-                      </div>
-                    )}
-
-                    {allocation.status === 'Pending Acceptance' && (
-                      <button
-                        onClick={() => handleAcceptAllocation(selectedGRN.id, allocation.id)}
-                        className="mt-3 w-full px-4 py-2 rounded-lg text-white transition-colors"
-                        style={{ backgroundColor: 'var(--color-teal)' }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.backgroundColor = 'var(--color-teal-dark)')
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.backgroundColor = 'var(--color-teal)')
-                        }
-                      >
-                        Accept Allocation
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
