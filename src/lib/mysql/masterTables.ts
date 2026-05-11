@@ -42,6 +42,7 @@ const MASTER_KEYS = [
   'depreciation_method_master',
   'service_type_master',
   'expense_category_master',
+  'kit_bundle_master',
 ] as const;
 
 export type MasterKey = (typeof MASTER_KEYS)[number];

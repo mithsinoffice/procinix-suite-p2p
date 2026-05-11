@@ -215,6 +215,12 @@ export const MASTER_STORAGE = {
     auditTable: 'expense_category_master_audit',
     legacyTable: 'erp_master_expense_categories',
   },
+  kit_bundle_master: {
+    database: 'kit_bundle_master',
+    table: 'kit_bundle_master',
+    auditTable: 'kit_bundle_master_audit',
+    legacyTable: 'erp_master_kit_bundles',
+  },
 };
 
 export function getMasterStorage(masterKey) {

@@ -32,6 +32,10 @@ const MIGRATIONS = [
   'sql/mysql/migrations/20260510_migrate_product_to_item_master.sql',
   // Add upload_source col + backfill ITM-PTPL approval + align vg audit.
   'sql/mysql/migrations/20260510_upload_source_and_audit_fix.sql',
+  // 2026-05-11 sprint: profit centre + kit bundle + employee masters.
+  'sql/mysql/migrations/20260511_profit_centre_master.sql',
+  'sql/mysql/migrations/20260511_kit_bundle_master.sql',
+  'sql/mysql/migrations/20260511_employee_master.sql',
 ];
 
 const IGNORABLE_ERRORS = new Set([

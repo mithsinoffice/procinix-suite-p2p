@@ -435,6 +435,72 @@ export type DepreciationMethodMaster = SimpleCodeMaster;
 export type ServiceTypeMaster = SimpleCodeMaster;
 export type ExpenseCategoryMaster = SimpleCodeMaster;
 
+// ── 2026-05-11 sprint — new masters ─────────────────────────────────────────
+
+export interface KitBundleItem {
+  id?: string;
+  lineNumber?: number;
+  itemCode?: string;
+  itemName: string;
+  description?: string;
+  qty: number;
+  uom?: string;
+  unitPrice: number;
+  gstRate: number;
+  hsnCode?: string;
+  mandatory: boolean;
+}
+
+export interface KitBundleMasterRecord {
+  id: string;
+  code: string;
+  recordCode?: string;
+  bundleCode?: string;
+  name: string;
+  recordName?: string;
+  bundleName?: string;
+  vendorId?: string;
+  vendorCode?: string;
+  vendorName?: string;
+  description?: string;
+  items: KitBundleItem[];
+  status?: string;
+  approvalStatus?: string;
+}
+
+export interface EmployeeMasterRecord {
+  id: string;
+  code: string;
+  recordCode?: string;
+  employeeCode?: string;
+  name: string;
+  recordName?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  panNumber?: string;
+  departmentId?: string;
+  departmentName?: string;
+  designationId?: string;
+  designationName?: string;
+  locationId?: string;
+  locationName?: string;
+  reportingManagerId?: string;
+  reportingManagerName?: string;
+  costCentreId?: string;
+  costCentreName?: string;
+  profitCentreId?: string;
+  profitCentreName?: string;
+  employmentType?: 'full_time' | 'part_time' | 'contract' | 'intern';
+  status?: 'active' | 'inactive' | 'on_leave' | 'terminated' | string;
+  approvalStatus?: string;
+  dateOfJoining?: string;
+  dateOfLeaving?: string;
+  entityId?: string;
+  entityCode?: string;
+}
+
 // ============================================================================
 // MULTI-CURRENCY SUPPORT - ADDITIVE ONLY (NO TRANSACTION IMPACT)
 // ============================================================================
@@ -1040,6 +1106,10 @@ interface MasterDataContextType {
   serviceTypes: ServiceTypeMaster[];
   expenseCategories: ExpenseCategoryMaster[];
 
+  // 2026-05-11 sprint
+  kitBundles: KitBundleMasterRecord[];
+  employees: EmployeeMasterRecord[];
+
   // TDS Sections
   tdsSections: TDSSectionMasterRecord[];
   getTDSSectionByCode: (sectionCode: string) => TDSSectionMasterRecord | undefined;
@@ -1083,6 +1153,8 @@ interface MasterDataDocument {
   depreciationMethods: DepreciationMethodMaster[];
   serviceTypes: ServiceTypeMaster[];
   expenseCategories: ExpenseCategoryMaster[];
+  kitBundles: KitBundleMasterRecord[];
+  employees: EmployeeMasterRecord[];
   tdsSections: TDSSectionMasterRecord[];
   currencies: CurrencyMaster[];
   exchangeRates: ExchangeRateMaster[];
@@ -1141,6 +1213,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     depreciationMethods: [] as DepreciationMethodMaster[],
     serviceTypes: [] as ServiceTypeMaster[],
     expenseCategories: [] as ExpenseCategoryMaster[],
+    kitBundles: [] as KitBundleMasterRecord[],
+    employees: [] as EmployeeMasterRecord[],
     tdsSections: TDS_SECTION_MASTER_DATA,
     currencies: CURRENCY_MASTER_DATA,
     exchangeRates: EXCHANGE_RATE_MASTER_DATA,
@@ -1183,6 +1257,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategoryMaster[]>(
     defaultDocument.expenseCategories
   );
+  const [kitBundles, setKitBundles] = useState<KitBundleMasterRecord[]>(defaultDocument.kitBundles);
+  const [employees, setEmployees] = useState<EmployeeMasterRecord[]>(defaultDocument.employees);
   const [tdsSections, setTdsSections] = useState<TDSSectionMasterRecord[]>(
     defaultDocument.tdsSections
   );
@@ -1218,6 +1294,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           depreciationMethodsData,
           serviceTypesData,
           expenseCategoriesData,
+          kitBundlesData,
+          employeesResponse,
           document,
           itemsResponse,
           liveVendorsResponse,
@@ -1266,6 +1344,13 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
             'expense_category_master',
             defaultDocument.expenseCategories
           ),
+          ensureRelationalMasterRecords<KitBundleMasterRecord>(
+            'kit_bundle_master',
+            defaultDocument.kitBundles
+          ),
+          mysqlApiRequest<{ success: boolean; data: EmployeeMasterRecord[] }>(
+            '/masters/employee_master'
+          ).catch(() => ({ success: false, data: [] as EmployeeMasterRecord[] })),
           ensureDomainDocument('master_data', defaultDocument),
           mysqlApiRequest<{ success: boolean; data: MysqlItemRow[] }>('/items').catch(() => ({
             success: false,
@@ -1381,6 +1466,18 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
             ? expenseCategoriesData
             : (document.expenseCategories ?? defaultDocument.expenseCategories)
         );
+        setKitBundles(
+          kitBundlesData && kitBundlesData.length > 0
+            ? kitBundlesData
+            : (document.kitBundles ?? defaultDocument.kitBundles)
+        );
+        setEmployees(
+          employeesResponse &&
+            Array.isArray(employeesResponse.data) &&
+            employeesResponse.data.length > 0
+            ? employeesResponse.data
+            : (document.employees ?? defaultDocument.employees)
+        );
         setTdsSections(tdsSectionsData ?? defaultDocument.tdsSections);
         setCurrencies(currenciesData ?? defaultDocument.currencies);
         setExchangeRates(exchangeRatesData ?? defaultDocument.exchangeRates);
@@ -1411,6 +1508,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       setDepreciationMethods(document.depreciationMethods ?? defaultDocument.depreciationMethods);
       setServiceTypes(document.serviceTypes ?? defaultDocument.serviceTypes);
       setExpenseCategories(document.expenseCategories ?? defaultDocument.expenseCategories);
+      setKitBundles(document.kitBundles ?? defaultDocument.kitBundles);
+      setEmployees(document.employees ?? defaultDocument.employees);
       setTdsSections(document.tdsSections ?? defaultDocument.tdsSections);
       setCurrencies(document.currencies ?? defaultDocument.currencies);
       setExchangeRates(document.exchangeRates ?? defaultDocument.exchangeRates);
@@ -1455,6 +1554,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
         vendorGroups,
         locations,
         designations,
+        kitBundles,
+        employees,
         tdsSections,
         currencies,
         exchangeRates,
@@ -1481,6 +1582,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       depreciationMethods,
       serviceTypes,
       expenseCategories,
+      kitBundles,
+      employees,
       tdsSections,
       currencies,
       exchangeRates,
@@ -1498,6 +1601,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     depreciationMethods,
     serviceTypes,
     expenseCategories,
+    kitBundles,
+    employees,
     departments,
     entities,
     exchangeRates,
@@ -1723,6 +1828,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     depreciationMethods,
     serviceTypes,
     expenseCategories,
+    kitBundles,
+    employees,
     tdsSections,
     getTDSSectionByCode,
     getActiveTDSSections,

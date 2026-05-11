@@ -295,6 +295,9 @@ const ServiceTypeMaster = lazy(() =>
 const ExpenseCategoryMaster = lazy(() =>
   import('./components/ExpenseCategoryMaster').then((m) => ({ default: m.ExpenseCategoryMaster }))
 );
+const KitBundleMaster = lazy(() =>
+  import('./components/KitBundleMaster').then((m) => ({ default: m.KitBundleMaster }))
+);
 const VendorMasterPage = lazy(() =>
   import('./components/VendorMaster').then((module) => ({ default: module.VendorMaster }))
 );
@@ -711,6 +714,10 @@ function App() {
                                 <Route
                                   path="masters/expense-category-master"
                                   element={<ExpenseCategoryMaster />}
+                                />
+                                <Route
+                                  path="masters/kit-bundle-master"
+                                  element={<KitBundleMaster />}
                                 />
 
                                 {/* Invoices */}

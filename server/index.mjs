@@ -105,6 +105,7 @@ import { handlePaymentsRoute } from './routes/payments.mjs';
 import { handleAdvancesRoute } from './routes/advances.mjs';
 import { handleProcurementRoute } from './routes/procurement.mjs';
 import { handleDebitNotesRoute } from './routes/debit-notes.mjs';
+import { handleMastersRoute } from './routes/masters.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import {
   verifyPAN,
@@ -1134,6 +1135,10 @@ const server = http.createServer(async (req, res) => {
     if (await handleAdvancesRoute(req, res, pathname, sendJson)) return;
     if (await handleProcurementRoute(req, res, pathname, sendJson)) return;
     if (await handleDebitNotesRoute(req, res, pathname, sendJson)) return;
+    // Intercept the bespoke kit_bundle / employee masters BEFORE the generic
+    // canonical /api/masters/<key> handler further down — those tables don't
+    // use the record_code/record_name/payload shape.
+    if (await handleMastersRoute(req, res, pathname, sendJson)) return;
 
     if (req.method === 'POST' && pathname === '/api/auth/platform-context') {
       const body = await readJsonBody(req);

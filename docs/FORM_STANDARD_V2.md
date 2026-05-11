@@ -226,20 +226,23 @@ introduced.
 All 12 masters listed below are wired to V2 via thin ~20–60-line config
 wrappers (2026-05-11 migration):
 
-| Master                     | codeKey/nameKey               | entityScoped | requiresApproval |
-| -------------------------- | ----------------------------- | :----------: | :--------------: |
-| `DesignationMaster`        | recordCode/recordName         |      –       |        –         |
-| `AssetCategoryMaster`      | recordCode/recordName         |      –       |        –         |
-| `DepreciationMethodMaster` | recordCode/recordName         |      –       |        –         |
-| `ServiceTypeMaster`        | recordCode/recordName         |      –       |        –         |
-| `ExpenseCategoryMaster`    | recordCode/recordName         |      –       |        –         |
-| `DepartmentMaster`         | deptCode/deptName             |      ✓       |        ✓         |
-| `LocationMaster`           | locationCode/locationName     |      ✓       |        ✓         |
-| `CostCentreMaster`         | costCentreCode/costCentreName |      ✓       |        ✓         |
-| `GLCodeMaster`             | glCode/glDescription          |      ✓       |        ✓         |
-| `TaxCodeMaster`            | taxCode/description           |      ✓       |        ✓         |
-| `UOMMaster`                | recordCode/recordName         |      ✓       |        ✓         |
-| `VendorGroupMaster`        | groupCode/groupName           |      ✓       |        ✓         |
+| Master                     | codeKey/nameKey                    | entityScoped | requiresApproval |
+| -------------------------- | ---------------------------------- | :----------: | :--------------: |
+| `DesignationMaster`        | recordCode/recordName              |      –       |        –         |
+| `AssetCategoryMaster`      | recordCode/recordName              |      –       |        –         |
+| `DepreciationMethodMaster` | recordCode/recordName              |      –       |        –         |
+| `ServiceTypeMaster`        | recordCode/recordName              |      –       |        –         |
+| `ExpenseCategoryMaster`    | recordCode/recordName              |      –       |        –         |
+| `DepartmentMaster`         | deptCode/deptName                  |      ✓       |        ✓         |
+| `LocationMaster`           | locationCode/locationName          |      ✓       |        ✓         |
+| `CostCentreMaster`         | costCentreCode/costCentreName      |      ✓       |        ✓         |
+| `GLCodeMaster`             | glCode/glDescription               |      ✓       |        ✓         |
+| `TaxCodeMaster`            | taxCode/description                |      ✓       |        ✓         |
+| `UOMMaster`                | recordCode/recordName              |      ✓       |        ✓         |
+| `VendorGroupMaster`        | groupCode/groupName                |      ✓       |        ✓         |
+| `ProfitCentreMaster`       | recordCode/recordName              |      ✓       |        ✓         |
+| `KitBundleMaster`          | bundleCode/bundleName              |      –       |        –         |
+| `EmployeeMaster`           | employeeCode/fullName (suppressed) |      –       |        –         |
 
 ## 8. Adding a new master
 
