@@ -28,6 +28,8 @@ import {
   metricValueWarning,
   metricValueSuccess,
   listingPage,
+  tableHeaderBg,
+  tableHeaderFg,
 } from '../ui/listingStyles';
 
 type PRType = 'Catalogue' | 'Regular' | 'Service' | 'Kit/Bundle' | 'Asset/CAPEX' | 'Blanket';
@@ -495,8 +497,8 @@ export function PRListing() {
                 className="grid gap-4 px-6 py-4"
                 style={{
                   gridTemplateColumns: '1.6fr 1fr 1.2fr 1.1fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1fr',
-                  background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)',
-                  borderBottom: '1px solid #E4EDF2',
+                  background: tableHeaderBg,
+                  borderBottom: '1px solid var(--color-nav-panel-border)',
                 }}
               >
                 {[
@@ -515,7 +517,7 @@ export function PRListing() {
                   <div
                     key={column}
                     className="text-xs uppercase tracking-[0.18em]"
-                    style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}
+                    style={{ color: tableHeaderFg, fontWeight: 500 }}
                   >
                     {column}
                   </div>

@@ -1,5 +1,6 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, Building2, FileText, Edit, Eye } from 'lucide-react';
 import { MasterListToolbar } from './ui/MasterListToolbar';
+import { tableHeaderBg, tableHeaderFg } from './ui/listingStyles';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MasterPageShell } from './ui/MasterPageShell';
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -1288,59 +1289,59 @@ export function EntityMaster() {
       <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
+            <thead style={{ backgroundColor: tableHeaderBg }}>
               <tr>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Entity Code
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Legal Name
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Region
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Country
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Currency
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Tax Regime
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Status
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Approval
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Actions
                 </th>

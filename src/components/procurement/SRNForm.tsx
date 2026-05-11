@@ -11,6 +11,8 @@ import {
   listingSubtitle,
   listingPrimaryBtn,
   listingPage,
+  tableHeaderBg,
+  tableHeaderFg,
 } from '../ui/listingStyles';
 
 interface ServiceLine {
@@ -221,7 +223,7 @@ export function SRNForm() {
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
-                <tr style={{ background: 'var(--color-background-secondary)' }}>
+                <tr style={{ background: tableHeaderBg }}>
                   <th style={th}>Service</th>
                   <th style={{ ...th, textAlign: 'right' }}>PO Line Value</th>
                   <th style={{ ...th, textAlign: 'right' }}>Amount Consumed</th>
@@ -332,14 +334,15 @@ const inputStyle: React.CSSProperties = {
 };
 
 const th: React.CSSProperties = {
-  padding: '6px 10px',
+  padding: '8px 10px',
   textAlign: 'left',
   fontSize: 10,
-  fontWeight: 600,
+  fontWeight: 500,
   letterSpacing: 0.4,
   textTransform: 'uppercase',
-  color: 'var(--color-mercury-grey)',
-  borderBottom: '1px solid var(--color-fog)',
+  color: tableHeaderFg,
+  background: tableHeaderBg,
+  borderBottom: '1px solid var(--color-nav-panel-border)',
 };
 
 const td: React.CSSProperties = {

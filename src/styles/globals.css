@@ -33,6 +33,11 @@
   --color-text-secondary: var(--color-mercury-grey);
   --color-text-tertiary: var(--color-slate);
   --color-border-tertiary: var(--color-fog);
+  /* Dark slate used by the left navigation panel. Re-used by listing
+     table headers so every page has the same horizon-line accent across
+     the top of every grid. See docs/ARCHITECTURE.md §14.1. */
+  --color-nav-panel: #1e2e38;
+  --color-nav-panel-border: #2a3e48;
 
   /* ── shadcn/ui design tokens ───────────────────────────── */
   --background: #ffffff;

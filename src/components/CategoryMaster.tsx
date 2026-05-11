@@ -6,6 +6,7 @@ import { MasterPageShell } from './ui/MasterPageShell';
 import { ApprovalModal } from './ApprovalModal';
 import { useIncrementalMasterRecords } from '../hooks/useIncrementalMasterRecords';
 import { applyMasterApprovalAction } from '../lib/masters/masterScreenApproval';
+import { tableHeaderBg, tableHeaderFg } from './ui/listingStyles';
 import {
   FormShell,
   FormSection,
@@ -438,47 +439,47 @@ export function CategoryMaster() {
       <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
+            <thead style={{ backgroundColor: tableHeaderBg }}>
               <tr>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Category Code
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Category Name
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Parent Category
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Description
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Status
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Approval Status
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Actions
                 </th>

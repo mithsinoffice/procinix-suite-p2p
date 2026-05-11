@@ -150,8 +150,8 @@ export function MainNavigation() {
       className="flex flex-col h-full"
       style={{
         width: '240px',
-        backgroundColor: '#1E2E38',
-        borderRight: '1px solid #2A3E48',
+        backgroundColor: 'var(--color-nav-panel)',
+        borderRight: '1px solid var(--color-nav-panel-border)',
       }}
     >
       <div

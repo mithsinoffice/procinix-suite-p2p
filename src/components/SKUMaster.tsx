@@ -12,6 +12,7 @@ import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { EntityMappingSelector } from './shared/EntityMappingSelector';
 import type { EntityScopeMapping } from '../lib/masters/entityMapping';
+import { tableHeaderBg, tableHeaderFg } from './ui/listingStyles';
 
 interface SKU {
   id: string;
@@ -1470,8 +1471,8 @@ export function SKUMaster() {
               className="grid gap-4 px-6 py-4"
               style={{
                 gridTemplateColumns: '1.2fr 1.4fr 1.8fr 1.1fr 1.2fr 0.9fr 1.2fr 0.9fr',
-                background: 'linear-gradient(180deg, #F8FBFD 0%, #F3F8FB 100%)',
-                borderBottom: '1px solid #E4EDF2',
+                background: tableHeaderBg,
+                borderBottom: '1px solid var(--color-nav-panel-border)',
               }}
             >
               {[
@@ -1487,7 +1488,7 @@ export function SKUMaster() {
                 <div
                   key={column}
                   className="text-xs uppercase tracking-[0.18em]"
-                  style={{ color: 'var(--color-mercury-grey)', fontWeight: 700 }}
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   {column}
                 </div>

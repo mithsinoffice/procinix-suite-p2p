@@ -14,6 +14,7 @@ import {
   listingTh,
   badgeBase,
   rowActionBtn,
+  tableHeaderBg,
 } from '../components/ui/listingStyles';
 
 type PendingMasterApprovalResponseItem = {
@@ -926,8 +927,8 @@ export default function MyApprovalsPage() {
             display: 'grid',
             gridTemplateColumns: '40px 0.8fr 1.8fr 1fr 0.9fr 0.7fr 0.7fr 1.1fr',
             alignItems: 'center',
-            background: 'var(--color-background-secondary)',
-            borderBottom: '0.5px solid var(--color-border-tertiary)',
+            background: tableHeaderBg,
+            borderBottom: '0.5px solid var(--color-nav-panel-border)',
           }}
         >
           <div style={{ ...listingTh, padding: '8px 12px' }} />

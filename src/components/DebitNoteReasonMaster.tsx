@@ -1,5 +1,6 @@
 import { ArrowLeft, Plus, Trash2, X, Hash, Type, FileText, Edit, Eye } from 'lucide-react';
 import { MasterListToolbar } from './ui/MasterListToolbar';
+import { tableHeaderBg, tableHeaderFg } from './ui/listingStyles';
 import { useNavigate } from 'react-router-dom';
 import { MasterPageShell } from './ui/MasterPageShell';
 import { useState, useMemo, useCallback } from 'react';
@@ -545,41 +546,41 @@ export function DebitNoteReasonMaster() {
       <div className="bg-white rounded-lg" style={{ border: '1px solid var(--color-silver)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead style={{ backgroundColor: 'var(--color-cloud)' }}>
+            <thead style={{ backgroundColor: tableHeaderBg }}>
               <tr>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Reason Code
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Reason Name
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Description
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Status
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Approval
                 </th>
                 <th
-                  className="px-6 py-4 text-left text-sm"
-                  style={{ color: 'var(--color-mercury-grey)' }}
+                  className="px-6 py-4 text-left text-xs uppercase tracking-[0.05em]"
+                  style={{ color: tableHeaderFg, fontWeight: 500 }}
                 >
                   Actions
                 </th>

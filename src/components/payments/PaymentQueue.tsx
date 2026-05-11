@@ -35,6 +35,7 @@ import {
   listingTh,
   badgeBase,
   rowActionBtn,
+  tableHeaderBg,
 } from '../ui/listingStyles';
 import type { FlagSeverity, PaymentQueueItem, PaymentStatus, RiskFlag } from '../../types/payments';
 
@@ -337,8 +338,8 @@ function QueueHeaderRow() {
         display: 'grid',
         gridTemplateColumns: COLUMNS,
         alignItems: 'center',
-        background: 'var(--color-background-secondary)',
-        borderBottom: '0.5px solid var(--color-border-tertiary)',
+        background: tableHeaderBg,
+        borderBottom: '0.5px solid var(--color-nav-panel-border)',
       }}
     >
       <div style={listingTh}>Payee / Ref</div>

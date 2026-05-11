@@ -35,6 +35,7 @@ import {
   badgeBase,
   rowActionBtn,
   formatStatusLabel,
+  tableHeaderBg,
 } from '../ui/listingStyles';
 
 const ADVANCE_COLUMNS = '1.2fr 2fr 0.8fr 0.9fr 0.9fr 0.9fr 0.9fr 0.8fr';
@@ -904,8 +905,8 @@ export function VendorAdvances() {
             display: 'grid',
             gridTemplateColumns: ADVANCE_COLUMNS,
             alignItems: 'center',
-            background: 'var(--color-background-secondary)',
-            borderBottom: '0.5px solid var(--color-fog)',
+            background: tableHeaderBg,
+            borderBottom: '0.5px solid var(--color-nav-panel-border)',
           }}
         >
           <div style={listingTh}>Ref</div>

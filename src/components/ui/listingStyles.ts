@@ -28,6 +28,19 @@ const RADIUS_PILL = '20px';
 const TEXT_INK = 'var(--color-text-primary)';
 const TEXT_MUTED = 'var(--color-text-secondary)';
 
+/**
+ * Table header background — same dark slate as the left navigation panel.
+ * Single source of truth: any `<thead>` or column-header strip in any
+ * listing page should pick this up automatically by spreading
+ * `listingThead`. Consumers that build their own header strip (e.g. CSS
+ * grid headers in PaymentQueue, Approvals) should also import this
+ * constant directly rather than hardcoding a value.
+ */
+export const tableHeaderBg = 'var(--color-nav-panel)';
+/** Text colour used on top of `tableHeaderBg` — white at 0.84 opacity
+ *  gives the same readable-but-quiet look as the nav-panel item labels. */
+export const tableHeaderFg = 'rgba(255, 255, 255, 0.84)';
+
 // ── Page header ─────────────────────────────────────────────────────────────
 export const listingHeader: CSSProperties = {
   display: 'flex',
@@ -193,18 +206,19 @@ export const listingTable: CSSProperties = {
   fontSize: 13,
 };
 export const listingThead: CSSProperties = {
-  background: BG_SECONDARY,
+  background: tableHeaderBg,
   borderBottom: BORDER,
 };
 export const listingTh: CSSProperties = {
-  padding: '8px 24px',
+  padding: '10px 24px',
   textAlign: 'left',
   fontSize: 11,
   fontWeight: 500,
   letterSpacing: '0.05em',
   textTransform: 'uppercase',
-  color: TEXT_MUTED,
+  color: tableHeaderFg,
   whiteSpace: 'nowrap',
+  background: tableHeaderBg,
 };
 export const listingTd: CSSProperties = {
   padding: '12px 24px',
