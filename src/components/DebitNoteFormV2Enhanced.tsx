@@ -20,7 +20,9 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useMasterData } from '../contexts/MasterDataContext';
-import { useAPData } from '../contexts/APDataContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useProcurementData } from '../contexts/ProcurementDataContext';
+import { mysqlApiRequest, type ApiRequestError } from '../lib/mysql/client';
 import { StandardInput, StandardSelect } from './shared/StandardInput';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
@@ -108,22 +110,20 @@ interface JournalLine {
   credit: number;
 }
 
-type DebitNoteStatus = 'Draft' | 'Submitted' | 'Approved' | 'Issued' | 'Adjusted' | 'Closed';
 type DebitNoteReasonType = 'quantity-based' | 'price-difference';
 type DebitNoteReasonSubtype = 'price-difference' | 'short-supply' | 'quality-damage';
 
 export function DebitNoteFormV2Enhanced() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { debitNoteReasons = [], vendors = [] } = useMasterData();
-  const { purchaseOrders, grns, debitNotes, addDebitNote, updateDebitNote } = useAPData();
+  const { debitNoteReasons = [], vendors = [], entities, currentCompany } = useMasterData();
+  const { user } = useAuth();
+  const { pos: procPOs, grns: procGRNs } = useProcurementData();
 
   const isEditMode = !!id;
 
   // Form state
-  const [debitNoteNumber] = useState('DN-2024-0023');
   const [debitNoteDate, setDebitNoteDate] = useState(new Date().toISOString().split('T')[0]);
-  const [debitNoteStatus, setDebitNoteStatus] = useState<DebitNoteStatus>('Draft');
   const [reasonId, setReasonId] = useState('');
   const [reasonType, setReasonType] = useState<DebitNoteReasonType>('quantity-based');
   const [reasonSubtype, setReasonSubtype] = useState<DebitNoteReasonSubtype>('short-supply');
@@ -149,92 +149,79 @@ export function DebitNoteFormV2Enhanced() {
   >('Internal Only');
   const [docValidationError, setDocValidationError] = useState<string>('');
 
-  useEffect(() => {
-    if (!isEditMode || !id) {
-      return;
-    }
-
-    const existing = debitNotes.find((entry) => entry.id === id);
-    if (!existing) {
-      return;
-    }
-
-    setDebitNoteDate(existing.debitNoteDate);
-    setDebitNoteStatus(
-      existing.status === 'Pending Approval'
-        ? 'Submitted'
-        : existing.status === 'Rejected'
-          ? 'Draft'
-          : existing.status
-    );
-    setReasonId(existing.reasonId);
-    setVendorId(existing.vendorId || existing.vendorCode);
-    setVendorName(existing.vendorName);
-    setVendorCode(existing.vendorCode);
-    setPoNumber(existing.referenceType === 'GRN' ? '' : existing.referenceNumber);
-    setGrnNumber(existing.referenceType === 'GRN' ? existing.referenceNumber : '');
-    setCurrency(existing.currency);
-  }, [debitNotes, id, isEditMode]);
+  // Edit mode is intentionally not prefilled — there is no PUT endpoint
+  // and the legacy blob hydrator was the only source. The read-only banner
+  // (rendered below) tells the user they need to create a new note.
 
   const selectedVendorRecord = vendors.find(
     (vendor) => vendor.id === vendorId || vendor.code === vendorId
   );
-  const availablePOs: PurchaseOrder[] = selectedVendorRecord
-    ? purchaseOrders
-        .filter(
-          (po) =>
-            po.vendorCode === selectedVendorRecord.code &&
-            grns.some((grn) => grn.poNumber === po.poNumber)
-        )
-        .map((po) => ({
-          id: po.id,
-          poNumber: po.poNumber,
-          vendorId: selectedVendorRecord.id,
-          vendorName: po.vendor,
-          hasGRN: true,
-        }))
-    : [];
 
-  const availableGRNs: GRN[] = poNumber
-    ? grns
-        .filter((grn) => grn.poNumber === poNumber)
-        .map((grn) => {
-          const parentPO = purchaseOrders.find((po) => po.poNumber === grn.poNumber);
+  // PO picker: relational POs whose vendor matches the selected master vendor
+  // AND has at least one GRN. Vendor match is defensive — id first, name
+  // fallback for cases where the procurement PO was created before master
+  // sync caught up.
+  const availablePOs: PurchaseOrder[] = useMemo(() => {
+    if (!selectedVendorRecord) return [];
+    return procPOs
+      .filter((po) => {
+        const vendorMatches =
+          po.vendorId === selectedVendorRecord.id ||
+          (po.vendorName && po.vendorName === selectedVendorRecord.name);
+        if (!vendorMatches) return false;
+        return procGRNs.some((g) => g.poId === po.id);
+      })
+      .map((po) => ({
+        id: po.id,
+        poNumber: po.poRef,
+        vendorId: selectedVendorRecord.id,
+        vendorName: po.vendorName,
+        hasGRN: true,
+      }));
+  }, [procPOs, procGRNs, selectedVendorRecord]);
+
+  // GRN picker: relational GRNs against the selected PO. Line items are
+  // joined to the parent PO's lineItems via poItemId so we can surface
+  // rate / qty / gst alongside the GRN's received/accepted qty.
+  const availableGRNs: GRN[] = useMemo(() => {
+    if (!poId) return [];
+    const parentPO = procPOs.find((p) => p.id === poId);
+    if (!parentPO) return [];
+    return procGRNs
+      .filter((g) => g.poId === poId)
+      .map((g) => ({
+        id: g.id,
+        grnNumber: g.grnRef,
+        poId: parentPO.id,
+        poNumber: parentPO.poRef,
+        vendorId: parentPO.vendorId,
+        vendorName: parentPO.vendorName,
+        vendorCode: selectedVendorRecord?.code ?? '',
+        status: g.status === 'confirmed' ? 'Delivered' : 'Partially Delivered',
+        lineItems: (g.items || []).map((lineItem) => {
+          const poLineItem = parentPO.lineItems.find((p) => p.id === lineItem.poItemId);
+          const rate = Number(lineItem.unitPrice ?? poLineItem?.unitPrice ?? 0);
           return {
-            id: grn.id,
-            grnNumber: grn.grnNumber,
-            poId: parentPO?.id ?? grn.poNumber,
-            poNumber: grn.poNumber,
-            vendorId: selectedVendorRecord?.id ?? '',
-            vendorName: grn.vendor,
-            vendorCode: parentPO?.vendorCode ?? '',
-            status: grn.status === 'Complete' ? 'Delivered' : 'Partially Delivered',
-            lineItems: grn.lineItems.map((lineItem) => {
-              const poLineItem = parentPO?.lineItems.find(
-                (poEntry) => poEntry.id === lineItem.poLineItemId
-              );
-              return {
-                itemId: lineItem.id,
-                itemCode: lineItem.itemCode,
-                itemName: lineItem.itemName,
-                itemCategory: poLineItem?.accountDescription ?? 'General',
-                glAccountCode: poLineItem?.accountCode ?? '',
-                glAccountName: poLineItem?.accountDescription ?? 'Expense',
-                prQty: poLineItem?.qty ?? lineItem.qtyOrdered,
-                poQty: poLineItem?.qty ?? lineItem.qtyOrdered,
-                grnQty: lineItem.qtyReceived,
-                invoiceQty: lineItem.qtyAccepted || lineItem.qtyReceived,
-                uom: 'Unit',
-                poRate: poLineItem?.unitPrice ?? lineItem.unitPrice,
-                invoiceRate: poLineItem?.unitPrice ?? lineItem.unitPrice,
-                gstPercent: poLineItem?.gstPercent ?? 0,
-                costCenter: poLineItem?.costCentre ?? '',
-                profitCenter: poLineItem?.profitCentre ?? '',
-              };
-            }),
+            itemId: lineItem.id,
+            itemCode: poLineItem?.itemCode ?? '',
+            itemName: poLineItem?.itemDescription ?? lineItem.itemDescription ?? '',
+            itemCategory: 'General',
+            glAccountCode: '',
+            glAccountName: 'Expense',
+            prQty: Number(poLineItem?.quantity ?? lineItem.qtyOrdered ?? 0),
+            poQty: Number(poLineItem?.quantity ?? lineItem.qtyOrdered ?? 0),
+            grnQty: Number(lineItem.qtyReceived ?? 0),
+            invoiceQty: Number(lineItem.qtyAccepted || lineItem.qtyReceived || 0),
+            uom: lineItem.unit || poLineItem?.unit || 'Unit',
+            poRate: Number(poLineItem?.unitPrice ?? rate),
+            invoiceRate: rate,
+            gstPercent: Number(poLineItem?.gstRate ?? 0),
+            costCenter: '',
+            profitCenter: '',
           };
-        })
-    : [];
+        }),
+      }));
+  }, [poId, procPOs, procGRNs, selectedVendorRecord?.code]);
 
   const handleReasonChange = (newReasonId: string) => {
     setReasonId(newReasonId);
@@ -646,17 +633,27 @@ export function DebitNoteFormV2Enhanced() {
     return null;
   };
 
-  const handleSaveDraft = () => {
-    if (!validateForm()) {
-      return;
-    }
+  // Entity context — server requires entityId; same pattern as PR/GRN forms.
+  const entityRecord = useMemo(
+    () =>
+      entities.find(
+        (e) =>
+          e.id === currentCompany?.id ||
+          e.id === user?.currentPlatformEntityId ||
+          e.name === currentCompany?.name
+      ) ?? entities[0],
+    [entities, currentCompany?.id, currentCompany?.name, user?.currentPlatformEntityId]
+  );
+  const entityId = currentCompany?.id ?? user?.currentPlatformEntityId ?? entityRecord?.id ?? '';
 
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const buildPayload = (status: 'Draft' | 'Pending Approval') => {
     const reasonName =
       debitNoteReasons.find((reason) => reason.id === reasonId)?.name ?? 'Debit Note';
-
-    const debitNoteRecord = {
-      id: id ?? `DN-${Date.now()}`,
-      debitNoteNumber,
+    return {
+      entityId,
       debitNoteDate,
       vendorId,
       vendorName,
@@ -664,14 +661,13 @@ export function DebitNoteFormV2Enhanced() {
       vendorAPAccount: `2100-${vendorCode || '000'}`,
       referenceType: grnNumber ? ('GRN' as const) : ('Invoice' as const),
       referenceNumber: grnNumber || poNumber || 'Unlinked',
-      referenceId: grnId || poId || `REF-${Date.now()}`,
+      referenceId: grnId || poId || '',
       reasonId,
       reasonName,
       debitAmount: calculateTotal(),
       currency,
-      status: 'Draft' as const,
+      status,
       lineItems: lineItems.map((item) => ({
-        id: item.id,
         itemCode: item.itemCode,
         itemName: item.itemName,
         referenceQty: item.grnQty || item.invoiceQty,
@@ -682,72 +678,50 @@ export function DebitNoteFormV2Enhanced() {
         debitAmount: item.debitAmount,
         expenseGL: item.glAccountCode,
       })),
-      createdBy: 'Current User',
-      createdDate: new Date().toISOString(),
     };
+  };
 
-    if (isEditMode && id) {
-      updateDebitNote(id, debitNoteRecord);
-    } else {
-      addDebitNote(debitNoteRecord);
+  const postDebitNote = async (status: 'Draft' | 'Pending Approval') => {
+    if (!entityId) {
+      setSubmitError('Entity context unavailable — please re-select a company before submitting.');
+      return;
     }
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      await mysqlApiRequest<{ success: boolean; data: { id: string } }>('/ap/debit-notes', {
+        method: 'POST',
+        body: JSON.stringify(buildPayload(status)),
+      });
+      navigate('/ap/debit-notes');
+    } catch (err) {
+      const apiErr = err as ApiRequestError;
+      const detail =
+        Array.isArray(apiErr?.details) && apiErr.details.length
+          ? apiErr.details.join('; ')
+          : apiErr?.message || 'Debit note creation failed.';
+      setSubmitError(detail);
+      setErrors([detail]);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    navigate('/ap/debit-notes');
+  const handleSaveDraft = () => {
+    if (isEditMode) return;
+    if (!validateForm()) return;
+    void postDebitNote('Draft');
   };
 
   const handleSubmitForApproval = () => {
-    if (!validateForm()) {
-      return;
-    }
-
+    if (isEditMode) return;
+    if (!validateForm()) return;
     const docError = validateSupportingDocuments();
     if (docError) {
       setErrors([docError]);
       return;
     }
-
-    const reasonName =
-      debitNoteReasons.find((reason) => reason.id === reasonId)?.name ?? 'Debit Note';
-
-    const debitNoteRecord = {
-      id: id ?? `DN-${Date.now()}`,
-      debitNoteNumber,
-      debitNoteDate,
-      vendorId,
-      vendorName,
-      vendorCode,
-      vendorAPAccount: `2100-${vendorCode || '000'}`,
-      referenceType: grnNumber ? ('GRN' as const) : ('Invoice' as const),
-      referenceNumber: grnNumber || poNumber || 'Unlinked',
-      referenceId: grnId || poId || `REF-${Date.now()}`,
-      reasonId,
-      reasonName,
-      debitAmount: calculateTotal(),
-      currency,
-      status: 'Pending Approval' as const,
-      lineItems: lineItems.map((item) => ({
-        id: item.id,
-        itemCode: item.itemCode,
-        itemName: item.itemName,
-        referenceQty: item.grnQty || item.invoiceQty,
-        invoicedQty: item.invoiceQty,
-        debitQty: item.debitQty,
-        uom: item.uom,
-        rate: reasonType === 'price-difference' ? item.rateToBeDebited : item.poRate,
-        debitAmount: item.debitAmount,
-        expenseGL: item.glAccountCode,
-      })),
-      createdBy: 'Current User',
-      createdDate: new Date().toISOString(),
-    };
-
-    if (isEditMode && id) {
-      updateDebitNote(id, debitNoteRecord);
-    } else {
-      addDebitNote(debitNoteRecord);
-    }
-
-    navigate('/ap/debit-notes');
+    void postDebitNote('Pending Approval');
   };
 
   const handleCancel = () => {
@@ -865,37 +839,8 @@ export function DebitNoteFormV2Enhanced() {
   };
 
   const handleDeleteDocument = (docId: string) => {
-    if (debitNoteStatus !== 'Draft') return;
+    if (isEditMode) return;
     setSupportingDocuments((prev) => prev.filter((doc) => doc.id !== docId));
-  };
-
-  const getStatusBadge = () => {
-    const statusConfig = {
-      Draft: {
-        bg: 'var(--color-cloud)',
-        color: 'var(--color-mercury-grey)',
-        border: 'var(--color-silver)',
-      },
-      Submitted: { bg: '#FFF4ED', color: '#C4320A', border: '#FECDCA' },
-      Approved: { bg: '#D1FAE5', color: '#065F46', border: '#6EE7B7' },
-      Issued: { bg: '#DBEAFE', color: '#1E40AF', border: '#93C5FD' },
-      Adjusted: { bg: '#FEF3C7', color: '#92400E', border: '#FCD34D' },
-      Closed: { bg: '#E5E7EB', color: '#374151', border: '#D1D5DB' },
-    };
-
-    const config = statusConfig[debitNoteStatus];
-    return (
-      <div
-        className="inline-flex items-center px-3 py-1 rounded-lg text-sm"
-        style={{
-          backgroundColor: config.bg,
-          color: config.color,
-          border: `1px solid ${config.border}`,
-        }}
-      >
-        {debitNoteStatus}
-      </div>
-    );
   };
 
   const isPriceDifference = reasonType === 'price-difference';
@@ -923,18 +868,51 @@ export function DebitNoteFormV2Enhanced() {
       subtitle="Create a debit note with full PR-PO-GRN-Invoice visibility"
       modeLabel={isEditMode ? 'Edit Transaction' : 'New Transaction'}
       variant="transaction"
-      draftStatus={debitNoteStatus}
+      draftStatus={isEditMode ? 'View only' : 'Draft'}
       completeness={completeness}
       onBack={handleCancel}
       onCancel={handleCancel}
-      onSaveDraft={debitNoteStatus === 'Draft' ? handleSaveDraftKb : undefined}
+      onSaveDraft={!isEditMode ? handleSaveDraftKb : undefined}
       onSubmit={handleSubmitForApproval}
       submitLabel="Submit for Approval"
       draftLabel="Save as Draft"
-      submitDisabled={debitNoteStatus !== 'Draft'}
+      submitDisabled={isEditMode || submitting}
       saveStatus={saveStatus}
     >
-      {/* Errors */}
+      {/* Edit-mode banner — no PUT endpoint exists yet */}
+      {isEditMode && (
+        <div
+          className="bg-white p-4 rounded-lg mb-6"
+          style={{ border: '1px solid #D97706', backgroundColor: '#FFF7E8' }}
+        >
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#D97706' }} />
+            <div className="flex-1">
+              <h3 className="mb-1" style={{ color: '#A36A00' }}>
+                Editing debit notes is not yet supported
+              </h3>
+              <p className="text-sm" style={{ color: '#A36A00' }}>
+                Server lacks a PUT endpoint for debit notes. Please create a new debit note instead
+                — submit + approval buttons are disabled.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* API submission error */}
+      {submitError && !errors.includes(submitError) && (
+        <div className="bg-white p-4 rounded-lg mb-6" style={{ border: '1px solid #EF4444' }}>
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} />
+            <p className="text-sm" style={{ color: '#EF4444' }}>
+              {submitError}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Validation errors */}
       {errors.length > 0 && (
         <div className="bg-white p-4 rounded-lg mb-6" style={{ border: '1px solid #EF4444' }}>
           <div className="flex items-start gap-3">
@@ -984,10 +962,10 @@ export function DebitNoteFormV2Enhanced() {
       >
         {/* STEP 1: Header (System Controlled) */}
         <FormSection title="System Information" columns={2}>
-          <PxFormField label="Debit Note Number" filled={!!debitNoteNumber}>
+          <PxFormField label="Debit Note Number" filled>
             <StandardInput
               type="text"
-              value={debitNoteNumber}
+              value="Auto-generated on save"
               onChange={() => {}}
               readOnly
               icon={<Hash className="w-4 h-4" />}
@@ -999,7 +977,7 @@ export function DebitNoteFormV2Enhanced() {
               type="date"
               value={debitNoteDate}
               onChange={(e) => setDebitNoteDate(e.target.value)}
-              disabled={debitNoteStatus !== 'Draft'}
+              disabled={isEditMode}
               icon={<Calendar className="w-4 h-4" />}
             />
           </PxFormField>
@@ -1011,7 +989,7 @@ export function DebitNoteFormV2Enhanced() {
             <StandardSelect
               value={reasonId}
               onChange={(e) => handleReasonChange(e.target.value)}
-              disabled={debitNoteStatus !== 'Draft'}
+              disabled={isEditMode}
               icon={<FileText className="w-4 h-4" />}
             >
               <option value="">Select Reason</option>
@@ -1029,7 +1007,7 @@ export function DebitNoteFormV2Enhanced() {
             <StandardSelect
               value={vendorId}
               onChange={(e) => handleVendorChange(e.target.value)}
-              disabled={debitNoteStatus !== 'Draft'}
+              disabled={isEditMode}
               icon={<Building2 className="w-4 h-4" />}
             >
               <option value="">Select Vendor</option>
@@ -1059,7 +1037,7 @@ export function DebitNoteFormV2Enhanced() {
             <StandardSelect
               value={poId}
               onChange={(e) => handlePOChange(e.target.value)}
-              disabled={debitNoteStatus !== 'Draft' || !vendorId}
+              disabled={isEditMode || !vendorId}
               icon={<Package2 className="w-4 h-4" />}
             >
               <option value="">Select PO with GRN</option>
@@ -1080,7 +1058,7 @@ export function DebitNoteFormV2Enhanced() {
             <StandardSelect
               value={grnId}
               onChange={(e) => handleGRNChange(e.target.value)}
-              disabled={debitNoteStatus !== 'Draft' || !poId}
+              disabled={isEditMode || !poId}
               icon={<FileText className="w-4 h-4" />}
             >
               <option value="">Select GRN</option>
@@ -1331,7 +1309,7 @@ export function DebitNoteFormV2Enhanced() {
                                 onChange={(e) =>
                                   handleDebitQtyChange(item.id, parseFloat(e.target.value) || 0)
                                 }
-                                disabled={debitNoteStatus !== 'Draft'}
+                                disabled={isEditMode}
                                 className="w-20 px-2 py-1.5 text-right rounded text-sm"
                                 style={{
                                   border: '1px solid var(--color-silver)',
@@ -1346,7 +1324,7 @@ export function DebitNoteFormV2Enhanced() {
                                     : 0;
                                 return (
                                   item.debitQty !== suggestedQty &&
-                                  debitNoteStatus === 'Draft' && (
+                                  !isEditMode && (
                                     <button
                                       type="button"
                                       onClick={() => resetToSuggested(item.id)}
@@ -1389,7 +1367,7 @@ export function DebitNoteFormV2Enhanced() {
                                       parseFloat(e.target.value) || 0
                                     )
                                   }
-                                  disabled={debitNoteStatus !== 'Draft'}
+                                  disabled={isEditMode}
                                   className="w-24 px-2 py-1.5 text-right rounded text-sm"
                                   style={{
                                     border: '1px solid var(--color-silver)',
@@ -1400,7 +1378,7 @@ export function DebitNoteFormV2Enhanced() {
                                 />
                                 {item.rateToBeDebited !==
                                   Math.max(0, item.invoiceRate - item.poRate) &&
-                                  debitNoteStatus === 'Draft' && (
+                                  !isEditMode && (
                                     <button
                                       type="button"
                                       onClick={() => resetToSuggested(item.id)}
@@ -1550,7 +1528,7 @@ export function DebitNoteFormV2Enhanced() {
         </h2>
 
         {/* Upload Area */}
-        {debitNoteStatus === 'Draft' && (
+        {!isEditMode && (
           <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-cloud)' }}>
             <div className="grid grid-cols-4 gap-4 mb-3">
               <div>
@@ -1727,7 +1705,7 @@ export function DebitNoteFormV2Enhanced() {
                   >
                     Status
                   </th>
-                  {debitNoteStatus === 'Draft' && (
+                  {!isEditMode && (
                     <th
                       className="px-3 py-2 text-center text-xs"
                       style={{ color: 'var(--color-mercury-grey)' }}
@@ -1795,7 +1773,7 @@ export function DebitNoteFormV2Enhanced() {
                         {doc.status}
                       </span>
                     </td>
-                    {debitNoteStatus === 'Draft' && (
+                    {!isEditMode && (
                       <td className="px-3 py-2 text-center">
                         <button
                           onClick={() => handleDeleteDocument(doc.id)}
@@ -1815,7 +1793,7 @@ export function DebitNoteFormV2Enhanced() {
           <div className="text-center py-6" style={{ color: 'var(--color-mercury-grey)' }}>
             <FileText className="w-10 h-10 mx-auto mb-2" style={{ color: 'var(--color-silver)' }} />
             <p className="text-sm">No supporting documents uploaded</p>
-            {debitNoteStatus === 'Draft' && (
+            {!isEditMode && (
               <p className="text-xs mt-1">At least one GRN, Invoice, or QC Report is required</p>
             )}
           </div>
@@ -1823,7 +1801,7 @@ export function DebitNoteFormV2Enhanced() {
       </div>
 
       {/* STEP 8: Accounting Preview (Post-Approval) */}
-      {(debitNoteStatus === 'Approved' || showAccountingPreview) && calculateTotal() > 0 && (
+      {showAccountingPreview && calculateTotal() > 0 && (
         <div
           className="bg-white rounded-lg p-6 mb-6"
           style={{ border: '1px solid var(--color-silver)' }}
@@ -1980,7 +1958,7 @@ export function DebitNoteFormV2Enhanced() {
       )}
 
       {/* STEP 7: Journal Entry Toggle */}
-      {debitNoteStatus === 'Draft' && calculateTotal() > 0 && (
+      {!isEditMode && calculateTotal() > 0 && (
         <div className="mb-6">
           <button
             onClick={() => setShowAccountingPreview(!showAccountingPreview)}
