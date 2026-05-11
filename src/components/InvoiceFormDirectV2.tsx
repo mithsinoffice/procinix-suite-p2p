@@ -63,116 +63,6 @@ interface LineItem {
   projectCode: string;
 }
 
-interface AccountingEntry {
-  account: string;
-  amount: number;
-}
-
-interface ApprovalLevel {
-  level: number;
-  title: string;
-  approver: string;
-  role: string;
-  color: string;
-  bgColor: string;
-  borderColor: string;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   MOCK DATA
-   ═══════════════════════════════════════════════════════════ */
-
-const MOCK_LINE_ITEMS: LineItem[] = [
-  {
-    id: '1',
-    itemName: 'Green Coffee Beans — Ethiopia Yirgacheffe',
-    itemCode: 'RM-COF-001',
-    itemDescription: 'Single origin, washed process, Grade 1',
-    ocrItem: 'Ethiopian Yirgacheffe Coffee Beans',
-    ocrConfidence: 'High',
-    glCode: '5001-10',
-    qty: 50,
-    rate: 1200,
-    amount: 60000,
-    gstPercent: 5,
-    cgst: 1500,
-    sgst: 1500,
-    igst: 0,
-    cess: 0,
-    totalGst: 3000,
-    grossAmount: 63000,
-    tdsSection: '194C',
-    tdsPercent: 2,
-    tdsAmount: 1200,
-    lowerTds: false,
-    sec206: 'N/A',
-    netPayable: 61800,
-    costCenter: 'CC-ROAST-01',
-    profitCenter: 'PC-MUM-01',
-    shipTo: 'Mumbai Roastery',
-    projectCode: 'PRJ-2026-Q2',
-  },
-  {
-    id: '2',
-    itemName: 'Packaging — 250g Kraft Bags',
-    itemCode: 'PK-BAG-250',
-    itemDescription: 'Kraft paper bags with valve, matte finish',
-    ocrItem: 'Kraft Bags 250g w/ Valve',
-    ocrConfidence: 'Medium',
-    glCode: '5002-20',
-    qty: 2000,
-    rate: 12,
-    amount: 24000,
-    gstPercent: 18,
-    cgst: 2160,
-    sgst: 2160,
-    igst: 0,
-    cess: 0,
-    totalGst: 4320,
-    grossAmount: 28320,
-    tdsSection: '194C',
-    tdsPercent: 2,
-    tdsAmount: 480,
-    lowerTds: false,
-    sec206: 'N/A',
-    netPayable: 27840,
-    costCenter: 'CC-PKG-01',
-    profitCenter: 'PC-MUM-01',
-    shipTo: 'Mumbai Warehouse',
-    projectCode: 'PRJ-2026-Q2',
-  },
-];
-
-const APPROVAL_LEVELS: ApprovalLevel[] = [
-  {
-    level: 1,
-    title: 'Department Head',
-    approver: 'Rahul Mehta',
-    role: 'Operations Manager',
-    color: 'var(--color-teal-dark)',
-    bgColor: 'var(--color-teal-tint)',
-    borderColor: 'var(--color-teal)',
-  },
-  {
-    level: 2,
-    title: 'Finance Controller',
-    approver: 'Priya Sharma',
-    role: 'Finance Head',
-    color: 'var(--color-warning-dark)',
-    bgColor: 'var(--color-warning-light)',
-    borderColor: 'var(--color-warning)',
-  },
-  {
-    level: 3,
-    title: 'CFO Approval',
-    approver: 'Vikram Desai',
-    role: 'Chief Financial Officer',
-    color: 'var(--color-error-dark)',
-    bgColor: 'var(--color-error-light)',
-    borderColor: 'var(--color-error)',
-  },
-];
-
 /* ═══════════════════════════════════════════════════════════
    INLINE STYLES (CSS-in-JS using Procinix variables only)
    ═══════════════════════════════════════════════════════════ */
@@ -709,10 +599,7 @@ export function InvoiceFormDirectV2() {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
 
   /* ---- file upload ---- */
-  const [uploadedFile, setUploadedFile] = useState<{ name: string; size: string } | null>({
-    name: 'subko_invoice_2026_0042.pdf',
-    size: '2.4 MB',
-  });
+  const [uploadedFile, setUploadedFile] = useState<{ name: string; size: string } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -725,13 +612,12 @@ export function InvoiceFormDirectV2() {
   const [verificationStatus, setVerificationStatus] = useState<'verified' | 'pending'>('verified');
 
   /* ---- line items ---- */
-  const [lineItems, setLineItems] = useState<LineItem[]>(MOCK_LINE_ITEMS);
-
-  /* ---- drawer ---- */
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
   /* ---- form field state (populated by AI or manual entry) ---- */
   const [vendorName, setVendorName] = useState('');
+  const [vendorId, setVendorId] = useState('');
+  const [vendorCode, setVendorCode] = useState('');
   const [vendorGroup, setVendorGroup] = useState('');
   const [entityName, setEntityName] = useState(() => currentCompany?.name || '');
   const [vendorLocation, setVendorLocation] = useState('');
@@ -811,6 +697,8 @@ export function InvoiceFormDirectV2() {
 
         // ── Populate every form field from DB/OCR data ──
         setVendorName(inv.vendor_name || '');
+        setVendorId(inv.vendor_id || '');
+        setVendorCode(inv.vendor_code || '');
         setVendorGstin(inv.vendor_gstin || meta.vendor_gstin || '');
         setVendorPan(inv.vendor_pan || meta.vendor_pan || '');
         setVendorState(meta.vendor_gstin ? getStateFromGstin(meta.vendor_gstin) : '');
@@ -897,34 +785,81 @@ export function InvoiceFormDirectV2() {
     fetchAIInvoice();
   }, [location.state, aiHydrated]);
 
-  /* ---- derived accounting entries ---- */
+  /* ---- derived totals ---- */
   const totalBase = lineItems.reduce((s, l) => s + l.amount, 0);
   const totalGst = lineItems.reduce((s, l) => s + l.totalGst, 0);
   const totalGross = lineItems.reduce((s, l) => s + l.grossAmount, 0);
   const totalTds = lineItems.reduce((s, l) => s + l.tdsAmount, 0);
   const totalNet = lineItems.reduce((s, l) => s + l.netPayable, 0);
 
-  const debitEntries: AccountingEntry[] = [
-    { account: 'Raw Material Purchases (5001-10)', amount: 60000 },
-    { account: 'Packaging Supplies (5002-20)', amount: 24000 },
-    { account: 'Input CGST Receivable (1301)', amount: 3660 },
-    { account: 'Input SGST Receivable (1302)', amount: 3660 },
-  ];
-  const creditEntries: AccountingEntry[] = [
-    { account: 'Vendor Payable — Subko (2101)', amount: totalNet },
-    { account: 'TDS Payable — 194C (2201)', amount: totalTds },
-  ];
-  const debitTotal = debitEntries.reduce((s, e) => s + e.amount, 0);
-  const creditTotal = creditEntries.reduce((s, e) => s + e.amount, 0);
+  /* ---- submit state ---- */
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitErrorDetails, setSubmitErrorDetails] = useState<string[]>([]);
 
-  /* ---- ESC to close drawer ---- */
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && drawerOpen) setDrawerOpen(false);
+  const parseAmount = (s: string): number => {
+    const cleaned = String(s ?? '').replace(/[^\d.-]/g, '');
+    const n = parseFloat(cleaned);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const submitInvoice = async (status: 'Draft' | 'Pending Approval') => {
+    setSubmitError(null);
+    setSubmitErrorDetails([]);
+
+    if (!vendorId) {
+      setSubmitError('Pick a vendor before submitting.');
+      return;
+    }
+    if (!selectedEntityId) {
+      setSubmitError('Bill-to Entity is required.');
+      return;
+    }
+    if (!invoiceDate) {
+      setSubmitError('Invoice Date is required.');
+      return;
+    }
+
+    const payload = {
+      invoice_date: invoiceDate,
+      vendor_id: vendorId,
+      vendor_name: vendorName,
+      vendor_code: vendorCode,
+      invoice_type: 'non_po' as const,
+      total_amount: parseAmount(grossAmount || '0'),
+      currency: invoiceCurrency,
+      entity_id: selectedEntityId,
+      status: status === 'Draft' ? 'draft' : 'pending_approval',
+      lifecycle_state: status === 'Draft' ? 'Ingested' : 'Under Verification',
+      line_items: lineItems,
     };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [drawerOpen]);
+
+    setSubmitting(true);
+    try {
+      const res = await mysqlApiRequest<{ success: boolean; data: { id: string } }>('/invoices', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (!res?.success) {
+        setSubmitError('Failed to save invoice.');
+        return;
+      }
+      navigate('/invoices');
+    } catch (err) {
+      const apiErr = err as { message?: string; details?: string[] };
+      if (Array.isArray(apiErr?.details) && apiErr.details.length > 0) {
+        setSubmitErrorDetails(apiErr.details);
+        setSubmitError('Server rejected the invoice:');
+      } else {
+        setSubmitError(apiErr?.message || 'Failed to save invoice.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = () => void submitInvoice('Draft');
+  const handleSubmitForApproval = () => void submitInvoice('Pending Approval');
 
   /* ---- drag-drop handlers ---- */
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -1007,14 +942,51 @@ export function InvoiceFormDirectV2() {
           </div>
         </div>
         <div style={S.headerRight}>
-          <button className="btn-secondary">
-            <Save size={16} /> Save Draft
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={handleSaveDraft}
+            disabled={submitting}
+          >
+            <Save size={16} /> {submitting ? 'Saving…' : 'Save Draft'}
           </button>
-          <button className="btn-primary">
-            <Send size={16} /> Submit for Approval
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={handleSubmitForApproval}
+            disabled={submitting}
+          >
+            <Send size={16} /> {submitting ? 'Submitting…' : 'Submit for Approval'}
           </button>
         </div>
       </header>
+
+      {submitError && (
+        <div
+          role="alert"
+          style={{
+            padding: '12px 24px',
+            background: '#FCEBEB',
+            borderBottom: '1px solid #F09595',
+            color: '#791F1F',
+            fontSize: 13,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <div style={{ fontWeight: 500 }}>{submitError}</div>
+              {submitErrorDetails.length > 0 && (
+                <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+                  {submitErrorDetails.map((d, i) => (
+                    <li key={i}>{d}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ──────────── BODY ──────────── */}
       <div style={S.body}>
@@ -1290,6 +1262,8 @@ export function InvoiceFormDirectV2() {
                         setInvoiceCurrency((ent as any).currency || 'INR');
                         // Reset dependent fields when entity changes
                         setVendorName('');
+                        setVendorId('');
+                        setVendorCode('');
                         setVendorGstin('');
                         setVendorPan('');
                         setVendorGroup('');
@@ -1333,11 +1307,16 @@ export function InvoiceFormDirectV2() {
                       setVendorName(name);
                       const v = activeVendors.find((vv: any) => (vv.name || vv.legalName) === name);
                       if (v) {
+                        setVendorId((v as any).id || '');
+                        setVendorCode((v as any).code || '');
                         setVendorGstin((v as any).gstin || (v as any).vendorGstin || '');
                         setVendorPan((v as any).pan || (v as any).panNumber || '');
                         setVendorGroup((v as any).group || (v as any).vendorGroup || '');
                         const gstin = (v as any).gstin || '';
                         if (gstin.length >= 2) setVendorState(getStateFromGstin(gstin));
+                      } else {
+                        setVendorId('');
+                        setVendorCode('');
                       }
                     }}
                   >
@@ -1489,17 +1468,16 @@ export function InvoiceFormDirectV2() {
                 <h2 style={S.sectionTitle}>Invoice Details</h2>
               </div>
               <div style={S.grid2}>
-                {/* Invoice Number */}
+                {/* Invoice Number (system-generated) */}
                 <div>
                   <div style={S.fieldLabel}>
-                    <span>Invoice Number</span>
-                    <span style={S.required}>*</span> {invoiceNumber && <OcrBadge />}
+                    <span>Invoice Number</span> <AutoBadge />
                   </div>
                   <input
-                    className="px-input"
+                    className="px-input-readonly"
+                    readOnly
                     value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                    placeholder="e.g. INV-2026-0042"
+                    placeholder="Auto-generated on save"
                   />
                 </div>
                 {/* Payment Due Date */}
@@ -1903,443 +1881,8 @@ export function InvoiceFormDirectV2() {
                 </div>
               </div>
             </div>
-
-            {/* ═══════════ SECTION 6: Accounting Entry Preview ═══════════ */}
-            <div style={S.sectionCard}>
-              <div style={S.sectionHeader}>
-                <div style={S.sectionIcon}>
-                  <TrendingUp size={18} />
-                </div>
-                <h2 style={S.sectionTitle}>Accounting Entry Preview</h2>
-              </div>
-              <div style={S.accountingGrid}>
-                {/* Debit Side */}
-                <div
-                  style={{
-                    border: '1px solid var(--color-silver)',
-                    borderRadius: 8,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '10px 16px',
-                      background: 'var(--color-teal-tint)',
-                      color: 'var(--color-teal-dark)',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <span>Debit</span>
-                    <span>Amount</span>
-                  </div>
-                  {debitEntries.map((e, i) => (
-                    <div key={i} style={S.accountingRow}>
-                      <span>{e.account}</span>
-                      <span style={{ fontWeight: 500 }}>{formatCurrency(e.amount)}</span>
-                    </div>
-                  ))}
-                  <div style={S.accountingTotal}>
-                    <span>Total Debit</span>
-                    <span>{formatCurrency(debitTotal)}</span>
-                  </div>
-                </div>
-
-                {/* Credit Side */}
-                <div
-                  style={{
-                    border: '1px solid var(--color-silver)',
-                    borderRadius: 8,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '10px 16px',
-                      background: 'var(--color-error-light)',
-                      color: 'var(--color-error-dark)',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <span>Credit</span>
-                    <span>Amount</span>
-                  </div>
-                  {creditEntries.map((e, i) => (
-                    <div key={i} style={S.accountingRow}>
-                      <span>{e.account}</span>
-                      <span style={{ fontWeight: 500 }}>{formatCurrency(e.amount)}</span>
-                    </div>
-                  ))}
-                  <div style={S.accountingTotal}>
-                    <span>Total Credit</span>
-                    <span>{formatCurrency(creditTotal)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div
-                style={{
-                  marginTop: 16,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '12px 16px',
-                  background: 'var(--color-cloud)',
-                  borderRadius: 8,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Info size={14} color="var(--color-mercury-grey)" />
-                  <span style={S.textMuted}>
-                    Posting Mode: Accrual basis &bull; Auto-reversed on payment
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)' }}>
-                    Net Payable:
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 15,
-                      fontWeight: 700,
-                      color: 'var(--color-teal-dark)',
-                      padding: '2px 12px',
-                      background: 'var(--color-teal-tint)',
-                      borderRadius: 6,
-                    }}
-                  >
-                    {formatCurrency(totalNet)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* ═══════════ SECTION 7: Workflow Preview ═══════════ */}
-            <div style={S.sectionCard}>
-              <div style={S.sectionHeader}>
-                <div style={S.sectionIcon}>
-                  <Shield size={18} />
-                </div>
-                <h2 style={S.sectionTitle}>Workflow Preview</h2>
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 0',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span className="badge-teal">{APPROVAL_LEVELS.length} Approvers</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Clock size={14} color="var(--color-mercury-grey)" />
-                    <span style={S.textMuted}>SLA: 48 hours</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setDrawerOpen(true)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: 'var(--color-teal-dark)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
-                >
-                  View Details <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
           </div>
         </main>
-      </div>
-
-      {/* ═══════════ WORKFLOW DRAWER ═══════════ */}
-      {/* Backdrop */}
-      <div style={S.backdrop(drawerOpen)} onClick={() => setDrawerOpen(false)} />
-      {/* Drawer */}
-      <div style={S.drawer(drawerOpen)}>
-        {/* Drawer Header */}
-        <div style={S.drawerHeader}>
-          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: 'var(--color-ink)' }}>
-            Workflow Details
-          </h3>
-          <button
-            onClick={() => setDrawerOpen(false)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-            aria-label="Close drawer"
-          >
-            <X size={20} color="var(--color-mercury-grey)" />
-          </button>
-        </div>
-
-        {/* Drawer Body */}
-        <div style={S.drawerBody}>
-          {/* Approval Levels */}
-          <div style={S.mb24}>
-            <h4
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'var(--color-ink)',
-                margin: '0 0 14px',
-              }}
-            >
-              Approval Levels
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {APPROVAL_LEVELS.map((lvl) => (
-                <div
-                  key={lvl.level}
-                  style={{
-                    padding: '14px 16px',
-                    background: lvl.bgColor,
-                    border: `1px solid ${lvl.borderColor}`,
-                    borderRadius: 8,
-                    borderLeft: `4px solid ${lvl.borderColor}`,
-                  }}
-                >
-                  <div
-                    style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: lvl.color,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                      }}
-                    >
-                      Level {lvl.level} — {lvl.title}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        padding: '1px 8px',
-                        borderRadius: 9999,
-                        background: lvl.borderColor,
-                        color: '#fff',
-                        fontWeight: 600,
-                      }}
-                    >
-                      Pending
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-ink)' }}>
-                    {lvl.approver}
-                  </div>
-                  <div style={S.textSmall}>{lvl.role}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* SLA & Escalations */}
-          <div style={S.mb24}>
-            <h4
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'var(--color-ink)',
-                margin: '0 0 14px',
-              }}
-            >
-              SLA &amp; Escalations
-            </h4>
-            <div
-              style={{
-                padding: 16,
-                background: 'var(--color-cloud)',
-                borderRadius: 8,
-                border: '1px solid var(--color-silver)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={S.textMuted}>Total SLA</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)' }}>
-                  48 hours
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={S.textMuted}>Per-level SLA</span>
-                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-ink)' }}>
-                  16 hours each
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={S.textMuted}>Escalation</span>
-                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-warning-dark)' }}>
-                  Auto-escalate after 4 hrs
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Routing Rules */}
-          <div style={S.mb24}>
-            <h4
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'var(--color-ink)',
-                margin: '0 0 14px',
-              }}
-            >
-              Routing Rules
-            </h4>
-            <div
-              style={{
-                padding: 16,
-                background: 'var(--color-cloud)',
-                borderRadius: 8,
-                border: '1px solid var(--color-silver)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-                <AlertTriangle
-                  size={14}
-                  color="var(--color-warning-dark)"
-                  style={{ flexShrink: 0, marginTop: 2 }}
-                />
-                <span style={{ fontSize: 13, color: 'var(--color-ink)' }}>
-                  Invoice amount exceeds department threshold. CFO approval (Level 3) added
-                  automatically.
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                <Info
-                  size={14}
-                  color="var(--color-teal-dark)"
-                  style={{ flexShrink: 0, marginTop: 2 }}
-                />
-                <span style={{ fontSize: 13, color: 'var(--color-ink)' }}>
-                  Non-PO invoices above INR 50,000 require Finance Controller sign-off.
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Audit Trail Preview */}
-          <div style={S.mb24}>
-            <h4
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'var(--color-ink)',
-                margin: '0 0 14px',
-              }}
-            >
-              Audit Trail Preview
-            </h4>
-            <div
-              style={{
-                padding: 16,
-                background: 'var(--color-cloud)',
-                borderRadius: 8,
-                border: '1px solid var(--color-silver)',
-              }}
-            >
-              {[
-                { time: 'Just now', action: 'Invoice created via OCR capture', user: 'You' },
-                {
-                  time: 'Auto',
-                  action: 'OCR extracted 2 line items (High/Med confidence)',
-                  user: 'System',
-                },
-                { time: 'Auto', action: 'GST validation passed — GSTIN verified', user: 'System' },
-                { time: 'Pending', action: 'Awaiting Level 1 approval', user: 'Rahul Mehta' },
-              ].map((entry, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    gap: 12,
-                    padding: '8px 0',
-                    borderBottom: i < 3 ? '1px solid var(--color-silver)' : 'none',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: 'var(--color-mercury-grey)',
-                      minWidth: 60,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {entry.time}
-                  </span>
-                  <div>
-                    <div style={{ fontSize: 13, color: 'var(--color-ink)' }}>{entry.action}</div>
-                    <div style={S.textSmall}>{entry.user}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Policy Information */}
-          <div>
-            <h4
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'var(--color-ink)',
-                margin: '0 0 14px',
-              }}
-            >
-              Policy Information
-            </h4>
-            <div
-              style={{
-                padding: 16,
-                background: 'var(--color-teal-tint)',
-                borderRadius: 8,
-                border: '1px solid var(--color-teal)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-                <Shield
-                  size={14}
-                  color="var(--color-teal-dark)"
-                  style={{ flexShrink: 0, marginTop: 2 }}
-                />
-                <span style={{ fontSize: 13, color: 'var(--color-ink)', fontWeight: 500 }}>
-                  Non-PO Procurement Policy v3.2
-                </span>
-              </div>
-              <ul
-                style={{
-                  margin: 0,
-                  paddingLeft: 38,
-                  fontSize: 13,
-                  color: 'var(--color-ink)',
-                  lineHeight: 1.8,
-                }}
-              >
-                <li>Maximum single invoice value: INR 5,00,000</li>
-                <li>Mandatory e-Invoice verification for GST-registered vendors</li>
-                <li>TDS deduction required for services above INR 30,000</li>
-                <li>Retention clause applicable for new vendors (first 3 invoices)</li>
-              </ul>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
