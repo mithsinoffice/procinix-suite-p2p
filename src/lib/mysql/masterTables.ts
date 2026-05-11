@@ -7,17 +7,13 @@ const relationalMasterInFlight = new Map<string, Promise<unknown[]>>();
 
 const MASTER_KEYS = [
   'category_master',
-  'color_master',
   'country_master',
   'state_master',
   'department_master',
   'tax_code_master',
-  'size_master',
   'item_category_master',
   'vendor_payment_terms_master',
   'item_master',
-  'product_master',
-  'sku_master',
   'uom_master',
   'debit_note_reason_master',
   'cost_centre_master',
@@ -32,7 +28,6 @@ const MASTER_KEYS = [
   'currency_master',
   'entity_master',
   'exchange_rate_master',
-  'payment_method_master',
   'tds_section_master',
   'location_master',
   'gl_code_master',
@@ -43,6 +38,7 @@ const MASTER_KEYS = [
   'service_type_master',
   'expense_category_master',
   'kit_bundle_master',
+  'rate_contract_master',
 ] as const;
 
 export type MasterKey = (typeof MASTER_KEYS)[number];

@@ -144,20 +144,6 @@ export const navigationConfig: { pillars: NavPillar[] } = {
               requiredPerm: ['MASTERS.VIEW'],
             },
             {
-              key: 'PRODUCT_MASTER',
-              label: 'Product Master',
-              route: '/masters/product-master',
-              icon: Package,
-              requiredPerm: ['MASTERS.VIEW'],
-            },
-            {
-              key: 'SKU_MASTER',
-              label: 'SKU Master',
-              route: '/masters/sku-master',
-              icon: Package,
-              requiredPerm: ['MASTERS.VIEW'],
-            },
-            {
               key: 'CONTRACT_MASTER',
               label: 'Contract Master',
               route: '/masters/contract-master',

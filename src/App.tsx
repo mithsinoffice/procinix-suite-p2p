@@ -160,18 +160,6 @@ const MasterBulkUpload = lazy(() =>
 const CategoryMaster = lazy(() =>
   import('./components/CategoryMaster').then((module) => ({ default: module.CategoryMaster }))
 );
-const ProductMaster = lazy(() =>
-  import('./components/ProductMaster').then((module) => ({ default: module.ProductMaster }))
-);
-const ColorMaster = lazy(() =>
-  import('./components/ColorMaster').then((module) => ({ default: module.ColorMaster }))
-);
-const SizeMaster = lazy(() =>
-  import('./components/SizeMaster').then((module) => ({ default: module.SizeMaster }))
-);
-const SKUMaster = lazy(() =>
-  import('./components/SKUMaster').then((module) => ({ default: module.SKUMaster }))
-);
 const ContractMaster = lazy(() =>
   import('./components/ContractMaster').then((module) => ({ default: module.ContractMaster }))
 );
@@ -245,9 +233,6 @@ const MyApprovalsPage = lazy(() => import('./pages/Approvals'));
 const InvoiceDetail = lazy(() =>
   import('./pages/InvoiceDetail').then((m) => ({ default: m.InvoiceDetail }))
 );
-const PaymentMethodMaster = lazy(() =>
-  import('./components/PaymentMethodMaster').then((m) => ({ default: m.PaymentMethodMaster }))
-);
 const TDSSectionMaster = lazy(() =>
   import('./components/TDSSectionMaster').then((m) => ({ default: m.TDSSectionMaster }))
 );
@@ -297,6 +282,9 @@ const ExpenseCategoryMaster = lazy(() =>
 );
 const KitBundleMaster = lazy(() =>
   import('./components/KitBundleMaster').then((m) => ({ default: m.KitBundleMaster }))
+);
+const RateContractMaster = lazy(() =>
+  import('./components/RateContractMaster').then((m) => ({ default: m.RateContractMaster }))
 );
 const VendorMasterPage = lazy(() =>
   import('./components/VendorMaster').then((module) => ({ default: module.VendorMaster }))
@@ -591,10 +579,6 @@ function App() {
                                   element={<CategoryMaster />}
                                 />
                                 <Route path="masters/item-master" element={<ItemMaster />} />
-                                <Route path="masters/product-master" element={<ProductMaster />} />
-                                <Route path="masters/color-master" element={<ColorMaster />} />
-                                <Route path="masters/size-master" element={<SizeMaster />} />
-                                <Route path="masters/sku-master" element={<SKUMaster />} />
                                 <Route
                                   path="masters/contract-master"
                                   element={<ContractMaster />}
@@ -679,10 +663,6 @@ function App() {
                                   element={<VendorPaymentTermsMaster />}
                                 />
                                 <Route
-                                  path="masters/payment-method-master"
-                                  element={<PaymentMethodMaster />}
-                                />
-                                <Route
                                   path="masters/tds-section-master"
                                   element={<TDSSectionMaster />}
                                 />
@@ -718,6 +698,10 @@ function App() {
                                 <Route
                                   path="masters/kit-bundle-master"
                                   element={<KitBundleMaster />}
+                                />
+                                <Route
+                                  path="masters/rate-contract-master"
+                                  element={<RateContractMaster />}
                                 />
 
                                 {/* Invoices */}

@@ -65,13 +65,6 @@ const MASTER_DEFINITIONS: MasterDefinition[] = [
     nameFields: ['categoryName'],
   },
   {
-    key: 'color_master',
-    label: 'Color Master',
-    route: '/masters/color-master',
-    codeFields: ['colorCode'],
-    nameFields: ['colorName'],
-  },
-  {
     key: 'country_master',
     label: 'Country Master',
     route: '/masters/country-master',
@@ -182,27 +175,6 @@ const MASTER_DEFINITIONS: MasterDefinition[] = [
     route: '/masters/vendor-payment-terms-master',
     codeFields: ['code'],
     nameFields: ['description', 'name'],
-  },
-  {
-    key: 'product_master',
-    label: 'Product Master',
-    route: '/masters/product-master',
-    codeFields: ['productCode', 'code'],
-    nameFields: ['productName', 'name'],
-  },
-  {
-    key: 'sku_master',
-    label: 'SKU Master',
-    route: '/masters/sku-master',
-    codeFields: ['skuCode', 'code'],
-    nameFields: ['skuName', 'product', 'name'],
-  },
-  {
-    key: 'size_master',
-    label: 'Size Master',
-    route: '/masters/size-master',
-    codeFields: ['sizeCode', 'code'],
-    nameFields: ['sizeName', 'name'],
   },
   {
     key: 'contract_master',

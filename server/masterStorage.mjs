@@ -5,12 +5,6 @@ export const MASTER_STORAGE = {
     auditTable: 'category_master_audit',
     legacyTable: 'erp_master_categories',
   },
-  color_master: {
-    database: 'color_master',
-    table: 'color_master',
-    auditTable: 'color_master_audit',
-    legacyTable: 'erp_master_colors',
-  },
   country_master: {
     database: 'country_master',
     table: 'country_master',
@@ -35,12 +29,6 @@ export const MASTER_STORAGE = {
     auditTable: 'tax_code_master_audit',
     legacyTable: 'erp_master_tax_codes',
   },
-  size_master: {
-    database: 'size_master',
-    table: 'size_master',
-    auditTable: 'size_master_audit',
-    legacyTable: 'erp_master_sizes',
-  },
   item_category_master: {
     database: 'item_category_master',
     table: 'item_category_master',
@@ -52,18 +40,6 @@ export const MASTER_STORAGE = {
     table: 'vendor_payment_terms_master',
     auditTable: 'vendor_payment_terms_master_audit',
     legacyTable: 'erp_master_vendor_payment_terms',
-  },
-  product_master: {
-    database: 'product_master',
-    table: 'product_master',
-    auditTable: 'product_master_audit',
-    legacyTable: 'erp_master_products',
-  },
-  sku_master: {
-    database: 'sku_master',
-    table: 'sku_master',
-    auditTable: 'sku_master_audit',
-    legacyTable: 'erp_master_skus',
   },
   uom_master: {
     database: 'uom_master',
@@ -149,12 +125,6 @@ export const MASTER_STORAGE = {
     auditTable: 'bank_master_audit',
     legacyTable: 'erp_master_banks',
   },
-  payment_method_master: {
-    database: 'payment_method_master',
-    table: 'payment_method_master',
-    auditTable: 'payment_method_master_audit',
-    legacyTable: 'erp_master_payment_methods',
-  },
   tds_section_master: {
     database: 'tds_section_master',
     table: 'tds_section_master',
@@ -220,6 +190,12 @@ export const MASTER_STORAGE = {
     table: 'kit_bundle_master',
     auditTable: 'kit_bundle_master_audit',
     legacyTable: 'erp_master_kit_bundles',
+  },
+  rate_contract_master: {
+    database: 'rate_contract_master',
+    table: 'rate_contract_master',
+    auditTable: 'rate_contract_master_audit',
+    legacyTable: 'erp_master_rate_contracts',
   },
 };
 

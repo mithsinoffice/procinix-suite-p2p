@@ -39,10 +39,6 @@ CREATE TABLE IF NOT EXISTS erp_master_categories (
   KEY idx_erp_master_categories_updated_at (updated_at)
 );
 
-CREATE TABLE IF NOT EXISTS erp_master_colors (
-  LIKE erp_master_categories
-);
-
 CREATE TABLE IF NOT EXISTS erp_master_countries (
   LIKE erp_master_categories
 );
@@ -59,23 +55,11 @@ CREATE TABLE IF NOT EXISTS erp_master_tax_codes (
   LIKE erp_master_categories
 );
 
-CREATE TABLE IF NOT EXISTS erp_master_sizes (
-  LIKE erp_master_categories
-);
-
 CREATE TABLE IF NOT EXISTS erp_master_item_categories (
   LIKE erp_master_categories
 );
 
 CREATE TABLE IF NOT EXISTS erp_master_vendor_payment_terms (
-  LIKE erp_master_categories
-);
-
-CREATE TABLE IF NOT EXISTS erp_master_products (
-  LIKE erp_master_categories
-);
-
-CREATE TABLE IF NOT EXISTS erp_master_skus (
   LIKE erp_master_categories
 );
 

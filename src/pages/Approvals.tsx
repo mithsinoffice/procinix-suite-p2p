@@ -25,7 +25,6 @@ type PendingMasterApprovalResponseItem = {
 
 const MASTER_ROUTE_MAP: Record<string, string> = {
   category_master: '/masters/category-master',
-  color_master: '/masters/color-master',
   country_master: '/masters/country-master',
   state_master: '/masters/state-master',
   tax_code_master: '/masters/tax-code-master',
@@ -42,9 +41,6 @@ const MASTER_ROUTE_MAP: Record<string, string> = {
   debit_note_reason_master: '/masters/debit-note-reason-master',
   item_category_master: '/masters/item-category-master',
   vendor_payment_terms_master: '/masters/vendor-payment-terms-master',
-  product_master: '/masters/product-master',
-  sku_master: '/masters/sku-master',
-  size_master: '/masters/size-master',
   contract_master: '/masters/contract-master',
   vendor_master: '/vendors',
   vendor_group_master: '/masters/vendor-group-master',
