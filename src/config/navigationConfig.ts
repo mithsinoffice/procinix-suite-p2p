@@ -368,6 +368,13 @@ export const navigationConfig: { pillars: NavPillar[] } = {
               icon: Users,
               requiredPerm: ['MASTERS.VIEW'],
             },
+            {
+              key: 'KIT_BUNDLE_MASTER',
+              label: 'Kit / Bundle Master',
+              route: '/masters/kit-bundle-master',
+              icon: Package,
+              requiredPerm: ['MASTERS.VIEW'],
+            },
           ],
         },
         {
