@@ -468,6 +468,40 @@ export interface KitBundleMasterRecord {
   approvalStatus?: string;
 }
 
+export interface RateContractItem {
+  id?: string;
+  itemId?: string;
+  itemCode: string;
+  itemName: string;
+  agreedRate: number;
+  currency?: string;
+  uom?: string;
+  gstRate?: number;
+  hsnCode?: string;
+  lineNumber?: number;
+}
+
+export interface RateContractMasterRecord {
+  id: string;
+  code: string;
+  recordCode?: string;
+  contractCode?: string;
+  name: string;
+  recordName?: string;
+  contractName?: string;
+  vendorId?: string;
+  vendorCode?: string;
+  vendorName?: string;
+  entityId?: string;
+  entityCode?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: 'active' | 'inactive' | 'expired' | string;
+  approvalStatus?: string;
+  notes?: string;
+  items: RateContractItem[];
+}
+
 export interface EmployeeMasterRecord {
   id: string;
   code: string;
@@ -1109,6 +1143,7 @@ interface MasterDataContextType {
   // 2026-05-11 sprint
   kitBundles: KitBundleMasterRecord[];
   employees: EmployeeMasterRecord[];
+  rateContracts: RateContractMasterRecord[];
 
   // TDS Sections
   tdsSections: TDSSectionMasterRecord[];
@@ -1155,6 +1190,7 @@ interface MasterDataDocument {
   expenseCategories: ExpenseCategoryMaster[];
   kitBundles: KitBundleMasterRecord[];
   employees: EmployeeMasterRecord[];
+  rateContracts: RateContractMasterRecord[];
   tdsSections: TDSSectionMasterRecord[];
   currencies: CurrencyMaster[];
   exchangeRates: ExchangeRateMaster[];
@@ -1215,6 +1251,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     expenseCategories: [] as ExpenseCategoryMaster[],
     kitBundles: [] as KitBundleMasterRecord[],
     employees: [] as EmployeeMasterRecord[],
+    rateContracts: [] as RateContractMasterRecord[],
     tdsSections: TDS_SECTION_MASTER_DATA,
     currencies: CURRENCY_MASTER_DATA,
     exchangeRates: EXCHANGE_RATE_MASTER_DATA,
@@ -1259,6 +1296,9 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
   );
   const [kitBundles, setKitBundles] = useState<KitBundleMasterRecord[]>(defaultDocument.kitBundles);
   const [employees, setEmployees] = useState<EmployeeMasterRecord[]>(defaultDocument.employees);
+  const [rateContracts, setRateContracts] = useState<RateContractMasterRecord[]>(
+    defaultDocument.rateContracts
+  );
   const [tdsSections, setTdsSections] = useState<TDSSectionMasterRecord[]>(
     defaultDocument.tdsSections
   );
@@ -1296,6 +1336,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           expenseCategoriesData,
           kitBundlesData,
           employeesResponse,
+          rateContractsResponse,
           document,
           itemsResponse,
           liveVendorsResponse,
@@ -1351,6 +1392,9 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           mysqlApiRequest<{ success: boolean; data: EmployeeMasterRecord[] }>(
             '/masters/employee_master'
           ).catch(() => ({ success: false, data: [] as EmployeeMasterRecord[] })),
+          mysqlApiRequest<{ success: boolean; data: RateContractMasterRecord[] }>(
+            '/masters/rate_contract_master'
+          ).catch(() => ({ success: false, data: [] as RateContractMasterRecord[] })),
           ensureDomainDocument('master_data', defaultDocument),
           mysqlApiRequest<{ success: boolean; data: MysqlItemRow[] }>('/items').catch(() => ({
             success: false,
@@ -1478,6 +1522,13 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
             ? employeesResponse.data
             : (document.employees ?? defaultDocument.employees)
         );
+        setRateContracts(
+          rateContractsResponse &&
+            Array.isArray(rateContractsResponse.data) &&
+            rateContractsResponse.data.length > 0
+            ? rateContractsResponse.data
+            : (document.rateContracts ?? defaultDocument.rateContracts)
+        );
         setTdsSections(tdsSectionsData ?? defaultDocument.tdsSections);
         setCurrencies(currenciesData ?? defaultDocument.currencies);
         setExchangeRates(exchangeRatesData ?? defaultDocument.exchangeRates);
@@ -1510,6 +1561,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       setExpenseCategories(document.expenseCategories ?? defaultDocument.expenseCategories);
       setKitBundles(document.kitBundles ?? defaultDocument.kitBundles);
       setEmployees(document.employees ?? defaultDocument.employees);
+      setRateContracts(document.rateContracts ?? defaultDocument.rateContracts);
       setTdsSections(document.tdsSections ?? defaultDocument.tdsSections);
       setCurrencies(document.currencies ?? defaultDocument.currencies);
       setExchangeRates(document.exchangeRates ?? defaultDocument.exchangeRates);
@@ -1556,6 +1608,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
         designations,
         kitBundles,
         employees,
+        rateContracts,
         tdsSections,
         currencies,
         exchangeRates,
@@ -1584,6 +1637,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
       expenseCategories,
       kitBundles,
       employees,
+      rateContracts,
       tdsSections,
       currencies,
       exchangeRates,
@@ -1603,6 +1657,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     expenseCategories,
     kitBundles,
     employees,
+    rateContracts,
     departments,
     entities,
     exchangeRates,
@@ -1830,6 +1885,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     expenseCategories,
     kitBundles,
     employees,
+    rateContracts,
     tdsSections,
     getTDSSectionByCode,
     getActiveTDSSections,

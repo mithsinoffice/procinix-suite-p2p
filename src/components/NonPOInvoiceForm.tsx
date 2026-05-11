@@ -42,6 +42,7 @@ import { ensureRelationalMasterRecords } from '../lib/mysql/masterTables';
 import { FormShell, FormSection, PxFormField, type SaveStatus } from './ui/form-primitives';
 import { useFormKeyboardSave } from '../hooks/useFormKeyboardSave';
 import { JournalEntryPreview, LineItemRow, NarrationField, TDSThresholdTracker } from './invoice';
+import { useRateContractLookup } from '../hooks/useRateContractLookup';
 
 // India's 36 GST place-of-supply codes (compliance-defined enum). Codes are
 // the GST state codes — first 2 digits of any GSTIN must match this list.
@@ -309,6 +310,45 @@ export function NonPOInvoiceForm() {
   // Line Items
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const selectedVendor = vendorId ? getVendorById(vendorId) : undefined;
+
+  // ── Rate Contract lookup ─────────────────────────────────────────────────
+  // For every (vendor, line.itemCode) pair, ask the server if a pre-negotiated
+  // rate contract is active. Matched lines auto-fill rate / gstRate / hsnCode
+  // unless the user clicks "Override".
+  const rateContractLines = useMemo(
+    () => lineItems.map((l) => ({ id: l.id, itemCode: l.itemCode || '' })),
+    [lineItems]
+  );
+  const rateContract = useRateContractLookup({
+    vendorId,
+    entityId,
+    lines: rateContractLines,
+    disabled: !vendorId,
+  });
+
+  // Auto-fill matched lines (deps watch the match map only — touching every
+  // line on every keystroke would loop).
+  useEffect(() => {
+    setLineItems((prev) => {
+      let dirty = false;
+      const next = prev.map((line) => {
+        const match = rateContract.matchByLineId[line.id];
+        if (!match || rateContract.overrides[line.id]) return line;
+        const targetRate = Number(match.agreedRate) || 0;
+        const targetGst = Number(match.gstRate) || 0;
+        if (line.unitRate === targetRate && line.gstRate === targetGst) return line;
+        dirty = true;
+        const baseAmount = +(targetRate * (Number(line.quantity) || 0)).toFixed(2);
+        return {
+          ...line,
+          unitRate: targetRate,
+          gstRate: targetGst,
+          baseAmount,
+        };
+      });
+      return dirty ? next : prev;
+    });
+  }, [rateContract.matchByLineId, rateContract.overrides]);
 
   // ── Edit-mode prefill ─────────────────────────────────────────────────────
   // When mounted at /invoices/edit/:id (via InvoiceEditLoader), GET the
@@ -1888,6 +1928,88 @@ export function NonPOInvoiceForm() {
             Add Line
           </button>
         </div>
+
+        {lineItems.some((l) => rateContract.matchByLineId[l.id]) && (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: '10px 14px',
+              borderRadius: 8,
+              border: '0.5px solid #C9F0DC',
+              background: '#F4FBF8',
+              fontSize: 12,
+              color: '#0F6E56',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+            }}
+          >
+            <strong style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Rate contracts auto-applied
+            </strong>
+            {lineItems
+              .filter((l) => rateContract.matchByLineId[l.id])
+              .map((l) => {
+                const match = rateContract.matchByLineId[l.id];
+                const overridden = rateContract.overrides[l.id];
+                return (
+                  <div
+                    key={l.id}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+                  >
+                    <span style={{ color: '#0F6E56', fontWeight: 500 }}>
+                      {l.itemCode || match.itemName}
+                    </span>
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                        background: overridden ? '#FFF4E1' : '#E1F5EE',
+                        color: overridden ? '#BA7517' : '#0F6E56',
+                        fontSize: 11,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {overridden
+                        ? `Manual override — ${match.contractCode} not applied`
+                        : `Rate contract active — ${match.contractCode}`}
+                    </span>
+                    {!overridden ? (
+                      <button
+                        type="button"
+                        onClick={() => rateContract.overrideLine(l.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#BA7517',
+                          fontSize: 11,
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        Override
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => rateContract.clearOverride(l.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#0F6E56',
+                          fontSize: 11,
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        Reapply contract
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full">

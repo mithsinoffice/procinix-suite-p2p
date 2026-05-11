@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useMasterData } from '../contexts/MasterDataContext';
 import { mysqlApiRequest } from '../lib/mysql/client';
+import { useRateContractLookup } from '../hooks/useRateContractLookup';
 
 /* ═══════════════════════════════════════════════════════════
    TYPES
@@ -614,6 +615,12 @@ export function InvoiceFormDirectV2() {
   /* ---- line items ---- */
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
+  /* ---- rate contract lookup (auto-enforces pre-negotiated rates) ---- */
+  const rateContractLines = useMemo(
+    () => lineItems.map((l) => ({ id: l.id, itemCode: l.itemCode || '' })),
+    [lineItems]
+  );
+
   /* ---- form field state (populated by AI or manual entry) ---- */
   const [vendorName, setVendorName] = useState('');
   const [vendorId, setVendorId] = useState('');
@@ -679,6 +686,32 @@ export function InvoiceFormDirectV2() {
       return mappings.length === 0 || mappings.some((m: any) => m.entityId === selectedEntityId);
     });
   }, [activeDepartments, selectedEntityId]);
+
+  const rateContract = useRateContractLookup({
+    vendorId,
+    entityId: selectedEntityId || '',
+    lines: rateContractLines,
+    disabled: !vendorId,
+  });
+
+  // Auto-fill matched line items with agreed rate / gst when contract is
+  // active and not overridden by the user.
+  useEffect(() => {
+    setLineItems((prev) => {
+      let dirty = false;
+      const next = prev.map((line) => {
+        const match = rateContract.matchByLineId[line.id];
+        if (!match || rateContract.overrides[line.id]) return line;
+        const targetRate = Number(match.agreedRate) || 0;
+        const targetGst = Number(match.gstRate) || 0;
+        if (line.rate === targetRate && line.gstPercent === targetGst) return line;
+        dirty = true;
+        const amount = +(targetRate * (Number(line.qty) || 0)).toFixed(2);
+        return { ...line, rate: targetRate, gstPercent: targetGst, amount };
+      });
+      return dirty ? next : prev;
+    });
+  }, [rateContract.matchByLineId, rateContract.overrides]);
 
   /* ---- Hydrate from AI-ingested invoice ---- */
   useEffect(() => {
@@ -1554,6 +1587,98 @@ export function InvoiceFormDirectV2() {
                 </div>
                 <h2 style={S.sectionTitle}>Item / Expense Details</h2>
               </div>
+              {lineItems.some((l) => rateContract.matchByLineId[l.id]) && (
+                <div
+                  style={{
+                    margin: '0 0 12px 0',
+                    padding: '10px 14px',
+                    borderRadius: 8,
+                    border: '0.5px solid #C9F0DC',
+                    background: '#F4FBF8',
+                    fontSize: 12,
+                    color: '#0F6E56',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 6,
+                  }}
+                >
+                  <strong
+                    style={{
+                      fontSize: 11,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    Rate contracts auto-applied
+                  </strong>
+                  {lineItems
+                    .filter((l) => rateContract.matchByLineId[l.id])
+                    .map((l) => {
+                      const match = rateContract.matchByLineId[l.id];
+                      const overridden = rateContract.overrides[l.id];
+                      return (
+                        <div
+                          key={l.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <span style={{ color: '#0F6E56', fontWeight: 500 }}>
+                            {l.itemCode || match.itemName}
+                          </span>
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 12,
+                              background: overridden ? '#FFF4E1' : '#E1F5EE',
+                              color: overridden ? '#BA7517' : '#0F6E56',
+                              fontSize: 11,
+                              fontWeight: 500,
+                            }}
+                          >
+                            {overridden
+                              ? `Manual override — ${match.contractCode} not applied`
+                              : `Rate contract active — ${match.contractCode}`}
+                          </span>
+                          {!overridden ? (
+                            <button
+                              type="button"
+                              onClick={() => rateContract.overrideLine(l.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#BA7517',
+                                fontSize: 11,
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                              }}
+                            >
+                              Override
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => rateContract.clearOverride(l.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#0F6E56',
+                                fontSize: 11,
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                              }}
+                            >
+                              Reapply contract
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
               <div style={S.tableWrap}>
                 <table style={S.table}>
                   <thead>

@@ -36,6 +36,8 @@ const MIGRATIONS = [
   'sql/mysql/migrations/20260511_profit_centre_master.sql',
   'sql/mysql/migrations/20260511_kit_bundle_master.sql',
   'sql/mysql/migrations/20260511_employee_master.sql',
+  // 2026-05-11 sprint 2: rate contract master (header + items).
+  'sql/mysql/migrations/20260511_rate_contract_master.sql',
 ];
 
 const IGNORABLE_ERRORS = new Set([

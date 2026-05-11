@@ -106,6 +106,7 @@ import { handleAdvancesRoute } from './routes/advances.mjs';
 import { handleProcurementRoute } from './routes/procurement.mjs';
 import { handleDebitNotesRoute } from './routes/debit-notes.mjs';
 import { handleMastersRoute } from './routes/masters.mjs';
+import { handleRateContractMasterRoute } from './routes/rate-contract-master.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import {
   verifyPAN,
@@ -1139,6 +1140,9 @@ const server = http.createServer(async (req, res) => {
     // canonical /api/masters/<key> handler further down — those tables don't
     // use the record_code/record_name/payload shape.
     if (await handleMastersRoute(req, res, pathname, sendJson)) return;
+    // rate_contract_master has its own header + items schema + bespoke
+    // lookup endpoint — also must intercept before the canonical handler.
+    if (await handleRateContractMasterRoute(req, res, pathname, sendJson)) return;
 
     if (req.method === 'POST' && pathname === '/api/auth/platform-context') {
       const body = await readJsonBody(req);
