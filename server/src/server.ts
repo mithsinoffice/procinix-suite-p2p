@@ -9,6 +9,7 @@ import { authPlugin }         from './plugins/auth.js'
 import { tenantPlugin }       from './plugins/tenant.js'
 import { errorHandlerPlugin } from './plugins/error-handler.js'
 import { healthRoutes }       from './routes/health.js'
+import { webhookRoutes }      from './routes/webhooks.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -34,6 +35,7 @@ export async function buildApp() {
 
   // Routes
   await app.register(healthRoutes)        // no auth — load balancer uses this
+  await app.register(webhookRoutes)       // no auth — verified by HMAC signature
 
   // Stub routes — to be filled in per module
   app.get('/api/ping', async () => ({ pong: true, ts: Date.now() }))

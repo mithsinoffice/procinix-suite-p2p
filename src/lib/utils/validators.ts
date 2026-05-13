@@ -131,3 +131,19 @@ export function isInterstate(entityGstin: string, vendorGstin: string): boolean 
   if (!entityGstin || !vendorGstin) return false
   return getGstinStateCode(entityGstin) !== getGstinStateCode(vendorGstin)
 }
+
+export const cinSchema = z
+  .string().trim()
+  .transform(s => s.toUpperCase())
+  .refine(s => /^[A-Z]{1}[0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$/.test(s), {
+    message: 'Invalid CIN format (e.g. U12345MH2010PTC123456)',
+  })
+export const cinOptional = cinSchema.optional().or(z.literal(''))
+
+export const udyamSchema = z
+  .string().trim()
+  .transform(s => s.toUpperCase())
+  .refine(s => /^UDYAM-[A-Z]{2}-\d{2}-\d{7}$/.test(s), {
+    message: 'Invalid Udyam number (e.g. UDYAM-MH-00-0012345)',
+  })
+export const udyamOptional = udyamSchema.optional().or(z.literal(''))

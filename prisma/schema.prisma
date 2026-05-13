@@ -78,15 +78,68 @@ model Vendor {
   updatedAt      DateTime      @updatedAt
   tenant         Tenant        @relation(fields: [tenantId], references: [id])
   invoices       Invoice[]
+  cin                   String?
+  kycCinStatus          String?
+  kycCinCompanyName     String?
+  kycCinDateOfReg       String?
+  udyamNumber           String?
+  kycMsmeStatus         String?
+  kycMsmeCategory       String?
+  kycMsmeRegisteredAt   String?
+  kycPanStatus          String?
+  kycPanName            String?
+  kycGstStatus          String?
+  kycGstName            String?
+  kycBankStatus         String?
+  kycBankAccountName    String?
+  kycBankNameMatchScore Int?
+  kycBankNameMatch      Boolean?
+  kycBankNameMatchedAt  DateTime?
+  kycLastCheckedAt      DateTime?
+  gstComplianceScore    Int?
+  einvoiceRequired      Boolean   @default(false)
+  itcRisk               String?
+  is206ABApplicable     Boolean   @default(false)
+  section206ABRate      Decimal?  @db.Decimal(5, 2)
+  section206ABReason    String?
+  lastItrFiledYear      String?
+  section206ABCheckedAt DateTime?
+  gstr1LastFiledPeriod  String?
+  gstr1LastFiledDate    String?
+  gstr3bLastFiledPeriod String?
+  gstr3bLastFiledDate   String?
+  gstReturnRisk         String?
+  gstReturnCheckedAt    DateTime?
+  complianceCheckedAt   DateTime?
+  transbnkBeneficiaryId String?
+  transbnkRegisteredAt  DateTime?
   @@unique([tenantId, gstin])
   @@unique([tenantId, vendorCode])
   @@index([tenantId, status, createdAt(sort: Desc)])
   @@map("vendors")
 }
 
-enum VendorType    { SUPPLIER SERVICE_PROVIDER CONTRACTOR EMPLOYEE INTERCOMPANY }
-enum VendorStatus  { ACTIVE INACTIVE BLOCKED PENDING_APPROVAL }
-enum PanCompliance { COMPLIANT NON_FILER LOWER_DEDUCTION EXEMPTED }
+enum VendorType {
+  SUPPLIER
+  SERVICE_PROVIDER
+  CONTRACTOR
+  EMPLOYEE
+  INTERCOMPANY
+}
+
+enum VendorStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+  PENDING_APPROVAL
+}
+
+enum PanCompliance {
+  COMPLIANT
+  NON_FILER
+  LOWER_DEDUCTION
+  EXEMPTED
+}
 
 model Department {
   id       String  @id @default(uuid())
@@ -205,8 +258,18 @@ enum InvoiceStatus {
   PARTIALLY_PAID
   CANCELLED
 }
-enum MatchStatus  { UNMATCHED TWO_WAY_MATCH THREE_WAY_MATCH EXCEPTION }
-enum ApprovalLane { STP MANUAL REVIEW }
+enum MatchStatus {
+  UNMATCHED
+  TWO_WAY_MATCH
+  THREE_WAY_MATCH
+  EXCEPTION
+}
+
+enum ApprovalLane {
+  STP
+  MANUAL
+  REVIEW
+}
 
 model Payment {
   id              String        @id @default(uuid())
@@ -225,14 +288,37 @@ model Payment {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  transbnkTransactionId String?
+  transbnkUtr           String?
+  transbnkRawStatus     String?
+  transbnkInitiatedAt   DateTime?
+  transbnkCompletedAt   DateTime?
+  transbnkFailureReason String?
   @@unique([tenantId, paymentRef])
   @@index([tenantId, status, createdAt(sort: Desc)])
   @@index([tenantId, vendorId])
   @@map("payments")
 }
 
-enum PaymentMode   { NEFT RTGS IMPS CHEQUE CASH UPI WIRE }
-enum PaymentStatus { PENDING APPROVED PROCESSING COMPLETED FAILED CANCELLED REVERSED }
+enum PaymentMode {
+  NEFT
+  RTGS
+  IMPS
+  CHEQUE
+  CASH
+  UPI
+  WIRE
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REVERSED
+}
 
 model WorkflowInstance {
   id             String         @id @default(uuid())
@@ -268,7 +354,13 @@ model ApprovalStep {
   @@map("approval_steps")
 }
 
-enum ApprovalStatus { PENDING APPROVED REJECTED DELEGATED ESCALATED }
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DELEGATED
+  ESCALATED
+}
 
 model AuditLog {
   id         String   @id @default(uuid())
