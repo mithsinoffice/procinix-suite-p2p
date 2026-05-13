@@ -32,11 +32,52 @@ function parseMasterReference(referenceId) {
 }
 
 async function syncMasterSourceApprovalStatus(conn, approval, nextStatus) {
-  if (!approval || approval.module !== 'master_update') return;
+  if (!approval) return;
+
+  // Invoice approvals — flip the invoice's lifecycle_state + status only on
+  // the FINAL workflow step (or single-step legacy rows). Approving step 1
+  // of a 3-step chain MUST leave the invoice in Under Verification — the
+  // workflow engine still has steps 2..N to play out. Rejection always
+  // terminates the document immediately, regardless of step.
+  if (approval.module === 'ap_invoice' || approval.module === 'non_po_invoice') {
+    const totalSteps = Number(approval.total_steps) || 1;
+    const stepNumber = Number(approval.step_number) || 1;
+    const isFinalStep = stepNumber >= totalSteps;
+    if (nextStatus === 'Approved' && isFinalStep) {
+      await conn.execute(
+        `UPDATE invoices
+            SET lifecycle_state = 'Processed',
+                status = 'approved',
+                updated_at = NOW()
+          WHERE id = ?`,
+        [approval.reference_id]
+      );
+    } else if (nextStatus === 'Rejected') {
+      await conn.execute(
+        `UPDATE invoices
+            SET lifecycle_state = 'Rejected',
+                status = 'rejected',
+                updated_at = NOW()
+          WHERE id = ?`,
+        [approval.reference_id]
+      );
+    }
+    return;
+  }
+
+  if (approval.module !== 'master_update') return;
   const parsed = parseMasterReference(approval.reference_id);
   if (!parsed) return;
   const tableName = getQualifiedTableName(parsed.masterKey);
   if (!tableName) return;
+
+  // Same guard as the invoice branch: a master row only flips on the FINAL
+  // workflow step (or any step on rejection). Intermediate approvals leave
+  // the master in Pending Approval / Changes Requested.
+  const totalSteps = Number(approval.total_steps) || 1;
+  const stepNumber = Number(approval.step_number) || 1;
+  const isFinalStep = stepNumber >= totalSteps;
+  if (nextStatus === 'Approved' && !isFinalStep) return;
 
   await conn.execute(
     `UPDATE ${tableName}
@@ -64,6 +105,13 @@ async function syncPendingApprovals(db, approverId = '1') {
   }
 
   // 1) Upsert pending invoices into approvals queue.
+  //
+  // `assigned_to = '1'` is the universal unclaimed marker — the queue filter
+  // is `(a.assigned_to = approverId OR a.assigned_to = '1')`, so any
+  // logged-in user can see and action these. Previously this column was set
+  // to `COALESCE(entity_id, approverId, '1')` which made invoices invisible
+  // to users whose id wasn't literally the entity UUID. `submitted_by` keeps
+  // the approverId fallback so audit-trail aggregation works.
   await db.execute(
     `INSERT INTO approvals (
       id, module, reference_id, status, assigned_to, submitted_by, created_at, approval_priority
@@ -77,8 +125,8 @@ async function syncPendingApprovals(db, approverId = '1') {
       END,
       i.id,
       'pending',
-      COALESCE(NULLIF(i.entity_id, ''), ?, '1'),
-      COALESCE(NULLIF(i.entity_id, ''), ?, '1'),
+      '1',
+      COALESCE(NULLIF(i.validated_by, ''), ?, '1'),
       COALESCE(i.created_at, NOW()),
       'normal'
     FROM invoices i
@@ -91,7 +139,7 @@ async function syncPendingApprovals(db, approverId = '1') {
           AND a.module IN ('ap_invoice', 'non_po_invoice')
           AND a.status = 'pending'
       )`,
-    [LIFECYCLE_STATES.UNDER_VERIFICATION, approverId, approverId]
+    [approverId, LIFECYCLE_STATES.UNDER_VERIFICATION]
   );
 
   // 2) Upsert pending POs.
@@ -127,14 +175,24 @@ async function syncPendingApprovals(db, approverId = '1') {
   // First heal source master rows from the latest processed approval decision.
   // This fixes older environments where approve/reject updated the approvals row
   // but did not persist the terminal status back to the source master record.
+  //
+  // CRITICAL: only heal when the audit decision is fresher than the master
+  // row's `updated_at`. Without this guard, a fresh edit that intentionally
+  // drops a previously-Approved record back to Pending Approval gets auto-
+  // re-flipped to Approved by an old audit row — defeating the whole
+  // re-approval flow. See bug history: entity_master edits would briefly show
+  // Pending then "auto-approve" because this sync ran ~5s later and clobbered
+  // the master row using an audit row from the previous approval cycle.
   for (const masterKey of masterKeys) {
     const tableName = getQualifiedTableName(masterKey);
     if (!tableName) continue;
 
-    await db.execute(
-      `UPDATE ${tableName} m
+    try {
+      await db.execute(
+        `UPDATE ${tableName} m
        JOIN (
-         SELECT a.reference_id, a.status
+         SELECT a.reference_id, a.status,
+                COALESCE(a.completed_at, a.approved_at, a.rejected_at, a.created_at) AS resolved_at
          FROM approvals a
          JOIN (
            SELECT reference_id, MAX(COALESCE(completed_at, approved_at, rejected_at, created_at)) AS latest_ts
@@ -166,17 +224,27 @@ async function syncPendingApprovals(db, approverId = '1') {
              END
            ),
        m.updated_at = CURRENT_TIMESTAMP
-       WHERE LOWER(COALESCE(m.approval_status, '')) NOT IN ('approved', 'rejected')`,
-      [masterKey, masterKey, masterKey]
-    );
+       WHERE LOWER(COALESCE(m.approval_status, '')) NOT IN ('approved', 'rejected')
+         AND resolved.resolved_at > COALESCE(m.updated_at, m.created_at)`,
+        [masterKey, masterKey, masterKey]
+      );
+    } catch (err) {
+      // ER_BAD_DB_ERROR / ER_NO_SUCH_TABLE on dev DBs where a per-master
+      // schema hasn't been provisioned. The heal is best-effort; missing
+      // tables just mean nothing to heal.
+      if (!['ER_BAD_DB_ERROR', 'ER_NO_SUCH_TABLE'].includes(err?.code)) {
+        throw err;
+      }
+    }
   }
 
   for (const masterKey of masterKeys) {
     const tableName = getQualifiedTableName(masterKey);
     if (!tableName) continue;
 
-    await db.execute(
-      `INSERT INTO approvals (
+    try {
+      await db.execute(
+        `INSERT INTO approvals (
         id, module, reference_id, status, assigned_to, submitted_by, created_at, approval_priority
       )
       SELECT
@@ -198,20 +266,31 @@ async function syncPendingApprovals(db, approverId = '1') {
             AND a.module = 'master_update'
             AND a.status = 'pending'
         )`,
-      [masterKey, approverId, ...PENDING_MASTER_STATUSES, masterKey]
-    );
+        [masterKey, approverId, ...PENDING_MASTER_STATUSES, masterKey]
+      );
+    } catch (err) {
+      if (!['ER_BAD_DB_ERROR', 'ER_NO_SUCH_TABLE'].includes(err?.code)) {
+        throw err;
+      }
+    }
   }
 
   // Normalize legacy master approvals to shared queue visibility.
+  // Skip workflow-engine rows — those carry a resolved approver id that
+  // must not be overwritten with the universal '1' sentinel.
   await db.execute(
     `UPDATE approvals
      SET assigned_to = '1'
      WHERE module = 'master_update'
        AND status = 'pending'
+       AND workflow_config_id IS NULL
        AND COALESCE(assigned_to, '') <> '1'`
   );
 
   // 4) Auto-close stale pending approvals whose source is no longer pending.
+  //    Only applies to LEGACY rows (workflow_config_id IS NULL). Workflow-
+  //    engine rows are not auto-closed — the dispatcher and triggerNextWorkflowStep
+  //    own that lifecycle (rejection paths cascade pending_predecessor → cancelled).
   await db.execute(
     `UPDATE approvals a
      LEFT JOIN invoices i ON a.reference_id = i.id AND a.module IN ('ap_invoice', 'non_po_invoice')
@@ -220,6 +299,7 @@ async function syncPendingApprovals(db, approverId = '1') {
          a.approved_at = COALESCE(a.approved_at, NOW())
      WHERE a.status = 'pending'
        AND a.module IN ('ap_invoice', 'non_po_invoice')
+       AND a.workflow_config_id IS NULL
        AND (
          i.id IS NULL
          OR (
@@ -268,14 +348,14 @@ async function syncPendingApprovals(db, approverId = '1') {
   }
 }
 
-async function ensurePendingApprovalsSynced(db, approverId = '1') {
-  const now = Date.now();
+async function ensurePendingApprovalsSynced(db, approverId = '1', options = {}) {
+  const force = options.force === true;
   if (pendingSyncPromise) {
     await pendingSyncPromise;
     return;
   }
 
-  if (now - lastSyncAt < SYNC_DEBOUNCE_MS) {
+  if (!force && Date.now() - lastSyncAt < SYNC_DEBOUNCE_MS) {
     return;
   }
 
@@ -294,6 +374,251 @@ export function triggerApprovalSync(db, approverId = '1') {
   ensurePendingApprovalsSynced(db, approverId).catch((error) => {
     console.error('[Approvals] background sync failed', error);
   });
+}
+
+/**
+ * Awaitable sync — used by the queue/KPI endpoints so that a fresh user fetch
+ * always reflects the latest pending master rows. `force=true` short-circuits
+ * the 60s debounce: explicit user reads must never miss a submission that
+ * happened seconds ago. The debounce still gates the background loop and the
+ * post-PUT trigger, where missing one window is harmless.
+ */
+export async function awaitApprovalSync(db, approverId = '1', options = {}) {
+  try {
+    await ensurePendingApprovalsSynced(db, approverId, options);
+  } catch (error) {
+    console.error('[Approvals] foreground sync failed', error);
+  }
+}
+
+/**
+ * Reset the debounce so the next sync runs full. Called from the master PUT
+ * path the moment a master row lands in a pending state — the next time the
+ * Approvals queue is opened, the sync is guaranteed to insert the new row.
+ */
+export function invalidatePendingApprovalsSync() {
+  lastSyncAt = 0;
+}
+
+/**
+ * Hardcoded single-level master approval — the master twin of
+ * `ensureInvoiceApproval`. Idempotently UPSERTs an approvals row for the
+ * given (masterKey, recordId). Used by:
+ *   • The canonical PUT /api/masters/<key> handler when a record lands in a
+ *     pending state.
+ *   • The `backfillAllPendingApprovals` startup hook (which sweeps every
+ *     master table and re-runs this helper).
+ *
+ * Schema mapping note: the `approvals` table is shared across modules and
+ * doesn't carry `document_type` / `document_id` / `document_ref` /
+ * `document_name` columns. The conventional encoding is:
+ *   module       = 'master_update'                  (the enum value)
+ *   reference_id = `${masterKey}:${recordId}`        (the dispatcher key)
+ * `recordCode` / `recordName` / `tenantId` are accepted on the helper API
+ * for future portability and currently only flow through the per-master
+ * row at queue read time (the queue JOINs the master table for display).
+ *
+ * `approvals` has no `updated_at` column — the UPDATE only resets
+ * `submitted_by` + `assigned_to` (the universal '1' unclaimed marker).
+ */
+export async function ensureMasterApproval(db, options = {}) {
+  const masterKey = options.masterKey;
+  const recordId = options.recordId;
+  if (!masterKey || !recordId) {
+    return { skipped: true, reason: 'missing_masterKey_or_recordId' };
+  }
+  const submittedBy = options.submittedBy || '1';
+  const recordCode = options.recordCode || null;
+  const recordName = options.recordName || null;
+  const tenantId = options.tenantId || 'tenant-default-001';
+  const referenceId = `${masterKey}:${recordId}`;
+
+  const [existingRows] = await db.execute(
+    `SELECT id FROM approvals
+      WHERE module = 'master_update'
+        AND reference_id = ?
+        AND status IN ('pending', 'pending_predecessor')
+      LIMIT 1`,
+    [referenceId]
+  );
+
+  if (existingRows && existingRows.length) {
+    invalidatePendingApprovalsSync();
+    return { approvalId: existingRows[0].id, action: 'noop_existing' };
+  }
+
+  // Dispatch through the workflow engine instead of inserting a hardcoded
+  // assigned_to='1' row. Lazy-required to avoid the circular import (the
+  // dispatcher imports invalidatePendingApprovalsSync from this module).
+  const { enqueueApprovalFromWorkflow } = await import('../workflow/dispatcher.mjs');
+  const result = await enqueueApprovalFromWorkflow({
+    documentType: 'master_update',
+    documentId: referenceId,
+    documentRef: recordCode || referenceId,
+    documentName: recordName || masterKey,
+    documentPayload: { master_type: masterKey, submitted_by: submittedBy },
+    submittedBy,
+    submittedByName: null,
+    tenantId,
+    db,
+  });
+  if (result.blocked) return result;
+  return { approvalId: result.approvalId, action: result.fallback ? 'fallback' : 'inserted' };
+}
+
+/**
+ * Combined startup backfill — sweeps every master in MASTER_STORAGE plus the
+ * invoices table and ensures a matching pending approvals row exists for
+ * each pending record. Idempotent (existing rows hit UPDATE branch). Each
+ * master is wrapped in its own try/catch so a schema-gap on one doesn't
+ * block the others (e.g. fresh dev DBs may lack some master tables).
+ *
+ * The `ensureInvoice` callback is dependency-injected so this module doesn't
+ * have to import from server/routes/invoices.mjs — that would create a
+ * circular dependency (invoices.mjs already imports
+ * `invalidatePendingApprovalsSync` from here).
+ *
+ * @param {object} db                 — { execute(sql, params): Promise<[rows]> }
+ * @param {object} [opts]
+ * @param {Function} [opts.ensureInvoice]  async (invoiceId, submittedBy) → result
+ * @returns {Promise<{
+ *   masters: { scanned, inserted, updated, errors, perKey: Record<string, object> },
+ *   invoices: { scanned, inserted, updated, errors }
+ * }>}
+ */
+export async function backfillAllPendingApprovals(db, opts = {}) {
+  const summary = {
+    masters: { scanned: 0, inserted: 0, updated: 0, errors: 0, perKey: {} },
+    invoices: { scanned: 0, inserted: 0, updated: 0, errors: 0 },
+  };
+
+  // ── Step A — Masters backfill ───────────────────────────────────────────
+  // Iterates every key in MASTER_STORAGE. `getGenericMasterKeys()` returns
+  // the canonical-schema masters (record_code/record_name/payload). Bespoke
+  // masters (item_master, kit_bundle_master, employee_master,
+  // rate_contract_master) have their own identifier columns and approval
+  // flows; we handle item_master here using its flat columns, and skip the
+  // other bespoke ones (their own route files manage their queue entries
+  // when approval workflows are wired). On dev DBs where a master schema
+  // hasn't been provisioned, MySQL returns ER_BAD_DB_ERROR (1049) or
+  // ER_NO_SUCH_TABLE (1146) — both treated as silent skips (logged but
+  // not counted as errors).
+  const SILENT_SKIP_ERRORS = new Set(['ER_BAD_DB_ERROR', 'ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR']);
+  const BESPOKE_SKIP_KEYS = new Set([
+    'kit_bundle_master',
+    'employee_master',
+    'rate_contract_master',
+  ]);
+
+  const genericKeys = getGenericMasterKeys();
+  const allKeys = [...genericKeys, 'item_master'];
+  for (const masterKey of allKeys) {
+    if (BESPOKE_SKIP_KEYS.has(masterKey)) continue;
+
+    const perKey = { scanned: 0, inserted: 0, updated: 0, errors: 0 };
+    summary.masters.perKey[masterKey] = perKey;
+    try {
+      const tableName = getQualifiedTableName(masterKey);
+      if (!tableName) continue;
+
+      const identCols =
+        masterKey === 'item_master'
+          ? 'm.id, m.item_code AS record_code, m.item_name AS record_name'
+          : 'm.id, m.record_code, m.record_name';
+
+      const [rows] = await db.execute(
+        `SELECT ${identCols}
+           FROM ${tableName} m
+          WHERE m.approval_status IN ('Pending Approval', 'Pending', 'pending_approval', 'Draft')
+            AND NOT EXISTS (
+              SELECT 1 FROM approvals a
+              WHERE a.module = 'master_update'
+                AND a.reference_id = CONCAT(?, ':', m.id)
+                AND a.status = 'pending'
+            )`,
+        [masterKey]
+      );
+
+      for (const row of rows || []) {
+        perKey.scanned += 1;
+        summary.masters.scanned += 1;
+        try {
+          const result = await ensureMasterApproval(db, {
+            masterKey,
+            recordId: row.id,
+            recordCode: row.record_code,
+            recordName: row.record_name,
+            submittedBy: '1',
+          });
+          if (result?.action === 'inserted') {
+            perKey.inserted += 1;
+            summary.masters.inserted += 1;
+          }
+          if (result?.action === 'updated') {
+            perKey.updated += 1;
+            summary.masters.updated += 1;
+          }
+        } catch (err) {
+          perKey.errors += 1;
+          summary.masters.errors += 1;
+          console.warn(`[approvalsBackfill] ${masterKey}:${row.id} failed:`, err?.message || err);
+        }
+      }
+    } catch (err) {
+      // Whole-master failure. ER_BAD_DB_ERROR / ER_NO_SUCH_TABLE on a dev
+      // DB that hasn't been fully seeded — log once, treat as a skip
+      // (don't bump errors).
+      const code = err?.code;
+      if (SILENT_SKIP_ERRORS.has(code)) {
+        console.warn(
+          `[approvalsBackfill] master ${masterKey} skipped (${code}): ${err?.sqlMessage || err?.message}`
+        );
+      } else {
+        perKey.errors += 1;
+        summary.masters.errors += 1;
+        console.warn(`[approvalsBackfill] master ${masterKey} skipped:`, err?.message || err);
+      }
+    }
+  }
+
+  // ── Step B — Invoices backfill ──────────────────────────────────────────
+  // Routed through the caller's `ensureInvoice` helper to avoid a circular
+  // import. Same lifecycle/status filter as the standalone helper.
+  try {
+    const [invoiceRows] = await db.execute(
+      `SELECT i.id, i.validated_by, i.lifecycle_state, i.status
+         FROM invoices i
+        WHERE (
+          i.lifecycle_state IN ('Under Verification', 'Pending Approval', 'pending_approval', 'Submitted')
+          OR LOWER(COALESCE(i.status, '')) IN
+             ('pending_approval', 'pending approval', 'pending', 'submitted', 'in review')
+        )
+        AND LOWER(COALESCE(i.status, '')) NOT IN ('approved', 'rejected', 'cancelled')
+        AND NOT EXISTS (
+          SELECT 1 FROM approvals a
+          WHERE a.reference_id = i.id
+            AND a.module IN ('ap_invoice', 'non_po_invoice')
+            AND a.status = 'pending'
+        )`
+    );
+    if (typeof opts.ensureInvoice === 'function') {
+      for (const row of invoiceRows || []) {
+        summary.invoices.scanned += 1;
+        try {
+          const result = await opts.ensureInvoice(row.id, row.validated_by || '1');
+          if (result?.action === 'inserted') summary.invoices.inserted += 1;
+          if (result?.action === 'updated') summary.invoices.updated += 1;
+        } catch (err) {
+          summary.invoices.errors += 1;
+          console.warn(`[approvalsBackfill] invoice ${row.id} failed:`, err?.message || err);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[approvalsBackfill] invoices sweep skipped:', err?.message || err);
+  }
+
+  return summary;
 }
 
 export function startApprovalSyncLoop(db, approverId = '1', intervalMs = SYNC_DEBOUNCE_MS) {
@@ -418,8 +743,17 @@ export async function getApprovalQueue(approverId, filters, db) {
   const whereParts = ["(a.assigned_to = ? OR a.assigned_to = '1')", "a.status = 'pending'"];
   const params = [approverId];
   if (filters?.module) {
-    whereParts.push('a.module = ?');
-    params.push(filters.module);
+    // AP Invoices tab in the UI groups both `ap_invoice` (PO-matched) and
+    // `non_po_invoice` modules under one filter. Expand the WHERE so a
+    // single ?module=ap_invoice query returns both. Other modules are
+    // matched exactly.
+    if (filters.module === 'ap_invoice') {
+      whereParts.push('a.module IN (?, ?)');
+      params.push('ap_invoice', 'non_po_invoice');
+    } else {
+      whereParts.push('a.module = ?');
+      params.push(filters.module);
+    }
   }
   if (filters?.priority) {
     whereParts.push('COALESCE(a.approval_priority, "normal") = ?');
@@ -638,7 +972,63 @@ export async function getModuleCounts(approverId, db) {
   };
 }
 
+/**
+ * Step advancement (PART 7). Called inside the approve/reject transactions.
+ *
+ *   approved + more steps remain  → promote step N+1 from pending_predecessor
+ *                                    to pending; notify its approver.
+ *   approved + final step        → notify the submitter that everything is done.
+ *   rejected                     → cancel every pending_predecessor row for
+ *                                    the same parent + notify the submitter.
+ */
 async function triggerNextWorkflowStep(approval, action, conn) {
+  try {
+    if (action === 'approved') {
+      const totalSteps = Number(approval.total_steps) || 1;
+      const currentStep = Number(approval.step_number) || 1;
+      const parentId = approval.parent_approval_id || approval.id;
+
+      if (currentStep >= totalSteps) {
+        // Final approval reached. Submitter notification fires post-commit.
+        return;
+      }
+
+      const nextStepNumber = currentStep + 1;
+      const [nextRows] = await conn.execute(
+        `SELECT id, assigned_to, document_ref, document_name, module, token
+           FROM approvals
+          WHERE (parent_approval_id = ? OR id = ?)
+            AND reference_id = ?
+            AND step_number = ?
+            AND status = 'pending_predecessor'
+          LIMIT 1`,
+        [parentId, parentId, approval.reference_id, nextStepNumber]
+      );
+      const next = nextRows?.[0];
+      if (!next) return;
+
+      await conn.execute(
+        `UPDATE approvals
+            SET status = 'pending',
+                token_expires_at = DATE_ADD(NOW(), INTERVAL 72 HOUR)
+          WHERE id = ?`,
+        [next.id]
+      );
+    } else if (action === 'rejected') {
+      const parentId = approval.parent_approval_id || approval.id;
+      await conn.execute(
+        `UPDATE approvals
+            SET status = 'cancelled',
+                completed_at = NOW()
+          WHERE (parent_approval_id = ? OR id = ?)
+            AND reference_id = ?
+            AND status = 'pending_predecessor'`,
+        [parentId, parentId, approval.reference_id]
+      );
+    }
+  } catch (err) {
+    console.error('[Approvals] triggerNextWorkflowStep failed:', err.message);
+  }
   await conn
     .execute(
       `INSERT INTO agent_run_logs (id, agent_name, status, input_json, output_json, run_at)
@@ -652,8 +1042,78 @@ async function triggerNextWorkflowStep(approval, action, conn) {
     .catch(() => undefined);
 }
 
+/**
+ * Post-commit notifier. Reads the freshest approval row (or parent) to
+ * decide whether to notify the next approver, the submitter on full
+ * completion, or the submitter on rejection.
+ */
 async function sendApprovalNotification(approval, action) {
-  console.log(`[Approvals] Notification: ${action} for approval ${approval.id}`);
+  if (!approval) return;
+  const tenantId = approval.tenant_id || 'tenant-default-001';
+  const [
+    { getMysqlPool },
+    {
+      sendApprovalRequestNotification,
+      sendApprovalCompleteNotification,
+      sendRejectionNotification,
+    },
+  ] = await Promise.all([
+    import('../../mysql.mjs'),
+    import('../notifications/notificationService.mjs'),
+  ]);
+  const db = getMysqlPool();
+  const totalSteps = Number(approval.total_steps) || 1;
+  const currentStep = Number(approval.step_number) || 1;
+  const parentId = approval.parent_approval_id || approval.id;
+
+  try {
+    if (action === 'approved' && currentStep < totalSteps) {
+      const [nextRows] = await db.execute(
+        `SELECT id, assigned_to, document_ref, document_name, module, token
+           FROM approvals
+          WHERE (parent_approval_id = ? OR id = ?)
+            AND reference_id = ?
+            AND step_number = ?
+            AND status = 'pending'
+          LIMIT 1`,
+        [parentId, parentId, approval.reference_id, currentStep + 1]
+      );
+      const next = nextRows?.[0];
+      if (next) {
+        await sendApprovalRequestNotification({
+          approverUserId: next.assigned_to,
+          documentType: next.module,
+          documentRef: next.document_ref,
+          documentName: next.document_name,
+          amount: null,
+          submittedByName: 'Workflow advanced',
+          approvalId: next.id,
+          token: next.token,
+          tenantId,
+          db,
+        });
+      }
+    } else if (action === 'approved' && currentStep >= totalSteps) {
+      await sendApprovalCompleteNotification({
+        submittedByUserId: approval.submitted_by,
+        tenantId,
+        documentRef: approval.document_ref,
+        documentName: approval.document_name,
+        db,
+      });
+    } else if (action === 'rejected') {
+      await sendRejectionNotification({
+        submittedByUserId: approval.submitted_by,
+        tenantId,
+        documentRef: approval.document_ref,
+        documentName: approval.document_name,
+        remarks: approval.rejection_remarks || approval.reason || null,
+        db,
+      });
+    }
+  } catch (err) {
+    console.error('[Approvals] sendApprovalNotification failed:', err.message);
+  }
 }
 
 export async function approveItem(approvalId, approverId, comments, db) {
@@ -701,9 +1161,10 @@ export async function rejectItem(approvalId, approverId, reason, db) {
         rejected_by = ?,
         rejected_at = NOW(),
         completed_at = NOW(),
-        reason = ?
+        reason = ?,
+        rejection_remarks = ?
       WHERE id = ? AND (assigned_to = ? OR assigned_to = '1') AND status = 'pending'`,
-      [approverId, reason, approvalId, approverId]
+      [approverId, reason, reason, approvalId, approverId]
     );
     if (result.affectedRows === 0) {
       throw new Error('Approval not found or already processed');
@@ -775,6 +1236,30 @@ export async function getApprovalDetail(approvalId, approverId, db) {
     [approvalId, approverId]
   );
   return rows?.[0] ?? null;
+}
+
+export async function askForInfo(approvalId, approverId, comment, db) {
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+  try {
+    const [result] = await conn.execute(
+      `UPDATE approvals SET
+        comments = ?,
+        updated_at = NOW()
+      WHERE id = ? AND (assigned_to = ? OR assigned_to = '1') AND status = 'pending'`,
+      [comment, approvalId, approverId]
+    );
+    if (result.affectedRows === 0) {
+      throw new Error('Approval not found or already processed');
+    }
+    await conn.commit();
+    return { success: true };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
 
 export async function getMSMEAlerts(approverId, db) {

@@ -12,8 +12,9 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { query, withTransaction, connExecute } from '../mysql.mjs';
+import { query, withTransaction, connExecute, getMysqlPool } from '../mysql.mjs';
 import { isPaymentApprover } from './payments.mjs';
+import { enqueueApprovalFromWorkflow } from '../services/workflow/dispatcher.mjs';
 
 const VALID_STATUSES = new Set([
   'Draft',
@@ -275,6 +276,36 @@ async function handleCreate(req, res, sendJson, tenantId, body) {
     `SELECT * FROM debit_note_items WHERE debit_note_id = ? ORDER BY line_number`,
     [id]
   );
+
+  // Workflow dispatch on Pending-Approval creates. Draft creates skip the
+  // engine (the user hasn't committed yet). If the dispatcher blocks we
+  // surface the reason but the debit note row stays — caller can retry.
+  if (status === 'Pending Approval') {
+    const dispatch = await enqueueApprovalFromWorkflow({
+      documentType: 'debit_note',
+      documentId: id,
+      documentRef: dnNumber,
+      documentName: `Debit Note — ${body.vendorName || ''}`,
+      documentPayload: {
+        amount: Number(debitAmount) || 0,
+        vendor_id: body.vendorId || null,
+      },
+      submittedBy: actorId,
+      submittedByName: actorName,
+      tenantId,
+      db: getMysqlPool(),
+    });
+    if (dispatch.blocked) {
+      sendJson(res, 422, {
+        success: false,
+        error: 'approval_blocked',
+        reason: dispatch.reason,
+        data: { id, dnNumber },
+      });
+      return;
+    }
+  }
+
   sendJson(res, 200, { success: true, data: adaptHeader(head[0], items) });
 }
 

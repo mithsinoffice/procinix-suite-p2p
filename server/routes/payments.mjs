@@ -18,8 +18,9 @@
 import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { query } from '../mysql.mjs';
+import { query, getMysqlPool } from '../mysql.mjs';
 import { generatePayoutFile } from '../services/payments/payoutFileGenerator.mjs';
+import { enqueueApprovalFromWorkflow } from '../services/workflow/dispatcher.mjs';
 import { parseUTRFile } from '../services/payments/utrIngestParser.mjs';
 import { createPaymentJV } from '../services/payments/jvCreator.mjs';
 import {
@@ -1219,10 +1220,36 @@ export async function handlePaymentsRoute(req, res, pathname, sendJson) {
       sendJson(res, 400, { success: false, error: 'invalid_status_transition' });
       return true;
     }
+    // Workflow engine gate before status flip.
+    const batchHead = await query(
+      'SELECT batch_ref, total_amount, vendor_count FROM bank_payment_batches WHERE id = ?',
+      [batchId]
+    );
+    const headRow = batchHead[0] || {};
+    const dispatch = await enqueueApprovalFromWorkflow({
+      documentType: 'payment',
+      documentId: batchId,
+      documentRef: headRow.batch_ref || batchId,
+      documentName: `Payment Batch — ${headRow.total_amount || 0}`,
+      documentPayload: {
+        amount: Number(headRow.total_amount) || 0,
+      },
+      submittedBy: req.userId || req.headers['x-user-id'] || '1',
+      submittedByName: req.headers['x-user-name'] || null,
+      tenantId,
+      db: getMysqlPool(),
+    });
+    if (dispatch.blocked) {
+      sendJson(res, 422, { success: false, error: 'approval_blocked', reason: dispatch.reason });
+      return true;
+    }
     await query("UPDATE bank_payment_batches SET status = 'pending_approval' WHERE id = ?", [
       batchId,
     ]);
-    sendJson(res, 200, { success: true, data: { id: batchId, status: 'pending_approval' } });
+    sendJson(res, 200, {
+      success: true,
+      data: { id: batchId, status: 'pending_approval', approvalId: dispatch.approvalId },
+    });
     return true;
   }
 

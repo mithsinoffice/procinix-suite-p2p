@@ -5,8 +5,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../mysql.mjs', () => ({
   query: vi.fn().mockResolvedValue([]),
   withTransaction: vi.fn(async (fn) => {
-    // Provide a stub conn that hands every query back to the same vi.fn() so
-    // tests can assert on it. .execute() returns [rows, fields].
     const { query: q } = await import('../../mysql.mjs');
     const conn = {
       execute: async (sql, params) => {
@@ -20,6 +18,19 @@ vi.mock('../../mysql.mjs', () => ({
     const { query: q } = await import('../../mysql.mjs');
     return q(sql, params);
   }),
+  // Pool stub: dispatcher calls db.execute() for its own selects/inserts.
+  getMysqlPool: vi.fn(() => ({
+    execute: async (sql, params) => {
+      const { query: q } = await import('../../mysql.mjs');
+      const rows = await q(sql, params);
+      return [Array.isArray(rows) ? rows : [], []];
+    },
+  })),
+}));
+
+// Workflow dispatcher mock — tests don't actually exercise the engine here.
+vi.mock('../../services/workflow/dispatcher.mjs', () => ({
+  enqueueApprovalFromWorkflow: vi.fn(async () => ({ success: true, approvalId: 'stub-approval' })),
 }));
 
 import { query } from '../../mysql.mjs';

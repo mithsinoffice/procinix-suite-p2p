@@ -23,8 +23,9 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { query, withTransaction, connExecute } from '../mysql.mjs';
+import { query, withTransaction, connExecute, getMysqlPool } from '../mysql.mjs';
 import { evaluateRiskFlags, isPaymentApprover, normaliseRole } from './payments.mjs';
+import { enqueueApprovalFromWorkflow } from '../services/workflow/dispatcher.mjs';
 
 const VALID_TYPES = new Set([
   'travel',
@@ -497,8 +498,35 @@ export async function handleAdvancesRoute(req, res, pathname, sendJson) {
       sendJson(res, 400, { success: false, error: 'invalid_status_transition' });
       return true;
     }
+    // Workflow engine gate.
+    const head = await query(
+      'SELECT advance_ref, vendor_id, total_amount, currency FROM vendor_advances WHERE id = ?',
+      [id]
+    );
+    const h = head[0] || {};
+    const dispatch = await enqueueApprovalFromWorkflow({
+      documentType: 'vendor_advance',
+      documentId: id,
+      documentRef: h.advance_ref || id,
+      documentName: `Vendor Advance — ${h.currency || 'INR'} ${h.total_amount || 0}`,
+      documentPayload: {
+        amount: Number(h.total_amount) || 0,
+        vendor_id: h.vendor_id,
+      },
+      submittedBy: req.userId || req.headers['x-user-id'] || '1',
+      submittedByName: req.headers['x-user-name'] || null,
+      tenantId,
+      db: getMysqlPool(),
+    });
+    if (dispatch.blocked) {
+      sendJson(res, 422, { success: false, error: 'approval_blocked', reason: dispatch.reason });
+      return true;
+    }
     await query("UPDATE vendor_advances SET status = 'pending_approval' WHERE id = ?", [id]);
-    sendJson(res, 200, { success: true, data: { id, status: 'pending_approval' } });
+    sendJson(res, 200, {
+      success: true,
+      data: { id, status: 'pending_approval', approvalId: dispatch.approvalId },
+    });
     return true;
   }
 

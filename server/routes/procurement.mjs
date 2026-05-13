@@ -22,8 +22,9 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { query, withTransaction, connExecute } from '../mysql.mjs';
+import { query, withTransaction, connExecute, getMysqlPool } from '../mysql.mjs';
 import { isPaymentApprover } from './payments.mjs';
+import { enqueueApprovalFromWorkflow } from '../services/workflow/dispatcher.mjs';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -918,6 +919,28 @@ async function handleTransitionPR(req, res, sendJson, tenantId, prId, action, bo
       sendJson(res, 400, { success: false, error: 'invalid_transition', from: cur.status });
       return;
     }
+    // Dispatch through the workflow engine FIRST — if the engine blocks (no
+    // workflow / same approver as submitter / role unmapped) we bail before
+    // mutating the PR's status so the user gets the actionable error.
+    const dispatch = await enqueueApprovalFromWorkflow({
+      documentType: 'purchase_request',
+      documentId: prId,
+      documentRef: cur.pr_ref || prId,
+      documentName: cur.title || cur.pr_ref || 'Purchase Request',
+      documentPayload: {
+        total_amount: Number(cur.total_amount) || 0,
+        department: cur.department,
+        entity: cur.entity_id,
+      },
+      submittedBy: actorId,
+      submittedByName: actorName,
+      tenantId,
+      db: getMysqlPool(),
+    });
+    if (dispatch.blocked) {
+      sendJson(res, 422, { success: false, error: 'approval_blocked', reason: dispatch.reason });
+      return;
+    }
     await query(
       `UPDATE purchase_requests SET status = 'pending_approval', updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
@@ -935,7 +958,10 @@ async function handleTransitionPR(req, res, sendJson, tenantId, prId, action, bo
       oldValue: cur.status,
       newValue: 'pending_approval',
     });
-    sendJson(res, 200, { success: true, data: { id: prId, status: 'pending_approval' } });
+    sendJson(res, 200, {
+      success: true,
+      data: { id: prId, status: 'pending_approval', approvalId: dispatch.approvalId },
+    });
     return;
   }
   if (action === 'approve') {
@@ -1353,6 +1379,29 @@ async function handleTransitionPO(req, res, sendJson, tenantId, poId, action, bo
   if (action === 'issue') {
     if (cur.status !== 'draft') {
       sendJson(res, 400, { success: false, error: 'invalid_transition', from: cur.status });
+      return;
+    }
+    // Workflow engine gate — PO "issue" now triggers an approval chain instead
+    // of flipping straight to issued. If the dispatcher blocks, the PO stays
+    // in draft and the user sees the actionable reason.
+    const dispatch = await enqueueApprovalFromWorkflow({
+      documentType: 'purchase_order',
+      documentId: poId,
+      documentRef: cur.po_ref || poId,
+      documentName: cur.title || cur.po_ref || 'Purchase Order',
+      documentPayload: {
+        total_amount: Number(cur.total_amount) || 0,
+        department: cur.department,
+        entity: cur.entity_id,
+        vendor_id: cur.vendor_id,
+      },
+      submittedBy: actorId,
+      submittedByName: actorName,
+      tenantId,
+      db: getMysqlPool(),
+    });
+    if (dispatch.blocked) {
+      sendJson(res, 422, { success: false, error: 'approval_blocked', reason: dispatch.reason });
       return;
     }
     await query(

@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  name      String
+  gstin     String?
+  pan       String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  users     User[]
+  vendors   Vendor[]
+  invoices  Invoice[]
+  payments  Payment[]
+  @@map("tenants")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  tenantId     String
+  email        String
+  passwordHash String
+  name         String
+  role         UserRole  @default(USER)
+  departmentId String?
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  @@unique([tenantId, email])
+  @@index([tenantId, isActive])
+  @@map("users")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  APPROVER_L1
+  APPROVER_L2
+  APPROVER_L3
+  AP_CLERK
+  USER
+  VIEWER
+}
+
+model Vendor {
+  id             String        @id @default(uuid())
+  tenantId       String
+  vendorCode     String
+  legalName      String
+  tradeName      String?
+  gstin          String?
+  pan            String
+  vendorType     VendorType    @default(SUPPLIER)
+  email          String?
+  mobile         String?
+  city           String?
+  state          String?
+  pincode        String?
+  bankAccountNo  String?
+  ifscCode       String?
+  bankName       String?
+  paymentTerms   Int           @default(30)
+  tdsApplicable  Boolean       @default(false)
+  tdsSectionCode String?
+  panCompliance  PanCompliance @default(COMPLIANT)
+  status         VendorStatus  @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  tenant         Tenant        @relation(fields: [tenantId], references: [id])
+  invoices       Invoice[]
+  @@unique([tenantId, gstin])
+  @@unique([tenantId, vendorCode])
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@map("vendors")
+}
+
+enum VendorType    { SUPPLIER SERVICE_PROVIDER CONTRACTOR EMPLOYEE INTERCOMPANY }
+enum VendorStatus  { ACTIVE INACTIVE BLOCKED PENDING_APPROVAL }
+enum PanCompliance { COMPLIANT NON_FILER LOWER_DEDUCTION EXEMPTED }
+
+model Department {
+  id       String  @id @default(uuid())
+  tenantId String
+  code     String
+  name     String
+  isActive Boolean @default(true)
+  @@unique([tenantId, code])
+  @@map("departments")
+}
+
+model GlCode {
+  id          String  @id @default(uuid())
+  tenantId    String
+  code        String
+  name        String
+  accountType String
+  isActive    Boolean @default(true)
+  @@unique([tenantId, code])
+  @@map("gl_codes")
+}
+
+model CostCentre {
+  id       String  @id @default(uuid())
+  tenantId String
+  code     String
+  name     String
+  isActive Boolean @default(true)
+  @@unique([tenantId, code])
+  @@map("cost_centres")
+}
+
+model TaxCode {
+  id          String  @id @default(uuid())
+  tenantId    String
+  code        String
+  description String
+  cgstRate    Decimal @db.Decimal(5, 2)
+  sgstRate    Decimal @db.Decimal(5, 2)
+  igstRate    Decimal @db.Decimal(5, 2)
+  isActive    Boolean @default(true)
+  @@unique([tenantId, code])
+  @@map("tax_codes")
+}
+
+model Invoice {
+  id                 String        @id @default(uuid())
+  tenantId           String
+  invoiceNumber      String
+  vendorId           String
+  invoiceDate        DateTime      @db.Date
+  dueDate            DateTime?     @db.Date
+  currency           String        @default("INR")
+  subtotal           Decimal       @db.Decimal(15, 2)
+  taxAmount          Decimal       @db.Decimal(15, 2) @default(0)
+  tdsAmount          Decimal       @db.Decimal(15, 2) @default(0)
+  totalAmount        Decimal       @db.Decimal(15, 2)
+  netPayable         Decimal       @db.Decimal(15, 2)
+  poId               String?
+  grnId              String?
+  glCodeId           String?
+  costCentreId       String?
+  departmentId       String?
+  narration          String?       @db.Text
+  attachmentUrls     Json?
+  ocrRawData         Json?
+  matchStatus        MatchStatus   @default(UNMATCHED)
+  status             InvoiceStatus @default(DRAFT)
+  approvalLane       ApprovalLane  @default(MANUAL)
+  workflowInstanceId String?
+  createdByUserId    String
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  tenant             Tenant        @relation(fields: [tenantId], references: [id])
+  vendor             Vendor        @relation(fields: [vendorId], references: [id])
+  lines              InvoiceLine[]
+  approvals          ApprovalStep[]
+  @@unique([tenantId, vendorId, invoiceNumber])
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@index([tenantId, vendorId])
+  @@index([tenantId, dueDate])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id           String  @id @default(uuid())
+  invoiceId    String
+  lineNumber   Int
+  description  String
+  quantity     Decimal @db.Decimal(12, 3)
+  unitPrice    Decimal @db.Decimal(15, 2)
+  amount       Decimal @db.Decimal(15, 2)
+  taxCodeId    String?
+  cgst         Decimal @db.Decimal(15, 2) @default(0)
+  sgst         Decimal @db.Decimal(15, 2) @default(0)
+  igst         Decimal @db.Decimal(15, 2) @default(0)
+  tdsAmount    Decimal @db.Decimal(15, 2) @default(0)
+  isRcm        Boolean @default(false)
+  glCodeId     String?
+  costCentreId String?
+  invoice      Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  @@index([invoiceId])
+  @@map("invoice_lines")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SUBMITTED
+  PENDING_L1
+  PENDING_L2
+  PENDING_L3
+  APPROVED
+  REJECTED
+  ON_HOLD
+  PAID
+  PARTIALLY_PAID
+  CANCELLED
+}
+enum MatchStatus  { UNMATCHED TWO_WAY_MATCH THREE_WAY_MATCH EXCEPTION }
+enum ApprovalLane { STP MANUAL REVIEW }
+
+model Payment {
+  id              String        @id @default(uuid())
+  tenantId        String
+  paymentRef      String
+  invoiceId       String
+  vendorId        String
+  amount          Decimal       @db.Decimal(15, 2)
+  currency        String        @default("INR")
+  paymentDate     DateTime?     @db.Date
+  paymentMode     PaymentMode   @default(NEFT)
+  bankRefNumber   String?
+  status          PaymentStatus @default(PENDING)
+  narration       String?
+  createdByUserId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  @@unique([tenantId, paymentRef])
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@index([tenantId, vendorId])
+  @@map("payments")
+}
+
+enum PaymentMode   { NEFT RTGS IMPS CHEQUE CASH UPI WIRE }
+enum PaymentStatus { PENDING APPROVED PROCESSING COMPLETED FAILED CANCELLED REVERSED }
+
+model WorkflowInstance {
+  id             String         @id @default(uuid())
+  tenantId       String
+  entityType     String
+  entityId       String
+  currentState   String
+  xstateSnapshot Json?
+  startedAt      DateTime       @default(now())
+  completedAt    DateTime?
+  slaDeadline    DateTime?
+  steps          ApprovalStep[]
+  @@index([tenantId, entityType, entityId])
+  @@map("workflow_instances")
+}
+
+model ApprovalStep {
+  id                 String            @id @default(uuid())
+  workflowInstanceId String?
+  invoiceId          String?
+  tenantId           String
+  level              Int
+  approverId         String
+  status             ApprovalStatus    @default(PENDING)
+  comments           String?           @db.Text
+  actionAt           DateTime?
+  delegatedTo        String?
+  createdAt          DateTime          @default(now())
+  workflowInstance   WorkflowInstance? @relation(fields: [workflowInstanceId], references: [id])
+  invoice            Invoice?          @relation(fields: [invoiceId], references: [id])
+  @@index([tenantId, status])
+  @@index([approverId, status])
+  @@map("approval_steps")
+}
+
+enum ApprovalStatus { PENDING APPROVED REJECTED DELEGATED ESCALATED }
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  tenantId   String
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}

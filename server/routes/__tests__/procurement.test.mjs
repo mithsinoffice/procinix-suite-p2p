@@ -18,10 +18,21 @@ vi.mock('../../mysql.mjs', () => ({
     const { query: q } = await import('../../mysql.mjs');
     return q(sql, params);
   }),
+  getMysqlPool: vi.fn(() => ({
+    execute: async (sql, params) => {
+      const { query: q } = await import('../../mysql.mjs');
+      const rows = await q(sql, params);
+      return [Array.isArray(rows) ? rows : [], []];
+    },
+  })),
 }));
 
 vi.mock('../payments.mjs', () => ({
   isPaymentApprover: vi.fn().mockResolvedValue(false),
+}));
+
+vi.mock('../../services/workflow/dispatcher.mjs', () => ({
+  enqueueApprovalFromWorkflow: vi.fn(async () => ({ success: true, approvalId: 'stub-approval' })),
 }));
 
 import { query } from '../../mysql.mjs';

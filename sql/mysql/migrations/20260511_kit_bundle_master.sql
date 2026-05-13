@@ -103,25 +103,28 @@ VALUES
 DELETE FROM kit_bundle_master.kit_bundle_items
   WHERE bundle_id IN (@BUNDLE_1, @BUNDLE_2, @BUNDLE_3);
 
+-- Note: 2026-05-11 V2 — item_code references use ITM-* codes that exist in
+-- item_master.item_master (added by 20260511_item_master_v2.sql). Manufacturer
+-- codes (LAP-14IN-I7, …) live on item_master.item_alias for cross-reference.
 INSERT INTO kit_bundle_master.kit_bundle_items
   (id, bundle_id, line_number, item_code, item_name, description, qty, uom,
    unit_price, gst_rate, hsn_code, mandatory)
 VALUES
-  -- Bundle 1: Onboarding Laptop Kit
-  (UUID(), @BUNDLE_1, 1, 'LAP-14IN-I7', '14" Business Laptop',           '14-inch i7 / 16GB / 512GB SSD', 1, 'NOS', 85000, 18, '84713000', 1),
-  (UUID(), @BUNDLE_1, 2, 'CHG-90W-USBC','90W USB-C Charger',             'Original 90W AC adapter',       1, 'NOS',  2500, 18, '85044030', 1),
-  (UUID(), @BUNDLE_1, 3, 'MSE-WRL-001','Wireless Mouse',                 'Standard wireless mouse',       1, 'NOS',   800, 18, '84716060', 0),
-  (UUID(), @BUNDLE_1, 4, 'BAG-LAP-15','Laptop Carry Case',               '15-inch padded carry case',     1, 'NOS',  1200, 18, '42021290', 0),
+  -- Bundle 1: Onboarding Laptop Kit (item_master ITM-IT-006..009)
+  (UUID(), @BUNDLE_1, 1, 'ITM-IT-006', 'Laptop 14-inch i7',              '14-inch i7 / 16GB / 512GB SSD',  1, 'NOS', 85000, 18, '84713000', 1),
+  (UUID(), @BUNDLE_1, 2, 'ITM-IT-007', '90W USB-C Charger',              'Original 90W AC adapter',        1, 'NOS',  2500, 18, '85044030', 1),
+  (UUID(), @BUNDLE_1, 3, 'ITM-IT-008', 'Wireless Mouse',                 'Standard wireless mouse',        1, 'NOS',   800, 18, '84716060', 0),
+  (UUID(), @BUNDLE_1, 4, 'ITM-IT-009', 'Laptop Carry Case',              '15-inch padded carry case',      1, 'NOS',  1200, 18, '42021290', 0),
 
-  -- Bundle 2: Workstation Desktop Kit
-  (UUID(), @BUNDLE_2, 1, 'DESK-TWR-I5','Desktop Tower i5',               '12th Gen i5 / 8GB / 1TB',       1, 'NOS', 45000, 18, '84713000', 1),
-  (UUID(), @BUNDLE_2, 2, 'MON-24IN-FHD','24" FHD Monitor',               'Dual-monitor pair (left + right)',2,'NOS', 12000, 18, '85285210', 1),
-  (UUID(), @BUNDLE_2, 3, 'KBD-USB-IND','USB Keyboard',                   'Indian-layout USB keyboard',    1, 'NOS',   600, 18, '84716070', 1),
-  (UUID(), @BUNDLE_2, 4, 'MSE-USB-OPT','USB Optical Mouse',              'Standard wired mouse',          1, 'NOS',   400, 18, '84716060', 1),
-  (UUID(), @BUNDLE_2, 5, 'SPK-USB-BAR','USB Speaker Bar',                'Stereo speaker bar',            1, 'NOS',  1500, 18, '85182200', 0),
+  -- Bundle 2: Workstation Desktop Kit (item_master ITM-IT-010..014)
+  (UUID(), @BUNDLE_2, 1, 'ITM-IT-010', 'Desktop Tower i5',               '12th Gen i5 / 8GB / 1TB',        1, 'NOS', 45000, 18, '84713000', 1),
+  (UUID(), @BUNDLE_2, 2, 'ITM-IT-011', '24-inch FHD Monitor',            'Dual-monitor pair (left + right)',2,'NOS', 12000, 18, '85285210', 1),
+  (UUID(), @BUNDLE_2, 3, 'ITM-IT-012', 'USB Keyboard',                   'Indian-layout USB keyboard',     1, 'NOS',   600, 18, '84716070', 1),
+  (UUID(), @BUNDLE_2, 4, 'ITM-IT-013', 'USB Optical Mouse',              'Standard wired mouse',           1, 'NOS',   400, 18, '84716060', 1),
+  (UUID(), @BUNDLE_2, 5, 'ITM-IT-014', 'USB Speaker Bar',                'Stereo speaker bar',             1, 'NOS',  1500, 18, '85182200', 0),
 
-  -- Bundle 3: Light Manufacturing Tool Kit
-  (UUID(), @BUNDLE_3, 1, 'TOOL-WRENCH-SET','Wrench set 8–24mm',          '17-piece combination wrench set',1,'NOS',  3500, 18, '82041100', 1),
-  (UUID(), @BUNDLE_3, 2, 'TOOL-SCREW-SET','Screwdriver set',             '20-piece precision driver set', 1, 'NOS',  1800, 18, '82054000', 1),
-  (UUID(), @BUNDLE_3, 3, 'TOOL-PLIER-3PC','Pliers 3-piece',              'Combination + nose + cutting', 1, 'NOS',  1200, 18, '82032000', 1),
-  (UUID(), @BUNDLE_3, 4, 'TOOL-HAMMER',   'Claw hammer 0.5kg',           'Heavy-duty claw hammer',        1, 'NOS',   700, 18, '82052000', 0);
+  -- Bundle 3: Light Manufacturing Tool Kit (item_master ITM-MRO-005..008)
+  (UUID(), @BUNDLE_3, 1, 'ITM-MRO-005', 'Wrench Set 8-24mm',             '17-piece combination wrench set',1, 'SET',  3500, 18, '82041100', 1),
+  (UUID(), @BUNDLE_3, 2, 'ITM-MRO-006', 'Screwdriver Set',               '20-piece precision driver set',  1, 'SET',  1800, 18, '82054000', 1),
+  (UUID(), @BUNDLE_3, 3, 'ITM-MRO-007', 'Pliers 3-piece',                'Combination + nose + cutting',   1, 'SET',  1200, 18, '82032000', 1),
+  (UUID(), @BUNDLE_3, 4, 'ITM-MRO-008', 'Claw Hammer 0.5kg',             'Heavy-duty claw hammer',         1, 'NOS',   700, 18, '82052000', 0);

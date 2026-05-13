@@ -243,6 +243,7 @@ wrappers (2026-05-11 migration):
 | `ProfitCentreMaster`       | recordCode/recordName              |      ✓       |        ✓         |
 | `KitBundleMaster`          | bundleCode/bundleName              |      –       |        –         |
 | `EmployeeMaster`           | employeeCode/fullName (suppressed) |      –       |        –         |
+| `RateContractMaster`       | contractCode/contractName          |      –       |        –         |
 
 ## 8. Adding a new master
 

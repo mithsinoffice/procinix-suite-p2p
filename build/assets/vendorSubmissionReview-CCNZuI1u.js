@@ -1,0 +1,1 @@
+function s(t){return!!t.submission?.submittedAt}function e(t){return s(t)?t.status==="submitted_by_vendor"||t.status==="pending_internal_review"||t.status==="pending_approval":!1}function n(t){return t.submission?.submittedAt??t.createdAt}export{s as h,e as i,n as s};

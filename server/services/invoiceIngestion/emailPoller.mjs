@@ -2,6 +2,20 @@ import { ImapFlow } from 'imapflow';
 import { randomUUID } from 'node:crypto';
 import { query } from '../../mysql.mjs';
 
+// ImapFlow emits 'error' on internal Decoder/pipeline streams that have no
+// listener when a socket closes unexpectedly (e.g. attachment download timeout).
+// Node.js turns unlistened error events into uncaught exceptions that crash the
+// server. Intercept only those specific IMAP connection errors here; for
+// anything else replicate Node's default behaviour (print + exit).
+process.on('uncaughtException', (err) => {
+  if (err?.code === 'NoConnection' || String(err?.message).includes('Connection not available')) {
+    console.error('[EmailPoller] Suppressed IMAP socket-close error (NoConnection):', err.message);
+    return;
+  }
+  console.error('Uncaught exception (not IMAP):', err);
+  process.exit(1);
+});
+
 // ── Attachment detection ────────────────────────────────
 // Accept broad MIME types + filename extension fallback
 const VALID_MIME = new Set([
@@ -36,6 +50,16 @@ function inferMimeFromFilename(filename) {
 }
 
 // ── IMAP config ─────────────────────────────────────────
+// Timeouts: Gmail can leave the TCP socket open with no data movement for
+// minutes when its IMAP frontend is overloaded — the prior `socketTimeout`
+// of 300000 ms (5 min) let the poller hang exactly that long before
+// imapflow surfaced an error, blocking concurrent triggers and the
+// background loop's in-flight flag for the same window.
+//   greetingTimeout    — how long to wait for the server greeting after TCP
+//   connectionTimeout  — TCP connect ceiling (imapflow passes this through
+//                        to the underlying socket where applicable; harmless
+//                        when unrecognised by the version in use)
+//   socketTimeout      — server inactivity ceiling on any single operation
 function buildImapConfig() {
   return {
     host: process.env.AP_EMAIL_HOST,
@@ -48,9 +72,25 @@ function buildImapConfig() {
     logger: false,
     tls: { rejectUnauthorized: true },
     greetingTimeout: 15000,
-    socketTimeout: 300000,
+    connectionTimeout: 15000,
+    socketTimeout: 30000,
     disableCompression: true,
   };
+}
+
+/**
+ * Promise.race against a timeout. The IMAP library's own `socketTimeout`
+ * only fires when there's been no socket activity for the duration —
+ * Gmail sometimes trickles keepalive bytes during a hung SELECT, which
+ * resets that clock. This explicit racer guarantees an upper bound on
+ * any single async call.
+ */
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 // ── Check OCR API key (Gemini only) ─────────────────────
@@ -80,11 +120,15 @@ async function fetchEmails() {
   });
 
   try {
-    await client.connect();
+    // 15s connect ceiling — Gmail-side hangs at TCP/TLS handshake are the
+    // most common stall mode. Throws cleanly into the outer catch which
+    // releases the in-flight lock via the caller's finally.
+    await withTimeout(client.connect(), 15000, 'IMAP connect');
     console.log('[EmailPoller] IMAP connected to', config.host, 'as', config.auth.user);
 
     const inbox = process.env.AP_EMAIL_INBOX || 'INBOX';
-    const lock = await client.getMailboxLock(inbox);
+    // 15s mailbox-open ceiling — same rationale, applied to SELECT INBOX.
+    const lock = await withTimeout(client.getMailboxLock(inbox), 15000, `SELECT ${inbox}`);
 
     try {
       // Strategy: try UNSEEN first; if 0 found, fall back to last 10
@@ -166,8 +210,12 @@ async function fetchEmails() {
             dlConfig.socketTimeout = 600000; // 10 minutes for large attachment downloads
             dlClient = new ImapFlow(dlConfig);
             dlClient.on('error', () => {});
-            await dlClient.connect();
-            const dlLock = await dlClient.getMailboxLock(inbox);
+            await withTimeout(dlClient.connect(), 15000, 'IMAP connect (download)');
+            const dlLock = await withTimeout(
+              dlClient.getMailboxLock(inbox),
+              15000,
+              `SELECT ${inbox} (download)`
+            );
             try {
               for (const ap of attachmentParts) {
                 try {
@@ -325,8 +373,12 @@ export async function markEmailSeen(uid) {
       /* swallow — handled below */
     });
     try {
-      await client.connect();
-      const lock = await client.getMailboxLock(inbox);
+      await withTimeout(client.connect(), 15000, 'IMAP connect (mark-seen)');
+      const lock = await withTimeout(
+        client.getMailboxLock(inbox),
+        15000,
+        `SELECT ${inbox} (mark-seen)`
+      );
       try {
         await client.messageFlagsAdd({ uid }, ['\\Seen'], { uid: true });
         console.log(`[EmailPoller] Marked UID ${uid} as SEEN`);
@@ -355,6 +407,26 @@ export async function markEmailSeen(uid) {
 // ── Public API ──────────────────────────────────────────
 let pollerInterval = null;
 let currentProcessCallback = null;
+// In-flight guard shared between the background loop (`startEmailPoller.run`)
+// and the on-demand /api/invoice-ingestion/trigger endpoint. Both call paths
+// flip this around their work so concurrent invocations don't compete for
+// the single IMAP connection allowed per Gmail app password.
+let pollInFlight = false;
+
+/** True when a poll cycle is currently running. */
+export function isPollInFlight() {
+  return pollInFlight;
+}
+
+/** Mark a poll cycle started — caller must pair with `endPoll()` in finally. */
+export function beginPoll() {
+  pollInFlight = true;
+}
+
+/** Mark the current poll cycle finished. Idempotent on already-false. */
+export function endPoll() {
+  pollInFlight = false;
+}
 
 export async function pollOnce() {
   console.log('[EmailPoller] ═══════════════════════════════════════');
@@ -410,14 +482,29 @@ export function startEmailPoller(processCallback) {
 
   // Guard against overlapping poll cycles — if a poll is still running when
   // the next interval ticks, skip this tick rather than stacking connections.
-  let isPolling = false;
+  // The flag lives at module scope so the /api/invoice-ingestion/trigger
+  // endpoint shares the same in-flight state — it can detect a background
+  // poll in progress and respond 202 with "already in progress" rather than
+  // competing for the single IMAP connection Gmail allows per app password.
 
   const run = async () => {
-    if (isPolling) {
+    if (pollInFlight) {
       console.log('[EmailPoller] Previous poll still running — skipping this tick');
       return;
     }
-    isPolling = true;
+    beginPoll();
+    // 5-min watchdog — releases the in-flight lock if a poll wedges on an
+    // unrecoverable IMAP stall the per-call 15s/30s timeouts somehow miss
+    // (e.g. a download client never resolving its `download()` stream).
+    // Without this, a single hang would block every subsequent trigger
+    // until process restart.
+    const watchdog = setTimeout(
+      () => {
+        console.error('[EmailPoller] Watchdog: poll exceeded 5min — force-releasing lock');
+        endPoll();
+      },
+      5 * 60 * 1000
+    );
     try {
       const { emails } = await pollOnce();
 
@@ -452,7 +539,8 @@ export function startEmailPoller(processCallback) {
       console.error('[EmailPoller] Poll cycle error:', err.message);
       console.error(err.stack);
     } finally {
-      isPolling = false;
+      clearTimeout(watchdog);
+      endPoll();
     }
   };
 

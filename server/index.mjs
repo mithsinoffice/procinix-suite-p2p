@@ -62,6 +62,9 @@ import {
   pollOnce,
   checkGeminiKey,
   restartEmailPoller,
+  isPollInFlight,
+  beginPoll,
+  endPoll,
 } from './services/invoiceIngestion/emailPoller.mjs';
 import {
   listSettings,
@@ -100,13 +103,20 @@ import {
   ensureSessionsTable,
 } from './services/auth/loginService.mjs';
 import { handleAuthRoute } from './routes/auth.mjs';
-import { handleInvoiceRoute } from './routes/invoices.mjs';
+import {
+  handleInvoiceRoute,
+  ensureInvoiceApproval,
+  backfillPendingInvoiceApprovals,
+} from './routes/invoices.mjs';
 import { handlePaymentsRoute } from './routes/payments.mjs';
 import { handleAdvancesRoute } from './routes/advances.mjs';
 import { handleProcurementRoute } from './routes/procurement.mjs';
 import { handleDebitNotesRoute } from './routes/debit-notes.mjs';
+import { handleWorkflowsRoute } from './routes/workflows.mjs';
 import { handleMastersRoute } from './routes/masters.mjs';
 import { handleRateContractMasterRoute } from './routes/rate-contract-master.mjs';
+import { projectVendorCompliance } from './services/vendors/compliance.mjs';
+import { syncVendorMasterRecord, backfillApprovedVendorMasters } from './services/vendors/sync.mjs';
 import { loadAgent, runAgent, testAgent } from './services/agents/agentRunner.mjs';
 import {
   verifyPAN,
@@ -131,6 +141,7 @@ import {
 } from './services/po/poAmendment.mjs';
 import {
   approveItem,
+  askForInfo,
   bulkApprove,
   getApprovalDetail,
   getApprovalKPIs,
@@ -140,6 +151,10 @@ import {
   rejectItem,
   startApprovalSyncLoop,
   triggerApprovalSync,
+  awaitApprovalSync,
+  invalidatePendingApprovalsSync,
+  ensureMasterApproval,
+  backfillAllPendingApprovals,
 } from './services/approvals/approvalService.mjs';
 import {
   listPayableInvoices,
@@ -486,6 +501,11 @@ function mapItemRow(row) {
     hsnCode: row.hsn_code,
     sacCode: row.sac_code,
     gstRate: row.gst_rate,
+    // ── V2 columns (20260511_item_master_v2.sql) ───────────────────────────
+    standardPrice: row.standard_price != null ? Number(row.standard_price) : 0,
+    itemType: row.item_type ?? 'material',
+    taxCodeId: row.tax_code_id ?? null,
+    expenseCategoryId: row.expense_category_id ?? null,
     defaultITCEligibility: row.default_itc_eligibility,
     poRequired: row.po_required,
     reorderLevel: row.reorder_level,
@@ -639,6 +659,28 @@ function resolveNextApprovalStatus(previousRecord, incomingRecord) {
   const incomingApprovalStatus = inferApprovalStatus(incomingRecord);
   const terminalStatuses = new Set(['Approved', 'Rejected']);
 
+  // Honor an explicit re-approval request unconditionally. `Pending Approval`
+  // is never set by passive cache writes in this codebase — only the master
+  // form's Submit handler emits it. Anything else (Approved / Rejected /
+  // Changes Requested) gets dropped to Pending on edit so the dashboard
+  // surfaces the change.
+  if (incomingApprovalStatus === 'Pending Approval') {
+    return 'Pending Approval';
+  }
+
+  // Approver actions (approve / reject / request_info) flow through
+  // `updateGenericMasterApproval` directly — not through this resolver — so we
+  // never see action-driven Approved/Rejected here. A stale cache that tries
+  // to roll a Pending row back to Approved must be ignored.
+  if (
+    previousApprovalStatus === 'Pending Approval' &&
+    terminalStatuses.has(incomingApprovalStatus || '')
+  ) {
+    return 'Pending Approval';
+  }
+
+  // Otherwise, do not let a stale cache write knock an approved/rejected
+  // record back into a non-terminal state.
   if (
     terminalStatuses.has(previousApprovalStatus || '') &&
     !terminalStatuses.has(incomingApprovalStatus || '')
@@ -681,6 +723,10 @@ async function tableHasTenantColumn(qualifiedTableName) {
 }
 
 const auditTableConfigCache = new Map();
+
+// Per-approver timestamp of the last forced awaitApprovalSync. Requests that
+// arrive within 10 seconds skip the sync and return cached queue rows directly.
+const approvalQueueSyncTs = new Map();
 
 async function getAuditTableConfig(masterKey) {
   if (auditTableConfigCache.has(masterKey)) {
@@ -929,19 +975,38 @@ async function getLatestAuditEntry(masterKey, recordId) {
 
 function applyApprovalActionToRecord(record, nextStatus, action, actor, comments) {
   const nowIso = new Date().toISOString();
-  const nextRecord = {
+  let nextRecord = {
     ...record,
     approvalStatus: nextStatus,
     updatedAt: nowIso,
   };
 
   if (action === 'approve') {
+    // The proposed (current) record values become the live record. Clear the
+    // diff snapshot so the next edit starts from a fresh baseline.
     nextRecord.originalData = undefined;
     nextRecord.approvedBy = actor || nextRecord.approvedBy;
     nextRecord.approvedDate = nowIso.split('T')[0];
   }
 
   if (action === 'reject') {
+    // Restore the originalData snapshot onto the live record so the rejected
+    // edit is discarded. originalData itself is then cleared, and the record
+    // is marked Rejected. If no originalData exists (e.g. brand-new draft
+    // that got rejected), just keep the current values + the rejected flag.
+    const previousSnapshot =
+      record && typeof record.originalData === 'object' && record.originalData
+        ? record.originalData
+        : null;
+    if (previousSnapshot) {
+      nextRecord = {
+        ...previousSnapshot,
+        id: nextRecord.id,
+        approvalStatus: nextStatus,
+        updatedAt: nowIso,
+        originalData: undefined,
+      };
+    }
     nextRecord.rejectedBy = actor || nextRecord.rejectedBy;
     nextRecord.rejectedDate = nowIso.split('T')[0];
     if (comments) {
@@ -1136,6 +1201,7 @@ const server = http.createServer(async (req, res) => {
     if (await handleAdvancesRoute(req, res, pathname, sendJson)) return;
     if (await handleProcurementRoute(req, res, pathname, sendJson)) return;
     if (await handleDebitNotesRoute(req, res, pathname, sendJson)) return;
+    if (await handleWorkflowsRoute(req, res, pathname, sendJson)) return;
     // Intercept the bespoke kit_bundle / employee masters BEFORE the generic
     // canonical /api/masters/<key> handler further down — those tables don't
     // use the record_code/record_name/payload shape.
@@ -1307,6 +1373,24 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 404, { success: false, error: 'Master record not found' });
       }
 
+      // Bridge governance → operational for vendor_master. Approve upserts the
+      // matching p2p_schema_mt.vendors row (+ GST / PAN side tables) so the
+      // newly-approved vendor shows up in invoice / PO / GRN dropdowns
+      // without a manual second step. Reject deactivates the operational row
+      // (no delete — preserves FK integrity for historical invoices). All
+      // other actions are no-ops. Errors logged, never thrown — the master
+      // approval already committed.
+      if (masterKey === 'vendor_master') {
+        const syncResult = await syncVendorMasterRecord(updatedRecord, action);
+        if (syncResult?.action) {
+          console.log(
+            `[vendorSync] ${action} → operational ${syncResult.action} for ${
+              (updatedRecord && (updatedRecord.recordCode || updatedRecord.vendor_code)) || recordId
+            }`
+          );
+        }
+      }
+
       return sendJson(res, 200, { success: true, data: updatedRecord });
     }
 
@@ -1323,7 +1407,17 @@ const server = http.createServer(async (req, res) => {
           execute: async (sql, params = []) => [await query(sql, params)],
           getConnection: getMysqlConnection,
         };
-        triggerApprovalSync(db, approverId);
+        // 10-second per-approver cache: skip the forced sync when data is fresh.
+        // awaitApprovalSync(force:true) takes ~300-800ms on every call; skipping
+        // it on repeat fetches (tab re-focus, KPI+queue parallel fetch) makes
+        // subsequent loads instant. The background sync loop still catches up
+        // within 60 seconds for stragglers.
+        const now = Date.now();
+        const lastSync = approvalQueueSyncTs.get(approverId) ?? 0;
+        if (now - lastSync > 10_000) {
+          await awaitApprovalSync(db, approverId, { force: true });
+          approvalQueueSyncTs.set(approverId, Date.now());
+        }
         const rows = await getApprovalQueue(approverId, filters, db);
         return sendJson(res, 200, rows);
       } catch (error) {
@@ -1456,6 +1550,31 @@ const server = http.createServer(async (req, res) => {
       } catch (error) {
         console.error('[Approvals] reject error', error);
         return sendJson(res, 400, { success: false, error: error.message || 'Reject failed' });
+      }
+    }
+
+    if (
+      req.method === 'POST' &&
+      pathname.startsWith('/api/approvals/') &&
+      pathname.endsWith('/ask-info')
+    ) {
+      try {
+        const approverId = getRequestUserId(req);
+        const approvalId = pathname.split('/')[3];
+        const body = await readJsonBody(req);
+        if (!body?.comment || !String(body.comment).trim()) {
+          return sendJson(res, 400, { success: false, error: 'comment is required' });
+        }
+        const result = await askForInfo(approvalId, approverId, String(body.comment).trim(), {
+          getConnection: getMysqlConnection,
+        });
+        return sendJson(res, 200, result);
+      } catch (error) {
+        console.error('[Approvals] ask-info error', error);
+        return sendJson(res, 400, {
+          success: false,
+          error: error.message || 'Ask for info failed',
+        });
       }
     }
 
@@ -1894,6 +2013,32 @@ const server = http.createServer(async (req, res) => {
             previous ? 'UPDATE' : 'CREATE'
           );
 
+          // Mirror the canonical PUT branch: idempotently UPSERT the queue
+          // entry so the Master Updates tab surfaces this item immediately.
+          if (
+            typeof approvalStatus === 'string' &&
+            ['Pending Approval', 'Pending', 'Changes Requested', 'Draft'].includes(approvalStatus)
+          ) {
+            try {
+              await ensureMasterApproval(
+                { execute: async (sql, params = []) => [await query(sql, params)] },
+                {
+                  masterKey: 'item_master',
+                  recordId: id,
+                  recordCode: itemCode,
+                  recordName: itemName,
+                  submittedBy: req.headers['x-user-id'] || '1',
+                  tenantId,
+                }
+              );
+            } catch (err) {
+              console.warn(
+                `[masterApproval] ensure failed for item_master:${id}:`,
+                err?.message || err
+              );
+            }
+          }
+
           seenIds.add(id);
           writes += 1;
         }
@@ -2017,6 +2162,34 @@ const server = http.createServer(async (req, res) => {
           payload,
           previous ? 'UPDATE' : 'CREATE'
         );
+
+        // If this write parked the row in a pending state, ensure a matching
+        // approvals queue entry exists. ensureMasterApproval is idempotent
+        // and calls invalidatePendingApprovalsSync() internally so the next
+        // /api/approvals/queue read sees it immediately.
+        if (
+          typeof nextApprovalStatus === 'string' &&
+          ['Pending Approval', 'Pending', 'Changes Requested', 'Draft'].includes(nextApprovalStatus)
+        ) {
+          try {
+            await ensureMasterApproval(
+              { execute: async (sql, params = []) => [await query(sql, params)] },
+              {
+                masterKey,
+                recordId: id,
+                recordCode: inferRecordCode(payload),
+                recordName: inferRecordName(payload),
+                submittedBy: req.headers['x-user-id'] || '1',
+                tenantId,
+              }
+            );
+          } catch (err) {
+            console.warn(
+              `[masterApproval] ensure failed for ${masterKey}:${id}:`,
+              err?.message || err
+            );
+          }
+        }
 
         seenIds.add(id);
       }
@@ -2248,6 +2421,10 @@ const server = http.createServer(async (req, res) => {
                 hsn_code = ?,
                 sac_code = ?,
                 gst_rate = ?,
+                standard_price = ?,
+                item_type = ?,
+                tax_code_id = ?,
+                expense_category_id = ?,
                 default_itc_eligibility = ?,
                 po_required = ?,
                 reorder_level = ?,
@@ -2274,6 +2451,10 @@ const server = http.createServer(async (req, res) => {
               body.hsnCode ?? '',
               body.sacCode ?? '',
               body.gstRate ?? '',
+              Number(body.standardPrice ?? 0) || 0,
+              body.itemType ?? 'material',
+              body.taxCodeId ?? null,
+              body.expenseCategoryId ?? null,
               body.defaultITCEligibility ?? '',
               body.poRequired ?? 'No',
               body.reorderLevel ?? '',
@@ -2368,9 +2549,10 @@ const server = http.createServer(async (req, res) => {
               id, item_code, item_name, item_alias, item_status, item_description,
               uom, item_group_master, procurement_category, entity_name, expenditure_type,
               gl_account_code, gl_account_description, nature, rcm_applicable,
-              hsn_code, sac_code, gst_rate, default_itc_eligibility, po_required,
+              hsn_code, sac_code, gst_rate, standard_price, item_type,
+              tax_code_id, expense_category_id, default_itc_eligibility, po_required,
               reorder_level, max_order_qty, approval_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             id,
@@ -2391,6 +2573,10 @@ const server = http.createServer(async (req, res) => {
             body.hsnCode ?? '',
             body.sacCode ?? '',
             body.gstRate ?? '',
+            Number(body.standardPrice ?? 0) || 0,
+            body.itemType ?? 'material',
+            body.taxCodeId ?? null,
+            body.expenseCategoryId ?? null,
             body.defaultITCEligibility ?? '',
             body.poRequired ?? 'No',
             body.reorderLevel ?? '',
@@ -3299,6 +3485,18 @@ const server = http.createServer(async (req, res) => {
         after: invoicePatch,
       });
 
+      // Mirror POST /api/invoices: when the PUT moves the invoice into
+      // `Under Verification`, ensure the My Approvals queue surfaces it.
+      // Drafts and other transitions don't create a queue entry. This is the
+      // PO-form path (InvoiceFormPO uses PUT for edit-then-submit).
+      if (isSubmitting) {
+        try {
+          await ensureInvoiceApproval(invoiceId, req.userId || req.headers['x-user-id'] || null);
+        } catch (err) {
+          console.warn('[invoices PUT] approvals insert failed:', err?.message || err);
+        }
+      }
+
       if (hasLineItemsPayload) {
         const lineTaxable = lineItems.reduce(
           (sum, item) => sum + Number(item.amount ?? item.taxable_amount ?? 0),
@@ -3885,16 +4083,73 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ── Invoice Ingestion API ──────────────────────────────
+    //
+    // Fire-and-forget trigger: returns 202 immediately and runs the IMAP
+    // poll + per-email pipeline in the background. The earlier synchronous
+    // version blocked the response on `pollOnce()` + N×`processInvoiceEmail()`
+    // and timed out clients on any busy mailbox (Gmail can stack 15+
+    // attachments per cycle at ~3-10s each = well past the typical 60s
+    // client timeout). Caller polls `/api/invoice-ingestion/logs` for
+    // progress / completion.
+    //
+    // Concurrency guard: the IMAP server allows ONE active connection per
+    // app password. Both this endpoint and the background `startEmailPoller`
+    // loop share `isPollInFlight` (module-level in emailPoller.mjs) so a
+    // second call while one is already running responds 202 with a
+    // "already in progress" message rather than competing for the socket
+    // (the prior log showed `ImapFlow Socket timeout` + crash from exactly
+    // this contention).
     if (req.method === 'POST' && pathname === '/api/invoice-ingestion/trigger') {
-      const { emails, results } = await pollOnce();
-      for (const email of emails) {
-        try {
-          await processInvoiceEmail(email);
-        } catch (err) {
-          console.error('[Ingestion] trigger process error:', err.message);
-        }
+      if (isPollInFlight()) {
+        return sendJson(res, 202, {
+          accepted: true,
+          message: 'Poll already in progress — check logs',
+          timestamp: new Date().toISOString(),
+        });
       }
-      return sendJson(res, 200, { success: true, ...results });
+
+      sendJson(res, 202, {
+        accepted: true,
+        message: 'Email poll triggered — processing in background',
+        timestamp: new Date().toISOString(),
+      });
+
+      // Don't await — the response is already sent. Mark in-flight so the
+      // background scheduler skips its next tick if it fires mid-cycle,
+      // and so a re-trigger short-circuits to the "already in progress"
+      // branch above. Always clear in `finally`, even on crash.
+      beginPoll();
+      // 5-min watchdog — if pollOnce / processInvoiceEmail wedges past
+      // the per-call IMAP timeouts (15s connect / 15s SELECT / 30s op),
+      // force-release the in-flight lock so subsequent triggers can retry
+      // cleanly instead of permanently returning "already in progress".
+      const watchdog = setTimeout(
+        () => {
+          console.error('[trigger] Watchdog: poll exceeded 5min — force-releasing lock');
+          endPoll();
+        },
+        5 * 60 * 1000
+      );
+      (async () => {
+        try {
+          const { emails, results } = await pollOnce();
+          for (const email of emails) {
+            try {
+              await processInvoiceEmail(email);
+            } catch (err) {
+              console.error('[trigger] processInvoiceEmail error:', err?.message || err);
+            }
+          }
+          console.log('[trigger] Poll complete:', results);
+        } catch (err) {
+          console.error('[trigger] pollOnce error:', err?.message || err);
+        } finally {
+          clearTimeout(watchdog);
+          endPoll();
+        }
+      })();
+
+      return;
     }
 
     if (req.method === 'GET' && pathname === '/api/invoice-ingestion/logs') {
@@ -4086,6 +4341,60 @@ const server = http.createServer(async (req, res) => {
       if (result === null)
         return sendJson(res, 404, { success: false, error: 'Invoice not found' });
       return sendJson(res, 200, { success: true, data: result });
+    }
+
+    // Preview-only OCR: runs extraction and returns JSON without persisting an invoice.
+    // Used by the new upload → DirectV2 flow (sessionStorage handoff, no DB write).
+    if (req.method === 'POST' && pathname === '/api/invoice-ingestion/preview-extract') {
+      if (!checkGeminiKey()) {
+        return sendJson(res, 503, {
+          success: false,
+          error: 'GOOGLE_AI_API_KEY not configured — cannot run OCR',
+        });
+      }
+
+      let buffer, mimeType, filename;
+      const contentType = req.headers['content-type'] || '';
+
+      if (contentType.includes('multipart/form-data')) {
+        const boundary = contentType.split('boundary=')[1];
+        if (!boundary)
+          return sendJson(res, 400, { success: false, error: 'Missing multipart boundary' });
+        const rawChunks = [];
+        for await (const chunk of req) rawChunks.push(chunk);
+        const raw = Buffer.concat(rawChunks);
+        const parts = parseMultipart(raw, boundary);
+        const filePart = parts.find((p) => p.name === 'invoice' || p.name === 'file');
+        if (!filePart || !filePart.data || filePart.data.length === 0) {
+          return sendJson(res, 400, {
+            success: false,
+            error: 'No file found in form-data. Use field name "invoice" or "file"',
+          });
+        }
+        buffer = filePart.data;
+        filename = filePart.filename || 'preview-upload.pdf';
+        mimeType = filePart.contentType || 'application/pdf';
+      } else {
+        const body = await readJsonBody(req);
+        const fileData = body.file;
+        if (!fileData)
+          return sendJson(res, 400, { success: false, error: 'file (base64) is required' });
+        buffer = Buffer.from(fileData, 'base64');
+        mimeType = body.mimeType || 'application/pdf';
+        filename = body.filename || 'preview-upload.pdf';
+      }
+
+      console.log(
+        `[PreviewExtract] ${filename} (${(buffer.length / 1024).toFixed(1)} KB, ${mimeType})`
+      );
+
+      try {
+        const extracted = await extractInvoiceData(buffer, mimeType);
+        return sendJson(res, 200, { success: true, extracted, filename });
+      } catch (err) {
+        console.error('[PreviewExtract] ✗ Failed:', err.message);
+        return sendJson(res, 500, { success: false, error: err.message });
+      }
     }
 
     if (req.method === 'POST' && pathname === '/api/invoice-ingestion/manual-upload') {
@@ -4359,15 +4668,80 @@ const server = http.createServer(async (req, res) => {
     // ── Vendor CRUD API (new vendor tables) ──────────────────────────────────
     if (req.method === 'GET' && pathname === '/api/vendors') {
       const search = url.searchParams.get('search') || '';
-      let sql = 'SELECT * FROM p2p_schema_mt.vendors WHERE is_active = TRUE';
+      // Project the primary GSTIN + PAN from joined side tables so the vendor
+      // listing carries compliance fields without a round-trip per row. The
+      // primary GST row is flagged via `is_primary=1` (mirrors the existing
+      // `vendor_spocs.is_primary` / `vendor_bank_accounts.is_primary`
+      // conventions). Sort-order is the secondary tiebreaker for legacy rows
+      // that pre-date the is_primary backfill migration.
+      let sql = `
+        SELECT v.*,
+               primary_gst.gstin AS gstin,
+               primary_gst.gst_state_code AS gst_state_code,
+               pc.pan AS pan,
+               pc.msme_category AS msme_category
+          FROM p2p_schema_mt.vendors v
+          LEFT JOIN (
+            SELECT vendor_id,
+                   gstin,
+                   gst_state_code,
+                   ROW_NUMBER() OVER (
+                     PARTITION BY vendor_id
+                     ORDER BY is_primary DESC, sort_order ASC, created_at ASC
+                   ) AS rn
+              FROM p2p_schema_mt.vendor_gst_registrations
+             WHERE (status = 'active' OR status IS NULL)
+               AND gstin IS NOT NULL
+               AND gstin <> ''
+          ) primary_gst
+            ON primary_gst.vendor_id = v.id
+           AND primary_gst.rn = 1
+          LEFT JOIN p2p_schema_mt.vendor_pan_compliance pc
+            ON pc.vendor_id = v.id
+         WHERE v.is_active = TRUE`;
       const params = [];
       if (search) {
-        sql += ' AND (vendor_legal_name LIKE ? OR vendor_code LIKE ?)';
+        sql += ' AND (v.vendor_legal_name LIKE ? OR v.vendor_code LIKE ?)';
         params.push(`%${search}%`, `%${search}%`);
       }
-      sql += ' ORDER BY created_at DESC';
+      sql += ' ORDER BY v.created_at DESC';
       const rows = await query(sql, params);
       return sendJson(res, 200, { success: true, data: rows });
+    }
+
+    // ── GET /api/vendors/:id/compliance ────────────────────────────────────
+    // Returns the projected compliance shape consumed by determineTDS +
+    // determineGST in the invoice forms. Projection logic lives in
+    // `server/services/vendors/compliance.mjs` (pure + unit-tested).
+    if (req.method === 'GET' && pathname.match(/^\/api\/vendors\/[^/]+\/compliance$/)) {
+      const vendorId = pathname.split('/')[3];
+      const [vendor] = await query(
+        'SELECT id, vendor_code, vendor_legal_name, vendor_type, state FROM p2p_schema_mt.vendors WHERE id = ?',
+        [vendorId]
+      );
+      if (!vendor) return sendJson(res, 404, { success: false, error: 'Vendor not found' });
+
+      const [pan] = await query(
+        'SELECT pan, pan_status, entity_type, section_206ab, tds_sections, rcm_applicable, lower_tds_section, lower_tds_cert_number, lower_tds_cert_rate, msme_category FROM p2p_schema_mt.vendor_pan_compliance WHERE vendor_id = ?',
+        [vendorId]
+      );
+      // Primary GST row — flagged via is_primary=1 (the canonical
+      // registration when a vendor has multi-state GSTINs). Falls back to
+      // the lowest sort_order if no row carries the flag yet.
+      const [gstRow] = await query(
+        `SELECT gstin, gst_state_code, status
+           FROM p2p_schema_mt.vendor_gst_registrations
+          WHERE vendor_id = ?
+            AND gstin IS NOT NULL AND gstin <> ''
+          ORDER BY is_primary DESC, sort_order ASC, created_at ASC
+          LIMIT 1`,
+        [vendorId]
+      );
+
+      return sendJson(res, 200, {
+        success: true,
+        data: projectVendorCompliance({ vendor, pan: pan || null, gstRow: gstRow || null }),
+      });
     }
 
     if (
@@ -4387,7 +4761,10 @@ const server = http.createServer(async (req, res) => {
         [vendorId]
       );
       const gst = await query(
-        'SELECT * FROM p2p_schema_mt.vendor_gst_registrations WHERE vendor_id = ? ORDER BY sort_order',
+        // Primary first (is_primary=1), then by sort_order. Consumers (the
+        // invoice form's vendor onChange + the vendor detail page) read
+        // either the top-level `gstin` derived below or `gst_registrations[0]`.
+        'SELECT * FROM p2p_schema_mt.vendor_gst_registrations WHERE vendor_id = ? ORDER BY is_primary DESC, sort_order ASC, created_at ASC',
         [vendorId]
       );
       const banks = await query(
@@ -4398,10 +4775,19 @@ const server = http.createServer(async (req, res) => {
         'SELECT * FROM p2p_schema_mt.vendor_entity_mappings WHERE vendor_id = ?',
         [vendorId]
       );
+      // Project the primary GSTIN onto the top-level vendor object so callers
+      // that only need the canonical GSTIN (invoice forms, dropdowns) don't
+      // have to drill into `gst_registrations[0]`.
+      const primaryGst =
+        gst.find((row) => row.is_primary === 1 || row.is_primary === true) ?? gst[0] ?? null;
       return sendJson(res, 200, {
         success: true,
         data: {
           ...vendor,
+          gstin: primaryGst?.gstin ?? null,
+          gst_state_code: primaryGst?.gst_state_code ?? null,
+          pan: pan?.pan ?? null,
+          msme_category: pan?.msme_category ?? null,
           spocs,
           pan_compliance: pan || null,
           gst_registrations: gst,
@@ -4537,29 +4923,40 @@ const server = http.createServer(async (req, res) => {
           ]
         );
       }
-      for (const g of body.gst_registrations || []) {
-        const gSrc = g.verification_source || 'not_verified';
-        const gAt = gSrc !== 'not_verified' ? toMysqlDatetime(g.verified_at || new Date()) : null;
-        await query(
-          'INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
-          [
-            randomUUID(),
-            vendorId,
-            g.gstin,
-            g.gst_type,
-            g.state || null,
-            g.gst_state_code || null,
-            g.city || null,
-            g.pin_code || null,
-            g.address || null,
-            g.spoc_id || null,
-            g.status || 'active',
-            gSrc,
-            gAt,
-            g.verification_reference || null,
-            g.verification_raw_response ? JSON.stringify(g.verification_raw_response) : null,
-          ]
-        );
+      // Track whether any caller-supplied row was explicitly flagged primary.
+      // If none, the first row becomes primary by default (single-GSTIN vendors
+      // get is_primary=1 automatically; multi-state vendors get their first
+      // entry).
+      {
+        const gstRows = body.gst_registrations || [];
+        const anyExplicit = gstRows.some((g) => g?.is_primary === true || g?.is_primary === 1);
+        for (let i = 0; i < gstRows.length; i++) {
+          const g = gstRows[i];
+          const gSrc = g.verification_source || 'not_verified';
+          const gAt = gSrc !== 'not_verified' ? toMysqlDatetime(g.verified_at || new Date()) : null;
+          const isPrimary = anyExplicit ? (g.is_primary ? 1 : 0) : i === 0 ? 1 : 0;
+          await query(
+            'INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status, is_primary, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
+            [
+              randomUUID(),
+              vendorId,
+              g.gstin,
+              g.gst_type,
+              g.state || null,
+              g.gst_state_code || null,
+              g.city || null,
+              g.pin_code || null,
+              g.address || null,
+              g.spoc_id || null,
+              g.status || 'active',
+              isPrimary,
+              gSrc,
+              gAt,
+              g.verification_reference || null,
+              g.verification_raw_response ? JSON.stringify(g.verification_raw_response) : null,
+            ]
+          );
+        }
       }
       for (const b of body.bank_accounts || []) {
         const bSrc = b.verification_source || 'not_verified';
@@ -4706,11 +5103,19 @@ const server = http.createServer(async (req, res) => {
         await query('DELETE FROM p2p_schema_mt.vendor_gst_registrations WHERE vendor_id=?', [
           vendorId,
         ]);
-        for (const g of body.gst_registrations) {
+        // Mirror the POST branch: honour an explicit is_primary flag when
+        // any row carries one; otherwise the first row in the array becomes
+        // primary by default. Defence-in-depth for the listing/dropdown
+        // queries that filter on is_primary=1.
+        const gstRows = body.gst_registrations;
+        const anyExplicit = gstRows.some((g) => g?.is_primary === true || g?.is_primary === 1);
+        for (let i = 0; i < gstRows.length; i++) {
+          const g = gstRows[i];
           const gSrc = g.verification_source || 'not_verified';
           const gAt = gSrc !== 'not_verified' ? toMysqlDatetime(g.verified_at || new Date()) : null;
+          const isPrimary = anyExplicit ? (g.is_primary ? 1 : 0) : i === 0 ? 1 : 0;
           await query(
-            'INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
+            'INSERT INTO p2p_schema_mt.vendor_gst_registrations (id, vendor_id, gstin, gst_type, state, gst_state_code, city, pin_code, address, spoc_id, status, is_primary, verification_source, verified_at, verification_reference, verification_raw_response) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CAST(? AS JSON))',
             [
               randomUUID(),
               vendorId,
@@ -4723,6 +5128,7 @@ const server = http.createServer(async (req, res) => {
               g.address || null,
               g.spoc_id || null,
               g.status || 'active',
+              isPrimary,
               gSrc,
               gAt,
               g.verification_reference || null,
@@ -5788,6 +6194,45 @@ server.listen(port, host, async () => {
     '1',
     60000
   );
+
+  // One-shot backfill: ensure every Approved vendor_master row has a matching
+  // operational vendor in p2p_schema_mt.vendors. Idempotent — re-runs only
+  // touch rows whose values drifted. Non-fatal — if the master schema isn't
+  // provisioned (test DBs etc.) the helper logs and returns a zero summary.
+  backfillApprovedVendorMasters()
+    .then((summary) => {
+      const { scanned, inserted, updated, errors } = summary;
+      if (scanned > 0 || errors > 0) {
+        console.log(
+          `[vendorSync] backfill: scanned=${scanned} inserted=${inserted} updated=${updated} errors=${errors}`
+        );
+      }
+    })
+    .catch((err) => console.warn('[vendorSync] backfill failed (non-fatal):', err?.message || err));
+
+  // Combined approvals backfill — masters (every key in MASTER_STORAGE) +
+  // invoices. Idempotent, non-fatal: a single master's schema gap doesn't
+  // block the rest. The invoice path is dependency-injected to avoid the
+  // circular import (routes/invoices.mjs already imports from
+  // approvalService.mjs). Replaces the legacy `backfillPendingInvoiceApprovals`
+  // standalone call — that helper remains exported for unit tests but the
+  // server-side sweep goes through this unified entry point.
+  backfillAllPendingApprovals(
+    {
+      execute: async (sql, params = []) => [await query(sql, params)],
+      getConnection: getMysqlConnection,
+    },
+    { ensureInvoice: ensureInvoiceApproval }
+  )
+    .then((summary) => {
+      const { masters, invoices } = summary;
+      if (masters.scanned > 0 || invoices.scanned > 0 || masters.errors > 0) {
+        console.log(
+          `[approvalsBackfill] masters: scanned=${masters.scanned} inserted=${masters.inserted} updated=${masters.updated} errors=${masters.errors} | invoices: scanned=${invoices.scanned} inserted=${invoices.inserted} updated=${invoices.updated} errors=${invoices.errors}`
+        );
+      }
+    })
+    .catch((err) => console.warn('[approvalsBackfill] failed (non-fatal):', err?.message || err));
 
   // PO Expiry cron jobs
   cron.schedule('0 0 * * *', async () => {

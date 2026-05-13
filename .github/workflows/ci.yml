@@ -2,38 +2,79 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [procinix-v2, main]
   pull_request:
+    branches: [procinix-v2, main]
 
 jobs:
-  ci:
-    name: Lint · Format · Typecheck · Test · Build
+  typecheck-lint:
+    name: Typecheck + Lint
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    needs: typecheck-lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - run: npm run test
+
+  security:
+    name: Snyk scan
+    runs-on: ubuntu-latest
+    needs: typecheck-lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          node-version: 20
-          cache: npm
+          args: --severity-threshold=high
 
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps --ignore-scripts
-
-      - name: Lint (errors only; warnings allowed)
-        run: npm run lint -- --max-warnings=9999
-
-      - name: Format check
-        run: npm run format:check
-
-      # TODO(F4): remove continue-on-error once the 7 pre-existing TS errors are fixed
-      - name: Type check
-        run: npm run typecheck
-        continue-on-error: true
-
-      - name: Test
-        run: npm test
-
-      - name: Build
-        run: npm run build
+  e2e:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    needs: test
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: procinix_test
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run db:push
+        env:
+          DATABASE_URL: mysql://root:root@localhost:3306/procinix_test
+      - run: npm run test:e2e
+        env:
+          DATABASE_URL: mysql://root:root@localhost:3306/procinix_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-32-chars-minimum-here
+          JWT_REFRESH_SECRET: test-refresh-32-chars-minimum!!
+          COOKIE_SECRET: test-cookie-secret-32-chars-min!!
+          FRONTEND_URL: http://localhost:3000
+          NODE_ENV: test
