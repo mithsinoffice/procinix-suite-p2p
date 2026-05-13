@@ -1,11 +1,13 @@
 import { z } from 'zod'
-import { gstinOptional, panSchema, ifscSchema, bankAccountSchema, indianMobileSchema, emailSchema, pincodeSchema, nonEmptyString, optionalString } from '../../src/lib/utils/validators'
+import { gstinOptional, panSchema, ifscSchema, bankAccountSchema, indianMobileSchema, emailSchema, pincodeSchema, nonEmptyString, optionalString, cinOptional, udyamOptional } from '../../src/lib/utils/validators'
 
 export const vendorFormSchema = z.object({
   legalName:     nonEmptyString.max(200),
   tradeName:     optionalString,
   gstin:         gstinOptional,
   pan:           panSchema,
+  cin:           cinOptional,
+  udyamNumber:   udyamOptional,
   vendorType:    z.enum(['SUPPLIER', 'SERVICE_PROVIDER', 'CONTRACTOR', 'EMPLOYEE', 'INTERCOMPANY']),
   email:         emailSchema.optional().or(z.literal('')),
   mobile:        indianMobileSchema.optional().or(z.literal('')),

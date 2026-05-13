@@ -11,6 +11,7 @@ const PaymentListPage    = lazy(() => import('./pages/payments/PaymentListPage')
 const PaymentDetailPage  = lazy(() => import('./pages/payments/PaymentDetailPage'))
 const VendorListPage     = lazy(() => import('./pages/masters/vendors/VendorListPage'))
 const VendorDetailPage   = lazy(() => import('./pages/masters/vendors/VendorDetailPage'))
+const VendorFormPage     = lazy(() => import('./pages/masters/vendors/VendorFormPage'))
 const MastersPage        = lazy(() => import('./pages/masters/MastersPage'))
 const NotFoundPage       = lazy(() => import('./pages/NotFoundPage'))
 
@@ -52,9 +53,13 @@ export const router = createBrowserRouter([
           { path: ':id', element: <S><PaymentDetailPage /></S> },
         ]},
         { path: 'masters', children: [
-          { index: true,         element: <S><MastersPage /></S> },
-          { path: 'vendors',     element: <S><VendorListPage /></S> },
-          { path: 'vendors/:id', element: <S><VendorDetailPage /></S> },
+          { index: true, element: <S><MastersPage /></S> },
+          { path: 'vendors', children: [
+            { index: true,        element: <S><VendorListPage /></S> },
+            { path: 'new',        element: <S><VendorFormPage mode="create" /></S> },
+            { path: ':id',        element: <S><VendorDetailPage /></S> },
+            { path: ':id/edit',   element: <S><VendorFormPage mode="edit" /></S> },
+          ]},
         ]},
       ],
     }],

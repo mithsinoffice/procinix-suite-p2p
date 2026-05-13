@@ -1,4 +1,5 @@
 import Redis from 'ioredis'
+export type { Redis }
 import fp from 'fastify-plugin'
 import type { FastifyInstance } from 'fastify'
 
