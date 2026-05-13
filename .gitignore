@@ -7,4 +7,12 @@ server/dist/
 coverage/
 playwright-report/
 test-results/
+build/
 .claude/
+server/*.mjs
+server/routes/
+server/services/
+server/middleware/
+server/utils/
+server/db/
+server/config/
