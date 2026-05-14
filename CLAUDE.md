@@ -45,6 +45,8 @@
 - No raw SQL — Prisma only (exception: migration files)
 - All mutations write to audit_log — append-only, never delete
 - Rate limiting on all public endpoints
+- Every Prisma model MUST have `status String @default("ACTIVE")`. Models without it will cause MasterTabs to return empty on the Active tab. Flag any model missing this field.
+- Never filter by `isActive` in route handlers — always use `status`. `isActive` is a legacy boolean kept only for backwards-compat; `status` is the canonical field.
 
 ### Validation
 - Deduplication server-side — client warns, server enforces

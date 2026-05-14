@@ -239,6 +239,13 @@ async function main() {
   }
   console.log(`✓ ${workflows.length} workflow rules`)
 
+  // Ensure all seeded records have status=ACTIVE
+  await prisma.$executeRaw`UPDATE countries    SET status='ACTIVE' WHERE status IS NULL OR status=''`
+  await prisma.$executeRaw`UPDATE states       SET status='ACTIVE' WHERE status IS NULL OR status=''`
+  await prisma.$executeRaw`UPDATE cities       SET status='ACTIVE' WHERE status IS NULL OR status=''`
+  await prisma.$executeRaw`UPDATE currencies   SET status='ACTIVE' WHERE status IS NULL OR status=''`
+  console.log('✓ Status normalised on all seeded records')
+
   console.log('\n✅ Seed complete.')
   console.log('   Login: mithilesh@procinix.ai / Demo@123')
 }

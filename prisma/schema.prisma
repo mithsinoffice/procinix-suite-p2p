@@ -583,13 +583,17 @@ model Location {
 }
 
 model Currency {
-  id           String  @id @default(uuid())
-  code         String  @unique
-  name         String
-  symbol       String
-  exchangeRate Decimal @db.Decimal(12, 6) @default(1)
-  isBase       Boolean @default(false)
-  isActive     Boolean @default(true)
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  symbol          String
+  exchangeRate    Decimal  @db.Decimal(12, 6) @default(1)
+  isBase          Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  status          String   @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
   @@map("currencies")
 }
 

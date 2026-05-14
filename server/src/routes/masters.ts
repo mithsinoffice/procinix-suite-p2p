@@ -150,9 +150,12 @@ export async function masterRoutes(app: FastifyInstance) {
   })
 
   // ── Currency CRUD ──
-  app.get('/currencies', auth, async (_req, reply) =>
-    reply.send(await app.prisma.currency.findMany({ where: { isActive: true }, orderBy: { code: 'asc' } }))
-  )
+  app.get('/currencies', auth, async (req, reply) => {
+    const { status } = req.query as any
+    const where: any = {}
+    if (status && status !== 'ALL') where.status = status
+    return reply.send(await app.prisma.currency.findMany({ where, orderBy: { code: 'asc' } }))
+  })
   app.post('/currencies', auth, async (req, reply) => {
     const row = await app.prisma.currency.create({ data: req.body as any })
     return reply.code(201).send(row)
