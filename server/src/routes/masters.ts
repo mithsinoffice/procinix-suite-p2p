@@ -148,12 +148,20 @@ export async function masterRoutes(app: FastifyInstance) {
     const row = await app.prisma.city.update({ where: { id: (req.params as any).id }, data: { status: 'ACTIVE' } })
     return reply.send(row)
   })
+  app.get('/cities/:id/audit', auth, async (req, reply) => {
+    const logs = await app.prisma.auditLog.findMany({
+      where:   { tenantId: req.tenant.id, entityType: 'city', entityId: (req.params as any).id },
+      orderBy: { createdAt: 'desc' }, take: 50,
+    })
+    return reply.send(logs)
+  })
 
   // ── Currency CRUD ──
   app.get('/currencies', auth, async (req, reply) => {
-    const { status } = req.query as any
+    const { status, search } = req.query as any
     const where: any = {}
     if (status && status !== 'ALL') where.status = status
+    if (search) where.OR = [{ name: { contains: search } }, { code: { contains: search } }]
     return reply.send(await app.prisma.currency.findMany({ where, orderBy: { code: 'asc' } }))
   })
   app.post('/currencies', auth, async (req, reply) => {
@@ -161,8 +169,59 @@ export async function masterRoutes(app: FastifyInstance) {
     return reply.code(201).send(row)
   })
   app.put('/currencies/:code', auth, async (req, reply) => {
-    const row = await app.prisma.currency.update({ where: { code: (req.params as any).code }, data: req.body as any })
+    const { submitForApproval: _sf, ...data } = req.body as any
+    const row = await app.prisma.currency.update({ where: { code: (req.params as any).code }, data })
     return reply.send(row)
+  })
+  app.post('/currencies/:id/approve', auth, async (req, reply) => {
+    const row = await app.prisma.currency.update({ where: { id: (req.params as any).id }, data: { status: 'ACTIVE' } })
+    return reply.send(row)
+  })
+  app.get('/currencies/:id/audit', auth, async (req, reply) => {
+    const logs = await app.prisma.auditLog.findMany({
+      where:   { tenantId: req.tenant.id, entityType: 'currency', entityId: (req.params as any).id },
+      orderBy: { createdAt: 'desc' }, take: 50,
+    })
+    return reply.send(logs)
+  })
+
+  // ── FX Rate CRUD ──
+  app.get('/fx-rates', auth, async (req, reply) => {
+    const { fromCurrency, toCurrency, status } = req.query as any
+    const where: any = {}
+    if (fromCurrency) where.fromCurrency = fromCurrency
+    if (toCurrency)   where.toCurrency   = toCurrency
+    if (status && status !== 'ALL') where.status = status
+    return reply.send(await app.prisma.fxRate.findMany({
+      where, orderBy: [{ effectiveDate: 'desc' }, { fromCurrency: 'asc' }], take: 200,
+    }))
+  })
+  app.post('/fx-rates', auth, async (req, reply) => {
+    const { fromCurrency, toCurrency, rate, effectiveDate, expiryDate, source = 'MANUAL' } = req.body as any
+    const row = await app.prisma.fxRate.create({
+      data: {
+        fromCurrency, toCurrency, rate, source,
+        effectiveDate: new Date(effectiveDate),
+        expiryDate: expiryDate ? new Date(expiryDate) : null,
+        status: 'ACTIVE', createdByUserId: req.user.sub,
+      },
+    })
+    return reply.code(201).send(row)
+  })
+  app.put('/fx-rates/:id', auth, async (req, reply) => {
+    const { submitForApproval: _sf, ...data } = req.body as any
+    const row = await app.prisma.fxRate.update({
+      where: { id: (req.params as any).id },
+      data,
+    })
+    return reply.send(row)
+  })
+  app.get('/fx-rates/:id/audit', auth, async (req, reply) => {
+    const logs = await app.prisma.auditLog.findMany({
+      where:   { tenantId: req.tenant.id, entityType: 'fxRate', entityId: (req.params as any).id },
+      orderBy: { createdAt: 'desc' }, take: 50,
+    })
+    return reply.send(logs)
   })
 
   // ── Tax regimes by country (for entity form cascade) ──

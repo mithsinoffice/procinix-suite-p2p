@@ -142,6 +142,39 @@ async function main() {
   }
   console.log(`✓ ${states.length} Indian states`)
 
+  // Major Indian cities
+  const cities = [
+    { name: 'Mumbai',           stateCode: 'MH', countryCode: 'IN', isCapital: false, isMetro: true,  timezone: 'Asia/Kolkata' },
+    { name: 'Pune',             stateCode: 'MH', countryCode: 'IN', isCapital: false, isMetro: true,  timezone: 'Asia/Kolkata' },
+    { name: 'Nagpur',           stateCode: 'MH', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'New Delhi',        stateCode: 'DL', countryCode: 'IN', isCapital: true,  isMetro: true,  timezone: 'Asia/Kolkata' },
+    { name: 'Bangalore',        stateCode: 'KA', countryCode: 'IN', isCapital: false, isMetro: true,  timezone: 'Asia/Kolkata' },
+    { name: 'Chennai',          stateCode: 'TN', countryCode: 'IN', isCapital: false, isMetro: true,  timezone: 'Asia/Kolkata' },
+    { name: 'Coimbatore',       stateCode: 'TN', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Ahmedabad',        stateCode: 'GJ', countryCode: 'IN', isCapital: false, isMetro: true,  timezone: 'Asia/Kolkata' },
+    { name: 'Surat',            stateCode: 'GJ', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Jaipur',           stateCode: 'RJ', countryCode: 'IN', isCapital: false, isMetro: true,  timezone: 'Asia/Kolkata' },
+    { name: 'Lucknow',          stateCode: 'UP', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Kanpur',           stateCode: 'UP', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Kolkata',          stateCode: 'WB', countryCode: 'IN', isCapital: false, isMetro: true,  timezone: 'Asia/Kolkata' },
+    { name: 'Hyderabad',        stateCode: 'TS', countryCode: 'IN', isCapital: false, isMetro: true,  timezone: 'Asia/Kolkata' },
+    { name: 'Visakhapatnam',    stateCode: 'AP', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Kochi',            stateCode: 'KL', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Thiruvananthapuram', stateCode: 'KL', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Chandigarh',       stateCode: 'PB', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Gurugram',         stateCode: 'HR', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Faridabad',        stateCode: 'HR', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Indore',           stateCode: 'MP', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Bhopal',           stateCode: 'MP', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Patna',            stateCode: 'BR', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+    { name: 'Bhubaneswar',      stateCode: 'OR', countryCode: 'IN', isCapital: false, isMetro: false, timezone: 'Asia/Kolkata' },
+  ]
+  await prisma.city.createMany({
+    data:          cities.map(c => ({ ...c, status: 'ACTIVE', isActive: true })),
+    skipDuplicates: true,
+  })
+  console.log(`✓ ${cities.length} Indian cities`)
+
   // Currencies
   const currencies = [
     { code: 'INR', name: 'Indian Rupee',      symbol: '₹',   exchangeRate: 1,      isBase: true  },
@@ -238,6 +271,24 @@ async function main() {
     })
   }
   console.log(`✓ ${workflows.length} workflow rules`)
+
+  // FX rates vs INR base
+  const fxRates = [
+    { fromCurrency: 'INR', toCurrency: 'USD', rate: 0.012,  source: 'MANUAL' },
+    { fromCurrency: 'INR', toCurrency: 'EUR', rate: 0.011,  source: 'MANUAL' },
+    { fromCurrency: 'INR', toCurrency: 'GBP', rate: 0.0095, source: 'MANUAL' },
+    { fromCurrency: 'INR', toCurrency: 'AED', rate: 0.044,  source: 'MANUAL' },
+    { fromCurrency: 'INR', toCurrency: 'SGD', rate: 0.016,  source: 'MANUAL' },
+    { fromCurrency: 'USD', toCurrency: 'INR', rate: 83.5,   source: 'MANUAL' },
+    { fromCurrency: 'AED', toCurrency: 'INR', rate: 22.7,   source: 'MANUAL' },
+    { fromCurrency: 'GBP', toCurrency: 'INR', rate: 105.2,  source: 'MANUAL' },
+  ]
+  for (const fx of fxRates) {
+    await prisma.fxRate.create({
+      data: { ...fx, effectiveDate: new Date('2025-04-01'), status: 'ACTIVE' },
+    })
+  }
+  console.log(`✓ ${fxRates.length} FX rates`)
 
   // Ensure all seeded records have status=ACTIVE
   await prisma.$executeRaw`UPDATE countries    SET status='ACTIVE' WHERE status IS NULL OR status=''`

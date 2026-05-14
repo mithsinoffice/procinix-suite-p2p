@@ -1,11 +1,11 @@
-import { useState, useDeferredValue } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { http } from '../../lib/http'
 import {
   Building2, Calculator, MapPin, Receipt, Package, Users,
   Globe, Calendar, Wallet, GitBranch, Briefcase, Shield,
-  User, LayoutGrid, List, Search, DollarSign,
+  User, LayoutGrid, List, Search, DollarSign, TrendingUp,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -43,6 +43,7 @@ const MASTER_GROUPS: { group: string; color: string; masters: MasterDef[] }[] = 
       { key: 'costCentre', title: 'Cost Centres',  desc: 'Cost centre and profit centre allocation',      icon: DollarSign, iconBg: 'bg-teal-50',    iconColor: 'text-teal-600',    to: '/masters/cost-centres',    countApi: '/api/masters/cost-centres?take=1',   status: 'live'        },
       { key: 'fy',         title: 'Financial Years', desc: 'Fiscal year periods and current year',        icon: Calendar,   iconBg: 'bg-green-50',   iconColor: 'text-green-600',   to: '/masters/financial-years', countApi: '/api/masters/financial-years',        status: 'live'        },
       { key: 'currency',   title: 'Currencies',    desc: 'Currency master with exchange rates',           icon: Wallet,     iconBg: 'bg-lime-50',    iconColor: 'text-lime-600',    to: '/masters/currencies',      countApi: '/api/masters/currencies',            status: 'live'        },
+      { key: 'fxRate',     title: 'FX Rates',      desc: 'Exchange rates with effective dates and source tracking', icon: TrendingUp, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', to: '/masters/fx-rates', countApi: '/api/masters/fx-rates?take=1', status: 'live' },
     ],
   },
   {
@@ -68,7 +69,6 @@ const MASTER_GROUPS: { group: string; color: string; masters: MasterDef[] }[] = 
       { key: 'country',  title: 'Countries',       desc: 'Country master with flags and tax regime mapping', icon: Globe,     iconBg: 'bg-purple-50',  iconColor: 'text-purple-600',  to: '/masters/countries',  countApi: '/api/masters/countries',  status: 'live'        },
       { key: 'state',    title: 'States',          desc: 'States and provinces with GST code',               icon: MapPin,    iconBg: 'bg-violet-50',  iconColor: 'text-violet-600',  to: '/masters/states',     countApi: '/api/masters/states',     status: 'live'        },
       { key: 'city',     title: 'Cities',          desc: 'Cities cascading from Country → State',            icon: Building2, iconBg: 'bg-fuchsia-50', iconColor: 'text-fuchsia-600', to: '/masters/cities',     countApi: '/api/masters/cities',     status: 'live'        },
-      { key: 'currency', title: 'Currencies',      desc: 'Currency master with symbol and exchange rates',   icon: Wallet,    iconBg: 'bg-green-50',   iconColor: 'text-green-600',   to: '/masters/currencies', countApi: '/api/masters/currencies', status: 'live'        },
     ],
   },
 ]
@@ -148,11 +148,10 @@ export default function MastersPage() {
   const [search, setSearch]   = useState('')
   const [view, setView]       = useState<'grid' | 'list'>('grid')
   const [groupBy, setGroupBy] = useState(true)
-  const deferred              = useDeferredValue(search)
 
   const allMasters = MASTER_GROUPS.flatMap(g => g.masters)
-  const filtered   = deferred
-    ? allMasters.filter(m => m.title.toLowerCase().includes(deferred.toLowerCase()) || m.desc.toLowerCase().includes(deferred.toLowerCase()))
+  const filtered   = search
+    ? allMasters.filter(m => m.title.toLowerCase().includes(search.toLowerCase()) || m.desc.toLowerCase().includes(search.toLowerCase()))
     : null
 
   const totalLive = allMasters.filter(m => m.status === 'live').length
@@ -211,7 +210,7 @@ export default function MastersPage() {
       {/* Search results */}
       {filtered ? (
         <div>
-          <p className="text-xs text-muted-foreground mb-3">{filtered.length} results for "{deferred}"</p>
+          <p className="text-xs text-muted-foreground mb-3">{filtered.length} results for "{search}"</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map(m => <MasterCard key={m.key} master={m} />)}
           </div>

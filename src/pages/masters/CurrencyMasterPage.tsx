@@ -13,7 +13,7 @@ import { cn } from '../../lib/utils'
 
 interface Currency {
   id: string; code: string; name: string; symbol: string
-  exchangeRate?: number; isBase?: boolean; status: string
+  isBase?: boolean; status: string
 }
 
 function CurrencyForm({ record, onClose, onSaved }: {
@@ -65,11 +65,6 @@ function CurrencyForm({ record, onClose, onSaved }: {
         <FormField label="Symbol" required hint="Currency symbol e.g. ₹, $, €" error={errors.symbol}>
           <FormInput value={String(form.symbol ?? '')} placeholder="₹"
             onChange={e => set('symbol', e.target.value)} onBlur={validate} />
-        </FormField>
-        <FormField label="Exchange Rate vs USD" hint="Leave blank if this is the base currency">
-          <FormInput type="number" value={String(form.exchangeRate ?? '')} placeholder="83.50"
-            min={0} step="0.01"
-            onChange={e => set('exchangeRate', e.target.value ? Number(e.target.value) : undefined)} />
         </FormField>
         <div className="col-span-2">
           <div className="flex items-center gap-2 rounded-lg border border-border p-3">
@@ -157,7 +152,7 @@ export default function CurrencyMasterPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/40">
               <tr>
-                {['Code', 'Name', 'Symbol', 'Exchange rate', 'Base', 'Status', 'Actions'].map(h => (
+                {['Code', 'Name', 'Symbol', 'Base', 'Status', 'Actions'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">{h}</th>
                 ))}
               </tr>
@@ -168,9 +163,6 @@ export default function CurrencyMasterPage() {
                   <td className="px-4 py-3 font-mono text-xs font-medium">{c.code}</td>
                   <td className="px-4 py-3 font-medium">{c.name}</td>
                   <td className="px-4 py-3 text-base">{c.symbol}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {c.exchangeRate != null ? `1 USD = ${c.exchangeRate} ${c.code}` : '—'}
-                  </td>
                   <td className="px-4 py-3 text-center">
                     {c.isBase && (
                       <span className="rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-xs">Base</span>

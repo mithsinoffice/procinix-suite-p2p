@@ -30,6 +30,7 @@ const CountryMasterPage  = lazy(() => import('./pages/masters/CountryMasterPage'
 const StateMasterPage    = lazy(() => import('./pages/masters/StateMasterPage'))
 const CityMasterPage     = lazy(() => import('./pages/masters/CityMasterPage'))
 const CurrencyMasterPage = lazy(() => import('./pages/masters/CurrencyMasterPage'))
+const FxRateMasterPage   = lazy(() => import('./pages/masters/FxRateMasterPage'))
 const NotFoundPage       = lazy(() => import('./pages/NotFoundPage'))
 
 function PageLoader() {
@@ -89,7 +90,8 @@ export const router = createBrowserRouter([
           { path: 'countries',         element: <S><CountryMasterPage /></S>                    },
           { path: 'states',            element: <S><StateMasterPage /></S>                      },
           { path: 'cities',            element: <S><CityMasterPage /></S>                       },
-          { path: 'currencies',        element: <S><CurrencyMasterPage /></S>                   },
+          { path: 'currencies',         element: <S><CurrencyMasterPage /></S>                  },
+          { path: 'fx-rates',          element: <S><FxRateMasterPage /></S>                     },
         ]},
       ],
     }],

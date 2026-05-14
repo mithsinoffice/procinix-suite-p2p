@@ -499,7 +499,25 @@ model City {
   createdByUserId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  @@unique([name, stateCode])
   @@map("cities")
+}
+
+model FxRate {
+  id              String    @id @default(uuid())
+  fromCurrency    String
+  toCurrency      String
+  rate            Decimal   @db.Decimal(18, 8)
+  effectiveDate   DateTime  @db.Date
+  expiryDate      DateTime? @db.Date
+  source          String    @default("MANUAL")
+  isActive        Boolean   @default(true)
+  status          String    @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  @@index([fromCurrency, toCurrency, effectiveDate])
+  @@map("fx_rates")
 }
 
 model Designation {
