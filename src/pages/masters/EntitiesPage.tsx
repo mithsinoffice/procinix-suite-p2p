@@ -6,6 +6,10 @@ import { AuditTrailDrawer } from '../../components/shared/AuditTrailDrawer'
 import { BulkUploadModal } from '../../components/shared/BulkUploadModal'
 import { formatDate, formatStatus, getStatusColor } from '../../lib/utils/formatters'
 import { cn } from '../../lib/utils'
+import {
+  FormSection, FormField, FormInput, FormSelect,
+  AutoCodeField, WorkflowBanner, FormPageHeader, FormFooter,
+} from '../../components/masters/MasterFormLayout'
 
 interface TaxRegime { id: string; code: string; name: string; regimeType: string; countryCode: string; requiresGstin: boolean; requiresVat: boolean; tdsApplicable: boolean; vatRate?: number }
 interface Country   { code: string; name: string; currency: string }
@@ -27,7 +31,10 @@ const ENTITY_TYPES = [
 
 function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: () => void; onCancel: () => void }) {
   const qc = useQueryClient()
-  const { data: countries = [] } = useQuery({ queryKey: ['masters', 'countries'], queryFn: () => http.get<Country[]>('/api/masters/countries') })
+  const { data: countries = [] } = useQuery({
+    queryKey: ['masters', 'countries'],
+    queryFn:  () => http.get<Country[]>('/api/masters/countries'),
+  })
   const [form, setForm]     = useState<Record<string, unknown>>(record ? { ...record } : { countryCode: 'IN', entityType: 'SUBSIDIARY' })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -45,7 +52,9 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
   const save = useMutation({
     mutationFn: (submitForApproval: boolean) => {
       const payload = { ...form, submitForApproval }
-      return record ? http.put<Entity>(`/api/masters/entities/${record.id}`, payload) : http.post<Entity>('/api/masters/entities', payload)
+      return record
+        ? http.put<Entity>(`/api/masters/entities/${record.id}`, payload)
+        : http.post<Entity>('/api/masters/entities', payload)
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['entity'] }); onSaved() },
   })
@@ -57,163 +66,208 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
 
   function validate(): boolean {
     const e: Record<string, string> = {}
-    if (!form.name)                    e.name      = 'Legal name is required'
-    if (isGst && !form.gstin)          e.gstin     = 'GSTIN is required for GST regime'
-    if (isGst && !form.pan)            e.pan       = 'PAN is required for GST regime'
-    if (isVat && !form.vatNumber)      e.vatNumber = 'VAT number is required for VAT regime'
+    if (!form.name)               e.name      = 'Legal name is required'
+    if (isGst && !form.gstin)     e.gstin     = 'GSTIN is required for GST regime'
+    if (isGst && !form.pan)       e.pan       = 'PAN is required for GST regime'
+    if (isVat && !form.vatNumber) e.vatNumber = 'VAT number is required for VAT regime'
     setErrors(e)
     return Object.keys(e).length === 0
   }
 
-  const F = ({ k, label, span = false, readOnly = false, placeholder }: { k: string; label: string; span?: boolean; readOnly?: boolean; placeholder?: string }) => (
-    <div className={cn('space-y-1.5', span && 'col-span-2')}>
-      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</label>
-      {k === 'code' && !record ? (
-        <div className="w-full rounded-md border border-dashed border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground">Auto-generated on save</div>
-      ) : (
-        <input type="text" value={String(form[k] ?? '')} placeholder={placeholder}
-          readOnly={readOnly || (k === 'code' && !!record)}
-          onChange={e => set(k, e.target.value)}
-          onBlur={() => validate()}
-          className={cn('w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring',
-            (readOnly || (k === 'code' && !!record)) && 'bg-muted/30 text-muted-foreground cursor-not-allowed',
-            errors[k] && 'border-destructive'
-          )}
-        />
-      )}
-      {errors[k] && <p className="text-xs text-destructive">{errors[k]}</p>}
-    </div>
-  )
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
 
       {/* A. Identity */}
-      <section className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">A. Identity</p>
-        <div className="grid grid-cols-2 gap-3">
-          <F k="code"      label="Entity code" />
-          <F k="name"      label="Legal name *" span />
-          <F k="shortName" label="Short name / trade name" />
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Entity type</label>
-            <select value={String(form.entityType ?? 'SUBSIDIARY')}
-              onChange={e => set('entityType', e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            >
-              {ENTITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-          </div>
-        </div>
-      </section>
+      <FormSection title="A. Identity">
+        <FormField label="Entity code" hint="Auto-generated — unique identifier">
+          <AutoCodeField value={record?.code} />
+        </FormField>
+
+        <FormField label="Legal name" required error={errors.name} span>
+          <FormInput
+            value={String(form.name ?? '')}
+            placeholder="Procinix Technologies Pvt Ltd"
+            onChange={e => set('name', e.target.value)}
+            onBlur={validate}
+            className={errors.name ? 'border-destructive' : ''}
+          />
+        </FormField>
+
+        <FormField label="Short name / trade name" hint="Abbreviated name used in reports">
+          <FormInput
+            value={String(form.shortName ?? '')}
+            placeholder="Procinix"
+            onChange={e => set('shortName', e.target.value)}
+          />
+        </FormField>
+
+        <FormField label="Entity type">
+          <FormSelect value={String(form.entityType ?? 'SUBSIDIARY')} onChange={e => set('entityType', e.target.value)}>
+            {ENTITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </FormSelect>
+        </FormField>
+      </FormSection>
 
       {/* B. Country + Tax regime */}
-      <section className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">B. Country &amp; tax regime</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Country *</label>
-            <select value={String(form.countryCode ?? 'IN')}
-              onChange={e => { set('countryCode', e.target.value); set('taxRegimeId', '') }}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            >
-              {countries.map((c: Country) => <option key={c.code} value={c.code}>{c.name}</option>)}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tax regime *</label>
-            <select value={String(form.taxRegimeId ?? '')}
-              onChange={e => set('taxRegimeId', e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Select regime…</option>
-              {taxRegimes.map((r: TaxRegime) => (
-                <option key={r.id} value={r.id}>{r.name} ({r.regimeType})</option>
-              ))}
-            </select>
-            {selectedRegime && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {selectedRegime.requiresGstin && <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5">GSTIN required</span>}
-                {selectedRegime.requiresVat   && <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded px-1.5 py-0.5">VAT number required</span>}
-                {selectedRegime.tdsApplicable && <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">TDS applicable</span>}
-                {selectedRegime.vatRate       && <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded px-1.5 py-0.5">VAT {selectedRegime.vatRate}%</span>}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      <FormSection title="B. Country &amp; Tax Regime">
+        <FormField label="Country" required>
+          <FormSelect
+            value={String(form.countryCode ?? 'IN')}
+            onChange={e => { set('countryCode', e.target.value); set('taxRegimeId', '') }}
+          >
+            {countries.map((c: Country) => <option key={c.code} value={c.code}>{c.name}</option>)}
+          </FormSelect>
+        </FormField>
+
+        <FormField label="Tax regime" required>
+          <FormSelect value={String(form.taxRegimeId ?? '')} onChange={e => set('taxRegimeId', e.target.value)}>
+            <option value="">Select regime…</option>
+            {taxRegimes.map((r: TaxRegime) => (
+              <option key={r.id} value={r.id}>{r.name} ({r.regimeType})</option>
+            ))}
+          </FormSelect>
+          {selectedRegime && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {selectedRegime.requiresGstin && <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-md px-1.5 py-0.5">GSTIN required</span>}
+              {selectedRegime.requiresVat   && <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded-md px-1.5 py-0.5">VAT number required</span>}
+              {selectedRegime.tdsApplicable && <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-md px-1.5 py-0.5">TDS applicable</span>}
+              {selectedRegime.vatRate       && <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-md px-1.5 py-0.5">VAT {selectedRegime.vatRate}%</span>}
+            </div>
+          )}
+        </FormField>
+      </FormSection>
 
       {/* C. Tax identifiers — conditional */}
       {(isGst || isVat || isIndia) && (
-        <section className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">C. Tax identifiers</p>
-          <div className="grid grid-cols-2 gap-3">
-            {(isGst || isIndia) && <F k="gstin"     label={`GSTIN${isGst ? ' *' : ''}`} placeholder="27AABCP1234R1ZV" />}
-            {(isGst || isIndia) && <F k="pan"       label={`PAN${isGst ? ' *' : ''}`}   placeholder="AABCP1234R" />}
-            {(isGst || isIndia) && <F k="tan"       label="TAN" placeholder="MUMX12345A" />}
-            {isVat              && <F k="vatNumber"  label="VAT number *" />}
-            {isIndia            && <F k="cinNumber"  label="CIN" placeholder="U72200MH2020PTC123456" />}
-            {isIndia            && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Date of incorporation</label>
-                <input type="date" value={String(form.incorporationDate ?? '')}
-                  onChange={e => set('incorporationDate', e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-                />
-              </div>
-            )}
-          </div>
-        </section>
+        <FormSection title="C. Tax Identifiers">
+          {(isGst || isIndia) && (
+            <FormField label={`GSTIN${isGst ? '' : ' (optional)'}`} required={isGst} error={errors.gstin}
+              hint="15-character GST Identification Number">
+              <FormInput
+                value={String(form.gstin ?? '')}
+                placeholder="27AABCP1234R1ZV"
+                onChange={e => set('gstin', e.target.value)}
+                onBlur={validate}
+                className={errors.gstin ? 'border-destructive' : ''}
+              />
+            </FormField>
+          )}
+          {(isGst || isIndia) && (
+            <FormField label={`PAN${isGst ? '' : ' (optional)'}`} required={isGst} error={errors.pan}
+              hint="10-character Permanent Account Number">
+              <FormInput
+                value={String(form.pan ?? '')}
+                placeholder="AABCP1234R"
+                onChange={e => set('pan', e.target.value)}
+                onBlur={validate}
+                className={errors.pan ? 'border-destructive' : ''}
+              />
+            </FormField>
+          )}
+          {(isGst || isIndia) && (
+            <FormField label="TAN" hint="Tax Deduction Account Number">
+              <FormInput
+                value={String(form.tan ?? '')}
+                placeholder="MUMX12345A"
+                onChange={e => set('tan', e.target.value)}
+              />
+            </FormField>
+          )}
+          {isVat && (
+            <FormField label="VAT number" required error={errors.vatNumber}>
+              <FormInput
+                value={String(form.vatNumber ?? '')}
+                onChange={e => set('vatNumber', e.target.value)}
+                onBlur={validate}
+                className={errors.vatNumber ? 'border-destructive' : ''}
+              />
+            </FormField>
+          )}
+          {isIndia && (
+            <FormField label="CIN" hint="Corporate Identification Number">
+              <FormInput
+                value={String(form.cinNumber ?? '')}
+                placeholder="U72200MH2020PTC123456"
+                onChange={e => set('cinNumber', e.target.value)}
+              />
+            </FormField>
+          )}
+          {isIndia && (
+            <FormField label="Date of incorporation">
+              <FormInput
+                type="date"
+                value={String(form.incorporationDate ?? '')}
+                onChange={e => set('incorporationDate', e.target.value)}
+              />
+            </FormField>
+          )}
+        </FormSection>
       )}
 
       {/* D. Address */}
-      <section className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">D. Address</p>
-        <div className="grid grid-cols-2 gap-3">
-          <F k="addressLine1" label="Address line" span />
-          <F k="city"    label="City"      />
-          <F k="state"   label="State"     />
-          <F k="pincode" label="PIN / ZIP"  />
-        </div>
-      </section>
+      <FormSection title="D. Address">
+        <FormField label="Address line" span>
+          <FormInput
+            value={String(form.addressLine1 ?? '')}
+            placeholder="123, Main Street"
+            onChange={e => set('addressLine1', e.target.value)}
+          />
+        </FormField>
+        <FormField label="City">
+          <FormInput value={String(form.city ?? '')} placeholder="Mumbai" onChange={e => set('city', e.target.value)} />
+        </FormField>
+        <FormField label="State">
+          <FormInput value={String(form.state ?? '')} placeholder="Maharashtra" onChange={e => set('state', e.target.value)} />
+        </FormField>
+        <FormField label="PIN / ZIP">
+          <FormInput value={String(form.pincode ?? '')} placeholder="400001" onChange={e => set('pincode', e.target.value)} />
+        </FormField>
+      </FormSection>
 
       {/* E. Contact */}
-      <section className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">E. Contact</p>
-        <div className="grid grid-cols-2 gap-3">
-          <F k="email"   label="Email"   placeholder="finance@company.com" />
-          <F k="phone"   label="Phone"   placeholder="+91 98765 43210" />
-          <F k="website" label="Website" placeholder="https://company.com" span />
-        </div>
-      </section>
+      <FormSection title="E. Contact">
+        <FormField label="Email" icon="@">
+          <FormInput
+            type="email"
+            value={String(form.email ?? '')}
+            placeholder="finance@company.com"
+            onChange={e => set('email', e.target.value)}
+          />
+        </FormField>
+        <FormField label="Phone">
+          <FormInput
+            value={String(form.phone ?? '')}
+            placeholder="+91 98765 43210"
+            onChange={e => set('phone', e.target.value)}
+          />
+        </FormField>
+        <FormField label="Website" span>
+          <FormInput
+            value={String(form.website ?? '')}
+            placeholder="https://company.com"
+            onChange={e => set('website', e.target.value)}
+          />
+        </FormField>
+      </FormSection>
 
-      {/* Footer */}
-      <div className="flex gap-3 pt-6 border-t border-border">
-        <button onClick={onCancel}
-          className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted">
-          Cancel
-        </button>
-        <button onClick={() => { if (validate()) save.mutate(false) }}
-          disabled={save.isPending}
-          className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60">
-          Save as draft
-        </button>
-        <button onClick={() => { if (validate()) save.mutate(true) }}
-          disabled={save.isPending}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 ml-auto">
-          <Send className="h-3.5 w-3.5" /> Submit for approval
-        </button>
-      </div>
+      <WorkflowBanner />
+
+      <FormFooter
+        onCancel={onCancel}
+        onDraft={() => { if (validate()) save.mutate(false) }}
+        onSubmit={() => { if (validate()) save.mutate(true) }}
+        isPending={save.isPending}
+      />
     </div>
   )
 }
 
 export default function EntitiesPage() {
   const qc = useQueryClient()
-  const [formOpen, setFormOpen]         = useState(false)
-  const [editRecord, setEditRecord]     = useState<Entity | null>(null)
-  const [auditRecord, setAuditRecord]   = useState<{ id: string; name: string } | null>(null)
-  const [bulkOpen, setBulkOpen]         = useState(false)
+  const [formOpen, setFormOpen]       = useState(false)
+  const [editRecord, setEditRecord]   = useState<Entity | null>(null)
+  const [auditRecord, setAuditRecord] = useState<{ id: string; name: string } | null>(null)
+  const [bulkOpen, setBulkOpen]       = useState(false)
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['entity'],
@@ -229,7 +283,7 @@ export default function EntitiesPage() {
     onSuccess:  () => qc.invalidateQueries({ queryKey: ['entity'] }),
   })
 
-  function openNew()  { setEditRecord(null); setFormOpen(true) }
+  function openNew()   { setEditRecord(null); setFormOpen(true) }
   function closeForm() { setFormOpen(false); setEditRecord(null) }
 
   const entities = data?.data ?? []
@@ -237,18 +291,18 @@ export default function EntitiesPage() {
   if (formOpen) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <button onClick={closeForm} className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-1.5">
-              ← Back to Entities
-            </button>
-            <span className="text-muted-foreground">/</span>
-            <h1 className="text-base font-semibold">{editRecord ? 'Edit entity' : 'New entity'}</h1>
-          </div>
-        </div>
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6">
-            <EntityForm record={editRecord ?? undefined} onSaved={() => { refetch(); closeForm() }} onCancel={closeForm} />
+            <FormPageHeader
+              title={editRecord ? 'Edit entity' : 'Create entity'}
+              subtitle={editRecord ? `Editing ${editRecord.code}` : 'Fill in the details to register a new entity'}
+              onBack={closeForm}
+            />
+            <EntityForm
+              record={editRecord ?? undefined}
+              onSaved={() => { refetch(); closeForm() }}
+              onCancel={closeForm}
+            />
           </div>
         </div>
       </div>
@@ -263,7 +317,8 @@ export default function EntitiesPage() {
           <p className="text-xs text-muted-foreground">{data?.total ?? 0} entities</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setBulkOpen(true)} className="flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted">
+          <button onClick={() => setBulkOpen(true)}
+            className="flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted">
             <Upload className="h-3.5 w-3.5" /> Bulk upload
           </button>
           <button onClick={openNew}
@@ -292,8 +347,13 @@ export default function EntitiesPage() {
               {entities.map(e => (
                 <tr key={e.id} className="border-b border-border hover:bg-muted/20">
                   <td className="px-4 py-3 font-mono text-xs">{e.code}</td>
-                  <td className="px-4 py-3 font-medium">{e.name}{e.shortName && <span className="ml-1 text-xs text-muted-foreground">({e.shortName})</span>}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{ENTITY_TYPES.find(t => t.value === e.entityType)?.label ?? e.entityType ?? '—'}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {e.name}
+                    {e.shortName && <span className="ml-1 text-xs text-muted-foreground">({e.shortName})</span>}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {ENTITY_TYPES.find(t => t.value === e.entityType)?.label ?? e.entityType ?? '—'}
+                  </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{e.countryCode}</td>
                   <td className="px-4 py-3 font-mono text-xs">{e.gstin ?? e.vatNumber ?? '—'}</td>
                   <td className="px-4 py-3">
@@ -304,10 +364,26 @@ export default function EntitiesPage() {
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(e.updatedAt ?? e.createdAt)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => { setEditRecord(e); setFormOpen(true) }} className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted" title="Edit"><Pencil className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => setAuditRecord({ id: e.id, name: e.name })} className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted" title="Audit"><Clock className="h-3.5 w-3.5" /></button>
-                      {e.status === 'DRAFT'            && <button onClick={() => submit.mutate(e.id)}  className="rounded p-1 text-amber-600 hover:bg-amber-50"  title="Submit"><Send         className="h-3.5 w-3.5" /></button>}
-                      {e.status === 'PENDING_APPROVAL' && <button onClick={() => approve.mutate(e.id)} className="rounded p-1 text-green-600 hover:bg-green-50" title="Approve"><CheckCircle className="h-3.5 w-3.5" /></button>}
+                      <button onClick={() => { setEditRecord(e); setFormOpen(true) }}
+                        className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted" title="Edit">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => setAuditRecord({ id: e.id, name: e.name })}
+                        className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted" title="Audit">
+                        <Clock className="h-3.5 w-3.5" />
+                      </button>
+                      {e.status === 'DRAFT' && (
+                        <button onClick={() => submit.mutate(e.id)}
+                          className="rounded p-1 text-amber-600 hover:bg-amber-50" title="Submit">
+                          <Send className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {e.status === 'PENDING_APPROVAL' && (
+                        <button onClick={() => approve.mutate(e.id)}
+                          className="rounded p-1 text-green-600 hover:bg-green-50" title="Approve">
+                          <CheckCircle className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -317,8 +393,10 @@ export default function EntitiesPage() {
         )}
       </div>
 
-      <AuditTrailDrawer open={!!auditRecord} onClose={() => setAuditRecord(null)} entityType="entity" entityId={auditRecord?.id ?? ''} entityName={auditRecord?.name ?? ''} />
-      <BulkUploadModal open={bulkOpen} onClose={() => setBulkOpen(false)} onSuccess={() => { refetch(); setBulkOpen(false) }}
+      <AuditTrailDrawer open={!!auditRecord} onClose={() => setAuditRecord(null)}
+        entityType="entity" entityId={auditRecord?.id ?? ''} entityName={auditRecord?.name ?? ''} />
+      <BulkUploadModal open={bulkOpen} onClose={() => setBulkOpen(false)}
+        onSuccess={() => { refetch(); setBulkOpen(false) }}
         masterName="Entities" apiPath="/api/masters/entities"
         csvHeaders={['name', 'countryCode', 'gstin', 'pan', 'city', 'state']}
         csvExample={{ name: 'Procinix UK Ltd', countryCode: 'GB', gstin: '', pan: '', city: 'London', state: 'England' }}

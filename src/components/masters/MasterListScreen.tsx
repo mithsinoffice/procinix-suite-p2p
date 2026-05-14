@@ -6,6 +6,10 @@ import { AuditTrailDrawer } from '../shared/AuditTrailDrawer'
 import { BulkUploadModal } from '../shared/BulkUploadModal'
 import { formatDate, formatStatus, getStatusColor } from '../../lib/utils/formatters'
 import { cn } from '../../lib/utils'
+import {
+  FormSection, FormField, FormInput, FormSelect, FormTextarea,
+  AutoCodeField, WorkflowBanner, FormPageHeader, FormFooter,
+} from './MasterFormLayout'
 
 // ── Config type ──
 
@@ -80,67 +84,66 @@ function FullPageForm({ config, record, onSaved, onCancel }: {
     },
   })
 
+  const codeField  = config.fields.find(f => f.key === 'code')
+  const otherFields = config.fields.filter(f => f.key !== 'code')
+
   return (
-    <div>
-      {/* Form grid */}
-      <div className="grid grid-cols-2 gap-4">
-        {config.fields.map(field => (
-          <div key={field.key} className={cn('space-y-1.5', field.span === 2 && 'col-span-2')}>
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              {field.label}{field.required && <span className="text-destructive ml-0.5">*</span>}
-            </label>
+    <div className="space-y-4">
+      <FormSection title="Details">
+        {/* Code always first */}
+        <FormField label={codeField?.label ?? 'Code'} hint="Auto-generated — unique identifier">
+          <AutoCodeField value={record?.code} />
+        </FormField>
 
-            {field.key === 'code' && !record && (
-              <div className="w-full rounded-md border border-dashed border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                Auto-generated on save
-              </div>
-            )}
-            {field.key === 'code' && record && (
-              <input
-                type="text"
+        {otherFields.map(field => (
+          <FormField
+            key={field.key}
+            label={field.label}
+            required={field.required}
+            error={fieldErrors[field.key]}
+            span={field.span === 2}
+            icon={field.key.toLowerCase().includes('code') ? '#' : field.key === 'email' ? '@' : undefined}
+          >
+            {field.type === 'text' && (
+              <FormInput
                 value={String(form[field.key] ?? '')}
-                readOnly
-                className="w-full rounded-md border border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground cursor-not-allowed"
-              />
-            )}
-            {field.key !== 'code' && field.type === 'text' && (
-              <input
-                type="text"
-                value={String(form[field.key] ?? '')}
+                placeholder={`Enter ${field.label.toLowerCase()}`}
                 onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
                 onBlur={() => validateField(field.key, form[field.key])}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                className={fieldErrors[field.key] ? 'border-destructive' : ''}
               />
             )}
-
             {field.type === 'number' && (
-              <input
-                type="number"
-                step={field.step ?? '0.01'}
+              <FormInput
+                type="number" step={field.step ?? '0.01'}
                 value={String(form[field.key] ?? '')}
                 onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
                 onBlur={() => validateField(field.key, form[field.key])}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                className={fieldErrors[field.key] ? 'border-destructive' : ''}
               />
             )}
-
             {field.type === 'select' && (
-              <select
+              <FormSelect
                 value={String(form[field.key] ?? '')}
                 onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
                 onBlur={() => validateField(field.key, form[field.key])}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Select…</option>
                 {field.options?.map(o => <option key={o} value={o}>{o}</option>)}
-              </select>
+              </FormSelect>
             )}
-
+            {field.type === 'textarea' && (
+              <FormTextarea
+                rows={3}
+                value={String(form[field.key] ?? '')}
+                placeholder={`Enter ${field.label.toLowerCase()}`}
+                onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                onBlur={() => validateField(field.key, form[field.key])}
+              />
+            )}
             {field.type === 'checkbox' && (
               <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id={field.key}
+                <input type="checkbox" id={field.key}
                   checked={Boolean(form[field.key])}
                   onChange={e => setForm(f => ({ ...f, [field.key]: e.target.checked }))}
                   className="h-4 w-4 rounded border-input accent-primary"
@@ -148,43 +151,18 @@ function FullPageForm({ config, record, onSaved, onCancel }: {
                 <label htmlFor={field.key} className="text-sm text-muted-foreground">{field.label}</label>
               </div>
             )}
-
-            {field.type === 'textarea' && (
-              <textarea
-                value={String(form[field.key] ?? '')}
-                onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
-                onBlur={() => validateField(field.key, form[field.key])}
-                rows={3}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
-              />
-            )}
-
-            {fieldErrors[field.key] && (
-              <p className="text-xs text-destructive mt-1">{fieldErrors[field.key]}</p>
-            )}
-          </div>
+          </FormField>
         ))}
-      </div>
+      </FormSection>
 
-      {/* Footer */}
-      <div className="flex gap-3 pt-6 border-t border-border mt-6">
-        <button onClick={onCancel}
-          className="rounded-md border border-input px-4 py-2 text-sm hover:bg-muted">
-          Cancel
-        </button>
-        <button
-          onClick={() => { if (!validateAll()) return; save.mutate(false) }}
-          disabled={save.isPending}
-          className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60">
-          Save as draft
-        </button>
-        <button
-          onClick={() => { if (!validateAll()) return; save.mutate(true) }}
-          disabled={save.isPending}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
-          <Send className="h-3.5 w-3.5" /> Submit for approval
-        </button>
-      </div>
+      <WorkflowBanner />
+
+      <FormFooter
+        onCancel={onCancel}
+        onDraft={() => { if (validateAll()) save.mutate(false) }}
+        onSubmit={() => { if (validateAll()) save.mutate(true) }}
+        isPending={save.isPending}
+      />
     </div>
   )
 }
@@ -231,20 +209,13 @@ export function MasterListScreen({ config }: { config: MasterConfig }) {
   if (formOpen) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <button onClick={closeForm}
-              className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-1.5">
-              ← Back to {config.title}
-            </button>
-            <span className="text-muted-foreground">/</span>
-            <h1 className="text-base font-semibold">
-              {editRecord ? `Edit ${config.singular}` : `New ${config.singular}`}
-            </h1>
-          </div>
-        </div>
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6">
+            <FormPageHeader
+              title={editRecord ? `Edit ${config.singular}` : `Create ${config.singular}`}
+              subtitle={editRecord ? `Editing ${editRecord.code ?? editRecord.name}` : `Fill in the details to create a new ${config.singular}`}
+              onBack={closeForm}
+            />
             <FullPageForm
               config={config}
               record={editRecord}
