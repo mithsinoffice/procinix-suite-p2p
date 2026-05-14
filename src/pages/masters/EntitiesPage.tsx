@@ -8,7 +8,7 @@ import { formatDate, formatStatus, getStatusColor } from '../../lib/utils/format
 import { cn } from '../../lib/utils'
 import {
   FormSection, FormField, FormInput, FormSelect,
-  AutoCodeField, WorkflowBanner, FormPageHeader, FormFooter,
+  AutoCodeField, WorkflowBanner, FormPageHeader, FormFooter, ApiSelect,
 } from '../../components/masters/MasterFormLayout'
 
 interface TaxRegime { id: string; code: string; name: string; regimeType: string; countryCode: string; requiresGstin: boolean; requiresVat: boolean; tdsApplicable: boolean; vatRate?: number }
@@ -18,6 +18,7 @@ interface Entity    {
   gstin?: string; pan?: string; tan?: string; vatNumber?: string; cinNumber?: string; incorporationDate?: string;
   countryCode: string; taxRegimeId?: string; city?: string; state?: string; pincode?: string; addressLine1?: string;
   email?: string; phone?: string; website?: string;
+  logoUrl?: string; baseCurrencyCode?: string; currentFyId?: string;
   status: string; createdAt: string; updatedAt?: string
 }
 
@@ -278,6 +279,84 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
           />
         </FormField>
       </FormSection>
+
+      {/* F. Company settings */}
+      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+        <h3 className="text-base font-semibold">F. Company settings</h3>
+        <div className="grid grid-cols-2 gap-4">
+
+          {/* Base currency */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Base currency</label>
+            <ApiSelect
+              endpoint="/api/masters/currencies"
+              queryKey={['currencies']}
+              value={String(form.baseCurrencyCode ?? 'INR')}
+              onChange={v => setForm(f => ({ ...f, baseCurrencyCode: v }))}
+              valueKey="code"
+              labelKey="name"
+              placeholder="Select currency…"
+              autoSelect={false}
+            />
+            <p className="text-xs text-muted-foreground">Reporting and transaction currency for this entity</p>
+          </div>
+
+          {/* Current financial year */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Current financial year</label>
+            <ApiSelect
+              endpoint="/api/masters/financial-years"
+              queryKey={['financial-years']}
+              value={String(form.currentFyId ?? '')}
+              onChange={v => setForm(f => ({ ...f, currentFyId: v }))}
+              placeholder="Select financial year…"
+              autoSelect={true}
+            />
+            <p className="text-xs text-muted-foreground">Active fiscal year for this entity</p>
+          </div>
+
+          {/* Logo upload */}
+          <div className="col-span-2 space-y-2">
+            <label className="text-sm font-medium">Entity logo</label>
+            <div className="flex items-start gap-4">
+              {/* Preview */}
+              <div className="flex h-20 w-40 items-center justify-center rounded-lg border border-dashed border-input bg-muted/30">
+                {form.logoUrl ? (
+                  <img src={String(form.logoUrl)} alt="Logo" className="h-16 w-full object-contain p-2" />
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center px-2">No logo uploaded</p>
+                )}
+              </div>
+              {/* Upload */}
+              <div className="flex-1 space-y-2">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml"
+                  id="logo-upload"
+                  className="hidden"
+                  onChange={async e => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const reader = new FileReader()
+                    reader.onload = () => setForm(f => ({ ...f, logoUrl: reader.result as string }))
+                    reader.readAsDataURL(file)
+                  }}
+                />
+                <label htmlFor="logo-upload"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-input px-3 py-2 text-sm font-medium hover:bg-muted">
+                  Upload logo
+                </label>
+                <p className="text-xs text-muted-foreground">PNG, JPG or SVG · max 2MB · used on PO prints and PDFs</p>
+                {!!form.logoUrl && (
+                  <button onClick={() => setForm(f => ({ ...f, logoUrl: '' }))}
+                    className="text-xs text-destructive hover:underline">Remove logo</button>
+                )}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
 
       <WorkflowBanner />
 

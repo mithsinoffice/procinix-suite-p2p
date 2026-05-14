@@ -512,6 +512,10 @@ model Entity {
   taxRegimeId      String?
   vatNumber        String?
   taxRegime        TaxRegime? @relation(fields: [taxRegimeId], references: [id])
+  logoUrl          String?
+  baseCurrencyCode String?   @default("INR")
+  currentFyId      String?
+  currentFy        FinancialYear? @relation(fields: [currentFyId], references: [id])
   isActive         Boolean   @default(true)
   status           String    @default("ACTIVE")
   createdByUserId  String?
@@ -568,6 +572,7 @@ model FinancialYear {
   createdByUserId  String?
   approvedByUserId String?
   approvedAt       DateTime?
+  entities         Entity[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   @@unique([tenantId, code])

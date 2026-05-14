@@ -1,5 +1,8 @@
+import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { cn } from '../../lib/utils'
 import { Send } from 'lucide-react'
+import { http } from '../../lib/http'
 
 export function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -136,5 +139,53 @@ export function FormFooter({
         Submit for approval
       </button>
     </div>
+  )
+}
+
+// ── ApiSelect — fetches options from an API endpoint ──
+
+export function ApiSelect({
+  endpoint, queryKey, value, onChange, valueKey = 'id', labelKey = 'name',
+  placeholder = 'Select…', autoSelect = false, className,
+}: {
+  endpoint:    string
+  queryKey:    unknown[]
+  value:       string
+  onChange:    (value: string) => void
+  valueKey?:   string
+  labelKey?:   string
+  placeholder?: string
+  autoSelect?: boolean
+  className?:  string
+}) {
+  const { data: options = [] } = useQuery({
+    queryKey,
+    queryFn:   () => http.get<any[]>(endpoint),
+    staleTime: 5 * 60_000,
+  })
+
+  useEffect(() => {
+    if (autoSelect && options.length === 1 && !value) {
+      onChange(String(options[0][valueKey]))
+    }
+  }, [options])
+
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className={cn(
+        'w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none',
+        'focus:ring-2 focus:ring-ring focus:ring-offset-1',
+        className
+      )}
+    >
+      <option value="">{placeholder}</option>
+      {options.map((o: any) => (
+        <option key={String(o[valueKey])} value={String(o[valueKey])}>
+          {String(o[labelKey])}
+        </option>
+      ))}
+    </select>
   )
 }

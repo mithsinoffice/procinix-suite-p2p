@@ -39,13 +39,19 @@ export function AppShell() {
         open ? 'translate-x-0' : '-translate-x-full'
       )}>
         {/* Logo */}
-        <div className="flex h-14 items-center gap-2 border-b border-[#1E2D45] px-4">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#00A9B7]">
-            <span className="text-xs font-bold text-white">P</span>
-          </div>
-          <span className="font-semibold text-sm text-white">Procinix</span>
-          <button className="ml-auto lg:hidden" onClick={() => setOpen(false)}>
-            <X className="h-4 w-4 text-[#8B9BB4]" />
+        <div className="flex h-14 items-center gap-2.5 border-b border-[#1E2D45] px-4">
+          <img
+            src="/logos/procinix-logo.png"
+            alt="Procinix"
+            className="h-7 object-contain"
+            onError={e => {
+              e.currentTarget.style.display = 'none'
+              e.currentTarget.nextElementSibling?.removeAttribute('style')
+            }}
+          />
+          <span style={{ display: 'none' }} className="text-sm font-bold text-white">Procinix</span>
+          <button className="ml-auto lg:hidden text-[#D6F7F9]" onClick={() => setOpen(false)}>
+            <X className="h-4 w-4" />
           </button>
         </div>
 
