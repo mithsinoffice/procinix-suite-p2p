@@ -491,14 +491,20 @@ model Designation {
 }
 
 model Entity {
-  id               String    @id @default(uuid())
-  tenantId         String
-  code             String
-  name             String
-  gstin            String?
-  pan              String?
-  tan              String?
-  addressLine1     String?
+  id                String    @id @default(uuid())
+  tenantId          String
+  code              String
+  name              String
+  shortName         String?
+  entityType        String?   @default("SUBSIDIARY")
+  cinNumber         String?
+  incorporationDate DateTime? @db.Date
+  website           String?
+  phone             String?
+  gstin             String?
+  pan               String?
+  tan               String?
+  addressLine1      String?
   city             String?
   state            String?
   pincode          String?

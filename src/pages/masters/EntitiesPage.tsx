@@ -9,12 +9,26 @@ import { cn } from '../../lib/utils'
 
 interface TaxRegime { id: string; code: string; name: string; regimeType: string; countryCode: string; requiresGstin: boolean; requiresVat: boolean; tdsApplicable: boolean; vatRate?: number }
 interface Country   { code: string; name: string; currency: string }
-interface Entity    { id: string; code: string; name: string; gstin?: string; pan?: string; vatNumber?: string; countryCode: string; taxRegimeId?: string; city?: string; state?: string; status: string; createdAt: string; updatedAt?: string }
+interface Entity    {
+  id: string; code: string; name: string; shortName?: string; entityType?: string;
+  gstin?: string; pan?: string; tan?: string; vatNumber?: string; cinNumber?: string; incorporationDate?: string;
+  countryCode: string; taxRegimeId?: string; city?: string; state?: string; pincode?: string; addressLine1?: string;
+  email?: string; phone?: string; website?: string;
+  status: string; createdAt: string; updatedAt?: string
+}
 
-function EntityForm({ record, onClose, onSaved }: { record?: Entity; onClose: () => void; onSaved: () => void }) {
+const ENTITY_TYPES = [
+  { value: 'HOLDING_COMPANY',       label: 'Holding Company' },
+  { value: 'SUBSIDIARY',            label: 'Subsidiary' },
+  { value: 'BRANCH',                label: 'Branch' },
+  { value: 'JV',                    label: 'Joint Venture' },
+  { value: 'REPRESENTATIVE_OFFICE', label: 'Representative Office' },
+]
+
+function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: () => void; onCancel: () => void }) {
   const qc = useQueryClient()
   const { data: countries = [] } = useQuery({ queryKey: ['masters', 'countries'], queryFn: () => http.get<Country[]>('/api/masters/countries') })
-  const [form, setForm]     = useState<Record<string, unknown>>(record ? { ...record } : { countryCode: 'IN' })
+  const [form, setForm]     = useState<Record<string, unknown>>(record ? { ...record } : { countryCode: 'IN', entityType: 'SUBSIDIARY' })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const { data: taxRegimes = [] } = useQuery({
@@ -31,9 +45,9 @@ function EntityForm({ record, onClose, onSaved }: { record?: Entity; onClose: ()
   const save = useMutation({
     mutationFn: (submitForApproval: boolean) => {
       const payload = { ...form, submitForApproval }
-      return record ? http.put<any>(`/api/masters/entities/${record.id}`, payload) : http.post<any>('/api/masters/entities', payload)
+      return record ? http.put<Entity>(`/api/masters/entities/${record.id}`, payload) : http.post<Entity>('/api/masters/entities', payload)
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['entity'] }); onSaved(); onClose() },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['entity'] }); onSaved() },
   })
 
   function set(key: string, value: unknown) {
@@ -51,18 +65,19 @@ function EntityForm({ record, onClose, onSaved }: { record?: Entity; onClose: ()
     return Object.keys(e).length === 0
   }
 
-  const F = ({ k, label, span = false, readOnly = false }: { k: string; label: string; span?: boolean; readOnly?: boolean }) => (
+  const F = ({ k, label, span = false, readOnly = false, placeholder }: { k: string; label: string; span?: boolean; readOnly?: boolean; placeholder?: string }) => (
     <div className={cn('space-y-1.5', span && 'col-span-2')}>
       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</label>
       {k === 'code' && !record ? (
         <div className="w-full rounded-md border border-dashed border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground">Auto-generated on save</div>
       ) : (
-        <input type="text" value={String(form[k] ?? '')}
+        <input type="text" value={String(form[k] ?? '')} placeholder={placeholder}
           readOnly={readOnly || (k === 'code' && !!record)}
           onChange={e => set(k, e.target.value)}
           onBlur={() => validate()}
           className={cn('w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring',
-            (readOnly || (k === 'code' && !!record)) && 'bg-muted/30 text-muted-foreground cursor-not-allowed'
+            (readOnly || (k === 'code' && !!record)) && 'bg-muted/30 text-muted-foreground cursor-not-allowed',
+            errors[k] && 'border-destructive'
           )}
         />
       )}
@@ -71,94 +86,121 @@ function EntityForm({ record, onClose, onSaved }: { record?: Entity; onClose: ()
   )
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <p className="text-sm font-semibold">{record ? 'Edit entity' : 'New entity'}</p>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg leading-none">×</button>
-      </div>
+    <div className="space-y-8">
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-
-        {/* A. Basic */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">A. Basic details</p>
-          <div className="grid grid-cols-2 gap-3">
-            <F k="code" label="Entity code" />
-            <F k="name" label="Legal name *" span />
+      {/* A. Identity */}
+      <section className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">A. Identity</p>
+        <div className="grid grid-cols-2 gap-3">
+          <F k="code"      label="Entity code" />
+          <F k="name"      label="Legal name *" span />
+          <F k="shortName" label="Short name / trade name" />
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Entity type</label>
+            <select value={String(form.entityType ?? 'SUBSIDIARY')}
+              onChange={e => set('entityType', e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            >
+              {ENTITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
           </div>
         </div>
+      </section>
 
-        {/* B. Country + Tax regime */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">B. Country & tax regime</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Country *</label>
-              <select value={String(form.countryCode ?? 'IN')}
-                onChange={e => { set('countryCode', e.target.value); set('taxRegimeId', '') }}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-              >
-                {countries.map((c: Country) => <option key={c.code} value={c.code}>{c.name}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tax regime *</label>
-              <select value={String(form.taxRegimeId ?? '')}
-                onChange={e => set('taxRegimeId', e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">Select regime…</option>
-                {taxRegimes.map((r: TaxRegime) => (
-                  <option key={r.id} value={r.id}>{r.name} ({r.regimeType})</option>
-                ))}
-              </select>
-              {selectedRegime && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedRegime.requiresGstin && <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5">GSTIN required</span>}
-                  {selectedRegime.requiresVat   && <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded px-1.5 py-0.5">VAT number required</span>}
-                  {selectedRegime.tdsApplicable && <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">TDS applicable</span>}
-                  {selectedRegime.vatRate       && <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded px-1.5 py-0.5">VAT {selectedRegime.vatRate}%</span>}
-                </div>
-              )}
-            </div>
+      {/* B. Country + Tax regime */}
+      <section className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">B. Country &amp; tax regime</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Country *</label>
+            <select value={String(form.countryCode ?? 'IN')}
+              onChange={e => { set('countryCode', e.target.value); set('taxRegimeId', '') }}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            >
+              {countries.map((c: Country) => <option key={c.code} value={c.code}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tax regime *</label>
+            <select value={String(form.taxRegimeId ?? '')}
+              onChange={e => set('taxRegimeId', e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Select regime…</option>
+              {taxRegimes.map((r: TaxRegime) => (
+                <option key={r.id} value={r.id}>{r.name} ({r.regimeType})</option>
+              ))}
+            </select>
+            {selectedRegime && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {selectedRegime.requiresGstin && <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded px-1.5 py-0.5">GSTIN required</span>}
+                {selectedRegime.requiresVat   && <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded px-1.5 py-0.5">VAT number required</span>}
+                {selectedRegime.tdsApplicable && <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">TDS applicable</span>}
+                {selectedRegime.vatRate       && <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded px-1.5 py-0.5">VAT {selectedRegime.vatRate}%</span>}
+              </div>
+            )}
           </div>
         </div>
+      </section>
 
-        {/* C. Tax identifiers — conditional */}
-        {(isGst || isVat || isIndia) && (
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">C. Tax identifiers</p>
-            <div className="grid grid-cols-2 gap-3">
-              {(isGst || isIndia) && <F k="gstin"     label={`GSTIN${isGst ? ' *' : ''}`} />}
-              {(isGst || isIndia) && <F k="pan"       label={`PAN${isGst ? ' *' : ''}`}   />}
-              {(isGst || isIndia) && <F k="tan"       label="TAN" />}
-              {isVat              && <F k="vatNumber"  label="VAT number *" />}
-            </div>
-          </div>
-        )}
-
-        {/* D. Address */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">D. Address</p>
+      {/* C. Tax identifiers — conditional */}
+      {(isGst || isVat || isIndia) && (
+        <section className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">C. Tax identifiers</p>
           <div className="grid grid-cols-2 gap-3">
-            <F k="addressLine1" label="Address" span />
-            <F k="city"    label="City"      />
-            <F k="state"   label="State"     />
-            <F k="pincode" label="PIN / ZIP"  />
+            {(isGst || isIndia) && <F k="gstin"     label={`GSTIN${isGst ? ' *' : ''}`} placeholder="27AABCP1234R1ZV" />}
+            {(isGst || isIndia) && <F k="pan"       label={`PAN${isGst ? ' *' : ''}`}   placeholder="AABCP1234R" />}
+            {(isGst || isIndia) && <F k="tan"       label="TAN" placeholder="MUMX12345A" />}
+            {isVat              && <F k="vatNumber"  label="VAT number *" />}
+            {isIndia            && <F k="cinNumber"  label="CIN" placeholder="U72200MH2020PTC123456" />}
+            {isIndia            && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Date of incorporation</label>
+                <input type="date" value={String(form.incorporationDate ?? '')}
+                  onChange={e => set('incorporationDate', e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            )}
           </div>
+        </section>
+      )}
+
+      {/* D. Address */}
+      <section className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">D. Address</p>
+        <div className="grid grid-cols-2 gap-3">
+          <F k="addressLine1" label="Address line" span />
+          <F k="city"    label="City"      />
+          <F k="state"   label="State"     />
+          <F k="pincode" label="PIN / ZIP"  />
         </div>
+      </section>
 
-      </div>
+      {/* E. Contact */}
+      <section className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-1">E. Contact</p>
+        <div className="grid grid-cols-2 gap-3">
+          <F k="email"   label="Email"   placeholder="finance@company.com" />
+          <F k="phone"   label="Phone"   placeholder="+91 98765 43210" />
+          <F k="website" label="Website" placeholder="https://company.com" span />
+        </div>
+      </section>
 
-      <div className="border-t border-border p-4 flex gap-2">
+      {/* Footer */}
+      <div className="flex gap-3 pt-6 border-t border-border">
+        <button onClick={onCancel}
+          className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted">
+          Cancel
+        </button>
         <button onClick={() => { if (validate()) save.mutate(false) }}
           disabled={save.isPending}
-          className="flex-1 rounded-md border border-input px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60">
+          className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60">
           Save as draft
         </button>
         <button onClick={() => { if (validate()) save.mutate(true) }}
           disabled={save.isPending}
-          className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
+          className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 ml-auto">
           <Send className="h-3.5 w-3.5" /> Submit for approval
         </button>
       </div>
@@ -187,7 +229,31 @@ export default function EntitiesPage() {
     onSuccess:  () => qc.invalidateQueries({ queryKey: ['entity'] }),
   })
 
+  function openNew()  { setEditRecord(null); setFormOpen(true) }
+  function closeForm() { setFormOpen(false); setEditRecord(null) }
+
   const entities = data?.data ?? []
+
+  if (formOpen) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-3">
+            <button onClick={closeForm} className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-1.5">
+              ← Back to Entities
+            </button>
+            <span className="text-muted-foreground">/</span>
+            <h1 className="text-base font-semibold">{editRecord ? 'Edit entity' : 'New entity'}</h1>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6">
+            <EntityForm record={editRecord ?? undefined} onSaved={() => { refetch(); closeForm() }} onCancel={closeForm} />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -200,7 +266,7 @@ export default function EntitiesPage() {
           <button onClick={() => setBulkOpen(true)} className="flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted">
             <Upload className="h-3.5 w-3.5" /> Bulk upload
           </button>
-          <button onClick={() => { setEditRecord(null); setFormOpen(true) }}
+          <button onClick={openNew}
             className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
             <Plus className="h-3.5 w-3.5" /> New entity
           </button>
@@ -213,12 +279,12 @@ export default function EntitiesPage() {
         ) : entities.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
             <p className="text-sm text-muted-foreground">No entities yet</p>
-            <button onClick={() => setFormOpen(true)} className="mt-3 text-sm text-primary hover:underline">Add first entity</button>
+            <button onClick={openNew} className="mt-3 text-sm text-primary hover:underline">Add first entity</button>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/40">
-              <tr>{['Code', 'Legal name', 'Country', 'GSTIN / VAT', 'Status', 'Updated', 'Actions'].map(h => (
+              <tr>{['Code', 'Legal name', 'Type', 'Country', 'GSTIN / VAT', 'Status', 'Updated', 'Actions'].map(h => (
                 <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">{h}</th>
               ))}</tr>
             </thead>
@@ -226,7 +292,8 @@ export default function EntitiesPage() {
               {entities.map(e => (
                 <tr key={e.id} className="border-b border-border hover:bg-muted/20">
                   <td className="px-4 py-3 font-mono text-xs">{e.code}</td>
-                  <td className="px-4 py-3 font-medium">{e.name}</td>
+                  <td className="px-4 py-3 font-medium">{e.name}{e.shortName && <span className="ml-1 text-xs text-muted-foreground">({e.shortName})</span>}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{ENTITY_TYPES.find(t => t.value === e.entityType)?.label ?? e.entityType ?? '—'}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{e.countryCode}</td>
                   <td className="px-4 py-3 font-mono text-xs">{e.gstin ?? e.vatNumber ?? '—'}</td>
                   <td className="px-4 py-3">
@@ -249,15 +316,6 @@ export default function EntitiesPage() {
           </table>
         )}
       </div>
-
-      {formOpen && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setFormOpen(false)} />
-          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-background shadow-2xl">
-            <EntityForm record={editRecord ?? undefined} onClose={() => { setFormOpen(false); setEditRecord(null) }} onSaved={() => refetch()} />
-          </div>
-        </>
-      )}
 
       <AuditTrailDrawer open={!!auditRecord} onClose={() => setAuditRecord(null)} entityType="entity" entityId={auditRecord?.id ?? ''} entityName={auditRecord?.name ?? ''} />
       <BulkUploadModal open={bulkOpen} onClose={() => setBulkOpen(false)} onSuccess={() => { refetch(); setBulkOpen(false) }}
