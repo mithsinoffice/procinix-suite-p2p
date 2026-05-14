@@ -93,9 +93,15 @@ export async function masterRoutes(app: FastifyInstance) {
   // ── Tax regimes by country (for entity form cascade) ──
   app.get('/tax-regimes-by-country', auth, async (req, reply) => {
     const { countryCode } = req.query as { countryCode?: string }
-    const where: any = { tenantId: req.tenant.id, isActive: true }
-    if (countryCode) where.countryCode = countryCode
-    return reply.send(await app.prisma.taxRegime.findMany({ where, orderBy: { name: 'asc' } }))
+    const regimes = await app.prisma.taxRegime.findMany({
+      where: {
+        tenantId: req.tenant.id,
+        isActive: true,
+        ...(countryCode && { countryCode }),
+      },
+      orderBy: { name: 'asc' },
+    })
+    return reply.send(regimes)
   })
 
   // ── Entity compliance detail ──

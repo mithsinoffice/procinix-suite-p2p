@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Upload, Pencil, Clock, Send, CheckCircle } from 'lucide-react'
 import { http } from '../../lib/http'
@@ -38,11 +38,22 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
   const [form, setForm]     = useState<Record<string, unknown>>(record ? { ...record } : { countryCode: 'IN', entityType: 'SUBSIDIARY' })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  const selectedCountry = String(form.countryCode ?? 'IN')
+
   const { data: taxRegimes = [] } = useQuery({
-    queryKey: ['masters', 'tax-regimes-by-country', form.countryCode],
-    queryFn:  () => http.get<TaxRegime[]>(`/api/masters/tax-regimes-by-country?countryCode=${form.countryCode}`),
-    enabled:  !!form.countryCode,
+    queryKey:  ['tax-regimes-by-country', selectedCountry],
+    queryFn:   () => http.get<TaxRegime[]>(`/api/masters/tax-regimes-by-country?countryCode=${selectedCountry}`),
+    enabled:   !!selectedCountry,
+    staleTime: 5 * 60_000,
   })
+
+  useEffect(() => {
+    if (taxRegimes.length === 1 && !form.taxRegimeId) {
+      setForm(f => ({ ...f, taxRegimeId: taxRegimes[0].id }))
+    }
+  }, [taxRegimes])
+
+  console.log('[Entity] countryCode:', selectedCountry, 'regimes:', taxRegimes.length)
 
   const selectedRegime = taxRegimes.find((r: TaxRegime) => r.id === form.taxRegimeId)
   const isGst          = selectedRegime?.regimeType === 'GST'

@@ -78,11 +78,16 @@ function useMasterCount(api?: string): number | null {
     queryKey:  ['master-count', api],
     queryFn:   async () => {
       if (!api) return null
-      const res = await http.get<any>(api)
-      return res?.total ?? (Array.isArray(res) ? res.length : null)
+      try {
+        const res = await http.get<any>(api)
+        return res?.total ?? (Array.isArray(res) ? res.length : null)
+      } catch {
+        return null
+      }
     },
     enabled:   !!api,
     staleTime: 5 * 60_000,
+    retry:     false,
   })
   return data ?? null
 }
