@@ -5,6 +5,7 @@
 2. Run `npm run typecheck` — must stay at 0 errors
 3. Run `npm run lint` — 0 warnings on new code
 4. Update ARCHITECTURE.md after every structural change
+5. Verify no orphaned files: when replacing any page or component, delete the old file in the same commit. Before committing, run `grep -r "GeographyPage\|<OldComponent>" src` to confirm no stale references remain.
 
 ## Stack (locked — do not deviate)
 | Layer | Choice |
