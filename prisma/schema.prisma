@@ -142,45 +142,61 @@ enum PanCompliance {
 }
 
 model Department {
-  id       String  @id @default(uuid())
-  tenantId String
-  code     String
-  name     String
-  isActive Boolean @default(true)
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  name             String
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
   @@unique([tenantId, code])
   @@map("departments")
 }
 
 model GlCode {
-  id          String  @id @default(uuid())
-  tenantId    String
-  code        String
-  name        String
-  accountType String
-  isActive    Boolean @default(true)
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  name             String
+  accountType      String
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
   @@unique([tenantId, code])
   @@map("gl_codes")
 }
 
 model CostCentre {
-  id       String  @id @default(uuid())
-  tenantId String
-  code     String
-  name     String
-  isActive Boolean @default(true)
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  name             String
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
   @@unique([tenantId, code])
   @@map("cost_centres")
 }
 
 model TaxCode {
-  id          String  @id @default(uuid())
-  tenantId    String
-  code        String
-  description String
-  cgstRate    Decimal @db.Decimal(5, 2)
-  sgstRate    Decimal @db.Decimal(5, 2)
-  igstRate    Decimal @db.Decimal(5, 2)
-  isActive    Boolean @default(true)
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  description      String
+  cgstRate         Decimal   @db.Decimal(5, 2)
+  sgstRate         Decimal   @db.Decimal(5, 2)
+  igstRate         Decimal   @db.Decimal(5, 2)
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
   @@unique([tenantId, code])
   @@map("tax_codes")
 }

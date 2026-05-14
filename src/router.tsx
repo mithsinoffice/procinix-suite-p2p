@@ -14,6 +14,10 @@ const VendorListPage     = lazy(() => import('./pages/masters/vendors/VendorList
 const VendorDetailPage   = lazy(() => import('./pages/masters/vendors/VendorDetailPage'))
 const VendorFormPage     = lazy(() => import('./pages/masters/vendors/VendorFormPage'))
 const MastersPage        = lazy(() => import('./pages/masters/MastersPage'))
+const GlCodesPage        = lazy(() => import('./pages/masters/GlCodesPage'))
+const DepartmentsPage    = lazy(() => import('./pages/masters/DepartmentsPage'))
+const CostCentresPage    = lazy(() => import('./pages/masters/CostCentresPage'))
+const TaxCodesPage       = lazy(() => import('./pages/masters/TaxCodesPage'))
 const NotFoundPage       = lazy(() => import('./pages/NotFoundPage'))
 
 function PageLoader() {
@@ -55,13 +59,15 @@ export const router = createBrowserRouter([
           { path: ':id', element: <S><PaymentDetailPage /></S> },
         ]},
         { path: 'masters', children: [
-          { index: true, element: <S><MastersPage /></S> },
-          { path: 'vendors', children: [
-            { index: true,        element: <S><VendorListPage /></S> },
-            { path: 'new',        element: <S><VendorFormPage mode="create" /></S> },
-            { path: ':id',        element: <S><VendorDetailPage /></S> },
-            { path: ':id/edit',   element: <S><VendorFormPage mode="edit" /></S> },
-          ]},
+          { index: true,              element: <S><MastersPage /></S>                        },
+          { path: 'vendors',          element: <S><VendorListPage /></S>                     },
+          { path: 'vendors/new',      element: <S><VendorFormPage mode="create" /></S>       },
+          { path: 'vendors/:id',      element: <S><VendorDetailPage /></S>                   },
+          { path: 'vendors/:id/edit', element: <S><VendorFormPage mode="edit" /></S>         },
+          { path: 'gl-codes',         element: <S><GlCodesPage /></S>                        },
+          { path: 'departments',      element: <S><DepartmentsPage /></S>                    },
+          { path: 'cost-centres',     element: <S><CostCentresPage /></S>                    },
+          { path: 'tax-codes',        element: <S><TaxCodesPage /></S>                       },
         ]},
       ],
     }],
