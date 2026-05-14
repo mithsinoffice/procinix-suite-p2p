@@ -1,4 +1,5 @@
 import { useState, useDeferredValue } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Upload, Eye, Pencil, Clock, CheckCircle, Send } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { http } from '../../lib/http'
@@ -173,6 +174,7 @@ function FullPageForm({ config, record, onSaved, onCancel }: {
 
 export function MasterListScreen({ config }: { config: MasterConfig }) {
   const qc                              = useQueryClient()
+  const navigate                        = useNavigate()
   const [search, setSearch]             = useState('')
   const [activeTab, setActiveTab]       = useState<MasterTab>('ACTIVE')
   const [entityId, setEntityId]         = useState('')
@@ -238,6 +240,13 @@ export function MasterListScreen({ config }: { config: MasterConfig }) {
   // ── List view ──
   return (
     <div className="flex flex-col h-full">
+
+      <div className="flex items-center gap-2 px-4 pt-3 sm:px-6">
+        <button onClick={() => navigate('/masters')}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+          ← Masters
+        </button>
+      </div>
 
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">

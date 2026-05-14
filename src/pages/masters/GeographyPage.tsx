@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, X, Upload } from 'lucide-react'
 import { http } from '../../lib/http'
@@ -378,10 +379,17 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 
 export default function GeographyPage() {
+  const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('countries')
 
   return (
     <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 px-4 pt-3 sm:px-6">
+        <button onClick={() => navigate('/masters')}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+          ← Masters
+        </button>
+      </div>
       {/* Header */}
       <div className="border-b border-border px-6 py-4">
         <h1 className="text-base font-semibold">Geography &amp; Currencies</h1>

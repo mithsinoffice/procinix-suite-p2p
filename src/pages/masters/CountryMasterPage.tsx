@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Clock, CheckCircle } from 'lucide-react'
 import { http } from '../../lib/http'
@@ -113,6 +114,7 @@ function CountryForm({ record, onClose, onSaved }: { record?: Country; onClose: 
 }
 
 export default function CountryMasterPage() {
+  const navigate = useNavigate()
   const qc = useQueryClient()
   const [formOpen, setFormOpen]   = useState(false)
   const [edit, setEdit]           = useState<Country | null>(null)
@@ -145,6 +147,12 @@ export default function CountryMasterPage() {
 
   return (
     <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 px-4 pt-3 sm:px-6">
+        <button onClick={() => navigate('/masters')}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+          ← Masters
+        </button>
+      </div>
       <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
         <div>
           <h1 className="text-base font-semibold">Country Master</h1>
