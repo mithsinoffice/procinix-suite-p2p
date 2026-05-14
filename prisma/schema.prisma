@@ -627,6 +627,15 @@ model TaxRegime {
   vatRate          Decimal? @db.Decimal(5, 2)
   withholdingRate  Decimal? @db.Decimal(5, 2)
   currencyCode     String   @default("INR")
+  effectiveFrom        DateTime? @db.Date
+  effectiveTo          DateTime? @db.Date
+  einvoicingRequired   Boolean   @default(false)
+  einvoicingProvider   String?
+  einvoicingThreshold  Decimal?  @db.Decimal(15, 2)
+  einvoicingFormat     String?
+  placeOfSupplyRuleSet String?
+  kycFieldSchema       Json?
+  taxTypes             Json?
   entities         Entity[]
   @@unique([tenantId, code])
   @@map("tax_regimes")
