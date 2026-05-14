@@ -217,6 +217,13 @@ model Invoice {
   vendor             Vendor        @relation(fields: [vendorId], references: [id])
   lines              InvoiceLine[]
   approvals          ApprovalStep[]
+  channelType        String    @default("MANUAL_UPLOAD")
+  matchScore         Int?
+  matchLane          String?
+  ingestionJobId     String?
+  ocrConfidence      Int?
+  irn                String?
+  isEInvoice         Boolean   @default(false)
   @@unique([tenantId, vendorId, invoiceNumber])
   @@index([tenantId, status, createdAt(sort: Desc)])
   @@index([tenantId, vendorId])
@@ -377,4 +384,46 @@ model AuditLog {
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, createdAt(sort: Desc)])
   @@map("audit_logs")
+}
+
+model InvoiceIngestionJob {
+  id            String   @id @default(uuid())
+  tenantId      String
+  channelType   String
+  status        String   @default("QUEUED")
+  rawFileUrl    String?  @db.Text
+  rawFileBase64 String?  @db.LongText
+  fileName      String?
+  mimeType      String?
+  emailFrom     String?
+  emailSubject  String?
+  extractedData Json?
+  errorMessage  String?  @db.Text
+  invoiceId     String?
+  ocrJobId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@index([tenantId, status])
+  @@index([tenantId, channelType])
+  @@map("invoice_ingestion_jobs")
+}
+
+model InvoiceMatchScore {
+  id                  String   @id @default(uuid())
+  invoiceId           String   @unique
+  tenantId            String
+  vendorScore         Int      @default(0)
+  poScore             Int      @default(0)
+  amountScore         Int      @default(0)
+  grnScore            Int      @default(0)
+  gstScore            Int      @default(0)
+  ocrScore            Int      @default(0)
+  totalScore          Int      @default(0)
+  lane                String
+  isPOInvoice         Boolean  @default(false)
+  guardrailsTriggered Json?
+  scoreBreakdown      Json?
+  createdAt           DateTime @default(now())
+  @@index([tenantId])
+  @@map("invoice_match_scores")
 }
