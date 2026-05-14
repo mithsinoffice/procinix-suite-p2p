@@ -5,6 +5,10 @@ import { useInvoice, useSubmitInvoice, useApproveInvoice, useRejectInvoice } fro
 import { formatINR, formatDate, formatStatus, getStatusColor } from '../../lib/utils/formatters'
 import { PageSkeleton } from '../../components/shared/PageSkeleton'
 import { cn } from '../../lib/utils'
+import { MatchScoreBadge } from '../../components/shared/MatchScoreBadge'
+import { ChannelBadge } from '../../components/shared/ChannelBadge'
+import { useQuery } from '@tanstack/react-query'
+import { http } from '../../lib/http'
 
 export default function InvoiceDetailPage() {
   const { id }       = useParams<{ id: string }>()
@@ -15,6 +19,12 @@ export default function InvoiceDetailPage() {
   const reject       = useRejectInvoice(id ?? '')
   const [rejectNote, setRejectNote] = useState('')
   const [showReject, setShowReject] = useState(false)
+
+  const { data: scoreData } = useQuery({
+    queryKey: ['invoices', id, 'score'],
+    queryFn:  () => http.get<{ guardrailsTriggered: string[] }>(`/api/invoices/${id}/score`),
+    enabled:  !!id && !!inv,
+  })
 
   if (isLoading) return <PageSkeleton />
   if (!inv) return <div className="p-6 text-sm text-muted-foreground">Invoice not found</div>
@@ -78,6 +88,23 @@ export default function InvoiceDetailPage() {
           </button>
         </div>
       )}
+
+      {/* Channel + OCR + Match score */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <ChannelBadge
+          channelType={(inv as any).channelType ?? 'MANUAL_UPLOAD'}
+          ocrConfidence={(inv as any).ocrConfidence}
+          isEInvoice={(inv as any).isEInvoice}
+        />
+        {(inv as any).matchScore !== null && (inv as any).matchScore !== undefined && (
+          <MatchScoreBadge
+            score={(inv as any).matchScore}
+            lane={(inv as any).matchLane ?? 'MANUAL'}
+            guardrails={scoreData?.guardrailsTriggered}
+            compact
+          />
+        )}
+      </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

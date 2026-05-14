@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { OcrUploader } from '../../components/shared/OcrUploader'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Plus, Trash2, Loader2, AlertTriangle } from 'lucide-react'
@@ -120,6 +121,14 @@ export default function InvoiceNewPage() {
           {dupeWarning}
         </div>
       )}
+
+      {/* OCR Upload */}
+      <OcrUploader
+        onIngested={(result) => {
+          // Navigate to the created invoice detail page
+          navigate(`/invoices/${result.invoiceId}`)
+        }}
+      />
 
       <form id="inv-form" onSubmit={handleSubmit(onSubmit)} className="space-y-8">
 
