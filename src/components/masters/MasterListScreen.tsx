@@ -44,7 +44,29 @@ function FormDrawer({ open, onClose, config, record, onSaved }: {
   config: MasterConfig; record?: any; onSaved: () => void
 }) {
   const qc              = useQueryClient()
-  const [form, setForm] = useState<Record<string, unknown>>(record ?? {})
+  const [form, setForm]             = useState<Record<string, unknown>>(record ?? {})
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  function validateField(key: string, value: unknown) {
+    const field = config.fields.find(f => f.key === key)
+    if (!field) return
+    if (field.required && !value) {
+      setFieldErrors(e => ({ ...e, [key]: `${field.label} is required` }))
+    } else {
+      setFieldErrors(e => { const next = { ...e }; delete next[key]; return next })
+    }
+  }
+
+  function validateAll(): boolean {
+    const errs: Record<string, string> = {}
+    for (const field of config.fields) {
+      if (field.required && field.key !== 'code' && !form[field.key]) {
+        errs[field.key] = `${field.label} is required`
+      }
+    }
+    setFieldErrors(errs)
+    return Object.keys(errs).length === 0
+  }
 
   const save = useMutation({
     mutationFn: (submitForApproval: boolean) => {
@@ -103,6 +125,7 @@ function FormDrawer({ open, onClose, config, record, onSaved }: {
                     type="text"
                     value={String(form[field.key] ?? '')}
                     onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                    onBlur={() => validateField(field.key, form[field.key])}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                   />
                 )}
@@ -113,6 +136,7 @@ function FormDrawer({ open, onClose, config, record, onSaved }: {
                     step={field.step ?? '0.01'}
                     value={String(form[field.key] ?? '')}
                     onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                    onBlur={() => validateField(field.key, form[field.key])}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                   />
                 )}
@@ -121,6 +145,7 @@ function FormDrawer({ open, onClose, config, record, onSaved }: {
                   <select
                     value={String(form[field.key] ?? '')}
                     onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                    onBlur={() => validateField(field.key, form[field.key])}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">Select…</option>
@@ -145,9 +170,14 @@ function FormDrawer({ open, onClose, config, record, onSaved }: {
                   <textarea
                     value={String(form[field.key] ?? '')}
                     onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                    onBlur={() => validateField(field.key, form[field.key])}
                     rows={3}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
                   />
+                )}
+
+                {fieldErrors[field.key] && (
+                  <p className="text-xs text-destructive mt-1">{fieldErrors[field.key]}</p>
                 )}
               </div>
             ))}
@@ -158,14 +188,14 @@ function FormDrawer({ open, onClose, config, record, onSaved }: {
         <div className="border-t border-border p-4 space-y-2">
           <div className="flex gap-2">
             <button
-              onClick={() => save.mutate(false)}
+              onClick={() => { if (!validateAll()) return; save.mutate(false) }}
               disabled={save.isPending}
               className="flex-1 flex items-center justify-center gap-1.5 rounded-md border border-input px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60"
             >
               Save as draft
             </button>
             <button
-              onClick={() => save.mutate(true)}
+              onClick={() => { if (!validateAll()) return; save.mutate(true) }}
               disabled={save.isPending}
               className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
             >
@@ -173,7 +203,6 @@ function FormDrawer({ open, onClose, config, record, onSaved }: {
               Submit for approval
             </button>
           </div>
-          {save.isError && <p className="text-xs text-destructive text-center">{(save.error as any)?.message}</p>}
         </div>
       </div>
     </>

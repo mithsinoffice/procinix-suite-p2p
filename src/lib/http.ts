@@ -15,15 +15,28 @@ export class HttpError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+let isRefreshing = false
+
+async function request<T>(path: string, init?: RequestInit, retry = true): Promise<T> {
   const res = await fetch(path, {
     ...init,
-    credentials: 'include', // always send httpOnly cookies
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...init?.headers },
   })
+
+  // Auto-refresh on 401 and retry once
+  if (res.status === 401 && retry && !isRefreshing) {
+    isRefreshing = true
+    try {
+      await fetch('/auth/refresh', { method: 'POST', credentials: 'include' })
+      isRefreshing = false
+      return request<T>(path, init, false) // retry once
+    } catch {
+      isRefreshing = false
+      window.location.href = '/login'
+      throw new HttpError({ code: 'TOKEN_EXPIRED', message: 'Session expired', status: 401 })
+    }
+  }
 
   if (!res.ok) {
     let error: ApiError
