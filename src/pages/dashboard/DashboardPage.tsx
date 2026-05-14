@@ -75,6 +75,7 @@ export default function DashboardPage() {
   const { data: byGl,      isLoading: loadingGl    }  = useSpendByGl()
   const { data: _activity                           }  = useRecentActivity()
 
+  console.log('kpis', kpis)
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 
@@ -92,7 +93,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mt-4">
         {loadingKpis ? (
           <>
             {[...Array(8)].map((_, i) => <KpiSkeleton key={i} />)}
@@ -162,7 +163,7 @@ export default function DashboardPage() {
               <div className="h-full rounded-lg bg-muted animate-pulse" />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trend} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <AreaChart data={trend ?? []} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%"  stopColor="#1D9E75" stopOpacity={0.2} />

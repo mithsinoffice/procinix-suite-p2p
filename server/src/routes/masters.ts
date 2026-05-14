@@ -8,10 +8,16 @@ import {
 } from '../services/master.service.js'
 
 const TABLE_ROUTE_MAP: Record<string, MasterTable> = {
-  'departments':   'department',
-  'gl-codes':      'glCode',
-  'cost-centres':  'costCentre',
-  'tax-codes':     'taxCode',
+  'departments':    'department',
+  'gl-codes':       'glCode',
+  'cost-centres':   'costCentre',
+  'tax-codes':      'taxCode',
+  'designations':   'designation',
+  'entities':       'entity',
+  'locations':      'location',
+  'tax-regimes':    'taxRegime',
+  'workflow-rules': 'workflowRule',
+  'employees':      'employee',
 }
 
 const listSchema = z.object({
@@ -60,6 +66,41 @@ export async function masterRoutes(app: FastifyInstance) {
     const result = { vendors, glCodes, departments, costCentres, taxCodes }
     await cacheSet(app.redis, cacheKey, result, TTL.MASTER_DATA)
     return reply.send(result)
+  })
+
+  // ── Geography (read-only, system-seeded) ──
+  app.get('/countries', auth, async (_req, reply) => {
+    return reply.send(await app.prisma.country.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }))
+  })
+
+  app.get('/states', auth, async (req, reply) => {
+    const { countryCode = 'IN' } = req.query as any
+    return reply.send(await app.prisma.state.findMany({ where: { countryCode, isActive: true }, orderBy: { name: 'asc' } }))
+  })
+
+  app.get('/cities', auth, async (req, reply) => {
+    const { stateCode } = req.query as any
+    const where: any = { isActive: true }
+    if (stateCode) where.stateCode = stateCode
+    return reply.send(await app.prisma.city.findMany({ where, orderBy: { name: 'asc' }, take: 100 }))
+  })
+
+  // ── Currencies (system-wide) ──
+  app.get('/currencies', auth, async (_req, reply) => {
+    return reply.send(await app.prisma.currency.findMany({ where: { isActive: true }, orderBy: { code: 'asc' } }))
+  })
+
+  // ── Financial Years ──
+  app.get('/financial-years', auth, async (req, reply) => {
+    return reply.send(await app.prisma.financialYear.findMany({ where: { tenantId: req.tenant.id }, orderBy: { startDate: 'desc' } }))
+  })
+
+  app.post('/financial-years', auth, async (req, reply) => {
+    const { code, name, startDate, endDate, isCurrent = false } = req.body as any
+    const fy = await app.prisma.financialYear.create({
+      data: { tenantId: req.tenant.id, code, name, startDate: new Date(startDate), endDate: new Date(endDate), isCurrent, status: 'ACTIVE', isActive: true, createdByUserId: req.user.sub },
+    })
+    return reply.code(201).send({ id: fy.id })
   })
 
   // ── Generic CRUD for all masters ──

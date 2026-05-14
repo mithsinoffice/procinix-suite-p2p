@@ -4,48 +4,52 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --primary: 161 70% 36%;
+    /* Procinix Brand — Mercury Teal + Opal White */
+    --background:        0 0% 97%;          /* #F6F9FC Opal White */
+    --foreground:        210 15% 10%;       /* Near black */
+    --muted:             200 10% 90%;       /* #E1E6EA Silver Grey */
+    --muted-foreground:  200 8% 43%;        /* #6E7A82 Mercury Grey */
+    --popover:           0 0% 100%;
+    --popover-foreground: 210 15% 10%;
+    --card:              0 0% 100%;
+    --card-foreground:   210 15% 10%;
+    --border:            200 10% 88%;       /* Silver border */
+    --input:             200 10% 88%;
+    --primary:           185 100% 36%;      /* #00A9B7 Primary Teal */
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
+    --secondary:         200 10% 90%;
+    --secondary-foreground: 210 15% 10%;
+    --accent:            185 100% 36%;
+    --accent-foreground: 0 0% 100%;
+    --destructive:       355 100% 65%;      /* #FF4E5B Error Red */
     --destructive-foreground: 0 0% 100%;
-    --ring: 161 70% 36%;
-    --radius: 0.5rem;
+    --success:           162 100% 39%;      /* #00C796 Success Green */
+    --warning:           40 100% 68%;       /* #FFC75E Warning Amber */
+    --ring:              185 100% 36%;
+    --radius:            0.5rem;
   }
 
   .dark {
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
-    --card: 222 47% 10%;
-    --card-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --primary: 161 70% 45%;
+    /* Mercury Black Dark Theme */
+    --background:        210 32% 5%;        /* #0A0F14 Tech Black */
+    --foreground:        200 10% 92%;
+    --muted:             210 20% 14%;       /* #1A1F25 Graphite */
+    --muted-foreground:  200 8% 55%;
+    --popover:           210 25% 10%;
+    --popover-foreground: 200 10% 92%;
+    --card:              210 25% 10%;       /* #1A1F25 Graphite cards */
+    --card-foreground:   200 10% 92%;
+    --border:            210 18% 18%;       /* #2A3A42 Slate */
+    --input:             210 18% 18%;
+    --primary:           185 100% 36%;      /* #00A9B7 stays same */
     --primary-foreground: 0 0% 100%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62% 50%;
+    --secondary:         210 20% 14%;
+    --secondary-foreground: 200 10% 92%;
+    --accent:            185 100% 36%;
+    --accent-foreground: 0 0% 100%;
+    --destructive:       355 100% 65%;
     --destructive-foreground: 0 0% 100%;
-    --ring: 161 70% 45%;
+    --ring:              185 100% 36%;
   }
 
   * { @apply border-border; }

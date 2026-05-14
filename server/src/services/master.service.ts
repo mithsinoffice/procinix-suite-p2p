@@ -7,17 +7,23 @@ import { ok, err, Errors, type Result } from '../lib/result.js'
 import { writeAuditLog } from '../lib/audit.js'
 import { cacheInvalidate, CacheKeys, type Redis } from '../lib/redis.js'
 
-export type MasterTable = 'department' | 'glCode' | 'costCentre' | 'taxCode'
+export type MasterTable = 'department' | 'glCode' | 'costCentre' | 'taxCode' | 'designation' | 'entity' | 'location' | 'taxRegime' | 'workflowRule' | 'employee'
 
 interface Ctx { tenantId: string; userId: string; ip?: string }
 
 // ── Map table name to Prisma delegate ──
 function getDelegate(prisma: PrismaClient, table: MasterTable) {
   const map: Record<MasterTable, any> = {
-    department:  prisma.department,
-    glCode:      prisma.glCode,
-    costCentre:  prisma.costCentre,
-    taxCode:     prisma.taxCode,
+    department:   prisma.department,
+    glCode:       prisma.glCode,
+    costCentre:   prisma.costCentre,
+    taxCode:      prisma.taxCode,
+    designation:  prisma.designation,
+    entity:       prisma.entity,
+    location:     prisma.location,
+    taxRegime:    prisma.taxRegime,
+    workflowRule: prisma.workflowRule,
+    employee:     prisma.employee,
   }
   return map[table]
 }

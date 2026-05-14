@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom'
+import { AppShell } from './components/layout/AppShell'
 import { useAuthStore } from './stores/auth.store'
 
 const LoginPage          = lazy(() => import('./pages/auth/LoginPage'))
@@ -18,6 +19,14 @@ const GlCodesPage        = lazy(() => import('./pages/masters/GlCodesPage'))
 const DepartmentsPage    = lazy(() => import('./pages/masters/DepartmentsPage'))
 const CostCentresPage    = lazy(() => import('./pages/masters/CostCentresPage'))
 const TaxCodesPage       = lazy(() => import('./pages/masters/TaxCodesPage'))
+const DesignationsPage   = lazy(() => import('./pages/masters/DesignationsPage'))
+const EntitiesPage       = lazy(() => import('./pages/masters/EntitiesPage'))
+const LocationsPage      = lazy(() => import('./pages/masters/LocationsPage'))
+const EmployeesPage      = lazy(() => import('./pages/masters/EmployeesPage'))
+const WorkflowRulesPage  = lazy(() => import('./pages/masters/WorkflowRulesPage'))
+const TaxRegimesPage     = lazy(() => import('./pages/masters/TaxRegimesPage'))
+const FinancialYearsPage = lazy(() => import('./pages/masters/FinancialYearsPage'))
+const GeographyPage      = lazy(() => import('./pages/masters/GeographyPage'))
 const NotFoundPage       = lazy(() => import('./pages/NotFoundPage'))
 
 function PageLoader() {
@@ -43,8 +52,7 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [{
-      // AppShell will be imported here once built
-      element: <Outlet />,
+      element: <AppShell />,
       children: [
         { index: true, element: <Navigate to="/dashboard" replace /> },
         { path: 'dashboard', element: <S><DashboardPage /></S> },
@@ -67,7 +75,15 @@ export const router = createBrowserRouter([
           { path: 'gl-codes',         element: <S><GlCodesPage /></S>                        },
           { path: 'departments',      element: <S><DepartmentsPage /></S>                    },
           { path: 'cost-centres',     element: <S><CostCentresPage /></S>                    },
-          { path: 'tax-codes',        element: <S><TaxCodesPage /></S>                       },
+          { path: 'tax-codes',         element: <S><TaxCodesPage /></S>                        },
+          { path: 'designations',      element: <S><DesignationsPage /></S>                    },
+          { path: 'entities',          element: <S><EntitiesPage /></S>                        },
+          { path: 'locations',         element: <S><LocationsPage /></S>                       },
+          { path: 'employees',         element: <S><EmployeesPage /></S>                       },
+          { path: 'workflow-rules',    element: <S><WorkflowRulesPage /></S>                   },
+          { path: 'tax-regimes',       element: <S><TaxRegimesPage /></S>                      },
+          { path: 'financial-years',   element: <S><FinancialYearsPage /></S>                  },
+          { path: 'geography',         element: <S><GeographyPage /></S>                       },
         ]},
       ],
     }],

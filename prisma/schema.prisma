@@ -443,3 +443,213 @@ model InvoiceMatchScore {
   @@index([tenantId])
   @@map("invoice_match_scores")
 }
+
+model Country {
+  id       String  @id @default(uuid())
+  code     String  @unique
+  name     String
+  dialCode String?
+  currency String?
+  isActive Boolean @default(true)
+  @@map("countries")
+}
+
+model State {
+  id          String  @id @default(uuid())
+  code        String
+  name        String
+  countryCode String  @default("IN")
+  gstCode     String?
+  isActive    Boolean @default(true)
+  @@unique([code, countryCode])
+  @@map("states")
+}
+
+model City {
+  id        String  @id @default(uuid())
+  name      String
+  stateCode String
+  isActive  Boolean @default(true)
+  @@map("cities")
+}
+
+model Designation {
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  name             String
+  level            Int?
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  @@unique([tenantId, code])
+  @@map("designations")
+}
+
+model Entity {
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  name             String
+  gstin            String?
+  pan              String?
+  tan              String?
+  addressLine1     String?
+  city             String?
+  state            String?
+  pincode          String?
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  @@unique([tenantId, code])
+  @@map("entities")
+}
+
+model Location {
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  name             String
+  entityId         String?
+  addressLine1     String?
+  city             String?
+  state            String?
+  pincode          String?
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  @@unique([tenantId, code])
+  @@map("locations")
+}
+
+model Currency {
+  id           String  @id @default(uuid())
+  code         String  @unique
+  name         String
+  symbol       String
+  exchangeRate Decimal @db.Decimal(12, 6) @default(1)
+  isBase       Boolean @default(false)
+  isActive     Boolean @default(true)
+  @@map("currencies")
+}
+
+model FinancialYear {
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  name             String
+  startDate        DateTime  @db.Date
+  endDate          DateTime  @db.Date
+  isCurrent        Boolean   @default(false)
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  @@unique([tenantId, code])
+  @@map("financial_years")
+}
+
+model HolidayCalendar {
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  name             String
+  year             Int
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  holidays         Holiday[]
+  @@unique([tenantId, code])
+  @@map("holiday_calendars")
+}
+
+model Holiday {
+  id         String          @id @default(uuid())
+  calendarId String
+  name       String
+  date       DateTime        @db.Date
+  type       String          @default("PUBLIC")
+  calendar   HolidayCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  @@map("holidays")
+}
+
+model TaxRegime {
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  name             String
+  description      String?
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  @@unique([tenantId, code])
+  @@map("tax_regimes")
+}
+
+model WorkflowRule {
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  name             String
+  module           String
+  amountFrom       Decimal?  @db.Decimal(15, 2)
+  amountTo         Decimal?  @db.Decimal(15, 2)
+  levels           Int       @default(1)
+  approverL1       String?
+  approverL2       String?
+  approverL3       String?
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  @@unique([tenantId, code])
+  @@map("workflow_rules")
+}
+
+model Employee {
+  id               String    @id @default(uuid())
+  tenantId         String
+  code             String
+  name             String
+  email            String?
+  mobile           String?
+  departmentId     String?
+  designationId    String?
+  locationId       String?
+  managerId        String?
+  joiningDate      DateTime? @db.Date
+  pan              String?
+  isActive         Boolean   @default(true)
+  status           String    @default("ACTIVE")
+  createdByUserId  String?
+  approvedByUserId String?
+  approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  @@unique([tenantId, code])
+  @@map("employees")
+}
