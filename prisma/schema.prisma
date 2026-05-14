@@ -344,17 +344,28 @@ enum PaymentStatus {
 }
 
 model WorkflowInstance {
-  id             String         @id @default(uuid())
-  tenantId       String
-  entityType     String
-  entityId       String
-  currentState   String
-  xstateSnapshot Json?
-  startedAt      DateTime       @default(now())
-  completedAt    DateTime?
-  slaDeadline    DateTime?
-  steps          ApprovalStep[]
+  id                String    @id @default(uuid())
+  tenantId          String
+  definitionId      String?
+  entityType        String
+  entityId          String
+  status            String    @default("IN_PROGRESS")
+  currentStageOrder Int       @default(1)
+  onHoldReason      String?
+  onHoldBy          String?
+  onHoldAt          DateTime?
+  releasedBy        String?
+  releasedAt        DateTime?
+  releaseRemarks    String?
+  startedAt         DateTime  @default(now())
+  completedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  definition        WorkflowDefinition? @relation(fields: [definitionId], references: [id])
+  stages            WorkflowInstanceStage[]
+  chats             WorkflowChat[]
   @@index([tenantId, entityType, entityId])
+  @@index([tenantId, status])
   @@map("workflow_instances")
 }
 
@@ -370,7 +381,6 @@ model ApprovalStep {
   actionAt           DateTime?
   delegatedTo        String?
   createdAt          DateTime          @default(now())
-  workflowInstance   WorkflowInstance? @relation(fields: [workflowInstanceId], references: [id])
   invoice            Invoice?          @relation(fields: [invoiceId], references: [id])
   @@index([tenantId, status])
   @@index([approverId, status])
@@ -445,31 +455,50 @@ model InvoiceMatchScore {
 }
 
 model Country {
-  id       String  @id @default(uuid())
-  code     String  @unique
-  name     String
-  dialCode String?
-  currency String?
-  isActive Boolean @default(true)
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  isoCode3        String?
+  localName       String?
+  region          String?
+  dialCode        String?
+  currency        String?
+  isActive        Boolean  @default(true)
+  status          String   @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
   @@map("countries")
 }
 
 model State {
-  id          String  @id @default(uuid())
-  code        String
-  name        String
-  countryCode String  @default("IN")
-  gstCode     String?
-  isActive    Boolean @default(true)
+  id              String   @id @default(uuid())
+  code            String
+  name            String
+  countryCode     String   @default("IN")
+  gstCode         String?
+  isActive        Boolean  @default(true)
+  status          String   @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
   @@unique([code, countryCode])
   @@map("states")
 }
 
 model City {
-  id        String  @id @default(uuid())
-  name      String
-  stateCode String
-  isActive  Boolean @default(true)
+  id              String   @id @default(uuid())
+  name            String
+  stateCode       String
+  countryCode     String?
+  timezone        String?
+  isCapital       Boolean  @default(false)
+  isMetro         Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  status          String   @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   @@map("cities")
 }
 
@@ -537,6 +566,11 @@ model Location {
   city             String?
   state            String?
   pincode          String?
+  locationType     String?
+  spocName         String?
+  spocEmail        String?
+  spocMobile       String?
+  spocDescription  String?
   isActive         Boolean   @default(true)
   status           String    @default("ACTIVE")
   createdByUserId  String?
@@ -686,4 +720,110 @@ model Employee {
   updatedAt        DateTime  @updatedAt
   @@unique([tenantId, code])
   @@map("employees")
+}
+
+model WorkflowDefinition {
+  id              String   @id @default(uuid())
+  tenantId        String
+  code            String
+  name            String
+  description     String?
+  module          String
+  entityId        String?
+  departmentId    String?
+  priority        Int      @default(0)
+  isDefault       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  status          String   @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  stages          WorkflowDefinitionStage[]
+  conditions      WorkflowDefinitionCondition[]
+  instances       WorkflowInstance[]
+  @@unique([tenantId, code])
+  @@index([tenantId, module])
+  @@map("workflow_definitions")
+}
+
+model WorkflowDefinitionStage {
+  id               String   @id @default(uuid())
+  definitionId     String
+  order            Int
+  name             String
+  approverType     String   @default("ROLE")
+  approverRole     String?
+  approverUserId   String?
+  slaHours         Int?
+  escalateToRole   String?
+  autoApproveBelow Decimal? @db.Decimal(15, 2)
+  allowDelegation  Boolean  @default(false)
+  requiresComment  Boolean  @default(false)
+  onReject         String   @default("RETURN_TO_DRAFT")
+  definition       WorkflowDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  @@index([definitionId])
+  @@map("workflow_definition_stages")
+}
+
+model WorkflowDefinitionCondition {
+  id           String   @id @default(uuid())
+  definitionId String
+  field        String
+  operator     String
+  value        String
+  logicGroup   String   @default("AND")
+  definition   WorkflowDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  @@index([definitionId])
+  @@map("workflow_definition_conditions")
+}
+
+model WorkflowInstanceStage {
+  id            String    @id @default(uuid())
+  instanceId    String
+  tenantId      String
+  stageOrder    Int
+  stageName     String
+  approverRole  String?
+  assignedTo    String?
+  status        String    @default("PENDING")
+  comments      String?   @db.Text
+  actionAt      DateTime?
+  actionBy      String?
+  slaDeadline   DateTime?
+  escalatedAt   DateTime?
+  escalatedTo   String?
+  delegatedTo   String?
+  rejectionMode String?
+  instance      WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  @@index([instanceId])
+  @@index([tenantId, assignedTo, status])
+  @@map("workflow_instance_stages")
+}
+
+model WorkflowChat {
+  id          String               @id @default(uuid())
+  instanceId  String
+  tenantId    String
+  senderId    String
+  senderName  String
+  senderRole  String?
+  message     String               @db.Text
+  messageType String               @default("COMMENT")
+  createdAt   DateTime             @default(now())
+  attachments WorkflowAttachment[]
+  instance    WorkflowInstance     @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  @@index([instanceId])
+  @@map("workflow_chats")
+}
+
+model WorkflowAttachment {
+  id        String       @id @default(uuid())
+  chatId    String
+  fileName  String
+  fileUrl   String       @db.Text
+  mimeType  String
+  fileSize  Int?
+  createdAt DateTime     @default(now())
+  chat      WorkflowChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  @@map("workflow_attachments")
 }

@@ -12,7 +12,6 @@ import {
 } from '../../components/masters/MasterFormLayout'
 
 interface TaxRegime { id: string; code: string; name: string; regimeType: string; countryCode: string; requiresGstin: boolean; requiresVat: boolean; tdsApplicable: boolean; vatRate?: number }
-interface Country   { code: string; name: string; currency: string }
 interface Entity    {
   id: string; code: string; name: string; shortName?: string; entityType?: string;
   gstin?: string; pan?: string; tan?: string; vatNumber?: string; cinNumber?: string; incorporationDate?: string;
@@ -32,10 +31,6 @@ const ENTITY_TYPES = [
 
 function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: () => void; onCancel: () => void }) {
   const qc = useQueryClient()
-  const { data: countries = [] } = useQuery({
-    queryKey: ['masters', 'countries'],
-    queryFn:  () => http.get<Country[]>('/api/masters/countries'),
-  })
   const [form, setForm]     = useState<Record<string, unknown>>(record ? { ...record } : { countryCode: 'IN', entityType: 'SUBSIDIARY' })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -54,7 +49,6 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
     }
   }, [taxRegimes])
 
-  console.log('[Entity] countryCode:', selectedCountry, 'regimes:', taxRegimes.length)
 
   const selectedRegime = taxRegimes.find((r: TaxRegime) => r.id === form.taxRegimeId)
   const isGst          = selectedRegime?.regimeType === 'GST'
@@ -125,12 +119,15 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
       <FormSection title="B. Country &amp; Tax Regime">
         {/* Col 1 */}
         <FormField label="Country" required>
-          <FormSelect
+          <ApiSelect
+            endpoint="/api/masters/countries"
+            queryKey={['masters', 'countries']}
             value={String(form.countryCode ?? 'IN')}
-            onChange={e => { set('countryCode', e.target.value); set('taxRegimeId', '') }}
-          >
-            {countries.map((c: Country) => <option key={c.code} value={c.code}>{c.name}</option>)}
-          </FormSelect>
+            onChange={v => { set('countryCode', v); set('taxRegimeId', '') }}
+            valueKey="code"
+            labelKey="name"
+            flagKey="code"
+          />
         </FormField>
         {/* Col 2 */}
         <FormField label="Tax regime" required>

@@ -65,8 +65,11 @@ const MASTER_GROUPS: { group: string; color: string; masters: MasterDef[] }[] = 
     group: 'Geography & Localisation',
     color: 'text-purple-600',
     masters: [
-      { key: 'geography', title: 'Countries & States', desc: 'System-seeded country and state data',     icon: Globe,      iconBg: 'bg-purple-50',  iconColor: 'text-purple-600',  to: '/masters/geography',       countApi: '/api/masters/countries',             status: 'live'        },
-      { key: 'holiday',   title: 'Holiday Calendar',   desc: 'Public and optional holiday schedules',    icon: Flag,       iconBg: 'bg-fuchsia-50', iconColor: 'text-fuchsia-600', to: '/masters/geography',       countApi: undefined,                            status: 'coming_soon' },
+      { key: 'country',  title: 'Countries',       desc: 'Country master with flags and tax regime mapping', icon: Globe,     iconBg: 'bg-purple-50',  iconColor: 'text-purple-600',  to: '/masters/countries',  countApi: '/api/masters/countries',  status: 'live'        },
+      { key: 'state',    title: 'States',          desc: 'States and provinces with GST code',               icon: MapPin,    iconBg: 'bg-violet-50',  iconColor: 'text-violet-600',  to: '/masters/states',     countApi: '/api/masters/states',     status: 'live'        },
+      { key: 'city',     title: 'Cities',          desc: 'Cities cascading from Country → State',            icon: Building2, iconBg: 'bg-fuchsia-50', iconColor: 'text-fuchsia-600', to: '/masters/cities',     countApi: '/api/masters/cities',     status: 'live'        },
+      { key: 'currency', title: 'Currencies',      desc: 'Currency master with symbol and exchange rates',   icon: Wallet,    iconBg: 'bg-green-50',   iconColor: 'text-green-600',   to: '/masters/geography',  countApi: '/api/masters/currencies', status: 'live'        },
+      { key: 'holiday',  title: 'Holiday Calendar', desc: 'Public and optional holiday schedules',           icon: Flag,      iconBg: 'bg-pink-50',    iconColor: 'text-pink-600',    to: '/masters/geography',  countApi: undefined,                 status: 'coming_soon' },
     ],
   },
 ]

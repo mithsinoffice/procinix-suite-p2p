@@ -8,7 +8,8 @@
 import type { PrismaClient } from '@prisma/client'
 import type { OcrInvoiceData } from './gemini-ocr.service.js'
 
-const STP_THRESHOLD    = Number(process.env.STP_SCORE_THRESHOLD ?? 95)
+import { getStpThreshold } from './workflow-engine.service.js'
+
 const STP_AMOUNT_CEIL  = Number(process.env.STP_AMOUNT_CEILING  ?? 500000)
 
 export type ApLane = 'STP' | 'REVIEW' | 'MANUAL'
@@ -141,10 +142,10 @@ export async function calculateMatchScore(
 
   // ── Assign lane ──
   let lane: ApLane
-  if (guardrails.length > 0)            lane = 'MANUAL'
-  else if (totalScore >= STP_THRESHOLD) lane = 'STP'
-  else if (totalScore >= 60)            lane = 'REVIEW'
-  else                                  lane = 'MANUAL'
+  if (guardrails.length > 0)                           lane = 'MANUAL'
+  else if (totalScore >= getStpThreshold(isPOInvoice)) lane = 'STP'
+  else if (totalScore >= 60)                           lane = 'REVIEW'
+  else                                                  lane = 'MANUAL'
 
   // ── Persist match score ──
   await prisma.invoiceMatchScore.upsert({

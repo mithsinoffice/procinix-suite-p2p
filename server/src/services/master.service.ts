@@ -33,12 +33,14 @@ export async function listMaster(
   prisma: PrismaClient,
   table: MasterTable,
   tenantId: string,
-  filter: { search?: string; status?: string; cursor?: string; take?: number }
+  filter: { search?: string; status?: string; cursor?: string; take?: number; mine?: boolean; userId?: string; entityId?: string }
 ) {
   const delegate = getDelegate(prisma, table)
   const take     = filter.take ?? 50
   const where: any = { tenantId }
-  if (filter.status) where.status = filter.status
+  if (filter.status)                       where.status           = filter.status
+  if (filter.mine && filter.userId)        where.createdByUserId  = filter.userId
+  if (filter.entityId)                     where.entityId         = filter.entityId
   if (filter.search) where.OR = [
     { name: { contains: filter.search } },
     { code: { contains: filter.search } },

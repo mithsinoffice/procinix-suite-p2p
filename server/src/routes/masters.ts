@@ -21,10 +21,12 @@ const TABLE_ROUTE_MAP: Record<string, MasterTable> = {
 }
 
 const listSchema = z.object({
-  search: z.string().optional(),
-  status: z.string().optional(),
-  cursor: z.string().optional(),
-  take:   z.coerce.number().int().min(1).max(200).default(50),
+  search:   z.string().optional(),
+  status:   z.string().optional(),
+  cursor:   z.string().optional(),
+  take:     z.coerce.number().int().min(1).max(200).default(50),
+  mine:     z.coerce.boolean().default(false),
+  entityId: z.string().optional(),
 })
 
 const createSchema = z.object({
@@ -68,26 +70,99 @@ export async function masterRoutes(app: FastifyInstance) {
     return reply.send(result)
   })
 
-  // ── Geography (read-only, system-seeded) ──
-  app.get('/countries', auth, async (_req, reply) => {
-    return reply.send(await app.prisma.country.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }))
+  // ── Country CRUD ──
+  app.get('/countries', auth, async (req, reply) => {
+    const { status, search } = req.query as any
+    const where: any = {}
+    if (status) where.status = status
+    else        where.isActive = true
+    if (search) where.OR = [{ name: { contains: search } }, { code: { contains: search } }]
+    return reply.send(await app.prisma.country.findMany({ where, orderBy: { name: 'asc' } }))
+  })
+  app.post('/countries', auth, async (req, reply) => {
+    const { code, name, isoCode3, localName, region, dialCode, currency, status = 'ACTIVE' } = req.body as any
+    const row = await app.prisma.country.create({ data: { code: code.toUpperCase(), name, isoCode3, localName, region, dialCode, currency, status } })
+    return reply.code(201).send(row)
+  })
+  app.put('/countries/:code', auth, async (req, reply) => {
+    const { submitForApproval: _sf, ...data } = req.body as any
+    const row = await app.prisma.country.update({ where: { code: (req.params as any).code }, data })
+    return reply.send(row)
+  })
+  app.post('/countries/:code/approve', auth, async (req, reply) => {
+    const row = await app.prisma.country.update({ where: { code: (req.params as any).code }, data: { status: 'ACTIVE' } })
+    return reply.send(row)
+  })
+  app.get('/countries/:code/audit', auth, async (req, reply) => {
+    const logs = await app.prisma.auditLog.findMany({
+      where:   { tenantId: req.tenant.id, entityType: 'country', entityId: (req.params as any).code },
+      orderBy: { createdAt: 'desc' }, take: 50,
+    })
+    return reply.send(logs)
   })
 
+  // ── State CRUD ──
   app.get('/states', auth, async (req, reply) => {
-    const { countryCode = 'IN' } = req.query as any
-    return reply.send(await app.prisma.state.findMany({ where: { countryCode, isActive: true }, orderBy: { name: 'asc' } }))
+    const { countryCode, status, search } = req.query as any
+    const where: any = {}
+    if (status) where.status = status
+    else        where.isActive = true
+    if (countryCode) where.countryCode = countryCode
+    if (search) where.OR = [{ name: { contains: search } }, { code: { contains: search } }]
+    return reply.send(await app.prisma.state.findMany({ where, orderBy: { name: 'asc' } }))
+  })
+  app.post('/states', auth, async (req, reply) => {
+    const { code, name, countryCode, gstCode, status = 'ACTIVE' } = req.body as any
+    const row = await app.prisma.state.create({ data: { code, name, countryCode, gstCode, status } })
+    return reply.code(201).send(row)
+  })
+  app.put('/states/:id', auth, async (req, reply) => {
+    const { submitForApproval: _sf, ...data } = req.body as any
+    const row = await app.prisma.state.update({ where: { id: (req.params as any).id }, data })
+    return reply.send(row)
+  })
+  app.post('/states/:id/approve', auth, async (req, reply) => {
+    const row = await app.prisma.state.update({ where: { id: (req.params as any).id }, data: { status: 'ACTIVE' } })
+    return reply.send(row)
   })
 
+  // ── City CRUD ──
   app.get('/cities', auth, async (req, reply) => {
-    const { stateCode } = req.query as any
-    const where: any = { isActive: true }
-    if (stateCode) where.stateCode = stateCode
-    return reply.send(await app.prisma.city.findMany({ where, orderBy: { name: 'asc' }, take: 100 }))
+    const { stateCode, countryCode, status, search } = req.query as any
+    const where: any = {}
+    if (status) where.status = status
+    else        where.isActive = true
+    if (stateCode)   where.stateCode   = stateCode
+    if (countryCode) where.countryCode = countryCode
+    if (search) where.OR = [{ name: { contains: search } }]
+    return reply.send(await app.prisma.city.findMany({ where, orderBy: { name: 'asc' }, take: 200 }))
+  })
+  app.post('/cities', auth, async (req, reply) => {
+    const { submitForApproval: _sf, ...data } = req.body as any
+    const row = await app.prisma.city.create({ data: { ...data, status: data.status ?? 'ACTIVE' } })
+    return reply.code(201).send(row)
+  })
+  app.put('/cities/:id', auth, async (req, reply) => {
+    const { submitForApproval: _sf, ...data } = req.body as any
+    const row = await app.prisma.city.update({ where: { id: (req.params as any).id }, data })
+    return reply.send(row)
+  })
+  app.post('/cities/:id/approve', auth, async (req, reply) => {
+    const row = await app.prisma.city.update({ where: { id: (req.params as any).id }, data: { status: 'ACTIVE' } })
+    return reply.send(row)
   })
 
-  // ── Currencies (system-wide) ──
-  app.get('/currencies', auth, async (_req, reply) => {
-    return reply.send(await app.prisma.currency.findMany({ where: { isActive: true }, orderBy: { code: 'asc' } }))
+  // ── Currency CRUD ──
+  app.get('/currencies', auth, async (_req, reply) =>
+    reply.send(await app.prisma.currency.findMany({ where: { isActive: true }, orderBy: { code: 'asc' } }))
+  )
+  app.post('/currencies', auth, async (req, reply) => {
+    const row = await app.prisma.currency.create({ data: req.body as any })
+    return reply.code(201).send(row)
+  })
+  app.put('/currencies/:code', auth, async (req, reply) => {
+    const row = await app.prisma.currency.update({ where: { code: (req.params as any).code }, data: req.body as any })
+    return reply.send(row)
   })
 
   // ── Tax regimes by country (for entity form cascade) ──
@@ -141,7 +216,10 @@ export async function masterRoutes(app: FastifyInstance) {
     // List
     app.get(`/${route}`, auth, async (req, reply) => {
       const filter = listSchema.parse(req.query)
-      return reply.send(await listMaster(app.prisma, table, req.tenant.id, filter))
+      return reply.send(await listMaster(app.prisma, table, req.tenant.id, {
+        ...filter,
+        userId: req.user.sub,
+      }))
     })
 
     // Get one

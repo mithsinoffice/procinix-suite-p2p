@@ -11,11 +11,19 @@ export interface MasterDropdowns {
   taxCodes:    { id: string; code: string; description: string; cgstRate: number; sgstRate: number; igstRate: number }[]
 }
 
+export interface EntitySummary { id: string; code: string; name: string }
+
 export function useMasterData() {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated)
   const { data, isLoading } = useQuery({
     queryKey:  ['masters', 'dropdown'],
     queryFn:   () => http.get<MasterDropdowns>('/api/masters/dropdown'),
+    staleTime: STALE_TIMES.MASTER,
+    enabled:   isAuthenticated,
+  })
+  const { data: entities = [] } = useQuery({
+    queryKey:  ['masters', 'entities-list'],
+    queryFn:   () => http.get<{ data: EntitySummary[] }>('/api/masters/entities?take=200&status=ACTIVE').then(r => r.data),
     staleTime: STALE_TIMES.MASTER,
     enabled:   isAuthenticated,
   })
@@ -25,6 +33,7 @@ export function useMasterData() {
     departments: data?.departments ?? [],
     costCentres: data?.costCentres ?? [],
     taxCodes:    data?.taxCodes    ?? [],
+    entities,
     isLoading,
   }
 }

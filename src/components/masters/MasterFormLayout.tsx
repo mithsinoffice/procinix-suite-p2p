@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { cn } from '../../lib/utils'
 import { Send } from 'lucide-react'
 import { http } from '../../lib/http'
+import { getCountryFlag } from '../../lib/utils/country'
 
 export function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -146,7 +147,8 @@ export function FormFooter({
 
 export function ApiSelect({
   endpoint, queryKey, value, onChange, valueKey = 'id', labelKey = 'name',
-  placeholder = 'Select…', autoSelect = false, className,
+  placeholder = 'Select…', autoSelect = false, flagKey, enabled = true,
+  dependsOn: _dependsOn, className,
 }: {
   endpoint:    string
   queryKey:    unknown[]
@@ -156,12 +158,16 @@ export function ApiSelect({
   labelKey?:   string
   placeholder?: string
   autoSelect?: boolean
+  flagKey?:    string
+  enabled?:    boolean
+  dependsOn?:  unknown
   className?:  string
 }) {
   const { data: options = [] } = useQuery({
     queryKey,
     queryFn:   () => http.get<any[]>(endpoint),
     staleTime: 5 * 60_000,
+    enabled,
   })
 
   useEffect(() => {
@@ -183,7 +189,7 @@ export function ApiSelect({
       <option value="">{placeholder}</option>
       {options.map((o: any) => (
         <option key={String(o[valueKey])} value={String(o[valueKey])}>
-          {String(o[labelKey])}
+          {flagKey && o[flagKey] ? `${getCountryFlag(String(o[flagKey]))} ` : ''}{String(o[labelKey])}
         </option>
       ))}
     </select>

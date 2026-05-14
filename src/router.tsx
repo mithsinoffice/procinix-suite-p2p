@@ -27,6 +27,9 @@ const WorkflowRulesPage  = lazy(() => import('./pages/masters/WorkflowRulesPage'
 const TaxRegimesPage     = lazy(() => import('./pages/masters/TaxRegimesPage'))
 const FinancialYearsPage = lazy(() => import('./pages/masters/FinancialYearsPage'))
 const GeographyPage      = lazy(() => import('./pages/masters/GeographyPage'))
+const CountryMasterPage  = lazy(() => import('./pages/masters/CountryMasterPage'))
+const StateMasterPage    = lazy(() => import('./pages/masters/StateMasterPage'))
+const CityMasterPage     = lazy(() => import('./pages/masters/CityMasterPage'))
 const NotFoundPage       = lazy(() => import('./pages/NotFoundPage'))
 
 function PageLoader() {
@@ -84,6 +87,9 @@ export const router = createBrowserRouter([
           { path: 'tax-regimes',       element: <S><TaxRegimesPage /></S>                      },
           { path: 'financial-years',   element: <S><FinancialYearsPage /></S>                  },
           { path: 'geography',         element: <S><GeographyPage /></S>                       },
+          { path: 'countries',         element: <S><CountryMasterPage /></S>                    },
+          { path: 'states',            element: <S><StateMasterPage /></S>                      },
+          { path: 'cities',            element: <S><CityMasterPage /></S>                       },
         ]},
       ],
     }],

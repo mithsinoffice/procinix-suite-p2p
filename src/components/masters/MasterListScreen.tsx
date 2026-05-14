@@ -10,6 +10,8 @@ import {
   FormSection, FormField, FormInput, FormSelect, FormTextarea,
   AutoCodeField, WorkflowBanner, FormPageHeader, FormFooter,
 } from './MasterFormLayout'
+import { MasterTabs, type MasterTab } from './MasterTabs'
+import { useMasterData } from '../../hooks/useMasterData'
 
 // ── Config type ──
 
@@ -172,19 +174,24 @@ function FullPageForm({ config, record, onSaved, onCancel }: {
 export function MasterListScreen({ config }: { config: MasterConfig }) {
   const qc                              = useQueryClient()
   const [search, setSearch]             = useState('')
-  const [status, setStatus]             = useState('')
+  const [activeTab, setActiveTab]       = useState<MasterTab>('ACTIVE')
+  const [entityId, setEntityId]         = useState('')
   const [formOpen, setFormOpen]         = useState(false)
   const [bulkOpen, setBulkOpen]         = useState(false)
   const [editRecord, setEditRecord]     = useState<any>(null)
   const [auditRecord, setAuditRecord]   = useState<{ id: string; name: string } | null>(null)
-  const deferred = useDeferredValue(search)
+  const deferred  = useDeferredValue(search)
+  const { entities } = useMasterData()
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: [config.entityType, { search: deferred, status }],
+    queryKey: [config.entityType, { search: deferred, tab: activeTab, entityId }],
     queryFn:  () => {
       const p = new URLSearchParams()
       if (deferred) p.set('search', deferred)
-      if (status)   p.set('status', status)
+      if (activeTab === 'ALL')         { /* no status filter */ }
+      else if (activeTab === 'DRAFT')  { p.set('status', 'DRAFT'); p.set('mine', 'true') }
+      else                             p.set('status', activeTab)
+      if (entityId) p.set('entityId', entityId)
       p.set('take', '50')
       return http.get<{ data: any[]; total: number }>(`${config.apiPath}?${p}`)
     },
@@ -256,7 +263,27 @@ export function MasterListScreen({ config }: { config: MasterConfig }) {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Entity scoping */}
+      {entities.length > 1 && (
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-border sm:px-6">
+          <span className="text-xs text-muted-foreground">Entity:</span>
+          <select value={entityId} onChange={e => setEntityId(e.target.value)}
+            className="rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-ring">
+            <option value="">All entities</option>
+            {entities.map(e => <option key={e.id} value={e.id}>{e.code} — {e.name}</option>)}
+          </select>
+        </div>
+      )}
+
+      {/* Status tabs */}
+      <MasterTabs
+        active={activeTab}
+        onChange={tab => { setActiveTab(tab) }}
+        apiPath={config.apiPath}
+        entityId={entityId || undefined}
+      />
+
+      {/* Search bar */}
       <div className="flex items-center gap-2 border-b border-border px-4 py-2 sm:px-6">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -266,16 +293,6 @@ export function MasterListScreen({ config }: { config: MasterConfig }) {
             className="w-full rounded-md border border-input bg-background pl-8 pr-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
-        <select
-          value={status} onChange={e => setStatus(e.target.value)}
-          className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="">All statuses</option>
-          <option value="DRAFT">Draft</option>
-          <option value="PENDING_APPROVAL">Pending approval</option>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
       </div>
 
       {/* Table */}
