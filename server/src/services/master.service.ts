@@ -60,6 +60,29 @@ export async function listMaster(
   return { data, total, nextCursor, hasMore }
 }
 
+const CODE_PREFIXES: Partial<Record<MasterTable, string>> = {
+  department:   'DEPT',
+  glCode:       'GL',
+  costCentre:   'CC',
+  taxCode:      'TAX',
+  designation:  'DESG',
+  entity:       'ENT',
+  location:     'LOC',
+  employee:     'EMP',
+  workflowRule: 'WF',
+  taxRegime:    'TREG',
+}
+
+async function generateCode(
+  prisma: PrismaClient,
+  table: MasterTable,
+  tenantId: string
+): Promise<string> {
+  const prefix = CODE_PREFIXES[table] ?? table.toUpperCase().slice(0, 4)
+  const count  = await getDelegate(prisma, table).count({ where: { tenantId } })
+  return `${prefix}-${String(count + 1).padStart(4, '0')}`
+}
+
 // ── Create (as DRAFT) ──
 export async function createMasterRecord(
   prisma: PrismaClient,
@@ -72,9 +95,10 @@ export async function createMasterRecord(
 ): Promise<Result<{ id: string }>> {
   const delegate = getDelegate(prisma, table)
 
-  // Check code uniqueness
-  if (input.code) {
-    const existing = await delegate.findFirst({ where: { tenantId, code: input.code } })
+  if (!input.code) {
+    input.code = await generateCode(prisma, table, tenantId)
+  } else {
+    const existing = await delegate.findFirst({ where: { tenantId, code: String(input.code) } })
     if (existing) return err(Errors.duplicateRecord(table, 'code', String(input.code)))
   }
 

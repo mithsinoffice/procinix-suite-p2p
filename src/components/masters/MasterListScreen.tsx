@@ -85,7 +85,20 @@ function FormDrawer({ open, onClose, config, record, onSaved }: {
                   {field.label}{field.required && <span className="text-destructive ml-0.5">*</span>}
                 </label>
 
-                {field.type === 'text' && (
+                {field.key === 'code' && !record && (
+                  <div className="w-full rounded-md border border-dashed border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                    Auto-generated on save
+                  </div>
+                )}
+                {field.key === 'code' && record && (
+                  <input
+                    type="text"
+                    value={String(form[field.key] ?? '')}
+                    readOnly
+                    className="w-full rounded-md border border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground cursor-not-allowed"
+                  />
+                )}
+                {field.key !== 'code' && field.type === 'text' && (
                   <input
                     type="text"
                     value={String(form[field.key] ?? '')}
