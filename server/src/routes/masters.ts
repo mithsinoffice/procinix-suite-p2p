@@ -90,6 +90,32 @@ export async function masterRoutes(app: FastifyInstance) {
     return reply.send(await app.prisma.currency.findMany({ where: { isActive: true }, orderBy: { code: 'asc' } }))
   })
 
+  // ── Tax regimes by country (for entity form cascade) ──
+  app.get('/tax-regimes-by-country', auth, async (req, reply) => {
+    const { countryCode } = req.query as { countryCode?: string }
+    const where: any = { tenantId: req.tenant.id, isActive: true }
+    if (countryCode) where.countryCode = countryCode
+    return reply.send(await app.prisma.taxRegime.findMany({ where, orderBy: { name: 'asc' } }))
+  })
+
+  // ── Entity compliance detail ──
+  app.get('/entities/:id/compliance', auth, async (req, reply) => {
+    const entity = await app.prisma.entity.findFirst({
+      where:   { id: (req.params as any).id, tenantId: req.tenant.id },
+      include: { taxRegime: true },
+    })
+    if (!entity) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Entity not found' })
+    return reply.send({
+      ...entity,
+      isGstRegime:   entity.taxRegime?.regimeType === 'GST',
+      isVatRegime:   entity.taxRegime?.regimeType === 'VAT',
+      tdsApplicable: entity.taxRegime?.tdsApplicable ?? false,
+      requiresGstin: entity.taxRegime?.requiresGstin ?? false,
+      requiresVat:   entity.taxRegime?.requiresVat ?? false,
+      vatRate:       entity.taxRegime?.vatRate ?? null,
+    })
+  })
+
   // ── Financial Years ──
   app.get('/financial-years', auth, async (req, reply) => {
     return reply.send(await app.prisma.financialYear.findMany({ where: { tenantId: req.tenant.id }, orderBy: { startDate: 'desc' } }))

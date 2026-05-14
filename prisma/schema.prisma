@@ -502,6 +502,10 @@ model Entity {
   city             String?
   state            String?
   pincode          String?
+  countryCode      String    @default("IN")
+  taxRegimeId      String?
+  vatNumber        String?
+  taxRegime        TaxRegime? @relation(fields: [taxRegimeId], references: [id])
   isActive         Boolean   @default(true)
   status           String    @default("ACTIVE")
   createdByUserId  String?
@@ -603,6 +607,16 @@ model TaxRegime {
   approvedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  countryCode      String   @default("IN")
+  regimeType       String   @default("GST")
+  requiresGstin    Boolean  @default(false)
+  requiresVat      Boolean  @default(false)
+  requiresPan      Boolean  @default(false)
+  tdsApplicable    Boolean  @default(false)
+  vatRate          Decimal? @db.Decimal(5, 2)
+  withholdingRate  Decimal? @db.Decimal(5, 2)
+  currencyCode     String   @default("INR")
+  entities         Entity[]
   @@unique([tenantId, code])
   @@map("tax_regimes")
 }

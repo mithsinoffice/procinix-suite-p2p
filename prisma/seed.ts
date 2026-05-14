@@ -156,6 +156,25 @@ async function main() {
   }
   console.log(`✓ ${currencies.length} currencies`)
 
+  // Tax regimes — seeded globally
+  const taxRegimes = [
+    { code: 'GST-IN', name: 'India GST',        countryCode: 'IN', regimeType: 'GST',         requiresGstin: true,  requiresVat: false, requiresPan: true,  tdsApplicable: true,  vatRate: null, currencyCode: 'INR' },
+    { code: 'VAT-AE', name: 'UAE VAT 5%',        countryCode: 'AE', regimeType: 'VAT',         requiresGstin: false, requiresVat: true,  requiresPan: false, tdsApplicable: false, vatRate: 5,    currencyCode: 'AED' },
+    { code: 'VAT-GB', name: 'UK VAT 20%',         countryCode: 'GB', regimeType: 'VAT',         requiresGstin: false, requiresVat: true,  requiresPan: false, tdsApplicable: false, vatRate: 20,   currencyCode: 'GBP' },
+    { code: 'VAT-DE', name: 'Germany VAT 19%',    countryCode: 'DE', regimeType: 'VAT',         requiresGstin: false, requiresVat: true,  requiresPan: false, tdsApplicable: false, vatRate: 19,   currencyCode: 'EUR' },
+    { code: 'VAT-SG', name: 'Singapore GST 9%',   countryCode: 'SG', regimeType: 'VAT',         requiresGstin: false, requiresVat: true,  requiresPan: false, tdsApplicable: false, vatRate: 9,    currencyCode: 'SGD' },
+    { code: 'WHT-US', name: 'US Withholding Tax', countryCode: 'US', regimeType: 'WITHHOLDING', requiresGstin: false, requiresVat: false, requiresPan: false, tdsApplicable: false, vatRate: null, currencyCode: 'USD' },
+    { code: 'NONE',   name: 'No Tax / Exempt',    countryCode: '',   regimeType: 'NONE',        requiresGstin: false, requiresVat: false, requiresPan: false, tdsApplicable: false, vatRate: null, currencyCode: 'USD' },
+  ]
+  for (const tr of taxRegimes) {
+    await prisma.taxRegime.upsert({
+      where:  { tenantId_code: { tenantId: tenant.id, code: tr.code } },
+      update: {},
+      create: { tenantId, ...tr, isActive: true, status: 'ACTIVE' },
+    })
+  }
+  console.log(`✓ ${taxRegimes.length} tax regimes`)
+
   // Current financial year
   await prisma.financialYear.upsert({
     where: { tenantId_code: { tenantId: tenant.id, code: 'FY2025-26' } },
