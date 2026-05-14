@@ -1,6 +1,7 @@
 import { useState, useDeferredValue } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search } from 'lucide-react'
+import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { useInvoices } from '../../lib/api/invoices.api'
 import { formatINR, formatDate, formatStatus, getStatusColor } from '../../lib/utils/formatters'
 import { cn } from '../../lib/utils'
@@ -21,20 +22,16 @@ export default function InvoiceListPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
-        <div>
-          <h1 className="text-base font-semibold">Invoices</h1>
-          <p className="text-xs text-muted-foreground">{total} invoices</p>
-        </div>
-        <button
-          onClick={() => navigate('/invoices/new')}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          New invoice
-        </button>
-      </div>
+      <MasterPageHeader
+        title="Invoices"
+        description={`${total} invoices`}
+        actions={
+          <button onClick={() => navigate('/invoices/new')}
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
+            <Plus className="h-3.5 w-3.5" /> New invoice
+          </button>
+        }
+      />
 
       {/* Filters */}
       <div className="flex items-center gap-2 border-b border-border px-4 py-2 sm:px-6">

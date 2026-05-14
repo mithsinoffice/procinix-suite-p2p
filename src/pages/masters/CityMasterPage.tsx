@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Clock } from 'lucide-react'
 import { http } from '../../lib/http'
@@ -7,7 +6,7 @@ import { FlagImage } from '../../components/shared/FlagImage'
 import { MasterTabs, type MasterTab } from '../../components/masters/MasterTabs'
 import { AuditTrailDrawer } from '../../components/shared/AuditTrailDrawer'
 import {
-  FormSection, FormField, FormInput, FormSelect, FormPageHeader, FormFooter, WorkflowBanner, ApiSelect,
+  FormSection, FormField, FormInput, FormSelect, FormPageHeader, FormFooter, WorkflowBanner, ApiSelect, MasterPageHeader,
 } from '../../components/masters/MasterFormLayout'
 import { formatStatus, getStatusColor } from '../../lib/utils/formatters'
 import { cn } from '../../lib/utils'
@@ -94,7 +93,6 @@ function CityForm({ record, onClose, onSaved }: { record?: City; onClose: () => 
 }
 
 export default function CityMasterPage() {
-  const navigate = useNavigate()
   const [formOpen, setFormOpen]   = useState(false)
   const [edit, setEdit]           = useState<City | null>(null)
   const [activeTab, setActiveTab] = useState<MasterTab>('ACTIVE')
@@ -102,8 +100,9 @@ export default function CityMasterPage() {
   const [audit, setAudit]         = useState<{ id: string; name: string } | null>(null)
 
   const { data: cities = [], isLoading, refetch } = useQuery({
-    queryKey: ['city', activeTab, search],
-    queryFn:  () => {
+    queryKey:  ['city', activeTab, search],
+    staleTime: 30_000,
+    queryFn:   () => {
       const p = new URLSearchParams()
       if (search)            p.set('search', search)
       if (activeTab !== 'ALL') p.set('status', activeTab)
@@ -121,26 +120,20 @@ export default function CityMasterPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-4 pt-3 sm:px-6">
-        <button onClick={() => navigate('/masters')}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-          ← Masters
-        </button>
-      </div>
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
-        <div>
-          <h1 className="text-base font-semibold">City Master</h1>
-          <p className="text-xs text-muted-foreground">Cities cascading from Country → State. Capital + metro flags drive downstream forms.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <input type="search" placeholder="Search cities…" value={search} onChange={e => setSearch(e.target.value)}
-            className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring w-48" />
-          <button onClick={() => { setEdit(null); setFormOpen(true) }}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
-            <Plus className="h-3.5 w-3.5" /> Add New
-          </button>
-        </div>
-      </div>
+      <MasterPageHeader
+        title="City Master"
+        description="Cities cascading from Country → State. Capital + metro flags drive downstream forms."
+        actions={
+          <>
+            <input type="search" placeholder="Search cities…" value={search} onChange={e => setSearch(e.target.value)}
+              className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring w-48" />
+            <button onClick={() => { setEdit(null); setFormOpen(true) }}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
+              <Plus className="h-3.5 w-3.5" /> Add New
+            </button>
+          </>
+        }
+      />
 
       <MasterTabs active={activeTab} onChange={setActiveTab} apiPath="/api/masters/cities" />
 

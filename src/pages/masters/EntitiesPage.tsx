@@ -8,7 +8,7 @@ import { formatDate, formatStatus, getStatusColor } from '../../lib/utils/format
 import { cn } from '../../lib/utils'
 import {
   FormSection, FormField, FormInput, FormSelect,
-  AutoCodeField, WorkflowBanner, FormPageHeader, FormFooter, ApiSelect,
+  AutoCodeField, WorkflowBanner, FormPageHeader, FormFooter, ApiSelect, MasterPageHeader,
 } from '../../components/masters/MasterFormLayout'
 
 interface TaxRegime { id: string; code: string; name: string; regimeType: string; countryCode: string; requiresGstin: boolean; requiresVat: boolean; tdsApplicable: boolean; vatRate?: number }
@@ -416,22 +416,22 @@ export default function EntitiesPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
-        <div>
-          <h1 className="text-base font-semibold">Entities</h1>
-          <p className="text-xs text-muted-foreground">{data?.total ?? 0} entities</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => setBulkOpen(true)}
-            className="flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted">
-            <Upload className="h-3.5 w-3.5" /> Bulk upload
-          </button>
-          <button onClick={openNew}
-            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
-            <Plus className="h-3.5 w-3.5" /> New entity
-          </button>
-        </div>
-      </div>
+      <MasterPageHeader
+        title="Entities"
+        description={`${data?.total ?? 0} legal entities registered`}
+        actions={
+          <>
+            <button onClick={() => setBulkOpen(true)}
+              className="flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted">
+              <Upload className="h-3.5 w-3.5" /> Bulk upload
+            </button>
+            <button onClick={openNew}
+              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
+              <Plus className="h-3.5 w-3.5" /> New entity
+            </button>
+          </>
+        }
+      />
 
       <div className="flex-1 overflow-auto">
         {isLoading ? (

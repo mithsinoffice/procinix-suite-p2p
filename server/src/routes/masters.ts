@@ -74,8 +74,7 @@ export async function masterRoutes(app: FastifyInstance) {
   app.get('/countries', auth, async (req, reply) => {
     const { status, search } = req.query as any
     const where: any = {}
-    if (status) where.status = status
-    else        where.isActive = true
+    if (status && status !== 'ALL') where.status = status
     if (search) where.OR = [{ name: { contains: search } }, { code: { contains: search } }]
     return reply.send(await app.prisma.country.findMany({ where, orderBy: { name: 'asc' } }))
   })
@@ -105,8 +104,7 @@ export async function masterRoutes(app: FastifyInstance) {
   app.get('/states', auth, async (req, reply) => {
     const { countryCode, status, search } = req.query as any
     const where: any = {}
-    if (status) where.status = status
-    else        where.isActive = true
+    if (status && status !== 'ALL') where.status = status
     if (countryCode) where.countryCode = countryCode
     if (search) where.OR = [{ name: { contains: search } }, { code: { contains: search } }]
     return reply.send(await app.prisma.state.findMany({ where, orderBy: { name: 'asc' } }))
@@ -130,8 +128,7 @@ export async function masterRoutes(app: FastifyInstance) {
   app.get('/cities', auth, async (req, reply) => {
     const { stateCode, countryCode, status, search } = req.query as any
     const where: any = {}
-    if (status) where.status = status
-    else        where.isActive = true
+    if (status && status !== 'ALL') where.status = status
     if (stateCode)   where.stateCode   = stateCode
     if (countryCode) where.countryCode = countryCode
     if (search) where.OR = [{ name: { contains: search } }]

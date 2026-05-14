@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { useInvoices } from '../../lib/api/invoices.api'
 import { formatINR, formatDate, formatStatus, getStatusColor } from '../../lib/utils/formatters'
 import { MatchScoreBadge } from '../../components/shared/MatchScoreBadge'
@@ -12,12 +13,10 @@ export default function InvoiceReviewQueuePage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
-        <div>
-          <h1 className="text-base font-semibold">AP Review Queue</h1>
-          <p className="text-xs text-muted-foreground">{invoices.length} invoices need review</p>
-        </div>
-      </div>
+      <MasterPageHeader
+        title="AP Review Queue"
+        description={`${invoices.length} invoices need review`}
+      />
 
       <div className="flex-1 overflow-auto">
         {isLoading ? (

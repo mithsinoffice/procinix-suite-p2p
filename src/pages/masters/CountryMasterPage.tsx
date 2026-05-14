@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Clock, CheckCircle } from 'lucide-react'
 import { http } from '../../lib/http'
@@ -8,7 +7,7 @@ import { MasterTabs, type MasterTab } from '../../components/masters/MasterTabs'
 import { AuditTrailDrawer } from '../../components/shared/AuditTrailDrawer'
 import {
   FormSection, FormField, FormInput, FormSelect,
-  FormPageHeader, FormFooter, WorkflowBanner, ApiSelect,
+  FormPageHeader, FormFooter, WorkflowBanner, ApiSelect, MasterPageHeader,
 } from '../../components/masters/MasterFormLayout'
 import { formatStatus, getStatusColor } from '../../lib/utils/formatters'
 import { cn } from '../../lib/utils'
@@ -114,7 +113,6 @@ function CountryForm({ record, onClose, onSaved }: { record?: Country; onClose: 
 }
 
 export default function CountryMasterPage() {
-  const navigate = useNavigate()
   const qc = useQueryClient()
   const [formOpen, setFormOpen]   = useState(false)
   const [edit, setEdit]           = useState<Country | null>(null)
@@ -123,8 +121,9 @@ export default function CountryMasterPage() {
   const [audit, setAudit]         = useState<{ id: string; name: string } | null>(null)
 
   const { data: countries = [], isLoading, refetch } = useQuery({
-    queryKey: ['country', activeTab, search],
-    queryFn:  () => {
+    queryKey:  ['country', activeTab, search],
+    staleTime: 30_000,
+    queryFn:   () => {
       const p = new URLSearchParams()
       if (search)            p.set('search', search)
       if (activeTab !== 'ALL') p.set('status', activeTab)
@@ -147,27 +146,21 @@ export default function CountryMasterPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-4 pt-3 sm:px-6">
-        <button onClick={() => navigate('/masters')}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-          ← Masters
-        </button>
-      </div>
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
-        <div>
-          <h1 className="text-base font-semibold">Country Master</h1>
-          <p className="text-xs text-muted-foreground">Global country reference data with flags and tax regime mapping</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <input type="search" placeholder="Search countries…" value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring w-48" />
-          <button onClick={() => { setEdit(null); setFormOpen(true) }}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
-            <Plus className="h-3.5 w-3.5" /> Add New
-          </button>
-        </div>
-      </div>
+      <MasterPageHeader
+        title="Country Master"
+        description="Global country reference data with flags and tax regime mapping"
+        actions={
+          <>
+            <input type="search" placeholder="Search countries…" value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring w-48" />
+            <button onClick={() => { setEdit(null); setFormOpen(true) }}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
+              <Plus className="h-3.5 w-3.5" /> Add New
+            </button>
+          </>
+        }
+      />
 
       <MasterTabs active={activeTab} onChange={setActiveTab} apiPath="/api/masters/countries" />
 

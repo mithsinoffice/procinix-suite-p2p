@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '../../lib/utils'
 import { Send } from 'lucide-react'
@@ -102,6 +103,33 @@ export function WorkflowBanner({ rule = '1-step approval', sla = 'SLA not yet tr
         Workflow: {rule} · {sla}
       </p>
       <button className="text-sm text-primary font-medium hover:underline">View →</button>
+    </div>
+  )
+}
+
+export function MasterPageHeader({
+  title, description, actions,
+}: {
+  title: string; description?: string; actions?: React.ReactNode
+}) {
+  const navigate = useNavigate()
+  return (
+    <div className="border-b border-border bg-background">
+      <div className="flex items-center gap-2 px-4 pt-2.5 pb-1 sm:px-6">
+        <button
+          onClick={() => navigate('/masters')}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          ← Masters
+        </button>
+      </div>
+      <div className="flex items-center justify-between px-4 pb-3 sm:px-6">
+        <div>
+          <h1 className="text-base font-semibold">{title}</h1>
+          {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+        </div>
+        {actions && <div className="flex items-center gap-2">{actions}</div>}
+      </div>
     </div>
   )
 }

@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, Clock, Pencil, CheckCircle } from 'lucide-react'
 import { http } from '../../lib/http'
 import {
   FormField, FormInput, FormSelect, FormTextarea,
-  AutoCodeField, WorkflowBanner, FormFooter, FormPageHeader
+  AutoCodeField, WorkflowBanner, FormFooter, FormPageHeader, MasterPageHeader,
 } from '../../components/masters/MasterFormLayout'
 import { AuditTrailDrawer } from '../../components/shared/AuditTrailDrawer'
 import { formatStatus, getStatusColor } from '../../lib/utils/formatters'
@@ -376,7 +375,6 @@ function TaxRegimeForm({ record, onClose, onSaved }: {
 // ── List page ──
 
 export default function TaxRegimesPage() {
-  const navigate = useNavigate()
   const qc = useQueryClient()
   const [formOpen, setFormOpen]       = useState(false)
   const [editRecord, setEditRecord]   = useState<TaxRegime | null>(null)
@@ -408,22 +406,16 @@ export default function TaxRegimesPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-4 pt-3 sm:px-6">
-        <button onClick={() => navigate('/masters')}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-          ← Masters
-        </button>
-      </div>
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
-        <div>
-          <h1 className="text-base font-semibold">Tax Regimes</h1>
-          <p className="text-xs text-muted-foreground">{data?.total ?? 0} regimes</p>
-        </div>
-        <button onClick={() => { setEditRecord(null); setFormOpen(true) }}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
-          <Plus className="h-3.5 w-3.5" /> New regime
-        </button>
-      </div>
+      <MasterPageHeader
+        title="Tax Regimes"
+        description={`${data?.total ?? 0} regimes configured`}
+        actions={
+          <button onClick={() => { setEditRecord(null); setFormOpen(true) }}
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
+            <Plus className="h-3.5 w-3.5" /> New regime
+          </button>
+        }
+      />
 
       <div className="flex-1 overflow-auto">
         {isLoading ? (

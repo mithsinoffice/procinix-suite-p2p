@@ -1,5 +1,5 @@
-import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { http } from '../../lib/http'
 import { formatDate } from '../../lib/utils/formatters'
 import { cn } from '../../lib/utils'
@@ -7,7 +7,6 @@ import { cn } from '../../lib/utils'
 interface FY { id: string; code: string; name: string; startDate: string; endDate: string; isCurrent: boolean; status: string }
 
 export default function FinancialYearsPage() {
-  const navigate = useNavigate()
   const { data: fys = [], isLoading } = useQuery({
     queryKey: ['masters', 'financial-years'],
     queryFn:  () => http.get<FY[]>('/api/masters/financial-years'),
@@ -15,18 +14,10 @@ export default function FinancialYearsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-4 pt-3 sm:px-6">
-        <button onClick={() => navigate('/masters')}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-          ← Masters
-        </button>
-      </div>
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
-        <div>
-          <h1 className="text-base font-semibold">Financial Years</h1>
-          <p className="text-xs text-muted-foreground">{fys.length} financial years</p>
-        </div>
-      </div>
+      <MasterPageHeader
+        title="Financial Years"
+        description={`${fys.length} financial years configured`}
+      />
       <div className="flex-1 overflow-auto p-4 sm:p-6">
         {isLoading ? (
           <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="h-16 rounded-lg bg-muted animate-pulse" />)}</div>

@@ -37,6 +37,7 @@
 - Zod schemas live in `shared/schemas/` — same schema frontend + backend
 - All forms use React Hook Form + zodResolver
 - Mobile-first CSS — `sm:` for desktop, never `max-md:` for mobile
+- Every master page and module page MUST use `<MasterPageHeader>` (from `src/components/masters/MasterFormLayout.tsx`) as its first element — it provides the ← Masters breadcrumb automatically. Never hand-roll a page header with a separate back button div.
 
 ### Backend
 - All endpoints validate tenant from JWT — never from request body

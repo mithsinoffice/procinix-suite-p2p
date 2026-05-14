@@ -1,5 +1,4 @@
 import { useState, useDeferredValue } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Upload, Eye, Pencil, Clock, CheckCircle, Send } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { http } from '../../lib/http'
@@ -9,7 +8,7 @@ import { formatDate, formatStatus, getStatusColor } from '../../lib/utils/format
 import { cn } from '../../lib/utils'
 import {
   FormSection, FormField, FormInput, FormSelect, FormTextarea,
-  AutoCodeField, WorkflowBanner, FormPageHeader, FormFooter,
+  AutoCodeField, WorkflowBanner, FormPageHeader, FormFooter, MasterPageHeader,
 } from './MasterFormLayout'
 import { MasterTabs, type MasterTab } from './MasterTabs'
 import { useMasterData } from '../../hooks/useMasterData'
@@ -174,7 +173,6 @@ function FullPageForm({ config, record, onSaved, onCancel }: {
 
 export function MasterListScreen({ config }: { config: MasterConfig }) {
   const qc                              = useQueryClient()
-  const navigate                        = useNavigate()
   const [search, setSearch]             = useState('')
   const [activeTab, setActiveTab]       = useState<MasterTab>('ACTIVE')
   const [entityId, setEntityId]         = useState('')
@@ -241,36 +239,22 @@ export function MasterListScreen({ config }: { config: MasterConfig }) {
   return (
     <div className="flex flex-col h-full">
 
-      <div className="flex items-center gap-2 px-4 pt-3 sm:px-6">
-        <button onClick={() => navigate('/masters')}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-          ← Masters
-        </button>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6">
-        <div>
-          <h1 className="text-base font-semibold">{config.title}</h1>
-          <p className="text-xs text-muted-foreground">{total} records</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setBulkOpen(true)}
-            className="flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            Bulk upload
-          </button>
-          <button
-            onClick={() => { setEditRecord(null); setFormOpen(true) }}
-            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New {config.singular}
-          </button>
-        </div>
-      </div>
+      <MasterPageHeader
+        title={config.title}
+        description={`${total} ${config.title.toLowerCase()} records`}
+        actions={
+          <>
+            <button onClick={() => setBulkOpen(true)}
+              className="flex items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted">
+              <Upload className="h-3.5 w-3.5" /> Bulk upload
+            </button>
+            <button onClick={() => { setEditRecord(null); setFormOpen(true) }}
+              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
+              <Plus className="h-3.5 w-3.5" /> New {config.singular}
+            </button>
+          </>
+        }
+      />
 
       {/* Entity scoping */}
       {entities.length > 1 && (
