@@ -210,7 +210,7 @@ export function MasterListScreen({ config }: { config: MasterConfig }) {
     return (
       <div className="flex flex-col h-full">
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6">
+          <div className="max-w-5xl mx-auto px-6 py-6">
             <FormPageHeader
               title={editRecord ? `Edit ${config.singular}` : `Create ${config.singular}`}
               subtitle={editRecord ? `Editing ${editRecord.code ?? editRecord.name}` : `Fill in the details to create a new ${config.singular}`}

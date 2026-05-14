@@ -77,13 +77,14 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
   return (
     <div className="space-y-4">
 
-      {/* A. Identity */}
+      {/* A. Identity — 2-col grid */}
       <FormSection title="A. Identity">
+        {/* Col 1 */}
         <FormField label="Entity code" hint="Auto-generated — unique identifier">
           <AutoCodeField value={record?.code} />
         </FormField>
-
-        <FormField label="Legal name" required error={errors.name} span>
+        {/* Col 2 */}
+        <FormField label="Legal name" required error={errors.name}>
           <FormInput
             value={String(form.name ?? '')}
             placeholder="Procinix Technologies Pvt Ltd"
@@ -92,7 +93,7 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
             className={errors.name ? 'border-destructive' : ''}
           />
         </FormField>
-
+        {/* Col 1 */}
         <FormField label="Short name / trade name" hint="Abbreviated name used in reports">
           <FormInput
             value={String(form.shortName ?? '')}
@@ -100,7 +101,7 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
             onChange={e => set('shortName', e.target.value)}
           />
         </FormField>
-
+        {/* Col 2 */}
         <FormField label="Entity type">
           <FormSelect value={String(form.entityType ?? 'SUBSIDIARY')} onChange={e => set('entityType', e.target.value)}>
             {ENTITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -108,8 +109,9 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
         </FormField>
       </FormSection>
 
-      {/* B. Country + Tax regime */}
+      {/* B. Country + Tax Regime — 2-col grid */}
       <FormSection title="B. Country &amp; Tax Regime">
+        {/* Col 1 */}
         <FormField label="Country" required>
           <FormSelect
             value={String(form.countryCode ?? 'IN')}
@@ -118,7 +120,7 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
             {countries.map((c: Country) => <option key={c.code} value={c.code}>{c.name}</option>)}
           </FormSelect>
         </FormField>
-
+        {/* Col 2 */}
         <FormField label="Tax regime" required>
           <FormSelect value={String(form.taxRegimeId ?? '')} onChange={e => set('taxRegimeId', e.target.value)}>
             <option value="">Select regime…</option>
@@ -126,22 +128,24 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
               <option key={r.id} value={r.id}>{r.name} ({r.regimeType})</option>
             ))}
           </FormSelect>
-          {selectedRegime && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {selectedRegime.requiresGstin && <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-md px-1.5 py-0.5">GSTIN required</span>}
-              {selectedRegime.requiresVat   && <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded-md px-1.5 py-0.5">VAT number required</span>}
-              {selectedRegime.tdsApplicable && <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-md px-1.5 py-0.5">TDS applicable</span>}
-              {selectedRegime.vatRate       && <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-md px-1.5 py-0.5">VAT {selectedRegime.vatRate}%</span>}
-            </div>
-          )}
         </FormField>
+        {/* Chips row — col-span-2 */}
+        {selectedRegime && (
+          <div className="col-span-2 flex flex-wrap gap-1.5">
+            {selectedRegime.requiresGstin && <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-md px-2 py-0.5">GSTIN required</span>}
+            {selectedRegime.requiresVat   && <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded-md px-2 py-0.5">VAT number required</span>}
+            {selectedRegime.tdsApplicable && <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-md px-2 py-0.5">TDS applicable</span>}
+            {selectedRegime.vatRate       && <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-md px-2 py-0.5">VAT {selectedRegime.vatRate}%</span>}
+          </div>
+        )}
       </FormSection>
 
-      {/* C. Tax identifiers — conditional */}
+      {/* C. Tax Identifiers — 2-col grid, conditional */}
       {(isGst || isVat || isIndia) && (
         <FormSection title="C. Tax Identifiers">
+          {/* Col 1 */}
           {(isGst || isIndia) && (
-            <FormField label={`GSTIN${isGst ? '' : ' (optional)'}`} required={isGst} error={errors.gstin}
+            <FormField label={isGst ? 'GSTIN' : 'GSTIN (optional)'} required={isGst} error={errors.gstin}
               hint="15-character GST Identification Number">
               <FormInput
                 value={String(form.gstin ?? '')}
@@ -152,8 +156,9 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
               />
             </FormField>
           )}
+          {/* Col 2 */}
           {(isGst || isIndia) && (
-            <FormField label={`PAN${isGst ? '' : ' (optional)'}`} required={isGst} error={errors.pan}
+            <FormField label={isGst ? 'PAN' : 'PAN (optional)'} required={isGst} error={errors.pan}
               hint="10-character Permanent Account Number">
               <FormInput
                 value={String(form.pan ?? '')}
@@ -164,6 +169,7 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
               />
             </FormField>
           )}
+          {/* Col 1 */}
           {(isGst || isIndia) && (
             <FormField label="TAN" hint="Tax Deduction Account Number">
               <FormInput
@@ -173,6 +179,27 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
               />
             </FormField>
           )}
+          {/* Col 2 */}
+          {isIndia && (
+            <FormField label="CIN" hint="Corporate Identification Number">
+              <FormInput
+                value={String(form.cinNumber ?? '')}
+                placeholder="U72200MH2020PTC123456"
+                onChange={e => set('cinNumber', e.target.value)}
+              />
+            </FormField>
+          )}
+          {/* Col 1 */}
+          {isIndia && (
+            <FormField label="Date of incorporation">
+              <FormInput
+                type="date"
+                value={String(form.incorporationDate ?? '')}
+                onChange={e => set('incorporationDate', e.target.value)}
+              />
+            </FormField>
+          )}
+          {/* Col 2 */}
           {isVat && (
             <FormField label="VAT number" required error={errors.vatNumber}>
               <FormInput
@@ -183,29 +210,12 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
               />
             </FormField>
           )}
-          {isIndia && (
-            <FormField label="CIN" hint="Corporate Identification Number">
-              <FormInput
-                value={String(form.cinNumber ?? '')}
-                placeholder="U72200MH2020PTC123456"
-                onChange={e => set('cinNumber', e.target.value)}
-              />
-            </FormField>
-          )}
-          {isIndia && (
-            <FormField label="Date of incorporation">
-              <FormInput
-                type="date"
-                value={String(form.incorporationDate ?? '')}
-                onChange={e => set('incorporationDate', e.target.value)}
-              />
-            </FormField>
-          )}
         </FormSection>
       )}
 
-      {/* D. Address */}
+      {/* D. Address — 2-col grid */}
       <FormSection title="D. Address">
+        {/* Col 1+2 span */}
         <FormField label="Address line" span>
           <FormInput
             value={String(form.addressLine1 ?? '')}
@@ -213,19 +223,25 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
             onChange={e => set('addressLine1', e.target.value)}
           />
         </FormField>
+        {/* Col 1 */}
         <FormField label="City">
           <FormInput value={String(form.city ?? '')} placeholder="Mumbai" onChange={e => set('city', e.target.value)} />
         </FormField>
+        {/* Col 2 */}
         <FormField label="State">
           <FormInput value={String(form.state ?? '')} placeholder="Maharashtra" onChange={e => set('state', e.target.value)} />
         </FormField>
+        {/* Col 1 */}
         <FormField label="PIN / ZIP">
           <FormInput value={String(form.pincode ?? '')} placeholder="400001" onChange={e => set('pincode', e.target.value)} />
         </FormField>
+        {/* Col 2 — intentionally empty, keeps grid balanced */}
+        <div />
       </FormSection>
 
-      {/* E. Contact */}
+      {/* E. Contact — 2-col grid */}
       <FormSection title="E. Contact">
+        {/* Col 1 */}
         <FormField label="Email" icon="@">
           <FormInput
             type="email"
@@ -234,6 +250,7 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
             onChange={e => set('email', e.target.value)}
           />
         </FormField>
+        {/* Col 2 */}
         <FormField label="Phone">
           <FormInput
             value={String(form.phone ?? '')}
@@ -241,6 +258,7 @@ function EntityForm({ record, onSaved, onCancel }: { record?: Entity; onSaved: (
             onChange={e => set('phone', e.target.value)}
           />
         </FormField>
+        {/* Col 1+2 span */}
         <FormField label="Website" span>
           <FormInput
             value={String(form.website ?? '')}
@@ -292,7 +310,7 @@ export default function EntitiesPage() {
     return (
       <div className="flex flex-col h-full">
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6">
+          <div className="max-w-5xl mx-auto px-6 py-6">
             <FormPageHeader
               title={editRecord ? 'Edit entity' : 'Create entity'}
               subtitle={editRecord ? `Editing ${editRecord.code}` : 'Fill in the details to register a new entity'}

@@ -5,13 +5,13 @@ export function FormSection({ title, children }: { title: string; children: Reac
   return (
     <div className="rounded-xl border border-border bg-card p-6 space-y-4">
       <h3 className="text-base font-semibold">{title}</h3>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
+      <div className="grid grid-cols-2 gap-4">{children}</div>
     </div>
   )
 }
 
 export function FormRow({ children }: { children: React.ReactNode }) {
-  return <div className="sm:col-span-2">{children}</div>
+  return <div className="col-span-2">{children}</div>
 }
 
 export function FormField({
@@ -22,7 +22,7 @@ export function FormField({
   children: React.ReactNode; span?: boolean
 }) {
   return (
-    <div className={cn('space-y-1.5', span && 'sm:col-span-2')}>
+    <div className={cn('space-y-1.5', span && 'col-span-2')}>
       <label className="text-sm font-medium text-foreground">
         {label}{required && <span className="text-destructive ml-0.5">*</span>}
       </label>
