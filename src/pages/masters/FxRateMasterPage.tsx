@@ -103,10 +103,14 @@ export default function FxRateMasterPage() {
   const [activeTab, setActiveTab] = useState<MasterTab>('ACTIVE')
   const [audit, setAudit]         = useState<{ id: string; name: string } | null>(null)
 
+  const qc = useQueryClient()
   const { data: rates = [], isLoading, refetch } = useQuery({
-    queryKey:  ['fxRate', activeTab],
-    staleTime: 30_000,
-    queryFn:   () => http.get<FxRate[]>(`/api/masters/fx-rates${activeTab !== 'ALL' ? `?status=${activeTab}` : ''}`),
+    queryKey:       ['fxRate', activeTab],
+    staleTime:      30_000,
+    gcTime:         0,
+    retry:          false,
+    refetchOnMount: true,
+    queryFn:        () => http.get<FxRate[]>(`/api/masters/fx-rates${activeTab !== 'ALL' ? `?status=${activeTab}` : ''}`),
   })
 
   if (formOpen) {
@@ -126,6 +130,7 @@ export default function FxRateMasterPage() {
       <MasterPageHeader
         title="FX Rate Master"
         description="Currency exchange rates with effective dates and source tracking"
+        onRefresh={() => qc.invalidateQueries({ queryKey: ['fxRate'] })}
         actions={
           <button onClick={() => { setEdit(null); setFormOpen(true) }}
             className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">

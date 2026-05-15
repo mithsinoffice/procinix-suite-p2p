@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { http } from '../../lib/http'
 import { formatDate } from '../../lib/utils/formatters'
@@ -7,9 +7,13 @@ import { cn } from '../../lib/utils'
 interface FY { id: string; code: string; name: string; startDate: string; endDate: string; isCurrent: boolean; status: string }
 
 export default function FinancialYearsPage() {
+  const qc = useQueryClient()
   const { data: fys = [], isLoading } = useQuery({
-    queryKey: ['masters', 'financial-years'],
-    queryFn:  () => http.get<FY[]>('/api/masters/financial-years'),
+    queryKey:       ['masters', 'financial-years'],
+    gcTime:         0,
+    retry:          false,
+    refetchOnMount: true,
+    queryFn:        () => http.get<FY[]>('/api/masters/financial-years'),
   })
 
   return (
@@ -17,6 +21,7 @@ export default function FinancialYearsPage() {
       <MasterPageHeader
         title="Financial Years"
         description={`${fys.length} financial years configured`}
+        onRefresh={() => qc.invalidateQueries({ queryKey: ['masters', 'financial-years'] })}
       />
       <div className="flex-1 overflow-auto p-4 sm:p-6">
         {isLoading ? (

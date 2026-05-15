@@ -93,6 +93,7 @@ function CityForm({ record, onClose, onSaved }: { record?: City; onClose: () => 
 }
 
 export default function CityMasterPage() {
+  const qc = useQueryClient()
   const [formOpen, setFormOpen]   = useState(false)
   const [edit, setEdit]           = useState<City | null>(null)
   const [activeTab, setActiveTab] = useState<MasterTab>('ACTIVE')
@@ -100,11 +101,14 @@ export default function CityMasterPage() {
   const [audit, setAudit]         = useState<{ id: string; name: string } | null>(null)
 
   const { data: cities = [], isLoading, refetch } = useQuery({
-    queryKey:  ['city', activeTab, search],
-    staleTime: 30_000,
-    queryFn:   () => {
+    queryKey:       ['city', activeTab, search],
+    staleTime:      30_000,
+    gcTime:         0,
+    retry:          false,
+    refetchOnMount: true,
+    queryFn:        () => {
       const p = new URLSearchParams()
-      if (search)            p.set('search', search)
+      if (search)              p.set('search', search)
       if (activeTab !== 'ALL') p.set('status', activeTab)
       return http.get<City[]>(`/api/masters/cities?${p}`)
     },
@@ -123,6 +127,7 @@ export default function CityMasterPage() {
       <MasterPageHeader
         title="City Master"
         description="Cities cascading from Country → State. Capital + metro flags drive downstream forms."
+        onRefresh={() => qc.invalidateQueries({ queryKey: ['city'] })}
         actions={
           <>
             <input type="search" placeholder="Search cities…" value={search} onChange={e => setSearch(e.target.value)}

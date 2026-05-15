@@ -96,9 +96,12 @@ export default function CurrencyMasterPage() {
   const [audit, setAudit]         = useState<{ id: string; name: string } | null>(null)
 
   const { data: currencies = [], isLoading, refetch } = useQuery({
-    queryKey:  ['currency', activeTab, search],
-    staleTime: 30_000,
-    queryFn:   () => {
+    queryKey:       ['currency', activeTab, search],
+    staleTime:      30_000,
+    gcTime:         0,
+    retry:          false,
+    refetchOnMount: true,
+    queryFn:        () => {
       const p = new URLSearchParams()
       if (search)              p.set('search', search)
       if (activeTab !== 'ALL') p.set('status', activeTab)
@@ -128,6 +131,7 @@ export default function CurrencyMasterPage() {
       <MasterPageHeader
         title="Currency Master"
         description="Global currencies with exchange rates and base currency designation"
+        onRefresh={() => qc.invalidateQueries({ queryKey: ['currency'] })}
         actions={
           <>
             <input type="search" placeholder="Search currencies…" value={search}

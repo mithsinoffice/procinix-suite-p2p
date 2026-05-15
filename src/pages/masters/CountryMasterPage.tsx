@@ -121,11 +121,14 @@ export default function CountryMasterPage() {
   const [audit, setAudit]         = useState<{ id: string; name: string } | null>(null)
 
   const { data: countries = [], isLoading, refetch } = useQuery({
-    queryKey:  ['country', activeTab, search],
-    staleTime: 30_000,
-    queryFn:   () => {
+    queryKey:       ['country', activeTab, search],
+    staleTime:      30_000,
+    gcTime:         0,
+    retry:          false,
+    refetchOnMount: true,
+    queryFn:        () => {
       const p = new URLSearchParams()
-      if (search)            p.set('search', search)
+      if (search)              p.set('search', search)
       if (activeTab !== 'ALL') p.set('status', activeTab)
       return http.get<Country[]>(`/api/masters/countries?${p}`)
     },
@@ -149,6 +152,7 @@ export default function CountryMasterPage() {
       <MasterPageHeader
         title="Country Master"
         description="Global country reference data with flags and tax regime mapping"
+        onRefresh={() => qc.invalidateQueries({ queryKey: ['country'] })}
         actions={
           <>
             <input type="search" placeholder="Search countries…" value={search}

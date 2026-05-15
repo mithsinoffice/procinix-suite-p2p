@@ -381,8 +381,11 @@ export default function TaxRegimesPage() {
   const [auditRecord, setAuditRecord] = useState<{ id: string; name: string } | null>(null)
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['taxRegime'],
-    queryFn:  () => http.get<{ data: TaxRegime[]; total: number }>('/api/masters/tax-regimes?take=50'),
+    queryKey:       ['taxRegime'],
+    gcTime:         0,
+    retry:          false,
+    refetchOnMount: true,
+    queryFn:        () => http.get<{ data: TaxRegime[]; total: number }>('/api/masters/tax-regimes?take=50'),
   })
 
   const approve = useMutation({
@@ -409,6 +412,7 @@ export default function TaxRegimesPage() {
       <MasterPageHeader
         title="Tax Regimes"
         description={`${data?.total ?? 0} regimes configured`}
+        onRefresh={() => qc.invalidateQueries({ queryKey: ['taxRegime'] })}
         actions={
           <button onClick={() => { setEditRecord(null); setFormOpen(true) }}
             className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">

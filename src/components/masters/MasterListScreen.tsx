@@ -184,8 +184,11 @@ export function MasterListScreen({ config }: { config: MasterConfig }) {
   const { entities } = useMasterData()
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: [config.entityType, { search: deferred, tab: activeTab, entityId }],
-    queryFn:  () => {
+    queryKey:       [config.entityType, { search: deferred, tab: activeTab, entityId }],
+    gcTime:         0,
+    retry:          false,
+    refetchOnMount: true,
+    queryFn:        () => {
       const p = new URLSearchParams()
       if (deferred) p.set('search', deferred)
       if (activeTab === 'ALL')         { /* no status filter */ }
@@ -242,6 +245,7 @@ export function MasterListScreen({ config }: { config: MasterConfig }) {
       <MasterPageHeader
         title={config.title}
         description={`${total} ${config.title.toLowerCase()} records`}
+        onRefresh={() => qc.invalidateQueries({ queryKey: [config.entityType] })}
         actions={
           <>
             <button onClick={() => setBulkOpen(true)}

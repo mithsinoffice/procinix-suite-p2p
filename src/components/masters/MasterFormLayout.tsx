@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '../../lib/utils'
-import { Send } from 'lucide-react'
+import { Send, RotateCcw } from 'lucide-react'
 import { http } from '../../lib/http'
 import { getCountryFlag } from '../../lib/utils/country'
 
@@ -108,9 +108,9 @@ export function WorkflowBanner({ rule = '1-step approval', sla = 'SLA not yet tr
 }
 
 export function MasterPageHeader({
-  title, description, actions,
+  title, description, actions, onRefresh,
 }: {
-  title: string; description?: string; actions?: React.ReactNode
+  title: string; description?: string; actions?: React.ReactNode; onRefresh?: () => void
 }) {
   const navigate = useNavigate()
   return (
@@ -128,7 +128,20 @@ export function MasterPageHeader({
           <h1 className="text-base font-semibold">{title}</h1>
           {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
         </div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {(actions || onRefresh) && (
+          <div className="flex items-center gap-2">
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                title="Refresh"
+                className="rounded-lg border border-input p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {actions}
+          </div>
+        )}
       </div>
     </div>
   )

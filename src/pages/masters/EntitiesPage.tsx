@@ -375,8 +375,11 @@ export default function EntitiesPage() {
   const [bulkOpen, setBulkOpen]       = useState(false)
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['entity'],
-    queryFn:  () => http.get<{ data: Entity[]; total: number }>('/api/masters/entities?take=50'),
+    queryKey:       ['entity'],
+    gcTime:         0,
+    retry:          false,
+    refetchOnMount: true,
+    queryFn:        () => http.get<{ data: Entity[]; total: number }>('/api/masters/entities?take=50'),
   })
 
   const approve = useMutation({
@@ -419,6 +422,7 @@ export default function EntitiesPage() {
       <MasterPageHeader
         title="Entities"
         description={`${data?.total ?? 0} legal entities registered`}
+        onRefresh={() => qc.invalidateQueries({ queryKey: ['entity'] })}
         actions={
           <>
             <button onClick={() => setBulkOpen(true)}

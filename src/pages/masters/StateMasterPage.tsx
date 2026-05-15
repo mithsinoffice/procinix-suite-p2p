@@ -83,8 +83,11 @@ export default function StateMasterPage() {
     staleTime: 5 * 60_000,
   })
   const { data: states = [], isLoading, refetch } = useQuery({
-    queryKey: ['state', activeTab, country],
-    queryFn:  () => {
+    queryKey:       ['state', activeTab, country],
+    gcTime:         0,
+    retry:          false,
+    refetchOnMount: true,
+    queryFn:        () => {
       const p = new URLSearchParams({ countryCode: country })
       if (activeTab !== 'ALL') p.set('status', activeTab)
       return http.get<State[]>(`/api/masters/states?${p}`)
@@ -109,6 +112,7 @@ export default function StateMasterPage() {
       <MasterPageHeader
         title="State Master"
         description="States and provinces with GST code mapping"
+        onRefresh={() => qc.invalidateQueries({ queryKey: ['state'] })}
         actions={
           <>
             <select value={country} onChange={e => setCountry(e.target.value)}
