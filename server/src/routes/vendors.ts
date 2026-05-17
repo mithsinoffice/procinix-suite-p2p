@@ -33,6 +33,17 @@ const listSchema = z.object({
 export async function vendorRoutes(app: FastifyInstance) {
   const opts = { preHandler: [app.authenticate] }
 
+  // Duplicate PAN check — must be before /:id to avoid param capture
+  app.get('/check-duplicate', opts, async (req, reply) => {
+    const { pan, vendorId } = req.query as any
+    if (!pan) return reply.send({ isDuplicate: false })
+    const existing = await app.prisma.vendor.findFirst({
+      where: { tenantId: req.tenant.id, pan, ...(vendorId && { id: { not: vendorId } }) },
+      select: { id: true, legalName: true, vendorCode: true },
+    })
+    return reply.send({ isDuplicate: !!existing, existingVendor: existing })
+  })
+
   // List
   app.get('/', opts, async (request, reply) => {
     const filter = listSchema.parse(request.query)
@@ -69,7 +80,41 @@ export async function vendorRoutes(app: FastifyInstance) {
     return reply.send(result.data)
   })
 
-  // Trigger KYC manually
+  // KYC — one-click PAN chain
+  app.post('/:id/kyc/pan', opts, async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const result = await getVendor(app.prisma, id, req.tenant.id)
+    if (!result.ok) return reply.code(404).send(result.error)
+    const v = result.data
+    if (!v.pan) return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'PAN is required for this check' })
+    const { runPANChain } = await import('../services/kyc/kyc.service.js')
+    const data = await runPANChain(app.prisma, v.id, v.pan, v.cin ?? undefined, v.udyamNumber ?? undefined)
+    return reply.send(data)
+  })
+
+  // KYC — one-click GST chain
+  app.post('/:id/kyc/gst', opts, async (req, reply) => {
+    const { id }    = req.params as { id: string }
+    const { gstin } = req.body as any
+    if (!gstin) return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'gstin is required' })
+    const result = await getVendor(app.prisma, id, req.tenant.id)
+    if (!result.ok) return reply.code(404).send(result.error)
+    const { runGSTChain } = await import('../services/kyc/kyc.service.js')
+    const data = await runGSTChain(app.prisma, id, gstin)
+    return reply.send(data)
+  })
+
+  // KYC — bank penny drop
+  app.post('/:id/kyc/bank/:bankAccountId', opts, async (req, reply) => {
+    const { bankAccountId } = req.params as any
+    const bank = await app.prisma.vendorBankAccount.findFirst({ where: { id: bankAccountId } })
+    if (!bank) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Bank account not found' })
+    const { runBankChain } = await import('../services/kyc/kyc.service.js')
+    const data = await runBankChain(app.prisma, bank.id, bank.accountNo, bank.ifsc, bank.accountHolderName ?? '')
+    return reply.send(data)
+  })
+
+  // Trigger full KYC (all checks)
   app.post('/:id/kyc', opts, async (request, reply) => {
     const { id } = request.params as { id: string }
     const result = await getVendor(app.prisma, id, request.tenant.id)

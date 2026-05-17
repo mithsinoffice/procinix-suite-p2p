@@ -269,6 +269,61 @@ export async function masterRoutes(app: FastifyInstance) {
     return reply.code(201).send({ id: fy.id })
   })
 
+  // ── Vendor Categories ──
+  app.get('/vendor-categories', auth, async (req, reply) => {
+    const { status } = req.query as any
+    const where: any = { tenantId: req.tenant.id }
+    if (status && status !== 'ALL') where.status = status
+    return reply.send(await app.prisma.vendorCategory.findMany({ where, orderBy: { name: 'asc' } }))
+  })
+  app.post('/vendor-categories', auth, async (req, reply) => {
+    const row = await app.prisma.vendorCategory.create({
+      data: { ...(req.body as any), tenantId: req.tenant.id, createdByUserId: req.user.sub },
+    })
+    return reply.code(201).send(row)
+  })
+  app.put('/vendor-categories/:id', auth, async (req, reply) => {
+    const row = await app.prisma.vendorCategory.update({ where: { id: (req.params as any).id }, data: req.body as any })
+    return reply.send(row)
+  })
+
+  // ── Vendor Groups ──
+  app.get('/vendor-groups', auth, async (req, reply) => {
+    const { status } = req.query as any
+    const where: any = { tenantId: req.tenant.id }
+    if (status && status !== 'ALL') where.status = status
+    return reply.send(await app.prisma.vendorGroup.findMany({ where, orderBy: { name: 'asc' } }))
+  })
+  app.post('/vendor-groups', auth, async (req, reply) => {
+    const row = await app.prisma.vendorGroup.create({
+      data: { ...(req.body as any), tenantId: req.tenant.id, createdByUserId: req.user.sub },
+    })
+    return reply.code(201).send(row)
+  })
+  app.put('/vendor-groups/:id', auth, async (req, reply) => {
+    const row = await app.prisma.vendorGroup.update({ where: { id: (req.params as any).id }, data: req.body as any })
+    return reply.send(row)
+  })
+
+  // ── Profit Centres (entity-scoped) ──
+  app.get('/profit-centres', auth, async (req, reply) => {
+    const { entityId, status } = req.query as any
+    const where: any = { tenantId: req.tenant.id }
+    if (entityId) where.entityId = entityId
+    if (status && status !== 'ALL') where.status = status
+    return reply.send(await app.prisma.profitCentre.findMany({ where, orderBy: { code: 'asc' } }))
+  })
+  app.post('/profit-centres', auth, async (req, reply) => {
+    const row = await app.prisma.profitCentre.create({
+      data: { ...(req.body as any), tenantId: req.tenant.id, createdByUserId: req.user.sub },
+    })
+    return reply.code(201).send(row)
+  })
+  app.put('/profit-centres/:id', auth, async (req, reply) => {
+    const row = await app.prisma.profitCentre.update({ where: { id: (req.params as any).id }, data: req.body as any })
+    return reply.send(row)
+  })
+
   // ── Generic CRUD for all masters ──
   for (const [route, table] of Object.entries(TABLE_ROUTE_MAP)) {
 

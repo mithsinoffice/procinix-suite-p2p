@@ -14,14 +14,6 @@ const schema = z.object({
 })
 type FormValues = z.infer<typeof schema>
 
-const features = [
-  { icon: '⚡', label: 'Touchless AP — 98% match score' },
-  { icon: '🔍', label: 'Gemini OCR invoice ingestion' },
-  { icon: '🛡️', label: 'Vendor KYC — PAN, GST, Bank' },
-  { icon: '🔄', label: 'Dynamic workflow engine' },
-  { icon: '📊', label: 'Real-time AP dashboard' },
-  { icon: '🏦', label: 'Transbnk payment integration' },
-]
 
 export default function LoginPage() {
   const navigate        = useNavigate()
@@ -51,37 +43,16 @@ export default function LoginPage() {
 
       {/* ── Left panel (hidden on mobile) ──────────────────────────────── */}
       <div
-        className="hidden md:flex md:w-2/5 flex-col justify-between px-12 py-14"
-        style={{ backgroundColor: '#051A1C' }}
+        className="hidden md:flex md:w-2/5 flex-col items-center justify-center relative"
+        style={{ background: '#051A1C' }}
       >
-        {/* Logo + tagline */}
-        <div className="flex flex-col items-center gap-4">
-          <img
-            src="/logos/procinix-logo.png"
-            alt="Procinix"
-            className="h-12 w-auto"
-            style={{ mixBlendMode: 'screen' }}
-          />
-          <p
-            className="text-xs font-semibold tracking-widest uppercase"
-            style={{ color: '#00A9B7' }}
-          >
-            Automation &amp; Beyond
-          </p>
-        </div>
-
-        {/* Feature list */}
-        <ul className="space-y-5">
-          {features.map(f => (
-            <li key={f.label} className="flex items-center gap-3">
-              <span className="text-xl leading-none">{f.icon}</span>
-              <span className="text-sm text-white/80">{f.label}</span>
-            </li>
-          ))}
-        </ul>
-
-        {/* Copyright */}
-        <p className="text-xs text-center" style={{ color: '#7BBFC2' }}>
+        <img
+          src="/logos/procinix-logo.png"
+          alt="Procinix"
+          className="h-24 w-auto object-contain"
+          style={{ mixBlendMode: 'screen' }}
+        />
+        <p className="absolute bottom-8 text-xs" style={{ color: '#7BBFC2' }}>
           © 2025 Procinix Technologies Pvt Ltd
         </p>
       </div>
@@ -92,15 +63,12 @@ export default function LoginPage() {
         style={{ backgroundColor: '#F6F9FC' }}
       >
         {/* Mobile logo (visible only below md) */}
-        <div className="mb-8 flex flex-col items-center gap-2 md:hidden">
+        <div className="mb-8 flex justify-center md:hidden">
           <img
             src="/logos/procinix-logo.png"
             alt="Procinix"
-            className="h-10 w-auto"
+            className="h-12 w-auto object-contain"
           />
-          <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: '#00A9B7' }}>
-            Automation &amp; Beyond
-          </p>
         </div>
 
         <div className="w-full max-w-sm">

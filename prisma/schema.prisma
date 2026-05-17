@@ -113,6 +113,48 @@ model Vendor {
   complianceCheckedAt   DateTime?
   transbnkBeneficiaryId String?
   transbnkRegisteredAt  DateTime?
+  // Extended classification
+  vendorCategoryId      String?
+  vendorGroupId         String?
+  countryCode           String    @default("IN")
+  taxRegimeCode         String?
+  tan                   String?
+  // TDS extensions
+  tdsSectionId          String?
+  tdsRate               Decimal?  @db.Decimal(5, 2)
+  tdsExempt             Boolean   @default(false)
+  lowerTdsCertNo        String?
+  lowerTdsSection       String?
+  lowerTdsRate          Decimal?  @db.Decimal(5, 2)
+  lowerTdsValidFrom     DateTime?
+  lowerTdsValidTo       DateTime?
+  lowerTdsAlertDays     Int       @default(30)
+  // International tax
+  vatNumber             String?
+  whtRegistration       String?
+  localTaxId            String?
+  // Address
+  addressLine1          String?
+  addressLine2          String?
+  stateCode             String?
+  contactName           String?
+  website               String?
+  // Payment
+  paymentCurrency       String    @default("INR")
+  paymentMode           String    @default("NEFT")
+  // ERP sync
+  erpVendorCode         String?
+  erpSystem             String?
+  erpSyncStatus         String?
+  erpSyncedAt           DateTime?
+  erpSyncError          String?
+  invitationId          String?
+  kycLastRunAt          DateTime?
+  // Sub-table relations
+  gstRegistrations      VendorGstRegistration[]
+  bankAccounts          VendorBankAccount[]
+  entityMappings        VendorEntityMapping[]
+  documents             VendorDocument[]
   @@unique([tenantId, gstin])
   @@unique([tenantId, vendorCode])
   @@index([tenantId, status, createdAt(sort: Desc)])
@@ -848,4 +890,148 @@ model WorkflowAttachment {
   createdAt DateTime     @default(now())
   chat      WorkflowChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
   @@map("workflow_attachments")
+}
+
+model VendorCategory {
+  id              String   @id @default(uuid())
+  tenantId        String
+  code            String
+  name            String
+  description     String?
+  status          String   @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@unique([tenantId, code])
+  @@map("vendor_categories")
+}
+
+model VendorGroup {
+  id              String   @id @default(uuid())
+  tenantId        String
+  code            String
+  name            String
+  description     String?
+  status          String   @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@unique([tenantId, code])
+  @@map("vendor_groups")
+}
+
+model ProfitCentre {
+  id              String   @id @default(uuid())
+  tenantId        String
+  entityId        String
+  code            String
+  name            String
+  description     String?
+  glCodeId        String?
+  status          String   @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@unique([tenantId, entityId, code])
+  @@index([tenantId, entityId])
+  @@map("profit_centres")
+}
+
+model VendorGstRegistration {
+  id               String    @id @default(uuid())
+  vendorId         String
+  stateCode        String
+  gstin            String    @unique
+  registrationType String    @default("REGULAR")
+  isPrimary        Boolean   @default(false)
+  spocName         String?
+  spocEmail        String?
+  spocPhone        String?
+  kycStatus        String?
+  kycVerifiedAt    DateTime?
+  status           String    @default("ACTIVE")
+  vendor           Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  @@index([vendorId])
+  @@map("vendor_gst_registrations")
+}
+
+model VendorBankAccount {
+  id                    String    @id @default(uuid())
+  vendorId              String
+  accountNo             String
+  ifsc                  String
+  bankName              String?
+  branch                String?
+  accountType           String    @default("CURRENT")
+  currencyCode          String    @default("INR")
+  accountHolderName     String?
+  isPrimary             Boolean   @default(false)
+  kycStatus             String?
+  kycNameMatchScore     Int?
+  kycVerifiedAt         DateTime?
+  transbnkBeneficiaryId String?
+  transbnkRegisteredAt  DateTime?
+  status                String    @default("ACTIVE")
+  vendor                Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  @@unique([accountNo, ifsc])
+  @@index([vendorId])
+  @@map("vendor_bank_accounts")
+}
+
+model VendorEntityMapping {
+  id             String   @id @default(uuid())
+  vendorId       String
+  entityId       String
+  glCodeId       String?
+  costCentreId   String?
+  profitCentreId String?
+  currencyCode   String   @default("INR")
+  creditLimit    Decimal? @db.Decimal(15, 2)
+  blockPO        Boolean  @default(false)
+  blockPayment   Boolean  @default(false)
+  blockReason    String?
+  isActive       Boolean  @default(true)
+  vendor         Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  @@unique([vendorId, entityId])
+  @@index([vendorId])
+  @@map("vendor_entity_mappings")
+}
+
+model VendorDocument {
+  id         String   @id @default(uuid())
+  vendorId   String
+  docType    String
+  fileName   String
+  fileUrl    String   @db.Text
+  mimeType   String?
+  fileSize   Int?
+  uploadedBy String?
+  uploadedAt DateTime @default(now())
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  @@index([vendorId])
+  @@map("vendor_documents")
+}
+
+model VendorInvitation {
+  id             String    @id @default(uuid())
+  tenantId       String
+  token          String    @unique @default(uuid())
+  companyName    String
+  contactName    String
+  email          String
+  mobile         String?
+  vendorType     String?
+  vendorCategory String?
+  status         String    @default("INVITED")
+  expiresAt      DateTime
+  submittedAt    DateTime?
+  submittedData  Json?
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  vendorId       String?
+  createdBy      String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  @@index([tenantId, status])
+  @@map("vendor_invitations")
 }

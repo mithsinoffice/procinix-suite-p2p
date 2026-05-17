@@ -290,6 +290,65 @@ async function main() {
   }
   console.log(`✓ ${fxRates.length} FX rates`)
 
+  // Vendor Categories
+  const vendorCategories = [
+    { code: 'IT',  name: 'IT & Technology' },
+    { code: 'LOG', name: 'Logistics & Supply Chain' },
+    { code: 'MKT', name: 'Marketing & Advertising' },
+    { code: 'LEG', name: 'Legal & Compliance' },
+    { code: 'FAC', name: 'Facilities & Admin' },
+    { code: 'MFG', name: 'Manufacturing & Production' },
+    { code: 'PRO', name: 'Professional Services' },
+    { code: 'FIN', name: 'Finance & Accounting' },
+    { code: 'HR',  name: 'HR & Staffing' },
+    { code: 'OTH', name: 'Others' },
+  ]
+  for (const c of vendorCategories) {
+    await prisma.vendorCategory.upsert({
+      where:  { tenantId_code: { tenantId: tenant.id, code: c.code } },
+      update: {},
+      create: { ...c, tenantId: tenant.id, status: 'ACTIVE' },
+    })
+  }
+  console.log(`✓ ${vendorCategories.length} vendor categories`)
+
+  // Vendor Groups
+  const vendorGroups = [
+    { code: 'STRATEGIC', name: 'Strategic Partners' },
+    { code: 'PREFERRED', name: 'Preferred Vendors' },
+    { code: 'APPROVED',  name: 'Approved Vendors' },
+    { code: 'ONE_TIME',  name: 'One-time Vendors' },
+    { code: 'BLACKLIST', name: 'Blacklisted' },
+  ]
+  for (const g of vendorGroups) {
+    await prisma.vendorGroup.upsert({
+      where:  { tenantId_code: { tenantId: tenant.id, code: g.code } },
+      update: {},
+      create: { ...g, tenantId: tenant.id, status: 'ACTIVE' },
+    })
+  }
+  console.log(`✓ ${vendorGroups.length} vendor groups`)
+
+  // Profit Centres (entity-scoped — seed for PTPL)
+  const ptpl = await prisma.entity.findFirst({ where: { tenantId: tenant.id } })
+  if (ptpl) {
+    const profitCentres = [
+      { code: 'PC-CORP',  name: 'Corporate' },
+      { code: 'PC-TECH',  name: 'Technology' },
+      { code: 'PC-OPS',   name: 'Operations' },
+      { code: 'PC-SALES', name: 'Sales & Marketing' },
+      { code: 'PC-FIN',   name: 'Finance' },
+    ]
+    for (const pc of profitCentres) {
+      await prisma.profitCentre.upsert({
+        where:  { tenantId_entityId_code: { tenantId: tenant.id, entityId: ptpl.id, code: pc.code } },
+        update: {},
+        create: { ...pc, tenantId: tenant.id, entityId: ptpl.id, status: 'ACTIVE' },
+      })
+    }
+    console.log(`✓ ${profitCentres.length} profit centres`)
+  }
+
   // Ensure all seeded records have status=ACTIVE
   await prisma.$executeRaw`UPDATE countries    SET status='ACTIVE' WHERE status IS NULL OR status=''`
   await prisma.$executeRaw`UPDATE states       SET status='ACTIVE' WHERE status IS NULL OR status=''`
