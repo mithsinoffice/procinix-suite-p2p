@@ -98,6 +98,10 @@ model Vendor {
   kycMsmeStatus         String?
   kycMsmeCategory       String?
   kycMsmeRegisteredAt   String?
+  panEntityType         String?
+  aadharNo              String?
+  aadharPanLinked       String?
+  msmeCategory          String?
   kycPanStatus          String?
   kycPanName            String?
   kycGstStatus          String?
@@ -999,10 +1003,14 @@ model VendorEntityMapping {
   profitCentreId String?
   currencyCode   String   @default("INR")
   creditLimit    Decimal? @db.Decimal(15, 2)
-  blockPO        Boolean  @default(false)
-  blockPayment   Boolean  @default(false)
-  blockReason    String?
-  isActive       Boolean  @default(true)
+  blockPO          Boolean  @default(false)
+  blockPayment     Boolean  @default(false)
+  blockReason      String?
+  paymentTermsDays Int      @default(30)
+  paymentMode      String   @default("NEFT")
+  erpVendorCode    String?
+  erpSystem        String?
+  isActive         Boolean  @default(true)
   vendor         Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   @@unique([vendorId, entityId])
   @@index([vendorId])

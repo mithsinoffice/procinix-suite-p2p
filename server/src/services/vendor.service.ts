@@ -30,16 +30,20 @@ export interface GstRegistrationInput {
 }
 
 export interface EntityMappingInput {
-  id?:             string
-  entityId:        string
-  glCodeId?:       string
-  costCentreId?:   string
-  profitCentreId?: string
-  currencyCode?:   string
-  creditLimit?:    number
-  blockPO?:        boolean
-  blockPayment?:   boolean
-  blockReason?:    string
+  id?:              string
+  entityId:         string
+  glCodeId?:        string
+  costCentreId?:    string
+  profitCentreId?:  string
+  currencyCode?:    string
+  creditLimit?:     number
+  blockPO?:         boolean
+  blockPayment?:    boolean
+  blockReason?:     string
+  paymentTermsDays?: number
+  paymentMode?:     string
+  erpVendorCode?:   string
+  erpSystem?:       string
 }
 
 export interface VendorCreateInput {
@@ -90,6 +94,10 @@ export interface VendorCreateInput {
   // ERP
   erpVendorCode?: string
   erpSystem?:     string
+  // PAN / Aadhaar / MSME
+  panEntityType?: string
+  aadharNo?:      string
+  msmeCategory?:  string
   // Sub-tables (full replace on update)
   bankAccounts?:     BankAccountInput[]
   gstRegistrations?: GstRegistrationInput[]
@@ -170,6 +178,9 @@ export async function createVendor(
         panCompliance:     (input.panCompliance ?? 'COMPLIANT') as any,
         erpVendorCode:     input.erpVendorCode,
         erpSystem:         input.erpSystem,
+        panEntityType:     input.panEntityType,
+        aadharNo:          input.aadharNo,
+        msmeCategory:      input.msmeCategory,
         status:            'PENDING_APPROVAL',
       },
     })
@@ -208,16 +219,20 @@ export async function createVendor(
     if (input.entityMappings?.length) {
       await tx.vendorEntityMapping.createMany({
         data: input.entityMappings.map(e => ({
-          vendorId:       v.id,
-          entityId:       e.entityId,
-          glCodeId:       e.glCodeId,
-          costCentreId:   e.costCentreId,
-          profitCentreId: e.profitCentreId,
-          currencyCode:   e.currencyCode ?? 'INR',
-          creditLimit:    e.creditLimit,
-          blockPO:        e.blockPO ?? false,
-          blockPayment:   e.blockPayment ?? false,
-          blockReason:    e.blockReason,
+          vendorId:        v.id,
+          entityId:        e.entityId,
+          glCodeId:        e.glCodeId,
+          costCentreId:    e.costCentreId,
+          profitCentreId:  e.profitCentreId,
+          currencyCode:    e.currencyCode ?? 'INR',
+          creditLimit:     e.creditLimit,
+          blockPO:         e.blockPO ?? false,
+          blockPayment:    e.blockPayment ?? false,
+          blockReason:     e.blockReason,
+          paymentTermsDays: e.paymentTermsDays ?? 30,
+          paymentMode:     e.paymentMode ?? 'NEFT',
+          erpVendorCode:   e.erpVendorCode,
+          erpSystem:       e.erpSystem,
         })),
       })
     }
@@ -362,6 +377,9 @@ export async function updateVendor(
         panCompliance:     input.panCompliance as any,
         erpVendorCode:     input.erpVendorCode,
         erpSystem:         input.erpSystem,
+        panEntityType:     input.panEntityType,
+        aadharNo:          input.aadharNo,
+        msmeCategory:      input.msmeCategory,
       },
     })
 
@@ -407,16 +425,20 @@ export async function updateVendor(
       if (input.entityMappings.length) {
         await tx.vendorEntityMapping.createMany({
           data: input.entityMappings.map(e => ({
-            vendorId:       id,
-            entityId:       e.entityId,
-            glCodeId:       e.glCodeId,
-            costCentreId:   e.costCentreId,
-            profitCentreId: e.profitCentreId,
-            currencyCode:   e.currencyCode ?? 'INR',
-            creditLimit:    e.creditLimit,
-            blockPO:        e.blockPO ?? false,
-            blockPayment:   e.blockPayment ?? false,
-            blockReason:    e.blockReason,
+            vendorId:        id,
+            entityId:        e.entityId,
+            glCodeId:        e.glCodeId,
+            costCentreId:    e.costCentreId,
+            profitCentreId:  e.profitCentreId,
+            currencyCode:    e.currencyCode ?? 'INR',
+            creditLimit:     e.creditLimit,
+            blockPO:         e.blockPO ?? false,
+            blockPayment:    e.blockPayment ?? false,
+            blockReason:     e.blockReason,
+            paymentTermsDays: e.paymentTermsDays ?? 30,
+            paymentMode:     e.paymentMode ?? 'NEFT',
+            erpVendorCode:   e.erpVendorCode,
+            erpSystem:       e.erpSystem,
           })),
         })
       }

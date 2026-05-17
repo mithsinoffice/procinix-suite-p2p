@@ -26,16 +26,20 @@ const gstRegRowSchema = z.object({
 })
 
 const entityMappingRowSchema = z.object({
-  id:             z.string().optional(),
-  entityId:       z.string().min(1),
-  glCodeId:       z.string().optional(),
-  costCentreId:   z.string().optional(),
-  profitCentreId: z.string().optional(),
-  currencyCode:   z.string().default('INR'),
-  creditLimit:    z.coerce.number().min(0).optional(),
-  blockPO:        z.boolean().default(false),
-  blockPayment:   z.boolean().default(false),
-  blockReason:    z.string().optional(),
+  id:              z.string().optional(),
+  entityId:        z.string().min(1),
+  glCodeId:        z.string().optional(),
+  costCentreId:    z.string().optional(),
+  profitCentreId:  z.string().optional(),
+  currencyCode:    z.string().default('INR'),
+  creditLimit:     z.coerce.number().min(0).optional(),
+  blockPO:         z.boolean().default(false),
+  blockPayment:    z.boolean().default(false),
+  blockReason:     z.string().optional(),
+  paymentTermsDays: z.coerce.number().int().min(0).max(365).default(30),
+  paymentMode:     z.string().optional(),
+  erpVendorCode:   z.string().optional(),
+  erpSystem:       z.string().optional(),
 })
 
 const createSchema = z.object({
@@ -86,6 +90,10 @@ const createSchema = z.object({
   // ERP
   erpVendorCode: z.string().optional(),
   erpSystem:     z.string().optional(),
+  // PAN / Aadhaar / MSME
+  panEntityType: z.string().optional(),
+  aadharNo:      z.string().optional(),
+  msmeCategory:  z.string().optional(),
   // Sub-tables
   bankAccounts:     z.array(bankAccountRowSchema).optional(),
   gstRegistrations: z.array(gstRegRowSchema).optional(),

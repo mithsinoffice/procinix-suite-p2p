@@ -1,9 +1,9 @@
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useForm, useFieldArray, type UseFormRegister, type FieldErrors } from 'react-hook-form'
+import { useForm, useFieldArray, type UseFormRegister, type UseFormWatch, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, Plus, Trash2, ShieldCheck, AlertTriangle, MinusCircle, CheckCircle2 } from 'lucide-react'
-import { useEffect } from 'react'
+import { Loader2, Plus, Trash2, AlertTriangle, MinusCircle, CheckCircle2, Search } from 'lucide-react'
 import { vendorFormSchema, type VendorFormInput } from '../../../../shared/schemas/vendor.schema'
 import { useCreateVendor, useUpdateVendor, useVendor, type VendorDetail } from '../../../lib/api/vendors.api'
 import { useMasterData } from '../../../hooks/useMasterData'
@@ -73,24 +73,26 @@ function Section({ letter, title, subtitle, children, extra }: {
   )
 }
 
-function KycChip({ status, label }: { status?: string | null; label: string }) {
+function KycChip({ status, label, name }: { status?: string | null; label: string; name?: string | null }) {
   if (!status || status === 'NOT_CHECKED') return null
   const map: Record<string, string> = {
-    VERIFIED:     'bg-green-50 text-green-700 border-green-200',
-    PASSED:       'bg-green-50 text-green-700 border-green-200',
-    COMPLIANT:    'bg-green-50 text-green-700 border-green-200',
-    FAILED:       'bg-red-50 text-red-700 border-red-200',
-    NON_COMPLIANT:'bg-red-50 text-red-700 border-red-200',
-    PENDING:      'bg-amber-50 text-amber-700 border-amber-200',
-    MISMATCH:     'bg-orange-50 text-orange-700 border-orange-200',
+    VERIFIED:      'bg-green-50 text-green-700 border-green-200',
+    PASSED:        'bg-green-50 text-green-700 border-green-200',
+    COMPLIANT:     'bg-green-50 text-green-700 border-green-200',
+    LINKED:        'bg-green-50 text-green-700 border-green-200',
+    FAILED:        'bg-red-50 text-red-700 border-red-200',
+    NON_COMPLIANT: 'bg-red-50 text-red-700 border-red-200',
+    NOT_LINKED:    'bg-red-50 text-red-700 border-red-200',
+    PENDING:       'bg-amber-50 text-amber-700 border-amber-200',
+    MISMATCH:      'bg-orange-50 text-orange-700 border-orange-200',
+    NOT_VERIFIED:  'bg-muted text-muted-foreground border-border',
   }
-  const Icon = status.includes('FAIL') || status.includes('NON') ? AlertTriangle
-             : status.includes('PENDING') ? MinusCircle
-             : CheckCircle2
+  const Icon = (status.includes('FAIL') || status.includes('NON') || status === 'NOT_LINKED')
+    ? AlertTriangle : status === 'PENDING' ? MinusCircle : CheckCircle2
   return (
     <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide', map[status] ?? 'bg-muted text-muted-foreground border-border')}>
       <Icon className="h-2.5 w-2.5" />
-      {label}: {status.replace(/_/g, ' ')}
+      {label}: {status.replace(/_/g, ' ')}{name ? ` — ${name}` : ''}
     </span>
   )
 }
@@ -115,11 +117,17 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   )
 }
 
-// ── Inline table row for bank accounts ──
+function TH({ children, className }: { children?: React.ReactNode; className?: string }) {
+  return (
+    <th className={cn('px-2 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap bg-muted/50', className)}>
+      {children}
+    </th>
+  )
+}
 
-function BankRow({
-  i, register, errors, onRemove, isPrimary, onSetPrimary,
-}: {
+// ── Bank account row (card layout) ──
+
+function BankRow({ i, register, errors, onRemove, isPrimary, onSetPrimary }: {
   i: number
   register: UseFormRegister<VendorFormInput>
   errors: FieldErrors<VendorFormInput>
@@ -191,148 +199,210 @@ function BankRow({
   )
 }
 
-// ── Inline table row for GST registrations ──
+// ── GST registration row (compact table row) ──
 
-function GstRow({
-  i, register, errors, onRemove, isPrimary, onSetPrimary,
-}: {
+function GstRow({ i, register, errors, watch, onRemove, isPrimary, onSetPrimary, vendorId }: {
   i: number
   register: UseFormRegister<VendorFormInput>
   errors: FieldErrors<VendorFormInput>
+  watch: UseFormWatch<VendorFormInput>
   onRemove: () => void
   isPrimary: boolean
   onSetPrimary: () => void
+  vendorId?: string
 }) {
+  const [kycStatus, setKycStatus] = useState<string | null>(null)
+  const [validating, setValidating] = useState(false)
+  const gstinVal = watch(`gstRegistrations.${i}.gstin`) ?? ''
+  const stateVal = watch(`gstRegistrations.${i}.stateCode`) ?? ''
+  const mismatch = gstinVal.length >= 2 && stateVal.length > 0 && gstinVal.substring(0, 2) !== stateVal
   const e = (errors.gstRegistrations?.[i] ?? {}) as Record<string, { message?: string }>
+
+  async function handleValidate() {
+    if (!vendorId || !gstinVal) return
+    setValidating(true)
+    try {
+      const res = await http.post<Record<string, string>>(`/api/masters/vendors/${vendorId}/kyc/gst`, { gstin: gstinVal })
+      setKycStatus(res.kycGstStatus ?? res.kycStatus ?? 'VERIFIED')
+    } catch {
+      setKycStatus('FAILED')
+    } finally {
+      setValidating(false)
+    }
+  }
+
   return (
-    <div className={cn('rounded-lg border p-3 space-y-3', isPrimary ? 'border-primary/40 bg-primary/5' : 'border-border bg-background')}>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">State code *</label>
-          <SI placeholder="27" maxLength={2} className="uppercase" {...register(`gstRegistrations.${i}.stateCode`)} />
-          {e.stateCode?.message && <p className="text-[10px] text-destructive mt-0.5">{e.stateCode.message}</p>}
-        </div>
-        <div className="col-span-1 sm:col-span-2">
-          <label className="text-xs text-muted-foreground mb-1 block">GSTIN *</label>
-          <SI placeholder="27AABCU9603R1ZV" className="uppercase" {...register(`gstRegistrations.${i}.gstin`)} />
-          {e.gstin?.message && <p className="text-[10px] text-destructive mt-0.5">{e.gstin.message}</p>}
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Registration type</label>
-          <SS {...register(`gstRegistrations.${i}.registrationType`)}>
-            <option value="REGULAR">Regular</option>
-            <option value="COMPOSITION">Composition</option>
-            <option value="UNREGISTERED">Unregistered</option>
-            <option value="SEZ">SEZ</option>
-            <option value="EXPORT">Export</option>
-            <option value="ISD">ISD</option>
-          </SS>
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">SPOC name</label>
-          <SI placeholder="Contact name" {...register(`gstRegistrations.${i}.spocName`)} />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">SPOC email</label>
-          <SI type="email" placeholder="spoc@vendor.com" {...register(`gstRegistrations.${i}.spocEmail`)} />
-        </div>
-      </div>
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isPrimary}
-            onChange={onSetPrimary}
-            className="h-3.5 w-3.5 rounded border-input accent-primary"
-          />
-          <span className="text-xs text-muted-foreground">Primary registration</span>
-        </label>
-        <button type="button" onClick={onRemove} className="flex items-center gap-1 text-xs text-destructive hover:underline">
-          <Trash2 className="h-3 w-3" /> Remove
+    <tr className="border-b border-border hover:bg-muted/30">
+      <td className="px-2 py-1.5 min-w-[70px]">
+        <SI placeholder="27" maxLength={2}
+          className={cn('uppercase text-xs', mismatch && 'border-destructive')}
+          {...register(`gstRegistrations.${i}.stateCode`)} />
+        {mismatch && <p className="text-[9px] text-destructive mt-0.5">≠ GSTIN prefix</p>}
+      </td>
+      <td className="px-2 py-1.5 min-w-[170px]">
+        <SI placeholder="27AABCU9603R1ZV" maxLength={15} className="uppercase text-xs"
+          {...register(`gstRegistrations.${i}.gstin`)} />
+        {e.gstin?.message && <p className="text-[9px] text-destructive mt-0.5">{e.gstin.message}</p>}
+      </td>
+      <td className="px-2 py-1.5 min-w-[130px]">
+        <SS className="text-xs" {...register(`gstRegistrations.${i}.registrationType`)}>
+          <option value="REGULAR">Regular</option>
+          <option value="COMPOSITION">Composition</option>
+          <option value="UNREGISTERED">Unregistered</option>
+          <option value="SEZ">SEZ</option>
+          <option value="EXPORT">Export</option>
+          <option value="ISD">ISD</option>
+        </SS>
+      </td>
+      <td className="px-2 py-1.5 text-center">
+        <input type="radio" checked={isPrimary} onChange={onSetPrimary}
+          className="h-3.5 w-3.5 accent-primary cursor-pointer" />
+      </td>
+      <td className="px-2 py-1.5 min-w-[120px]">
+        <SI placeholder="SPOC name" className="text-xs" {...register(`gstRegistrations.${i}.spocName`)} />
+      </td>
+      <td className="px-2 py-1.5 min-w-[150px]">
+        <SI type="email" placeholder="spoc@vendor.com" className="text-xs" {...register(`gstRegistrations.${i}.spocEmail`)} />
+      </td>
+      <td className="px-2 py-1.5 min-w-[110px]">
+        <SI placeholder="Phone" className="text-xs" {...register(`gstRegistrations.${i}.spocPhone`)} />
+      </td>
+      <td className="px-2 py-1.5 min-w-[90px]">
+        {kycStatus && <KycChip status={kycStatus} label="GST" />}
+      </td>
+      <td className="px-2 py-1.5">
+        {vendorId && (
+          <button
+            type="button"
+            onClick={handleValidate}
+            disabled={validating || !gstinVal}
+            title="Validate GSTIN via KYC"
+            className="flex items-center justify-center h-7 w-7 rounded border border-input hover:border-primary text-muted-foreground hover:text-primary disabled:opacity-40"
+          >
+            {validating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+          </button>
+        )}
+      </td>
+      <td className="px-2 py-1.5">
+        <button type="button" onClick={onRemove}
+          className="flex items-center justify-center h-7 w-7 rounded text-destructive hover:bg-destructive/10">
+          <Trash2 className="h-3.5 w-3.5" />
         </button>
-      </div>
-    </div>
+      </td>
+    </tr>
   )
 }
 
-// ── Entity mapping row ──
+// ── Entity mapping row (horizontal scrollable table) ──
 
-function EntityRow({
-  i, register, errors, onRemove, entities, glCodes, costCentres, profitCentres,
-}: {
+function EntityRow({ i, register, errors, watch, onRemove, entities, glCodes, costCentres, profitCentres }: {
   i: number
   register: UseFormRegister<VendorFormInput>
   errors: FieldErrors<VendorFormInput>
+  watch: UseFormWatch<VendorFormInput>
   onRemove: () => void
   entities: { id: string; code: string; name: string }[]
   glCodes:  { id: string; code: string; name: string }[]
   costCentres: { id: string; code: string; name: string }[]
   profitCentres: { id: string; code: string; name: string }[]
 }) {
+  const blockPO      = watch(`entityMappings.${i}.blockPO`)
+  const blockPayment = watch(`entityMappings.${i}.blockPayment`)
+  const showReason   = !!(blockPO || blockPayment)
   const e = (errors.entityMappings?.[i] ?? {}) as Record<string, { message?: string }>
+  const td = 'px-2 py-1.5 align-top'
+
   return (
-    <div className="rounded-lg border border-border bg-background p-3 space-y-3">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Entity *</label>
-          <SS {...register(`entityMappings.${i}.entityId`)}>
+    <>
+      <tr className="border-b border-border hover:bg-muted/30">
+        <td className={cn(td, 'min-w-[160px]')}>
+          <SS className="text-xs" {...register(`entityMappings.${i}.entityId`)}>
             <option value="">Select entity</option>
-            {entities.map(e => <option key={e.id} value={e.id}>{e.code} — {e.name}</option>)}
+            {entities.map(ent => <option key={ent.id} value={ent.id}>{ent.code} — {ent.name}</option>)}
           </SS>
-          {e.entityId?.message && <p className="text-[10px] text-destructive mt-0.5">{e.entityId.message}</p>}
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">GL Code</label>
-          <SS {...register(`entityMappings.${i}.glCodeId`)}>
-            <option value="">None</option>
-            {glCodes.map(g => <option key={g.id} value={g.id}>{g.code} — {g.name}</option>)}
+          {e.entityId?.message && <p className="text-[9px] text-destructive mt-0.5">{e.entityId.message}</p>}
+        </td>
+        <td className={cn(td, 'min-w-[120px]')}>
+          <SS className="text-xs" {...register(`entityMappings.${i}.glCodeId`)}>
+            <option value="">—</option>
+            {glCodes.map(g => <option key={g.id} value={g.id}>{g.code}</option>)}
           </SS>
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Cost centre</label>
-          <SS {...register(`entityMappings.${i}.costCentreId`)}>
-            <option value="">None</option>
-            {costCentres.map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
+        </td>
+        <td className={cn(td, 'min-w-[120px]')}>
+          <SS className="text-xs" {...register(`entityMappings.${i}.costCentreId`)}>
+            <option value="">—</option>
+            {costCentres.map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
           </SS>
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Profit centre</label>
-          <SS {...register(`entityMappings.${i}.profitCentreId`)}>
-            <option value="">None</option>
-            {profitCentres.map(p => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
+        </td>
+        <td className={cn(td, 'min-w-[120px]')}>
+          <SS className="text-xs" {...register(`entityMappings.${i}.profitCentreId`)}>
+            <option value="">—</option>
+            {profitCentres.map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
           </SS>
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Currency</label>
-          <SS {...register(`entityMappings.${i}.currencyCode`)}>
+        </td>
+        <td className={cn(td, 'min-w-[75px]')}>
+          <SS className="text-xs" {...register(`entityMappings.${i}.currencyCode`)}>
             <option value="INR">INR</option>
             <option value="USD">USD</option>
             <option value="EUR">EUR</option>
             <option value="GBP">GBP</option>
             <option value="AED">AED</option>
           </SS>
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Credit limit</label>
-          <SI type="number" placeholder="0" {...register(`entityMappings.${i}.creditLimit`)} />
-        </div>
-      </div>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" {...register(`entityMappings.${i}.blockPO`)} className="h-3.5 w-3.5 rounded border-input accent-destructive" />
-            <span className="text-xs text-muted-foreground">Block PO</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" {...register(`entityMappings.${i}.blockPayment`)} className="h-3.5 w-3.5 rounded border-input accent-destructive" />
-            <span className="text-xs text-muted-foreground">Block payment</span>
-          </label>
-        </div>
-        <button type="button" onClick={onRemove} className="flex items-center gap-1 text-xs text-destructive hover:underline">
-          <Trash2 className="h-3 w-3" /> Remove
-        </button>
-      </div>
-    </div>
+        </td>
+        <td className={cn(td, 'min-w-[90px]')}>
+          <SI type="number" placeholder="0" className="text-xs" {...register(`entityMappings.${i}.creditLimit`)} />
+        </td>
+        <td className={cn(td, 'text-center')}>
+          <input type="checkbox" {...register(`entityMappings.${i}.blockPO`)}
+            className="h-3.5 w-3.5 rounded accent-destructive cursor-pointer" />
+        </td>
+        <td className={cn(td, 'text-center')}>
+          <input type="checkbox" {...register(`entityMappings.${i}.blockPayment`)}
+            className="h-3.5 w-3.5 rounded accent-destructive cursor-pointer" />
+        </td>
+        <td className={cn(td, 'min-w-[90px]')}>
+          <SI type="number" placeholder="30" className="text-xs" {...register(`entityMappings.${i}.paymentTermsDays`)} />
+        </td>
+        <td className={cn(td, 'min-w-[100px]')}>
+          <SS className="text-xs" {...register(`entityMappings.${i}.paymentMode`)}>
+            <option value="NEFT">NEFT</option>
+            <option value="RTGS">RTGS</option>
+            <option value="IMPS">IMPS</option>
+            <option value="CHEQUE">Cheque</option>
+          </SS>
+        </td>
+        <td className={cn(td, 'min-w-[110px]')}>
+          <SI placeholder="SAP/Oracle ID" className="text-xs" {...register(`entityMappings.${i}.erpVendorCode`)} />
+        </td>
+        <td className={cn(td, 'min-w-[110px]')}>
+          <SS className="text-xs" {...register(`entityMappings.${i}.erpSystem`)}>
+            <option value="">—</option>
+            <option value="SAP">SAP</option>
+            <option value="ORACLE">Oracle</option>
+            <option value="TALLY">Tally</option>
+            <option value="BUSY">Busy</option>
+            <option value="CUSTOM">Custom</option>
+          </SS>
+        </td>
+        <td className={cn(td, 'text-center')}>
+          <button type="button" onClick={onRemove}
+            className="flex items-center justify-center h-7 w-7 rounded text-destructive hover:bg-destructive/10 mx-auto">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </td>
+      </tr>
+      {showReason && (
+        <tr className="bg-destructive/5 border-b border-border">
+          <td colSpan={13} className="px-3 py-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-destructive font-medium whitespace-nowrap">Block reason:</span>
+              <SI placeholder="Reason for blocking PO / payment"
+                className="max-w-sm text-xs" {...register(`entityMappings.${i}.blockReason`)} />
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   )
 }
 
@@ -346,7 +416,6 @@ export default function VendorFormPage({ mode }: Props) {
 
   const { data: vendor } = useVendor(mode === 'edit' ? (id ?? '') : '')
 
-  // Master data for dropdowns
   const { entities, glCodes, costCentres } = useMasterData()
 
   const { data: vendorCategories = [] } = useQuery<{ id: string; code: string; name: string }[]>({
@@ -364,13 +433,6 @@ export default function VendorFormPage({ mode }: Props) {
     queryFn:  () => http.get('/api/masters/tds-sections'),
     staleTime: STALE_TIMES.MASTER,
   })
-  const { data: taxRegimesRaw } = useQuery<{ data: { id: string; code: string; name: string }[] }>({
-    queryKey: ['masters', 'tax-regimes', 'list'],
-    queryFn:  () => http.get('/api/masters/tax-regimes?take=100'),
-    staleTime: STALE_TIMES.MASTER,
-  })
-  const taxRegimes = taxRegimesRaw?.data ?? []
-
   const { data: profitCentresRaw = [] } = useQuery<{ id: string; code: string; name: string }[]>({
     queryKey: ['masters', 'profit-centres'],
     queryFn:  () => http.get('/api/masters/profit-centres'),
@@ -384,88 +446,75 @@ export default function VendorFormPage({ mode }: Props) {
   } = useForm<VendorFormInput>({
     resolver: zodResolver(vendorFormSchema),
     defaultValues: {
-      countryCode:      'IN',
-      vendorType:       'SUPPLIER',
-      panCompliance:    'COMPLIANT',
-      paymentTerms:     30,
-      paymentMode:      'NEFT',
-      paymentCurrency:  'INR',
-      tdsApplicable:    false,
-      tdsExempt:        false,
-      einvoiceRequired: false,
+      countryCode:       'IN',
+      vendorType:        'SUPPLIER',
+      panCompliance:     'COMPLIANT',
+      tdsApplicable:     false,
+      tdsExempt:         false,
+      einvoiceRequired:  false,
       is206ABApplicable: false,
       lowerTdsAlertDays: 30,
-      bankAccounts:     [],
-      gstRegistrations: [],
-      entityMappings:   [],
+      bankAccounts:      [],
+      gstRegistrations:  [],
+      entityMappings:    [],
     },
   })
 
-  const {
-    fields: bankFields, append: appendBank, remove: removeBank,
-  } = useFieldArray({ control, name: 'bankAccounts' })
-
-  const {
-    fields: gstFields, append: appendGst, remove: removeGst,
-  } = useFieldArray({ control, name: 'gstRegistrations' })
-
-  const {
-    fields: entityFields, append: appendEntity, remove: removeEntity,
-  } = useFieldArray({ control, name: 'entityMappings' })
+  const { fields: bankFields,   append: appendBank,   remove: removeBank   } = useFieldArray({ control, name: 'bankAccounts' })
+  const { fields: gstFields,    append: appendGst,    remove: removeGst    } = useFieldArray({ control, name: 'gstRegistrations' })
+  const { fields: entityFields, append: appendEntity, remove: removeEntity } = useFieldArray({ control, name: 'entityMappings' })
 
   const tdsApplicable = watch('tdsApplicable')
   const tdsExempt     = watch('tdsExempt')
+  const panEntityType = watch('panEntityType')
+  const msmeCategory  = watch('msmeCategory')
+  const showAadhar    = panEntityType === 'INDIVIDUAL' || panEntityType === 'HUF'
 
   useEffect(() => {
     if (vendor && mode === 'edit') {
       const v = vendor as VendorDetail & {
-        bankAccounts: any[]
-        gstRegistrations: any[]
-        entityMappings: any[]
+        bankAccounts: any[]; gstRegistrations: any[]; entityMappings: any[]
       }
       reset({
-        legalName:        v.legalName       ?? '',
-        tradeName:        v.tradeName        ?? '',
-        vendorType:       v.vendorType       as any,
-        vendorCategoryId: v.vendorCategoryId ?? '',
-        vendorGroupId:    v.vendorGroupId    ?? '',
-        countryCode:      v.countryCode      ?? 'IN',
-        email:            v.email            ?? '',
-        mobile:           v.mobile           ?? '',
-        contactName:      v.contactName      ?? '',
-        website:          v.website          ?? '',
-        addressLine1:     v.addressLine1     ?? '',
-        addressLine2:     v.addressLine2     ?? '',
-        city:             v.city             ?? '',
-        state:            v.state            ?? '',
-        stateCode:        v.stateCode        ?? '',
-        pincode:          v.pincode          ?? '',
-        pan:              v.pan              ?? '',
-        panCompliance:    (v.panCompliance   ?? 'COMPLIANT') as any,
-        gstin:            v.gstin            ?? '',
-        cin:              v.cin              ?? '',
-        tan:              v.tan              ?? '',
-        udyamNumber:      v.udyamNumber      ?? '',
-        tdsApplicable:    v.tdsApplicable    ?? false,
-        tdsSectionCode:   v.tdsSectionCode   ?? '',
-        tdsSectionId:     v.tdsSectionId     ?? '',
-        tdsRate:          v.tdsRate          ?? undefined,
-        tdsExempt:        v.tdsExempt        ?? false,
-        lowerTdsCertNo:   v.lowerTdsCertNo   ?? '',
-        lowerTdsSection:  v.lowerTdsSection  ?? '',
-        lowerTdsRate:     v.lowerTdsRate     ?? undefined,
+        legalName:        v.legalName        ?? '',
+        tradeName:        v.tradeName         ?? '',
+        vendorType:       v.vendorType        as any,
+        vendorCategoryId: v.vendorCategoryId  ?? '',
+        vendorGroupId:    v.vendorGroupId     ?? '',
+        countryCode:      v.countryCode       ?? 'IN',
+        email:            v.email             ?? '',
+        mobile:           v.mobile            ?? '',
+        contactName:      v.contactName       ?? '',
+        website:          v.website           ?? '',
+        addressLine1:     v.addressLine1      ?? '',
+        addressLine2:     v.addressLine2      ?? '',
+        city:             v.city              ?? '',
+        state:            v.state             ?? '',
+        stateCode:        v.stateCode         ?? '',
+        pincode:          v.pincode           ?? '',
+        pan:              v.pan               ?? '',
+        panCompliance:    (v.panCompliance    ?? 'COMPLIANT') as any,
+        panEntityType:    v.panEntityType     ?? '',
+        aadharNo:         v.aadharNo          ?? '',
+        msmeCategory:     v.msmeCategory      ?? '',
+        gstin:            v.gstin             ?? '',
+        cin:              v.cin               ?? '',
+        tan:              v.tan               ?? '',
+        udyamNumber:      v.udyamNumber       ?? '',
+        tdsApplicable:    v.tdsApplicable     ?? false,
+        tdsSectionCode:   v.tdsSectionCode    ?? '',
+        tdsSectionId:     v.tdsSectionId      ?? '',
+        tdsRate:          v.tdsRate           ?? undefined,
+        tdsExempt:        v.tdsExempt         ?? false,
+        lowerTdsCertNo:   v.lowerTdsCertNo    ?? '',
+        lowerTdsSection:  v.lowerTdsSection   ?? '',
+        lowerTdsRate:     v.lowerTdsRate      ?? undefined,
         lowerTdsValidFrom: v.lowerTdsValidFrom ? v.lowerTdsValidFrom.substring(0, 10) : '',
         lowerTdsValidTo:   v.lowerTdsValidTo   ? v.lowerTdsValidTo.substring(0, 10)   : '',
         lowerTdsAlertDays: v.lowerTdsAlertDays ?? 30,
         einvoiceRequired:  v.einvoiceRequired  ?? false,
         is206ABApplicable: v.is206ABApplicable ?? false,
-        paymentTerms:     v.paymentTerms     ?? 30,
-        paymentMode:      (v.paymentMode     ?? 'NEFT') as any,
-        paymentCurrency:  v.paymentCurrency  ?? 'INR',
-        taxRegimeCode:    v.taxRegimeCode    ?? '',
-        erpVendorCode:    v.erpVendorCode    ?? '',
-        erpSystem:        v.erpSystem        ?? '',
-        bankAccounts:     (v.bankAccounts ?? []).map((b: any) => ({
+        bankAccounts: (v.bankAccounts ?? []).map((b: any) => ({
           id: b.id, accountNo: b.accountNo, ifsc: b.ifsc,
           bankName: b.bankName ?? '', branch: b.branch ?? '',
           accountType: b.accountType ?? 'CURRENT',
@@ -479,14 +528,18 @@ export default function VendorFormPage({ mode }: Props) {
           isPrimary: g.isPrimary ?? false,
           spocName: g.spocName ?? '', spocEmail: g.spocEmail ?? '', spocPhone: g.spocPhone ?? '',
         })),
-        entityMappings: (v.entityMappings ?? []).map((e: any) => ({
-          id: e.id, entityId: e.entityId,
-          glCodeId: e.glCodeId ?? '', costCentreId: e.costCentreId ?? '',
-          profitCentreId: e.profitCentreId ?? '',
-          currencyCode: e.currencyCode ?? 'INR',
-          creditLimit: e.creditLimit ?? undefined,
-          blockPO: e.blockPO ?? false, blockPayment: e.blockPayment ?? false,
-          blockReason: e.blockReason ?? '',
+        entityMappings: (v.entityMappings ?? []).map((em: any) => ({
+          id: em.id, entityId: em.entityId,
+          glCodeId: em.glCodeId ?? '', costCentreId: em.costCentreId ?? '',
+          profitCentreId: em.profitCentreId ?? '',
+          currencyCode: em.currencyCode ?? 'INR',
+          creditLimit: em.creditLimit ?? undefined,
+          blockPO: em.blockPO ?? false, blockPayment: em.blockPayment ?? false,
+          blockReason: em.blockReason ?? '',
+          paymentTermsDays: em.paymentTermsDays ?? 30,
+          paymentMode: em.paymentMode ?? 'NEFT',
+          erpVendorCode: em.erpVendorCode ?? '',
+          erpSystem: em.erpSystem ?? '',
         })),
       })
     }
@@ -496,16 +549,17 @@ export default function VendorFormPage({ mode }: Props) {
     try {
       const payload = {
         ...data,
-        gstin:       data.gstin       || undefined,
-        cin:         data.cin         || undefined,
-        udyamNumber: data.udyamNumber || undefined,
-        tan:         data.tan         || undefined,
-        // Map empty optional string fields to undefined
+        gstin:            data.gstin            || undefined,
+        cin:              data.cin              || undefined,
+        udyamNumber:      data.udyamNumber      || undefined,
+        tan:              data.tan              || undefined,
+        panEntityType:    data.panEntityType    || undefined,
+        aadharNo:         data.aadharNo         || undefined,
+        msmeCategory:     data.msmeCategory     || undefined,
         vendorCategoryId: data.vendorCategoryId || undefined,
         vendorGroupId:    data.vendorGroupId    || undefined,
-        taxRegimeCode:    data.taxRegimeCode    || undefined,
         tdsSectionId:     data.tdsSectionId     || undefined,
-        bankAccounts:     data.bankAccounts.map(b => ({
+        bankAccounts: data.bankAccounts.map(b => ({
           ...b, id: b.id || undefined,
           bankName: b.bankName || undefined,
           branch: b.branch || undefined,
@@ -523,6 +577,8 @@ export default function VendorFormPage({ mode }: Props) {
           costCentreId: e.costCentreId || undefined,
           profitCentreId: e.profitCentreId || undefined,
           blockReason: e.blockReason || undefined,
+          erpVendorCode: e.erpVendorCode || undefined,
+          erpSystem: e.erpSystem || undefined,
         })),
       }
       if (mode === 'create') {
@@ -558,7 +614,7 @@ export default function VendorFormPage({ mode }: Props) {
       />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-        <form id="vendor-form" onSubmit={handleSubmit(onSubmit)} className="max-w-4xl mx-auto space-y-5">
+        <form id="vendor-form" onSubmit={handleSubmit(onSubmit)} className="max-w-5xl mx-auto space-y-5">
 
           {/* ── A. Identity & Classification ── */}
           <Section letter="A" title="Identity & Classification" subtitle="Core identifiers and type">
@@ -642,15 +698,15 @@ export default function VendorFormPage({ mode }: Props) {
             </F>
           </Section>
 
-          {/* ── D. Statutory ── */}
+          {/* ── D. Tax & Statutory ── */}
           <Section
             letter="D"
             title="Tax & Statutory"
-            subtitle="PAN, GSTIN, CIN, TAN — India compliance"
+            subtitle="PAN, GSTIN, CIN, TAN, MSME — India compliance"
             extra={
               mode === 'edit' && v ? (
                 <div className="flex flex-wrap gap-1.5">
-                  <KycChip status={v.kycPanStatus} label="PAN" />
+                  <KycChip status={v.kycPanStatus} label="PAN" name={v.kycPanName} />
                   <KycChip status={v.kycCinStatus} label="CIN" />
                   <KycChip status={v.kycMsmeStatus} label="MSME" />
                 </div>
@@ -660,6 +716,19 @@ export default function VendorFormPage({ mode }: Props) {
             <F label="PAN" required error={err('pan')}>
               <SI placeholder="ABCDE1234F" maxLength={10} className="uppercase" {...register('pan')} />
             </F>
+            <F label="PAN entity type">
+              <SS {...register('panEntityType')}>
+                <option value="">Select</option>
+                <option value="COMPANY">Company</option>
+                <option value="INDIVIDUAL">Individual</option>
+                <option value="HUF">HUF</option>
+                <option value="FIRM">Firm / LLP</option>
+                <option value="AOP">AOP</option>
+                <option value="BOI">BOI</option>
+                <option value="TRUST">Trust</option>
+                <option value="GOVT">Government</option>
+              </SS>
+            </F>
             <F label="PAN compliance">
               <SS {...register('panCompliance')}>
                 <option value="COMPLIANT">Compliant</option>
@@ -668,6 +737,16 @@ export default function VendorFormPage({ mode }: Props) {
                 <option value="EXEMPTED">Exempted</option>
               </SS>
             </F>
+            {showAadhar && (
+              <F label="Aadhaar number" error={err('aadharNo')}>
+                <div className="space-y-1.5">
+                  <SI placeholder="XXXX XXXX XXXX" maxLength={12} {...register('aadharNo')} />
+                  {mode === 'edit' && v?.aadharPanLinked && (
+                    <KycChip status={v.aadharPanLinked} label="Aadhaar-PAN" />
+                  )}
+                </div>
+              </F>
+            )}
             <F label="Primary GSTIN" error={err('gstin')}>
               <SI placeholder="27AABCU9603R1ZV" className="uppercase" {...register('gstin')} />
             </F>
@@ -680,6 +759,22 @@ export default function VendorFormPage({ mode }: Props) {
             <F label="Udyam / MSME no." error={err('udyamNumber')}>
               <SI placeholder="UDYAM-MH-00-0012345" className="uppercase" {...register('udyamNumber')} />
             </F>
+            <F label="MSME category">
+              <SS {...register('msmeCategory')}>
+                <option value="">None / Not registered</option>
+                <option value="MICRO">Micro enterprise</option>
+                <option value="SMALL">Small enterprise</option>
+                <option value="MEDIUM">Medium enterprise</option>
+              </SS>
+            </F>
+            {msmeCategory && (
+              <div className="col-span-2 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800">
+                  MSME payment rule: invoices from this {msmeCategory.toLowerCase()} enterprise must be paid within <strong>45 days</strong> to avoid interest under the MSMED Act, 2006.
+                </p>
+              </div>
+            )}
           </Section>
 
           {/* ── E. GST Registrations ── */}
@@ -700,27 +795,50 @@ export default function VendorFormPage({ mode }: Props) {
               ) : null
             }
           >
-            <div className="col-span-2 space-y-3">
-              {gstFields.map((field, i) => (
-                <GstRow
-                  key={field.id} i={i}
-                  register={register} errors={errors}
-                  onRemove={() => removeGst(i)}
-                  isPrimary={!!watch(`gstRegistrations.${i}.isPrimary`)}
-                  onSetPrimary={() => {
-                    gstFields.forEach((_, j) => {
-                      setValue(`gstRegistrations.${j}.isPrimary`, j === i)
-                    })
-                  }}
-                />
-              ))}
-              <button
-                type="button"
-                onClick={() => appendGst({ stateCode: '', gstin: '', registrationType: 'REGULAR', isPrimary: gstFields.length === 0, spocName: '', spocEmail: '', spocPhone: '' })}
-                className="flex items-center gap-1.5 text-xs text-primary hover:underline"
-              >
-                <Plus className="h-3 w-3" /> Add GST registration
-              </button>
+            <div className="col-span-2 overflow-x-auto rounded-md border border-border">
+              {gstFields.length > 0 ? (
+                <table className="w-full min-w-[860px] border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <TH>State</TH>
+                      <TH>GSTIN *</TH>
+                      <TH>Type</TH>
+                      <TH className="text-center">Primary</TH>
+                      <TH>SPOC Name</TH>
+                      <TH>SPOC Email</TH>
+                      <TH>SPOC Phone</TH>
+                      <TH>KYC</TH>
+                      <TH>Validate</TH>
+                      <TH></TH>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gstFields.map((field, i) => (
+                      <GstRow
+                        key={field.id} i={i}
+                        register={register} errors={errors} watch={watch}
+                        onRemove={() => removeGst(i)}
+                        isPrimary={!!watch(`gstRegistrations.${i}.isPrimary`)}
+                        onSetPrimary={() => {
+                          gstFields.forEach((_, j) => setValue(`gstRegistrations.${j}.isPrimary`, j === i))
+                        }}
+                        vendorId={mode === 'edit' ? id : undefined}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-6">No GST registrations added</p>
+              )}
+              <div className="border-t border-border px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => appendGst({ stateCode: '', gstin: '', registrationType: 'REGULAR', isPrimary: gstFields.length === 0, spocName: '', spocEmail: '', spocPhone: '' })}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                >
+                  <Plus className="h-3 w-3" /> Add GST registration
+                </button>
+              </div>
             </div>
           </Section>
 
@@ -729,7 +847,7 @@ export default function VendorFormPage({ mode }: Props) {
             <F label="TDS applicable" span>
               <Toggle
                 checked={tdsApplicable}
-                onChange={v => setValue('tdsApplicable', v)}
+                onChange={val => setValue('tdsApplicable', val)}
                 label="Deduct TDS on invoices from this vendor"
               />
             </F>
@@ -757,7 +875,7 @@ export default function VendorFormPage({ mode }: Props) {
                 <F label="TDS exempt">
                   <Toggle
                     checked={tdsExempt}
-                    onChange={v => setValue('tdsExempt', v)}
+                    onChange={val => setValue('tdsExempt', val)}
                     label="Vendor is TDS exempt"
                   />
                 </F>
@@ -795,14 +913,14 @@ export default function VendorFormPage({ mode }: Props) {
             <F label="e-Invoice required">
               <Toggle
                 checked={!!watch('einvoiceRequired')}
-                onChange={v => setValue('einvoiceRequired', v)}
+                onChange={val => setValue('einvoiceRequired', val)}
                 label="Vendor must issue e-Invoice"
               />
             </F>
             <F label="206AB flag">
               <Toggle
                 checked={!!watch('is206ABApplicable')}
-                onChange={v => setValue('is206ABApplicable', v)}
+                onChange={val => setValue('is206ABApplicable', val)}
                 label="Apply higher TDS under Section 206AB"
               />
             </F>
@@ -829,9 +947,7 @@ export default function VendorFormPage({ mode }: Props) {
                   onRemove={() => removeBank(i)}
                   isPrimary={!!watch(`bankAccounts.${i}.isPrimary`)}
                   onSetPrimary={() => {
-                    bankFields.forEach((_, j) => {
-                      setValue(`bankAccounts.${j}.isPrimary`, j === i)
-                    })
+                    bankFields.forEach((_, j) => setValue(`bankAccounts.${j}.isPrimary`, j === i))
                   }}
                 />
               ))}
@@ -845,83 +961,63 @@ export default function VendorFormPage({ mode }: Props) {
             </div>
           </Section>
 
-          {/* ── H. Entity Mappings ── */}
-          <Section letter="H" title="Entity Mappings" subtitle="GL, cost centre and credit settings per legal entity">
-            <div className="col-span-2 space-y-3">
-              {entityFields.map((field, i) => (
-                <EntityRow
-                  key={field.id} i={i}
-                  register={register} errors={errors}
-                  onRemove={() => removeEntity(i)}
-                  entities={entities}
-                  glCodes={glCodes}
-                  costCentres={costCentres}
-                  profitCentres={profitCentresRaw}
-                />
-              ))}
-              <button
-                type="button"
-                onClick={() => appendEntity({ entityId: '', glCodeId: '', costCentreId: '', profitCentreId: '', currencyCode: 'INR', blockPO: false, blockPayment: false, blockReason: '' })}
-                className="flex items-center gap-1.5 text-xs text-primary hover:underline"
-              >
-                <Plus className="h-3 w-3" /> Add entity mapping
-              </button>
+          {/* ── H. Entity Mappings — payment + ERP merged per entity ── */}
+          <Section
+            letter="H"
+            title="Entity Mappings"
+            subtitle="GL code, cost centre, payment terms and ERP settings per legal entity"
+          >
+            <div className="col-span-2 overflow-x-auto rounded-md border border-border">
+              {entityFields.length > 0 ? (
+                <table className="w-full min-w-[1240px] border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <TH>Entity *</TH>
+                      <TH>GL Code</TH>
+                      <TH>Cost Centre</TH>
+                      <TH>Profit Centre</TH>
+                      <TH>Currency</TH>
+                      <TH>Credit Limit</TH>
+                      <TH className="text-center">Block PO</TH>
+                      <TH className="text-center">Block Pmt</TH>
+                      <TH>Pmt Terms</TH>
+                      <TH>Pmt Mode</TH>
+                      <TH>ERP Code</TH>
+                      <TH>ERP System</TH>
+                      <TH></TH>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entityFields.map((field, i) => (
+                      <EntityRow
+                        key={field.id} i={i}
+                        register={register} errors={errors} watch={watch}
+                        onRemove={() => removeEntity(i)}
+                        entities={entities}
+                        glCodes={glCodes}
+                        costCentres={costCentres}
+                        profitCentres={profitCentresRaw}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-6">No entity mappings added</p>
+              )}
+              <div className="border-t border-border px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => appendEntity({
+                    entityId: '', glCodeId: '', costCentreId: '', profitCentreId: '',
+                    currencyCode: 'INR', blockPO: false, blockPayment: false, blockReason: '',
+                    paymentTermsDays: 30, paymentMode: 'NEFT', erpVendorCode: '', erpSystem: '',
+                  })}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                >
+                  <Plus className="h-3 w-3" /> Add entity mapping
+                </button>
+              </div>
             </div>
-          </Section>
-
-          {/* ── I. Payment Settings ── */}
-          <Section letter="I" title="Payment Settings" subtitle="Terms, mode and currency">
-            <F label="Payment terms (days)" error={err('paymentTerms')}>
-              <SI type="number" placeholder="30" {...register('paymentTerms')} />
-            </F>
-            <F label="Payment mode">
-              <SS {...register('paymentMode')}>
-                <option value="NEFT">NEFT</option>
-                <option value="RTGS">RTGS</option>
-                <option value="IMPS">IMPS</option>
-                <option value="CHEQUE">Cheque</option>
-                <option value="DD">Demand Draft</option>
-                <option value="CASH">Cash</option>
-                <option value="SWIFT">SWIFT (International)</option>
-              </SS>
-            </F>
-            <F label="Payment currency">
-              <SS {...register('paymentCurrency')}>
-                <option value="INR">INR — Indian Rupee</option>
-                <option value="USD">USD — US Dollar</option>
-                <option value="EUR">EUR — Euro</option>
-                <option value="GBP">GBP — British Pound</option>
-                <option value="AED">AED — UAE Dirham</option>
-                <option value="SGD">SGD — Singapore Dollar</option>
-              </SS>
-            </F>
-            {taxRegimes.length > 0 && (
-              <F label="Tax regime">
-                <SS {...register('taxRegimeCode')}>
-                  <option value="">Default</option>
-                  {taxRegimes.map(r => <option key={r.id} value={r.code ?? r.id}>{r.name}</option>)}
-                </SS>
-              </F>
-            )}
-          </Section>
-
-          {/* ── J. ERP Sync ── */}
-          <Section letter="J" title="ERP Sync" subtitle="Vendor code in your ERP system">
-            <F label="ERP vendor code">
-              <SI placeholder="SAP / Oracle vendor ID" {...register('erpVendorCode')} />
-            </F>
-            <F label="ERP system">
-              <SI placeholder="SAP S/4HANA" {...register('erpSystem')} />
-            </F>
-            {mode === 'edit' && v?.erpSyncStatus && (
-              <F label="Sync status" span>
-                <div className="flex items-center gap-2 pt-1">
-                  <ShieldCheck className={cn('h-4 w-4', v.erpSyncStatus === 'SYNCED' ? 'text-green-600' : 'text-amber-500')} />
-                  <span className="text-sm">{v.erpSyncStatus}</span>
-                  {v.erpSyncedAt && <span className="text-xs text-muted-foreground">{new Date(v.erpSyncedAt).toLocaleDateString()}</span>}
-                </div>
-              </F>
-            )}
           </Section>
 
         </form>

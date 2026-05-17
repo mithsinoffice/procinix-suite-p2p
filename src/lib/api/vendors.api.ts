@@ -22,6 +22,8 @@ export interface VendorEntityMapping {
   glCodeId?: string; costCentreId?: string; profitCentreId?: string
   currencyCode: string; creditLimit?: number
   blockPO: boolean; blockPayment: boolean; blockReason?: string; isActive: boolean
+  paymentTermsDays?: number; paymentMode?: string
+  erpVendorCode?: string; erpSystem?: string
 }
 
 export interface VendorSummary {
@@ -51,6 +53,8 @@ export interface VendorDetail extends VendorSummary {
   einvoiceRequired: boolean
   // Payment
   paymentMode: string; paymentCurrency: string
+  // PAN / Aadhaar / MSME
+  panEntityType?: string; aadharNo?: string; aadharPanLinked?: string; msmeCategory?: string
   // KYC (read-only)
   kycPanName?: string; kycGstName?: string; kycBankAccountName?: string
   kycBankNameMatchScore?: number; kycCinStatus?: string; kycCinCompanyName?: string

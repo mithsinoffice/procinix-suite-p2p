@@ -31,16 +31,20 @@ export const gstRegistrationRowSchema = z.object({
 })
 
 export const entityMappingRowSchema = z.object({
-  id:             z.string().optional(),
-  entityId:       nonEmptyString,
-  glCodeId:       z.string().optional(),
-  costCentreId:   z.string().optional(),
-  profitCentreId: z.string().optional(),
-  currencyCode:   z.string().default('INR'),
-  creditLimit:    z.coerce.number().min(0).optional(),
-  blockPO:        z.boolean().default(false),
-  blockPayment:   z.boolean().default(false),
-  blockReason:    optionalString,
+  id:              z.string().optional(),
+  entityId:        nonEmptyString,
+  glCodeId:        z.string().optional(),
+  costCentreId:    z.string().optional(),
+  profitCentreId:  z.string().optional(),
+  currencyCode:    z.string().default('INR'),
+  creditLimit:     z.coerce.number().min(0).optional(),
+  blockPO:         z.boolean().default(false),
+  blockPayment:    z.boolean().default(false),
+  blockReason:     optionalString,
+  paymentTermsDays: z.coerce.number().int().min(0).max(365).default(30),
+  paymentMode:     z.string().default('NEFT'),
+  erpVendorCode:   optionalString,
+  erpSystem:       optionalString,
 })
 
 export type BankAccountRow     = z.infer<typeof bankAccountRowSchema>
@@ -73,12 +77,15 @@ export const vendorFormSchema = z.object({
   pincode:      pincodeSchema.optional().or(z.literal('')),
 
   // D. Statutory
-  pan:           panSchema,
-  panCompliance: z.enum(['COMPLIANT', 'NON_FILER', 'LOWER_DEDUCTION', 'EXEMPTED']).default('COMPLIANT'),
-  gstin:         gstinOptional,
-  cin:           cinOptional,
-  tan:           z.string().optional(),
-  udyamNumber:   udyamOptional,
+  pan:            panSchema,
+  panCompliance:  z.enum(['COMPLIANT', 'NON_FILER', 'LOWER_DEDUCTION', 'EXEMPTED']).default('COMPLIANT'),
+  panEntityType:  z.string().optional(),
+  aadharNo:       z.string().optional(),
+  msmeCategory:   z.string().optional(),
+  gstin:          gstinOptional,
+  cin:            cinOptional,
+  tan:            z.string().optional(),
+  udyamNumber:    udyamOptional,
 
   // E. GST Registrations (inline table)
   gstRegistrations: z.array(gstRegistrationRowSchema).default([]),
@@ -101,18 +108,8 @@ export const vendorFormSchema = z.object({
   // G. Bank Accounts (inline table)
   bankAccounts: z.array(bankAccountRowSchema).default([]),
 
-  // H. Entity Mappings (inline table)
+  // H. Entity Mappings — includes payment + ERP settings per entity
   entityMappings: z.array(entityMappingRowSchema).default([]),
-
-  // I. Payment Settings
-  paymentTerms:    z.coerce.number().int().min(0).max(365).default(30),
-  paymentMode:     z.enum(['NEFT', 'RTGS', 'IMPS', 'CHEQUE', 'DD', 'CASH', 'SWIFT']).default('NEFT'),
-  paymentCurrency: z.string().default('INR'),
-  taxRegimeCode:   z.string().optional(),
-
-  // J. ERP Sync
-  erpVendorCode: optionalString,
-  erpSystem:     optionalString,
 })
 
 export type VendorFormInput = z.infer<typeof vendorFormSchema>
