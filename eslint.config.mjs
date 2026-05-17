@@ -1,10 +1,6 @@
-import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
-import reactPlugin from 'eslint-plugin-react';
-import reactHooks from 'eslint-plugin-react-hooks';
-import reactRefresh from 'eslint-plugin-react-refresh';
-import prettier from 'eslint-config-prettier';
-import globals from 'globals';
+import typescriptEslintPlugin from '@typescript-eslint/eslint-plugin'
+import typescriptParser from '@typescript-eslint/parser'
+import globals from 'globals'
 
 /**
  * F4 (2026-05-10): zero-warnings policy.
@@ -16,31 +12,26 @@ import globals from 'globals';
  * name, the violation count at deferral time, and the policy: re-enable to
  * 'warn' (or 'error') and clean per-file when the file is next touched.
  *
- * The bar going forward: any NEW code (lint-staged at commit time) must keep
- * the file at zero warnings under the active rule set. Husky/lint-staged
- * already enforces this via pre-commit. Legacy violations stay invisible to
- * CI until we explicitly re-ratchet a rule.
+ * The bar going forward: any NEW code must keep the file at zero warnings
+ * under the active rule set. `npm run lint:forms` enforces this on components.
  *
  * Rules still actively enforced on every file:
- *   • react-hooks/rules-of-hooks (real correctness bugs — fixed inline)
  *   • no-case-declarations, no-unused-expressions, prefer-const
  *
  * Deferred rules (F4-deferred — see CLAUDE.md change log):
  *   • @typescript-eslint/no-unused-vars      — 643 pre-existing
- *   • no-unused-vars (server)                —  25 pre-existing
  *   • @typescript-eslint/no-explicit-any     — 326 pre-existing
- *   • react-refresh/only-export-components   —  20 pre-existing
- *   • react-hooks/exhaustive-deps            —  63 pre-existing (audit risk-by-risk
- *                                                under a hooks-cleanup task)
- *   • react/no-unescaped-entities            —  46 pre-existing (cosmetic only —
- *                                                React renders fine; not
- *                                                auto-fixable; per-file when
- *                                                touched)
  *   • no-useless-assignment                  —  12 pre-existing (per-file dead-code
  *                                                analysis when touched)
+ *
+ * Uses packages installed at project level:
+ *   @typescript-eslint/eslint-plugin@7.x
+ *   @typescript-eslint/parser@7.x
+ *   globals
+ * (react-hooks and react-refresh plugins deferred until ESLint v9 upgrade)
  */
 
-export default tseslint.config(
+export default [
   // ── Global ignores ──────────────────────────────────────────────────────────
   {
     ignores: [
@@ -56,51 +47,23 @@ export default tseslint.config(
   // ── TypeScript frontend (src/**/*.{ts,tsx}) ──────────────────────────────
   {
     files: ['src/**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      ...tseslint.configs.recommended,
-      reactPlugin.configs.flat.recommended,
-    ],
-    plugins: {
-      // react-hooks registered manually — NOT via configs preset, because react-hooks v7
-      // ships 13 aggressive new React-compiler rules as errors. We only want the two
-      // classic rules for now; ratchet the rest up under a future hooks-cleanup task.
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
-    },
     languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true },
+      },
       globals: globals.browser,
+    },
+    plugins: {
+      '@typescript-eslint': typescriptEslintPlugin,
     },
     settings: {
       react: { version: 'detect' },
     },
     rules: {
-      // ── React ───────────────────────────────────────────────────────────────
-      'react/prop-types': 'off', // TS handles prop types
-      'react/react-in-jsx-scope': 'off', // React 17+ JSX transform
-      'react/display-name': 'off', // many HOC patterns don't need it
-      // F4-deferred (46 pre-existing). Cosmetic-only (React renders fine);
-      // not auto-fixable. Re-enable per-file when touched.
-      'react/no-unescaped-entities': 'off',
-
-      // ── React Refresh — F4-deferred (20 pre-existing) ───────────────────────
-      'react-refresh/only-export-components': 'off',
-
-      // ── React Hooks ──────────────────────────────────────────────────────────
-      // rules-of-hooks: 3 pre-existing legacy violations addressed inline with
-      // disable-next-line + TODO. Going forward this stays at 'warn'.
-      'react-hooks/rules-of-hooks': 'warn',
-      // F4-deferred (63 pre-existing). Stale-closure risk requires per-file
-      // audit; not safe to bulk-fix.
-      'react-hooks/exhaustive-deps': 'off',
-
       // ── TypeScript — F4-deferred (969 combined) ─────────────────────────────
-      // no-unused-vars (643): mostly imports/destructures kept around for API
-      //   parity with sibling components. Risk of removing: subtle behaviour
-      //   shifts in object spreads. Re-enable when each file is next touched.
-      // no-explicit-any (326): legacy `any` types deep in form/grid components.
-      //   Proper typing requires understanding each component's data flow.
-      //   Re-enable when each file is next touched.
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-empty-object-type': 'warn',
@@ -114,14 +77,57 @@ export default tseslint.config(
       'no-empty-pattern': 'off',
       'no-console': 'off',
       'prefer-const': 'warn',
-      // F4-deferred (12 pre-existing). Dead-code analysis requires per-file
-      // verification that the assignment is genuinely dead and not behaviour-
-      // load-bearing.
       'no-useless-assignment': 'off',
       'no-case-declarations': 'warn',
+    },
+  },
 
-      // ── Prettier — disable conflicting stylistic rules ───────────────────────
-      ...prettier.rules,
+  // ── forwardRef enforcement — catches bare <input>/<select>/<textarea> in component wrappers ──
+  // MasterFormLayout.tsx is excluded because it IS the canonical source of forwardRef wrappers.
+  // All other component files must use those wrappers — never render native elements directly
+  // from a direct-return arrow-function without forwardRef.
+  {
+    files: ['src/components/**/*.{ts,tsx}'],
+    ignores: ['**/MasterFormLayout.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ArrowFunctionExpression > JSXElement > JSXOpeningElement[name.name="input"]',
+          message: 'Input components must use React.forwardRef — RHF register() spreads a ref callback that is silently dropped without it.',
+        },
+        {
+          selector: 'ArrowFunctionExpression > JSXElement > JSXOpeningElement[name.name="select"]',
+          message: 'Select components must use React.forwardRef — RHF register() spreads a ref callback that is silently dropped without it.',
+        },
+        {
+          selector: 'ArrowFunctionExpression > JSXElement > JSXOpeningElement[name.name="textarea"]',
+          message: 'Textarea components must use React.forwardRef — RHF register() spreads a ref callback that is silently dropped without it.',
+        },
+      ],
+    },
+  },
+
+  // ── Server Node.js (server/src/**/*.ts) ─────────────────────────────────
+  {
+    files: ['server/src/**/*.ts'],
+    languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module',
+      },
+      globals: globals.node,
+    },
+    plugins: {
+      '@typescript-eslint': typescriptEslintPlugin,
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+      'no-empty': ['warn', { allowEmptyCatch: true }],
+      'no-useless-assignment': 'off',
     },
   },
 
@@ -134,14 +140,10 @@ export default tseslint.config(
       globals: globals.node,
     },
     rules: {
-      ...js.configs.recommended.rules,
-      // F4-deferred (25 pre-existing): server side has many imports/helpers
-      // pre-emptively unused for a future endpoint. Re-enable per file.
       'no-unused-vars': 'off',
       'no-empty': ['warn', { allowEmptyCatch: true }],
       'no-undef': 'warn',
       'no-useless-assignment': 'off',
-      ...prettier.rules,
     },
-  }
-);
+  },
+]

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, forwardRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '../../lib/utils'
@@ -43,9 +43,10 @@ export function FormField({
   )
 }
 
-export function FormInput({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
+export const FormInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  ({ className, ...props }, ref) => (
     <input
+      ref={ref}
       className={cn(
         'w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none',
         'placeholder:text-muted-foreground',
@@ -56,11 +57,13 @@ export function FormInput({ className, ...props }: React.InputHTMLAttributes<HTM
       {...props}
     />
   )
-}
+)
+FormInput.displayName = 'FormInput'
 
-export function FormSelect({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
+export const FormSelect = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
+  ({ className, ...props }, ref) => (
     <select
+      ref={ref}
       className={cn(
         'w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none',
         'focus:ring-2 focus:ring-ring focus:ring-offset-1',
@@ -69,11 +72,13 @@ export function FormSelect({ className, ...props }: React.SelectHTMLAttributes<H
       {...props}
     />
   )
-}
+)
+FormSelect.displayName = 'FormSelect'
 
-export function FormTextarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
+export const FormTextarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  ({ className, ...props }, ref) => (
     <textarea
+      ref={ref}
       className={cn(
         'w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none resize-none',
         'placeholder:text-muted-foreground',
@@ -83,7 +88,8 @@ export function FormTextarea({ className, ...props }: React.TextareaHTMLAttribut
       {...props}
     />
   )
-}
+)
+FormTextarea.displayName = 'FormTextarea'
 
 export function AutoCodeField({ value }: { value?: string }) {
   return (
@@ -167,15 +173,15 @@ export function FormFooter({
 }) {
   return (
     <div className="flex items-center justify-end gap-3 pt-4">
-      <button onClick={onCancel}
+      <button type="button" onClick={onCancel}
         className="rounded-lg border border-input px-4 py-2.5 text-sm font-medium hover:bg-muted">
         Cancel
       </button>
-      <button onClick={onDraft} disabled={isPending}
+      <button type="button" onClick={onDraft} disabled={isPending}
         className="rounded-lg border border-input px-4 py-2.5 text-sm font-medium hover:bg-muted disabled:opacity-60">
         Save as draft
       </button>
-      <button onClick={onSubmit} disabled={isPending}
+      <button type="button" onClick={onSubmit} disabled={isPending}
         className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
         <Send className="h-3.5 w-3.5" />
         Submit for approval

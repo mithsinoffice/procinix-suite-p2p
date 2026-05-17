@@ -35,6 +35,9 @@ const VendorCategoryPage     = lazy(() => import('./pages/masters/VendorCategory
 const VendorGroupPage        = lazy(() => import('./pages/masters/VendorGroupPage'))
 const ProfitCentrePage       = lazy(() => import('./pages/masters/ProfitCentrePage'))
 const TdsSectionsPage        = lazy(() => import('./pages/masters/TdsSectionsPage'))
+const ItemMasterPage         = lazy(() => import('./pages/masters/items/ItemMasterPage'))
+const ItemFormPage           = lazy(() => import('./pages/masters/items/ItemFormPage'))
+const ItemCategoryPage       = lazy(() => import('./pages/masters/items/ItemCategoryPage'))
 const AdminTenantsPage       = lazy(() => import('./pages/admin/AdminTenantsPage'))
 const NotFoundPage           = lazy(() => import('./pages/NotFoundPage'))
 
@@ -101,6 +104,10 @@ export const router = createBrowserRouter([
           { path: 'vendor-groups',     element: <S><VendorGroupPage /></S>                     },
           { path: 'profit-centres',    element: <S><ProfitCentrePage /></S>                    },
           { path: 'tds-sections',      element: <S><TdsSectionsPage /></S>                     },
+          { path: 'items',             element: <S><ItemMasterPage /></S>                       },
+          { path: 'items/new',         element: <S><ItemFormPage /></S>                         },
+          { path: 'items/:id',         element: <S><ItemFormPage /></S>                         },
+          { path: 'item-categories',   element: <S><ItemCategoryPage /></S>                     },
         ]},
         { path: 'admin', children: [
           { path: 'tenants', element: <S><AdminTenantsPage /></S> },

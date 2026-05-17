@@ -349,6 +349,128 @@ async function main() {
     console.log(`✓ ${profitCentres.length} profit centres`)
   }
 
+  // Item Categories
+  const itemCategories = [
+    { code: 'IT-HW',    name: 'IT Hardware & Infrastructure' },
+    { code: 'IT-SW',    name: 'IT Software & Licenses'       },
+    { code: 'IT-SVC',   name: 'IT Services & AMC'            },
+    { code: 'PROF',     name: 'Professional Services'        },
+    { code: 'LEGAL',    name: 'Legal & Compliance'           },
+    { code: 'AUDIT',    name: 'Audit & Assurance'            },
+    { code: 'HR',       name: 'HR & Training'                },
+    { code: 'MKT',      name: 'Marketing & Communications'   },
+    { code: 'FAC',      name: 'Premises & Facilities'        },
+    { code: 'SEC',      name: 'Security Services'            },
+    { code: 'UTIL',     name: 'Utilities'                    },
+    { code: 'BANK-OPS', name: 'Banking Operations'           },
+    { code: 'INSUR',    name: 'Insurance'                    },
+    { code: 'PRINT',    name: 'Printing & Stationery'        },
+    { code: 'MISC',     name: 'Miscellaneous'                },
+  ]
+  for (const c of itemCategories) {
+    await prisma.itemCategory.upsert({
+      where:  { tenantId_code: { tenantId: tenant.id, code: c.code } },
+      update: {},
+      create: { ...c, tenantId: tenant.id, status: 'ACTIVE' },
+    })
+  }
+  console.log(`✓ ${itemCategories.length} item categories`)
+
+  // Item Master — 30 banking items
+  const items: any[] = [
+    // SERVICES — OPEX
+    { itemCode:'ITM-0001', name:'Core Banking Software License',  itemType:'SERVICES', expenseType:'OPEX',  nature:'SUBSCRIPTION',  sacCode:'998314', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'MONTHLY',   ocrKeywords:'core banking, CBS license, software license', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0002', name:'IT AMC - Servers',               itemType:'SERVICES', expenseType:'OPEX',  nature:'MAINTENANCE',   sacCode:'998314', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'MONTHLY',   ocrKeywords:'annual maintenance, AMC, server maintenance', ocrMatchConfidence:80 },
+    { itemCode:'ITM-0003', name:'Cloud Hosting AWS/Azure',        itemType:'SERVICES', expenseType:'OPEX',  nature:'SUBSCRIPTION',  sacCode:'998315', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:false, autoPostProvision:false,                                 ocrKeywords:'cloud hosting, AWS, Azure, cloud services', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0004', name:'Legal Retainer',                 itemType:'SERVICES', expenseType:'OPEX',  nature:'PROFESSIONAL',  sacCode:'998211', gstRate:18, rcmApplicable:false, poRequired:'NO',   threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'MONTHLY',   ocrKeywords:'legal retainer, legal fees, advocate fees, solicitor', ocrMatchConfidence:80 },
+    { itemCode:'ITM-0005', name:'Statutory Audit Fees',           itemType:'SERVICES', expenseType:'OPEX',  nature:'PROFESSIONAL',  sacCode:'998221', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'QUARTERLY', ocrKeywords:'statutory audit, audit fees, CA fees', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0006', name:'Internal Audit Services',        itemType:'SERVICES', expenseType:'OPEX',  nature:'PROFESSIONAL',  sacCode:'998221', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:false, autoPostProvision:false,                                 ocrKeywords:'internal audit, audit services', ocrMatchConfidence:80 },
+    { itemCode:'ITM-0007', name:'Security Services',              itemType:'SERVICES', expenseType:'OPEX',  nature:'MAINTENANCE',   sacCode:'998523', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'MONTHLY',   ocrKeywords:'security guard, security services, manpower', ocrMatchConfidence:80 },
+    { itemCode:'ITM-0008', name:'Housekeeping Services',          itemType:'SERVICES', expenseType:'OPEX',  nature:'MAINTENANCE',   sacCode:'998531', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'MONTHLY',   ocrKeywords:'housekeeping, cleaning services, facility management', ocrMatchConfidence:80 },
+    { itemCode:'ITM-0009', name:'Office Rent',                    itemType:'SERVICES', expenseType:'OPEX',  nature:'UTILITY',       sacCode:'997211', gstRate:18, rcmApplicable:false, poRequired:'NO',   threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'MONTHLY',   ocrKeywords:'rent, office rent, lease rent, rental charges', ocrMatchConfidence:90 },
+    { itemCode:'ITM-0010', name:'Training & Development',         itemType:'SERVICES', expenseType:'OPEX',  nature:'PROFESSIONAL',  sacCode:'999293', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:false, autoPostProvision:false,                                 ocrKeywords:'training, development, workshop, seminar', ocrMatchConfidence:75 },
+    { itemCode:'ITM-0011', name:'Recruitment Services',           itemType:'SERVICES', expenseType:'OPEX',  nature:'PROFESSIONAL',  sacCode:'998511', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:false, autoPostProvision:false,                                 ocrKeywords:'recruitment, placement, staffing, headhunting', ocrMatchConfidence:80 },
+    { itemCode:'ITM-0012', name:'Advertising & Marketing',        itemType:'SERVICES', expenseType:'OPEX',  nature:'PROFESSIONAL',  sacCode:'998361', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:false, autoPostProvision:false,                                 ocrKeywords:'advertising, marketing, media, campaign, digital marketing', ocrMatchConfidence:80 },
+    { itemCode:'ITM-0013', name:'Telecom & Internet',             itemType:'SERVICES', expenseType:'OPEX',  nature:'UTILITY',       sacCode:'998422', gstRate:18, rcmApplicable:false, poRequired:'NO',   threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'MONTHLY',   ocrKeywords:'telecom, internet, broadband, phone bill, mobile bill', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0014', name:'Electricity',                    itemType:'SERVICES', expenseType:'OPEX',  nature:'UTILITY',       sacCode:'998911', gstRate:0,  rcmApplicable:false, poRequired:'NO',   threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'MONTHLY',   ocrKeywords:'electricity, power bill, MSEDCL, BESCOM, TATA power', ocrMatchConfidence:90 },
+    { itemCode:'ITM-0015', name:'Insurance Premium - Property',   itemType:'SERVICES', expenseType:'OPEX',  nature:'SUBSCRIPTION',  sacCode:'997137', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'MONTHLY',   ocrKeywords:'insurance premium, property insurance, fire insurance', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0016', name:'Insurance Premium - D&O',        itemType:'SERVICES', expenseType:'OPEX',  nature:'SUBSCRIPTION',  sacCode:'997137', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'MONTHLY',   ocrKeywords:'directors officers insurance, D&O insurance, liability insurance', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0017', name:'SWIFT Charges',                  itemType:'SERVICES', expenseType:'OPEX',  nature:'PROFESSIONAL',  sacCode:'997119', gstRate:18, rcmApplicable:false, poRequired:'NO',   threeWayMatch:false, grnRequired:false, provisionRequired:false, autoPostProvision:false,                                 ocrKeywords:'SWIFT, wire transfer charges, correspondent bank charges', ocrMatchConfidence:90 },
+    { itemCode:'ITM-0018', name:'RBI Regulatory Fees',            itemType:'SERVICES', expenseType:'OPEX',  nature:'PROFESSIONAL',  sacCode:'997119', gstRate:0,  rcmApplicable:false, poRequired:'NO',   threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'QUARTERLY', ocrKeywords:'RBI fees, regulatory fees, SEBI fees, compliance fees', ocrMatchConfidence:90 },
+    { itemCode:'ITM-0019', name:'Printing & Stationery',          itemType:'GOODS',    expenseType:'OPEX',  nature:'CONSUMABLE',    hsnCode:'48219',  gstRate:12, rcmApplicable:false, poRequired:'CONDITIONAL', poThresholdAmount:50000, threeWayMatch:true, grnRequired:true, provisionRequired:false, ocrKeywords:'stationery, printing, paper, toner', ocrMatchConfidence:75 },
+    { itemCode:'ITM-0020', name:'Office Supplies',                itemType:'GOODS',    expenseType:'OPEX',  nature:'CONSUMABLE',    hsnCode:'48219',  gstRate:12, rcmApplicable:false, poRequired:'CONDITIONAL', poThresholdAmount:25000, threeWayMatch:true, grnRequired:true, provisionRequired:false, ocrKeywords:'office supplies, consumables, stationery items', ocrMatchConfidence:70 },
+    // CAPEX — Fixed Assets
+    { itemCode:'ITM-0021', name:'Laptop / Desktop Computer',      itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'84713',  gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:true,  grnRequired:true,  usefulLifeYears:3,  depreciationMethod:'SLM', depreciationRate:33.33, residualValuePct:5, autoCreateAsset:true, capitalisationLimit:5000, autoPostDepreciation:true,  depreciationFrequency:'MONTHLY', ocrKeywords:'laptop, desktop, computer, notebook', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0022', name:'Server & Network Equipment',     itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'84715',  gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:true,  grnRequired:true,  usefulLifeYears:5,  depreciationMethod:'SLM', depreciationRate:20,    residualValuePct:5, autoCreateAsset:true, capitalisationLimit:5000, autoPostDepreciation:true,  depreciationFrequency:'MONTHLY', ocrKeywords:'server, network equipment, router, switch, firewall', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0023', name:'UPS & Power Equipment',          itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'85044',  gstRate:28, rcmApplicable:false, poRequired:'YES',  threeWayMatch:true,  grnRequired:true,  usefulLifeYears:5,  depreciationMethod:'SLM', depreciationRate:20,    residualValuePct:5, autoCreateAsset:true, capitalisationLimit:5000, autoPostDepreciation:true,  depreciationFrequency:'MONTHLY', ocrKeywords:'UPS, inverter, power backup, stabilizer', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0024', name:'CCTV & Security Systems',        itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'85258',  gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:true,  grnRequired:true,  usefulLifeYears:5,  depreciationMethod:'SLM', depreciationRate:20,    residualValuePct:5, autoCreateAsset:true, capitalisationLimit:5000, autoPostDepreciation:true,  depreciationFrequency:'MONTHLY', ocrKeywords:'CCTV, surveillance, security camera, access control', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0025', name:'Office Furniture',               itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'94032',  gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:true,  grnRequired:true,  usefulLifeYears:10, depreciationMethod:'SLM', depreciationRate:10,    residualValuePct:5, autoCreateAsset:true, capitalisationLimit:5000, autoPostDepreciation:true,  depreciationFrequency:'MONTHLY', ocrKeywords:'furniture, chairs, table, workstation, cabin', ocrMatchConfidence:80 },
+    { itemCode:'ITM-0026', name:'Air Conditioner',                itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'84159',  gstRate:28, rcmApplicable:false, poRequired:'YES',  threeWayMatch:true,  grnRequired:true,  usefulLifeYears:5,  depreciationMethod:'SLM', depreciationRate:20,    residualValuePct:5, autoCreateAsset:true, capitalisationLimit:5000, autoPostDepreciation:true,  depreciationFrequency:'MONTHLY', ocrKeywords:'air conditioner, AC, HVAC, split AC', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0027', name:'Vehicle',                        itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'87120',  gstRate:28, rcmApplicable:false, poRequired:'YES',  threeWayMatch:true,  grnRequired:true,  usefulLifeYears:8,  depreciationMethod:'WDV', depreciationRate:18.75, residualValuePct:5, autoCreateAsset:true, capitalisationLimit:5000, autoPostDepreciation:true,  depreciationFrequency:'MONTHLY', ocrKeywords:'vehicle, car, automobile, transport vehicle', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0028', name:'ATM Machine',                    itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'84721',  gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:true,  grnRequired:true,  usefulLifeYears:7,  depreciationMethod:'SLM', depreciationRate:14.29, residualValuePct:5, autoCreateAsset:true, capitalisationLimit:5000, autoPostDepreciation:true,  depreciationFrequency:'MONTHLY', ocrKeywords:'ATM, cash dispenser, automated teller machine', ocrMatchConfidence:90 },
+    { itemCode:'ITM-0029', name:'Core Banking Software (CAPEX)',  itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'85234',  gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, usefulLifeYears:5,  depreciationMethod:'SLM', depreciationRate:20,    residualValuePct:0, autoCreateAsset:true, capitalisationLimit:100000, autoPostDepreciation:false, ocrKeywords:'core banking system, CBS implementation, software implementation', ocrMatchConfidence:85 },
+    { itemCode:'ITM-0030', name:'Printing Machine / Copier',      itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'84433',  gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:true,  grnRequired:true,  usefulLifeYears:5,  depreciationMethod:'SLM', depreciationRate:20,    residualValuePct:5, autoCreateAsset:true, capitalisationLimit:5000, autoPostDepreciation:true,  depreciationFrequency:'MONTHLY', ocrKeywords:'printer, copier, photocopier, MFD, multifunction device', ocrMatchConfidence:85 },
+  ]
+  for (const item of items) {
+    const { gstRate, depreciationRate, residualValuePct, poThresholdAmount, capitalisationLimit, ...rest } = item
+    await prisma.itemMaster.upsert({
+      where:  { tenantId_itemCode: { tenantId: tenant.id, itemCode: item.itemCode } },
+      update: {},
+      create: {
+        ...rest,
+        tenantId: tenant.id,
+        status:   'ACTIVE',
+        gstRate:             gstRate           != null ? gstRate           : null,
+        depreciationRate:    depreciationRate   != null ? depreciationRate  : null,
+        residualValuePct:    residualValuePct   != null ? residualValuePct  : null,
+        poThresholdAmount:   poThresholdAmount  != null ? poThresholdAmount : null,
+        capitalisationLimit: capitalisationLimit != null ? capitalisationLimit : null,
+      },
+    })
+  }
+  console.log(`✓ ${items.length} items seeded`)
+
+  // Item entity mappings for PTPL
+  const defaultEntity = await prisma.entity.findFirst({ where: { tenantId: tenant.id }, select: { id: true } })
+  if (defaultEntity) {
+    const glCodes = await prisma.glCode.findMany({ where: { tenantId: tenant.id }, select: { id: true, code: true } })
+    const gl = (code: string) => glCodes.find(g => g.code === code)?.id ?? null
+
+    const cc = await prisma.costCentre.findUnique({ where: { tenantId_code: { tenantId: tenant.id, code: 'CC-CORP' } }, select: { id: true } })
+    const pc = await prisma.profitCentre.findFirst({ where: { tenantId: tenant.id, entityId: defaultEntity.id, code: 'PC-CORP' }, select: { id: true } })
+
+    const itemMaps = await prisma.itemMaster.findMany({ where: { tenantId: tenant.id }, select: { id: true, itemCode: true, expenseType: true, rcmApplicable: true, provisionRequired: true, poRequired: true, poThresholdAmount: true } })
+    for (const item of itemMaps) {
+      const isCapex = item.expenseType === 'CAPEX'
+      await prisma.itemEntityMapping.upsert({
+        where:  { itemId_entityId: { itemId: item.id, entityId: defaultEntity.id } },
+        update: {},
+        create: {
+          itemId:                    item.id,
+          entityId:                  defaultEntity.id,
+          itemDescription:           item.itemCode,
+          expenseGlCodeId:           !isCapex ? gl('5001') : null,
+          assetGlCodeId:             isCapex ? gl('1001') : null,
+          depreciationGlCodeId:      isCapex ? gl('5001') : null,
+          accumulatedDepnGlCodeId:   isCapex ? gl('1001') : null,
+          provisionGlCodeId:         item.provisionRequired ? gl('5002') : null,
+          provisionExpenseGlCodeId:  item.provisionRequired ? gl('5001') : null,
+          rcmGlCodeId:               item.rcmApplicable ? gl('2001') : null,
+          tdsPayableGlCodeId:        gl('2001'),
+          gstItcGlCodeId:            gl('1001'),
+          costCentreId:              cc?.id ?? null,
+          profitCentreId:            pc?.id ?? null,
+          assetCategoryId:           isCapex ? 'ASSET-DEFAULT' : null,
+          poThresholdOverride:       item.poRequired === 'CONDITIONAL' && item.poThresholdAmount != null ? item.poThresholdAmount : null,
+          capitalisationLimitOverride: isCapex ? 5000 : null,
+          provisionAmountOverride:   item.provisionRequired ? 0 : null,
+          isActive:                  true,
+        },
+      })
+    }
+    console.log(`✓ ${itemMaps.length} PTPL item entity mappings seeded`)
+  }
+
   // Ensure all seeded records have status=ACTIVE
   await prisma.$executeRaw`UPDATE countries    SET status='ACTIVE' WHERE status IS NULL OR status=''`
   await prisma.$executeRaw`UPDATE states       SET status='ACTIVE' WHERE status IS NULL OR status=''`

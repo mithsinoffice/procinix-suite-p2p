@@ -40,6 +40,15 @@
 - Mobile-first CSS — `sm:` for desktop, never `max-md:` for mobile
 - Every master page and module page MUST use `<MasterPageHeader>` (from `src/components/masters/MasterFormLayout.tsx`) as its first element — it provides the ← Masters breadcrumb automatically. Never hand-roll a page header with a separate back button div.
 
+#### HARD RULE — `React.forwardRef` on ALL form components
+- Every component that renders `<input>`, `<select>`, or `<textarea>` **MUST** use `React.forwardRef`
+- Every `forwardRef` component **MUST** have `.displayName` set immediately after the declaration
+- This applies to ALL new components — no exceptions
+- Before writing any form component, ask: does it render `<input>`, `<select>`, or `<textarea>`? If yes → `forwardRef` is **mandatory**
+- The approved wrappers (`FormInput`, `FormSelect`, `FormTextarea`) live in `src/components/masters/MasterFormLayout.tsx` — always use these; never hand-roll new wrappers
+- ESLint (`no-restricted-syntax`) will **error** on any new arrow-function component returning a bare native input in `src/components/**`; run `npm run lint:forms` before committing
+- **Why this matters:** RHF's `register()` returns a `ref` callback. Without `forwardRef`, the ref is silently dropped by React, breaking: auto-focus on validation error, `setFocus()` API, and native browser validation — with no console warning and no TypeScript error to catch it
+
 ### Backend
 - All endpoints validate tenant from JWT — never from request body
 - All inputs validated with Zod before touching Prisma

@@ -1131,3 +1131,153 @@ model TenantSettings {
   updatedAt              DateTime @updatedAt
   @@map("tenant_settings")
 }
+
+model ItemCategory {
+  id              String   @id @default(uuid())
+  tenantId        String
+  code            String
+  name            String
+  description     String?
+  status          String   @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@unique([tenantId, code])
+  @@map("item_categories")
+}
+
+model ItemMaster {
+  id                    String    @id @default(uuid())
+  tenantId              String
+  itemCode              String
+  name                  String
+  description           String?   @db.Text
+  itemType              String
+  nature                String?
+  expenseType           String
+  uom                   String?
+  hsnCode               String?
+  sacCode               String?
+  itemCategoryId        String?
+  gstRate               Decimal?  @db.Decimal(5,2)
+  rcmApplicable         Boolean   @default(false)
+  tdsSectionId          String?
+  taxCodeId             String?
+  poRequired            String    @default("YES")
+  poThresholdAmount     Decimal?  @db.Decimal(15,2)
+  poAtLocation          Boolean   @default(false)
+  threeWayMatch         Boolean   @default(true)
+  grnRequired           Boolean   @default(true)
+  advanceAllowed        Boolean   @default(false)
+  assetCategoryId       String?
+  usefulLifeYears       Int?
+  depreciationMethod    String?
+  depreciationRate      Decimal?  @db.Decimal(5,2)
+  residualValuePct      Decimal?  @db.Decimal(5,2)
+  autoCreateAsset       Boolean   @default(false)
+  capitalisationLimit   Decimal?  @db.Decimal(15,2)
+  autoPostDepreciation  Boolean   @default(false)
+  depreciationFrequency String?
+  depreciationStartDate DateTime? @db.Date
+  provisionRequired     Boolean   @default(false)
+  autoPostProvision     Boolean   @default(false)
+  provisionFrequency    String?
+  provisionBasis        String?
+  provisionAmount       Decimal?  @db.Decimal(15,2)
+  autoReverse           Boolean   @default(true)
+  reversalTrigger       String?
+  ocrKeywords           String?   @db.Text
+  ocrSynonyms           String?   @db.Text
+  ocrMatchConfidence    Int       @default(80)
+  ocrNegativeKeywords   String?   @db.Text
+  approvedVendorsOnly   Boolean   @default(false)
+  status                String    @default("ACTIVE")
+  createdByUserId       String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  entityMappings        ItemEntityMapping[]
+  approvedVendors       ItemApprovedVendor[]
+  @@unique([tenantId, itemCode])
+  @@index([tenantId, itemType, expenseType])
+  @@map("item_master")
+}
+
+model ItemEntityMapping {
+  id                         String   @id @default(uuid())
+  itemId                     String
+  entityId                   String
+  itemDescription            String?
+  expenseGlCodeId            String?
+  assetGlCodeId              String?
+  depreciationGlCodeId       String?
+  accumulatedDepnGlCodeId    String?
+  provisionGlCodeId          String?
+  provisionExpenseGlCodeId   String?
+  rcmGlCodeId                String?
+  tdsPayableGlCodeId         String?
+  gstItcGlCodeId             String?
+  costCentreId               String?
+  profitCentreId             String?
+  assetCategoryId            String?
+  poThresholdOverride        Decimal? @db.Decimal(15,2)
+  capitalisationLimitOverride Decimal? @db.Decimal(15,2)
+  provisionAmountOverride    Decimal? @db.Decimal(15,2)
+  isActive                   Boolean  @default(true)
+  item                       ItemMaster @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  @@unique([itemId, entityId])
+  @@map("item_entity_mappings")
+}
+
+model ItemApprovedVendor {
+  id       String @id @default(uuid())
+  itemId   String
+  entityId String?
+  vendorId String
+  item     ItemMaster @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  @@index([itemId])
+  @@unique([itemId, entityId, vendorId])
+  @@map("item_approved_vendors")
+}
+
+model RecurringInvoiceMaster {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  code               String
+  name               String
+  recurringType      String    @default("FIXED")
+  vendorId           String
+  entityId           String
+  itemId             String?
+  frequency          String    @default("MONTHLY")
+  startDate          DateTime  @db.Date
+  endDate            DateTime? @db.Date
+  generationDay      Int       @default(1)
+  advanceDays        Int       @default(3)
+  baseAmount         Decimal?  @db.Decimal(15,2)
+  currencyCode       String    @default("INR")
+  gstApplicable      Boolean   @default(false)
+  gstRate            Decimal?  @db.Decimal(5,2)
+  tdsApplicable      Boolean   @default(false)
+  tdsSectionId       String?
+  escalationPct      Decimal?  @db.Decimal(5,2)
+  escalationMonth    Int?
+  bbpsBillerCategory String?
+  bbpsBillerName     String?
+  bbpsConsumerNo     String?
+  bbpsFetchDays      Int       @default(5)
+  glCodeId           String?
+  costCentreId       String?
+  profitCentreId     String?
+  provisionGlCodeId  String?
+  autoApproveBelow   Decimal?  @db.Decimal(15,2)
+  isActive           Boolean   @default(true)
+  status             String    @default("ACTIVE")
+  lastGeneratedAt    DateTime?
+  nextGenerationAt   DateTime?
+  createdByUserId    String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  @@unique([tenantId, code])
+  @@index([tenantId, nextGenerationAt])
+  @@map("recurring_invoice_masters")
+}

@@ -360,6 +360,96 @@ export async function masterRoutes(app: FastifyInstance) {
     return reply.send(settings)
   })
 
+  // ── Item Categories ──
+  app.get('/item-categories', auth, async (req, reply) => {
+    const { status, search } = req.query as any
+    const where: any = { tenantId: req.tenant.id }
+    if (status && status !== 'ALL') where.status = status
+    if (search) where.OR = [{ name: { contains: search } }, { code: { contains: search } }]
+    return reply.send(await app.prisma.itemCategory.findMany({ where, orderBy: { name: 'asc' } }))
+  })
+  app.post('/item-categories', auth, async (req, reply) => {
+    const row = await app.prisma.itemCategory.create({
+      data: { ...(req.body as any), tenantId: req.tenant.id, createdByUserId: req.user.sub },
+    })
+    return reply.code(201).send(row)
+  })
+  app.put('/item-categories/:id', auth, async (req, reply) => {
+    const row = await app.prisma.itemCategory.update({ where: { id: (req.params as any).id }, data: req.body as any })
+    return reply.send(row)
+  })
+
+  // ── Item Master ──
+  app.get('/items', auth, async (req, reply) => {
+    const { status, search, itemType, expenseType } = req.query as any
+    const where: any = { tenantId: req.tenant.id }
+    if (status && status !== 'ALL') where.status = status
+    if (itemType)    where.itemType    = itemType
+    if (expenseType) where.expenseType = expenseType
+    if (search) where.OR = [
+      { name:     { contains: search } },
+      { itemCode: { contains: search } },
+      { hsnCode:  { contains: search } },
+      { sacCode:  { contains: search } },
+    ]
+    return reply.send(await app.prisma.itemMaster.findMany({
+      where, orderBy: { itemCode: 'asc' },
+      include: { entityMappings: true },
+    }))
+  })
+
+  app.get('/items/:id', auth, async (req, reply) => {
+    const item = await app.prisma.itemMaster.findFirst({
+      where:   { id: (req.params as any).id, tenantId: req.tenant.id },
+      include: { entityMappings: true, approvedVendors: true },
+    })
+    if (!item) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Item not found' })
+    return reply.send(item)
+  })
+
+  app.post('/items', auth, async (req, reply) => {
+    const { entityMappings = [], approvedVendors = [], ...data } = req.body as any
+    const lastItem = await app.prisma.itemMaster.findFirst({
+      where: { tenantId: req.tenant.id }, orderBy: { createdAt: 'desc' }, select: { itemCode: true },
+    })
+    const nextNum  = lastItem ? parseInt(lastItem.itemCode.replace('ITM-', '')) + 1 : 1
+    const itemCode = `ITM-${String(nextNum).padStart(4, '0')}`
+    const item = await app.prisma.$transaction(async tx => {
+      const i = await tx.itemMaster.create({
+        data: { ...data, itemCode, tenantId: req.tenant.id, createdByUserId: req.user.sub },
+      })
+      if (entityMappings.length) {
+        await tx.itemEntityMapping.createMany({ data: entityMappings.map((e: any) => ({ ...e, itemId: i.id })) })
+      }
+      if (approvedVendors.length) {
+        await tx.itemApprovedVendor.createMany({ data: approvedVendors.map((v: any) => ({ itemId: i.id, vendorId: v.vendorId })) })
+      }
+      return i
+    })
+    return reply.code(201).send(item)
+  })
+
+  app.put('/items/:id', auth, async (req, reply) => {
+    const { entityMappings, approvedVendors, ...data } = req.body as any
+    const item = await app.prisma.$transaction(async tx => {
+      const i = await tx.itemMaster.update({ where: { id: (req.params as any).id }, data })
+      if (entityMappings !== undefined) {
+        await tx.itemEntityMapping.deleteMany({ where: { itemId: i.id } })
+        if (entityMappings.length) {
+          await tx.itemEntityMapping.createMany({ data: entityMappings.map((e: any) => ({ ...e, itemId: i.id })) })
+        }
+      }
+      if (approvedVendors !== undefined) {
+        await tx.itemApprovedVendor.deleteMany({ where: { itemId: i.id } })
+        if (approvedVendors.length) {
+          await tx.itemApprovedVendor.createMany({ data: approvedVendors.map((v: any) => ({ itemId: i.id, vendorId: v.vendorId })) })
+        }
+      }
+      return i
+    })
+    return reply.send(item)
+  })
+
   // ── Generic CRUD for all masters ──
   for (const [route, table] of Object.entries(TABLE_ROUTE_MAP)) {
 
