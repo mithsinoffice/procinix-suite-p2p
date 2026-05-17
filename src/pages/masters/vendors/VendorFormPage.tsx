@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, useFieldArray, type UseFormRegister, type UseFormWatch, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -37,29 +37,38 @@ const PAN_ENTITY_MAP: Record<string, string[]> = {
   AOP: ['A'], BOI: ['B'], GOVT: ['G', 'J'], TRUST: ['T'],
 }
 
+const ENTITY_TYPE_LABELS: Record<string, string> = {
+  COMPANY: 'Company', INDIVIDUAL: 'Individual', HUF: 'HUF',
+  FIRM: 'Firm / LLP', AOP: 'AOP', BOI: 'BOI', TRUST: 'Trust', GOVT: 'Government',
+}
+
 interface Props { mode: 'create' | 'edit' }
 
 // ── Primitives ──
 
-function SI({ className, ...p }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
+const SI = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  ({ className, ...p }, ref) => (
     <input
+      ref={ref}
       className={cn('w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground disabled:opacity-50', className)}
       {...p}
     />
   )
-}
+)
+SI.displayName = 'SI'
 
-function SS({ className, children, ...p }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
+const SS = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
+  ({ className, children, ...p }, ref) => (
     <select
+      ref={ref}
       className={cn('w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring', className)}
       {...p}
     >
       {children}
     </select>
   )
-}
+)
+SS.displayName = 'SS'
 
 function F({ label, error, required, span, children }: {
   label: string; error?: string; required?: boolean; span?: boolean; children: React.ReactNode
@@ -474,6 +483,7 @@ export default function VendorFormPage({ mode }: Props) {
       countryCode:       'IN',
       vendorType:        'SUPPLIER',
       panCompliance:     'COMPLIANT',
+      panEntityType:     '',
       tdsApplicable:     false,
       tdsExempt:         false,
       einvoiceRequired:  false,
@@ -787,12 +797,76 @@ export default function VendorFormPage({ mode }: Props) {
                 <option value="GOVT">Government</option>
               </SS>
             </F>
-            {rules.alert && (
-              <div className="col-span-2 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800">{rules.alert}</p>
-              </div>
-            )}
+            {panEntityType && (() => {
+              const items: { label: string; sublabel: string; state: 'risk' | 'positive' | 'na' }[] = [
+                {
+                  label: 'PAN required',
+                  sublabel: rules.panRequired ? 'Mandatory' : 'Not required',
+                  state: rules.panRequired ? 'risk' : 'na',
+                },
+                {
+                  label: 'Aadhaar required',
+                  sublabel: rules.aadharRequired ? 'Mandatory' : 'Not required',
+                  state: rules.aadharRequired ? 'risk' : 'na',
+                },
+                {
+                  label: 'Aadhaar-PAN linkage',
+                  sublabel: rules.higherTDSIfNotLinked ? '20% TDS if unlinked' : 'Not applicable',
+                  state: rules.higherTDSIfNotLinked ? 'risk' : 'na',
+                },
+                {
+                  label: '206AA — Higher TDS',
+                  sublabel: rules.higherTDSIfNoPAN ? '20% if PAN missing' : 'Not applicable',
+                  state: rules.higherTDSIfNoPAN ? 'risk' : 'na',
+                },
+                {
+                  label: 'TDS exemption',
+                  sublabel: rules.tdsExempt ? 'Exempt' : 'Standard TDS',
+                  state: rules.tdsExempt ? 'positive' : 'na',
+                },
+                {
+                  label: 'MSME eligible',
+                  sublabel: rules.msmeApplicable !== false ? 'Applicable' : 'Not applicable',
+                  state: rules.msmeApplicable !== false ? 'positive' : 'na',
+                },
+                ...(rules.cinRequired       ? [{ label: 'CIN required',         sublabel: 'Mandatory', state: 'risk' as const }] : []),
+                ...(rules.llpRequired       ? [{ label: 'LLP Reg. required',    sublabel: 'Mandatory', state: 'risk' as const }] : []),
+                ...(rules.trustRegRequired  ? [{ label: 'Trust Reg. required',  sublabel: 'Mandatory', state: 'risk' as const }] : []),
+              ]
+              return (
+                <div className="col-span-2 rounded-lg border border-border bg-muted/20 overflow-hidden">
+                  <div className="border-b border-border px-3 py-2 bg-muted/40">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Compliance applicability — {ENTITY_TYPE_LABELS[panEntityType] ?? panEntityType}
+                    </p>
+                  </div>
+                  <div className="p-3 grid grid-cols-3 gap-2">
+                    {items.map(item => (
+                      <div key={item.label} className={cn(
+                        'rounded-md border px-2.5 py-2',
+                        item.state === 'risk'     && 'bg-red-50/70 border-red-200',
+                        item.state === 'positive' && 'bg-green-50/70 border-green-200',
+                        item.state === 'na'       && 'bg-muted/30 border-border opacity-60',
+                      )}>
+                        <p className={cn(
+                          'text-[10px] font-semibold leading-tight',
+                          item.state === 'risk'     && 'text-red-700',
+                          item.state === 'positive' && 'text-green-700',
+                          item.state === 'na'       && 'text-muted-foreground',
+                        )}>{item.label}</p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{item.sublabel}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {rules.alert && (
+                    <div className="border-t border-amber-200 bg-amber-50/60 px-3 py-2 flex items-start gap-1.5">
+                      <span className="text-amber-500 shrink-0 text-xs mt-0.5">⚠</span>
+                      <p className="text-[10px] text-amber-800 leading-relaxed">{rules.alert}</p>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
             {tdsImpact && (
               <div className={cn(
                 'col-span-2 rounded-md border px-3 py-2 text-xs font-medium',
@@ -813,41 +887,36 @@ export default function VendorFormPage({ mode }: Props) {
             </F>
             {showAadhar && (
               <>
-                <F label={`Aadhaar number${rules.aadharRequired ? ' *' : ''}`} error={err('aadharNo')}>
+                <F label="Aadhaar number *" error={err('aadharNo')}>
                   <div className="space-y-1">
                     <SI
                       placeholder="XXXX-XXXX-XXXX"
                       maxLength={14}
                       {...register('aadharNo')}
                       onChange={e => {
-                        const digits = e.target.value.replace(/\D/g, '').slice(0, 12)
-                        const fmt = digits.length > 8
-                          ? `${digits.slice(0,4)}-${digits.slice(4,8)}-${digits.slice(8)}`
-                          : digits.length > 4
-                          ? `${digits.slice(0,4)}-${digits.slice(4)}`
-                          : digits
-                        setValue('aadharNo', fmt, { shouldValidate: true })
+                        const d = e.target.value.replace(/\D/g, '').slice(0, 12)
+                        setValue('aadharNo', d.replace(/(\d{4})(\d{4})(\d{0,4})/, '$1-$2-$3').replace(/-$/, ''))
                       }}
                     />
                     <p className="text-[10px] text-muted-foreground">
-                      {panEntityType === 'HUF' ? "Karta's Aadhaar number" : 'Beneficiary Aadhaar number'}
+                      {panEntityType === 'HUF' ? "Karta's Aadhaar" : '12-digit Aadhaar'}
                     </p>
                   </div>
                 </F>
                 <F label="Aadhaar-PAN linkage">
-                  <div className="flex flex-col gap-1.5 mt-1">
-                    {mode === 'edit' && v?.aadharPanLinked ? (
-                      <>
-                        <KycChip status={v.aadharPanLinked} label="Aadhaar-PAN" />
-                        {v.aadharPanLinked === 'LINKED' && (
-                          <p className="text-[10px] text-green-700">Standard TDS rates apply</p>
-                        )}
-                        {v.aadharPanLinked === 'NOT_LINKED' && (
-                          <p className="text-[10px] text-destructive font-medium">⚠ TDS rate doubled under Section 206AA</p>
-                        )}
-                      </>
-                    ) : (
-                      <p className="text-[10px] text-muted-foreground mt-1">Linkage verified after KYC run</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className={cn(
+                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold',
+                      v?.aadharPanLinked === 'LINKED'     ? 'bg-green-50 border-green-200 text-green-700' :
+                      v?.aadharPanLinked === 'NOT_LINKED' ? 'bg-red-50 border-red-200 text-red-700' :
+                      'bg-muted border-border text-muted-foreground'
+                    )}>
+                      {v?.aadharPanLinked === 'LINKED'     ? '● Linked — standard TDS applies' :
+                       v?.aadharPanLinked === 'NOT_LINKED' ? '● Not linked — 20% TDS under 206AA' :
+                       '● Not verified'}
+                    </span>
+                    {v?.aadharPanLinked === 'NOT_LINKED' && (
+                      <span className="text-xs text-red-600 font-semibold">⚠ TDS doubled</span>
                     )}
                   </div>
                 </F>
