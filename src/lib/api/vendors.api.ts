@@ -2,6 +2,28 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tansta
 import { http } from '../http'
 import { queryKeys, STALE_TIMES } from '../query-client'
 
+export interface VendorBankAccount {
+  id: string; vendorId: string; accountNo: string; ifsc: string
+  bankName?: string; branch?: string; accountType: string; currencyCode: string
+  accountHolderName?: string; isPrimary: boolean
+  kycStatus?: string; kycNameMatchScore?: number; kycVerifiedAt?: string
+  transbnkBeneficiaryId?: string; status: string
+}
+
+export interface VendorGstRegistration {
+  id: string; vendorId: string; stateCode: string; gstin: string
+  registrationType: string; isPrimary: boolean
+  spocName?: string; spocEmail?: string; spocPhone?: string
+  kycStatus?: string; kycVerifiedAt?: string; status: string
+}
+
+export interface VendorEntityMapping {
+  id: string; vendorId: string; entityId: string
+  glCodeId?: string; costCentreId?: string; profitCentreId?: string
+  currencyCode: string; creditLimit?: number
+  blockPO: boolean; blockPayment: boolean; blockReason?: string; isActive: boolean
+}
+
 export interface VendorSummary {
   id: string; vendorCode: string; legalName: string; tradeName?: string
   gstin?: string; pan: string; vendorType: string; status: string
@@ -11,16 +33,38 @@ export interface VendorSummary {
 }
 
 export interface VendorDetail extends VendorSummary {
-  cin?: string; udyamNumber?: string; email?: string; mobile?: string
-  city?: string; state?: string; pincode?: string
-  bankAccountNo?: string; ifscCode?: string; bankName?: string
+  // Contact
+  email?: string; mobile?: string; contactName?: string; website?: string
+  // Address
+  addressLine1?: string; addressLine2?: string
+  city?: string; state?: string; stateCode?: string; pincode?: string
+  // Classification
+  vendorCategoryId?: string; vendorGroupId?: string
+  countryCode: string; taxRegimeCode?: string
+  // Statutory
+  cin?: string; udyamNumber?: string; tan?: string; panCompliance: string
+  // TDS
+  tdsApplicable: boolean; tdsSectionCode?: string; tdsSectionId?: string
+  tdsRate?: number; tdsExempt: boolean
+  lowerTdsCertNo?: string; lowerTdsSection?: string; lowerTdsRate?: number
+  lowerTdsValidFrom?: string; lowerTdsValidTo?: string; lowerTdsAlertDays: number
+  einvoiceRequired: boolean
+  // Payment
+  paymentMode: string; paymentCurrency: string
+  // KYC (read-only)
   kycPanName?: string; kycGstName?: string; kycBankAccountName?: string
   kycBankNameMatchScore?: number; kycCinStatus?: string; kycCinCompanyName?: string
   kycMsmeCategory?: string; section206ABRate?: number; section206ABReason?: string
   gstr1LastFiledPeriod?: string; gstr3bLastFiledPeriod?: string; gstReturnRisk?: string
-  transbnkBeneficiaryId?: string; tdsApplicable: boolean; tdsSectionCode?: string
-  panCompliance: string; einvoiceRequired: boolean; itcRisk?: string
+  itcRisk?: string; transbnkBeneficiaryId?: string
+  // ERP
+  erpVendorCode?: string; erpSystem?: string; erpSyncStatus?: string; erpSyncedAt?: string
+  // Timestamps
   createdAt: string; updatedAt: string
+  // Sub-tables
+  bankAccounts:     VendorBankAccount[]
+  gstRegistrations: VendorGstRegistration[]
+  entityMappings:   VendorEntityMapping[]
 }
 
 export interface VendorListResponse {
@@ -48,7 +92,7 @@ export function useVendors(filters: VendorFilters = {}) {
 
 export function useVendor(id: string) {
   return useQuery({
-    queryKey: queryKeys.masters.vendors(),
+    queryKey: ['masters', 'vendors', id],
     queryFn:  () => http.get<VendorDetail>(`/api/masters/vendors/${id}`),
     enabled:  !!id,
     staleTime: STALE_TIMES.DETAIL,
@@ -58,7 +102,8 @@ export function useVendor(id: string) {
 export function useCreateVendor() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Partial<VendorDetail>) => http.post<{ id: string; vendorCode: string }>('/api/masters/vendors', data),
+    mutationFn: (data: Record<string, unknown>) =>
+      http.post<{ id: string; vendorCode: string }>('/api/masters/vendors', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.masters.vendors() }),
   })
 }
@@ -66,8 +111,12 @@ export function useCreateVendor() {
 export function useUpdateVendor(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Partial<VendorDetail>) => http.put<{ id: string }>(`/api/masters/vendors/${id}`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.masters.vendors() }),
+    mutationFn: (data: Record<string, unknown>) =>
+      http.put<{ id: string }>(`/api/masters/vendors/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.masters.vendors() })
+      qc.invalidateQueries({ queryKey: ['masters', 'vendors', id] })
+    },
   })
 }
 
@@ -75,6 +124,6 @@ export function useTriggerKyc(id: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => http.post(`/api/masters/vendors/${id}/kyc`, {}),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.masters.vendors() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['masters', 'vendors', id] }),
   })
 }

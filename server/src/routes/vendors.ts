@@ -2,25 +2,94 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { createVendor, listVendors, getVendor, updateVendor } from '../services/vendor.service.js'
 
+const bankAccountRowSchema = z.object({
+  id:                z.string().optional(),
+  accountNo:         z.string().min(9).max(18),
+  ifsc:              z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC'),
+  bankName:          z.string().optional(),
+  branch:            z.string().optional(),
+  accountType:       z.enum(['CURRENT','SAVINGS','ESCROW','OD']).default('CURRENT'),
+  currencyCode:      z.string().default('INR'),
+  accountHolderName: z.string().optional(),
+  isPrimary:         z.boolean().default(false),
+})
+
+const gstRegRowSchema = z.object({
+  id:               z.string().optional(),
+  stateCode:        z.string().min(1).max(2),
+  gstin:            z.string().regex(/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/, 'Invalid GSTIN'),
+  registrationType: z.enum(['REGULAR','COMPOSITION','UNREGISTERED','SEZ','EXPORT','ISD']).default('REGULAR'),
+  isPrimary:        z.boolean().default(false),
+  spocName:         z.string().optional(),
+  spocEmail:        z.string().email().optional().or(z.literal('')),
+  spocPhone:        z.string().optional(),
+})
+
+const entityMappingRowSchema = z.object({
+  id:             z.string().optional(),
+  entityId:       z.string().min(1),
+  glCodeId:       z.string().optional(),
+  costCentreId:   z.string().optional(),
+  profitCentreId: z.string().optional(),
+  currencyCode:   z.string().default('INR'),
+  creditLimit:    z.coerce.number().min(0).optional(),
+  blockPO:        z.boolean().default(false),
+  blockPayment:   z.boolean().default(false),
+  blockReason:    z.string().optional(),
+})
+
 const createSchema = z.object({
-  legalName:    z.string().min(1).max(200),
-  tradeName:    z.string().optional(),
-  gstin:        z.string().optional(),
-  pan:          z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, 'Invalid PAN'),
-  cin:          z.string().optional(),
-  udyamNumber:  z.string().optional(),
-  vendorType:   z.enum(['SUPPLIER','SERVICE_PROVIDER','CONTRACTOR','EMPLOYEE','INTERCOMPANY']),
-  email:        z.string().email().optional().or(z.literal('')),
-  mobile:       z.string().optional(),
+  // Identity
+  legalName:        z.string().min(1).max(200),
+  tradeName:        z.string().optional(),
+  gstin:            z.string().optional(),
+  pan:              z.string().regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, 'Invalid PAN'),
+  cin:              z.string().optional(),
+  udyamNumber:      z.string().optional(),
+  vendorType:       z.enum(['SUPPLIER','SERVICE_PROVIDER','CONTRACTOR','EMPLOYEE','INTERCOMPANY']),
+  vendorCategoryId: z.string().optional(),
+  vendorGroupId:    z.string().optional(),
+  countryCode:      z.string().default('IN'),
+  taxRegimeCode:    z.string().optional(),
+  // Contact
+  email:       z.string().email().optional().or(z.literal('')),
+  mobile:      z.string().optional(),
+  contactName: z.string().optional(),
+  website:     z.string().optional(),
+  // Address
+  addressLine1: z.string().optional(),
+  addressLine2: z.string().optional(),
   city:         z.string().optional(),
   state:        z.string().optional(),
+  stateCode:    z.string().optional(),
   pincode:      z.string().optional(),
-  bankAccountNo: z.string().optional(),
-  ifscCode:     z.string().optional(),
-  bankName:     z.string().optional(),
-  paymentTerms: z.coerce.number().int().min(0).max(365).default(30),
-  tdsApplicable:  z.boolean().default(false),
-  tdsSectionCode: z.string().optional(),
+  // Payment
+  paymentTerms:    z.coerce.number().int().min(0).max(365).default(30),
+  paymentMode:     z.string().optional(),
+  paymentCurrency: z.string().optional(),
+  // TDS
+  tdsApplicable:     z.boolean().default(false),
+  tdsSectionCode:    z.string().optional(),
+  tdsSectionId:      z.string().optional(),
+  tdsRate:           z.coerce.number().optional(),
+  tdsExempt:         z.boolean().default(false),
+  lowerTdsCertNo:    z.string().optional(),
+  lowerTdsSection:   z.string().optional(),
+  lowerTdsRate:      z.coerce.number().optional(),
+  lowerTdsValidFrom: z.string().optional(),
+  lowerTdsValidTo:   z.string().optional(),
+  lowerTdsAlertDays: z.coerce.number().int().default(30),
+  einvoiceRequired:  z.boolean().default(false),
+  is206ABApplicable: z.boolean().default(false),
+  tan:               z.string().optional(),
+  panCompliance:     z.enum(['COMPLIANT','NON_FILER','LOWER_DEDUCTION','EXEMPTED']).default('COMPLIANT'),
+  // ERP
+  erpVendorCode: z.string().optional(),
+  erpSystem:     z.string().optional(),
+  // Sub-tables
+  bankAccounts:     z.array(bankAccountRowSchema).optional(),
+  gstRegistrations: z.array(gstRegRowSchema).optional(),
+  entityMappings:   z.array(entityMappingRowSchema).optional(),
 })
 
 const listSchema = z.object({

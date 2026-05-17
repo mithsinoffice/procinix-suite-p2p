@@ -6,25 +6,94 @@ import { cacheInvalidate, CacheKeys, type Redis } from '../lib/redis.js'
 
 // ── Types ──
 
+export interface BankAccountInput {
+  id?:                string
+  accountNo:          string
+  ifsc:               string
+  bankName?:          string
+  branch?:            string
+  accountType?:       string
+  currencyCode?:      string
+  accountHolderName?: string
+  isPrimary?:         boolean
+}
+
+export interface GstRegistrationInput {
+  id?:               string
+  stateCode:         string
+  gstin:             string
+  registrationType?: string
+  isPrimary?:        boolean
+  spocName?:         string
+  spocEmail?:        string
+  spocPhone?:        string
+}
+
+export interface EntityMappingInput {
+  id?:             string
+  entityId:        string
+  glCodeId?:       string
+  costCentreId?:   string
+  profitCentreId?: string
+  currencyCode?:   string
+  creditLimit?:    number
+  blockPO?:        boolean
+  blockPayment?:   boolean
+  blockReason?:    string
+}
+
 export interface VendorCreateInput {
-  legalName:      string
-  tradeName?:     string
-  gstin?:         string
-  pan:            string
-  cin?:           string
-  udyamNumber?:   string
-  vendorType:     string
-  email?:         string
-  mobile?:        string
-  city?:          string
-  state?:         string
-  pincode?:       string
-  bankAccountNo?: string
-  ifscCode?:      string
-  bankName?:      string
-  paymentTerms?:  number
-  tdsApplicable?: boolean
-  tdsSectionCode?: string
+  // Identity
+  legalName:         string
+  tradeName?:        string
+  gstin?:            string
+  pan:               string
+  cin?:              string
+  udyamNumber?:      string
+  vendorType:        string
+  vendorCategoryId?: string
+  vendorGroupId?:    string
+  countryCode?:      string
+  taxRegimeCode?:    string
+  // Contact
+  email?:            string
+  mobile?:           string
+  contactName?:      string
+  website?:          string
+  // Address
+  addressLine1?:     string
+  addressLine2?:     string
+  city?:             string
+  state?:            string
+  stateCode?:        string
+  pincode?:          string
+  // Payment
+  paymentTerms?:     number
+  paymentMode?:      string
+  paymentCurrency?:  string
+  // TDS
+  tdsApplicable?:     boolean
+  tdsSectionCode?:    string
+  tdsSectionId?:      string
+  tdsRate?:           number
+  tdsExempt?:         boolean
+  lowerTdsCertNo?:    string
+  lowerTdsSection?:   string
+  lowerTdsRate?:      number
+  lowerTdsValidFrom?: string
+  lowerTdsValidTo?:   string
+  lowerTdsAlertDays?: number
+  einvoiceRequired?:  boolean
+  is206ABApplicable?: boolean
+  tan?:               string
+  panCompliance?:     string
+  // ERP
+  erpVendorCode?: string
+  erpSystem?:     string
+  // Sub-tables (full replace on update)
+  bankAccounts?:     BankAccountInput[]
+  gstRegistrations?: GstRegistrationInput[]
+  entityMappings?:   EntityMappingInput[]
 }
 
 export interface VendorListFilter {
@@ -54,34 +123,108 @@ export async function createVendor(
   const count = await prisma.vendor.count({ where: { tenantId } })
   const vendorCode = `VND-${String(count + 1).padStart(5, '0')}`
 
-  // 3. Create vendor
-  const vendor = await prisma.vendor.create({
-    data: {
-      tenantId,
-      vendorCode,
-      legalName:     input.legalName,
-      tradeName:     input.tradeName,
-      gstin:         input.gstin,
-      pan:           input.pan.toUpperCase(),
-      cin:           input.cin?.toUpperCase(),
-      udyamNumber:   input.udyamNumber?.toUpperCase(),
-      vendorType:    input.vendorType as any,
-      email:         input.email?.toLowerCase(),
-      mobile:        input.mobile,
-      city:          input.city,
-      state:         input.state,
-      pincode:       input.pincode,
-      bankAccountNo: input.bankAccountNo,
-      ifscCode:      input.ifscCode?.toUpperCase(),
-      bankName:      input.bankName,
-      paymentTerms:  input.paymentTerms ?? 30,
-      tdsApplicable: input.tdsApplicable ?? false,
-      tdsSectionCode: input.tdsSectionCode,
-      status:        'PENDING_APPROVAL',
-    },
+  // 3. Create vendor + sub-tables in a transaction
+  const vendor = await prisma.$transaction(async (tx) => {
+    const v = await tx.vendor.create({
+      data: {
+        tenantId,
+        vendorCode,
+        legalName:         input.legalName,
+        tradeName:         input.tradeName,
+        gstin:             input.gstin,
+        pan:               input.pan.toUpperCase(),
+        cin:               input.cin?.toUpperCase(),
+        udyamNumber:       input.udyamNumber?.toUpperCase(),
+        vendorType:        input.vendorType as any,
+        vendorCategoryId:  input.vendorCategoryId,
+        vendorGroupId:     input.vendorGroupId,
+        countryCode:       input.countryCode ?? 'IN',
+        taxRegimeCode:     input.taxRegimeCode,
+        email:             input.email?.toLowerCase(),
+        mobile:            input.mobile,
+        contactName:       input.contactName,
+        website:           input.website,
+        addressLine1:      input.addressLine1,
+        addressLine2:      input.addressLine2,
+        city:              input.city,
+        state:             input.state,
+        stateCode:         input.stateCode,
+        pincode:           input.pincode,
+        paymentTerms:      input.paymentTerms ?? 30,
+        paymentMode:       input.paymentMode ?? 'NEFT',
+        paymentCurrency:   input.paymentCurrency ?? 'INR',
+        tdsApplicable:     input.tdsApplicable ?? false,
+        tdsSectionCode:    input.tdsSectionCode,
+        tdsSectionId:      input.tdsSectionId,
+        tdsRate:           input.tdsRate,
+        tdsExempt:         input.tdsExempt ?? false,
+        lowerTdsCertNo:    input.lowerTdsCertNo,
+        lowerTdsSection:   input.lowerTdsSection,
+        lowerTdsRate:      input.lowerTdsRate,
+        lowerTdsValidFrom: input.lowerTdsValidFrom ? new Date(input.lowerTdsValidFrom) : undefined,
+        lowerTdsValidTo:   input.lowerTdsValidTo   ? new Date(input.lowerTdsValidTo)   : undefined,
+        lowerTdsAlertDays: input.lowerTdsAlertDays ?? 30,
+        einvoiceRequired:  input.einvoiceRequired  ?? false,
+        is206ABApplicable: input.is206ABApplicable ?? false,
+        tan:               input.tan?.toUpperCase(),
+        panCompliance:     (input.panCompliance ?? 'COMPLIANT') as any,
+        erpVendorCode:     input.erpVendorCode,
+        erpSystem:         input.erpSystem,
+        status:            'PENDING_APPROVAL',
+      },
+    })
+
+    if (input.bankAccounts?.length) {
+      await tx.vendorBankAccount.createMany({
+        data: input.bankAccounts.map(b => ({
+          vendorId:          v.id,
+          accountNo:         b.accountNo,
+          ifsc:              b.ifsc.toUpperCase(),
+          bankName:          b.bankName,
+          branch:            b.branch,
+          accountType:       b.accountType ?? 'CURRENT',
+          currencyCode:      b.currencyCode ?? 'INR',
+          accountHolderName: b.accountHolderName,
+          isPrimary:         b.isPrimary ?? false,
+        })),
+      })
+    }
+
+    if (input.gstRegistrations?.length) {
+      await tx.vendorGstRegistration.createMany({
+        data: input.gstRegistrations.map(g => ({
+          vendorId:         v.id,
+          stateCode:        g.stateCode,
+          gstin:            g.gstin.toUpperCase(),
+          registrationType: g.registrationType ?? 'REGULAR',
+          isPrimary:        g.isPrimary ?? false,
+          spocName:         g.spocName,
+          spocEmail:        g.spocEmail,
+          spocPhone:        g.spocPhone,
+        })),
+      })
+    }
+
+    if (input.entityMappings?.length) {
+      await tx.vendorEntityMapping.createMany({
+        data: input.entityMappings.map(e => ({
+          vendorId:       v.id,
+          entityId:       e.entityId,
+          glCodeId:       e.glCodeId,
+          costCentreId:   e.costCentreId,
+          profitCentreId: e.profitCentreId,
+          currencyCode:   e.currencyCode ?? 'INR',
+          creditLimit:    e.creditLimit,
+          blockPO:        e.blockPO ?? false,
+          blockPayment:   e.blockPayment ?? false,
+          blockReason:    e.blockReason,
+        })),
+      })
+    }
+
+    return v
   })
 
-  // 4. Audit
   await writeAuditLog(prisma, {
     tenantId, userId: ctx.userId,
     action: AuditAction.VENDOR_CREATED,
@@ -90,14 +233,12 @@ export async function createVendor(
     ipAddress: ctx.ip,
   })
 
-  // 5. Invalidate master data cache
   await cacheInvalidate(redis, CacheKeys.masterData(tenantId))
 
-  // 6. Fire KYC checks async (non-blocking)
   runVendorKyc(prisma, {
     id: vendor.id, pan: vendor.pan, gstin: vendor.gstin ?? undefined,
     cin: vendor.cin ?? undefined, udyamNumber: vendor.udyamNumber ?? undefined,
-    bankAccountNo: vendor.bankAccountNo ?? undefined, ifscCode: vendor.ifscCode ?? undefined,
+    bankAccountNo: undefined, ifscCode: undefined,
     legalName: vendor.legalName, email: vendor.email ?? undefined, mobile: vendor.mobile ?? undefined,
   }, ctx).catch(e => console.error('[KYC] Background check failed:', e))
 
@@ -148,10 +289,17 @@ export async function listVendors(
   return { data, total, nextCursor, hasMore }
 }
 
-// ── Get single vendor ──
+// ── Get single vendor (includes sub-tables for detail/edit) ──
 
 export async function getVendor(prisma: PrismaClient, id: string, tenantId: string) {
-  const vendor = await prisma.vendor.findFirst({ where: { id, tenantId } })
+  const vendor = await prisma.vendor.findFirst({
+    where: { id, tenantId },
+    include: {
+      bankAccounts:     { where: { status: 'ACTIVE' }, orderBy: { isPrimary: 'desc' } },
+      gstRegistrations: { where: { status: 'ACTIVE' }, orderBy: { isPrimary: 'desc' } },
+      entityMappings:   { where: { isActive: true } },
+    },
+  })
   if (!vendor) return err(Errors.notFound('Vendor', id))
   return ok(vendor)
 }
@@ -169,16 +317,110 @@ export async function updateVendor(
   const existing = await prisma.vendor.findFirst({ where: { id, tenantId } })
   if (!existing) return err(Errors.notFound('Vendor', id))
 
-  const updated = await prisma.vendor.update({
-    where: { id },
-    data: {
-      ...input,
-      pan:      input.pan?.toUpperCase(),
-      gstin:    input.gstin,
-      cin:      input.cin?.toUpperCase(),
-      ifscCode: input.ifscCode?.toUpperCase(),
-      email:    input.email?.toLowerCase(),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.vendor.update({
+      where: { id },
+      data: {
+        legalName:         input.legalName,
+        tradeName:         input.tradeName,
+        gstin:             input.gstin,
+        pan:               input.pan?.toUpperCase(),
+        cin:               input.cin?.toUpperCase(),
+        udyamNumber:       input.udyamNumber?.toUpperCase(),
+        vendorType:        input.vendorType as any,
+        vendorCategoryId:  input.vendorCategoryId,
+        vendorGroupId:     input.vendorGroupId,
+        countryCode:       input.countryCode,
+        taxRegimeCode:     input.taxRegimeCode,
+        email:             input.email?.toLowerCase(),
+        mobile:            input.mobile,
+        contactName:       input.contactName,
+        website:           input.website,
+        addressLine1:      input.addressLine1,
+        addressLine2:      input.addressLine2,
+        city:              input.city,
+        state:             input.state,
+        stateCode:         input.stateCode,
+        pincode:           input.pincode,
+        paymentTerms:      input.paymentTerms,
+        paymentMode:       input.paymentMode,
+        paymentCurrency:   input.paymentCurrency,
+        tdsApplicable:     input.tdsApplicable,
+        tdsSectionCode:    input.tdsSectionCode,
+        tdsSectionId:      input.tdsSectionId,
+        tdsRate:           input.tdsRate,
+        tdsExempt:         input.tdsExempt,
+        lowerTdsCertNo:    input.lowerTdsCertNo,
+        lowerTdsSection:   input.lowerTdsSection,
+        lowerTdsRate:      input.lowerTdsRate,
+        lowerTdsValidFrom: input.lowerTdsValidFrom ? new Date(input.lowerTdsValidFrom) : undefined,
+        lowerTdsValidTo:   input.lowerTdsValidTo   ? new Date(input.lowerTdsValidTo)   : undefined,
+        lowerTdsAlertDays: input.lowerTdsAlertDays,
+        einvoiceRequired:  input.einvoiceRequired,
+        is206ABApplicable: input.is206ABApplicable,
+        tan:               input.tan?.toUpperCase(),
+        panCompliance:     input.panCompliance as any,
+        erpVendorCode:     input.erpVendorCode,
+        erpSystem:         input.erpSystem,
+      },
+    })
+
+    if (input.bankAccounts !== undefined) {
+      await tx.vendorBankAccount.deleteMany({ where: { vendorId: id } })
+      if (input.bankAccounts.length) {
+        await tx.vendorBankAccount.createMany({
+          data: input.bankAccounts.map(b => ({
+            vendorId:          id,
+            accountNo:         b.accountNo,
+            ifsc:              b.ifsc.toUpperCase(),
+            bankName:          b.bankName,
+            branch:            b.branch,
+            accountType:       b.accountType ?? 'CURRENT',
+            currencyCode:      b.currencyCode ?? 'INR',
+            accountHolderName: b.accountHolderName,
+            isPrimary:         b.isPrimary ?? false,
+          })),
+        })
+      }
+    }
+
+    if (input.gstRegistrations !== undefined) {
+      await tx.vendorGstRegistration.deleteMany({ where: { vendorId: id } })
+      if (input.gstRegistrations.length) {
+        await tx.vendorGstRegistration.createMany({
+          data: input.gstRegistrations.map(g => ({
+            vendorId:         id,
+            stateCode:        g.stateCode,
+            gstin:            g.gstin.toUpperCase(),
+            registrationType: g.registrationType ?? 'REGULAR',
+            isPrimary:        g.isPrimary ?? false,
+            spocName:         g.spocName,
+            spocEmail:        g.spocEmail,
+            spocPhone:        g.spocPhone,
+          })),
+        })
+      }
+    }
+
+    if (input.entityMappings !== undefined) {
+      await tx.vendorEntityMapping.deleteMany({ where: { vendorId: id } })
+      if (input.entityMappings.length) {
+        await tx.vendorEntityMapping.createMany({
+          data: input.entityMappings.map(e => ({
+            vendorId:       id,
+            entityId:       e.entityId,
+            glCodeId:       e.glCodeId,
+            costCentreId:   e.costCentreId,
+            profitCentreId: e.profitCentreId,
+            currencyCode:   e.currencyCode ?? 'INR',
+            creditLimit:    e.creditLimit,
+            blockPO:        e.blockPO ?? false,
+            blockPayment:   e.blockPayment ?? false,
+            blockReason:    e.blockReason,
+          })),
+        })
+      }
+    }
   })
 
   await writeAuditLog(prisma, {
@@ -186,22 +428,24 @@ export async function updateVendor(
     action: AuditAction.VENDOR_UPDATED,
     entityType: 'vendor', entityId: id,
     before: { legalName: existing.legalName, status: existing.status },
-    after:  { legalName: updated.legalName,  status: updated.status  },
+    after:  { legalName: input.legalName ?? existing.legalName, status: existing.status },
     ipAddress: ctx.ip,
   })
 
   await cacheInvalidate(redis, CacheKeys.masterData(tenantId))
 
-  // Re-run KYC if key compliance fields changed
-  const kycFields = ['pan', 'gstin', 'cin', 'udyamNumber', 'bankAccountNo', 'ifscCode']
-  const needsKyc  = kycFields.some(f => (input as any)[f] !== undefined)
+  const kycTriggerFields = ['pan', 'gstin', 'cin', 'udyamNumber']
+  const needsKyc = kycTriggerFields.some(f => (input as any)[f] !== undefined)
   if (needsKyc) {
-    runVendorKyc(prisma, {
-      id, pan: updated.pan, gstin: updated.gstin ?? undefined,
-      cin: updated.cin ?? undefined, udyamNumber: updated.udyamNumber ?? undefined,
-      bankAccountNo: updated.bankAccountNo ?? undefined, ifscCode: updated.ifscCode ?? undefined,
-      legalName: updated.legalName, email: updated.email ?? undefined, mobile: updated.mobile ?? undefined,
-    }, ctx).catch(e => console.error('[KYC] Re-check failed:', e))
+    const updated = await prisma.vendor.findFirst({ where: { id } })
+    if (updated) {
+      runVendorKyc(prisma, {
+        id, pan: updated.pan, gstin: updated.gstin ?? undefined,
+        cin: updated.cin ?? undefined, udyamNumber: updated.udyamNumber ?? undefined,
+        bankAccountNo: undefined, ifscCode: undefined,
+        legalName: updated.legalName, email: updated.email ?? undefined, mobile: updated.mobile ?? undefined,
+      }, ctx).catch(e => console.error('[KYC] Re-check failed:', e))
+    }
   }
 
   return ok({ id })
