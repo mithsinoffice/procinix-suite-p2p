@@ -324,6 +324,42 @@ export async function masterRoutes(app: FastifyInstance) {
     return reply.send(row)
   })
 
+  // ── TDS Sections ──
+  app.get('/tds-sections', auth, async (req, reply) => {
+    const { status } = req.query as any
+    const where: any = { tenantId: req.tenant.id }
+    if (status && status !== 'ALL') where.status = status
+    return reply.send(await app.prisma.tDSSection.findMany({ where, orderBy: { section: 'asc' } }))
+  })
+  app.post('/tds-sections', auth, async (req, reply) => {
+    const row = await app.prisma.tDSSection.create({
+      data: { ...(req.body as any), tenantId: req.tenant.id, createdByUserId: req.user.sub },
+    })
+    return reply.code(201).send(row)
+  })
+  app.put('/tds-sections/:id', auth, async (req, reply) => {
+    return reply.send(await app.prisma.tDSSection.update({ where: { id: (req.params as any).id }, data: req.body as any }))
+  })
+
+  // ── Tenant KYC Settings ──
+  app.get('/settings/kyc', auth, async (req, reply) => {
+    const settings = await app.prisma.tenantSettings.findFirst({ where: { tenantId: req.tenant.id } })
+    return reply.send(settings ?? {
+      kycEnabled: true,
+      kycProvider: 'ongrid',
+      kycAutoRun: false,
+      kycMandatoryFields: ['PAN', 'BANK'],
+    })
+  })
+  app.put('/settings/kyc', auth, async (req, reply) => {
+    const settings = await app.prisma.tenantSettings.upsert({
+      where:  { tenantId: req.tenant.id },
+      create: { tenantId: req.tenant.id, ...(req.body as any) },
+      update: req.body as any,
+    })
+    return reply.send(settings)
+  })
+
   // ── Generic CRUD for all masters ──
   for (const [route, table] of Object.entries(TABLE_ROUTE_MAP)) {
 

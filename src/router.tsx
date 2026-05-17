@@ -30,8 +30,12 @@ const CountryMasterPage  = lazy(() => import('./pages/masters/CountryMasterPage'
 const StateMasterPage    = lazy(() => import('./pages/masters/StateMasterPage'))
 const CityMasterPage     = lazy(() => import('./pages/masters/CityMasterPage'))
 const CurrencyMasterPage = lazy(() => import('./pages/masters/CurrencyMasterPage'))
-const FxRateMasterPage   = lazy(() => import('./pages/masters/FxRateMasterPage'))
-const NotFoundPage       = lazy(() => import('./pages/NotFoundPage'))
+const FxRateMasterPage       = lazy(() => import('./pages/masters/FxRateMasterPage'))
+const VendorCategoryPage     = lazy(() => import('./pages/masters/VendorCategoryPage'))
+const VendorGroupPage        = lazy(() => import('./pages/masters/VendorGroupPage'))
+const ProfitCentrePage       = lazy(() => import('./pages/masters/ProfitCentrePage'))
+const TdsSectionsPage        = lazy(() => import('./pages/masters/TdsSectionsPage'))
+const NotFoundPage           = lazy(() => import('./pages/NotFoundPage'))
 
 function PageLoader() {
   return (
@@ -92,6 +96,10 @@ export const router = createBrowserRouter([
           { path: 'cities',            element: <S><CityMasterPage /></S>                       },
           { path: 'currencies',         element: <S><CurrencyMasterPage /></S>                  },
           { path: 'fx-rates',          element: <S><FxRateMasterPage /></S>                     },
+          { path: 'vendor-categories', element: <S><VendorCategoryPage /></S>                  },
+          { path: 'vendor-groups',     element: <S><VendorGroupPage /></S>                     },
+          { path: 'profit-centres',    element: <S><ProfitCentrePage /></S>                    },
+          { path: 'tds-sections',      element: <S><TdsSectionsPage /></S>                     },
         ]},
       ],
     }],

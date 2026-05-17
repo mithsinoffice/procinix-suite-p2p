@@ -6,6 +6,7 @@ import {
   Building2, Calculator, MapPin, Receipt, Package, Users,
   Globe, Calendar, Wallet, GitBranch, Briefcase, Shield,
   User, LayoutGrid, List, Search, DollarSign, TrendingUp,
+  Tag, FileText,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -58,8 +59,12 @@ const MASTER_GROUPS: { group: string; color: string; masters: MasterDef[] }[] = 
     group: 'Procurement',
     color: 'text-rose-600',
     masters: [
-      { key: 'vendor',   title: 'Vendors',        desc: 'Suppliers, contractors — KYC + bank verified',  icon: Users,      iconBg: 'bg-rose-50',    iconColor: 'text-rose-600',    to: '/masters/vendors',         countApi: '/api/masters/vendors?take=1',         status: 'live'        },
-      { key: 'workflow', title: 'Workflow Rules',  desc: 'Approval routing and amount thresholds',        icon: GitBranch,  iconBg: 'bg-pink-50',    iconColor: 'text-pink-600',    to: '/masters/workflow-rules',  countApi: '/api/masters/workflow-rules?take=1', status: 'live'        },
+      { key: 'vendor',          title: 'Vendors',          desc: 'Suppliers, contractors — KYC + bank verified',  icon: Users,      iconBg: 'bg-rose-50',     iconColor: 'text-rose-600',     to: '/masters/vendors',           countApi: '/api/masters/vendors?take=1',           status: 'live'        },
+      { key: 'vendorCategory',  title: 'Vendor Categories', desc: 'Vendor classification categories',             icon: Tag,        iconBg: 'bg-orange-50',  iconColor: 'text-orange-600',   to: '/masters/vendor-categories', countApi: '/api/masters/vendor-categories?take=1', status: 'live'        },
+      { key: 'vendorGroup',     title: 'Vendor Groups',     desc: 'Vendor relationship tiers',                    icon: Users,      iconBg: 'bg-rose-50',    iconColor: 'text-rose-600',     to: '/masters/vendor-groups',     countApi: '/api/masters/vendor-groups?take=1',     status: 'live'        },
+      { key: 'profitCentre',    title: 'Profit Centres',    desc: 'Entity-scoped profit centres',                 icon: TrendingUp, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600',  to: '/masters/profit-centres',    countApi: '/api/masters/profit-centres?take=1',    status: 'live'        },
+      { key: 'tdsSection',      title: 'TDS Sections',      desc: 'TDS deduction sections and rates',             icon: FileText,   iconBg: 'bg-yellow-50',  iconColor: 'text-yellow-600',   to: '/masters/tds-sections',      countApi: '/api/masters/tds-sections?take=1',      status: 'live'        },
+      { key: 'workflow',        title: 'Workflow Rules',     desc: 'Approval routing and amount thresholds',       icon: GitBranch,  iconBg: 'bg-pink-50',    iconColor: 'text-pink-600',     to: '/masters/workflow-rules',    countApi: '/api/masters/workflow-rules?take=1',    status: 'live'        },
     ],
   },
   {

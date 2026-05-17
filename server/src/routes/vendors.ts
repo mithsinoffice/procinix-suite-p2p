@@ -88,7 +88,7 @@ export async function vendorRoutes(app: FastifyInstance) {
     const v = result.data
     if (!v.pan) return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'PAN is required for this check' })
     const { runPANChain } = await import('../services/kyc/kyc.service.js')
-    const data = await runPANChain(app.prisma, v.id, v.pan, v.cin ?? undefined, v.udyamNumber ?? undefined)
+    const data = await runPANChain(app.prisma, v.id, v.pan, v.cin ?? undefined, v.udyamNumber ?? undefined, req.tenant.id)
     return reply.send(data)
   })
 
@@ -100,7 +100,7 @@ export async function vendorRoutes(app: FastifyInstance) {
     const result = await getVendor(app.prisma, id, req.tenant.id)
     if (!result.ok) return reply.code(404).send(result.error)
     const { runGSTChain } = await import('../services/kyc/kyc.service.js')
-    const data = await runGSTChain(app.prisma, id, gstin)
+    const data = await runGSTChain(app.prisma, id, gstin, req.tenant.id)
     return reply.send(data)
   })
 
@@ -110,7 +110,7 @@ export async function vendorRoutes(app: FastifyInstance) {
     const bank = await app.prisma.vendorBankAccount.findFirst({ where: { id: bankAccountId } })
     if (!bank) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Bank account not found' })
     const { runBankChain } = await import('../services/kyc/kyc.service.js')
-    const data = await runBankChain(app.prisma, bank.id, bank.accountNo, bank.ifsc, bank.accountHolderName ?? '')
+    const data = await runBankChain(app.prisma, bank.id, bank.accountNo, bank.ifsc, bank.accountHolderName ?? '', req.tenant.id)
     return reply.send(data)
   })
 

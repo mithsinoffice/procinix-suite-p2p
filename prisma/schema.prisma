@@ -1035,3 +1035,45 @@ model VendorInvitation {
   @@index([tenantId, status])
   @@map("vendor_invitations")
 }
+
+model TDSSection {
+  id              String   @id @default(uuid())
+  tenantId        String
+  code            String
+  section         String
+  description     String?
+  defaultRate     Decimal? @db.Decimal(5, 2)
+  applicableTo    String   @default("Both")
+  status          String   @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@unique([tenantId, code])
+  @@map("tds_sections")
+}
+
+model TenantSettings {
+  id                     String   @id @default(uuid())
+  tenantId               String   @unique
+  kycEnabled             Boolean  @default(true)
+  kycAutoRun             Boolean  @default(false)
+  kycMandatoryFields     Json     @default("[\"PAN\",\"BANK\"]")
+  panProvider            String   @default("ongrid")
+  gstProvider            String   @default("ongrid")
+  returnsProvider        String   @default("surepass")
+  ab206Provider          String   @default("surepass")
+  bankProvider           String   @default("ongrid")
+  cinProvider            String   @default("ongrid")
+  msmeProvider           String   @default("ongrid")
+  sanctionsProvider      String   @default("surepass")
+  erpSystem              String?
+  erpWebhookUrl          String?
+  erpAuthType            String?
+  erpAuthCredentials     Json?
+  vendorPortalEnabled    Boolean  @default(true)
+  invitationExpiryDays   Int      @default(7)
+  invitationReminderDays Int      @default(2)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  @@map("tenant_settings")
+}

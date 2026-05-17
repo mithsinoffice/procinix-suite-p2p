@@ -1,4 +1,4 @@
-import type { KYCProvider, PANResult, GSTResult, GSTReturnResult, Check206ABResult, BankResult, CINResult, MSMEResult } from '../kyc.interface.js'
+import type { KYCProvider } from '../kyc.interface.js'
 
 const BASE = process.env.ONGRID_BASE_URL ?? 'https://api.ongrid.in/v1'
 const KEY  = process.env.ONGRID_API_KEY

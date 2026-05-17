@@ -1,4 +1,4 @@
-import type { KYCProvider, PANResult, GSTResult, GSTReturnResult, Check206ABResult, BankResult, CINResult, MSMEResult } from '../kyc.interface.js'
+import type { KYCProvider } from '../kyc.interface.js'
 
 const BASE  = process.env.SUREPASS_BASE_URL ?? 'https://kyc-api.surepass.io/api/v1'
 const TOKEN = process.env.SUREPASS_TOKEN

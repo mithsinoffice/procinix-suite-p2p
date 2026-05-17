@@ -9,13 +9,23 @@ function getProvider(check: string): KYCProvider {
   return provider === 'surepass' ? SurepassProvider : OngridProvider
 }
 
+export async function isKYCEnabled(prisma: PrismaClient, tenantId: string): Promise<boolean> {
+  const settings = await prisma.tenantSettings.findFirst({ where: { tenantId } })
+  return settings?.kycEnabled ?? true
+}
+
 export async function runPANChain(
   prisma:   PrismaClient,
   vendorId: string,
   pan:      string,
   cin?:     string,
   udyamNo?: string,
+  tenantId?: string,
 ): Promise<Record<string, unknown>> {
+  if (tenantId && !(await isKYCEnabled(prisma, tenantId))) {
+    return { status: 'KYC_DISABLED', message: 'KYC validation is disabled for this tenant' }
+  }
+
   const results: Record<string, unknown> = {}
 
   const panResult = await getProvider('PAN').verifyPAN(pan)
@@ -48,7 +58,12 @@ export async function runGSTChain(
   prisma:   PrismaClient,
   vendorId: string,
   gstin:    string,
+  tenantId?: string,
 ): Promise<Record<string, unknown>> {
+  if (tenantId && !(await isKYCEnabled(prisma, tenantId))) {
+    return { status: 'KYC_DISABLED', message: 'KYC validation is disabled for this tenant' }
+  }
+
   const gstResult    = await getProvider('GST').verifyGST(gstin)
   const returnResult = await getProvider('RETURNS').verifyGSTReturns(gstin)
 
@@ -69,7 +84,16 @@ export async function runBankChain(
   accountNo:      string,
   ifsc:           string,
   holderName:     string,
+  tenantId?: string,
 ): Promise<Record<string, unknown>> {
+  if (tenantId) {
+    const vendor = await prisma.vendorBankAccount.findFirst({ where: { id: bankAccountId }, select: { vendorId: true } })
+    if (vendor) {
+      const enabled = await isKYCEnabled(prisma, tenantId)
+      if (!enabled) return { status: 'KYC_DISABLED', message: 'KYC validation is disabled for this tenant' }
+    }
+  }
+
   const bankResult = await getProvider('BANK').pennyDrop(accountNo, ifsc, holderName)
 
   const updates: Record<string, unknown> = {
