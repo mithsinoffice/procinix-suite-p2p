@@ -35,6 +35,7 @@ const VendorCategoryPage     = lazy(() => import('./pages/masters/VendorCategory
 const VendorGroupPage        = lazy(() => import('./pages/masters/VendorGroupPage'))
 const ProfitCentrePage       = lazy(() => import('./pages/masters/ProfitCentrePage'))
 const TdsSectionsPage        = lazy(() => import('./pages/masters/TdsSectionsPage'))
+const AdminTenantsPage       = lazy(() => import('./pages/admin/AdminTenantsPage'))
 const NotFoundPage           = lazy(() => import('./pages/NotFoundPage'))
 
 function PageLoader() {
@@ -100,6 +101,9 @@ export const router = createBrowserRouter([
           { path: 'vendor-groups',     element: <S><VendorGroupPage /></S>                     },
           { path: 'profit-centres',    element: <S><ProfitCentrePage /></S>                    },
           { path: 'tds-sections',      element: <S><TdsSectionsPage /></S>                     },
+        ]},
+        { path: 'admin', children: [
+          { path: 'tenants', element: <S><AdminTenantsPage /></S> },
         ]},
       ],
     }],

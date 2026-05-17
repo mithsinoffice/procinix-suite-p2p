@@ -1,12 +1,12 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FileText, CreditCard, Database, LogOut, Menu, X, AlertCircle } from 'lucide-react'
+import { LayoutDashboard, FileText, CreditCard, Database, LogOut, Menu, X, AlertCircle, Shield } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '../../stores/auth.store'
 import { http } from '../../lib/http'
 import { queryClient } from '../../lib/query-client'
 import { cn } from '../../lib/utils'
 
-const NAV = [
+const BASE_NAV = [
   { to: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/invoices',        icon: FileText,         label: 'Invoices'  },
   { to: '/invoices/review', icon: AlertCircle,      label: 'AP Queue'  },
@@ -17,6 +17,10 @@ const NAV = [
 export function AppShell() {
   const [open, setOpen] = useState(false)
   const { user, clearUser } = useAuthStore()
+  const NAV = [
+    ...BASE_NAV,
+    ...(user?.role === 'SUPER_ADMIN' ? [{ to: '/admin/tenants', icon: Shield, label: 'Admin' }] : []),
+  ]
   const navigate = useNavigate()
 
   async function handleLogout() {

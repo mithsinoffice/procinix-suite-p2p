@@ -356,6 +356,40 @@ async function main() {
   await prisma.$executeRaw`UPDATE currencies   SET status='ACTIVE' WHERE status IS NULL OR status=''`
   console.log('✓ Status normalised on all seeded records')
 
+  // Tenant modules + features
+  const MODULE_FEATURES: Record<string, string[]> = {
+    INVOICE:  ['UPLOAD', 'OCR', 'EMAIL_INGEST', 'STP', 'MATCH_SCORING', 'EINVOICE'],
+    VENDOR:   ['KYC', 'PORTAL', '206AB', 'MSME', 'ERP_SYNC'],
+    PAYMENT:  ['TRANSBNK', 'TDS', 'BATCH', 'CHALLAN'],
+    WORKFLOW: ['DYNAMIC', 'CHAT', 'SLA'],
+    PR:       ['CREATE', 'APPROVE', 'CONVERT_PO'],
+    PO:       ['CREATE', 'APPROVE', 'GRN'],
+    GRN:      ['CREATE', 'APPROVE'],
+    REPORTS:  ['AP_AGING', 'SPEND', 'TDS_SUMMARY'],
+  }
+  for (const [moduleCode, features] of Object.entries(MODULE_FEATURES)) {
+    await prisma.tenantModule.upsert({
+      where:  { tenantId_moduleCode: { tenantId: tenant.id, moduleCode } },
+      update: { isEnabled: true },
+      create: { tenantId: tenant.id, moduleCode, isEnabled: true },
+    })
+    for (const featureCode of features) {
+      await prisma.tenantFeature.upsert({
+        where:  { tenantId_moduleCode_featureCode: { tenantId: tenant.id, moduleCode, featureCode } },
+        update: { isEnabled: true },
+        create: { tenantId: tenant.id, moduleCode, featureCode, isEnabled: true },
+      })
+    }
+  }
+  console.log('✓ Tenant modules + features seeded')
+
+  // Set super admin role on seed user
+  await prisma.user.update({
+    where: { tenantId_email: { tenantId: tenant.id, email: 'mithilesh@procinix.ai' } },
+    data:  { role: 'SUPER_ADMIN' },
+  })
+  console.log('✓ Super admin role set')
+
   console.log('\n✅ Seed complete.')
   console.log('   Login: mithilesh@procinix.ai / Demo@123')
 }

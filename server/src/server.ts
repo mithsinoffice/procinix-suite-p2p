@@ -16,6 +16,7 @@ import { masterRoutes }       from './routes/masters.js'
 import { invoiceRoutes }      from './routes/invoices.js'
 import { dashboardRoutes }    from './routes/dashboard.js'
 import { workflowRoutes }     from './routes/workflow.js'
+import { adminRoutes }        from './routes/admin.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -48,6 +49,7 @@ export async function buildApp() {
   await app.register(invoiceRoutes,   { prefix: '/api/invoices'   })
   await app.register(dashboardRoutes,  { prefix: '/api/dashboard'  })
   await app.register(workflowRoutes,   { prefix: '/api/workflow'   })
+  await app.register(adminRoutes,      { prefix: '/api' })
 
   // Stub routes — to be filled in per module
   app.get('/api/ping', async () => ({ pong: true, ts: Date.now() }))
