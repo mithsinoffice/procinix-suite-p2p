@@ -110,6 +110,18 @@ export const vendorFormSchema = z.object({
 
   // H. Entity Mappings — includes payment + ERP settings per entity
   entityMappings: z.array(entityMappingRowSchema).default([]),
+
+  // Entity-type-dependent statutory fields
+  llpRegNo:   z.string().optional(),
+  trustRegNo: z.string().optional(),
+}).superRefine((val, ctx) => {
+  if ((val.panEntityType === 'INDIVIDUAL' || val.panEntityType === 'HUF') && !val.aadharNo) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Aadhaar required for Individual / HUF vendors',
+      path: ['aadharNo'],
+    })
+  }
 })
 
 export type VendorFormInput = z.infer<typeof vendorFormSchema>

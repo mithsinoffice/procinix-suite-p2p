@@ -94,6 +94,8 @@ const createSchema = z.object({
   panEntityType: z.string().optional(),
   aadharNo:      z.string().optional(),
   msmeCategory:  z.string().optional(),
+  llpRegNo:      z.string().optional(),
+  trustRegNo:    z.string().optional(),
   // Sub-tables
   bankAccounts:     z.array(bankAccountRowSchema).optional(),
   gstRegistrations: z.array(gstRegRowSchema).optional(),

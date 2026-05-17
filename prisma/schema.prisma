@@ -102,6 +102,8 @@ model Vendor {
   aadharNo              String?
   aadharPanLinked       String?
   msmeCategory          String?
+  llpRegNo              String?
+  trustRegNo            String?
   kycPanStatus          String?
   kycPanName            String?
   kycGstStatus          String?

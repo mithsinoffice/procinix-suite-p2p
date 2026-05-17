@@ -98,6 +98,8 @@ export interface VendorCreateInput {
   panEntityType?: string
   aadharNo?:      string
   msmeCategory?:  string
+  llpRegNo?:      string
+  trustRegNo?:    string
   // Sub-tables (full replace on update)
   bankAccounts?:     BankAccountInput[]
   gstRegistrations?: GstRegistrationInput[]
@@ -181,6 +183,8 @@ export async function createVendor(
         panEntityType:     input.panEntityType,
         aadharNo:          input.aadharNo,
         msmeCategory:      input.msmeCategory,
+        llpRegNo:          input.llpRegNo,
+        trustRegNo:        input.trustRegNo,
         status:            'PENDING_APPROVAL',
       },
     })
@@ -380,6 +384,8 @@ export async function updateVendor(
         panEntityType:     input.panEntityType,
         aadharNo:          input.aadharNo,
         msmeCategory:      input.msmeCategory,
+        llpRegNo:          input.llpRegNo,
+        trustRegNo:        input.trustRegNo,
       },
     })
 

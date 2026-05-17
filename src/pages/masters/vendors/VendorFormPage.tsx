@@ -12,6 +12,31 @@ import { http } from '../../../lib/http'
 import { STALE_TIMES } from '../../../lib/query-client'
 import { cn } from '../../../lib/utils'
 
+// ── Entity-type compliance rules ──
+
+type EntityRule = {
+  aadharRequired?: boolean; panRequired?: boolean; cinRequired?: boolean
+  llpRequired?: boolean; trustRegRequired?: boolean; msmeApplicable?: boolean
+  higherTDSIfNoPAN?: boolean; higherTDSIfNotLinked?: boolean
+  tdsExempt?: boolean; alert?: string | null
+}
+
+const ENTITY_TYPE_RULES: Record<string, EntityRule> = {
+  COMPANY:    { aadharRequired: false, panRequired: true,  cinRequired: true,  llpRequired: false, trustRegRequired: false, msmeApplicable: true,  higherTDSIfNoPAN: true,  higherTDSIfNotLinked: false, tdsExempt: false, alert: null },
+  INDIVIDUAL: { aadharRequired: true,  panRequired: true,  cinRequired: false, llpRequired: false, trustRegRequired: false, msmeApplicable: true,  higherTDSIfNoPAN: true,  higherTDSIfNotLinked: true,  tdsExempt: false, alert: 'Aadhar-PAN linkage mandatory. If not linked, TDS at higher rate (20%) applies under Section 206AA.' },
+  HUF:        { aadharRequired: true,  panRequired: true,  cinRequired: false, llpRequired: false, trustRegRequired: false, msmeApplicable: true,  higherTDSIfNoPAN: true,  higherTDSIfNotLinked: true,  tdsExempt: false, alert: "HUF: Karta's Aadhar and PAN required. Aadhar-PAN linkage mandatory for standard TDS rates." },
+  FIRM:       { aadharRequired: false, panRequired: true,  cinRequired: false, llpRequired: true,  trustRegRequired: false, msmeApplicable: true,  higherTDSIfNoPAN: true,  higherTDSIfNotLinked: false, tdsExempt: false, alert: null },
+  AOP:        { aadharRequired: false, panRequired: true,  cinRequired: false, llpRequired: false, trustRegRequired: false, msmeApplicable: false, higherTDSIfNoPAN: true,  higherTDSIfNotLinked: false, tdsExempt: false, alert: 'AOP/BOI: PAN mandatory. TDS at maximum marginal rate if PAN not provided.' },
+  BOI:        { aadharRequired: false, panRequired: true,  cinRequired: false, llpRequired: false, trustRegRequired: false, msmeApplicable: false, higherTDSIfNoPAN: true,  higherTDSIfNotLinked: false, tdsExempt: false, alert: 'AOP/BOI: PAN mandatory. TDS at maximum marginal rate if PAN not provided.' },
+  TRUST:      { aadharRequired: false, panRequired: true,  cinRequired: false, llpRequired: false, trustRegRequired: true,  msmeApplicable: false, higherTDSIfNoPAN: true,  higherTDSIfNotLinked: false, tdsExempt: false, alert: 'Trust: Registration certificate mandatory. PAN required for TDS.' },
+  GOVT:       { aadharRequired: false, panRequired: false, cinRequired: false, llpRequired: false, trustRegRequired: false, msmeApplicable: false, higherTDSIfNoPAN: false, higherTDSIfNotLinked: false, tdsExempt: true,  alert: 'Government entity: TDS typically exempt. Verify exemption certificate.' },
+}
+
+const PAN_ENTITY_MAP: Record<string, string[]> = {
+  COMPANY: ['C'], INDIVIDUAL: ['P'], HUF: ['H'], FIRM: ['F'],
+  AOP: ['A'], BOI: ['B'], GOVT: ['G', 'J'], TRUST: ['T'],
+}
+
 interface Props { mode: 'create' | 'edit' }
 
 // ── Primitives ──
@@ -464,11 +489,33 @@ export default function VendorFormPage({ mode }: Props) {
   const { fields: gstFields,    append: appendGst,    remove: removeGst    } = useFieldArray({ control, name: 'gstRegistrations' })
   const { fields: entityFields, append: appendEntity, remove: removeEntity } = useFieldArray({ control, name: 'entityMappings' })
 
-  const tdsApplicable = watch('tdsApplicable')
-  const tdsExempt     = watch('tdsExempt')
-  const panEntityType = watch('panEntityType')
-  const msmeCategory  = watch('msmeCategory')
-  const showAadhar    = panEntityType === 'INDIVIDUAL' || panEntityType === 'HUF'
+  const v = vendor as (VendorDetail & { bankAccounts: any[]; gstRegistrations: any[]; entityMappings: any[] }) | undefined
+
+  const tdsApplicable  = watch('tdsApplicable')
+  const tdsExempt      = watch('tdsExempt')
+  const panEntityType  = watch('panEntityType')
+  const msmeCategory   = watch('msmeCategory')
+  const showAadhar     = panEntityType === 'INDIVIDUAL' || panEntityType === 'HUF'
+
+  const panValue       = watch('pan')
+  const is206AB        = watch('is206ABApplicable')
+  const tdsSectionCode = watch('tdsSectionCode')
+  const cinValue       = watch('cin')
+  const rules          = (ENTITY_TYPE_RULES as Record<string, EntityRule>)[panEntityType ?? ''] ?? {} as EntityRule
+  const showMsme       = rules.msmeApplicable !== false
+
+  const panEntityMismatch = !!panValue && panValue.length === 10 && !!panEntityType
+    && !!PAN_ENTITY_MAP[panEntityType]
+    && !PAN_ENTITY_MAP[panEntityType].includes(panValue[3])
+
+  const tdsImpact = panEntityType ? (() => {
+    if (panEntityType === 'GOVT') return { color: 'green', text: 'TDS Exempt — Govt entity' }
+    if (!panValue) return { color: 'red', text: 'No PAN — TDS at 20% under Section 206AA' }
+    if (rules.higherTDSIfNotLinked && v?.aadharPanLinked === 'NOT_LINKED')
+      return { color: 'red', text: 'Aadhar-PAN not linked — TDS at 20% under Section 206AA' }
+    if (is206AB) return { color: 'purple', text: '206AB flagged — TDS doubled' }
+    return { color: 'green', text: `Standard TDS — Section ${tdsSectionCode || '—'}` }
+  })() : null
 
   useEffect(() => {
     if (vendor && mode === 'edit') {
@@ -497,6 +544,8 @@ export default function VendorFormPage({ mode }: Props) {
         panEntityType:    v.panEntityType     ?? '',
         aadharNo:         v.aadharNo          ?? '',
         msmeCategory:     v.msmeCategory      ?? '',
+        llpRegNo:         v.llpRegNo          ?? '',
+        trustRegNo:       v.trustRegNo        ?? '',
         gstin:            v.gstin             ?? '',
         cin:              v.cin               ?? '',
         tan:              v.tan               ?? '',
@@ -545,6 +594,10 @@ export default function VendorFormPage({ mode }: Props) {
     }
   }, [vendor, mode, reset])
 
+  useEffect(() => {
+    if (panEntityType === 'GOVT') setValue('tdsExempt', true)
+  }, [panEntityType, setValue])
+
   async function onSubmit(data: VendorFormInput) {
     try {
       const payload = {
@@ -554,8 +607,10 @@ export default function VendorFormPage({ mode }: Props) {
         udyamNumber:      data.udyamNumber      || undefined,
         tan:              data.tan              || undefined,
         panEntityType:    data.panEntityType    || undefined,
-        aadharNo:         data.aadharNo         || undefined,
+        aadharNo:         data.aadharNo ? data.aadharNo.replace(/-/g, '') : undefined,
         msmeCategory:     data.msmeCategory     || undefined,
+        llpRegNo:         data.llpRegNo         || undefined,
+        trustRegNo:       data.trustRegNo       || undefined,
         vendorCategoryId: data.vendorCategoryId || undefined,
         vendorGroupId:    data.vendorGroupId    || undefined,
         tdsSectionId:     data.tdsSectionId     || undefined,
@@ -592,8 +647,6 @@ export default function VendorFormPage({ mode }: Props) {
   }
 
   const err = (field: keyof VendorFormInput) => errors[field]?.message as string | undefined
-
-  const v = vendor as (VendorDetail & { bankAccounts: any[]; gstRegistrations: any[]; entityMappings: any[] }) | undefined
 
   return (
     <div className="flex flex-col h-full">
@@ -714,7 +767,12 @@ export default function VendorFormPage({ mode }: Props) {
             }
           >
             <F label="PAN" required error={err('pan')}>
-              <SI placeholder="ABCDE1234F" maxLength={10} className="uppercase" {...register('pan')} />
+              <div className="space-y-1">
+                <SI placeholder="ABCDE1234F" maxLength={10} className="uppercase" {...register('pan')} />
+                {panEntityMismatch && (
+                  <p className="text-[10px] text-amber-600">⚠ PAN 4th character doesn't match entity type ({panEntityType})</p>
+                )}
+              </div>
             </F>
             <F label="PAN entity type">
               <SS {...register('panEntityType')}>
@@ -729,6 +787,22 @@ export default function VendorFormPage({ mode }: Props) {
                 <option value="GOVT">Government</option>
               </SS>
             </F>
+            {rules.alert && (
+              <div className="col-span-2 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800">{rules.alert}</p>
+              </div>
+            )}
+            {tdsImpact && (
+              <div className={cn(
+                'col-span-2 rounded-md border px-3 py-2 text-xs font-medium',
+                tdsImpact.color === 'green'  && 'bg-green-50 border-green-200 text-green-800',
+                tdsImpact.color === 'red'    && 'bg-red-50 border-red-200 text-red-800',
+                tdsImpact.color === 'purple' && 'bg-purple-50 border-purple-200 text-purple-800',
+              )}>
+                TDS impact: {tdsImpact.text}
+              </div>
+            )}
             <F label="PAN compliance">
               <SS {...register('panCompliance')}>
                 <option value="COMPLIANT">Compliant</option>
@@ -738,40 +812,103 @@ export default function VendorFormPage({ mode }: Props) {
               </SS>
             </F>
             {showAadhar && (
-              <F label="Aadhaar number" error={err('aadharNo')}>
-                <div className="space-y-1.5">
-                  <SI placeholder="XXXX XXXX XXXX" maxLength={12} {...register('aadharNo')} />
-                  {mode === 'edit' && v?.aadharPanLinked && (
-                    <KycChip status={v.aadharPanLinked} label="Aadhaar-PAN" />
-                  )}
-                </div>
-              </F>
+              <>
+                <F label={`Aadhaar number${rules.aadharRequired ? ' *' : ''}`} error={err('aadharNo')}>
+                  <div className="space-y-1">
+                    <SI
+                      placeholder="XXXX-XXXX-XXXX"
+                      maxLength={14}
+                      {...register('aadharNo')}
+                      onChange={e => {
+                        const digits = e.target.value.replace(/\D/g, '').slice(0, 12)
+                        const fmt = digits.length > 8
+                          ? `${digits.slice(0,4)}-${digits.slice(4,8)}-${digits.slice(8)}`
+                          : digits.length > 4
+                          ? `${digits.slice(0,4)}-${digits.slice(4)}`
+                          : digits
+                        setValue('aadharNo', fmt, { shouldValidate: true })
+                      }}
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      {panEntityType === 'HUF' ? "Karta's Aadhaar number" : 'Beneficiary Aadhaar number'}
+                    </p>
+                  </div>
+                </F>
+                <F label="Aadhaar-PAN linkage">
+                  <div className="flex flex-col gap-1.5 mt-1">
+                    {mode === 'edit' && v?.aadharPanLinked ? (
+                      <>
+                        <KycChip status={v.aadharPanLinked} label="Aadhaar-PAN" />
+                        {v.aadharPanLinked === 'LINKED' && (
+                          <p className="text-[10px] text-green-700">Standard TDS rates apply</p>
+                        )}
+                        {v.aadharPanLinked === 'NOT_LINKED' && (
+                          <p className="text-[10px] text-destructive font-medium">⚠ TDS rate doubled under Section 206AA</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground mt-1">Linkage verified after KYC run</p>
+                    )}
+                  </div>
+                </F>
+              </>
             )}
             <F label="Primary GSTIN" error={err('gstin')}>
               <SI placeholder="27AABCU9603R1ZV" className="uppercase" {...register('gstin')} />
             </F>
-            <F label="CIN" error={err('cin')}>
-              <SI placeholder="U12345MH2010PTC123456" className="uppercase" {...register('cin')} />
-            </F>
+            {panEntityType === 'COMPANY' && (
+              <F label="CIN *" error={err('cin')}>
+                <div className="space-y-1">
+                  <SI placeholder="U12345MH2010PTC123456" className="uppercase" maxLength={21} {...register('cin')} />
+                  {!cinValue && <p className="text-[10px] text-amber-600">⚠ CIN recommended for companies</p>}
+                </div>
+              </F>
+            )}
+            {(!panEntityType || (panEntityType !== 'COMPANY' && panEntityType !== 'FIRM' && panEntityType !== 'TRUST')) && (
+              <F label="CIN" error={err('cin')}>
+                <SI placeholder="U12345MH2010PTC123456" className="uppercase" {...register('cin')} />
+              </F>
+            )}
+            {panEntityType === 'FIRM' && (
+              <F label="LLP Registration No.">
+                <SI placeholder="AAB-1234" {...register('llpRegNo')} />
+              </F>
+            )}
+            {panEntityType === 'TRUST' && (
+              <F label="Trust Registration No.">
+                <SI placeholder="TR/MH/2010/001" {...register('trustRegNo')} />
+              </F>
+            )}
             <F label="TAN">
               <SI placeholder="MUMB12345A" className="uppercase" {...register('tan')} />
             </F>
-            <F label="Udyam / MSME no." error={err('udyamNumber')}>
-              <SI placeholder="UDYAM-MH-00-0012345" className="uppercase" {...register('udyamNumber')} />
-            </F>
-            <F label="MSME category">
-              <SS {...register('msmeCategory')}>
-                <option value="">None / Not registered</option>
-                <option value="MICRO">Micro enterprise</option>
-                <option value="SMALL">Small enterprise</option>
-                <option value="MEDIUM">Medium enterprise</option>
-              </SS>
-            </F>
-            {msmeCategory && (
-              <div className="col-span-2 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800">
-                  MSME payment rule: invoices from this {msmeCategory.toLowerCase()} enterprise must be paid within <strong>45 days</strong> to avoid interest under the MSMED Act, 2006.
+            {showMsme && (
+              <>
+                <F label="Udyam / MSME no." error={err('udyamNumber')}>
+                  <SI placeholder="UDYAM-MH-00-0012345" className="uppercase" {...register('udyamNumber')} />
+                </F>
+                <F label="MSME category">
+                  <SS {...register('msmeCategory')}>
+                    <option value="">None / Not registered</option>
+                    <option value="MICRO">Micro enterprise</option>
+                    <option value="SMALL">Small enterprise</option>
+                    <option value="MEDIUM">Medium enterprise</option>
+                  </SS>
+                </F>
+                {msmeCategory && (
+                  <div className="col-span-2 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2">
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800">
+                      MSME payment rule: invoices from this {msmeCategory.toLowerCase()} enterprise must be paid within <strong>45 days</strong> to avoid interest under the MSMED Act, 2006.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+            {panEntityType === 'GOVT' && (
+              <div className="col-span-2 rounded-lg bg-blue-50 border border-blue-200 p-3">
+                <p className="text-xs text-blue-800">
+                  🏛 Government entity — TDS exempt auto-applied. Verify Form 13 / exemption order.
                 </p>
               </div>
             )}

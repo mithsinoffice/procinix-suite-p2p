@@ -55,6 +55,7 @@ export interface VendorDetail extends VendorSummary {
   paymentMode: string; paymentCurrency: string
   // PAN / Aadhaar / MSME
   panEntityType?: string; aadharNo?: string; aadharPanLinked?: string; msmeCategory?: string
+  llpRegNo?: string; trustRegNo?: string
   // KYC (read-only)
   kycPanName?: string; kycGstName?: string; kycBankAccountName?: string
   kycBankNameMatchScore?: number; kycCinStatus?: string; kycCinCompanyName?: string
