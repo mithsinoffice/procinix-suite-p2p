@@ -59,7 +59,6 @@ const MASTER_GROUPS: { group: string; color: string; masters: MasterDef[] }[] = 
     group: 'Procurement',
     color: 'text-rose-600',
     masters: [
-      { key: 'vendor',          title: 'Vendors',          desc: 'Suppliers, contractors — KYC + bank verified',  icon: Users,      iconBg: 'bg-rose-50',     iconColor: 'text-rose-600',     to: '/masters/vendors',           countApi: '/api/masters/vendors?take=1',           status: 'live'        },
       { key: 'vendorCategory',  title: 'Vendor Categories', desc: 'Vendor classification categories',             icon: Tag,        iconBg: 'bg-orange-50',  iconColor: 'text-orange-600',   to: '/masters/vendor-categories', countApi: '/api/masters/vendor-categories?take=1', status: 'live'        },
       { key: 'vendorGroup',     title: 'Vendor Groups',     desc: 'Vendor relationship tiers',                    icon: Users,      iconBg: 'bg-rose-50',    iconColor: 'text-rose-600',     to: '/masters/vendor-groups',     countApi: '/api/masters/vendor-groups?take=1',     status: 'live'        },
       { key: 'items',           title: 'Item Master',       desc: 'Items, services and assets with PO rules, tax config and OCR keywords', icon: Package, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600', to: '/masters/items', countApi: '/api/masters/items?take=1', status: 'live' },

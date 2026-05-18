@@ -1,5 +1,9 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FileText, CreditCard, Database, LogOut, Menu, X, AlertCircle, Shield } from 'lucide-react'
+import {
+  LayoutDashboard, CheckSquare, ShoppingCart,
+  FileText, CreditCard, Users, GitBranch, Database,
+  Shield, Truck, LogOut, Menu, X,
+} from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '../../stores/auth.store'
 import { http } from '../../lib/http'
@@ -7,11 +11,15 @@ import { queryClient } from '../../lib/query-client'
 import { cn } from '../../lib/utils'
 
 const BASE_NAV = [
-  { to: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/invoices',        icon: FileText,         label: 'Invoices'  },
-  { to: '/invoices/review', icon: AlertCircle,      label: 'AP Queue'  },
-  { to: '/payments',        icon: CreditCard,       label: 'Payments'  },
-  { to: '/masters',         icon: Database,         label: 'Masters'   },
+  { to: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard'       },
+  { to: '/approvals',       icon: CheckSquare,     label: 'Approval Desk'   },
+  { to: '/purchase-orders', icon: ShoppingCart,    label: 'Purchase Orders' },
+  { to: '/grn',             icon: Truck,           label: 'GRN'             },
+  { to: '/invoices',        icon: FileText,        label: 'Invoices'        },
+  { to: '/payments',        icon: CreditCard,      label: 'Payments'        },
+  { to: '/vendors',         icon: Users,           label: 'Vendors'         },
+  { to: '/workflow',        icon: GitBranch,       label: 'Workflow'        },
+  { to: '/masters',         icon: Database,        label: 'Masters'         },
 ]
 
 export function AppShell() {

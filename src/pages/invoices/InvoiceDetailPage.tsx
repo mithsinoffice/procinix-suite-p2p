@@ -54,13 +54,14 @@ export default function InvoiceDetailPage() {
   }
   if (!inv) return <div className="p-6 text-sm text-muted-foreground">Invoice not found</div>
 
-  const status     = inv.status as string
-  const currency   = inv.currencyCode ?? 'INR'
-  const canSubmit  = status === 'DRAFT'
-  const canApprove = status === 'SUBMITTED' || status === 'PENDING_L1' || status === 'PENDING_L2'
-  const canHold    = status === 'SUBMITTED' || status === 'PENDING_L1' || status === 'PENDING_L2'
-  const canRelease = status === 'ON_HOLD'
-  const canEdit    = status === 'DRAFT' || status === 'REJECTED'
+  const status      = inv.status as string
+  const currency    = inv.currencyCode ?? 'INR'
+  const isWfManaged = !!inv.workflowInstanceId
+  const canSubmit   = status === 'DRAFT' || status === 'REJECTED'
+  const canApprove  = !isWfManaged && (status === 'SUBMITTED' || status === 'PENDING_L1' || status === 'PENDING_L2')
+  const canHold     = !isWfManaged && (status === 'SUBMITTED' || status === 'PENDING_L1' || status === 'PENDING_L2')
+  const canRelease  = !isWfManaged && status === 'ON_HOLD'
+  const canEdit     = status === 'DRAFT' || status === 'REJECTED'
 
   return (
     <div className="flex flex-col h-full">
@@ -334,8 +335,215 @@ export default function InvoiceDetailPage() {
             </div>
           )}
 
+          {/* Workflow panel */}
+          {inv.workflowInstanceId && (
+            <WorkflowPanel
+              invoiceId={inv.id}
+              workflowInstanceId={inv.workflowInstanceId}
+              onAction={() => qc.invalidateQueries({ queryKey: ['invoices', id] })}
+            />
+          )}
+
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Workflow panel ───────────────────────────────────────────────────────────
+
+function WorkflowPanel({ invoiceId: _invoiceId, workflowInstanceId, onAction }: {
+  invoiceId: string
+  workflowInstanceId: string
+  onAction: () => void
+}) {
+  const qcPanel = useQueryClient()
+  const { data: instance } = useQuery({
+    queryKey: ['workflow-instance', workflowInstanceId],
+    queryFn:  () => http.get<any>(`/api/workflow/instances/${workflowInstanceId}`),
+    staleTime: 15_000,
+  })
+
+  const [mode, setMode]         = useState<'approve' | 'reject' | 'hold' | 'info' | null>(null)
+  const [comments, setComments] = useState('')
+  const [rejectMode, setRejectMode] = useState<'RETURN_TO_DRAFT' | 'RETURN_TO_PREV_STAGE'>('RETURN_TO_DRAFT')
+
+  const invalidate = () => {
+    qcPanel.invalidateQueries({ queryKey: ['workflow-instance', workflowInstanceId] })
+    onAction()
+    setMode(null)
+    setComments('')
+  }
+
+  const approve    = useMutation({ mutationFn: () => http.post(`/api/workflow/instances/${workflowInstanceId}/approve`, { comments }), onSuccess: invalidate })
+  const reject     = useMutation({ mutationFn: () => http.post(`/api/workflow/instances/${workflowInstanceId}/reject`, { mode: rejectMode, comments }), onSuccess: invalidate })
+  const hold       = useMutation({ mutationFn: () => http.post(`/api/workflow/instances/${workflowInstanceId}/hold`, { reason: comments }), onSuccess: invalidate })
+  const requestInfo = useMutation({ mutationFn: () => http.post(`/api/workflow/instances/${workflowInstanceId}/reject`, { mode: 'REQUEST_INFO', comments }), onSuccess: invalidate })
+
+  if (!instance) return null
+
+  const currentStage = instance.stages?.find((s: any) => s.status === 'PENDING' || s.status === 'INFO_REQUESTED')
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/20">
+        <div>
+          <p className="text-sm font-semibold">Approval Workflow</p>
+          <p className="text-xs text-muted-foreground">{instance.definition?.name ?? 'Standard workflow'}</p>
+        </div>
+        <span className={cn('rounded-full px-2.5 py-1 text-xs font-semibold border',
+          instance.status === 'APPROVED' ? 'bg-green-50 text-green-700 border-green-200' :
+          instance.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' :
+          instance.status === 'ON_HOLD'  ? 'bg-amber-50 text-amber-700 border-amber-200' :
+          'bg-blue-50 text-blue-700 border-blue-200')}>
+          {instance.status}
+        </span>
+      </div>
+
+      {/* Stage timeline */}
+      <div className="px-4 py-3 space-y-2">
+        {instance.stages?.map((stage: any, i: number) => (
+          <div key={stage.id} className="flex items-center gap-3">
+            <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
+              stage.status === 'APPROVED'       ? 'bg-green-100 text-green-700' :
+              stage.status === 'REJECTED'       ? 'bg-red-100 text-red-700' :
+              stage.status === 'PENDING'        ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-400' :
+              stage.status === 'INFO_REQUESTED' ? 'bg-amber-100 text-amber-700' :
+              stage.status === 'AUTO_APPROVED'  ? 'bg-green-50 text-green-500' :
+              'bg-muted text-muted-foreground')}>
+              {i + 1}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold">{stage.stageName}</p>
+                <span className="text-xs text-muted-foreground">{stage.approverRole ?? ''}</span>
+              </div>
+              {stage.comments && <p className="text-xs text-muted-foreground mt-0.5 italic">"{stage.comments}"</p>}
+              {stage.actionAt && <p className="text-xs text-muted-foreground">{formatDate(stage.actionAt)}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Action area — only when a stage is pending */}
+      {currentStage && instance.status === 'IN_PROGRESS' && (
+        <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+          <p className="text-xs text-muted-foreground">
+            Pending: <span className="font-semibold text-foreground">{currentStage.stageName}</span>
+          </p>
+
+          {!mode && (
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setMode('approve')}
+                className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700">
+                ✓ Approve
+              </button>
+              <button onClick={() => setMode('reject')}
+                className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700">
+                ✗ Reject
+              </button>
+              <button onClick={() => setMode('info')}
+                className="flex items-center gap-1.5 rounded-lg border border-amber-400 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100">
+                ? Request info
+              </button>
+              <button onClick={() => setMode('hold')}
+                className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted">
+                ⏸ Hold
+              </button>
+            </div>
+          )}
+
+          {mode && (
+            <div className="rounded-lg border border-border p-3 space-y-2 bg-muted/20">
+              <p className="text-xs font-semibold capitalize">{mode === 'info' ? 'Request information' : mode}</p>
+              {mode === 'reject' && (
+                <div className="flex gap-2">
+                  {(['RETURN_TO_DRAFT', 'RETURN_TO_PREV_STAGE'] as const).map(m => (
+                    <button key={m} onClick={() => setRejectMode(m)}
+                      className={cn('px-2.5 py-1 rounded-md text-xs font-medium border transition-colors',
+                        rejectMode === m ? 'bg-red-600 text-white border-red-600' : 'border-border text-muted-foreground hover:bg-muted')}>
+                      {m === 'RETURN_TO_DRAFT' ? 'Return to draft' : 'Previous stage'}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <textarea
+                value={comments}
+                onChange={e => setComments(e.target.value)}
+                placeholder={
+                  mode === 'approve' ? 'Add approval comments (optional)…' :
+                  mode === 'reject'  ? 'Rejection reason (required)…' :
+                  mode === 'info'    ? 'What information do you need?…' :
+                  'Reason for hold…'
+                }
+                rows={3}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
+              />
+              <div className="flex gap-2">
+                <button onClick={() => { setMode(null); setComments('') }}
+                  className="rounded-lg border border-input px-3 py-1.5 text-xs hover:bg-muted">
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (mode === 'approve') approve.mutate()
+                    if (mode === 'reject')  reject.mutate()
+                    if (mode === 'hold')    hold.mutate()
+                    if (mode === 'info')    requestInfo.mutate()
+                  }}
+                  disabled={(['reject', 'hold', 'info'] as const).includes(mode as any) && !comments.trim()}
+                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50">
+                  Confirm
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Chat thread */}
+      {instance.chats?.length > 0 && (
+        <div className="border-t border-border px-4 py-3">
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Discussion thread</p>
+          <div className="space-y-2">
+            {instance.chats.map((chat: any) => (
+              <div key={chat.id} className={cn('rounded-lg p-2.5 text-xs',
+                chat.messageType === 'INFO_REQUEST' ? 'bg-amber-50 border border-amber-200' :
+                chat.messageType === 'INFO_REPLY'   ? 'bg-blue-50 border border-blue-200' :
+                'bg-muted/40')}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold">{chat.senderName}</span>
+                  <span className="text-muted-foreground">{formatDate(chat.createdAt)}</span>
+                </div>
+                <p>{chat.message}</p>
+              </div>
+            ))}
+          </div>
+          {instance.chats?.some((c: any) => c.messageType === 'INFO_REQUEST') && (
+            <ReplyBox instanceId={workflowInstanceId} onReplied={invalidate} />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ReplyBox({ instanceId, onReplied }: { instanceId: string; onReplied: () => void }) {
+  const [reply, setReply] = useState('')
+  const send = useMutation({
+    mutationFn: () => http.post(`/api/workflow/instances/${instanceId}/chat`, { message: reply, messageType: 'INFO_REPLY', attachments: [] }),
+    onSuccess:  () => { setReply(''); onReplied() },
+  })
+  return (
+    <div className="mt-2 flex gap-2">
+      <textarea value={reply} onChange={e => setReply(e.target.value)}
+        placeholder="Reply with additional information…" rows={2}
+        className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring resize-none" />
+      <button onClick={() => send.mutate()} disabled={!reply.trim() || send.isPending}
+        className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50">
+        Send
+      </button>
     </div>
   )
 }

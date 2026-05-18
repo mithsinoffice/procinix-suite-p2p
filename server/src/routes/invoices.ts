@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
-import { createInvoice, listInvoices, getInvoice, submitInvoice, approveInvoice, rejectInvoice } from '../services/invoice.service.js'
+import { createInvoice, listInvoices, getInvoice, approveInvoice, rejectInvoice } from '../services/invoice.service.js'
+import { startWorkflow } from '../services/workflow-engine.service.js'
 
 export async function invoiceRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
@@ -44,6 +45,34 @@ export async function invoiceRoutes(app: FastifyInstance) {
       app.prisma.invoice.count({ where: { tenantId, status: 'PAID' } }),
     ])
     return reply.send({ total, draft, submitted, approved, rejected, onHold, paid })
+  })
+
+  // ── Pending approvals (current user) ──
+  app.get('/pending-approvals', auth, async (req, reply) => {
+    const userId   = req.user.sub
+    const tenantId = req.tenant.id
+
+    const pendingStages = await app.prisma.workflowInstanceStage.findMany({
+      where:   { tenantId, assignedTo: userId, status: 'PENDING' },
+      include: { instance: true },
+    })
+
+    const invoiceIds = pendingStages
+      .filter(s => s.instance.entityType === 'invoice')
+      .map(s => s.instance.entityId)
+
+    if (!invoiceIds.length) return reply.send([])
+
+    const invoices = await app.prisma.invoice.findMany({
+      where:   { id: { in: invoiceIds }, tenantId },
+      include: { vendor: { select: { legalName: true, vendorCode: true } } },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    return reply.send(invoices.map(inv => ({
+      ...inv,
+      pendingStage: pendingStages.find(s => s.instance.entityId === inv.id),
+    })))
   })
 
   // ── Get detail ──
@@ -101,12 +130,50 @@ export async function invoiceRoutes(app: FastifyInstance) {
 
   // ── Submit for approval ──
   app.post('/:id/submit', auth, async (req, reply) => {
-    const result = await submitInvoice(app.prisma, (req.params as any).id, { tenantId: req.tenant.id, userId: req.user.sub, ip: req.ip })
-    if (!result.ok) return reply.code(result.error.httpStatus ?? 400).send(result.error)
-    await app.prisma.invoiceAuditLog.create({
-      data: { invoiceId: (req.params as any).id, tenantId: req.tenant.id, action: 'SUBMITTED', userId: req.user.sub, userName: (req.user as any).name },
+    const tenantId = req.tenant.id
+    const userId   = req.user.sub
+    const invoiceId = (req.params as any).id
+
+    const invoice = await app.prisma.invoice.findFirst({
+      where: { id: invoiceId, tenantId },
     })
-    return reply.send({ ok: true })
+    if (!invoice) return reply.code(404).send({ message: 'Invoice not found' })
+    if (!['DRAFT', 'REJECTED'].includes(invoice.status)) {
+      return reply.code(400).send({ message: `Cannot submit invoice in ${invoice.status} status` })
+    }
+
+    const record = {
+      totalAmount:     Number(invoice.totalAmount),
+      entityId:        invoice.entityId,
+      vendorId:        invoice.vendorId,
+      currencyCode:    invoice.currencyCode,
+      isPOInvoice:     invoice.isPOInvoice ?? false,
+      departmentId:    null,
+      createdByUserId: invoice.createdByUserId,
+    }
+
+    const wfResult = await startWorkflow(
+      app.prisma, 'INVOICE', 'invoice', invoiceId, record,
+      { tenantId, userId, userName: (req.user as any).name ?? userId }
+    )
+
+    const wfInstanceId = wfResult.ok ? wfResult.data.instanceId : null
+    const newStatus    = wfResult.ok ? 'PENDING_L1' : 'SUBMITTED'
+
+    await app.prisma.invoice.update({
+      where: { id: invoiceId },
+      data:  { status: newStatus, workflowInstanceId: wfInstanceId },
+    })
+
+    await app.prisma.invoiceAuditLog.create({
+      data: {
+        invoiceId, tenantId, action: 'SUBMITTED',
+        userId, userName: (req.user as any).name,
+        details: { workflowStarted: wfResult.ok, newStatus },
+      },
+    })
+
+    return reply.send({ ok: true, status: newStatus, workflowInstanceId: wfInstanceId })
   })
 
   // ── Approve ──

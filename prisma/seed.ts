@@ -934,6 +934,57 @@ async function main() {
   }
   console.log('✓ 4 vendors seeded (Infosys BPM, G4S Security, Crawford Bayley, Oberoi Realty)')
 
+  // ── Budgets — FY 2025-26, PTPL ───────────────────────────────────────────────
+  const currentFy = await prisma.financialYear.findFirst({ where: { tenantId, isCurrent: true } })
+  const allCostCentres = await prisma.costCentre.findMany({ where: { tenantId }, select: { id: true, code: true } })
+  const cc = (code: string) => allCostCentres.find(c => c.code === code)?.id ?? null
+
+  if (currentFy && ptplEntity) {
+    const budgets = [
+      { budgetRef: 'BUD-2526-IT-001',    name: 'IT Services & Software FY26',    glCode: '5001', ccCode: 'CC-IT',    amount: 5000000 },
+      { budgetRef: 'BUD-2526-FAC-001',   name: 'Facilities & Rent FY26',         glCode: '5010', ccCode: 'CC-CORP',  amount: 3600000 },
+      { budgetRef: 'BUD-2526-SEC-001',   name: 'Security Services FY26',         glCode: '5020', ccCode: 'CC-OPS',   amount: 1800000 },
+      { budgetRef: 'BUD-2526-LEGAL-001', name: 'Legal & Professional Fees FY26', glCode: '5030', ccCode: 'CC-LEGAL', amount: 1200000 },
+      { budgetRef: 'BUD-2526-HR-001',    name: 'HR & Training FY26',             glCode: '5050', ccCode: 'CC-HR',    amount: 800000  },
+      { budgetRef: 'BUD-2526-MKT-001',   name: 'Marketing & Advertising FY26',   glCode: '5040', ccCode: 'CC-MKT',   amount: 600000  },
+    ]
+    for (const b of budgets) {
+      const existing = await prisma.budget.findFirst({ where: { tenantId, budgetRef: b.budgetRef } })
+      if (existing) continue
+      const budget = await prisma.budget.create({
+        data: {
+          tenantId,
+          budgetRef:       b.budgetRef,
+          name:            b.name,
+          financialYearId: currentFy.id,
+          entityId:        ptplEntity.id,
+          glCodeId:        gl(b.glCode),
+          costCentreId:    cc(b.ccCode),
+          periodType:      'MONTHLY',
+          budgetAmount:    b.amount,
+          revisedAmount:   b.amount,
+          toleranceZonePct: 10,
+          hardBlock:       true,
+          carryForward:    false,
+          status:          'ACTIVE',
+        },
+      })
+      const monthlyAmount = b.amount / 12
+      const months = Array.from({ length: 12 }, (_, i) => {
+        const d = new Date(2025, 3 + i, 1)
+        return {
+          budgetId:        budget.id,
+          periodLabel:     d.toLocaleString('default', { month: 'short', year: '2-digit' }),
+          periodStart:     new Date(d.getFullYear(), d.getMonth(), 1),
+          periodEnd:       new Date(d.getFullYear(), d.getMonth() + 1, 0),
+          allocatedAmount: monthlyAmount,
+        }
+      })
+      await prisma.budgetPeriod.createMany({ data: months })
+    }
+    console.log(`✓ ${budgets.length} budgets seeded with monthly periods`)
+  }
+
   console.log('\n✅ Seed complete.')
   console.log('   Login: mithilesh@procinix.ai / Demo@123')
 }

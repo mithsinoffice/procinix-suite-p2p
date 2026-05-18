@@ -36,10 +36,16 @@ const VendorCategoryPage     = lazy(() => import('./pages/masters/VendorCategory
 const VendorGroupPage        = lazy(() => import('./pages/masters/VendorGroupPage'))
 const ProfitCentrePage       = lazy(() => import('./pages/masters/ProfitCentrePage'))
 const TdsSectionsPage        = lazy(() => import('./pages/masters/TdsSectionsPage'))
-const ItemMasterPage         = lazy(() => import('./pages/masters/items/ItemMasterPage'))
-const ItemFormPage           = lazy(() => import('./pages/masters/items/ItemFormPage'))
-const ItemCategoryPage       = lazy(() => import('./pages/masters/items/ItemCategoryPage'))
-const AdminTenantsPage       = lazy(() => import('./pages/admin/AdminTenantsPage'))
+const ItemMasterPage                = lazy(() => import('./pages/masters/items/ItemMasterPage'))
+const ItemFormPage                  = lazy(() => import('./pages/masters/items/ItemFormPage'))
+const ItemCategoryPage              = lazy(() => import('./pages/masters/items/ItemCategoryPage'))
+const WorkflowDefinitionsPage       = lazy(() => import('./pages/masters/workflow/WorkflowDefinitionsPage'))
+const WorkflowDefinitionFormPage    = lazy(() => import('./pages/masters/workflow/WorkflowDefinitionFormPage'))
+const ApprovalDeskPage              = lazy(() => import('./pages/approvals/ApprovalDeskPage'))
+const PurchaseOrdersPage            = lazy(() => import('./pages/purchase-orders/PurchaseOrdersPage'))
+const GRNPage                       = lazy(() => import('./pages/grn/GRNPage'))
+const WorkflowHubPage               = lazy(() => import('./pages/workflow/WorkflowHubPage'))
+const AdminTenantsPage              = lazy(() => import('./pages/admin/AdminTenantsPage'))
 const NotFoundPage           = lazy(() => import('./pages/NotFoundPage'))
 
 function PageLoader() {
@@ -68,7 +74,15 @@ export const router = createBrowserRouter([
       element: <AppShell />,
       children: [
         { index: true, element: <Navigate to="/dashboard" replace /> },
-        { path: 'dashboard', element: <S><DashboardPage /></S> },
+        { path: 'dashboard',       element: <S><DashboardPage /></S>       },
+        { path: 'approvals',       element: <S><ApprovalDeskPage /></S>    },
+        { path: 'purchase-orders', element: <S><PurchaseOrdersPage /></S>  },
+        { path: 'grn',             element: <S><GRNPage /></S>             },
+        { path: 'workflow',        element: <S><WorkflowHubPage /></S>     },
+        { path: 'vendors',         element: <S><VendorListPage /></S>      },
+        { path: 'vendors/new',     element: <S><VendorFormPage mode="create" /></S> },
+        { path: 'vendors/:id',     element: <S><VendorDetailPage /></S>    },
+        { path: 'vendors/:id/edit', element: <S><VendorFormPage mode="edit" /></S> },
         { path: 'invoices', children: [
           { index: true,        element: <S><InvoiceListPage /></S>      },
           { path: 'new',        element: <S><InvoiceFormPage /></S>      },
@@ -107,10 +121,13 @@ export const router = createBrowserRouter([
           { path: 'vendor-groups',     element: <S><VendorGroupPage /></S>                     },
           { path: 'profit-centres',    element: <S><ProfitCentrePage /></S>                    },
           { path: 'tds-sections',      element: <S><TdsSectionsPage /></S>                     },
-          { path: 'items',             element: <S><ItemMasterPage /></S>                       },
-          { path: 'items/new',         element: <S><ItemFormPage /></S>                         },
-          { path: 'items/:id',         element: <S><ItemFormPage /></S>                         },
-          { path: 'item-categories',   element: <S><ItemCategoryPage /></S>                     },
+          { path: 'items',                        element: <S><ItemMasterPage /></S>                    },
+          { path: 'items/new',                    element: <S><ItemFormPage /></S>                      },
+          { path: 'items/:id',                    element: <S><ItemFormPage /></S>                      },
+          { path: 'item-categories',              element: <S><ItemCategoryPage /></S>                  },
+          { path: 'workflow-definitions',         element: <S><WorkflowDefinitionsPage /></S>           },
+          { path: 'workflow-definitions/new',     element: <S><WorkflowDefinitionFormPage /></S>        },
+          { path: 'workflow-definitions/:id',     element: <S><WorkflowDefinitionFormPage /></S>        },
         ]},
         { path: 'admin', children: [
           { path: 'tenants', element: <S><AdminTenantsPage /></S> },

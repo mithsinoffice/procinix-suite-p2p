@@ -663,6 +663,8 @@ export default function VendorFormPage({ mode }: Props) {
       <MasterPageHeader
         title={mode === 'create' ? 'New Vendor' : 'Edit Vendor'}
         description={mode === 'create' ? 'KYC checks run automatically after save' : `Editing ${v?.legalName ?? '…'}`}
+        backLabel="Vendors"
+        backTo="/vendors"
         actions={
           <button
             form="vendor-form"

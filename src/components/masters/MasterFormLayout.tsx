@@ -115,18 +115,20 @@ export function WorkflowBanner({ rule = '1-step approval', sla = 'SLA not yet tr
 
 export function MasterPageHeader({
   title, description, actions, onRefresh,
+  backLabel = 'Masters', backTo = '/masters',
 }: {
   title: string; description?: string; actions?: React.ReactNode; onRefresh?: () => void
+  backLabel?: string; backTo?: string
 }) {
   const navigate = useNavigate()
   return (
     <div className="border-b border-border bg-background">
       <div className="flex items-center gap-2 px-4 pt-2.5 pb-1 sm:px-6">
         <button
-          onClick={() => navigate('/masters')}
+          onClick={() => navigate(backTo)}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          ← Masters
+          ← {backLabel}
         </button>
       </div>
       <div className="flex items-center justify-between px-4 pb-3 sm:px-6">

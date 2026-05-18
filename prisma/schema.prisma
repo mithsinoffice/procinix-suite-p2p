@@ -1288,3 +1288,387 @@ model RecurringInvoiceMaster {
   @@index([tenantId, nextGenerationAt])
   @@map("recurring_invoice_masters")
 }
+
+// ── RATE CONTRACT ─────────────────────────────────────────────────────────────
+model RateContract {
+  id              String   @id @default(uuid())
+  tenantId        String
+  contractRef     String
+  vendorId        String
+  entityId        String
+  validFrom       DateTime @db.Date
+  validTo         DateTime @db.Date
+  description     String?
+  currencyCode    String   @default("INR")
+  escalationPct   Decimal? @db.Decimal(5,2)
+  status          String   @default("DRAFT")
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lines           RateContractLine[]
+  @@unique([tenantId, contractRef])
+  @@map("rate_contracts")
+}
+
+model RateContractLine {
+  id             String       @id @default(uuid())
+  contractId     String
+  itemId         String?
+  description    String
+  uom            String?
+  agreedRate     Decimal      @db.Decimal(15,4)
+  currencyCode   String       @default("INR")
+  minQty         Decimal?     @db.Decimal(15,4)
+  maxQty         Decimal?     @db.Decimal(15,4)
+  utilisedQty    Decimal      @db.Decimal(15,4) @default(0)
+  utilisedValue  Decimal      @db.Decimal(15,2) @default(0)
+  contract       RateContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  @@map("rate_contract_lines")
+}
+
+// ── BUDGET ────────────────────────────────────────────────────────────────────
+model Budget {
+  id                  String   @id @default(uuid())
+  tenantId            String
+  budgetRef           String
+  name                String
+  financialYearId     String
+  entityId            String
+  departmentId        String?
+  glCodeId            String?
+  costCentreId        String?
+  profitCentreId      String?
+  periodType          String   @default("ANNUAL")
+  budgetAmount        Decimal  @db.Decimal(15,2)
+  revisedAmount       Decimal  @db.Decimal(15,2) @default(0)
+  committedAmount     Decimal  @db.Decimal(15,2) @default(0)
+  actualAmount        Decimal  @db.Decimal(15,2) @default(0)
+  carryForwardAmount  Decimal  @db.Decimal(15,2) @default(0)
+  toleranceZonePct    Decimal  @db.Decimal(5,2)  @default(10)
+  hardBlock           Boolean  @default(true)
+  exceptionWorkflowId String?
+  carryForward        Boolean  @default(false)
+  carryForwardType    String?
+  status              String   @default("DRAFT")
+  createdByUserId     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  periods             BudgetPeriod[]
+  revisions           BudgetRevision[]
+  @@unique([tenantId, budgetRef])
+  @@index([tenantId, entityId, financialYearId])
+  @@map("budgets")
+}
+
+model BudgetPeriod {
+  id              String   @id @default(uuid())
+  budgetId        String
+  periodLabel     String
+  periodStart     DateTime @db.Date
+  periodEnd       DateTime @db.Date
+  allocatedAmount Decimal  @db.Decimal(15,2)
+  committedAmount Decimal  @db.Decimal(15,2) @default(0)
+  actualAmount    Decimal  @db.Decimal(15,2) @default(0)
+  budget          Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  @@map("budget_periods")
+}
+
+model BudgetRevision {
+  id             String   @id @default(uuid())
+  budgetId       String
+  revisionNo     Int
+  previousAmount Decimal  @db.Decimal(15,2)
+  revisedAmount  Decimal  @db.Decimal(15,2)
+  reason         String
+  approvedBy     String?
+  createdAt      DateTime @default(now())
+  budget         Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  @@map("budget_revisions")
+}
+
+// ── PURCHASE REQUISITION ──────────────────────────────────────────────────────
+model PurchaseRequisition {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  prRef              String
+  prType             String   @default("STANDARD")
+  requestedBy        String
+  departmentId       String?
+  entityId           String
+  requiredBy         DateTime @db.Date
+  justification      String?  @db.Text
+  priority           String   @default("NORMAL")
+  estimatedTotal     Decimal  @db.Decimal(15,2) @default(0)
+  currencyCode       String   @default("INR")
+  budgetId           String?
+  budgetAvailable    Decimal? @db.Decimal(15,2)
+  budgetStatus       String?
+  workflowInstanceId String?
+  status             String   @default("DRAFT")
+  rejectionReason    String?
+  createdByUserId    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  lines              PurchaseRequisitionLine[]
+  @@unique([tenantId, prRef])
+  @@index([tenantId, status])
+  @@map("purchase_requisitions")
+}
+
+model PurchaseRequisitionLine {
+  id               String              @id @default(uuid())
+  prId             String
+  lineNo           Int
+  itemId           String?
+  description      String
+  qty              Decimal             @db.Decimal(15,4)
+  uom              String?
+  estimatedPrice   Decimal             @db.Decimal(15,4) @default(0)
+  deliveryLocation String?
+  requiredBy       DateTime?           @db.Date
+  glCodeId         String?
+  costCentreId     String?
+  poLineId         String?
+  pr               PurchaseRequisition @relation(fields: [prId], references: [id], onDelete: Cascade)
+  @@map("purchase_requisition_lines")
+}
+
+// ── PURCHASE ORDER ────────────────────────────────────────────────────────────
+model PurchaseOrder {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  poRef              String
+  poType             String   @default("STANDARD")
+  poDate             DateTime @db.Date
+  poExpiryDate       DateTime? @db.Date
+  autoExpire         Boolean  @default(false)
+  vendorId           String
+  entityId           String
+  shipToLocationId   String?
+  billToEntityId     String?
+  rateContractId     String?
+  blanketPoId        String?
+  currencyCode       String   @default("INR")
+  exchangeRate       Decimal? @db.Decimal(18,8)
+  paymentTermsDays   Int      @default(30)
+  paymentMode        String   @default("NEFT")
+  deliveryTerms      String?
+  warrantyPeriod     String?
+  taxType            String   @default("EXCLUSIVE")
+  subtotal           Decimal  @db.Decimal(15,2) @default(0)
+  taxAmount          Decimal  @db.Decimal(15,2) @default(0)
+  tdsAmount          Decimal  @db.Decimal(15,2) @default(0)
+  totalAmount        Decimal  @db.Decimal(15,2) @default(0)
+  advanceAmount      Decimal  @db.Decimal(15,2) @default(0)
+  advancePct         Decimal? @db.Decimal(5,2)
+  budgetId           String?
+  workflowInstanceId String?
+  prRefs             Json?
+  notes              String?  @db.Text
+  status             String   @default("DRAFT")
+  rejectionReason    String?
+  sentToVendorAt     DateTime?
+  closedAt           DateTime?
+  createdByUserId    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  lines              PurchaseOrderLine[]
+  milestones         POPaymentMilestone[]
+  releases           BlanketPORelease[]
+  grns               GoodsReceiptNote[]
+  advances           VendorAdvance[]
+  @@unique([tenantId, poRef])
+  @@index([tenantId, status])
+  @@index([tenantId, vendorId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id                 String        @id @default(uuid())
+  poId               String
+  lineNo             Int
+  prLineId           String?
+  itemId             String?
+  description        String
+  qty                Decimal       @db.Decimal(15,4)
+  uom                String?
+  unitPrice          Decimal       @db.Decimal(15,4)
+  discountPct        Decimal?      @db.Decimal(5,2)
+  taxType            String        @default("EXCLUSIVE")
+  gstRate            Decimal?      @db.Decimal(5,2)
+  cgstAmount         Decimal       @db.Decimal(15,2) @default(0)
+  sgstAmount         Decimal       @db.Decimal(15,2) @default(0)
+  igstAmount         Decimal       @db.Decimal(15,2) @default(0)
+  tdsApplicable      Boolean       @default(false)
+  tdsRate            Decimal?      @db.Decimal(5,2)
+  tdsAmount          Decimal       @db.Decimal(15,2) @default(0)
+  rcmApplicable      Boolean       @default(false)
+  hsnCode            String?
+  sacCode            String?
+  lineTotal          Decimal       @db.Decimal(15,2) @default(0)
+  shipToLocationId   String?
+  deliveryDate       DateTime?     @db.Date
+  glCodeId           String?
+  costCentreId       String?
+  profitCentreId     String?
+  toleranceZonePct   Decimal?      @db.Decimal(5,2)
+  grnQty             Decimal       @db.Decimal(15,4) @default(0)
+  pendingQty         Decimal       @db.Decimal(15,4) @default(0)
+  invoicedQty        Decimal       @db.Decimal(15,4) @default(0)
+  rateContractLineId String?
+  po                 PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  grnLines           GoodsReceiptLine[]
+  @@map("purchase_order_lines")
+}
+
+model POPaymentMilestone {
+  id               String        @id @default(uuid())
+  poId             String
+  milestoneNo      Int
+  description      String
+  pct              Decimal       @db.Decimal(5,2)
+  amount           Decimal       @db.Decimal(15,2)
+  triggerEvent     String        @default("ON_GRN")
+  dueDate          DateTime?     @db.Date
+  isAdvance        Boolean       @default(false)
+  advanceAdjusted  Boolean       @default(false)
+  status           String        @default("PENDING")
+  paidAt           DateTime?
+  invoiceId        String?
+  po               PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  @@map("po_payment_milestones")
+}
+
+model BlanketPORelease {
+  id                 String        @id @default(uuid())
+  blanketPoId        String
+  releaseRef         String
+  releaseDate        DateTime      @db.Date
+  releaseAmount      Decimal       @db.Decimal(15,2)
+  workflowInstanceId String?
+  status             String        @default("DRAFT")
+  blanketPo          PurchaseOrder @relation(fields: [blanketPoId], references: [id], onDelete: Cascade)
+  @@map("blanket_po_releases")
+}
+
+// ── GRN ───────────────────────────────────────────────────────────────────────
+model GoodsReceiptNote {
+  id                 String        @id @default(uuid())
+  tenantId           String
+  grnRef             String
+  grnDate            DateTime      @db.Date
+  poId               String
+  vendorId           String
+  deliveryLocation   String?
+  vehicleNo          String?
+  lrNumber           String?
+  deliveryNote       String?
+  workflowInstanceId String?
+  status             String        @default("DRAFT")
+  createdByUserId    String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  lines              GoodsReceiptLine[]
+  po                 PurchaseOrder @relation(fields: [poId], references: [id])
+  @@unique([tenantId, grnRef])
+  @@index([tenantId, poId])
+  @@map("goods_receipt_notes")
+}
+
+model GoodsReceiptLine {
+  id              String            @id @default(uuid())
+  grnId           String
+  poLineId        String
+  itemId          String?
+  description     String
+  orderedQty      Decimal           @db.Decimal(15,4)
+  receivedQty     Decimal           @db.Decimal(15,4)
+  acceptedQty     Decimal           @db.Decimal(15,4)
+  rejectedQty     Decimal           @db.Decimal(15,4) @default(0)
+  rejectionReason String?
+  batchNo         String?
+  serialNo        String?
+  expiryDate      DateTime?         @db.Date
+  storageLocation String?
+  qualityStatus   String            @default("PENDING")
+  grn             GoodsReceiptNote  @relation(fields: [grnId], references: [id], onDelete: Cascade)
+  poLine          PurchaseOrderLine @relation(fields: [poLineId], references: [id])
+  @@map("goods_receipt_lines")
+}
+
+// ── SRN ───────────────────────────────────────────────────────────────────────
+model SupplierReturnNote {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  srnRef             String
+  srnDate            DateTime @db.Date
+  grnId              String
+  vendorId           String
+  returnReason       String?
+  creditNoteRef      String?
+  workflowInstanceId String?
+  status             String   @default("DRAFT")
+  createdByUserId    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  lines              SupplierReturnLine[]
+  @@unique([tenantId, srnRef])
+  @@map("supplier_return_notes")
+}
+
+model SupplierReturnLine {
+  id             String             @id @default(uuid())
+  srnId          String
+  grnLineId      String
+  itemId         String?
+  description    String
+  returnQty      Decimal            @db.Decimal(15,4)
+  returnReason   String
+  reverseGst     Boolean            @default(true)
+  reverseTds     Boolean            @default(false)
+  srn            SupplierReturnNote @relation(fields: [srnId], references: [id], onDelete: Cascade)
+  @@map("supplier_return_lines")
+}
+
+// ── VENDOR ADVANCE ────────────────────────────────────────────────────────────
+model VendorAdvance {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  advanceRef         String
+  vendorId           String
+  entityId           String
+  poId               String?
+  milestoneId        String?
+  advanceAmount      Decimal  @db.Decimal(15,2)
+  currencyCode       String   @default("INR")
+  advanceDate        DateTime @db.Date
+  purpose            String?
+  glCodeId           String?
+  tdsApplicable      Boolean  @default(false)
+  tdsSectionId       String?
+  tdsAmount          Decimal  @db.Decimal(15,2) @default(0)
+  adjustedAmount     Decimal  @db.Decimal(15,2) @default(0)
+  pendingAmount      Decimal  @db.Decimal(15,2) @default(0)
+  workflowInstanceId String?
+  status             String   @default("DRAFT")
+  paidAt             DateTime?
+  createdByUserId    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  adjustments        VendorAdvanceAdjustment[]
+  po                 PurchaseOrder? @relation(fields: [poId], references: [id])
+  @@unique([tenantId, advanceRef])
+  @@index([tenantId, vendorId, status])
+  @@map("vendor_advances")
+}
+
+model VendorAdvanceAdjustment {
+  id             String        @id @default(uuid())
+  advanceId      String
+  invoiceId      String
+  adjustedAmount Decimal       @db.Decimal(15,2)
+  adjustmentDate DateTime      @db.Date
+  tdsCredit      Decimal       @db.Decimal(15,2) @default(0)
+  advance        VendorAdvance @relation(fields: [advanceId], references: [id])
+  @@map("vendor_advance_adjustments")
+}

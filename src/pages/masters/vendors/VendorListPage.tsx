@@ -24,6 +24,8 @@ export default function VendorListPage() {
       <MasterPageHeader
         title="Vendors"
         description={`${total} vendors`}
+        backLabel="Vendors"
+        backTo="/vendors"
         actions={
           <button onClick={() => navigate('/masters/vendors/new')}
             className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
