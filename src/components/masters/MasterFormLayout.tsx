@@ -210,18 +210,21 @@ export function ApiSelect({
   dependsOn?:  unknown
   className?:  string
 }) {
-  const { data: options = [] } = useQuery({
+  const { data } = useQuery({
     queryKey,
-    queryFn:   () => http.get<any[]>(endpoint),
+    queryFn:   () => http.get<any>(endpoint),
     staleTime: 5 * 60_000,
     enabled,
   })
 
+  const options = Array.isArray(data) ? data : (data as any)?.data ?? []
+  const safeOptions = Array.isArray(options) ? options : []
+
   useEffect(() => {
-    if (autoSelect && options.length === 1 && !value) {
-      onChange(String(options[0][valueKey]))
+    if (autoSelect && safeOptions.length === 1 && !value) {
+      onChange(String(safeOptions[0][valueKey]))
     }
-  }, [options])
+  }, [safeOptions])
 
   return (
     <select
@@ -234,7 +237,7 @@ export function ApiSelect({
       )}
     >
       <option value="">{placeholder}</option>
-      {options.map((o: any) => (
+      {safeOptions.map((o: any) => (
         <option key={String(o[valueKey])} value={String(o[valueKey])}>
           {flagKey && o[flagKey] ? `${getCountryFlag(String(o[flagKey]))} ` : ''}{String(o[labelKey])}
         </option>
