@@ -368,14 +368,24 @@ export async function procurementRoutes(app: FastifyInstance) {
   // ════════════════════════════════
 
   app.get('/budgets', auth, async (req, reply) => {
-    const { entityId, glCodeId, costCentreId } = req.query as any
+    const { entityId, glCodeId, costCentreId, status } = req.query as any
     const where: any = { tenantId: req.tenant.id }
     if (entityId)     where.entityId     = entityId
     if (glCodeId)     where.glCodeId     = glCodeId
     if (costCentreId) where.costCentreId = costCentreId
-    return reply.send(await app.prisma.budget.findMany({
+    if (status && status !== 'ALL') where.status = status
+    const budgets = await app.prisma.budget.findMany({
       where, orderBy: { budgetRef: 'asc' },
       include: { periods: { orderBy: { periodStart: 'asc' } }, _count: { select: { revisions: true } } },
+    })
+    return reply.send(budgets.map(b => {
+      const revised   = Number(b.revisedAmount)
+      const committed = Number(b.committedAmount)
+      const actual    = Number(b.actualAmount)
+      const available = revised - committed - actual
+      const used      = committed + actual
+      const utilisedPct = revised > 0 ? (used / revised) * 100 : 0
+      return { ...b, availableAmount: available, utilisedPct: utilisedPct.toFixed(1) }
     }))
   })
 
@@ -397,6 +407,29 @@ export async function procurementRoutes(app: FastifyInstance) {
       return b
     })
     return reply.code(201).send(budget)
+  })
+
+  app.put('/budgets/:id', auth, async (req, reply) => {
+    const { periods, ...data } = req.body as any
+    const id = (req.params as any).id
+    const existing = await app.prisma.budget.findFirst({ where: { id, tenantId: req.tenant.id } })
+    if (!existing) return reply.code(404).send({ message: 'Budget not found' })
+    const updated = await app.prisma.$transaction(async tx => {
+      const b = await tx.budget.update({
+        where: { id },
+        data: {
+          ...data,
+          // While still a DRAFT, keep revisedAmount aligned with budgetAmount — formal revisions only kick in after activation
+          ...(existing.status === 'DRAFT' && data.budgetAmount != null && { revisedAmount: data.budgetAmount }),
+        },
+      })
+      if (periods) {
+        await tx.budgetPeriod.deleteMany({ where: { budgetId: id } })
+        if (periods.length) await tx.budgetPeriod.createMany({ data: periods.map((p: any) => ({ ...p, budgetId: id })) })
+      }
+      return b
+    })
+    return reply.send(updated)
   })
 
   app.post('/budgets/:id/revise', auth, async (req, reply) => {

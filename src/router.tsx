@@ -41,6 +41,9 @@ const ItemFormPage                  = lazy(() => import('./pages/masters/items/I
 const ItemCategoryPage              = lazy(() => import('./pages/masters/items/ItemCategoryPage'))
 const WorkflowDefinitionsPage       = lazy(() => import('./pages/masters/workflow/WorkflowDefinitionsPage'))
 const WorkflowDefinitionFormPage    = lazy(() => import('./pages/masters/workflow/WorkflowDefinitionFormPage'))
+const BudgetListPage                = lazy(() => import('./pages/masters/budget/BudgetListPage'))
+const BudgetFormPage                = lazy(() => import('./pages/masters/budget/BudgetFormPage'))
+const BudgetDetailPage              = lazy(() => import('./pages/masters/budget/BudgetDetailPage'))
 const ApprovalDeskPage              = lazy(() => import('./pages/approvals/ApprovalDeskPage'))
 const IntakePage                    = lazy(() => import('./pages/intake/IntakePage'))
 const PurchaseOrdersPage            = lazy(() => import('./pages/purchase-orders/PurchaseOrdersPage'))
@@ -89,6 +92,10 @@ export const router = createBrowserRouter([
         { path: 'grn',                      element: <S><GRNPage /></S>             },
         { path: 'grn/new',                  element: <S><GRNFormPage /></S>         },
         { path: 'grn/:id',                  element: <S><GRNFormPage /></S>         },
+        { path: 'budgets',                  element: <S><BudgetListPage /></S>      },
+        { path: 'budgets/new',              element: <S><BudgetFormPage /></S>      },
+        { path: 'budgets/:id',              element: <S><BudgetDetailPage /></S>    },
+        { path: 'budgets/:id/edit',         element: <S><BudgetFormPage /></S>      },
         { path: 'workflow',        element: <S><WorkflowHubPage /></S>     },
         { path: 'vendors',         element: <S><VendorListPage /></S>      },
         { path: 'vendors/new',     element: <S><VendorFormPage mode="create" /></S> },

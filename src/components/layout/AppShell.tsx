@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, CheckSquare, ShoppingCart, ClipboardList,
   FileText, CreditCard, Users, GitBranch, Database,
-  Shield, Truck, LogOut, Menu, X,
+  Shield, Truck, LogOut, Menu, X, PiggyBank,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '../../stores/auth.store'
@@ -13,6 +13,7 @@ import { cn } from '../../lib/utils'
 const BASE_NAV = [
   { to: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard'       },
   { to: '/approvals',       icon: CheckSquare,     label: 'Approval Desk'   },
+  { to: '/budgets',         icon: PiggyBank,       label: 'Budget'          },
   { to: '/intake',          icon: ClipboardList,   label: 'Intake'          },
   { to: '/purchase-orders', icon: ShoppingCart,    label: 'Purchase Orders' },
   { to: '/grn',             icon: Truck,           label: 'GRN'             },
