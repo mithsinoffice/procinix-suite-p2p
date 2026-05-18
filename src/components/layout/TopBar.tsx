@@ -62,6 +62,22 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
   })
   const pendingCount = Array.isArray(pendingApprovals) ? pendingApprovals.length : 0
 
+  // Resolve current user's default entity → entity name for the chip
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn:  () => http.get<any>('/auth/me'),
+    staleTime: 5 * 60_000,
+    enabled:   !!user,
+  })
+  const { data: entities = [] } = useQuery({
+    queryKey: ['entities'],
+    queryFn:  () => http.get<any>('/api/masters/entities').then((r: any) => Array.isArray(r) ? r : r?.data ?? []),
+    staleTime: 10 * 60_000,
+    enabled:   !!user,
+  })
+  const currentEntity = (entities as any[]).find((e: any) => e.id === currentUser?.entityId)
+  const entityDisplay = currentEntity?.name ?? currentUser?.tenantCode ?? user?.tenantCode ?? '…'
+
   async function handleLogout() {
     try { await http.post('/auth/logout', {}) } catch { /* ignore */ }
     clearUser()
@@ -85,12 +101,10 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
 
       {/* Right: entity chip + notifications + user menu */}
       <div className="flex items-center gap-2">
-        {user?.tenantCode && (
-          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/30 px-2.5 py-1 text-xs font-medium">
-            <Building2 className="h-3 w-3 text-muted-foreground" />
-            {user.tenantCode}
-          </span>
-        )}
+        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/30 px-2.5 py-1 text-xs font-medium" title={currentEntity?.code ?? user?.tenantCode ?? ''}>
+          <Building2 className="h-3 w-3 text-muted-foreground" />
+          <span className="truncate max-w-[180px]">{entityDisplay}</span>
+        </span>
 
         <button
           onClick={() => navigate('/approvals')}

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -36,17 +36,20 @@ interface LineItem {
 }
 
 interface FormValues {
-  vendorId:     string
-  entityId:     string
-  invoiceNumber: string
-  invoiceDate:  string
-  dueDate?:     string
-  channelType:  string
-  currencyCode: string
-  poRef?:       string
-  irnNumber?:   string
-  notes?:       string
-  lines:        LineItem[]
+  entityId:         string
+  vendorId:         string
+  vendorGSTIN?:     string  // read-only, auto-filled from vendor
+  vendorPAN?:       string  // read-only, auto-filled from vendor
+  billToLocationId?: string
+  invoiceNumber:    string
+  invoiceDate:      string
+  dueDate?:         string
+  channelType:      string
+  currencyCode:     string
+  poRef?:           string
+  irnNumber?:       string
+  notes?:           string
+  lines:            LineItem[]
 }
 
 // ── Auto-calc helpers ──
@@ -229,6 +232,11 @@ export default function InvoiceFormPage() {
   })
 
   // ── API data ──
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user'],
+    queryFn:  () => http.get<any>('/auth/me'),
+    staleTime: 5 * 60_000,
+  })
   const { data: vendors = [] } = useQuery({
     queryKey: ['vendors-list'],
     queryFn:  () => http.get<any>('/api/masters/vendors').then((r: any) => Array.isArray(r) ? r : r?.data ?? []),
@@ -237,6 +245,11 @@ export default function InvoiceFormPage() {
   const { data: entities = [] } = useQuery({
     queryKey: ['entities-list'],
     queryFn:  () => http.get<any>('/api/masters/entities').then((r: any) => Array.isArray(r) ? r : r?.data ?? []),
+    staleTime: 5 * 60_000,
+  })
+  const { data: locations = [] } = useQuery({
+    queryKey: ['locations-list'],
+    queryFn:  () => http.get<any>('/api/masters/locations').then((r: any) => Array.isArray(r) ? r : r?.data ?? []),
     staleTime: 5 * 60_000,
   })
   const { data: glCodes = [] } = useQuery({
@@ -250,7 +263,7 @@ export default function InvoiceFormPage() {
     staleTime: 5 * 60_000,
   })
 
-  const { register, control, handleSubmit, setValue, watch, formState: { errors } } =
+  const { register, control, handleSubmit, setValue, formState: { errors } } =
     useForm<FormValues>({
       defaultValues: {
         channelType: 'MANUAL_UPLOAD',
@@ -262,24 +275,43 @@ export default function InvoiceFormPage() {
   const { fields, append, remove, update } = useFieldArray({ control, name: 'lines' })
   const lines       = useWatch({ control, name: 'lines' }) ?? []
   const vendorId    = useWatch({ control, name: 'vendorId' })
+  const entityId    = useWatch({ control, name: 'entityId' })
   const invNumber   = useWatch({ control, name: 'invoiceNumber' })
   const currencyCode = useWatch({ control, name: 'currencyCode' }) || 'INR'
 
   const totals = recalcTotals(lines)
 
-  // Update vendor state when vendor changes
-  const handleVendorChange = useCallback((vid: string) => {
-    setValue('vendorId', vid)
-    const v = (vendors as any[]).find((x: any) => x.id === vid)
-    setVendorState(v?.stateCode ?? v?.state ?? '')
-  }, [vendors, setValue])
+  // Auto-populate entity from current user — runs once, only if user hasn't
+  // chosen an entity yet. Lets users still override via the dropdown.
+  const entityAutoPopulated = useRef(false)
+  useEffect(() => {
+    if (!entityAutoPopulated.current && currentUser?.entityId && !entityId) {
+      setValue('entityId', currentUser.entityId)
+      entityAutoPopulated.current = true
+    }
+  }, [currentUser, entityId, setValue])
 
-  // Update entity state when entity changes
-  const handleEntityChange = useCallback((eid: string) => {
-    setValue('entityId', eid)
-    const e = (entities as any[]).find((x: any) => x.id === eid)
+  // Sync entityState from selected entity (used by recalcLine for GST routing)
+  useEffect(() => {
+    const e = (entities as any[]).find((x: any) => x.id === entityId)
     setEntityState(e?.state ?? '')
-  }, [entities, setValue])
+  }, [entityId, entities])
+
+  // Auto-fill vendor GSTIN, PAN, and state on vendor select — and clear when
+  // vendor is unset. Keyed on vendorId so it fires regardless of how the value
+  // got set (manual select OR setValue).
+  useEffect(() => {
+    const v = (vendors as any[]).find((x: any) => x.id === vendorId)
+    if (v) {
+      setValue('vendorGSTIN', v.gstin ?? '')
+      setValue('vendorPAN',   v.pan   ?? '')
+      setVendorState(v.stateCode ?? v.state ?? '')
+    } else {
+      setValue('vendorGSTIN', '')
+      setValue('vendorPAN',   '')
+      setVendorState('')
+    }
+  }, [vendorId, vendors, setValue])
 
   // Recalc a line when qty/price/rates change
   const recalc = useCallback((idx: number) => {
@@ -369,19 +401,33 @@ export default function InvoiceFormPage() {
           <div className="rounded-xl border border-border bg-card p-6">
             <SectionHeader letter="A" title="Invoice Header" subtitle="Core invoice identifiers and dates" />
             <div className="grid grid-cols-2 gap-4">
+              <Field label="Entity" required error={errors.entityId?.message}>
+                <FormSelect {...register('entityId')}>
+                  <option value="">Select entity…</option>
+                  {(entities as any[]).map((e: any) => (
+                    <option key={e.id} value={e.id}>{e.name} — {e.code}</option>
+                  ))}
+                </FormSelect>
+              </Field>
               <Field label="Vendor" required error={errors.vendorId?.message}>
-                <FormSelect value={watch('vendorId') ?? ''} onChange={e => handleVendorChange(e.target.value)}>
+                <FormSelect {...register('vendorId')}>
                   <option value="">Select vendor…</option>
                   {(vendors as any[]).map((v: any) => (
                     <option key={v.id} value={v.id}>{v.legalName} — {v.vendorCode}</option>
                   ))}
                 </FormSelect>
               </Field>
-              <Field label="Entity" required error={errors.entityId?.message}>
-                <FormSelect value={watch('entityId') ?? ''} onChange={e => handleEntityChange(e.target.value)}>
-                  <option value="">Select entity…</option>
-                  {(entities as any[]).map((e: any) => (
-                    <option key={e.id} value={e.id}>{e.name} — {e.code}</option>
+              <Field label="Vendor GSTIN">
+                <FormInput readOnly placeholder="Auto-filled from vendor" {...register('vendorGSTIN')} className="font-mono bg-muted/40" />
+              </Field>
+              <Field label="Vendor PAN">
+                <FormInput readOnly placeholder="Auto-filled from vendor" {...register('vendorPAN')} className="font-mono bg-muted/40" />
+              </Field>
+              <Field label="Bill-to location" span>
+                <FormSelect {...register('billToLocationId')}>
+                  <option value="">Select location…</option>
+                  {(locations as any[]).map((l: any) => (
+                    <option key={l.id} value={l.id}>{l.name}{l.code ? ` — ${l.code}` : ''}</option>
                   ))}
                 </FormSelect>
               </Field>

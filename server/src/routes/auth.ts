@@ -54,7 +54,11 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.code(200).send({ ok: true })
   })
 
-  // GET /auth/me — returns current user from JWT + profile-level defaults (departmentId)
+  // GET /auth/me — returns current user from JWT + profile-level defaults
+  // (departmentId, entityId). entityId comes from UserEntityAccess since the
+  // User model has no entity FK (entity access is many-to-many). We surface
+  // the first active entity as the "default" used to pre-populate forms; the
+  // full list is also returned so the UI can render an entity switcher later.
   app.get('/me', {
     preHandler: [app.authenticate],
   }, async (request, reply) => {
@@ -62,14 +66,22 @@ export async function authRoutes(app: FastifyInstance) {
       where:  { id: request.user.sub },
       select: { departmentId: true },
     })
+    const accesses = await app.prisma.userEntityAccess.findMany({
+      where:   { userId: request.user.sub, isActive: true },
+      select:  { entityId: true },
+      orderBy: { id: 'asc' },
+    })
+    const accessibleEntityIds = accesses.map(a => a.entityId)
     return reply.send({
-      id:           request.user.sub,
-      name:         request.user.name,
-      email:        request.user.email,
-      role:         request.user.role,
-      tenantId:     request.user.tenantId,
-      tenantCode:   request.user.tenantCode,
-      departmentId: profile?.departmentId ?? null,
+      id:                  request.user.sub,
+      name:                request.user.name,
+      email:               request.user.email,
+      role:                request.user.role,
+      tenantId:            request.user.tenantId,
+      tenantCode:          request.user.tenantCode,
+      departmentId:        profile?.departmentId ?? null,
+      entityId:            accessibleEntityIds[0] ?? null,
+      accessibleEntityIds,
     })
   })
 

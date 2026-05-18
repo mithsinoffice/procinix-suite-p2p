@@ -266,6 +266,8 @@ model Department {
   createdByUserId  String?
   approvedByUserId String?
   approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
   @@unique([tenantId, code])
   @@map("departments")
 }
@@ -281,6 +283,8 @@ model GlCode {
   createdByUserId  String?
   approvedByUserId String?
   approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
   @@unique([tenantId, code])
   @@map("gl_codes")
 }
@@ -295,6 +299,8 @@ model CostCentre {
   createdByUserId  String?
   approvedByUserId String?
   approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
   @@unique([tenantId, code])
   @@map("cost_centres")
 }
@@ -312,6 +318,8 @@ model TaxCode {
   createdByUserId  String?
   approvedByUserId String?
   approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
   @@unique([tenantId, code])
   @@map("tax_codes")
 }
@@ -324,7 +332,10 @@ model Invoice {
   invoiceDate         DateTime  @db.Date
   dueDate             DateTime? @db.Date
   vendorId            String
+  vendorGSTIN         String?
+  vendorPAN           String?
   entityId            String?
+  billToLocationId    String?
   channelType         String    @default("MANUAL_UPLOAD")
   status              String    @default("DRAFT")
   apLane              String?

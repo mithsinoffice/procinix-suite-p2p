@@ -5,6 +5,9 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    // Defensive: force a single React copy across all transitive deps so hooks
+    // never see a null dispatcher even if a future dep pulls a different React.
+    dedupe: ['react', 'react-dom', 'react-router-dom', 'zustand'],
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@shared': path.resolve(__dirname, './shared'),
