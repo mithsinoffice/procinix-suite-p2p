@@ -20,9 +20,17 @@ function getGmailClient() {
 }
 
 export interface PollResult {
-  processed: number
-  errors:    string[]
+  processed:        number
+  errors:           string[]
+  rateLimitedUntil?: number   // epoch ms when polling can resume
 }
+
+// Module-level guards. Single-process Node; if we ever go multi-instance we'll
+// need a distributed lock (Redis) instead.
+const inFlight = new Set<string>()     // tenantIds currently being polled
+let   rateLimitedUntil: number | null = null  // global — Gemini quota is per-project, not per-tenant
+
+const RATE_LIMIT_COOLDOWN_MS = 60 * 60 * 1000  // 1h cool-down after a 429
 
 export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Promise<PollResult> {
   if (!process.env.GMAIL_REFRESH_TOKEN) {
@@ -30,9 +38,28 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
     return { processed: 0, errors: [] }
   }
 
+  // Circuit breaker — Gemini daily/minute quota exhausted; don't even open the
+  // Gmail connection until cool-down expires.
+  if (rateLimitedUntil && Date.now() < rateLimitedUntil) {
+    const minsLeft = Math.ceil((rateLimitedUntil - Date.now()) / 60_000)
+    return {
+      processed: 0,
+      errors:    [`Gemini quota cooldown active — retry in ~${minsLeft} min`],
+      rateLimitedUntil,
+    }
+  }
+
+  // Concurrency guard — manual trigger + cron tick can both call this; prevent
+  // overlapping polls that would saturate the event loop.
+  if (inFlight.has(tenantId)) {
+    return { processed: 0, errors: ['Poll already in progress for this tenant — skipped'] }
+  }
+  inFlight.add(tenantId)
+
   const gmail            = getGmailClient()
   const errors: string[] = []
   let processed          = 0
+  let quotaTripped       = false
 
   try {
     const listRes = await gmail.users.messages.list({
@@ -280,9 +307,16 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
               }
             }
           } catch (attErr: any) {
-            errors.push(`Attachment error in "${subject}": ${attErr.message ?? attErr}`)
+            const m = String(attErr?.message ?? attErr)
+            errors.push(`Attachment error in "${subject}": ${m}`)
+            // Quota exhausted — trip the breaker and stop processing this cycle
+            if (m.includes('429') || /quota/i.test(m)) {
+              quotaTripped = true
+              break
+            }
           }
         }
+        if (quotaTripped) break
 
         // Mark email as read (only after attempting all attachments — partial success still marks read)
         await gmail.users.messages.modify({
@@ -295,18 +329,28 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
       }
     }
   } catch (err: any) {
-    errors.push(`Gmail API error: ${err.message ?? err}`)
+    const m = String(err?.message ?? err)
+    errors.push(`Gmail API error: ${m}`)
+    if (m.includes('429') || /quota/i.test(m)) quotaTripped = true
+  } finally {
+    inFlight.delete(tenantId)
+    if (quotaTripped) {
+      rateLimitedUntil = Date.now() + RATE_LIMIT_COOLDOWN_MS
+      console.log(`[EmailPoller] Quota tripped — pausing all polls for 1h (until ${new Date(rateLimitedUntil).toISOString()})`)
+    }
   }
 
-  console.log(`[EmailPoller] Processed: ${processed}, Errors: ${errors.length}`)
-  return { processed, errors }
+  console.log(`[EmailPoller] Processed: ${processed}, Errors: ${errors.length}${quotaTripped ? ' (quota tripped)' : ''}`)
+  return { processed, errors, ...(quotaTripped ? { rateLimitedUntil: rateLimitedUntil! } : {}) }
 }
 
-// Retry OCR calls on transient Gemini errors (429 / quota). Linear backoff:
-// 2s, 4s, 6s. Non-rate-limit errors fail fast — they're not worth retrying.
+// Retry OCR calls on transient 5xx / network errors only. 429 = quota
+// exhausted; retrying in-cycle is wasted work since Gemini's daily/minute
+// limits won't recover in ~6s. The caller (pollGmailInbox) trips a 1h
+// circuit-breaker on 429 instead.
 async function extractWithRetry(
   fn: () => Promise<EmailPollerOcrResult>,
-  maxRetries = 3,
+  maxRetries = 2,
 ): Promise<EmailPollerOcrResult> {
   let lastErr: unknown
   for (let i = 0; i < maxRetries; i++) {
@@ -315,9 +359,12 @@ async function extractWithRetry(
     } catch (err: any) {
       lastErr = err
       const msg = String(err?.message ?? err)
-      const isRateLimit = msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate limit')
-      if (!isRateLimit || i === maxRetries - 1) throw err
-      await new Promise(r => setTimeout(r, (i + 1) * 2000))
+      // Never retry on quota errors — propagate so the poll loop can break early
+      if (msg.includes('429') || /quota/i.test(msg)) throw err
+      // Retry transient network/5xx once
+      const isTransient = /5\d\d|ETIMEDOUT|ECONNRESET|ENOTFOUND/i.test(msg)
+      if (!isTransient || i === maxRetries - 1) throw err
+      await new Promise(r => setTimeout(r, 1500))
     }
   }
   throw lastErr ?? new Error('OCR retry exhausted')

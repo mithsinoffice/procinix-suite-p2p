@@ -175,7 +175,14 @@ async function start() {
   try {
     await app.listen({ port, host })
     app.log.info(`Procinix v2 API on port ${port}`)
-    startEmailPoller(app)
+    // In-process Gmail poller is disabled by default — n8n drives email
+    // ingestion via POST /webhooks/n8n/invoice-ingest. Re-enable for fallback
+    // testing by setting EMAIL_POLLER_ENABLED=true in server/.env.
+    if (process.env.EMAIL_POLLER_ENABLED === 'true') {
+      startEmailPoller(app)
+    } else {
+      app.log.info('[EmailPoller] disabled (EMAIL_POLLER_ENABLED!=true) — n8n drives ingestion')
+    }
   } catch (err) {
     app.log.error(err)
     process.exit(1)

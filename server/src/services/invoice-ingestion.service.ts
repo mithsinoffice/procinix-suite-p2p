@@ -98,11 +98,25 @@ export async function ingestInvoice(
       return err({ code: 'VALIDATION_ERROR' as const, message: 'No file or structured data provided', httpStatus: 400 })
     }
 
-    // 3. Identify vendor
+    // 3. Identify vendor — fail fast if no match. Invoice.vendorId is a NOT NULL
+    //    FK, so the old `vendorId ?? ctx.userId` fallback would have caused a
+    //    P2003 / corrupt data scenario. Return a clean 404 so callers can
+    //    treat this as a skip, not a server error.
     const vendorId = await identifyVendor(prisma, ctx.tenantId, extracted)
+    if (!vendorId) {
+      await prisma.invoiceIngestionJob.update({
+        where: { id: job.id },
+        data:  { status: 'NO_VENDOR_MATCH', errorMessage: `No vendor matched (gstin=${extracted.vendorGstin ?? '—'}, name=${extracted.vendorName ?? '—'})` },
+      })
+      return err({
+        code:       'NOT_FOUND' as const,
+        message:    `No matching vendor (gstin=${extracted.vendorGstin ?? '—'}, name=${extracted.vendorName ?? '—'})`,
+        httpStatus: 404,
+      })
+    }
 
-    // 4. Dedupe check (if vendor identified)
-    if (vendorId && extracted.invoiceNumber) {
+    // 4. Dedupe check
+    if (extracted.invoiceNumber) {
       const dupe = await prisma.invoice.findFirst({
         where: { tenantId: ctx.tenantId, vendorId, invoiceNumber: extracted.invoiceNumber },
       })
@@ -115,23 +129,26 @@ export async function ingestInvoice(
       }
     }
 
-    // 5. Create invoice record (DRAFT)
+    // 5. Create invoice record (DRAFT). Honour TDS from extracted data — n8n
+    //    OCR step or Gemini provider can populate it; falling back to 0 keeps
+    //    older OCR payloads working.
     const subtotal    = extracted.subtotal ?? 0
     const totalTax    = extracted.totalTax ?? 0
     const totalAmount = extracted.totalAmount ?? (subtotal + totalTax)
+    const tdsAmount   = (extracted as any).tdsAmount ?? 0
 
     const invoice = await prisma.invoice.create({
       data: {
         tenantId:        ctx.tenantId,
         invoiceNumber:   extracted.invoiceNumber ?? `DRAFT-${job.id.slice(0, 8)}`,
-        vendorId:        vendorId ?? ctx.userId,
+        vendorId,
         invoiceDate:     extracted.invoiceDate ? new Date(extracted.invoiceDate.split('/').reverse().join('-')) : new Date(),
         dueDate:         extracted.dueDate ? new Date(extracted.dueDate.split('/').reverse().join('-')) : null,
         currencyCode:    extracted.currency ?? 'INR',
         subtotal,
-        tdsAmount:       0,
+        tdsAmount,
         totalAmount,
-        netPayable:      totalAmount,
+        netPayable:      totalAmount - tdsAmount,
         channelType:     payload.channelType,
         ocrConfidence,
         irnNumber:       extracted.irn,
