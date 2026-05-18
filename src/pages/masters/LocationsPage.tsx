@@ -3,6 +3,7 @@ import { MasterListScreen, type MasterConfig } from '../../components/masters/Ma
 const config: MasterConfig = {
   title: 'Locations', singular: 'location',
   apiPath: '/api/masters/locations', entityType: 'location',
+  workflowModule: 'LOCATION',
   columns: [
     { key: 'code',  label: 'Code',  mono: true },
     { key: 'name',  label: 'Name' },

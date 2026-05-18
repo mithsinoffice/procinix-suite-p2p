@@ -38,14 +38,20 @@ export interface ColDef {
 }
 
 export interface MasterConfig {
-  title:        string
-  singular:     string
-  apiPath:      string
-  entityType:   string
-  columns:      ColDef[]
-  fields:       FieldDef[]
-  csvHeaders:   string[]
-  csvExample:   Record<string, string>
+  title:           string
+  singular:        string
+  apiPath:         string
+  entityType:      string
+  columns:         ColDef[]
+  fields:          FieldDef[]
+  csvHeaders:      string[]
+  csvExample:      Record<string, string>
+  /**
+   * Workflow module code (e.g. 'DEPARTMENT', 'GL_CODE'). When set, submitting
+   * a draft record triggers the workflow engine via POST /api/workflow/start
+   * instead of the simple POST /:apiPath/:id/submit handler.
+   */
+  workflowModule?: string
 }
 
 // ── Full-page form ──
@@ -254,8 +260,24 @@ export function MasterListScreen({ config }: { config: MasterConfig }) {
     onSuccess:  () => { qc.invalidateQueries({ queryKey: [config.entityType] }) },
   })
 
+  // Submit-for-approval. If the master has a workflowModule configured, route
+  // through the dynamic workflow engine; otherwise fall back to the legacy
+  // POST /:apiPath/:id/submit handler. The engine itself returns
+  // { ok: false, reason: 'NO_WORKFLOW_DEFINED' } when no definition matches,
+  // in which case we also fall back to the legacy submit.
   const submit = useMutation({
-    mutationFn: (id: string) => http.post(`${config.apiPath}/${id}/submit`, {}),
+    mutationFn: async (id: string) => {
+      if (config.workflowModule) {
+        try {
+          const wf = await http.post<{ ok: boolean; reason?: string; instanceId?: string }>(
+            '/api/workflow/start',
+            { module: config.workflowModule, entityType: config.entityType, entityId: id },
+          )
+          if (wf?.ok) return wf
+        } catch { /* fall through to legacy submit */ }
+      }
+      return http.post(`${config.apiPath}/${id}/submit`, {})
+    },
     onSuccess:  () => { qc.invalidateQueries({ queryKey: [config.entityType] }) },
   })
 

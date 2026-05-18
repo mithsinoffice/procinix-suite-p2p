@@ -11,7 +11,15 @@ import { ok, err, type Result } from '../lib/result.js'
 export const STP_THRESHOLD_PO     = 98
 export const STP_THRESHOLD_NON_PO = 96
 
-export type WfModule    = 'INVOICE' | 'PAYMENT' | 'VENDOR' | 'MASTER' | 'PR' | 'PO'
+// Module codes accepted by the workflow engine. Transactional modules + every
+// master that can be submitted for approval via MasterListScreen.
+// Persisted as a plain string in WorkflowDefinition.module — the union is for
+// type-safety on the callers, not a DB constraint.
+export type WfModule =
+  | 'INVOICE' | 'PAYMENT' | 'VENDOR' | 'MASTER' | 'PR' | 'PO' | 'GRN' | 'BUDGET'
+  | 'DEPARTMENT' | 'GL_CODE' | 'COST_CENTRE' | 'EMPLOYEE' | 'DESIGNATION'
+  | 'LOCATION' | 'ITEM' | 'VENDOR_CATEGORY' | 'FINANCIAL_YEAR' | 'TAX_CODE'
+  | 'TDS_SECTION' | 'ENTITY' | 'USER' | 'CURRENCY' | 'PROFIT_CENTRE'
 export type WfStatus    = 'IN_PROGRESS' | 'APPROVED' | 'REJECTED' | 'ON_HOLD' | 'CANCELLED'
 export type StageStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SKIPPED' | 'AUTO_APPROVED' | 'ESCALATED' | 'INFO_REQUESTED'
 

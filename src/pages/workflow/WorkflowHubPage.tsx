@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { GitBranch } from 'lucide-react'
+import { GitBranch, Plus } from 'lucide-react'
 import { http } from '../../lib/http'
 import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { formatCurrency, formatDate } from '../../lib/utils/formatters'
 
 const QUICK_LINKS = [
-  { label: 'Workflow Definitions', desc: 'Create and manage approval workflows',     to: '/masters/workflow-definitions', icon: '⚙️' },
+  { label: 'Workflow Definitions', desc: 'Create and manage approval workflows',     to: '/workflow/definitions',         icon: '⚙️' },
   { label: 'Invoice Approvals',    desc: 'All invoice workflow instances',            to: '/invoices?status=PENDING_L1',   icon: '📄' },
   { label: 'Payment Approvals',    desc: 'All payment workflow instances',            to: '/payments',                     icon: '💳' },
 ]
@@ -28,12 +28,20 @@ export default function WorkflowHubPage() {
         backLabel="Dashboard"
         backTo="/dashboard"
         actions={
-          <button
-            onClick={() => navigate('/masters/workflow-definitions')}
-            className="flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted"
-          >
-            <GitBranch className="h-3.5 w-3.5" /> Manage definitions
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/workflow/definitions')}
+              className="flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted"
+            >
+              <GitBranch className="h-3.5 w-3.5" /> Manage definitions
+            </button>
+            <button
+              onClick={() => navigate('/workflow/definitions/new')}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+            >
+              <Plus className="h-3.5 w-3.5" /> New Workflow
+            </button>
+          </div>
         }
       />
 

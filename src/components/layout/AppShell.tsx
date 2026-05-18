@@ -25,6 +25,11 @@ const NAV_VIEW_PERMISSION: Record<string, string> = {
   '/masters':         'MASTERS',
 }
 
+// Nav items that are always visible regardless of permission state — these are
+// either entry points (Dashboard) or admin surfaces (Masters, Admin) that must
+// be reachable even when perms haven't loaded or the user is mid-refresh.
+const ALWAYS_VISIBLE = ['/dashboard', '/masters', '/admin/tenants']
+
 const BASE_NAV = [
   { to: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard'       },
   { to: '/approvals',       icon: CheckSquare,     label: 'Approval Desk'   },
@@ -53,6 +58,7 @@ export function AppShell() {
   // While permissions are still loading, show everything optimistically (the
   // server-side rbacHook is the real gate; this just hides obviously-blocked items).
   const NAV = FULL_NAV.filter(item => {
+    if (ALWAYS_VISIBLE.includes(item.to)) return true
     const module = NAV_VIEW_PERMISSION[item.to]
     if (!module || isSuperAdmin) return true
     if (!perms) return true

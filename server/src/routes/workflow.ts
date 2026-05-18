@@ -1,11 +1,46 @@
 import type { FastifyInstance } from 'fastify'
 import {
   approveStage, rejectStage, putOnHold, releaseFromHold,
-  addChatMessage, getWorkflowInstance,
+  addChatMessage, getWorkflowInstance, startWorkflow,
+  type WfModule,
 } from '../services/workflow-engine.service.js'
 
 export async function workflowRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
+
+  // Start a workflow for any module (transactional or master).
+  // Looks up the matching ACTIVE WorkflowDefinition; if none exists, signals
+  // the caller with { ok: false, reason: 'NO_WORKFLOW_DEFINED' } so it can
+  // fall back to a direct status update. Otherwise creates a WorkflowInstance
+  // via the engine's startWorkflow().
+  app.post('/start', auth, async (req, reply) => {
+    const { module, entityType, entityId, record } = (req.body ?? {}) as {
+      module?: string; entityType?: string; entityId?: string; record?: Record<string, unknown>
+    }
+    if (!module || !entityType || !entityId) {
+      return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'module, entityType and entityId are required' })
+    }
+
+    const definition = await app.prisma.workflowDefinition.findFirst({
+      where:   { tenantId: req.tenant.id, module, status: 'ACTIVE' },
+      orderBy: { priority: 'desc' },
+      select:  { id: true },
+    })
+    if (!definition) {
+      return reply.send({ ok: false, reason: 'NO_WORKFLOW_DEFINED' })
+    }
+
+    const result = await startWorkflow(
+      app.prisma,
+      module as WfModule,
+      entityType,
+      entityId,
+      record ?? {},
+      { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as any).name ?? req.user.sub, userRole: (req.user as any).role },
+    )
+    if (!result.ok) return reply.code(result.error.httpStatus ?? 400).send(result.error)
+    return reply.send({ ok: true, instanceId: result.data.instanceId })
+  })
 
   // Get instance by ID directly
   app.get('/instances/:id', auth, async (req, reply) => {

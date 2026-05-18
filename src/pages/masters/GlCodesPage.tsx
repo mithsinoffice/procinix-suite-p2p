@@ -1,10 +1,11 @@
 import { MasterListScreen, type MasterConfig } from '../../components/masters/MasterListScreen'
 
 const config: MasterConfig = {
-  title:      'GL Codes',
-  singular:   'GL code',
-  apiPath:    '/api/masters/gl-codes',
-  entityType: 'glCode',
+  title:          'GL Codes',
+  singular:       'GL code',
+  apiPath:        '/api/masters/gl-codes',
+  entityType:     'glCode',
+  workflowModule: 'GL_CODE',
   columns: [
     { key: 'code', label: 'Code', mono: true },
     { key: 'name', label: 'Name' },

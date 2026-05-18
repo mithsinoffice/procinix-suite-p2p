@@ -1,10 +1,11 @@
 import { MasterListScreen, type MasterConfig } from '../../components/masters/MasterListScreen'
 
 const config: MasterConfig = {
-  title:      'Departments',
-  singular:   'department',
-  apiPath:    '/api/masters/departments',
-  entityType: 'department',
+  title:          'Departments',
+  singular:       'department',
+  apiPath:        '/api/masters/departments',
+  entityType:     'department',
+  workflowModule: 'DEPARTMENT',
   columns: [
     { key: 'code', label: 'Code', mono: true },
     { key: 'name', label: 'Name' },

@@ -1,10 +1,11 @@
 import { MasterListScreen, type MasterConfig } from '../../components/masters/MasterListScreen'
 
 const config: MasterConfig = {
-  title:      'Tax Codes',
-  singular:   'tax code',
-  apiPath:    '/api/masters/tax-codes',
-  entityType: 'taxCode',
+  title:          'Tax Codes',
+  singular:       'tax code',
+  apiPath:        '/api/masters/tax-codes',
+  entityType:     'taxCode',
+  workflowModule: 'TAX_CODE',
   columns: [
     { key: 'code',        label: 'Code',   mono: true },
     { key: 'description', label: 'Description' },

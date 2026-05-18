@@ -16,7 +16,30 @@ import {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const MODULES = ['INVOICE', 'VENDOR', 'PAYMENT', 'PR', 'PO']
+const MODULES: { value: string; label: string }[] = [
+  { value: 'INVOICE',         label: 'Invoice'              },
+  { value: 'VENDOR',          label: 'Vendor'               },
+  { value: 'PAYMENT',         label: 'Payment'              },
+  { value: 'PR',              label: 'Purchase Requisition' },
+  { value: 'PO',              label: 'Purchase Order'       },
+  { value: 'GRN',             label: 'GRN'                  },
+  { value: 'BUDGET',          label: 'Budget'               },
+  { value: 'DEPARTMENT',      label: 'Department'           },
+  { value: 'GL_CODE',         label: 'GL Code'              },
+  { value: 'COST_CENTRE',     label: 'Cost Centre'          },
+  { value: 'EMPLOYEE',        label: 'Employee'             },
+  { value: 'DESIGNATION',     label: 'Designation'          },
+  { value: 'LOCATION',        label: 'Location'             },
+  { value: 'ITEM',            label: 'Item Master'          },
+  { value: 'VENDOR_CATEGORY', label: 'Vendor Category'      },
+  { value: 'FINANCIAL_YEAR',  label: 'Financial Year'       },
+  { value: 'TAX_CODE',        label: 'Tax Code'             },
+  { value: 'TDS_SECTION',     label: 'TDS Section'          },
+  { value: 'ENTITY',          label: 'Entity'               },
+  { value: 'USER',            label: 'User'                 },
+  { value: 'CURRENCY',        label: 'Currency'             },
+  { value: 'PROFIT_CENTRE',   label: 'Profit Centre'        },
+]
 
 const CONDITION_FIELDS: Record<string, { value: string; label: string; type: 'number' | 'string' | 'boolean' | 'select' }[]> = {
   INVOICE: [
@@ -270,7 +293,7 @@ export default function WorkflowDefinitionFormPage() {
   if (isEdit && loadingExisting) {
     return (
       <div className="flex flex-col h-full">
-        <MasterPageHeader title="Workflow Definition" description="Loading…" backLabel="Workflow" backTo="/workflow" />
+        <MasterPageHeader title="Workflow Definition" description="Loading…" backLabel="Workflow Definitions" backTo="/workflow/definitions" />
         <div className="flex-1 flex items-center justify-center">
           <div className="animate-pulse text-muted-foreground text-sm">Loading definition…</div>
         </div>
@@ -334,8 +357,8 @@ export default function WorkflowDefinitionFormPage() {
       <MasterPageHeader
         title={isEdit ? (existing?.name ?? 'Edit Workflow') : 'New Workflow Definition'}
         description={isEdit ? `Code: ${existing?.code ?? ''}` : 'Design the approval stages, conditions and routing rules'}
-        backLabel="Workflow"
-        backTo="/workflow"
+        backLabel="Workflow Definitions"
+        backTo="/workflow/definitions"
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -409,7 +432,7 @@ export default function WorkflowDefinitionFormPage() {
                   }}
                 >
                   <option value="">Select module…</option>
-                  {MODULES.map(m => <option key={m} value={m}>{m}</option>)}
+                  {MODULES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </FormSelect>
               )}
             />
