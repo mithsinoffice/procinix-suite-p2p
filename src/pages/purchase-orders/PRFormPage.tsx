@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -13,28 +13,25 @@ import { cn } from '../../lib/utils'
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface PRLine {
-  itemId?:          string
-  description:      string
-  qty:              number
-  uom?:             string
-  estimatedPrice:   number
+  itemId?:           string
+  description:       string
+  qty:               number
+  uom?:              string
+  estimatedPrice:    number
   deliveryLocation?: string
-  requiredBy?:      string
-  glCodeId?:        string
-  costCentreId?:    string
+  requiredBy?:       string
+  glCodeId?:         string
+  costCentreId?:     string
 }
 
 interface PRForm {
-  prType:        string
-  entityId:      string
-  departmentId?: string
-  requiredBy:    string
-  priority:      string
+  prType:         string
+  entityId:       string
+  departmentId?:  string
+  priority:       string
   justification?: string
-  currencyCode:  string
-  glCodeId?:     string
-  costCentreId?: string
-  lines:         PRLine[]
+  currencyCode:   string
+  lines:          PRLine[]
 }
 
 const emptyLine = (): PRLine => ({
@@ -55,8 +52,8 @@ function SectionHeader({ letter, title, subtitle }: { letter: string; title: str
   )
 }
 
-function Field({ label, required, error, span, children }: {
-  label: string; required?: boolean; error?: string; span?: boolean; children: React.ReactNode
+function Field({ label, required, hint, error, span, children }: {
+  label: string; required?: boolean; hint?: string; error?: string; span?: boolean; children: React.ReactNode
 }) {
   return (
     <div className={cn('space-y-1.5', span && 'col-span-2')}>
@@ -64,10 +61,14 @@ function Field({ label, required, error, span, children }: {
         {label}{required && <span className="text-destructive ml-0.5">*</span>}
       </label>
       {children}
+      {hint  && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }
+
+// Compact cell-padding override for line-items table — twMerge will collapse the wrapper's px-3 py-2.5 text-sm
+const cellCls = 'px-1.5 py-1 text-xs rounded'
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,11 @@ export default function PRFormPage() {
   const [budgetCheck, setBudgetCheck] = useState<{ status: string; available: number | null } | null>(null)
 
   // ── Lookups ──
+  const { data: currentUser } = useQuery({
+    queryKey: ['current-user-profile'],
+    queryFn:  () => http.get<any>('/auth/me'),
+    staleTime: 5 * 60_000,
+  })
   const { data: entities = [] } = useQuery({
     queryKey: ['entities-lookup'],
     queryFn:  () => http.get<any>('/api/masters/entities').then((r: any) => Array.isArray(r) ? r : (r?.data ?? [])),
@@ -132,8 +138,19 @@ export default function PRFormPage() {
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' })
   const lines    = useWatch({ control, name: 'lines' }) ?? []
   const entityId = useWatch({ control, name: 'entityId' })
-  const glCodeId = useWatch({ control, name: 'glCodeId' })
-  const costCentreId = useWatch({ control, name: 'costCentreId' })
+
+  // Budget check derives GL/CC from the first line (line-level fields, not header)
+  const firstLineGl = lines[0]?.glCodeId
+  const firstLineCc = lines[0]?.costCentreId
+
+  // Auto-populate entity + department from logged-in user's profile (only when creating)
+  const prefilledRef = useRef(false)
+  useEffect(() => {
+    if (isEdit || prefilledRef.current || !currentUser) return
+    if (currentUser.entityId)     setValue('entityId',     currentUser.entityId)
+    if (currentUser.departmentId) setValue('departmentId', currentUser.departmentId)
+    prefilledRef.current = true
+  }, [currentUser, isEdit, setValue])
 
   // Hydrate on edit
   useEffect(() => {
@@ -142,11 +159,9 @@ export default function PRFormPage() {
         prType:        existing.prType,
         entityId:      existing.entityId,
         departmentId:  existing.departmentId ?? '',
-        requiredBy:    existing.requiredBy ? String(existing.requiredBy).slice(0, 10) : '',
         priority:      existing.priority,
         justification: existing.justification ?? '',
         currencyCode:  existing.currencyCode ?? 'INR',
-        glCodeId:      existing.budgetId ?? '',
         lines: (existing.lines ?? []).map((l: any) => ({
           itemId:           l.itemId ?? '',
           description:      l.description,
@@ -174,7 +189,7 @@ export default function PRFormPage() {
     }
   }
 
-  // Budget check
+  // Budget check (uses first line's GL/CC since those moved to line level)
   useEffect(() => {
     if (!entityId || estimatedTotal <= 0) {
       setBudgetCheck(null)
@@ -182,16 +197,31 @@ export default function PRFormPage() {
     }
     const t = setTimeout(() => {
       http.post<any>('/api/po/budget-check', {
-        entityId, glCodeId: glCodeId || null, costCentreId: costCentreId || null, amount: estimatedTotal,
+        entityId,
+        glCodeId:     firstLineGl || null,
+        costCentreId: firstLineCc || null,
+        amount:       estimatedTotal,
       }).then(setBudgetCheck).catch(() => setBudgetCheck(null))
     }, 400)
     return () => clearTimeout(t)
-  }, [entityId, glCodeId, costCentreId, estimatedTotal])
+  }, [entityId, firstLineGl, firstLineCc, estimatedTotal])
 
   // ── Mutations ──
+  // Derive header requiredBy from earliest line date (PR table column is NOT NULL)
+  function deriveRequiredBy(allLines: PRLine[]): string {
+    const dates = allLines.map(l => l.requiredBy).filter(Boolean) as string[]
+    if (dates.length === 0) {
+      const fallback = new Date()
+      fallback.setDate(fallback.getDate() + 30)
+      return fallback.toISOString().slice(0, 10)
+    }
+    return dates.sort()[0]
+  }
+
   const buildPayload = (data: PRForm) => ({
     ...data,
-    requestedBy: 'me',
+    requestedBy:    'me',
+    requiredBy:     deriveRequiredBy(data.lines),
     estimatedTotal,
     lines: data.lines.map(l => ({ ...l, qty: Number(l.qty), estimatedPrice: Number(l.estimatedPrice) })),
   })
@@ -224,7 +254,7 @@ export default function PRFormPage() {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
   }
 
-  const isPending = saveDraft.isPending || submitForApproval.isPending
+  const isPending   = saveDraft.isPending || submitForApproval.isPending
   const isHardBlock = budgetCheck?.status === 'HARD_BLOCK'
 
   return (
@@ -259,7 +289,7 @@ export default function PRFormPage() {
 
           {/* A. PR Identity */}
           <div className="rounded-xl border border-border bg-card p-6">
-            <SectionHeader letter="A" title="PR Identity" subtitle="Requisition reference, entity, and timing" />
+            <SectionHeader letter="A" title="PR Identity" subtitle="Requisition reference and requester scope" />
             <div className="grid grid-cols-2 gap-4">
               <Field label="PR Ref">
                 <AutoCodeField value={existing?.prRef} />
@@ -269,36 +299,24 @@ export default function PRFormPage() {
                   {['STANDARD', 'EMERGENCY', 'BLANKET'].map(t => <option key={t} value={t}>{t}</option>)}
                 </FormSelect>
               </Field>
-              <Field label="Entity" required error={errors.entityId?.message}>
+              <Field label="Entity" required
+                hint="Auto-populated from your profile — can be changed"
+                error={errors.entityId?.message}>
                 <FormSelect {...register('entityId', { required: 'Entity is required' })}>
                   <option value="">Select entity…</option>
                   {(entities as any[]).map(e => <option key={e.id} value={e.id}>{e.name} — {e.code}</option>)}
                 </FormSelect>
               </Field>
-              <Field label="Department">
+              <Field label="Department"
+                hint="Auto-populated from your profile — can be changed">
                 <FormSelect {...register('departmentId')}>
                   <option value="">—</option>
                   {(departments as any[]).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </FormSelect>
               </Field>
-              <Field label="Required By" required>
-                <FormInput type="date" {...register('requiredBy', { required: true })} />
-              </Field>
               <Field label="Priority">
                 <FormSelect {...register('priority')}>
                   {['NORMAL', 'URGENT', 'EMERGENCY'].map(p => <option key={p} value={p}>{p}</option>)}
-                </FormSelect>
-              </Field>
-              <Field label="GL Code (for budget)">
-                <FormSelect {...register('glCodeId')}>
-                  <option value="">—</option>
-                  {(glCodes as any[]).map(g => <option key={g.id} value={g.id}>{g.code} — {g.name}</option>)}
-                </FormSelect>
-              </Field>
-              <Field label="Cost Centre (for budget)">
-                <FormSelect {...register('costCentreId')}>
-                  <option value="">—</option>
-                  {(costCentres as any[]).map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
                 </FormSelect>
               </Field>
               <Field label="Justification" span>
@@ -309,63 +327,79 @@ export default function PRFormPage() {
 
           {/* B. PR Lines */}
           <div className="rounded-xl border border-border bg-card p-6">
-            <SectionHeader letter="B" title="PR Lines" subtitle="One row per item or service requested" />
+            <SectionHeader letter="B" title="PR Lines" subtitle="One row per item or service requested — GL code, cost centre and required-by are captured per line" />
             <div className="overflow-x-auto -mx-2">
-              <table className="w-full text-xs min-w-[900px]">
+              <table className="w-full text-xs min-w-[1200px]">
                 <thead>
                   <tr className="border-b border-border">
-                    {['#', 'Item', 'Description', 'Qty', 'UOM', 'Est. Price', 'Delivery Location', 'Required By', 'GL Code', 'Cost Centre', ''].map(h => (
-                      <th key={h} className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
-                    ))}
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground w-8">#</th>
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground min-w-[180px]">Item</th>
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground min-w-[160px]">Description</th>
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground min-w-[80px]">Qty</th>
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground min-w-[70px]">UOM</th>
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground min-w-[110px]">Est. Price</th>
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground min-w-[140px]">Delivery Location</th>
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground min-w-[130px]">Required By</th>
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground min-w-[150px]">GL Code</th>
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground min-w-[150px]">Cost Centre</th>
+                    <th className="px-2 py-2 text-left font-medium text-muted-foreground w-8"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {fields.map((field, i) => (
-                    <tr key={field.id} className="align-top">
-                      <td className="px-2 py-2 pt-3 text-muted-foreground">{i + 1}</td>
-                      <td className="px-2 py-2 min-w-[160px]">
+                    <tr key={field.id}>
+                      <td className="px-2 py-2 text-muted-foreground text-xs">{i + 1}</td>
+                      <td className="px-2 py-2">
                         <FormSelect value={watch(`lines.${i}.itemId`) ?? ''}
-                          onChange={e => handleItemChange(i, e.target.value)}>
+                          onChange={e => handleItemChange(i, e.target.value)}
+                          className={cellCls}>
                           <option value="">Select…</option>
                           {(items as any[]).map(it => <option key={it.id} value={it.id}>{it.itemCode} — {it.name}</option>)}
                         </FormSelect>
                       </td>
-                      <td className="px-2 py-2 min-w-[180px]">
-                        <FormInput placeholder="Description" {...register(`lines.${i}.description`)} />
+                      <td className="px-2 py-2">
+                        <FormInput type="text" placeholder="Description"
+                          className={cellCls}
+                          {...register(`lines.${i}.description`)} />
                       </td>
-                      <td className="px-2 py-2 w-20">
+                      <td className="px-2 py-2">
                         <FormInput type="number" step="0.01" min="0"
+                          className={cellCls}
                           {...register(`lines.${i}.qty`, { valueAsNumber: true })} />
                       </td>
-                      <td className="px-2 py-2 w-16">
-                        <FormInput placeholder="Nos" {...register(`lines.${i}.uom`)} />
+                      <td className="px-2 py-2">
+                        <FormInput type="text" placeholder="Nos"
+                          className={cellCls}
+                          {...register(`lines.${i}.uom`)} />
                       </td>
-                      <td className="px-2 py-2 w-24">
+                      <td className="px-2 py-2">
                         <FormInput type="number" step="0.01" min="0"
+                          className={cellCls}
                           {...register(`lines.${i}.estimatedPrice`, { valueAsNumber: true })} />
                       </td>
-                      <td className="px-2 py-2 min-w-[140px]">
-                        <FormSelect {...register(`lines.${i}.deliveryLocation`)}>
+                      <td className="px-2 py-2">
+                        <FormSelect className={cellCls} {...register(`lines.${i}.deliveryLocation`)}>
                           <option value="">—</option>
                           {(locations as any[]).map(l => <option key={l.id} value={l.code}>{l.name}</option>)}
                         </FormSelect>
                       </td>
-                      <td className="px-2 py-2 w-32">
-                        <FormInput type="date" {...register(`lines.${i}.requiredBy`)} />
+                      <td className="px-2 py-2">
+                        <FormInput type="date" className={cellCls}
+                          {...register(`lines.${i}.requiredBy`)} />
                       </td>
-                      <td className="px-2 py-2 min-w-[140px]">
-                        <FormSelect {...register(`lines.${i}.glCodeId`)}>
+                      <td className="px-2 py-2">
+                        <FormSelect className={cellCls} {...register(`lines.${i}.glCodeId`)}>
                           <option value="">—</option>
-                          {(glCodes as any[]).map(g => <option key={g.id} value={g.id}>{g.code}</option>)}
+                          {(glCodes as any[]).map(g => <option key={g.id} value={g.id}>{g.code} — {g.name}</option>)}
                         </FormSelect>
                       </td>
-                      <td className="px-2 py-2 min-w-[140px]">
-                        <FormSelect {...register(`lines.${i}.costCentreId`)}>
+                      <td className="px-2 py-2">
+                        <FormSelect className={cellCls} {...register(`lines.${i}.costCentreId`)}>
                           <option value="">—</option>
-                          {(costCentres as any[]).map(c => <option key={c.id} value={c.id}>{c.code}</option>)}
+                          {(costCentres as any[]).map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
                         </FormSelect>
                       </td>
-                      <td className="px-2 py-2 pt-3">
+                      <td className="px-2 py-2">
                         <button type="button" onClick={() => remove(i)} disabled={fields.length === 1}
                           className="text-muted-foreground hover:text-destructive disabled:opacity-30">
                           <Trash2 className="h-3.5 w-3.5" />
@@ -384,9 +418,9 @@ export default function PRFormPage() {
 
           {/* C. Budget Check */}
           <div className="rounded-xl border border-border bg-card p-6">
-            <SectionHeader letter="C" title="Budget Check" subtitle="Live availability against entity GL allocation" />
+            <SectionHeader letter="C" title="Budget Check" subtitle="Live availability against entity GL allocation (uses the first line's GL / cost centre)" />
             {!budgetCheck ? (
-              <p className="text-xs text-muted-foreground">Select entity, GL code and line amounts to run a budget check.</p>
+              <p className="text-xs text-muted-foreground">Add a line with GL code and entity to run a budget check.</p>
             ) : budgetCheck.status === 'OK' ? (
               <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-4 py-3">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />

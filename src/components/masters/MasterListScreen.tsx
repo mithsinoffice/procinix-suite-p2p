@@ -1,7 +1,7 @@
 import { useState, useDeferredValue } from 'react'
-import { Plus, Search, Upload, Eye, Pencil, Clock, CheckCircle, Send } from 'lucide-react'
+import { Plus, Search, Upload, Eye, Pencil, Clock, CheckCircle, Send, AlertTriangle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { http } from '../../lib/http'
+import { http, HttpError } from '../../lib/http'
 import { AuditTrailDrawer } from '../shared/AuditTrailDrawer'
 import { BulkUploadModal } from '../shared/BulkUploadModal'
 import { formatDate, formatStatus, getStatusColor } from '../../lib/utils/formatters'
@@ -9,6 +9,7 @@ import { cn } from '../../lib/utils'
 import {
   FormSection, FormField, FormInput, FormSelect, FormTextarea,
   AutoCodeField, WorkflowBanner, FormPageHeader, FormFooter, MasterPageHeader,
+  ApiSelect,
 } from './MasterFormLayout'
 import { MasterTabs, type MasterTab } from './MasterTabs'
 import { useMasterData } from '../../hooks/useMasterData'
@@ -18,11 +19,15 @@ import { useMasterData } from '../../hooks/useMasterData'
 export interface FieldDef {
   key:        string
   label:      string
-  type:       'text' | 'number' | 'select' | 'checkbox' | 'textarea'
+  type:       'text' | 'number' | 'select' | 'checkbox' | 'textarea' | 'apiSelect'
   options?:   string[]
   required?:  boolean
   span?:      1 | 2
   step?:      string
+  // apiSelect-only
+  endpoint?:  string
+  valueKey?:  string
+  labelKey?:  string
 }
 
 export interface ColDef {
@@ -51,6 +56,7 @@ function FullPageForm({ config, record, onSaved, onCancel }: {
   const qc                            = useQueryClient()
   const [form, setForm]               = useState<Record<string, unknown>>(record ?? {})
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [apiError,    setApiError]    = useState<string | null>(null)
 
   function validateField(key: string, value: unknown) {
     const field = config.fields.find(f => f.key === key)
@@ -70,7 +76,15 @@ function FullPageForm({ config, record, onSaved, onCancel }: {
       }
     }
     setFieldErrors(errs)
-    return Object.keys(errs).length === 0
+    if (Object.keys(errs).length > 0) {
+      // Scroll the first invalid field into view
+      const firstKey = Object.keys(errs)[0]
+      requestAnimationFrame(() => {
+        document.querySelector(`[data-field-key="${firstKey}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+      return false
+    }
+    return true
   }
 
   const save = useMutation({
@@ -81,8 +95,18 @@ function FullPageForm({ config, record, onSaved, onCancel }: {
         : http.post(config.apiPath, payload)
     },
     onSuccess: () => {
+      setApiError(null)
       qc.invalidateQueries({ queryKey: [config.entityType] })
       onSaved()
+    },
+    onError: (err: unknown) => {
+      if (err instanceof HttpError) {
+        setApiError(err.error.message || `Save failed (${err.error.status})`)
+      } else if (err instanceof Error) {
+        setApiError(err.message)
+      } else {
+        setApiError('Save failed — please retry')
+      }
     },
   })
 
@@ -91,6 +115,15 @@ function FullPageForm({ config, record, onSaved, onCancel }: {
 
   return (
     <div className="space-y-4">
+      {apiError && (
+        <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+          <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-700">Save failed</p>
+            <p className="text-xs text-red-600 mt-0.5">{apiError}</p>
+          </div>
+        </div>
+      )}
       <FormSection title="Details">
         {/* Code always first */}
         <FormField label={codeField?.label ?? 'Code'} hint="Auto-generated — unique identifier">
@@ -98,62 +131,78 @@ function FullPageForm({ config, record, onSaved, onCancel }: {
         </FormField>
 
         {otherFields.map(field => (
-          <FormField
-            key={field.key}
-            label={field.label}
-            required={field.required}
-            error={fieldErrors[field.key]}
-            span={field.span === 2}
-            icon={field.key.toLowerCase().includes('code') ? '#' : field.key === 'email' ? '@' : undefined}
-          >
-            {field.type === 'text' && (
-              <FormInput
-                value={String(form[field.key] ?? '')}
-                placeholder={`Enter ${field.label.toLowerCase()}`}
-                onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
-                onBlur={() => validateField(field.key, form[field.key])}
-                className={fieldErrors[field.key] ? 'border-destructive' : ''}
-              />
-            )}
-            {field.type === 'number' && (
-              <FormInput
-                type="number" step={field.step ?? '0.01'}
-                value={String(form[field.key] ?? '')}
-                onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
-                onBlur={() => validateField(field.key, form[field.key])}
-                className={fieldErrors[field.key] ? 'border-destructive' : ''}
-              />
-            )}
-            {field.type === 'select' && (
-              <FormSelect
-                value={String(form[field.key] ?? '')}
-                onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
-                onBlur={() => validateField(field.key, form[field.key])}
-              >
-                <option value="">Select…</option>
-                {field.options?.map(o => <option key={o} value={o}>{o}</option>)}
-              </FormSelect>
-            )}
-            {field.type === 'textarea' && (
-              <FormTextarea
-                rows={3}
-                value={String(form[field.key] ?? '')}
-                placeholder={`Enter ${field.label.toLowerCase()}`}
-                onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
-                onBlur={() => validateField(field.key, form[field.key])}
-              />
-            )}
-            {field.type === 'checkbox' && (
-              <div className="flex items-center gap-2 pt-1">
-                <input type="checkbox" id={field.key}
-                  checked={Boolean(form[field.key])}
-                  onChange={e => setForm(f => ({ ...f, [field.key]: e.target.checked }))}
-                  className="h-4 w-4 rounded border-input accent-primary"
+          <div key={field.key} data-field-key={field.key} className={field.span === 2 ? 'col-span-2' : ''}>
+            <FormField
+              label={field.label}
+              required={field.required}
+              error={fieldErrors[field.key]}
+              icon={field.key.toLowerCase().includes('code') ? '#' : field.key === 'email' ? '@' : undefined}
+            >
+              {field.type === 'text' && (
+                <FormInput
+                  value={String(form[field.key] ?? '')}
+                  placeholder={`Enter ${field.label.toLowerCase()}`}
+                  onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                  onBlur={() => validateField(field.key, form[field.key])}
+                  className={fieldErrors[field.key] ? 'border-destructive' : ''}
                 />
-                <label htmlFor={field.key} className="text-sm text-muted-foreground">{field.label}</label>
-              </div>
-            )}
-          </FormField>
+              )}
+              {field.type === 'number' && (
+                <FormInput
+                  type="number" step={field.step ?? '0.01'}
+                  value={String(form[field.key] ?? '')}
+                  onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                  onBlur={() => validateField(field.key, form[field.key])}
+                  className={fieldErrors[field.key] ? 'border-destructive' : ''}
+                />
+              )}
+              {field.type === 'select' && (
+                <FormSelect
+                  value={String(form[field.key] ?? '')}
+                  onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                  onBlur={() => validateField(field.key, form[field.key])}
+                  className={fieldErrors[field.key] ? 'border-destructive' : ''}
+                >
+                  <option value="">Select…</option>
+                  {field.options?.map(o => <option key={o} value={o}>{o}</option>)}
+                </FormSelect>
+              )}
+              {field.type === 'apiSelect' && field.endpoint && (
+                <ApiSelect
+                  endpoint={field.endpoint}
+                  queryKey={['masterListScreen', config.entityType, field.key]}
+                  value={String(form[field.key] ?? '')}
+                  onChange={v => {
+                    setForm(f => ({ ...f, [field.key]: v }))
+                    validateField(field.key, v)
+                  }}
+                  valueKey={field.valueKey ?? 'id'}
+                  labelKey={field.labelKey ?? 'name'}
+                  placeholder={`Select ${field.label.toLowerCase()}…`}
+                  className={fieldErrors[field.key] ? 'border-destructive' : ''}
+                />
+              )}
+              {field.type === 'textarea' && (
+                <FormTextarea
+                  rows={3}
+                  value={String(form[field.key] ?? '')}
+                  placeholder={`Enter ${field.label.toLowerCase()}`}
+                  onChange={e => setForm(f => ({ ...f, [field.key]: e.target.value }))}
+                  onBlur={() => validateField(field.key, form[field.key])}
+                />
+              )}
+              {field.type === 'checkbox' && (
+                <div className="flex items-center gap-2 pt-1">
+                  <input type="checkbox" id={field.key}
+                    checked={Boolean(form[field.key])}
+                    onChange={e => setForm(f => ({ ...f, [field.key]: e.target.checked }))}
+                    className="h-4 w-4 rounded border-input accent-primary"
+                  />
+                  <label htmlFor={field.key} className="text-sm text-muted-foreground">{field.label}</label>
+                </div>
+              )}
+            </FormField>
+          </div>
         ))}
       </FormSection>
 

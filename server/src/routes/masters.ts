@@ -29,19 +29,19 @@ const listSchema = z.object({
   entityId: z.string().optional(),
 })
 
+// Permissive schema: `code` is optional (service auto-generates via generateCode), and
+// unknown keys pass through so master-specific fields (email, mobile, departmentId, …)
+// reach Prisma. Prisma's NOT NULL columns still enforce real required-ness at the DB layer.
 const createSchema = z.object({
-  code:              z.string().min(1).max(20),
-  name:              z.string().min(1).max(200),
+  code:              z.string().min(1).max(20).optional(),
+  name:              z.string().min(1).max(200).optional(),
   description:       z.string().optional(),
-  // GL code specific
   accountType:       z.string().optional(),
-  // Tax code specific
   cgstRate:          z.coerce.number().optional(),
   sgstRate:          z.coerce.number().optional(),
   igstRate:          z.coerce.number().optional(),
-  // Misc
   submitForApproval: z.boolean().default(false),
-})
+}).passthrough()
 
 export async function masterRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
@@ -258,15 +258,42 @@ export async function masterRoutes(app: FastifyInstance) {
 
   // ── Financial Years ──
   app.get('/financial-years', auth, async (req, reply) => {
-    return reply.send(await app.prisma.financialYear.findMany({ where: { tenantId: req.tenant.id }, orderBy: { startDate: 'desc' } }))
+    const { status, search } = req.query as any
+    const where: any = { tenantId: req.tenant.id }
+    if (status && status !== 'ALL') where.status = status
+    if (search) where.OR = [{ name: { contains: search } }, { code: { contains: search } }]
+    return reply.send(await app.prisma.financialYear.findMany({ where, orderBy: { startDate: 'desc' } }))
   })
 
   app.post('/financial-years', auth, async (req, reply) => {
-    const { code, name, startDate, endDate, isCurrent = false } = req.body as any
+    const { code, name, startDate, endDate, isCurrent = false, submitForApproval = false, status: bodyStatus } = req.body as any
+    const status = bodyStatus ?? (submitForApproval ? 'PENDING_APPROVAL' : 'DRAFT')
     const fy = await app.prisma.financialYear.create({
-      data: { tenantId: req.tenant.id, code, name, startDate: new Date(startDate), endDate: new Date(endDate), isCurrent, status: 'ACTIVE', isActive: true, createdByUserId: req.user.sub },
+      data: { tenantId: req.tenant.id, code, name, startDate: new Date(startDate), endDate: new Date(endDate), isCurrent, status, isActive: status === 'ACTIVE', createdByUserId: req.user.sub },
     })
-    return reply.code(201).send({ id: fy.id })
+    return reply.code(201).send(fy)
+  })
+
+  app.put('/financial-years/:id', auth, async (req, reply) => {
+    const { submitForApproval: _sf, startDate, endDate, ...rest } = req.body as any
+    const data: any = { ...rest }
+    if (startDate) data.startDate = new Date(startDate)
+    if (endDate)   data.endDate   = new Date(endDate)
+    const fy = await app.prisma.financialYear.update({ where: { id: (req.params as any).id }, data })
+    return reply.send(fy)
+  })
+
+  app.post('/financial-years/:id/submit', auth, async (req, reply) => {
+    const fy = await app.prisma.financialYear.update({ where: { id: (req.params as any).id }, data: { status: 'PENDING_APPROVAL' } })
+    return reply.send(fy)
+  })
+
+  app.post('/financial-years/:id/approve', auth, async (req, reply) => {
+    const fy = await app.prisma.financialYear.update({
+      where: { id: (req.params as any).id },
+      data:  { status: 'ACTIVE', isActive: true, approvedByUserId: req.user.sub, approvedAt: new Date() },
+    })
+    return reply.send(fy)
   })
 
   // ── Vendor Categories ──

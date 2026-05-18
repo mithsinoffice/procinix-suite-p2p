@@ -53,17 +53,22 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.code(200).send({ ok: true })
   })
 
-  // GET /auth/me — returns current user from JWT
+  // GET /auth/me — returns current user from JWT + profile-level defaults (departmentId)
   app.get('/me', {
     preHandler: [app.authenticate],
   }, async (request, reply) => {
+    const profile = await app.prisma.user.findFirst({
+      where:  { id: request.user.sub },
+      select: { departmentId: true },
+    })
     return reply.send({
-      id:         request.user.sub,
-      name:       request.user.name,
-      email:      request.user.email,
-      role:       request.user.role,
-      tenantId:   request.user.tenantId,
-      tenantCode: request.user.tenantCode,
+      id:           request.user.sub,
+      name:         request.user.name,
+      email:        request.user.email,
+      role:         request.user.role,
+      tenantId:     request.user.tenantId,
+      tenantCode:   request.user.tenantCode,
+      departmentId: profile?.departmentId ?? null,
     })
   })
 
