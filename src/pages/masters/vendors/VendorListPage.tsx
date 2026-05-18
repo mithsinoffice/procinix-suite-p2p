@@ -27,7 +27,7 @@ export default function VendorListPage() {
         backLabel="Vendors"
         backTo="/vendors"
         actions={
-          <button onClick={() => navigate('/masters/vendors/new')}
+          <button onClick={() => navigate('/vendors/new')}
             className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
             <Plus className="h-3.5 w-3.5" /> New vendor
           </button>
@@ -73,7 +73,7 @@ export default function VendorListPage() {
         ) : vendors.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-sm text-muted-foreground">No vendors found</p>
-            <button onClick={() => navigate('/masters/vendors/new')} className="mt-3 text-sm text-primary hover:underline">Add your first vendor</button>
+            <button onClick={() => navigate('/vendors/new')} className="mt-3 text-sm text-primary hover:underline">Add your first vendor</button>
           </div>
         ) : (
           <>
@@ -90,7 +90,7 @@ export default function VendorListPage() {
                 {vendors.map(v => (
                   <tr
                     key={v.id}
-                    onClick={() => navigate(`/masters/vendors/${v.id}`)}
+                    onClick={() => navigate(`/vendors/${v.id}`)}
                     className="border-b border-border cursor-pointer hover:bg-muted/30 transition-colors"
                   >
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{v.vendorCode}</td>
@@ -126,7 +126,7 @@ export default function VendorListPage() {
               {vendors.map(v => (
                 <div
                   key={v.id}
-                  onClick={() => navigate(`/masters/vendors/${v.id}`)}
+                  onClick={() => navigate(`/vendors/${v.id}`)}
                   className="px-4 py-3 cursor-pointer hover:bg-muted/30"
                 >
                   <div className="flex items-start justify-between">

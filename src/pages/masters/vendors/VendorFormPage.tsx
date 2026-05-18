@@ -648,10 +648,10 @@ export default function VendorFormPage({ mode }: Props) {
       }
       if (mode === 'create') {
         const res = await createVendor.mutateAsync(payload as any)
-        navigate(`/masters/vendors/${res.id}`)
+        navigate(`/vendors/${res.id}`)
       } else {
         await updateVendor.mutateAsync(payload as any)
-        navigate(`/masters/vendors/${id}`)
+        navigate(`/vendors/${id}`)
       }
     } catch { /* errors surfaced by query client toast */ }
   }

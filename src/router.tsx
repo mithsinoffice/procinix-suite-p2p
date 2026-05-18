@@ -122,10 +122,6 @@ export const router = createBrowserRouter([
         ]},
         { path: 'masters', children: [
           { index: true,              element: <S><MastersPage /></S>                        },
-          { path: 'vendors',          element: <S><VendorListPage /></S>                     },
-          { path: 'vendors/new',      element: <S><VendorFormPage mode="create" /></S>       },
-          { path: 'vendors/:id',      element: <S><VendorDetailPage /></S>                   },
-          { path: 'vendors/:id/edit', element: <S><VendorFormPage mode="edit" /></S>         },
           { path: 'gl-codes',         element: <S><GlCodesPage /></S>                        },
           { path: 'departments',      element: <S><DepartmentsPage /></S>                    },
           { path: 'cost-centres',     element: <S><CostCentresPage /></S>                    },

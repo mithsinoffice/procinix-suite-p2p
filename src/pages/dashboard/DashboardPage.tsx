@@ -137,7 +137,7 @@ export default function DashboardPage() {
               value={String(kpis.totalVendors)}
               sub="KYC verified"
               color="bg-indigo-100 text-indigo-600"
-              onClick={() => navigate('/masters/vendors')}
+              onClick={() => navigate('/vendors')}
             />
             {kpis.invoicesByStatus.slice(0, 2).map(s => (
               <KpiCard

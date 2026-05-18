@@ -37,8 +37,8 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
   try {
     const listRes = await gmail.users.messages.list({
       userId:     'me',
-      q:          'is:unread has:attachment (invoice OR bill OR receipt)',
-      maxResults: 20,
+      q:          'has:attachment',
+      maxResults: 50,
     })
 
     const messages = listRes.data.messages ?? []
@@ -69,17 +69,46 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
 
     for (const msg of messages) {
       try {
+        // Skip if this Gmail message was already ingested (dedup via audit log).
+        // Required now that we no longer filter on is:unread — without this the
+        // poller would re-process every message every tick.
+        // MySQL JSON path uses '$.field' string syntax (Postgres uses string[]).
+        if (msg.id) {
+          const alreadyProcessed = await prisma.invoiceAuditLog.findFirst({
+            where: {
+              tenantId,
+              action:  'EMAIL_INGESTED',
+              details: { path: '$.gmailMessageId', equals: msg.id },
+            },
+            select: { id: true },
+          })
+          if (alreadyProcessed) {
+            console.log(`[EmailPoller] Already processed ${msg.id} — skipping`)
+            continue
+          }
+        }
+
         const fullMsg = await gmail.users.messages.get({
           userId: 'me',
           id:     msg.id!,
           format: 'full',
         })
 
+        // Skip Sent-folder messages — these are outgoing, not vendor invoices
+        const labelIds = fullMsg.data.labelIds ?? []
+        if (labelIds.includes('SENT')) {
+          console.log(`[EmailPoller] Skipping SENT message ${msg.id}`)
+          continue
+        }
+
         const headers     = fullMsg.data.payload?.headers ?? []
         const fromHeader  = headers.find(h => h.name === 'From')?.value ?? ''
         const subject     = headers.find(h => h.name === 'Subject')?.value ?? '(no subject)'
         const emailMatch  = fromHeader.match(/<(.+?)>/) ?? fromHeader.match(/(\S+@\S+)/)
         const senderEmail = emailMatch?.[1] ?? fromHeader
+        const senderDomain = senderEmail.includes('@')
+          ? senderEmail.split('@')[1]?.replace(/[>\s]/g, '') ?? ''
+          : ''
 
         // Flatten nested parts (Gmail nests multipart attachments)
         const allParts = flattenParts(fullMsg.data.payload?.parts ?? [])
@@ -116,14 +145,15 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
                 : extractInvoiceFromImage(base64Data, mimeType),
             )
 
-            // Match vendor by sender email or GSTIN. We need a real vendor — the
-            // Invoice.vendorId FK is NOT NULL, so missing match = skip with note.
+            // Match vendor by sender email, GSTIN, or sender-domain (website).
+            // Invoice.vendorId FK is NOT NULL — missing match = skip with note.
             const vendor = await prisma.vendor.findFirst({
               where: {
                 tenantId,
                 OR: [
-                  ...(senderEmail        ? [{ email: senderEmail }] : []),
-                  ...(ocr.vendorGSTIN    ? [{ gstin: ocr.vendorGSTIN }] : []),
+                  ...(senderEmail     ? [{ email:   senderEmail }] : []),
+                  ...(ocr.vendorGSTIN ? [{ gstin:   ocr.vendorGSTIN }] : []),
+                  ...(senderDomain    ? [{ website: { contains: senderDomain } }] : []),
                 ],
               },
             })
@@ -227,6 +257,7 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
                     userId:    systemUser.id,
                     userName:  'Email Poller',
                     details: {
+                      gmailMessageId: msg.id,
                       senderEmail,
                       subject,
                       ocrConfidence:  ocr.confidence?.overall ?? null,

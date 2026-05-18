@@ -70,6 +70,82 @@ export async function buildApp() {
     return reply.send(result)
   })
 
+  // Debug — lists what Gmail returns for `has:attachment` regardless of read state
+  // or keyword filter. Useful for diagnosing zero-ingestion issues. TEMPORARY.
+  app.get('/api/email-poll/debug', { preHandler: [app.authenticate] }, async (_req, reply) => {
+    if (!process.env.GMAIL_REFRESH_TOKEN) {
+      return reply.send({ error: 'GMAIL_REFRESH_TOKEN not configured' })
+    }
+    const { google } = await import('googleapis')
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GMAIL_CLIENT_ID,
+      process.env.GMAIL_CLIENT_SECRET,
+      process.env.GMAIL_REDIRECT_URI,
+    )
+    oauth2Client.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN })
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client })
+
+    try {
+      const list = await gmail.users.messages.list({
+        userId:     'me',
+        q:          'has:attachment',
+        maxResults: 50,
+      })
+
+      const messages: any[] = []
+      for (const msg of list.data.messages ?? []) {
+        // Use format:'full' so nested multipart parts are surfaced — Gmail
+        // commonly hides attachments under multipart/mixed → multipart/alternative.
+        const full = await gmail.users.messages.get({
+          userId: 'me',
+          id:     msg.id!,
+          format: 'full',
+        })
+        const headers = full.data.payload?.headers ?? []
+        const allParts = flattenParts(full.data.payload?.parts ?? [])
+        messages.push({
+          id:          msg.id,
+          from:        headers.find(h => h.name === 'From')?.value,
+          subject:     headers.find(h => h.name === 'Subject')?.value,
+          date:        headers.find(h => h.name === 'Date')?.value,
+          labels:      full.data.labelIds,
+          isUnread:    (full.data.labelIds ?? []).includes('UNREAD'),
+          attachments: allParts
+            .filter(p => p.filename || (p.mimeType ?? '').startsWith('application/') || (p.mimeType ?? '').startsWith('image/'))
+            .map(p => ({ name: p.filename, mime: p.mimeType, size: p.body?.size })),
+        })
+      }
+
+      // Match count for the actual production poller query (now broadened to
+      // has:attachment — same query as above, kept as a field for parity).
+      const pollerList = await gmail.users.messages.list({
+        userId:     'me',
+        q:          'has:attachment',
+        maxResults: 50,
+      })
+
+      return reply.send({
+        totalFound:           list.data.messages?.length ?? 0,
+        pollerQueryMatches:   pollerList.data.messages?.length ?? 0,
+        pollerQuery:          'has:attachment',
+        gmailUser:            process.env.GMAIL_USER,
+        messages,
+      })
+    } catch (err: any) {
+      return reply.code(500).send({ error: err?.message ?? String(err), stack: err?.stack })
+    }
+  })
+
+  // Walk nested multipart structures (mirror of helper in email-poller.service.ts)
+  function flattenParts(parts: any[]): any[] {
+    const out: any[] = []
+    for (const p of parts) {
+      if (p?.parts?.length) out.push(...flattenParts(p.parts))
+      else                  out.push(p)
+    }
+    return out
+  }
+
   // Stub routes — to be filled in per module
   app.get('/api/ping', async () => ({ pong: true, ts: Date.now() }))
 
