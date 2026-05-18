@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
+import { RouteErrorPage } from './components/ErrorBoundary'
 import { useAuthStore } from './stores/auth.store'
 
 const LoginPage          = lazy(() => import('./pages/auth/LoginPage'))
@@ -78,11 +79,13 @@ function S({ children }: { children: React.ReactNode }) {
 }
 
 export const router = createBrowserRouter([
-  { path: '/login', element: <S><LoginPage /></S> },
+  { path: '/login', element: <S><LoginPage /></S>, errorElement: <RouteErrorPage /> },
   {
     element: <RequireAuth />,
+    errorElement: <RouteErrorPage />,
     children: [{
       element: <AppShell />,
+      errorElement: <RouteErrorPage />,
       children: [
         { index: true, element: <Navigate to="/dashboard" replace /> },
         { path: 'dashboard',       element: <S><DashboardPage /></S>       },
@@ -163,7 +166,7 @@ export const router = createBrowserRouter([
       ],
     }],
   },
-  { path: '*', element: <S><NotFoundPage /></S> },
+  { path: '*', element: <S><NotFoundPage /></S>, errorElement: <RouteErrorPage /> },
 ])
 
 export function AppRouter() {
