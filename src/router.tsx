@@ -43,7 +43,10 @@ const WorkflowDefinitionsPage       = lazy(() => import('./pages/masters/workflo
 const WorkflowDefinitionFormPage    = lazy(() => import('./pages/masters/workflow/WorkflowDefinitionFormPage'))
 const ApprovalDeskPage              = lazy(() => import('./pages/approvals/ApprovalDeskPage'))
 const PurchaseOrdersPage            = lazy(() => import('./pages/purchase-orders/PurchaseOrdersPage'))
+const PRFormPage                    = lazy(() => import('./pages/purchase-orders/PRFormPage'))
+const POFormPage                    = lazy(() => import('./pages/purchase-orders/POFormPage'))
 const GRNPage                       = lazy(() => import('./pages/grn/GRNPage'))
+const GRNFormPage                   = lazy(() => import('./pages/grn/GRNFormPage'))
 const WorkflowHubPage               = lazy(() => import('./pages/workflow/WorkflowHubPage'))
 const AdminTenantsPage              = lazy(() => import('./pages/admin/AdminTenantsPage'))
 const NotFoundPage           = lazy(() => import('./pages/NotFoundPage'))
@@ -76,8 +79,14 @@ export const router = createBrowserRouter([
         { index: true, element: <Navigate to="/dashboard" replace /> },
         { path: 'dashboard',       element: <S><DashboardPage /></S>       },
         { path: 'approvals',       element: <S><ApprovalDeskPage /></S>    },
-        { path: 'purchase-orders', element: <S><PurchaseOrdersPage /></S>  },
-        { path: 'grn',             element: <S><GRNPage /></S>             },
+        { path: 'purchase-orders',          element: <S><PurchaseOrdersPage /></S> },
+        { path: 'purchase-orders/pr/new',   element: <S><PRFormPage /></S>          },
+        { path: 'purchase-orders/pr/:id',   element: <S><PRFormPage /></S>          },
+        { path: 'purchase-orders/new',      element: <S><POFormPage /></S>          },
+        { path: 'purchase-orders/:id',      element: <S><POFormPage /></S>          },
+        { path: 'grn',                      element: <S><GRNPage /></S>             },
+        { path: 'grn/new',                  element: <S><GRNFormPage /></S>         },
+        { path: 'grn/:id',                  element: <S><GRNFormPage /></S>         },
         { path: 'workflow',        element: <S><WorkflowHubPage /></S>     },
         { path: 'vendors',         element: <S><VendorListPage /></S>      },
         { path: 'vendors/new',     element: <S><VendorFormPage mode="create" /></S> },
