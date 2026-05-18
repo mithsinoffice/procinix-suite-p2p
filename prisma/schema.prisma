@@ -363,6 +363,13 @@ model Invoice {
   fileName            String?
   mimeType            String?
   notes               String?   @db.Text
+  narration           String?   @db.Text
+  expenseFrom         DateTime? @db.Date
+  expenseTo           DateTime? @db.Date
+  retentionRequired   Boolean   @default(false)
+  retentionAmount     Decimal?  @db.Decimal(15, 2)
+  retentionGlCodeId   String?
+  departmentId        String?
   rejectionReason     String?
   workflowInstanceId  String?
   createdByUserId     String

@@ -1,9 +1,38 @@
 import type { FastifyInstance } from 'fastify'
 import { createInvoice, listInvoices, getInvoice, approveInvoice, rejectInvoice } from '../services/invoice.service.js'
 import { startWorkflow } from '../services/workflow-engine.service.js'
+import { extractInvoiceFromFile } from '../services/gemini-ocr.service.js'
 
 export async function invoiceRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
+
+  // ── OCR extract (no persist) — fills the InvoiceFormPage on upload ──
+  // Returns structured fields from a single file so the React form can auto-
+  // populate. Persistence happens later when the user clicks Save Draft / Submit.
+  app.post('/ocr-extract', auth, async (req, reply) => {
+    const { base64Data, mimeType } = (req.body ?? {}) as { base64Data?: string; mimeType?: string }
+    if (!base64Data || !mimeType) {
+      return reply.code(400).send({ error: 'base64Data and mimeType required' })
+    }
+    const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+    if (!allowed.includes(mimeType)) {
+      return reply.code(400).send({ error: `unsupported mimeType — must be one of ${allowed.join(', ')}` })
+    }
+    const result = await extractInvoiceFromFile(base64Data, mimeType as any)
+    if (!result.ok) {
+      return reply.code(result.error.httpStatus ?? 502).send(result.error)
+    }
+    // Attempt vendor match by GSTIN so the form can pre-select the vendor row
+    let matchedVendorId: string | null = null
+    if (result.data.vendorGstin) {
+      const v = await app.prisma.vendor.findFirst({
+        where:  { tenantId: req.tenant.id, gstin: result.data.vendorGstin },
+        select: { id: true },
+      })
+      matchedVendorId = v?.id ?? null
+    }
+    return reply.send({ ocr: result.data, matchedVendorId })
+  })
 
   // ── List invoices ──
   app.get('/', auth, async (req, reply) => {

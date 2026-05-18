@@ -54,34 +54,64 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.code(200).send({ ok: true })
   })
 
-  // GET /auth/me — returns current user from JWT + profile-level defaults
-  // (departmentId, entityId). entityId comes from UserEntityAccess since the
-  // User model has no entity FK (entity access is many-to-many). We surface
-  // the first active entity as the "default" used to pre-populate forms; the
-  // full list is also returned so the UI can render an entity switcher later.
+  // GET /auth/me — returns the current user with profile-level defaults
+  // pre-resolved (entityId, departmentId, designationId, locationId) so forms
+  // can pre-populate without N round-trips. Resolution chain:
+  //   entityId       ← UserEntityAccess (first active) → fallback: first Entity
+  //   departmentId   ← Employee linked by email        → fallback: first ACTIVE Department
+  //   designation/loc ← Employee linked by email (null otherwise)
+  // Fallbacks are UI defaults, not authorisation grants.
   app.get('/me', {
     preHandler: [app.authenticate],
   }, async (request, reply) => {
-    const profile = await app.prisma.user.findFirst({
-      where:  { id: request.user.sub },
-      select: { departmentId: true },
-    })
-    const accesses = await app.prisma.userEntityAccess.findMany({
+    const tenantId = request.tenant?.id
+
+    // 1. Entity — UserEntityAccess first, then first entity in tenant
+    const entityAccess = await app.prisma.userEntityAccess.findMany({
       where:   { userId: request.user.sub, isActive: true },
       select:  { entityId: true },
       orderBy: { id: 'asc' },
     })
-    const accessibleEntityIds = accesses.map(a => a.entityId)
+    const accessibleEntityIds = entityAccess.map(e => e.entityId)
+    let entityId: string | null = accessibleEntityIds[0] ?? null
+    if (!entityId && tenantId) {
+      const firstEntity = await app.prisma.entity.findFirst({
+        where:   { tenantId },
+        orderBy: { createdAt: 'asc' },
+        select:  { id: true },
+      })
+      entityId = firstEntity?.id ?? null
+    }
+
+    // 2. Department / designation / location — Employee linked by email
+    const employee = tenantId
+      ? await app.prisma.employee.findFirst({
+          where:  { tenantId, email: request.user.email },
+          select: { departmentId: true, designationId: true, locationId: true },
+        })
+      : null
+    let departmentId: string | null = employee?.departmentId ?? null
+    if (!departmentId && tenantId) {
+      const firstDept = await app.prisma.department.findFirst({
+        where:   { tenantId, status: 'ACTIVE' },
+        orderBy: { name: 'asc' },
+        select:  { id: true },
+      })
+      departmentId = firstDept?.id ?? null
+    }
+
     return reply.send({
-      id:                  request.user.sub,
-      name:                request.user.name,
-      email:               request.user.email,
-      role:                request.user.role,
-      tenantId:            request.user.tenantId,
-      tenantCode:          request.user.tenantCode,
-      departmentId:        profile?.departmentId ?? null,
-      entityId:            accessibleEntityIds[0] ?? null,
+      id:            request.user.sub,
+      name:          request.user.name,
+      email:         request.user.email,
+      role:          request.user.role,
+      tenantId:      request.user.tenantId,
+      tenantCode:    request.user.tenantCode,
+      entityId,
       accessibleEntityIds,
+      departmentId,
+      designationId: employee?.designationId ?? null,
+      locationId:    employee?.locationId    ?? null,
     })
   })
 
