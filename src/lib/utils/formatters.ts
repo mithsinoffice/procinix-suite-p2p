@@ -10,6 +10,17 @@ export function formatINR(amount: number | string | null | undefined): string {
   return isNaN(n) ? '—' : INR.format(n)
 }
 
+export function formatCurrency(amount: number | string | null | undefined, currency = 'INR'): string {
+  const n = Number(amount)
+  if (isNaN(n)) return '—'
+  if (currency === 'INR') return INR.format(n)
+  try {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
+  } catch {
+    return `${currency} ${NUM.format(n)}`
+  }
+}
+
 export function formatINRCompact(amount: number | null | undefined): string {
   if (amount == null || isNaN(amount)) return '—'
   if (Math.abs(amount) >= 1_00_00_000) return `₹${(amount / 1_00_00_000).toFixed(2)}Cr`
@@ -70,7 +81,7 @@ export function daysFromToday(d: Date | string | null | undefined): number {
 // ── Status display ──
 
 const STATUS_LABELS: Record<string, string> = {
-  DRAFT: 'Draft', SUBMITTED: 'Submitted', PENDING_L1: 'Pending L1',
+  DRAFT: 'Draft', SUBMITTED: 'Submitted', PAYMENT_INITIATED: 'Payment Initiated', PENDING_L1: 'Pending L1',
   PENDING_L2: 'Pending L2', PENDING_L3: 'Pending L3', APPROVED: 'Approved',
   REJECTED: 'Rejected', ON_HOLD: 'On Hold', PAID: 'Paid',
   PARTIALLY_PAID: 'Partially Paid', CANCELLED: 'Cancelled',

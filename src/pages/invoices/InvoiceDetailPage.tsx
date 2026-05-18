@@ -1,179 +1,341 @@
-import { useParams, useNavigate } from 'react-router-dom'
-import { CheckCircle, XCircle, Send, Loader2 } from 'lucide-react'
 import { useState } from 'react'
-import { useInvoice, useSubmitInvoice, useApproveInvoice, useRejectInvoice } from '../../lib/api/invoices.api'
-import { formatINR, formatDate, formatStatus, getStatusColor } from '../../lib/utils/formatters'
-import { PageSkeleton } from '../../components/shared/PageSkeleton'
-import { cn } from '../../lib/utils'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { CheckCircle, XCircle, Send, Loader2, Edit, PauseCircle, PlayCircle } from 'lucide-react'
+import { http } from '../../lib/http'
+import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
+import { formatDate, formatDateTime, formatCurrency, formatStatus, getStatusColor } from '../../lib/utils/formatters'
 import { MatchScoreBadge } from '../../components/shared/MatchScoreBadge'
 import { ChannelBadge } from '../../components/shared/ChannelBadge'
-import { useQuery } from '@tanstack/react-query'
-import { http } from '../../lib/http'
+import { KycBadge } from '../../components/shared/KycBadge'
+import { cn } from '../../lib/utils'
 
 export default function InvoiceDetailPage() {
-  const { id }       = useParams<{ id: string }>()
-  const navigate     = useNavigate()
-  const { data: inv, isLoading } = useInvoice(id ?? '')
-  const submit       = useSubmitInvoice(id ?? '')
-  const approve      = useApproveInvoice(id ?? '')
-  const reject       = useRejectInvoice(id ?? '')
-  const [rejectNote, setRejectNote] = useState('')
-  const [showReject, setShowReject] = useState(false)
+  const { id }   = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const qc       = useQueryClient()
+  const [rejectNote, setRejectNote]   = useState('')
+  const [holdReason, setHoldReason]   = useState('')
+  const [showReject, setShowReject]   = useState(false)
+  const [showHold, setShowHold]       = useState(false)
+
+  const { data: inv, isLoading } = useQuery({
+    queryKey: ['invoices', id],
+    queryFn:  () => http.get<any>(`/api/invoices/${id}`),
+    enabled:  !!id,
+    staleTime: 30_000,
+  })
 
   const { data: scoreData } = useQuery({
     queryKey: ['invoices', id, 'score'],
-    queryFn:  () => http.get<{ guardrailsTriggered: string[] }>(`/api/invoices/${id}/score`),
+    queryFn:  () => http.get<any>(`/api/invoices/${id}/score`),
     enabled:  !!id && !!inv,
   })
 
-  if (isLoading) return <PageSkeleton />
+  const mutOpts = (_action: string) => ({
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['invoices', id] })
+      qc.invalidateQueries({ queryKey: ['invoices'] })
+    },
+  })
+
+  const submit      = useMutation({ mutationFn: () => http.post(`/api/invoices/${id}/submit`, {}), ...mutOpts('submit') })
+  const approve     = useMutation({ mutationFn: (c?: string) => http.post(`/api/invoices/${id}/approve`, { comments: c }), ...mutOpts('approve') })
+  const reject      = useMutation({ mutationFn: (r: string) => http.post(`/api/invoices/${id}/reject`, { comments: r }), ...mutOpts('reject') })
+  const hold        = useMutation({ mutationFn: (r: string) => http.post(`/api/invoices/${id}/hold`, { reason: r }), ...mutOpts('hold') })
+  const releaseHold = useMutation({ mutationFn: () => http.post(`/api/invoices/${id}/release-hold`, {}), ...mutOpts('release') })
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 p-6">
+        {[...Array(4)].map((_, i) => <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />)}
+      </div>
+    )
+  }
   if (!inv) return <div className="p-6 text-sm text-muted-foreground">Invoice not found</div>
 
-  const canSubmit  = inv.status === 'DRAFT'
-  const canApprove = inv.status === 'PENDING_L1' || inv.status === 'PENDING_L2'
+  const status     = inv.status as string
+  const currency   = inv.currencyCode ?? 'INR'
+  const canSubmit  = status === 'DRAFT'
+  const canApprove = status === 'SUBMITTED' || status === 'PENDING_L1' || status === 'PENDING_L2'
+  const canHold    = status === 'SUBMITTED' || status === 'PENDING_L1' || status === 'PENDING_L2'
+  const canRelease = status === 'ON_HOLD'
+  const canEdit    = status === 'DRAFT' || status === 'REJECTED'
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 space-y-6">
+    <div className="flex flex-col h-full">
+      <MasterPageHeader
+        title={inv.invoiceNumber}
+        description={`${inv.vendor?.legalName} · ${formatDate(inv.invoiceDate)}`}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            {canEdit && (
+              <button onClick={() => navigate(`/invoices/${id}/edit`)}
+                className="flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted">
+                <Edit className="h-3.5 w-3.5" /> Edit
+              </button>
+            )}
+            {canSubmit && (
+              <button onClick={() => submit.mutate()} disabled={submit.isPending}
+                className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
+                {submit.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                Submit
+              </button>
+            )}
+            {canApprove && (
+              <>
+                <button onClick={() => approve.mutate(undefined)} disabled={approve.isPending}
+                  className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60">
+                  <CheckCircle className="h-3.5 w-3.5" /> Approve
+                </button>
+                <button onClick={() => setShowReject(v => !v)}
+                  className="flex items-center gap-1.5 rounded-lg border border-destructive px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10">
+                  <XCircle className="h-3.5 w-3.5" /> Reject
+                </button>
+              </>
+            )}
+            {canHold && (
+              <button onClick={() => setShowHold(v => !v)}
+                className="flex items-center gap-1.5 rounded-lg border border-amber-400 px-3 py-1.5 text-xs font-medium text-amber-600 hover:bg-amber-50">
+                <PauseCircle className="h-3.5 w-3.5" /> Hold
+              </button>
+            )}
+            {canRelease && (
+              <button onClick={() => releaseHold.mutate()} disabled={releaseHold.isPending}
+                className="flex items-center gap-1.5 rounded-lg border border-green-400 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50 disabled:opacity-60">
+                <PlayCircle className="h-3.5 w-3.5" /> Release hold
+              </button>
+            )}
+          </div>
+        }
+      />
 
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold font-mono">{inv.invoiceNumber}</h1>
-            <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', getStatusColor(inv.status))}>
-              {formatStatus(inv.status)}
+      <div className="flex-1 overflow-auto">
+        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 space-y-5">
+
+          {/* Status + channel + match score */}
+          <div className="flex flex-wrap items-start gap-3">
+            <span className={cn('rounded-full px-2.5 py-1 text-xs font-medium', getStatusColor(status))}>
+              {formatStatus(status)}
             </span>
+            <ChannelBadge channelType={inv.channelType ?? 'MANUAL_UPLOAD'} ocrConfidence={inv.ocrConfidence} isEInvoice={!!inv.irnNumber} />
+            {inv.apLane && (
+              <span className={cn('rounded-full px-2.5 py-1 text-xs font-semibold border',
+                inv.apLane === 'STP'    ? 'bg-green-50 text-green-700 border-green-200' :
+                inv.apLane === 'REVIEW' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                          'bg-red-50 text-red-700 border-red-200')}>
+                {inv.apLane} lane
+              </span>
+            )}
+            {inv.matchScore != null && (
+              <MatchScoreBadge score={inv.matchScore} lane={inv.apLane ?? 'MANUAL'} guardrails={scoreData?.guardrailsTriggered} compact />
+            )}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{inv.vendor.legalName} · {formatDate(inv.invoiceDate)}</p>
-        </div>
 
-        <div className="flex items-center gap-2">
-          {canSubmit && (
-            <button onClick={() => submit.mutate()} disabled={submit.isPending}
-              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
-              {submit.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-              Submit
-            </button>
-          )}
-          {canApprove && (
-            <>
-              <button onClick={() => approve.mutate(undefined)} disabled={approve.isPending}
-                className="flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60">
-                <CheckCircle className="h-3.5 w-3.5" /> Approve
+          {/* Reject / Hold input panels */}
+          {showReject && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 space-y-2">
+              <p className="text-sm font-medium text-destructive">Rejection reason *</p>
+              <textarea value={rejectNote} onChange={e => setRejectNote(e.target.value)} rows={2}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
+                placeholder="Required — explain why this invoice is being rejected…" />
+              <button onClick={() => { if (rejectNote.trim()) { reject.mutate(rejectNote); setShowReject(false) } }}
+                disabled={!rejectNote.trim() || reject.isPending}
+                className="rounded-lg bg-destructive px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">
+                Confirm rejection
               </button>
-              <button onClick={() => setShowReject(v => !v)}
-                className="flex items-center gap-1.5 rounded-md border border-destructive px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10">
-                <XCircle className="h-3.5 w-3.5" /> Reject
-              </button>
-            </>
+            </div>
           )}
-        </div>
-      </div>
+          {showHold && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-2">
+              <p className="text-sm font-medium text-amber-700">Hold reason</p>
+              <textarea value={holdReason} onChange={e => setHoldReason(e.target.value)} rows={2}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
+                placeholder="Optional — reason for placing on hold…" />
+              <button onClick={() => { hold.mutate(holdReason); setShowHold(false) }} disabled={hold.isPending}
+                className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50">
+                Confirm hold
+              </button>
+            </div>
+          )}
 
-      {/* Reject form */}
-      {showReject && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 space-y-2">
-          <p className="text-sm font-medium text-destructive">Rejection reason</p>
-          <textarea
-            value={rejectNote} onChange={e => setRejectNote(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
-            rows={2} placeholder="Required — explain why this invoice is being rejected…"
-          />
-          <button
-            onClick={() => { if (rejectNote.trim()) { reject.mutate(rejectNote); setShowReject(false) } }}
-            disabled={!rejectNote.trim() || reject.isPending}
-            className="rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-          >
-            Confirm rejection
-          </button>
-        </div>
-      )}
-
-      {/* Channel + OCR + Match score */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <ChannelBadge
-          channelType={(inv as any).channelType ?? 'MANUAL_UPLOAD'}
-          ocrConfidence={(inv as any).ocrConfidence}
-          isEInvoice={(inv as any).isEInvoice}
-        />
-        {(inv as any).matchScore !== null && (inv as any).matchScore !== undefined && (
-          <MatchScoreBadge
-            score={(inv as any).matchScore}
-            lane={(inv as any).matchLane ?? 'MANUAL'}
-            guardrails={scoreData?.guardrailsTriggered}
-            compact
-          />
-        )}
-      </div>
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: 'Subtotal',    value: formatINR(inv.subtotal)   },
-          { label: 'GST',         value: formatINR(inv.taxAmount)  },
-          { label: 'TDS',         value: formatINR(inv.tdsAmount)  },
-          { label: 'Net payable', value: formatINR(inv.netPayable) },
-        ].map(({ label, value }) => (
-          <div key={label} className="rounded-lg border border-border p-3">
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="text-sm font-semibold tabular-nums mt-0.5">{value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Lines */}
-      <div className="rounded-lg border border-border overflow-hidden">
-        <div className="border-b border-border bg-muted/40 px-4 py-2.5">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Line items</p>
-        </div>
-        <table className="w-full text-sm">
-          <thead className="border-b border-border">
-            <tr>
-              {['#', 'Description', 'Qty', 'Unit price', 'Amount'].map(h => (
-                <th key={h} className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {inv.lines.map(line => (
-              <tr key={line.id} className="border-b border-border last:border-0">
-                <td className="px-4 py-2.5 text-xs text-muted-foreground">{line.lineNumber}</td>
-                <td className="px-4 py-2.5">{line.description}</td>
-                <td className="px-4 py-2.5 tabular-nums">{line.quantity}</td>
-                <td className="px-4 py-2.5 tabular-nums">{formatINR(line.unitPrice)}</td>
-                <td className="px-4 py-2.5 tabular-nums font-medium">{formatINR(line.amount)}</td>
-              </tr>
+          {/* Invoice header info */}
+          <div className="rounded-xl border border-border bg-card p-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            {[
+              { label: 'Vendor',        value: inv.vendor?.legalName },
+              { label: 'Vendor code',   value: inv.vendor?.vendorCode },
+              { label: 'Invoice date',  value: formatDate(inv.invoiceDate) },
+              { label: 'Due date',      value: inv.dueDate ? formatDate(inv.dueDate) : '—' },
+              { label: 'Currency',      value: inv.currencyCode ?? 'INR' },
+              { label: 'PO reference',  value: inv.poRef ?? '—' },
+              { label: 'IRN',           value: inv.irnNumber ?? '—' },
+              { label: 'Created by',    value: inv.createdByUserId?.slice(0, 8) + '…' },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="text-sm font-medium mt-0.5 truncate">{value}</p>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
 
-      {/* Approval timeline */}
-      {inv.approvals.length > 0 && (
-        <div className="rounded-lg border border-border p-4 space-y-3">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Approval timeline</p>
-          {inv.approvals.map(step => (
-            <div key={step.id} className="flex items-start gap-3">
-              <div className={cn('mt-0.5 h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0',
-                step.status === 'APPROVED' ? 'bg-green-100 text-green-600' :
-                step.status === 'REJECTED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
-              )}>
-                <span className="text-[10px] font-bold">L{step.level}</span>
+          {/* KYC chips */}
+          {inv.vendor && (
+            <div className="flex flex-wrap gap-2">
+              <KycBadge label="PAN" status={inv.vendor.kycPanStatus} />
+              <KycBadge label="GST" status={inv.vendor.kycGstStatus} />
+              <KycBadge label="Bank" status={inv.vendor.kycBankStatus} />
+            </div>
+          )}
+
+          {/* Financial summary */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Subtotal',    value: inv.subtotal },
+              { label: 'GST',         value: (Number(inv.cgstAmount) + Number(inv.sgstAmount) + Number(inv.igstAmount)) },
+              { label: 'TDS',         value: inv.tdsAmount },
+              { label: 'Net payable', value: inv.netPayable },
+            ].map(({ label, value }) => (
+              <div key={label} className="rounded-lg border border-border p-3">
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="text-sm font-semibold tabular-nums mt-0.5">{formatCurrency(value, currency)}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* GST breakdown */}
+          {(Number(inv.cgstAmount) > 0 || Number(inv.igstAmount) > 0) && (
+            <div className="rounded-lg border border-border p-4 grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">CGST</p>
+                <p className="font-mono tabular-nums text-green-700">{formatCurrency(inv.cgstAmount, currency)}</p>
               </div>
               <div>
-                <p className="text-sm font-medium">{formatStatus(step.status)}</p>
-                {step.comments && <p className="text-xs text-muted-foreground mt-0.5">{step.comments}</p>}
-                {step.actionAt && <p className="text-xs text-muted-foreground">{formatDate(step.actionAt)}</p>}
+                <p className="text-xs text-muted-foreground">SGST</p>
+                <p className="font-mono tabular-nums text-green-700">{formatCurrency(inv.sgstAmount, currency)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">IGST</p>
+                <p className="font-mono tabular-nums text-blue-700">{formatCurrency(inv.igstAmount, currency)}</p>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* Back link */}
-      <button onClick={() => navigate('/invoices')} className="text-sm text-muted-foreground hover:text-foreground">
-        ← Back to invoices
-      </button>
+          {/* Match score bar */}
+          {scoreData && (
+            <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Match score breakdown</p>
+              {[
+                { label: 'Vendor KYC',      score: scoreData.vendorScore },
+                { label: 'PO reference',    score: scoreData.poScore },
+                { label: 'Amount match',    score: scoreData.amountScore },
+                { label: 'GRN match',       score: scoreData.grnScore },
+                { label: 'GST compliance',  score: scoreData.gstScore },
+                { label: 'OCR confidence',  score: scoreData.ocrScore },
+              ].map(({ label, score }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground w-32 flex-shrink-0">{label}</span>
+                  <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                    <div className={cn('h-full rounded-full transition-all',
+                      score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-amber-500' : 'bg-red-500')}
+                      style={{ width: `${score}%` }} />
+                  </div>
+                  <span className="text-xs font-mono w-8 text-right">{score}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Line items */}
+          {inv.lines?.length > 0 && (
+            <div className="rounded-xl border border-border overflow-hidden">
+              <div className="border-b border-border bg-muted/40 px-4 py-2.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Line items</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="border-b border-border">
+                    <tr>
+                      {['#','Description','Qty','UOM','Unit Price','Taxable','CGST','SGST','IGST','TDS','RCM','Total'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inv.lines.map((line: any) => (
+                      <tr key={line.id} className="border-b border-border last:border-0">
+                        <td className="px-3 py-2 text-muted-foreground">{line.lineNumber}</td>
+                        <td className="px-3 py-2 max-w-[200px] truncate">{line.description}</td>
+                        <td className="px-3 py-2 tabular-nums">{line.quantity}</td>
+                        <td className="px-3 py-2">{line.uom ?? '—'}</td>
+                        <td className="px-3 py-2 tabular-nums font-mono">{formatCurrency(line.unitPrice, currency)}</td>
+                        <td className="px-3 py-2 tabular-nums font-mono">{formatCurrency(line.taxableAmount, currency)}</td>
+                        <td className="px-3 py-2 tabular-nums font-mono text-green-700">{formatCurrency(line.cgstAmount, currency)}</td>
+                        <td className="px-3 py-2 tabular-nums font-mono text-green-700">{formatCurrency(line.sgstAmount, currency)}</td>
+                        <td className="px-3 py-2 tabular-nums font-mono text-blue-700">{formatCurrency(line.igstAmount, currency)}</td>
+                        <td className="px-3 py-2 tabular-nums font-mono text-amber-600">{formatCurrency(line.tdsAmount, currency)}</td>
+                        <td className="px-3 py-2 text-center">{line.rcmApplicable ? '✓' : '—'}</td>
+                        <td className="px-3 py-2 tabular-nums font-mono font-semibold">{formatCurrency(line.lineTotal, currency)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Audit trail */}
+          {inv.auditLogs?.length > 0 && (
+            <div className="rounded-xl border border-border p-5 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Audit trail</p>
+              <div className="space-y-3">
+                {inv.auditLogs.map((log: any) => (
+                  <div key={log.id} className="flex items-start gap-3">
+                    <div className="mt-0.5 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[9px] font-bold text-primary">
+                        {log.action.slice(0, 2)}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold">{formatStatus(log.action)}</span>
+                        {log.userName && <span className="text-xs text-muted-foreground">by {log.userName}</span>}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</p>
+                      {log.details && Object.keys(log.details).length > 0 && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {Object.entries(log.details as Record<string, string>).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Legacy approval steps */}
+          {inv.approvals?.length > 0 && (
+            <div className="rounded-xl border border-border p-5 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Approval steps</p>
+              {inv.approvals.map((step: any) => (
+                <div key={step.id} className="flex items-start gap-3">
+                  <div className={cn('mt-0.5 h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-bold',
+                    step.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                    step.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700')}>
+                    L{step.level}
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold">{formatStatus(step.status)}</p>
+                    {step.comments && <p className="text-xs text-muted-foreground">{step.comments}</p>}
+                    {step.actionAt && <p className="text-xs text-muted-foreground">{formatDate(step.actionAt)}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+        </div>
+      </div>
     </div>
   )
 }

@@ -117,29 +117,27 @@ export async function ingestInvoice(
 
     // 5. Create invoice record (DRAFT)
     const subtotal    = extracted.subtotal ?? 0
-    const taxAmount   = extracted.totalTax ?? 0
-    const totalAmount = extracted.totalAmount ?? (subtotal + taxAmount)
+    const totalTax    = extracted.totalTax ?? 0
+    const totalAmount = extracted.totalAmount ?? (subtotal + totalTax)
 
     const invoice = await prisma.invoice.create({
       data: {
         tenantId:        ctx.tenantId,
         invoiceNumber:   extracted.invoiceNumber ?? `DRAFT-${job.id.slice(0, 8)}`,
-        vendorId:        vendorId ?? ctx.userId, // fallback to creator if vendor not found
+        vendorId:        vendorId ?? ctx.userId,
         invoiceDate:     extracted.invoiceDate ? new Date(extracted.invoiceDate.split('/').reverse().join('-')) : new Date(),
         dueDate:         extracted.dueDate ? new Date(extracted.dueDate.split('/').reverse().join('-')) : null,
-        currency:        extracted.currency ?? 'INR',
+        currencyCode:    extracted.currency ?? 'INR',
         subtotal,
-        taxAmount,
         tdsAmount:       0,
         totalAmount,
         netPayable:      totalAmount,
         channelType:     payload.channelType,
         ocrConfidence,
-        irn:             extracted.irn,
-        isEInvoice:      extracted.isEInvoice,
+        irnNumber:       extracted.irn,
         ocrRawData:      extracted as any,
         status:          'DRAFT',
-        approvalLane:    'MANUAL',
+        apLane:          'MANUAL',
         createdByUserId: ctx.userId,
       },
     })
@@ -148,13 +146,13 @@ export async function ingestInvoice(
     if (extracted.lineItems?.length > 0) {
       await prisma.invoiceLine.createMany({
         data: extracted.lineItems.map((l, i) => ({
-          invoiceId:   invoice.id,
-          lineNumber:  i + 1,
-          description: l.description,
-          quantity:    l.quantity  ?? 1,
-          unitPrice:   l.unitPrice ?? 0,
-          amount:      l.amount    ?? 0,
-          isRcm:       false,
+          invoiceId:    invoice.id,
+          lineNumber:   i + 1,
+          description:  l.description,
+          quantity:     l.quantity  ?? 1,
+          unitPrice:    l.unitPrice ?? 0,
+          lineTotal:    l.amount    ?? 0,
+          rcmApplicable: false,
         })),
       })
     }

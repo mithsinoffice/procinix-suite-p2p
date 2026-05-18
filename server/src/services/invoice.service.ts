@@ -10,8 +10,7 @@ export interface InvoiceLineInput {
   description:   string
   quantity:      number
   unitPrice:     number
-  taxCodeId?:    string
-  isRcm?:        boolean
+  rcmApplicable?: boolean
   glCodeId?:     string
   costCentreId?: string
 }
@@ -19,15 +18,11 @@ export interface InvoiceLineInput {
 export interface InvoiceCreateInput {
   invoiceNumber: string
   vendorId:      string
+  entityId?:     string
   invoiceDate:   string
   dueDate?:      string
-  currency?:     string
-  glCodeId?:     string
-  costCentreId?: string
-  departmentId?: string
-  poId?:         string
-  grnId?:        string
-  narration?:    string
+  currencyCode?: string
+  notes?:        string
   lines:         InvoiceLineInput[]
 }
 
@@ -35,31 +30,21 @@ interface Ctx { tenantId: string; userId: string; ip?: string }
 
 // ── Totals calculator ──
 
-async function calcTotals(prisma: PrismaClient, tenantId: string, lines: InvoiceLineInput[], vendorId: string) {
-  const taxCodeIds = [...new Set(lines.map(l => l.taxCodeId).filter(Boolean))] as string[]
-  const [taxCodes] = await Promise.all([
-    taxCodeIds.length ? prisma.taxCode.findMany({ where: { id: { in: taxCodeIds }, tenantId } }) : Promise.resolve([]),
-    prisma.vendor.findFirst({ where: { id: vendorId, tenantId }, select: { tdsApplicable: true, gstin: true } }),
-  ])
+async function calcTotals(prisma: PrismaClient, _tenantId: string, lines: InvoiceLineInput[], _vendorId: string) {
 
-  const tcMap = Object.fromEntries(taxCodes.map(t => [t.id, t]))
-
-  let subtotal = 0, taxAmount = 0, tdsAmount = 0
+  let subtotal = 0, cgstTotal = 0, sgstTotal = 0, igstTotal = 0, tdsAmount = 0
   const enrichedLines = lines.map(line => {
-    const amount  = Number(line.quantity) * Number(line.unitPrice)
-    const tc      = line.taxCodeId ? tcMap[line.taxCodeId] : null
-    const cgst    = tc && !line.isRcm ? amount * Number(tc.cgstRate) / 100 : 0
-    const sgst    = tc && !line.isRcm ? amount * Number(tc.sgstRate) / 100 : 0
-    const igst    = tc && !line.isRcm ? amount * Number(tc.igstRate) / 100 : 0
-    const lineTax = cgst + sgst + igst
-    subtotal  += amount
-    taxAmount += lineTax
-    return { ...line, amount, cgst, sgst, igst, tdsAmount: 0 }
+    const lineBase    = Number(line.quantity) * Number(line.unitPrice)
+    const cgstAmount  = 0  // GST calc via line-level gstRate on new form; legacy service zeroes out
+    const sgstAmount  = 0
+    const igstAmount  = 0
+    subtotal    += lineBase
+    return { ...line, lineTotal: lineBase, cgstAmount, sgstAmount, igstAmount, tdsAmount: 0 }
   })
 
-  const totalAmount = subtotal + taxAmount
+  const totalAmount = subtotal + cgstTotal + sgstTotal + igstTotal
   const netPayable  = totalAmount - tdsAmount
-  return { enrichedLines, subtotal, taxAmount, tdsAmount, totalAmount, netPayable }
+  return { enrichedLines, subtotal, cgstTotal, sgstTotal, igstTotal, tdsAmount, totalAmount, netPayable }
 }
 
 // ── Create ──
@@ -84,7 +69,7 @@ export async function createInvoice(
   if (!vendor) return err(Errors.notFound('Vendor', input.vendorId))
 
   // 3. Calculate totals
-  const { enrichedLines, subtotal, taxAmount, tdsAmount, totalAmount, netPayable } =
+  const { enrichedLines, subtotal, cgstTotal, sgstTotal, igstTotal, tdsAmount, totalAmount, netPayable } =
     await calcTotals(prisma, ctx.tenantId, input.lines, input.vendorId)
 
   // 4. Create invoice + lines in transaction
@@ -94,22 +79,20 @@ export async function createInvoice(
         tenantId:        ctx.tenantId,
         invoiceNumber:   input.invoiceNumber,
         vendorId:        input.vendorId,
+        entityId:        input.entityId,
         invoiceDate:     new Date(input.invoiceDate),
         dueDate:         input.dueDate ? new Date(input.dueDate) : null,
-        currency:        input.currency ?? 'INR',
+        currencyCode:    input.currencyCode ?? 'INR',
         subtotal,
-        taxAmount,
+        cgstAmount:      cgstTotal,
+        sgstAmount:      sgstTotal,
+        igstAmount:      igstTotal,
         tdsAmount,
         totalAmount,
         netPayable,
-        glCodeId:        input.glCodeId,
-        costCentreId:    input.costCentreId,
-        departmentId:    input.departmentId,
-        poId:            input.poId,
-        grnId:           input.grnId,
-        narration:       input.narration,
+        notes:           input.notes,
         status:          'DRAFT',
-        approvalLane:    'MANUAL',
+        apLane:          'MANUAL',
         createdByUserId: ctx.userId,
       },
     })
@@ -121,13 +104,12 @@ export async function createInvoice(
         description:  l.description,
         quantity:     l.quantity,
         unitPrice:    l.unitPrice,
-        amount:       l.amount,
-        taxCodeId:    l.taxCodeId,
-        cgst:         l.cgst,
-        sgst:         l.sgst,
-        igst:         l.igst,
+        lineTotal:    l.lineTotal,
+        cgstAmount:   l.cgstAmount,
+        sgstAmount:   l.sgstAmount,
+        igstAmount:   l.igstAmount,
         tdsAmount:    l.tdsAmount,
-        isRcm:        l.isRcm ?? false,
+        rcmApplicable: l.rcmApplicable ?? false,
         glCodeId:     l.glCodeId,
         costCentreId: l.costCentreId,
       })),
@@ -183,6 +165,7 @@ export async function getInvoice(prisma: PrismaClient, id: string, tenantId: str
     include: {
       vendor:    { select: { legalName: true, vendorCode: true, gstin: true, pan: true, panCompliance: true } },
       lines:     { orderBy: { lineNumber: 'asc' } },
+      auditLogs: { orderBy: { createdAt: 'asc' } },
       approvals: { orderBy: { createdAt: 'asc' } },
     },
   })

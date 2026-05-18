@@ -7,6 +7,7 @@ const LoginPage          = lazy(() => import('./pages/auth/LoginPage'))
 const DashboardPage      = lazy(() => import('./pages/dashboard/DashboardPage'))
 const InvoiceListPage         = lazy(() => import('./pages/invoices/InvoiceListPage'))
 const InvoiceDetailPage       = lazy(() => import('./pages/invoices/InvoiceDetailPage'))
+const InvoiceFormPage         = lazy(() => import('./pages/invoices/InvoiceFormPage'))
 const InvoiceNewPage          = lazy(() => import('./pages/invoices/InvoiceNewPage'))
 const InvoiceReviewQueuePage  = lazy(() => import('./pages/invoices/InvoiceReviewQueuePage'))
 const PaymentListPage    = lazy(() => import('./pages/payments/PaymentListPage'))
@@ -69,10 +70,12 @@ export const router = createBrowserRouter([
         { index: true, element: <Navigate to="/dashboard" replace /> },
         { path: 'dashboard', element: <S><DashboardPage /></S> },
         { path: 'invoices', children: [
-          { index: true,      element: <S><InvoiceListPage /></S> },
-          { path: 'new',      element: <S><InvoiceNewPage /></S> },
-          { path: 'review',   element: <S><InvoiceReviewQueuePage /></S> },
-          { path: ':id',      element: <S><InvoiceDetailPage /></S> },
+          { index: true,        element: <S><InvoiceListPage /></S>      },
+          { path: 'new',        element: <S><InvoiceFormPage /></S>      },
+          { path: 'review',     element: <S><InvoiceReviewQueuePage /></S> },
+          { path: ':id',        element: <S><InvoiceDetailPage /></S>   },
+          { path: ':id/edit',   element: <S><InvoiceFormPage /></S>      },
+          { path: ':id/legacy', element: <S><InvoiceNewPage /></S>       },
         ]},
         { path: 'payments', children: [
           { index: true, element: <S><PaymentListPage /></S> },

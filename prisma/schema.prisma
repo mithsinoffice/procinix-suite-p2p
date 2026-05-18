@@ -262,96 +262,103 @@ model TaxCode {
 }
 
 model Invoice {
-  id                 String        @id @default(uuid())
-  tenantId           String
-  invoiceNumber      String
-  vendorId           String
-  invoiceDate        DateTime      @db.Date
-  dueDate            DateTime?     @db.Date
-  currency           String        @default("INR")
-  subtotal           Decimal       @db.Decimal(15, 2)
-  taxAmount          Decimal       @db.Decimal(15, 2) @default(0)
-  tdsAmount          Decimal       @db.Decimal(15, 2) @default(0)
-  totalAmount        Decimal       @db.Decimal(15, 2)
-  netPayable         Decimal       @db.Decimal(15, 2)
-  poId               String?
-  grnId              String?
-  glCodeId           String?
-  costCentreId       String?
-  departmentId       String?
-  narration          String?       @db.Text
-  attachmentUrls     Json?
-  ocrRawData         Json?
-  matchStatus        MatchStatus   @default(UNMATCHED)
-  status             InvoiceStatus @default(DRAFT)
-  approvalLane       ApprovalLane  @default(MANUAL)
-  workflowInstanceId String?
-  createdByUserId    String
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  tenant             Tenant        @relation(fields: [tenantId], references: [id])
-  vendor             Vendor        @relation(fields: [vendorId], references: [id])
-  lines              InvoiceLine[]
-  approvals          ApprovalStep[]
-  channelType        String    @default("MANUAL_UPLOAD")
-  matchScore         Int?
-  matchLane          String?
-  ingestionJobId     String?
-  ocrConfidence      Int?
-  irn                String?
-  isEInvoice         Boolean   @default(false)
-  @@unique([tenantId, vendorId, invoiceNumber])
-  @@index([tenantId, status, createdAt(sort: Desc)])
+  id                  String    @id @default(uuid())
+  tenantId            String
+  invoiceNumber       String
+  invoiceRef          String?
+  invoiceDate         DateTime  @db.Date
+  dueDate             DateTime? @db.Date
+  vendorId            String
+  entityId            String?
+  channelType         String    @default("MANUAL_UPLOAD")
+  status              String    @default("DRAFT")
+  apLane              String?
+  matchScore          Int?
+  matchLane           String?
+  isPOInvoice         Boolean   @default(false)
+  poRef               String?
+  grnRef              String?
+  subtotal            Decimal   @db.Decimal(15, 2) @default(0)
+  discountAmount      Decimal   @db.Decimal(15, 2) @default(0)
+  taxableAmount       Decimal   @db.Decimal(15, 2) @default(0)
+  cgstAmount          Decimal   @db.Decimal(15, 2) @default(0)
+  sgstAmount          Decimal   @db.Decimal(15, 2) @default(0)
+  igstAmount          Decimal   @db.Decimal(15, 2) @default(0)
+  tdsAmount           Decimal   @db.Decimal(15, 2) @default(0)
+  totalAmount         Decimal   @db.Decimal(15, 2) @default(0)
+  netPayable          Decimal   @db.Decimal(15, 2) @default(0)
+  currencyCode        String    @default("INR")
+  exchangeRate        Decimal?  @db.Decimal(18, 8)
+  irnNumber           String?
+  irnVerified         Boolean   @default(false)
+  ocrConfidence       Int?
+  ocrRawData          Json?
+  fileUrl             String?   @db.Text
+  fileName            String?
+  mimeType            String?
+  notes               String?   @db.Text
+  rejectionReason     String?
+  workflowInstanceId  String?
+  createdByUserId     String
+  approvedByUserId    String?
+  approvedAt          DateTime?
+  paidAt              DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  tenant              Tenant    @relation(fields: [tenantId], references: [id])
+  vendor              Vendor    @relation(fields: [vendorId], references: [id])
+  lines               InvoiceLine[]
+  auditLogs           InvoiceAuditLog[]
+  approvals           ApprovalStep[]
+  @@unique([tenantId, invoiceNumber, vendorId])
+  @@index([tenantId, status])
   @@index([tenantId, vendorId])
-  @@index([tenantId, dueDate])
   @@map("invoices")
 }
 
 model InvoiceLine {
-  id           String  @id @default(uuid())
-  invoiceId    String
-  lineNumber   Int
-  description  String
-  quantity     Decimal @db.Decimal(12, 3)
-  unitPrice    Decimal @db.Decimal(15, 2)
-  amount       Decimal @db.Decimal(15, 2)
-  taxCodeId    String?
-  cgst         Decimal @db.Decimal(15, 2) @default(0)
-  sgst         Decimal @db.Decimal(15, 2) @default(0)
-  igst         Decimal @db.Decimal(15, 2) @default(0)
-  tdsAmount    Decimal @db.Decimal(15, 2) @default(0)
-  isRcm        Boolean @default(false)
-  glCodeId     String?
-  costCentreId String?
-  invoice      Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  invoiceId      String
+  lineNumber     Int
+  itemId         String?
+  itemCode       String?
+  description    String
+  quantity       Decimal  @db.Decimal(15, 4)
+  uom            String?
+  unitPrice      Decimal  @db.Decimal(15, 4)
+  discountPct    Decimal? @db.Decimal(5, 2)
+  discountAmount Decimal  @db.Decimal(15, 2) @default(0)
+  taxableAmount  Decimal  @db.Decimal(15, 2) @default(0)
+  gstRate        Decimal? @db.Decimal(5, 2)
+  cgstAmount     Decimal  @db.Decimal(15, 2) @default(0)
+  sgstAmount     Decimal  @db.Decimal(15, 2) @default(0)
+  igstAmount     Decimal  @db.Decimal(15, 2) @default(0)
+  tdsRate        Decimal? @db.Decimal(5, 2)
+  tdsAmount      Decimal  @db.Decimal(15, 2) @default(0)
+  rcmApplicable  Boolean  @default(false)
+  hsnCode        String?
+  sacCode        String?
+  glCodeId       String?
+  costCentreId   String?
+  profitCentreId String?
+  lineTotal      Decimal  @db.Decimal(15, 2) @default(0)
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   @@index([invoiceId])
   @@map("invoice_lines")
 }
 
-enum InvoiceStatus {
-  DRAFT
-  SUBMITTED
-  PENDING_L1
-  PENDING_L2
-  PENDING_L3
-  APPROVED
-  REJECTED
-  ON_HOLD
-  PAID
-  PARTIALLY_PAID
-  CANCELLED
-}
-enum MatchStatus {
-  UNMATCHED
-  TWO_WAY_MATCH
-  THREE_WAY_MATCH
-  EXCEPTION
-}
-
-enum ApprovalLane {
-  STP
-  MANUAL
-  REVIEW
+model InvoiceAuditLog {
+  id        String   @id @default(uuid())
+  invoiceId String
+  tenantId  String
+  action    String
+  userId    String?
+  userName  String?
+  details   Json?
+  createdAt DateTime @default(now())
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  @@index([invoiceId])
+  @@map("invoice_audit_logs")
 }
 
 model Payment {

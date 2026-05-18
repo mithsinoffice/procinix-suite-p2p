@@ -1,102 +1,177 @@
 import type { FastifyInstance } from 'fastify'
-import { z } from 'zod'
 import { createInvoice, listInvoices, getInvoice, submitInvoice, approveInvoice, rejectInvoice } from '../services/invoice.service.js'
-
-const lineSchema = z.object({
-  lineNumber:   z.number().int().positive(),
-  description:  z.string().min(1).max(500),
-  quantity:     z.coerce.number().positive(),
-  unitPrice:    z.coerce.number().positive(),
-  taxCodeId:    z.string().optional(),
-  isRcm:        z.boolean().default(false),
-  glCodeId:     z.string().optional(),
-  costCentreId: z.string().optional(),
-})
-
-const createSchema = z.object({
-  invoiceNumber: z.string().min(1).max(100),
-  vendorId:      z.string().uuid(),
-  invoiceDate:   z.string().min(1),
-  dueDate:       z.string().optional(),
-  currency:      z.string().default('INR'),
-  glCodeId:      z.string().optional(),
-  costCentreId:  z.string().optional(),
-  departmentId:  z.string().optional(),
-  poId:          z.string().optional(),
-  grnId:         z.string().optional(),
-  narration:     z.string().max(1000).optional(),
-  lines:         z.array(lineSchema).min(1),
-})
-
-const listSchema = z.object({
-  status:   z.string().optional(),
-  vendorId: z.string().optional(),
-  search:   z.string().optional(),
-  cursor:   z.string().optional(),
-  take:     z.coerce.number().int().min(1).max(100).default(25),
-})
 
 export async function invoiceRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
 
+  // ── List invoices ──
   app.get('/', auth, async (req, reply) => {
-    const filter = listSchema.parse(req.query)
-    return reply.send(await listInvoices(app.prisma, req.tenant.id, filter))
+    const { status, vendorId, entityId, search, apLane, dateFrom, dateTo } = req.query as any
+    const where: any = { tenantId: req.tenant.id }
+    if (status && status !== 'ALL') where.status   = status
+    if (vendorId)                   where.vendorId  = vendorId
+    if (entityId)                   where.entityId  = entityId
+    if (apLane && apLane !== 'ALL') where.apLane    = apLane
+    if (dateFrom) where.invoiceDate = { gte: new Date(dateFrom) }
+    if (dateTo)   where.invoiceDate = { ...where.invoiceDate, lte: new Date(dateTo) }
+    if (search)   where.OR = [
+      { invoiceNumber: { contains: search } },
+      { vendor: { legalName: { contains: search } } },
+    ]
+
+    const [data, total] = await Promise.all([
+      app.prisma.invoice.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take:    50,
+        include: { vendor: { select: { legalName: true, vendorCode: true, kycPanStatus: true } } },
+      }),
+      app.prisma.invoice.count({ where }),
+    ])
+    return reply.send({ data, total })
   })
 
-  app.post('/', auth, async (req, reply) => {
-    const input  = createSchema.parse(req.body)
-    const result = await createInvoice(app.prisma, app.redis, input, { tenantId: req.tenant.id, userId: req.user.sub, ip: req.ip })
-    if (!result.ok) return reply.code(result.error.httpStatus ?? 400).send(result.error)
-    return reply.code(201).send(result.data)
+  // ── Stats ──
+  app.get('/stats', auth, async (req, reply) => {
+    const tenantId = req.tenant.id
+    const [total, draft, submitted, approved, rejected, onHold, paid] = await Promise.all([
+      app.prisma.invoice.count({ where: { tenantId } }),
+      app.prisma.invoice.count({ where: { tenantId, status: 'DRAFT' } }),
+      app.prisma.invoice.count({ where: { tenantId, status: 'SUBMITTED' } }),
+      app.prisma.invoice.count({ where: { tenantId, status: 'APPROVED' } }),
+      app.prisma.invoice.count({ where: { tenantId, status: 'REJECTED' } }),
+      app.prisma.invoice.count({ where: { tenantId, status: 'ON_HOLD' } }),
+      app.prisma.invoice.count({ where: { tenantId, status: 'PAID' } }),
+    ])
+    return reply.send({ total, draft, submitted, approved, rejected, onHold, paid })
   })
 
+  // ── Get detail ──
   app.get('/:id', auth, async (req, reply) => {
     const result = await getInvoice(app.prisma, (req.params as any).id, req.tenant.id)
     if (!result.ok) return reply.code(result.error.httpStatus ?? 404).send(result.error)
     return reply.send(result.data)
   })
 
+  // ── Create invoice ──
+  app.post('/', auth, async (req, reply) => {
+    const { lines = [], ...data } = req.body as any
+    const invoice = await app.prisma.$transaction(async tx => {
+      const inv = await tx.invoice.create({
+        data: {
+          ...data,
+          tenantId:        req.tenant.id,
+          createdByUserId: req.user.sub,
+          status:          'DRAFT',
+        },
+      })
+      if (lines.length) {
+        await tx.invoiceLine.createMany({
+          data: lines.map((l: any, i: number) => ({ ...l, invoiceId: inv.id, lineNumber: i + 1 })),
+        })
+      }
+      await tx.invoiceAuditLog.create({
+        data: { invoiceId: inv.id, tenantId: req.tenant.id, action: 'CREATED', userId: req.user.sub, userName: (req.user as any).name },
+      })
+      return inv
+    })
+    return reply.code(201).send(invoice)
+  })
+
+  // ── Update invoice ──
+  app.put('/:id', auth, async (req, reply) => {
+    const { lines, ...data } = req.body as any
+    const invoice = await app.prisma.$transaction(async tx => {
+      const inv = await tx.invoice.update({ where: { id: (req.params as any).id }, data })
+      if (lines) {
+        await tx.invoiceLine.deleteMany({ where: { invoiceId: inv.id } })
+        if (lines.length) {
+          await tx.invoiceLine.createMany({
+            data: lines.map((l: any, i: number) => ({ ...l, invoiceId: inv.id, lineNumber: i + 1 })),
+          })
+        }
+      }
+      await tx.invoiceAuditLog.create({
+        data: { invoiceId: inv.id, tenantId: req.tenant.id, action: 'UPDATED', userId: req.user.sub, userName: (req.user as any).name },
+      })
+      return inv
+    })
+    return reply.send(invoice)
+  })
+
+  // ── Submit for approval ──
   app.post('/:id/submit', auth, async (req, reply) => {
     const result = await submitInvoice(app.prisma, (req.params as any).id, { tenantId: req.tenant.id, userId: req.user.sub, ip: req.ip })
     if (!result.ok) return reply.code(result.error.httpStatus ?? 400).send(result.error)
+    await app.prisma.invoiceAuditLog.create({
+      data: { invoiceId: (req.params as any).id, tenantId: req.tenant.id, action: 'SUBMITTED', userId: req.user.sub, userName: (req.user as any).name },
+    })
     return reply.send({ ok: true })
   })
 
+  // ── Approve ──
   app.post('/:id/approve', auth, async (req, reply) => {
     const { comments } = (req.body ?? {}) as { comments?: string }
     const result = await approveInvoice(app.prisma, (req.params as any).id, comments, { tenantId: req.tenant.id, userId: req.user.sub, ip: req.ip })
     if (!result.ok) return reply.code(result.error.httpStatus ?? 400).send(result.error)
+    await app.prisma.invoiceAuditLog.create({
+      data: { invoiceId: (req.params as any).id, tenantId: req.tenant.id, action: 'APPROVED', userId: req.user.sub, userName: (req.user as any).name, details: { comments } },
+    })
     return reply.send({ ok: true })
   })
 
+  // ── Reject ──
   app.post('/:id/reject', auth, async (req, reply) => {
     const { comments } = (req.body ?? {}) as { comments: string }
     if (!comments) return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Rejection reason is required' })
     const result = await rejectInvoice(app.prisma, (req.params as any).id, comments, { tenantId: req.tenant.id, userId: req.user.sub, ip: req.ip })
     if (!result.ok) return reply.code(result.error.httpStatus ?? 400).send(result.error)
+    await app.prisma.invoice.update({ where: { id: (req.params as any).id }, data: { rejectionReason: comments } })
+    await app.prisma.invoiceAuditLog.create({
+      data: { invoiceId: (req.params as any).id, tenantId: req.tenant.id, action: 'REJECTED', userId: req.user.sub, userName: (req.user as any).name, details: { comments } },
+    })
     return reply.send({ ok: true })
   })
 
-  // POST /api/invoices/ingest — manual file upload with OCR
+  // ── Put on hold ──
+  app.post('/:id/hold', auth, async (req, reply) => {
+    const { reason } = (req.body ?? {}) as { reason?: string }
+    const inv = await app.prisma.invoice.update({
+      where: { id: (req.params as any).id },
+      data:  { status: 'ON_HOLD' },
+    })
+    await app.prisma.invoiceAuditLog.create({
+      data: { invoiceId: inv.id, tenantId: req.tenant.id, action: 'ON_HOLD', userId: req.user.sub, userName: (req.user as any).name, details: { reason } },
+    })
+    return reply.send(inv)
+  })
+
+  // ── Release hold ──
+  app.post('/:id/release-hold', auth, async (req, reply) => {
+    const inv = await app.prisma.invoice.update({
+      where: { id: (req.params as any).id },
+      data:  { status: 'SUBMITTED' },
+    })
+    await app.prisma.invoiceAuditLog.create({
+      data: { invoiceId: inv.id, tenantId: req.tenant.id, action: 'HOLD_RELEASED', userId: req.user.sub, userName: (req.user as any).name },
+    })
+    return reply.send(inv)
+  })
+
+  // ── OCR ingest (file upload → extract → create draft) ──
   app.post('/ingest', { ...auth, config: { rawBody: true } }, async (req, reply) => {
     const body = req.body as any
     const { base64Data, mimeType, fileName, channelType = 'MANUAL_UPLOAD' } = body
-
     if (!base64Data || !mimeType) {
       return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'base64Data and mimeType are required' })
     }
-
     const { ingestInvoice } = await import('../services/invoice-ingestion.service.js')
-    const result = await ingestInvoice(app.prisma, {
-      channelType, base64Data, mimeType, fileName,
-    }, { tenantId: req.tenant.id, userId: req.user.sub, ip: req.ip })
-
+    const result = await ingestInvoice(app.prisma, { channelType, base64Data, mimeType, fileName }, { tenantId: req.tenant.id, userId: req.user.sub, ip: req.ip })
     if (!result.ok) return reply.code(result.error.httpStatus ?? 400).send(result.error)
     return reply.code(201).send(result.data)
   })
 
-  // GET /api/invoices/:id/score — get match score breakdown
+  // ── Match score ──
   app.get('/:id/score', auth, async (req, reply) => {
     const score = await app.prisma.invoiceMatchScore.findFirst({
       where: { invoiceId: (req.params as any).id, tenantId: req.tenant.id },

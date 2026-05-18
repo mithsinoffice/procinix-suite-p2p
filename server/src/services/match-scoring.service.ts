@@ -157,7 +157,7 @@ export async function calculateMatchScore(
   // ── Update invoice with score + lane ──
   await prisma.invoice.update({
     where: { id: input.invoiceId },
-    data:  { matchScore: totalScore, matchLane: lane, approvalLane: lane as any },
+    data:  { matchScore: totalScore, matchLane: lane, apLane: lane },
   })
 
   return { vendorScore, poScore, amountScore, grnScore, gstScore, ocrScore, totalScore, lane, isPOInvoice, guardrailsTriggered: guardrails, breakdown }
