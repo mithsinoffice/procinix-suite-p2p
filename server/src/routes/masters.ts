@@ -477,6 +477,22 @@ export async function masterRoutes(app: FastifyInstance) {
     return reply.send(item)
   })
 
+  // ── IFSC lookup proxy (used by Employee + Vendor bank-detail forms) ──
+  app.get('/lookup/ifsc/:code', auth, async (req, reply) => {
+    const { code } = req.params as { code: string }
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(code)) {
+      return reply.code(400).send({ message: 'Invalid IFSC format' })
+    }
+    try {
+      const res = await fetch(`https://ifsc.razorpay.com/${code}`)
+      if (!res.ok) return reply.code(404).send({ message: 'IFSC not found' })
+      const data = await res.json() as { BANK?: string; BRANCH?: string; CITY?: string; STATE?: string }
+      return reply.send({ bank: data.BANK, branch: data.BRANCH, city: data.CITY, state: data.STATE })
+    } catch {
+      return reply.code(503).send({ message: 'IFSC lookup unavailable' })
+    }
+  })
+
   // ── Generic CRUD for all masters ──
   for (const [route, table] of Object.entries(TABLE_ROUTE_MAP)) {
 

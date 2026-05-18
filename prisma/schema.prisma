@@ -788,25 +788,47 @@ model WorkflowRule {
 }
 
 model Employee {
-  id               String    @id @default(uuid())
-  tenantId         String
-  code             String
-  name             String
-  email            String?
-  mobile           String?
-  departmentId     String?
-  designationId    String?
-  locationId       String?
-  managerId        String?
-  joiningDate      DateTime? @db.Date
-  pan              String?
-  isActive         Boolean   @default(true)
-  status           String    @default("ACTIVE")
-  createdByUserId  String?
-  approvedByUserId String?
-  approvedAt       DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                  String    @id @default(uuid())
+  tenantId            String
+  code                String
+  name                String
+  firstName           String?
+  lastName            String?
+  email               String?
+  mobile              String?
+  gender              String?
+  dateOfBirth         DateTime? @db.Date
+  bloodGroup          String?
+  employeeCategory    String?   @default("ON_ROLL")
+  entityId            String?
+  departmentId        String?
+  designationId       String?
+  locationId          String?
+  costCentreId        String?
+  managerId           String?
+  systemRole          String?   @default("USER")
+  userId              String?
+  joiningDate         DateTime? @db.Date
+  confirmationDate    DateTime? @db.Date
+  resignationDate     DateTime? @db.Date
+  lastWorkingDate     DateTime? @db.Date
+  pan                 String?
+  aadhaarNo           String?
+  pfAccountNo         String?
+  esiNo               String?
+  bankAccountNo       String?
+  ifsc                String?
+  bankName            String?
+  emergencyName       String?
+  emergencyPhone      String?
+  emergencyRelation   String?
+  isActive            Boolean   @default(true)
+  status              String    @default("ACTIVE")
+  createdByUserId     String?
+  approvedByUserId    String?
+  approvedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
   @@unique([tenantId, code])
   @@map("employees")
 }

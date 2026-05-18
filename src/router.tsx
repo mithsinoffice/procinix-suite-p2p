@@ -24,6 +24,7 @@ const DesignationsPage   = lazy(() => import('./pages/masters/DesignationsPage')
 const EntitiesPage       = lazy(() => import('./pages/masters/EntitiesPage'))
 const LocationsPage      = lazy(() => import('./pages/masters/LocationsPage'))
 const EmployeesPage      = lazy(() => import('./pages/masters/EmployeesPage'))
+const EmployeeFormPage   = lazy(() => import('./pages/masters/EmployeeFormPage'))
 const WorkflowRulesPage  = lazy(() => import('./pages/masters/WorkflowRulesPage'))
 const TaxRegimesPage     = lazy(() => import('./pages/masters/TaxRegimesPage'))
 const FinancialYearsPage = lazy(() => import('./pages/masters/FinancialYearsPage'))
@@ -127,6 +128,8 @@ export const router = createBrowserRouter([
           { path: 'entities',          element: <S><EntitiesPage /></S>                        },
           { path: 'locations',         element: <S><LocationsPage /></S>                       },
           { path: 'employees',         element: <S><EmployeesPage /></S>                       },
+          { path: 'employees/new',     element: <S><EmployeeFormPage /></S>                    },
+          { path: 'employees/:id',     element: <S><EmployeeFormPage /></S>                    },
           { path: 'workflow-rules',    element: <S><WorkflowRulesPage /></S>                   },
           { path: 'tax-regimes',       element: <S><TaxRegimesPage /></S>                      },
           { path: 'financial-years',   element: <S><FinancialYearsPage /></S>                  },
