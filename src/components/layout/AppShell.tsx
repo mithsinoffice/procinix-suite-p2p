@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, CheckSquare, ShoppingCart,
+  LayoutDashboard, CheckSquare, ShoppingCart, ClipboardList,
   FileText, CreditCard, Users, GitBranch, Database,
   Shield, Truck, LogOut, Menu, X,
 } from 'lucide-react'
@@ -13,6 +13,7 @@ import { cn } from '../../lib/utils'
 const BASE_NAV = [
   { to: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard'       },
   { to: '/approvals',       icon: CheckSquare,     label: 'Approval Desk'   },
+  { to: '/intake',          icon: ClipboardList,   label: 'Intake'          },
   { to: '/purchase-orders', icon: ShoppingCart,    label: 'Purchase Orders' },
   { to: '/grn',             icon: Truck,           label: 'GRN'             },
   { to: '/invoices',        icon: FileText,        label: 'Invoices'        },

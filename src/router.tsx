@@ -42,6 +42,7 @@ const ItemCategoryPage              = lazy(() => import('./pages/masters/items/I
 const WorkflowDefinitionsPage       = lazy(() => import('./pages/masters/workflow/WorkflowDefinitionsPage'))
 const WorkflowDefinitionFormPage    = lazy(() => import('./pages/masters/workflow/WorkflowDefinitionFormPage'))
 const ApprovalDeskPage              = lazy(() => import('./pages/approvals/ApprovalDeskPage'))
+const IntakePage                    = lazy(() => import('./pages/intake/IntakePage'))
 const PurchaseOrdersPage            = lazy(() => import('./pages/purchase-orders/PurchaseOrdersPage'))
 const PRFormPage                    = lazy(() => import('./pages/purchase-orders/PRFormPage'))
 const POFormPage                    = lazy(() => import('./pages/purchase-orders/POFormPage'))
@@ -79,9 +80,10 @@ export const router = createBrowserRouter([
         { index: true, element: <Navigate to="/dashboard" replace /> },
         { path: 'dashboard',       element: <S><DashboardPage /></S>       },
         { path: 'approvals',       element: <S><ApprovalDeskPage /></S>    },
+        { path: 'intake',                   element: <S><IntakePage /></S>          },
+        { path: 'intake/new',               element: <S><PRFormPage /></S>          },
+        { path: 'intake/:id',               element: <S><PRFormPage /></S>          },
         { path: 'purchase-orders',          element: <S><PurchaseOrdersPage /></S> },
-        { path: 'purchase-orders/pr/new',   element: <S><PRFormPage /></S>          },
-        { path: 'purchase-orders/pr/:id',   element: <S><PRFormPage /></S>          },
         { path: 'purchase-orders/new',      element: <S><POFormPage /></S>          },
         { path: 'purchase-orders/:id',      element: <S><POFormPage /></S>          },
         { path: 'grn',                      element: <S><GRNPage /></S>             },

@@ -203,7 +203,7 @@ export default function PRFormPage() {
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['pr-list'] })
-      navigate(`/purchase-orders/pr/${res.id ?? id}`)
+      navigate(`/intake/${res.id ?? id}`)
     },
   })
 
@@ -216,7 +216,7 @@ export default function PRFormPage() {
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['pr-list'] })
-      navigate(`/purchase-orders/pr/${res.id ?? id}`)
+      navigate(`/intake/${res.id ?? id}`)
     },
   })
 
@@ -230,13 +230,13 @@ export default function PRFormPage() {
   return (
     <div className="flex flex-col h-full">
       <MasterPageHeader
-        title={isEdit ? `Edit ${existing?.prRef ?? 'PR'}` : 'New Purchase Requisition'}
+        title={isEdit ? `Edit ${existing?.prRef ?? 'PR'}` : 'New Intake Request'}
         description="Request items or services — budget-checked and routed for approval"
-        backLabel="Purchase Orders"
-        backTo="/purchase-orders"
+        backLabel="Intake"
+        backTo="/intake"
         actions={
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => navigate('/purchase-orders')}
+            <button type="button" onClick={() => navigate('/intake')}
               className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted">Cancel</button>
             <button type="button" disabled={isPending}
               onClick={handleSubmit(d => saveDraft.mutate(d))}
