@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, CheckSquare, ShoppingCart, ClipboardList,
   FileText, CreditCard, Users, GitBranch, Database,
-  Shield, Truck, LogOut, Menu, X, PiggyBank,
+  Shield, Truck, LogOut, X, PiggyBank,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '../../stores/auth.store'
@@ -10,6 +10,7 @@ import { usePermissions } from '../../hooks/usePermission'
 import { http } from '../../lib/http'
 import { queryClient } from '../../lib/query-client'
 import { cn } from '../../lib/utils'
+import { TopBar } from './TopBar'
 
 // Nav items hidden when the user has no `view` permission for the mapped module.
 // Items not in this map (Dashboard, Approval Desk, Workflow) stay visible.
@@ -129,13 +130,7 @@ export function AppShell() {
 
       {/* Main */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile topbar */}
-        <header className="flex h-14 items-center gap-3 border-b border-border bg-card px-4 lg:hidden">
-          <button onClick={() => setOpen(true)}>
-            <Menu className="h-5 w-5 text-muted-foreground" />
-          </button>
-          <span className="font-semibold text-sm">Procinix</span>
-        </header>
+        <TopBar onMenuOpen={() => setOpen(true)} />
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>

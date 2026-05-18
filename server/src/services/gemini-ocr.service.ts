@@ -1,12 +1,12 @@
 // Gemini Vision OCR — extracts structured invoice data from PDF or image
-// Uses gemini-1.5-flash for speed + cost efficiency
+// Uses gemini-2.0-flash for speed + cost efficiency
 // Returns typed extraction with per-field confidence scores
 
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
 import { ok, err, type Result } from '../lib/result.js'
 
 const API_KEY = process.env.GEMINI_API_KEY ?? ''
-const MODEL   = process.env.GEMINI_MODEL   ?? 'gemini-1.5-flash'
+const MODEL   = process.env.GEMINI_MODEL   ?? 'gemini-2.0-flash'
 
 // ── Extracted invoice structure ──
 
