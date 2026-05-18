@@ -6,9 +6,23 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '../../stores/auth.store'
+import { usePermissions } from '../../hooks/usePermission'
 import { http } from '../../lib/http'
 import { queryClient } from '../../lib/query-client'
 import { cn } from '../../lib/utils'
+
+// Nav items hidden when the user has no `view` permission for the mapped module.
+// Items not in this map (Dashboard, Approval Desk, Workflow) stay visible.
+const NAV_VIEW_PERMISSION: Record<string, string> = {
+  '/intake':          'INTAKE',
+  '/purchase-orders': 'PO',
+  '/grn':             'GRN',
+  '/invoices':        'INVOICE',
+  '/payments':        'PAYMENT',
+  '/vendors':         'VENDOR',
+  '/budgets':         'BUDGET',
+  '/masters':         'MASTERS',
+}
 
 const BASE_NAV = [
   { to: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard'       },
@@ -27,10 +41,22 @@ const BASE_NAV = [
 export function AppShell() {
   const [open, setOpen] = useState(false)
   const { user, clearUser } = useAuthStore()
-  const NAV = [
+  const { data: perms } = usePermissions()
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN'
+
+  const FULL_NAV = [
     ...BASE_NAV,
-    ...(user?.role === 'SUPER_ADMIN' ? [{ to: '/admin/tenants', icon: Shield, label: 'Admin' }] : []),
+    ...(isSuperAdmin ? [{ to: '/admin/tenants', icon: Shield, label: 'Admin' }] : []),
   ]
+  // Gate nav by `view` permission — items without a mapping always show.
+  // While permissions are still loading, show everything optimistically (the
+  // server-side rbacHook is the real gate; this just hides obviously-blocked items).
+  const NAV = FULL_NAV.filter(item => {
+    const module = NAV_VIEW_PERMISSION[item.to]
+    if (!module || isSuperAdmin) return true
+    if (!perms) return true
+    return perms?.[module]?.view ?? false
+  })
   const navigate = useNavigate()
 
   async function handleLogout() {

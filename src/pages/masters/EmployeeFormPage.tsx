@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, useWatch } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -13,14 +13,27 @@ import { cn } from '../../lib/utils'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const GENDERS         = [
-  { value: 'MALE', label: 'Male' }, { value: 'FEMALE', label: 'Female' },
-  { value: 'OTHER', label: 'Other' }, { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say' },
+const GENDERS = [
+  { value: 'MALE',   label: 'Male'   },
+  { value: 'FEMALE', label: 'Female' },
+  { value: 'OTHER',  label: 'Other'  },
+  { value: 'PREFER_NOT_TO_SAY', label: 'Prefer not to say' },
 ]
-const BLOOD_GROUPS    = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
-const EMP_CATEGORIES  = ['ON_ROLL', 'CONTRACTUAL', 'CONSULTANT', 'INTERN', 'PART_TIME']
-const EMP_STATUSES    = ['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'RESIGNED', 'TERMINATED']
-const SYSTEM_ROLES    = [
+const EMP_CATEGORIES = [
+  { value: 'ON_ROLL',     label: 'On roll'     },
+  { value: 'CONTRACTUAL', label: 'Contractual' },
+  { value: 'CONSULTANT',  label: 'Consultant'  },
+  { value: 'INTERN',      label: 'Intern'      },
+  { value: 'PART_TIME',   label: 'Part time'   },
+]
+const EMP_STATUSES = [
+  { value: 'ACTIVE',     label: 'Active'     },
+  { value: 'INACTIVE',   label: 'Inactive'   },
+  { value: 'ON_LEAVE',   label: 'On leave'   },
+  { value: 'RESIGNED',   label: 'Resigned'   },
+  { value: 'TERMINATED', label: 'Terminated' },
+]
+const SYSTEM_ROLES = [
   { value: 'AP_CLERK',         label: 'AP Clerk'         },
   { value: 'AP_MANAGER',       label: 'AP Manager'       },
   { value: 'APPROVER_L1',      label: 'Approver L1'      },
@@ -35,7 +48,6 @@ const SYSTEM_ROLES    = [
   { value: 'USER',             label: 'Standard User'    },
 ]
 
-const PAN_REGEX    = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/
 const MOBILE_REGEX = /^(\+\d{1,3})?\d{10}$/
 const EMAIL_REGEX  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -48,11 +60,9 @@ const schema = z.object({
   mobile:           z.string().optional().refine(v => !v || MOBILE_REGEX.test(v.replace(/\s/g, '')), 'Enter a valid mobile number'),
   gender:           z.string().optional(),
   dateOfBirth:      z.string().optional(),
-  bloodGroup:       z.string().optional(),
   employeeCategory: z.string().min(1, 'Employee category is required'),
   status:           z.string().min(1, 'Status is required'),
   joiningDate:      z.string().min(1, 'Joining date is required'),
-  confirmationDate: z.string().optional(),
   resignationDate:  z.string().optional(),
   lastWorkingDate:  z.string().optional(),
   entityId:         z.string().min(1, 'Entity is required'),
@@ -63,16 +73,6 @@ const schema = z.object({
   costCentreId:     z.string().optional(),
   systemRole:       z.string().optional(),
   userId:           z.string().optional(),
-  pan:              z.string().optional().refine(v => !v || PAN_REGEX.test(v), 'PAN must be 10 chars (e.g. ABCDE1234F)'),
-  aadhaarNo:        z.string().optional(),
-  pfAccountNo:      z.string().optional(),
-  esiNo:            z.string().optional(),
-  bankAccountNo:    z.string().optional(),
-  ifsc:             z.string().optional(),
-  bankName:         z.string().optional(),
-  emergencyName:    z.string().optional(),
-  emergencyPhone:   z.string().optional(),
-  emergencyRelation: z.string().optional(),
 })
 type EmployeeForm = z.infer<typeof schema>
 
@@ -105,31 +105,11 @@ function Field({ label, required, hint, error, span, children }: {
   )
 }
 
-// Visual state for fields — teal ring when filled-and-valid, red when errored
-function fieldCls(hasError: boolean, filledAndValid: boolean): string {
-  if (hasError)       return 'border-destructive focus:ring-destructive/20'
-  if (filledAndValid) return 'border-primary/50'
+// Red on error, green when populated, neutral otherwise
+function fieldCls(error?: string, value?: string): string {
+  if (error) return 'border-destructive ring-1 ring-destructive/20'
+  if (value) return 'border-primary/50'
   return ''
-}
-
-// Toggle-pill row for enum fields like category / status
-function PillSelect({ value, onChange, options, disabled }: {
-  value: string; onChange: (v: string) => void; options: string[]; disabled?: boolean
-}) {
-  return (
-    <div className="flex items-center flex-wrap gap-2">
-      {options.map(o => (
-        <button key={o} type="button" disabled={disabled} onClick={() => onChange(o)}
-          className={cn(
-            'rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
-            value === o
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-input bg-background hover:bg-muted',
-            disabled && 'opacity-60 cursor-not-allowed',
-          )}>{o.replace(/_/g, ' ')}</button>
-      ))}
-    </div>
-  )
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -158,14 +138,25 @@ export default function EmployeeFormPage() {
     },
   })
 
-  const status         = useWatch({ control, name: 'status' })         ?? 'ACTIVE'
-  const empCategory    = useWatch({ control, name: 'employeeCategory' }) ?? 'ON_ROLL'
-  const firstName      = useWatch({ control, name: 'firstName' })      ?? ''
-  const lastName       = useWatch({ control, name: 'lastName' })       ?? ''
-  const email          = useWatch({ control, name: 'email' })          ?? ''
-  const mobile         = useWatch({ control, name: 'mobile' })         ?? ''
-  const pan            = useWatch({ control, name: 'pan' })            ?? ''
-  const ifscWatched    = useWatch({ control, name: 'ifsc' })           ?? ''
+  const status            = useWatch({ control, name: 'status' })            ?? 'ACTIVE'
+  const empCategory       = useWatch({ control, name: 'employeeCategory' })  ?? 'ON_ROLL'
+  const firstName         = useWatch({ control, name: 'firstName' })         ?? ''
+  const lastName          = useWatch({ control, name: 'lastName' })          ?? ''
+  const email             = useWatch({ control, name: 'email' })             ?? ''
+  const mobile            = useWatch({ control, name: 'mobile' })            ?? ''
+  const gender            = useWatch({ control, name: 'gender' })            ?? ''
+  const dateOfBirth       = useWatch({ control, name: 'dateOfBirth' })       ?? ''
+  const joiningDate       = useWatch({ control, name: 'joiningDate' })       ?? ''
+  const resignationDate   = useWatch({ control, name: 'resignationDate' })   ?? ''
+  const lastWorkingDate   = useWatch({ control, name: 'lastWorkingDate' })   ?? ''
+  const entityId          = useWatch({ control, name: 'entityId' })          ?? ''
+  const departmentId      = useWatch({ control, name: 'departmentId' })      ?? ''
+  const designationId     = useWatch({ control, name: 'designationId' })     ?? ''
+  const locationId        = useWatch({ control, name: 'locationId' })        ?? ''
+  const managerId         = useWatch({ control, name: 'managerId' })         ?? ''
+  const costCentreId      = useWatch({ control, name: 'costCentreId' })      ?? ''
+  const systemRole        = useWatch({ control, name: 'systemRole' })        ?? ''
+  const userId            = useWatch({ control, name: 'userId' })            ?? ''
 
   // Hydrate on edit
   useEffect(() => {
@@ -177,11 +168,9 @@ export default function EmployeeFormPage() {
         mobile:           existing.mobile    ?? '',
         gender:           existing.gender    ?? '',
         dateOfBirth:      existing.dateOfBirth ? String(existing.dateOfBirth).slice(0, 10) : '',
-        bloodGroup:       existing.bloodGroup ?? '',
         employeeCategory: existing.employeeCategory ?? 'ON_ROLL',
         status:           existing.status    ?? 'ACTIVE',
         joiningDate:      existing.joiningDate ? String(existing.joiningDate).slice(0, 10) : '',
-        confirmationDate: existing.confirmationDate ? String(existing.confirmationDate).slice(0, 10) : '',
         resignationDate:  existing.resignationDate  ? String(existing.resignationDate).slice(0, 10)  : '',
         lastWorkingDate:  existing.lastWorkingDate  ? String(existing.lastWorkingDate).slice(0, 10)  : '',
         entityId:         existing.entityId      ?? '',
@@ -192,37 +181,9 @@ export default function EmployeeFormPage() {
         costCentreId:     existing.costCentreId  ?? '',
         systemRole:       existing.systemRole    ?? 'USER',
         userId:           existing.userId        ?? '',
-        pan:              existing.pan           ?? '',
-        aadhaarNo:        existing.aadhaarNo     ?? '',
-        pfAccountNo:      existing.pfAccountNo   ?? '',
-        esiNo:            existing.esiNo         ?? '',
-        bankAccountNo:    existing.bankAccountNo ?? '',
-        ifsc:             existing.ifsc          ?? '',
-        bankName:         existing.bankName      ?? '',
-        emergencyName:    existing.emergencyName ?? '',
-        emergencyPhone:   existing.emergencyPhone ?? '',
-        emergencyRelation: existing.emergencyRelation ?? '',
       })
     }
   }, [existing, reset])
-
-  // IFSC → bank name autofill (best-effort; routed through server proxy so we don't hit a 3rd-party origin directly)
-  const ifscFetchedRef = useRef<string>('')
-  useEffect(() => {
-    const ifsc = (ifscWatched ?? '').toUpperCase().trim()
-    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc) || ifsc === ifscFetchedRef.current) return
-    ifscFetchedRef.current = ifsc
-    http.get<{ bank?: string; branch?: string }>(`/api/masters/lookup/ifsc/${ifsc}`)
-      .then(result => {
-        if (result.bank && result.branch) setValue('bankName', `${result.bank} — ${result.branch}`)
-      })
-      .catch(() => { /* ignore — optional autofill */ })
-  }, [ifscWatched, setValue])
-
-  // Auto-uppercase PAN
-  useEffect(() => {
-    if (pan && pan !== pan.toUpperCase()) setValue('pan', pan.toUpperCase())
-  }, [pan, setValue])
 
   // ── Mutation ──
   const save = useMutation({
@@ -231,14 +192,12 @@ export default function EmployeeFormPage() {
         ...data,
         name: `${data.firstName} ${data.lastName}`.trim(),
         submitForApproval,
-        // Date strings → ISO for server; empty strings strip out so Prisma sees nulls
-        dateOfBirth:      data.dateOfBirth      || undefined,
-        joiningDate:      data.joiningDate      || undefined,
-        confirmationDate: data.confirmationDate || undefined,
-        resignationDate:  data.resignationDate  || undefined,
-        lastWorkingDate:  data.lastWorkingDate  || undefined,
+        dateOfBirth:     data.dateOfBirth     || undefined,
+        joiningDate:     data.joiningDate     || undefined,
+        resignationDate: data.resignationDate || undefined,
+        lastWorkingDate: data.lastWorkingDate || undefined,
       }
-      // Drop empty string fields so they don't overwrite existing nulls on PUT
+      // Drop empty strings so PUT doesn't overwrite existing nulls
       for (const k of Object.keys(payload)) if (payload[k] === '') delete payload[k]
       return isEdit
         ? http.put<any>(`/api/masters/employees/${id}`, payload)
@@ -250,9 +209,9 @@ export default function EmployeeFormPage() {
       navigate('/masters/employees')
     },
     onError: (err: unknown) => {
-      if (err instanceof HttpError)      setApiError(err.error.message || `Save failed (${err.error.status})`)
-      else if (err instanceof Error)     setApiError(err.message)
-      else                               setApiError('Save failed — please retry')
+      if (err instanceof HttpError)  setApiError(err.error.message || `Save failed (${err.error.status})`)
+      else if (err instanceof Error) setApiError(err.message)
+      else                           setApiError('Save failed — please retry')
     },
   })
 
@@ -260,14 +219,18 @@ export default function EmployeeFormPage() {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
   }
 
-  const isPending           = save.isPending
+  const isPending            = save.isPending
   const showResignationDates = status === 'RESIGNED' || status === 'TERMINATED'
+
+  // Email/mobile "valid + filled" state for green border
+  const emailGreen  = !!email  && !errors.email  && EMAIL_REGEX.test(email)
+  const mobileGreen = !!mobile && !errors.mobile && MOBILE_REGEX.test(mobile.replace(/\s/g, ''))
 
   return (
     <div className="flex flex-col h-full">
       <MasterPageHeader
         title={isEdit ? `Edit ${existing?.name ?? 'Employee'}` : 'New Employee'}
-        description="Personal, employment, organisation, statutory and bank details"
+        description="Identity, employment, organisation, system access and status"
         backLabel="Employees"
         backTo="/masters/employees"
         actions={
@@ -305,132 +268,127 @@ export default function EmployeeFormPage() {
 
           {/* A. Identity */}
           <div className="rounded-xl border border-border bg-card p-6">
-            <SectionHeader letter="A" title="Identity" subtitle="Name, contact, and personal details" />
+            <SectionHeader letter="A" title="Identity" subtitle="Name and contact" />
             <div className="grid grid-cols-2 gap-4">
               <Field label="Employee code">
                 <AutoCodeField value={existing?.code} />
               </Field>
-              <div /> {/* spacer */}
+              <div />
 
               <Field label="First name" required error={errors.firstName?.message}>
-                <FormInput placeholder="Rahul" className={fieldCls(!!errors.firstName, !!firstName && !errors.firstName)}
+                <FormInput placeholder="Rahul"
+                  className={fieldCls(errors.firstName?.message, firstName)}
                   {...register('firstName')} />
               </Field>
               <Field label="Last name" required error={errors.lastName?.message}>
-                <FormInput placeholder="Sharma" className={fieldCls(!!errors.lastName, !!lastName && !errors.lastName)}
+                <FormInput placeholder="Sharma"
+                  className={fieldCls(errors.lastName?.message, lastName)}
                   {...register('lastName')} />
               </Field>
 
               <Field label="Email" required error={errors.email?.message}>
                 <FormInput type="email" placeholder="rahul@company.com"
-                  className={fieldCls(!!errors.email, !!email && !errors.email && EMAIL_REGEX.test(email))}
+                  className={fieldCls(errors.email?.message, emailGreen ? email : '')}
                   {...register('email')} />
               </Field>
-              <Field label="Mobile" error={errors.mobile?.message}
-                hint="10 digits or +91 9XXXXXXXXX">
+              <Field label="Mobile" error={errors.mobile?.message} hint="10 digits or +91 9XXXXXXXXX">
                 <FormInput type="tel" placeholder="9800000000"
-                  className={fieldCls(!!errors.mobile, !!mobile && !errors.mobile && MOBILE_REGEX.test(mobile.replace(/\s/g, '')))}
+                  className={fieldCls(errors.mobile?.message, mobileGreen ? mobile : '')}
                   {...register('mobile')} />
               </Field>
 
               <Field label="Gender">
-                <FormSelect {...register('gender')}>
+                <FormSelect className={fieldCls(undefined, gender)} {...register('gender')}>
                   <option value="">—</option>
                   {GENDERS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
                 </FormSelect>
               </Field>
               <Field label="Date of birth">
-                <FormInput type="date" max={new Date().toISOString().slice(0, 10)} {...register('dateOfBirth')} />
-              </Field>
-
-              <Field label="Blood group">
-                <FormSelect {...register('bloodGroup')}>
-                  <option value="">—</option>
-                  {BLOOD_GROUPS.map(b => <option key={b} value={b}>{b}</option>)}
-                </FormSelect>
+                <FormInput type="date" max={new Date().toISOString().slice(0, 10)}
+                  className={fieldCls(undefined, dateOfBirth)}
+                  {...register('dateOfBirth')} />
               </Field>
             </div>
           </div>
 
           {/* B. Employment */}
           <div className="rounded-xl border border-border bg-card p-6">
-            <SectionHeader letter="B" title="Employment" subtitle="Category, status and dates" />
-            <div className="space-y-4">
-              <Field label="Employee category" required>
-                <PillSelect value={empCategory} options={EMP_CATEGORIES}
-                  onChange={v => setValue('employeeCategory', v, { shouldValidate: true })} />
+            <SectionHeader letter="B" title="Employment" subtitle="Category and dates" />
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Employee category" required error={errors.employeeCategory?.message}>
+                <FormSelect className={fieldCls(errors.employeeCategory?.message, empCategory)} {...register('employeeCategory')}>
+                  {EMP_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </FormSelect>
               </Field>
-              <Field label="Status" required>
-                <PillSelect value={status} options={EMP_STATUSES}
-                  onChange={v => setValue('status', v, { shouldValidate: true })} />
+              <Field label="Joining date" required error={errors.joiningDate?.message}>
+                <FormInput type="date"
+                  className={fieldCls(errors.joiningDate?.message, joiningDate)}
+                  {...register('joiningDate')} />
               </Field>
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Joining date" required error={errors.joiningDate?.message}>
-                  <FormInput type="date"
-                    className={fieldCls(!!errors.joiningDate, false)}
-                    {...register('joiningDate')} />
-                </Field>
-                <Field label="Confirmation date">
-                  <FormInput type="date" {...register('confirmationDate')} />
-                </Field>
-                {showResignationDates && (
-                  <>
-                    <Field label="Resignation date">
-                      <FormInput type="date" {...register('resignationDate')} />
-                    </Field>
-                    <Field label="Last working date">
-                      <FormInput type="date" {...register('lastWorkingDate')} />
-                    </Field>
-                  </>
-                )}
-              </div>
+
+              {showResignationDates && (
+                <>
+                  <Field label="Resignation date">
+                    <FormInput type="date"
+                      className={fieldCls(undefined, resignationDate)}
+                      {...register('resignationDate')} />
+                  </Field>
+                  <Field label="Last working date">
+                    <FormInput type="date"
+                      className={fieldCls(undefined, lastWorkingDate)}
+                      {...register('lastWorkingDate')} />
+                  </Field>
+                </>
+              )}
             </div>
           </div>
 
           {/* C. Organisation */}
           <div className="rounded-xl border border-border bg-card p-6">
-            <SectionHeader letter="C" title="Organisation" subtitle="Entity, department, designation, location, and reporting" />
+            <SectionHeader letter="C" title="Organisation" subtitle="Entity, department, designation, location and reporting" />
             <div className="grid grid-cols-2 gap-4">
               <Field label="Entity" required error={errors.entityId?.message}>
                 <ApiSelect endpoint="/api/masters/entities" queryKey={['entities-lookup']}
-                  value={String(useWatch({ control, name: 'entityId' }) ?? '')}
+                  value={String(entityId)}
                   onChange={v => setValue('entityId', v, { shouldValidate: true })}
                   placeholder="Select entity…"
-                  className={errors.entityId ? 'border-destructive' : ''} />
+                  className={fieldCls(errors.entityId?.message, entityId)} />
               </Field>
               <Field label="Department" required error={errors.departmentId?.message}>
                 <ApiSelect endpoint="/api/masters/departments" queryKey={['departments-lookup']}
-                  value={String(useWatch({ control, name: 'departmentId' }) ?? '')}
+                  value={String(departmentId)}
                   onChange={v => setValue('departmentId', v, { shouldValidate: true })}
                   placeholder="Select department…"
-                  className={errors.departmentId ? 'border-destructive' : ''} />
+                  className={fieldCls(errors.departmentId?.message, departmentId)} />
               </Field>
               <Field label="Designation" required error={errors.designationId?.message}>
                 <ApiSelect endpoint="/api/masters/designations" queryKey={['designations-lookup']}
-                  value={String(useWatch({ control, name: 'designationId' }) ?? '')}
+                  value={String(designationId)}
                   onChange={v => setValue('designationId', v, { shouldValidate: true })}
                   placeholder="Select designation…"
-                  className={errors.designationId ? 'border-destructive' : ''} />
+                  className={fieldCls(errors.designationId?.message, designationId)} />
               </Field>
               <Field label="Location" required error={errors.locationId?.message}>
                 <ApiSelect endpoint="/api/masters/locations" queryKey={['locations-lookup']}
-                  value={String(useWatch({ control, name: 'locationId' }) ?? '')}
+                  value={String(locationId)}
                   onChange={v => setValue('locationId', v, { shouldValidate: true })}
                   placeholder="Select location…"
-                  className={errors.locationId ? 'border-destructive' : ''} />
+                  className={fieldCls(errors.locationId?.message, locationId)} />
               </Field>
               <Field label="Reporting manager"
                 hint="Required for manager-based approval routing (MANAGER_OF approver type)">
                 <ApiSelect endpoint="/api/masters/employees" queryKey={['employees-lookup']}
-                  value={String(useWatch({ control, name: 'managerId' }) ?? '')}
+                  value={String(managerId)}
                   onChange={v => setValue('managerId', v)}
-                  placeholder="Select manager…" />
+                  placeholder="Select manager…"
+                  className={fieldCls(undefined, managerId)} />
               </Field>
               <Field label="Cost centre">
                 <ApiSelect endpoint="/api/masters/cost-centres" queryKey={['cost-centres-lookup']}
-                  value={String(useWatch({ control, name: 'costCentreId' }) ?? '')}
+                  value={String(costCentreId)}
                   onChange={v => setValue('costCentreId', v)}
-                  placeholder="Select cost centre…" />
+                  placeholder="Select cost centre…"
+                  className={fieldCls(undefined, costCentreId)} />
               </Field>
             </div>
           </div>
@@ -438,77 +396,36 @@ export default function EmployeeFormPage() {
           {/* D. System Access */}
           <div className="rounded-xl border border-border bg-card p-6">
             <SectionHeader letter="D" title="System Access & Role"
-              subtitle="Determines approval routing — Finance Manager, CFO, MD must be set for workflows to route correctly" />
+              subtitle="Determines approval routing — Finance Manager, CFO and MD must be set for workflows to route correctly" />
             <div className="grid grid-cols-2 gap-4">
               <Field label="System role"
                 hint="Drives workflow engine's ROLE-based approver resolution">
-                <FormSelect {...register('systemRole')}>
+                <FormSelect className={fieldCls(undefined, systemRole)} {...register('systemRole')}>
                   {SYSTEM_ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </FormSelect>
               </Field>
               <Field label="Linked user ID"
                 hint="Existing User row id, if the employee has system login (optional)">
-                <FormInput placeholder="user-xxx-001" {...register('userId')} />
+                <FormInput placeholder="user-xxx-001"
+                  className={fieldCls(undefined, userId)}
+                  {...register('userId')} />
               </Field>
             </div>
           </div>
 
-          {/* E. Statutory */}
+          {/* E. Status (bottom — full-width card, 2-col grid) */}
           <div className="rounded-xl border border-border bg-card p-6">
-            <SectionHeader letter="E" title="Statutory" subtitle="PAN, Aadhaar, PF and ESI — all optional" />
+            <SectionHeader letter="E" title="Status" subtitle="Employment lifecycle state" />
             <div className="grid grid-cols-2 gap-4">
-              <Field label="PAN" error={errors.pan?.message}>
-                <FormInput placeholder="ABCDE1234F" maxLength={10}
-                  className={cn('uppercase', fieldCls(!!errors.pan, !!pan && !errors.pan && PAN_REGEX.test(pan)))}
-                  {...register('pan')} />
-              </Field>
-              <Field label="Aadhaar number">
-                <FormInput placeholder="XXXX-XXXX-XXXX" maxLength={14} {...register('aadhaarNo')} />
-              </Field>
-              <Field label="PF account no.">
-                <FormInput {...register('pfAccountNo')} />
-              </Field>
-              <Field label="ESI no.">
-                <FormInput {...register('esiNo')} />
+              <Field label="Employment status" required error={errors.status?.message}>
+                <FormSelect className={fieldCls(errors.status?.message, status)} {...register('status')}>
+                  {EMP_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </FormSelect>
               </Field>
             </div>
           </div>
 
-          {/* F. Bank Details */}
-          <div className="rounded-xl border border-border bg-card p-6">
-            <SectionHeader letter="F" title="Bank Details" subtitle="For reimbursements — optional. Bank name auto-fills from IFSC." />
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Account number">
-                <FormInput {...register('bankAccountNo')} />
-              </Field>
-              <Field label="IFSC" hint="11 chars — bank name auto-fills on blur">
-                <FormInput placeholder="HDFC0000001" maxLength={11}
-                  className="uppercase"
-                  {...register('ifsc')} />
-              </Field>
-              <Field label="Bank name" span>
-                <FormInput readOnly placeholder="Auto-filled from IFSC" {...register('bankName')} />
-              </Field>
-            </div>
-          </div>
-
-          {/* G. Emergency Contact */}
-          <div className="rounded-xl border border-border bg-card p-6">
-            <SectionHeader letter="G" title="Emergency Contact" subtitle="Optional" />
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Name">
-                <FormInput {...register('emergencyName')} />
-              </Field>
-              <Field label="Phone">
-                <FormInput type="tel" {...register('emergencyPhone')} />
-              </Field>
-              <Field label="Relation" hint="e.g. Spouse, Parent, Sibling">
-                <FormInput {...register('emergencyRelation')} />
-              </Field>
-            </div>
-          </div>
-
-          {/* Footer status note */}
+          {/* Footer note */}
           <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
             <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
             <span>Fields marked * are required. Save as draft to come back later, or submit for approval to begin the workflow.</span>

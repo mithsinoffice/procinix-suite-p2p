@@ -312,6 +312,171 @@ async function main() {
   const ptplEntity = await prisma.entity.findFirst({ where: { tenantId }, select: { id: true } })
   console.log('✓ Default entity PTPL')
 
+  // ── Admin user entity access ─────────────────────────────────────────────────
+  if (ptplEntity) {
+    await prisma.userEntityAccess.upsert({
+      where:  { userId_entityId: { userId: admin.id, entityId: ptplEntity.id } },
+      update: {},
+      create: {
+        userId:           admin.id,
+        entityId:         ptplEntity.id,
+        canApprove:       true,
+        approvalLimit:    10_000_000,
+        canCreatePO:      true,
+        canCreateInvoice: true,
+        isActive:         true,
+      },
+    })
+    console.log('✓ Admin user entity access seeded')
+  }
+
+  // ── Role privileges (RBAC) ───────────────────────────────────────────────────
+  type Perms = Record<string, Record<string, boolean>>
+
+  const MODULES = ['INTAKE', 'PO', 'GRN', 'INVOICE', 'PAYMENT', 'VENDOR', 'BUDGET', 'MASTERS', 'ADMIN'] as const
+  const ACTIONS = ['create', 'view', 'edit', 'delete', 'submit', 'approve'] as const
+
+  function noPerms(): Perms {
+    return Object.fromEntries(MODULES.map(m => [m, Object.fromEntries(ACTIONS.map(a => [a, false]))]))
+  }
+  function allPerms(mods: readonly string[], actions: readonly string[]): Perms {
+    return Object.fromEntries(MODULES.map(m =>
+      [m, Object.fromEntries(ACTIONS.map(a => [a, mods.includes(m) && actions.includes(a)]))]
+    ))
+  }
+  function merge(base: Perms, overrides: Partial<Record<string, Partial<Record<string, boolean>>>>): Perms {
+    const result: Perms = JSON.parse(JSON.stringify(base))
+    for (const [mod, actionMap] of Object.entries(overrides)) {
+      if (!actionMap) continue
+      if (!result[mod]) result[mod] = {}
+      for (const [action, val] of Object.entries(actionMap)) {
+        if (val !== undefined) result[mod][action] = val
+      }
+    }
+    return result
+  }
+
+  const rolePrivileges = [
+    {
+      roleCode: 'AP_CLERK', roleName: 'AP Clerk', isSystem: true,
+      description: 'Creates and submits invoices, PRs and GRNs. Cannot approve.',
+      permissions: merge(noPerms(), {
+        INTAKE:  { create: true, view: true, edit: true, submit: true },
+        INVOICE: { create: true, view: true, edit: true, submit: true },
+        GRN:     { create: true, view: true, edit: true, submit: true },
+        VENDOR:  { view: true },
+        PO:      { view: true },
+        PAYMENT: { view: true },
+        BUDGET:  { view: true },
+      }),
+    },
+    {
+      roleCode: 'AP_MANAGER', roleName: 'AP Manager', isSystem: true,
+      description: 'Full AP operations including approvals. Manages masters.',
+      permissions: merge(noPerms(), {
+        INTAKE:   { create: true, view: true, edit: true, submit: true, approve: true },
+        INVOICE:  { create: true, view: true, edit: true, submit: true, approve: true },
+        GRN:      { create: true, view: true, edit: true, submit: true, approve: true },
+        VENDOR:   { create: true, view: true, edit: true, submit: true },
+        PO:       { view: true, submit: true },
+        PAYMENT:  { view: true, approve: true },
+        BUDGET:   { view: true },
+        MASTERS:  { create: true, view: true, edit: true, approve: true },
+      }),
+    },
+    {
+      roleCode: 'PROCUREMENT_HEAD', roleName: 'Procurement Head', isSystem: true,
+      description: 'Full procurement cycle — PR, PO, GRN, Vendor.',
+      permissions: merge(noPerms(), {
+        INTAKE:  { create: true, view: true, edit: true, submit: true, approve: true },
+        PO:      { create: true, view: true, edit: true, submit: true, approve: true },
+        GRN:     { create: true, view: true, edit: true, submit: true, approve: true },
+        VENDOR:  { create: true, view: true, edit: true, submit: true, approve: true },
+        INVOICE: { view: true, submit: true },
+        BUDGET:  { view: true },
+        MASTERS: { view: true },
+      }),
+    },
+    {
+      roleCode: 'FINANCE_MANAGER', roleName: 'Finance Manager', isSystem: true,
+      description: 'Approves invoices and payments. Manages budgets.',
+      permissions: merge(noPerms(), {
+        INVOICE:  { view: true, approve: true },
+        PAYMENT:  { view: true, approve: true },
+        BUDGET:   { view: true, edit: true, approve: true },
+        PO:       { view: true, approve: true },
+        INTAKE:   { view: true, approve: true },
+        VENDOR:   { view: true },
+        MASTERS:  { view: true },
+      }),
+    },
+    {
+      roleCode: 'APPROVER_L1', roleName: 'Approver L1', isSystem: true,
+      description: 'First-level approver for PRs, POs and invoices.',
+      permissions: merge(noPerms(), {
+        INTAKE:  { view: true, approve: true },
+        PO:      { view: true, approve: true },
+        INVOICE: { view: true, approve: true },
+        PAYMENT: { view: true },
+      }),
+    },
+    {
+      roleCode: 'APPROVER_L2', roleName: 'Approver L2', isSystem: true,
+      description: 'Second-level approver.',
+      permissions: merge(noPerms(), {
+        INTAKE:  { view: true, approve: true },
+        PO:      { view: true, approve: true },
+        INVOICE: { view: true, approve: true },
+        PAYMENT: { view: true, approve: true },
+      }),
+    },
+    {
+      roleCode: 'APPROVER_L3', roleName: 'Approver L3', isSystem: true,
+      description: 'Third-level approver — highest authority.',
+      permissions: merge(noPerms(), {
+        INTAKE:  { view: true, approve: true },
+        PO:      { view: true, approve: true },
+        INVOICE: { view: true, approve: true },
+        PAYMENT: { view: true, approve: true },
+        BUDGET:  { view: true, approve: true },
+      }),
+    },
+    {
+      roleCode: 'CFO', roleName: 'CFO', isSystem: true,
+      description: 'Full financial authority except Admin.',
+      permissions: allPerms(MODULES.filter(m => m !== 'ADMIN'), ACTIONS),
+    },
+    {
+      roleCode: 'MD', roleName: 'MD / CEO', isSystem: true,
+      description: 'Full authority except Admin.',
+      permissions: allPerms(MODULES.filter(m => m !== 'ADMIN'), ACTIONS),
+    },
+    {
+      roleCode: 'TENANT_ADMIN', roleName: 'Tenant Admin', isSystem: true,
+      description: 'Full system access including masters and user management.',
+      permissions: allPerms(MODULES, ACTIONS),
+    },
+  ]
+
+  for (const role of rolePrivileges) {
+    await prisma.rolePrivilege.upsert({
+      where:  { tenantId_roleCode: { tenantId, roleCode: role.roleCode } },
+      update: { roleName: role.roleName, description: role.description, permissions: role.permissions, isSystem: role.isSystem },
+      create: { tenantId, ...role },
+    })
+  }
+  console.log(`✓ ${rolePrivileges.length} role privileges seeded`)
+
+  // Admin user → TENANT_ADMIN role on the default entity
+  if (ptplEntity) {
+    await prisma.userEntityRole.upsert({
+      where:  { userId_entityId_roleCode: { userId: admin.id, entityId: ptplEntity.id, roleCode: 'TENANT_ADMIN' } },
+      update: { isActive: true },
+      create: { userId: admin.id, entityId: ptplEntity.id, roleCode: 'TENANT_ADMIN' },
+    })
+    console.log('✓ Admin user entity role (TENANT_ADMIN) seeded')
+  }
+
   // ── Designations ─────────────────────────────────────────────────────────────
   const designations = [
     { code: 'MD',    name: 'Managing Director',         level: 1 },

@@ -32,18 +32,28 @@ model Tenant {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  tenantId     String
-  email        String
-  passwordHash String
-  name         String
-  role         UserRole  @default(USER)
-  departmentId String?
-  isActive     Boolean   @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  id                  String    @id @default(uuid())
+  tenantId            String
+  email               String
+  passwordHash        String
+  name                String
+  mobile              String?
+  role                UserRole  @default(USER)
+  additionalRoles     Json?
+  departmentId        String?
+  employeeId          String?
+  profilePhoto        String?
+  mustResetPassword   Boolean   @default(true)
+  emailNotifications  Boolean   @default(true)
+  inAppNotifications  Boolean   @default(true)
+  dailyDigest         Boolean   @default(false)
+  isActive            Boolean   @default(true)
+  lastLoginAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  tenant              Tenant    @relation(fields: [tenantId], references: [id])
+  entityAccess        UserEntityAccess[]
+  entityRoles         UserEntityRole[]
   @@unique([tenantId, email])
   @@index([tenantId, isActive])
   @@map("users")
@@ -60,8 +70,53 @@ enum UserRole {
   AP_CLERK
   CFO
   MD
+  FINANCE_MANAGER
+  PROCUREMENT_HEAD
+  DEPT_HEAD
   USER
   VIEWER
+}
+
+model UserEntityAccess {
+  id               String   @id @default(uuid())
+  userId           String
+  entityId         String
+  roleOverride     String?
+  canApprove       Boolean  @default(false)
+  approvalLimit    Decimal? @db.Decimal(15,2)
+  canCreatePO      Boolean  @default(false)
+  canCreateInvoice Boolean  @default(true)
+  canViewOnly      Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, entityId])
+  @@map("user_entity_access")
+}
+
+model RolePrivilege {
+  id          String   @id @default(uuid())
+  tenantId    String
+  roleCode    String
+  roleName    String
+  description String?
+  permissions Json
+  isSystem    Boolean  @default(false)
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([tenantId, roleCode])
+  @@map("role_privileges")
+}
+
+model UserEntityRole {
+  id       String  @id @default(uuid())
+  userId   String
+  entityId String
+  roleCode String
+  isActive Boolean @default(true)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, entityId, roleCode])
+  @@map("user_entity_roles")
 }
 
 model Vendor {

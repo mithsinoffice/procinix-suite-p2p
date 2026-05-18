@@ -25,6 +25,9 @@ const EntitiesPage       = lazy(() => import('./pages/masters/EntitiesPage'))
 const LocationsPage      = lazy(() => import('./pages/masters/LocationsPage'))
 const EmployeesPage      = lazy(() => import('./pages/masters/EmployeesPage'))
 const EmployeeFormPage   = lazy(() => import('./pages/masters/EmployeeFormPage'))
+const UserListPage       = lazy(() => import('./pages/masters/users/UserListPage'))
+const UserFormPage       = lazy(() => import('./pages/masters/users/UserFormPage'))
+const RolePrivilegePage  = lazy(() => import('./pages/masters/roles/RolePrivilegePage'))
 const WorkflowRulesPage  = lazy(() => import('./pages/masters/WorkflowRulesPage'))
 const TaxRegimesPage     = lazy(() => import('./pages/masters/TaxRegimesPage'))
 const FinancialYearsPage = lazy(() => import('./pages/masters/FinancialYearsPage'))
@@ -130,6 +133,10 @@ export const router = createBrowserRouter([
           { path: 'employees',         element: <S><EmployeesPage /></S>                       },
           { path: 'employees/new',     element: <S><EmployeeFormPage /></S>                    },
           { path: 'employees/:id',     element: <S><EmployeeFormPage /></S>                    },
+          { path: 'users',             element: <S><UserListPage /></S>                        },
+          { path: 'users/new',         element: <S><UserFormPage /></S>                        },
+          { path: 'users/:id',         element: <S><UserFormPage /></S>                        },
+          { path: 'roles',             element: <S><RolePrivilegePage /></S>                   },
           { path: 'workflow-rules',    element: <S><WorkflowRulesPage /></S>                   },
           { path: 'tax-regimes',       element: <S><TaxRegimesPage /></S>                      },
           { path: 'financial-years',   element: <S><FinancialYearsPage /></S>                  },

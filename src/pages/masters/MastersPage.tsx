@@ -5,7 +5,7 @@ import { http } from '../../lib/http'
 import {
   Building2, Calculator, MapPin, Receipt, Package, Users,
   Globe, Calendar, Wallet, GitBranch, Briefcase, Shield,
-  User, LayoutGrid, List, Search, DollarSign, TrendingUp,
+  User, UserCog, LayoutGrid, List, Search, DollarSign, TrendingUp,
   Tag, FileText,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
@@ -33,6 +33,8 @@ const MASTER_GROUPS: { group: string; color: string; masters: MasterDef[] }[] = 
       { key: 'department',  title: 'Departments',   desc: 'Company department structure',                 icon: Package,    iconBg: 'bg-indigo-50',  iconColor: 'text-indigo-600',  to: '/masters/departments',     countApi: '/api/masters/departments?take=1',    status: 'live'        },
       { key: 'designation', title: 'Designations',  desc: 'Job titles and hierarchy levels',              icon: Briefcase,  iconBg: 'bg-violet-50',  iconColor: 'text-violet-600',  to: '/masters/designations',    countApi: '/api/masters/designations?take=1',   status: 'live'        },
       { key: 'employee',    title: 'Employees',     desc: 'Employee master with HR details',              icon: User,       iconBg: 'bg-sky-50',     iconColor: 'text-sky-600',     to: '/masters/employees',       countApi: '/api/masters/employees?take=1',      status: 'live'        },
+      { key: 'users',       title: 'Users',         desc: 'System users, roles and entity access',         icon: UserCog,    iconBg: 'bg-teal-50',    iconColor: 'text-teal-600',    to: '/masters/users',           countApi: '/api/admin/users',                    status: 'live'        },
+      { key: 'roles',       title: 'Roles & Privileges', desc: 'Define roles with module-level permissions', icon: Shield,    iconBg: 'bg-red-50',     iconColor: 'text-red-600',     to: '/masters/roles',           countApi: '/api/masters/roles',                 status: 'live'        },
       { key: 'location',    title: 'Locations',     desc: 'Office, warehouse and branch locations',       icon: MapPin,     iconBg: 'bg-cyan-50',    iconColor: 'text-cyan-600',    to: '/masters/locations',       countApi: '/api/masters/locations?take=1',      status: 'live'        },
     ],
   },

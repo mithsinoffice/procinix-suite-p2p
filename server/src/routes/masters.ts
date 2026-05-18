@@ -477,6 +477,54 @@ export async function masterRoutes(app: FastifyInstance) {
     return reply.send(item)
   })
 
+  // ── Role privileges (RBAC) ──
+  app.get('/roles', auth, async (req, reply) => {
+    const { status } = req.query as any
+    const where: any = { tenantId: req.tenant.id }
+    if (status && status !== 'ALL') where.status = status
+    const rows = await app.prisma.rolePrivilege.findMany({
+      where, orderBy: { roleCode: 'asc' },
+    })
+    return reply.send({ data: rows, total: rows.length })
+  })
+
+  app.get('/roles/:id', auth, async (req, reply) => {
+    const row = await app.prisma.rolePrivilege.findFirst({
+      where: { id: (req.params as any).id, tenantId: req.tenant.id },
+    })
+    if (!row) return reply.code(404).send({ message: 'Role not found' })
+    return reply.send(row)
+  })
+
+  app.post('/roles', auth, async (req, reply) => {
+    const data = req.body as any
+    delete data.id; delete data.createdAt; delete data.updatedAt; delete data.tenantId
+    try {
+      const row = await app.prisma.rolePrivilege.create({
+        data: { ...data, tenantId: req.tenant.id, isSystem: false },
+      })
+      return reply.code(201).send(row)
+    } catch (err: any) {
+      if (err?.code === 'P2002') return reply.code(409).send({ message: 'A role with that code already exists' })
+      throw err
+    }
+  })
+
+  app.put('/roles/:id', auth, async (req, reply) => {
+    const data = req.body as any
+    delete data.id; delete data.createdAt; delete data.updatedAt; delete data.tenantId
+    // Don't allow flipping isSystem via PUT
+    delete data.isSystem
+    const existing = await app.prisma.rolePrivilege.findFirst({
+      where: { id: (req.params as any).id, tenantId: req.tenant.id },
+    })
+    if (!existing) return reply.code(404).send({ message: 'Role not found' })
+    const row = await app.prisma.rolePrivilege.update({
+      where: { id: existing.id }, data,
+    })
+    return reply.send(row)
+  })
+
   // ── IFSC lookup proxy (used by Employee + Vendor bank-detail forms) ──
   app.get('/lookup/ifsc/:code', auth, async (req, reply) => {
     const { code } = req.params as { code: string }
