@@ -3,6 +3,10 @@ import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { cacheGet, cacheSet, TTL, CacheKeys } from '../lib/redis.js'
 import { sanitisePayload } from '../lib/payload.js'
+import { startWorkflow } from '../services/workflow-engine.service.js'
+import {
+  validateItemSubmittable, resolveItemStatusAfterSubmit,
+} from '../services/item-submit.service.js'
 import {
   listMaster, createMasterRecord, updateMasterRecord,
   submitMasterRecord, approveMasterRecord, bulkCreateMasterRecords,
@@ -437,7 +441,15 @@ export async function masterRoutes(app: FastifyInstance) {
   })
 
   app.post('/items', auth, async (req, reply) => {
-    const { entityMappings = [], approvedVendors = [], ...data } = req.body as any
+    const { entityMappings = [], approvedVendors = [], ...rawData } = req.body as any
+    // Same coercion as PUT: form may emit "" for depreciationStartDate + FK
+    // string fields, which Prisma rejects on insert with a bare 500.
+    const data = sanitisePayload(rawData, {
+      nullableFields: [
+        'depreciationStartDate',
+        'tdsSectionId', 'taxCodeId', 'itemCategoryId', 'assetCategoryId',
+      ],
+    })
     const lastItem = await app.prisma.itemMaster.findFirst({
       where: { tenantId: req.tenant.id }, orderBy: { createdAt: 'desc' }, select: { itemCode: true },
     })
@@ -445,10 +457,25 @@ export async function masterRoutes(app: FastifyInstance) {
     const itemCode = `ITM-${String(nextNum).padStart(4, '0')}`
     const item = await app.prisma.$transaction(async tx => {
       const i = await tx.itemMaster.create({
-        data: { ...data, itemCode, tenantId: req.tenant.id, createdByUserId: req.user.sub },
+        data: {
+          ...data,
+          itemCode,
+          tenantId: req.tenant.id,
+          createdByUserId: req.user.sub,
+          // Items start as DRAFT so they go through the approval workflow.
+          // Caller can flip to PENDING_APPROVAL via POST /items/:id/submit.
+          // Honour an explicit status in the body when seeding/admin paths
+          // need to create something already ACTIVE.
+          status: (data.status as string | undefined) ?? 'DRAFT',
+        } as never,
       })
       if (entityMappings.length) {
-        await tx.itemEntityMapping.createMany({ data: entityMappings.map((e: any) => ({ ...e, itemId: i.id })) })
+        await tx.itemEntityMapping.createMany({
+          data: entityMappings.map((e: Record<string, unknown>) => {
+            const { id: _id, itemId: _iid, ...rest } = e
+            return { ...rest, itemId: i.id }
+          }) as never,
+        })
       }
       if (approvedVendors.length) {
         await tx.itemApprovedVendor.createMany({ data: approvedVendors.map((v: any) => ({ itemId: i.id, vendorId: v.vendorId })) })
@@ -456,6 +483,45 @@ export async function masterRoutes(app: FastifyInstance) {
       return i
     })
     return reply.code(201).send(item)
+  })
+
+  // ── Submit item for approval ──
+  // DRAFT or REJECTED → PENDING_APPROVAL, with a workflow instance kicked off
+  // via the dynamic engine. NO_WORKFLOW_DEFINED still flips the status (so the
+  // record visibly leaves DRAFT) but no instance is created — matches the
+  // invoice/PR/PO submit pattern.
+  app.post('/items/:id/submit', auth, async (req, reply) => {
+    const id = (req.params as { id: string }).id
+    const existing = await app.prisma.itemMaster.findFirst({
+      where: { id, tenantId: req.tenant.id },
+      select: { id: true, status: true, name: true },
+    })
+    if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Item not found' })
+
+    const guard = validateItemSubmittable(existing.status)
+    if (!guard.ok) {
+      return reply.code(422).send({ code: 'WORKFLOW_INVALID_STATE', message: guard.message })
+    }
+
+    const wf = await startWorkflow(
+      app.prisma, 'ITEM', 'item', id, {},
+      { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as any).name ?? req.user.sub },
+    )
+    if (!wf.ok && wf.error.message !== 'NO_WORKFLOW_DEFINED') {
+      return reply.code(wf.error.httpStatus ?? 400).send(wf.error)
+    }
+    const newStatus = resolveItemStatusAfterSubmit({
+      ok:                wf.ok,
+      autoApproved:      wf.ok ? wf.data.autoApproved : false,
+      noWorkflowDefined: !wf.ok,
+    })
+    await app.prisma.itemMaster.update({ where: { id }, data: { status: newStatus } })
+
+    return reply.send({
+      ok: true,
+      status: newStatus,
+      workflowInstanceId: wf.ok ? wf.data.instanceId : null,
+    })
   })
 
   app.put('/items/:id', auth, async (req, reply) => {

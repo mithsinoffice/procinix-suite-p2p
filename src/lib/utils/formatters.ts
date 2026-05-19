@@ -83,6 +83,7 @@ export function daysFromToday(d: Date | string | null | undefined): number {
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Draft', SUBMITTED: 'Submitted', PAYMENT_INITIATED: 'Payment Initiated', PENDING_L1: 'Pending L1',
   PENDING_L2: 'Pending L2', PENDING_L3: 'Pending L3', APPROVED: 'Approved',
+  PENDING_APPROVAL: 'Pending approval',
   REJECTED: 'Rejected', ON_HOLD: 'On Hold', PAID: 'Paid',
   PARTIALLY_PAID: 'Partially Paid', CANCELLED: 'Cancelled',
   PROCESSING: 'Processing', COMPLETED: 'Completed', FAILED: 'Failed',
@@ -101,6 +102,7 @@ const STATUS_COLORS: Record<string, string> = {
   PENDING_L2: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
   PENDING_L3: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
   PENDING: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+  PENDING_APPROVAL: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
   APPROVED: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
   REJECTED: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
   ON_HOLD: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',

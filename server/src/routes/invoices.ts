@@ -113,8 +113,9 @@ export async function invoiceRoutes(app: FastifyInstance) {
     const invoiceIds = pendingStages.filter(s => s.instance.entityType === 'invoice').map(s => s.instance.entityId)
     const prIds      = pendingStages.filter(s => s.instance.entityType === 'purchase_requisition').map(s => s.instance.entityId)
     const poIds      = pendingStages.filter(s => s.instance.entityType === 'purchase_order').map(s => s.instance.entityId)
+    const itemIds    = pendingStages.filter(s => s.instance.entityType === 'item').map(s => s.instance.entityId)
 
-    const [invoices, prs, pos] = await Promise.all([
+    const [invoices, prs, pos, items] = await Promise.all([
       invoiceIds.length
         ? app.prisma.invoice.findMany({
             where:   { id: { in: invoiceIds }, tenantId },
@@ -130,6 +131,9 @@ export async function invoiceRoutes(app: FastifyInstance) {
             include: { vendor: { select: { legalName: true, vendorCode: true } } },
           })
         : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.purchaseOrder.findMany>>),
+      itemIds.length
+        ? app.prisma.itemMaster.findMany({ where: { id: { in: itemIds }, tenantId } })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.itemMaster.findMany>>),
     ])
 
     const rows: unknown[] = []
@@ -151,6 +155,12 @@ export async function invoiceRoutes(app: FastifyInstance) {
         if (po) rows.push({
           ...po, module: 'PO', pendingStage: stage,
           invoiceNumber: po.poRef,
+        })
+      } else if (entityType === 'item') {
+        const it = items.find(i => i.id === entityId)
+        if (it) rows.push({
+          ...it, module: 'ITEM', pendingStage: stage,
+          invoiceNumber: it.itemCode, totalAmount: 0, currencyCode: 'INR',
         })
       }
     }

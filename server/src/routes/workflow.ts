@@ -4,6 +4,7 @@ import {
   addChatMessage, getWorkflowInstance, startWorkflow,
   type WfModule,
 } from '../services/workflow-engine.service.js'
+import { resolveItemStatusAfterReject } from '../services/item-submit.service.js'
 
 export async function workflowRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
@@ -126,6 +127,16 @@ export async function workflowRoutes(app: FastifyInstance) {
         where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
         data:  { status: newStatus },
       })
+    } else if (instanceInfo?.entityType === 'item') {
+      // Item masters: typically a single-stage workflow (TENANT_ADMIN). On
+      // final approval the item flips ACTIVE; otherwise stays PENDING_APPROVAL
+      // while subsequent stages run.
+      if (result.data.finalStatus === 'APPROVED') {
+        await app.prisma.itemMaster.update({
+          where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
+          data:  { status: 'ACTIVE' },
+        })
+      }
     }
 
     return reply.send(result.data)
@@ -193,6 +204,15 @@ export async function workflowRoutes(app: FastifyInstance) {
       await app.prisma.purchaseOrder.update({
         where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
         data:  { status: newStatus, ...(mode === 'RETURN_TO_DRAFT' && { rejectionReason: comments }) },
+      })
+    } else if (instanceInfo?.entityType === 'item') {
+      // Item workflows are single-stage in the default seed, so RETURN_TO_PREV
+      // collapses to DRAFT same as RETURN_TO_DRAFT. REQUEST_INFO holds the
+      // item in PENDING_APPROVAL while the chat thread resolves.
+      const newStatus = resolveItemStatusAfterReject(mode as 'RETURN_TO_DRAFT' | 'RETURN_TO_PREV_STAGE' | 'REQUEST_INFO')
+      await app.prisma.itemMaster.update({
+        where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
+        data:  { status: newStatus },
       })
     }
 

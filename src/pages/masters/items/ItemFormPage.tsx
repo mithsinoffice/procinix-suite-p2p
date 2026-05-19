@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2, Info } from 'lucide-react'
 import { http } from '../../../lib/http'
 import {
@@ -239,16 +239,13 @@ export default function ItemFormPage() {
     }
   }, [depreciationMethod, usefulLifeYears, setValue])
 
-  const createItem = useMutation({
-    mutationFn: (payload: any) => http.post<{ id: string; itemCode: string }>('/api/masters/items', payload),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['itemMaster'] }); navigate('/masters/items') },
-  })
-  const updateItem = useMutation({
-    mutationFn: (payload: any) => http.put<any>(`/api/masters/items/${id}`, payload),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['itemMaster'] }); navigate('/masters/items') },
-  })
+  // Save-mode ref so we can branch on which footer button was clicked WITHOUT
+  // duplicating the RHF handleSubmit wrapper. The ref is read inside the
+  // wrapped handler — using state would race with React batching.
+  const submitModeRef = useRef<'draft' | 'submit'>('draft')
+  const [submitting, setSubmitting] = useState(false)
 
-  const onSubmit = handleSubmit((data) => {
+  const performSave = handleSubmit(async (data) => {
     const entityMappingsPayload = entityMappings.map(e => ({
       ...e,
       poThresholdOverride: e.poThresholdOverride ? Number(e.poThresholdOverride) : null,
@@ -268,11 +265,28 @@ export default function ItemFormPage() {
       ocrMatchConfidence:  Number(data.ocrMatchConfidence),
       entityMappings:      entityMappingsPayload,
     }
-    if (isEdit) updateItem.mutate(payload)
-    else createItem.mutate(payload)
+
+    setSubmitting(true)
+    try {
+      const saved = isEdit
+        ? await http.put<{ id: string }>(`/api/masters/items/${id}`, payload)
+        : await http.post<{ id: string; itemCode: string }>('/api/masters/items', payload)
+
+      // Submit-for-approval path: also kick off the workflow. Save-draft path
+      // just persists and exits — the record stays in DRAFT.
+      if (submitModeRef.current === 'submit') {
+        await http.post(`/api/masters/items/${saved.id}/submit`, {})
+      }
+      qc.invalidateQueries({ queryKey: ['itemMaster'] })
+      navigate('/masters/items')
+    } finally {
+      setSubmitting(false)
+    }
   })
 
-  const isPending = createItem.isPending || updateItem.isPending
+  const handleSaveDraft = () => { submitModeRef.current = 'draft';  performSave() }
+  const handleSubmitForApproval = () => { submitModeRef.current = 'submit'; performSave() }
+  const isPending = submitting
 
   // ── Entity mapping helpers ──
   function addEntityRow() {
@@ -294,7 +308,7 @@ export default function ItemFormPage() {
       />
 
       <div className="flex-1 overflow-y-auto">
-        <form onSubmit={onSubmit} className="max-w-5xl mx-auto px-6 py-6 space-y-4">
+        <form onSubmit={performSave} className="max-w-5xl mx-auto px-6 py-6 space-y-4">
           <FormPageHeader
             title={isEdit ? `Edit — ${existing?.name ?? '…'}` : 'Create Item Master'}
             subtitle="Fill all sections. CAPEX and Provision sections appear based on your expense type selection."
@@ -779,8 +793,8 @@ export default function ItemFormPage() {
           <WorkflowBanner />
           <FormFooter
             onCancel={() => navigate('/masters/items')}
-            onDraft={() => onSubmit()}
-            onSubmit={() => onSubmit()}
+            onDraft={handleSaveDraft}
+            onSubmit={handleSubmitForApproval}
             isPending={isPending}
           />
         </form>

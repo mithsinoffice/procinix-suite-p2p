@@ -341,12 +341,28 @@ Legacy `/masters/workflow-definitions/*` routes are still registered for backwar
 | `invoice`                 | `PENDING_L<next>`         | `APPROVED` (+ PO link flip)  | `REJECTED` + rejectionReason | `PENDING_L<prev>`                        | `PENDING_L<current>` + INFO_REQUESTED chat |
 | `purchase_requisition`    | `PENDING_L<next>`         | `APPROVED`                   | `REJECTED` + rejectionReason | `PENDING_L<max(1, current-1)>`           | `PENDING_L<current>`                       |
 | `purchase_order`          | `PENDING_L<next>`         | `APPROVED`                   | `REJECTED` + rejectionReason | `PENDING_L<max(1, current-1)>`           | `PENDING_L<current>`                       |
+| `item`                    | (single stage; no non-final transition) | `ACTIVE`        | `DRAFT`                       | `DRAFT` (single-stage collapses to DRAFT) | `PENDING_APPROVAL` (held while chat resolves) |
 
-PR/PO transitions were previously missing — only invoices got their document status updated on workflow advance/reject. Fixed in the audit; PR and PO submissions now go through the same engine pathway as invoices and reflect stage progression on the document.
+PR/PO transitions were previously missing — only invoices got their document status updated on workflow advance/reject. Fixed in the audit; PR and PO submissions now go through the same engine pathway as invoices and reflect stage progression on the document. Item master added with the same pattern — see §7.9b.
 
 ### §7.9 Submit guards
 
-`POST /api/invoices/:id/submit`, `POST /api/pr/:id/submit`, and `POST /api/po/:id/submit` all enforce `status ∈ {DRAFT, REJECTED}` server-side before calling `startWorkflow`. Re-submitting an already-submitted document returns `400 WORKFLOW_INVALID_STATE` — prevents stacking workflow instances. The standard rejection loop sets the document to `REJECTED`, re-enabling resubmission.
+`POST /api/invoices/:id/submit`, `POST /api/pr/:id/submit`, `POST /api/po/:id/submit`, and `POST /api/masters/items/:id/submit` all enforce `status ∈ {DRAFT, REJECTED}` server-side before calling `startWorkflow`. Re-submitting an already-submitted document returns `400 WORKFLOW_INVALID_STATE` — prevents stacking workflow instances. The standard rejection loop sets the document to `REJECTED` (transactional documents) or `DRAFT` (item masters), re-enabling resubmission.
+
+### §7.9b Item master approval flow
+
+Items go through the same engine pattern as invoices/PR/PO, but the workflow definition (`WF-ITEM-001` seeded in [prisma/seed.ts](../prisma/seed.ts)) is single-stage with a `TENANT_ADMIN` approver. Lifecycle:
+
+1. **Create** — `POST /api/masters/items` now defaults new items to `status: DRAFT` (was `ACTIVE`). An explicit `status` in the body is honoured for seeding / admin paths.
+2. **Submit** — `POST /api/masters/items/:id/submit` checks the guard (DRAFT/REJECTED only), calls `startWorkflow('ITEM', 'item', id, {})`, then flips the item to `PENDING_APPROVAL` (or `ACTIVE` if every stage auto-approved). On `NO_WORKFLOW_DEFINED` the item still flips to `PENDING_APPROVAL` so it visibly leaves DRAFT — a TENANT_ADMIN can manually approve later.
+3. **Approve / Reject** — handled by the standard workflow routes via the `entityType === 'item'` branch in [server/src/routes/workflow.ts](../server/src/routes/workflow.ts). Final approval → `ACTIVE`. Any reject mode (RETURN_TO_DRAFT or RETURN_TO_PREV_STAGE) collapses to `DRAFT` since the workflow is single-stage. `REQUEST_INFO` keeps the item in `PENDING_APPROVAL`.
+4. **Approval Desk** — `GET /api/invoices/pending-approvals` joins `itemMaster` records into the cross-module queue with `module: 'ITEM'` so item approvals show alongside invoices/PRs/POs.
+
+Pure helpers in [server/src/services/item-submit.service.ts](../server/src/services/item-submit.service.ts) — `validateItemSubmittable`, `resolveItemStatusAfterSubmit`, `resolveItemStatusAfterReject` — are covered by 13 Vitest specs at [item-submit.test.ts](../server/src/services/__tests__/item-submit.test.ts).
+
+**Frontend** — [ItemFormPage.tsx](../src/pages/masters/items/ItemFormPage.tsx) routes the FormFooter's two buttons through distinct paths. `Save as draft` does just the POST/PUT. `Submit for approval` does POST/PUT and then `POST /api/masters/items/:id/submit`. A ref tracks which button was clicked so the wrapped RHF `handleSubmit` can branch without duplicating the handler.
+
+Other bespoke masters (Vendors, Employees, Users, Budget, etc.) still follow the legacy "save with status='ACTIVE'" pattern — same gap exists there. Not addressed in this commit; pattern is reusable when each form's submit handler is wired through.
 
 ### §7.10 Cross-module pending-approvals queue
 
