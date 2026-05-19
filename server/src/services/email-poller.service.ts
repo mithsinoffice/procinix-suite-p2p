@@ -244,6 +244,11 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
               }
             }
 
+            // Persist the attachment bytes alongside OCR so the detail page can
+            // render the original PDF without needing object storage. Stored as
+            // a JSON sub-key (MySQL JSON column → LONGBLOB under the hood). Fine
+            // for typical invoice sizes (< 2 MB); revisit when we add object
+            // storage (S3 / Azure Blob) and write `fileUrl` instead.
             try {
               const invoice = await prisma.invoice.create({
                 data: {
@@ -266,7 +271,7 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
                   taxableAmount:  ocr.subtotal,
                   irnNumber:      ocr.irnNumber,
                   ocrConfidence:  Math.round(ocr.confidence?.overall ?? 0),
-                  ocrRawData:     ocr as unknown as object,
+                  ocrRawData:     { ...ocr, attachmentData: base64Data, attachmentMime: mimeType } as unknown as object,
                   fileName:       attachment.filename ?? 'invoice.pdf',
                   mimeType,
                   createdByUserId: systemUser.id,

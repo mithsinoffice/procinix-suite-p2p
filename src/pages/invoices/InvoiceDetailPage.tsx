@@ -199,6 +199,34 @@ export default function InvoiceDetailPage() {
     enabled:  !!id && !!inv,
   })
 
+  // Lookup data — masters endpoints sometimes return [], sometimes { data: [] }.
+  const toArray = (r: any): any[] => Array.isArray(r) ? r : (r?.data ?? [])
+  const { data: entities = [] } = useQuery({
+    queryKey: ['entities-list'],
+    queryFn:  () => http.get<any>('/api/masters/entities').then(toArray),
+    staleTime: 10 * 60_000,
+  })
+  const { data: usersList = [] } = useQuery({
+    queryKey: ['admin-users-list'],
+    queryFn:  () => http.get<any>('/api/admin/users').then(toArray),
+    staleTime: 10 * 60_000,
+  })
+  const { data: locations = [] } = useQuery({
+    queryKey: ['locations-list'],
+    queryFn:  () => http.get<any>('/api/masters/locations').then(toArray),
+    staleTime: 10 * 60_000,
+  })
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments-list'],
+    queryFn:  () => http.get<any>('/api/masters/departments').then(toArray),
+    staleTime: 10 * 60_000,
+  })
+
+  const entityName     = (id?: string | null) => (entities as any[]).find((e: any) => e.id === id)?.name ?? (id ?? '—')
+  const userName       = (id?: string | null) => (usersList as any[]).find((u: any) => u.id === id)?.name ?? (id ?? '—')
+  const locationName   = (id?: string | null) => (locations as any[]).find((l: any) => l.id === id)?.name ?? (id ?? '—')
+  const departmentName = (id?: string | null) => (departments as any[]).find((d: any) => d.id === id)?.name ?? (id ?? '—')
+
   const mutOpts = (_action: string) => ({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices', id] })
@@ -231,10 +259,27 @@ export default function InvoiceDetailPage() {
   const canEdit     = status === 'DRAFT' || status === 'REJECTED'
 
   // OCR raw data — only EmailPollerOcrResult shape exists today (confidence.overall is a single number)
-  const ocr           = (inv.ocrRawData ?? null) as null | { confidence?: { overall?: number }; invoiceNumber?: string | null; invoiceDate?: string | null; vendorGSTIN?: string | null; vendorPAN?: string | null; vendorName?: string | null; totalAmount?: number | null }
+  const ocr           = (inv.ocrRawData ?? null) as null | {
+    confidence?:    { overall?: number }
+    invoiceNumber?: string | null
+    invoiceDate?:   string | null
+    vendorGSTIN?:   string | null
+    vendorPAN?:     string | null
+    vendorName?:    string | null
+    totalAmount?:   number | null
+    attachmentData?: string | null
+    attachmentMime?: string | null
+  }
   const ocrConfidence = ocr?.confidence?.overall ?? inv.ocrConfidence ?? null
   const isOcrInvoice  = inv.channelType === 'EMAIL_INGEST' || !!ocr
   const fieldScore    = isOcrInvoice ? ocrConfidence : null
+
+  // Prefer real file URL; otherwise reconstruct a data URL from the bytes that
+  // the email-poller stashed in ocrRawData.attachmentData. Returns null when
+  // neither is present, which renders the LeftPanel "Document not available" placeholder.
+  const previewMime = ocr?.attachmentMime ?? inv.mimeType ?? 'application/pdf'
+  const previewUrl  = inv.fileUrl
+    ?? (ocr?.attachmentData ? `data:${previewMime};base64,${ocr.attachmentData}` : null)
 
   const ingestedAuditLog = inv.auditLogs?.find((l: any) => l.action === 'EMAIL_INGESTED')
   const ingestedAt       = ingestedAuditLog?.createdAt ?? null
@@ -301,9 +346,9 @@ export default function InvoiceDetailPage() {
         <LeftPanel
           open={leftOpen}
           onToggle={() => setLeftOpen(v => !v)}
-          fileUrl={inv.fileUrl}
+          fileUrl={previewUrl}
           fileName={inv.fileName}
-          mimeType={inv.mimeType}
+          mimeType={previewMime}
           ocrConfidence={ocrConfidence}
           ingestedAt={ingestedAt}
         />
@@ -361,9 +406,9 @@ export default function InvoiceDetailPage() {
             <div className="rounded-xl border border-border bg-card p-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">A. Invoice header</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                <Field label="Entity"        value={inv.entityId ? `${String(inv.entityId).slice(0, 8)}…` : '—'} />
-                <Field label="Created by"    value={inv.createdByUserId ? `${String(inv.createdByUserId).slice(0, 8)}…` : '—'} />
-                <Field label="Department"    value={inv.departmentId ? `${String(inv.departmentId).slice(0, 8)}…` : '—'} />
+                <Field label="Entity"        value={entityName(inv.entityId)} />
+                <Field label="Created by"    value={userName(inv.createdByUserId)} />
+                <Field label="Department"    value={departmentName(inv.departmentId)} />
                 <div />
                 <Field
                   label="Vendor"
@@ -385,7 +430,7 @@ export default function InvoiceDetailPage() {
                   confidence={ocrConfidence}
                   mono
                 />
-                <Field label="Bill-to location" value={inv.billToLocationId ? `${String(inv.billToLocationId).slice(0, 8)}…` : '—'} />
+                <Field label="Bill-to location" value={locationName(inv.billToLocationId)} />
                 <Field
                   label="Invoice number"
                   value={inv.invoiceNumber}

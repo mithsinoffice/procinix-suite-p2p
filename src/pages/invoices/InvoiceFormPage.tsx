@@ -434,10 +434,12 @@ export default function InvoiceFormPage() {
   const totals         = recalcTotals(lines)
   const selectedVendor = useMemo(() => (vendors as any[]).find((v: any) => v.id === vendorId), [vendorId, vendors])
 
-  // Auto-populate entity + department from /auth/me. Only fills blank fields,
-  // so user can still override or edit later. Keyed on the specific fields
-  // (not the whole currentUser object) so it doesn't re-fire on unrelated
-  // re-renders.
+  // Auto-populate entity + department from /auth/me. Two passes:
+  // (1) immediate — fires as soon as currentUser resolves
+  // (2) retry — fires again once entities/departments dropdown options are
+  //     loaded, because <select> may discard a value that doesn't match any
+  //     option present at render time.
+  // Only fills blank fields so the user can still override.
   useEffect(() => {
     if (currentUser?.entityId && !getValues('entityId')) {
       setValue('entityId', currentUser.entityId)
@@ -446,6 +448,16 @@ export default function InvoiceFormPage() {
       setValue('departmentId', currentUser.departmentId)
     }
   }, [currentUser?.entityId, currentUser?.departmentId, getValues, setValue])
+
+  useEffect(() => {
+    if (!currentUser) return
+    if (currentUser.entityId && !getValues('entityId') && (entities as any[]).length > 0) {
+      setValue('entityId', currentUser.entityId, { shouldDirty: false })
+    }
+    if (currentUser.departmentId && !getValues('departmentId') && (departments as any[]).length > 0) {
+      setValue('departmentId', currentUser.departmentId, { shouldDirty: false })
+    }
+  }, [currentUser, entities, departments, getValues, setValue])
 
   // Keep vendorState in sync with selected vendor (for GST interstate calc) + GSTIN/PAN auto-fill
   useEffect(() => {
