@@ -1,6 +1,6 @@
 # Procinix v2 (S2P) — Architecture
 
-_Last updated: 2026-05-19 (invoice detail redesign + match agent overhaul)_
+_Last updated: 2026-05-19 (dashboard KPIs + charts)_
 
 Indian Source-to-Pay (S2P) platform — Procurement, Goods Receipt, AP Invoice processing, Payments, Vendor management, Approvals and Masters — for mid-market Indian enterprises. Multi-tenant, RBAC-gated, n8n-driven email ingestion, Gemini OCR.
 
@@ -511,6 +511,52 @@ Currency mismatch (invoice currency ≠ entity `baseCurrencyCode`) raises a `CUR
 - **Section E — Audit Trail** and **Section F — Approval Workflow** are unchanged.
 
 The detail-page chips that compare against the vendor master (GSTIN, PAN, currency) are computed in the React component — they don't round-trip to the server because they're trivially derivable from the raw fields and tend to update faster than the match-score row gets refreshed.
+
+---
+
+## §10e Dashboard
+
+The dashboard ([DashboardPage.tsx](../src/pages/dashboard/DashboardPage.tsx)) renders 6 KPI cards + 4 charts + a pending-approvals table, all driven by real Prisma aggregates with a 60s TanStack Query refetch.
+
+### §10e.1 Endpoints
+
+| Endpoint | Returns | Query params |
+| --- | --- | --- |
+| `GET /api/dashboard/kpis`   | 6 KPI scalars + pending approvals list (top-20) + status group counts + balance | `entityId`, `dateFrom`, `dateTo` |
+| `GET /api/dashboard/charts` | 4 chart datasets: statusLast30, laneDonut, topVendors (top-5), matchHistogram | `entityId`, `dateFrom`, `dateTo` |
+| `GET /api/dashboard/spend-trend` | 6-month spend trend (unchanged) | — |
+| `GET /api/dashboard/spend-by-gl` | Top-8 GL codes FY-to-date (unchanged) | — |
+| `GET /api/dashboard/activity`    | Recent 15 audit-log events (unchanged) | — |
+
+All endpoints scope by `request.tenant.id` (JWT claim — never trust a request body or `X-Tenant-Id` header). The `/kpis` route caches its tenant-wide result in Redis for 60s; filtered requests skip the cache because the cache key isn't filter-aware.
+
+### §10e.2 KPI cards (top row, 6 total)
+
+| Card | Source field | Calculation |
+| --- | --- | --- |
+| Pending approvals | `Invoice.status IN ('PENDING_L1','PENDING_L2','PENDING_L3')` | tenant-wide count |
+| Invoice value (period) | `sum(Invoice.totalAmount)` in window for status APPROVED/PAID | sum |
+| Overdue | `Invoice.dueDate < now AND status NOT IN ('PAID')` | count + sum(netPayable) |
+| STP rate | `Invoice.apLane === 'STP'` over all in-window | pure `calcStpRate()` (1-decimal %) |
+| Avg processing | `approvedAt - createdAt` over status APPROVED in window | pure `calcAvgProcessingDays()` (returns null when no completions) |
+| TDS (period) | `sum(Invoice.tdsAmount)` in window | sum |
+
+### §10e.3 Charts (4 datasets in one /charts call)
+
+- **Invoice volume by status (last 30 days)** — bar chart, grouped by `status`, rolling 30-day window independent of the date filter so the bar stays comparable.
+- **Lane distribution (period)** — donut, output of pure `calcLaneDistribution()`. Unknown/null lanes fold into `UNCATEGORIZED` so totals match invoice count.
+- **Top 5 vendors by invoice value (period)** — horizontal bar via `groupBy(vendorId)` + `orderBy(_sum.totalAmount desc) take: 5`, with vendor names resolved in a second query.
+- **Match score distribution (period)** — bar with buckets `0–50 / 51–70 / 71–85 / 86–100`, output of pure `matchScoreHistogram()`. Invoices with `matchScore = null` are excluded (so unscored DRAFTs don't spike the low bucket).
+
+### §10e.4 Pure helpers + tests
+
+[dashboard.service.ts](../server/src/services/dashboard.service.ts) exports `calcStpRate`, `calcAvgProcessingDays`, `matchScoreHistogram`, `calcLaneDistribution`, `monthBounds`, and `resolveDateRange` — all pure functions. The route handler pulls invoices once and delegates the maths to these helpers.
+
+[dashboard.test.ts](../server/src/services/__tests__/dashboard.test.ts) — 22 Vitest specs covering empty-invoice fallback, bucket boundaries (50/51/85/86), float precision (1-decimal STP rate), month-end (Feb non-leap / Feb leap / December year roll), and `resolveDateRange` fallback when query strings are absent or invalid.
+
+### §10e.5 Frontend filter state
+
+`DashboardPage` keeps three local pieces of state — `entityId`, `preset` (`this_month` | `last_month` | `last_3_months` | `custom`), and `customFrom` / `customTo`. The active filter object is memoised and passed through to `useDashboardKpis(filters)` and `useDashboardCharts(filters)` so changing the entity or range refetches both endpoints. The refresh button calls `queryClient.invalidateQueries(['dashboard', ...])`.
 
 ---
 

@@ -1,22 +1,49 @@
 import type { FastifyInstance } from 'fastify'
 import { cacheGet, cacheSet, TTL, CacheKeys } from '../lib/redis.js'
 import { getAccountBalance } from '../services/transbnk.service.js'
+import {
+  calcStpRate, calcAvgProcessingDays, matchScoreHistogram, calcLaneDistribution,
+  resolveDateRange,
+} from '../services/dashboard.service.js'
+
+interface DashboardQuery {
+  entityId?: string
+  dateFrom?: string   // ISO YYYY-MM-DD
+  dateTo?:   string
+}
 
 export async function dashboardRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
 
-  // ── Main KPIs ──
+  // ── Main KPIs ────────────────────────────────────────────────────────────
+  // Accepts entityId / dateFrom / dateTo as query params. With no filters it
+  // falls back to "this month" and reads from Redis cache (60s TTL); filtered
+  // requests skip the cache because the cache key isn't filter-aware.
   app.get('/kpis', auth, async (request, reply) => {
     const tenantId  = request.tenant.id
+    const q         = request.query as DashboardQuery
+    const filtered  = !!(q.entityId || q.dateFrom || q.dateTo)
     const cacheKey  = CacheKeys.dashboard(tenantId)
-    const cached    = await cacheGet(app.redis, cacheKey)
-    if (cached) return reply.send(cached)
 
-    const now        = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const fyStart    = now.getMonth() >= 3
+    if (!filtered) {
+      const cached = await cacheGet(app.redis, cacheKey)
+      if (cached) return reply.send(cached)
+    }
+
+    const now      = new Date()
+    const { start: rangeStart, end: rangeEnd } = resolveDateRange(q.dateFrom, q.dateTo, now)
+    const fyStart  = now.getMonth() >= 3
       ? new Date(now.getFullYear(), 3, 1)
       : new Date(now.getFullYear() - 1, 3, 1)
+
+    // Pull all invoices in the active window once — the pure helpers slice it
+    // for STP rate / avg processing time / histogram. Saves the cost of
+    // running 4 separate groupBy queries on the same window.
+    const windowWhere = {
+      tenantId,
+      ...(q.entityId ? { entityId: q.entityId } : {}),
+      invoiceDate: { gte: rangeStart, lte: rangeEnd },
+    }
 
     const [
       pendingApprovalsCount,
@@ -24,58 +51,95 @@ export async function dashboardRoutes(app: FastifyInstance) {
       overdueCount,
       overdueAmount,
       monthlySpend,
+      monthlyTds,
       quarterTds,
       totalVendors,
-      invoicesThisMonth,
+      invoicesInWindow,
       invoicesByStatus,
     ] = await Promise.all([
-      // Pending approval count
+      // Pending approval count (always tenant-wide — filter doesn't apply to "what's on my plate today")
       app.prisma.invoice.count({
-        where: { tenantId, status: { in: ['PENDING_L1', 'PENDING_L2', 'PENDING_L3'] } },
+        where: { tenantId, status: { in: ['PENDING_L1', 'PENDING_L2', 'PENDING_L3'] }, ...(q.entityId ? { entityId: q.entityId } : {}) },
       }),
-      // Pending approvals list (top 5)
+      // Pending approvals list — enriched with daysPending + approver name
       app.prisma.invoice.findMany({
-        where:   { tenantId, status: { in: ['PENDING_L1', 'PENDING_L2', 'PENDING_L3'] } },
+        where:   { tenantId, status: { in: ['PENDING_L1', 'PENDING_L2', 'PENDING_L3'] }, ...(q.entityId ? { entityId: q.entityId } : {}) },
         orderBy: { createdAt: 'asc' },
-        take:    5,
+        take:    20,
         select:  {
-          id: true, invoiceNumber: true, netPayable: true, status: true,
+          id: true, invoiceNumber: true, netPayable: true, totalAmount: true, status: true,
           invoiceDate: true, dueDate: true, createdAt: true,
-          vendor: { select: { legalName: true, vendorCode: true } },
+          vendor:   { select: { legalName: true, vendorCode: true } },
+          approvals: {
+            where: { status: 'PENDING' }, orderBy: { level: 'asc' }, take: 1,
+            select: { approverId: true, level: true },
+          },
         },
       }),
       // Overdue invoices count (approved but past due date and not paid)
       app.prisma.invoice.count({
-        where: { tenantId, status: { in: ['APPROVED', 'PENDING_L1', 'PENDING_L2'] }, dueDate: { lt: now } },
+        where: { tenantId, status: { in: ['APPROVED', 'PENDING_L1', 'PENDING_L2'] }, dueDate: { lt: now }, ...(q.entityId ? { entityId: q.entityId } : {}) },
       }),
-      // Overdue total amount
       app.prisma.invoice.aggregate({
-        where: { tenantId, status: { in: ['APPROVED', 'PENDING_L1', 'PENDING_L2'] }, dueDate: { lt: now } },
+        where: { tenantId, status: { in: ['APPROVED', 'PENDING_L1', 'PENDING_L2'] }, dueDate: { lt: now }, ...(q.entityId ? { entityId: q.entityId } : {}) },
         _sum:  { netPayable: true },
       }),
-      // Monthly AP spend
+      // Monthly AP spend (in the active window)
       app.prisma.invoice.aggregate({
-        where: { tenantId, status: { in: ['APPROVED', 'PAID'] }, invoiceDate: { gte: monthStart } },
-        _sum:  { netPayable: true },
+        where: { ...windowWhere, status: { in: ['APPROVED', 'PAID'] } },
+        _sum:  { totalAmount: true },
       }),
-      // TDS liability this quarter
+      // TDS this month (in the active window)
       app.prisma.invoice.aggregate({
-        where: { tenantId, status: { in: ['APPROVED', 'PAID'] }, invoiceDate: { gte: fyStart } },
+        where: { ...windowWhere, status: { in: ['APPROVED', 'PAID'] } },
         _sum:  { tdsAmount: true },
       }),
-      // Active vendors
-      app.prisma.vendor.count({ where: { tenantId, status: 'ACTIVE' } }),
-      // Invoices this month
-      app.prisma.invoice.count({
-        where: { tenantId, createdAt: { gte: monthStart } },
+      // TDS this quarter (FY) — separate from window so it stays comparable
+      app.prisma.invoice.aggregate({
+        where: { tenantId, status: { in: ['APPROVED', 'PAID'] }, invoiceDate: { gte: fyStart }, ...(q.entityId ? { entityId: q.entityId } : {}) },
+        _sum:  { tdsAmount: true },
       }),
-      // Invoices by status
+      app.prisma.vendor.count({ where: { tenantId, status: 'ACTIVE' } }),
+      // Raw invoice rows in the window — drives STP rate, avg processing, histogram, lane donut
+      app.prisma.invoice.findMany({
+        where:  windowWhere,
+        select: { id: true, apLane: true, status: true, createdAt: true, approvedAt: true, matchScore: true, totalAmount: true, vendorId: true },
+      }),
       app.prisma.invoice.groupBy({
-        by:    ['status'],
-        where: { tenantId },
-        _count: true,
+        by: ['status'], where: { tenantId, ...(q.entityId ? { entityId: q.entityId } : {}) }, _count: true,
       }),
     ])
+
+    // Approver lookup — pending list rows carry only approverId; the UI wants names.
+    const approverIds = pendingApprovals.flatMap(p => p.approvals.map(a => a.approverId)).filter(Boolean)
+    const approvers   = approverIds.length > 0
+      ? await app.prisma.user.findMany({ where: { id: { in: approverIds } }, select: { id: true, name: true, email: true } })
+      : []
+    const approverMap = Object.fromEntries(approvers.map(u => [u.id, u]))
+
+    const pendingApprovalsEnriched = pendingApprovals.map(p => {
+      const daysPending = Math.floor((now.getTime() - p.createdAt.getTime()) / 86_400_000)
+      const a           = p.approvals[0]
+      const approver    = a ? approverMap[a.approverId] : null
+      return {
+        id:            p.id,
+        invoiceNumber: p.invoiceNumber,
+        netPayable:    Number(p.netPayable),
+        totalAmount:   Number(p.totalAmount),
+        status:        p.status,
+        invoiceDate:   p.invoiceDate,
+        dueDate:       p.dueDate,
+        createdAt:     p.createdAt,
+        vendor:        p.vendor,
+        daysPending,
+        approverName:  approver?.name ?? null,
+        approverLevel: a?.level ?? null,
+      }
+    }).sort((a, b) => b.daysPending - a.daysPending)
+
+    // Pure-function calcs over the in-window invoice set
+    const stpRate           = calcStpRate(invoicesInWindow)
+    const avgProcessingDays = calcAvgProcessingDays(invoicesInWindow)
 
     // Account balance (non-blocking — use mock if Transbnk not configured)
     const balResult = await getAccountBalance().catch(() => null)
@@ -83,23 +147,88 @@ export async function dashboardRoutes(app: FastifyInstance) {
 
     const kpis = {
       pendingApprovalsCount,
-      pendingApprovals,
+      pendingApprovals: pendingApprovalsEnriched,
       overdueCount,
-      overdueAmount:    Number(overdueAmount._sum.netPayable ?? 0),
-      monthlySpend:     Number(monthlySpend._sum.netPayable ?? 0),
-      quarterTds:       Number(quarterTds._sum.tdsAmount ?? 0),
+      overdueAmount:      Number(overdueAmount._sum.netPayable ?? 0),
+      monthlySpend:       Number(monthlySpend._sum.totalAmount ?? 0),
+      monthlyTds:         Number(monthlyTds._sum.tdsAmount ?? 0),
+      quarterTds:         Number(quarterTds._sum.tdsAmount ?? 0),
+      stpRate:            stpRate.rate,
+      stpCount:           stpRate.stpCount,
+      avgProcessingDays,
       totalVendors,
-      invoicesThisMonth,
-      invoicesByStatus: invoicesByStatus.map(s => ({ status: s.status, count: s._count })),
+      invoicesThisMonth:  invoicesInWindow.length,
+      invoicesByStatus:   invoicesByStatus.map(s => ({ status: s.status, count: s._count })),
       balance,
-      generatedAt: new Date().toISOString(),
+      dateRange:          { from: rangeStart.toISOString(), to: rangeEnd.toISOString() },
+      generatedAt:        new Date().toISOString(),
     }
 
-    await cacheSet(app.redis, cacheKey, kpis, TTL.DASHBOARD)
+    if (!filtered) await cacheSet(app.redis, cacheKey, kpis, TTL.DASHBOARD)
     return reply.send(kpis)
   })
 
-  // ── Spend trend — last 6 months ──
+  // ── Charts — 4 datasets in one call ──────────────────────────────────────
+  // Status-by-day (last 30 days), lane distribution (window), top-5 vendors
+  // (window), match-score histogram (window). Same filter params as /kpis.
+  app.get('/charts', auth, async (request, reply) => {
+    const tenantId  = request.tenant.id
+    const q         = request.query as DashboardQuery
+    const now       = new Date()
+    const { start: rangeStart, end: rangeEnd } = resolveDateRange(q.dateFrom, q.dateTo, now)
+    const last30Start = new Date(now)
+    last30Start.setDate(last30Start.getDate() - 30)
+    last30Start.setHours(0, 0, 0, 0)
+
+    const windowWhere = {
+      tenantId,
+      ...(q.entityId ? { entityId: q.entityId } : {}),
+      invoiceDate: { gte: rangeStart, lte: rangeEnd },
+    }
+
+    const [statusLast30, windowInvoices, topVendors] = await Promise.all([
+      // Status bar — last 30 days grouped by status (independent of date filter)
+      app.prisma.invoice.groupBy({
+        by: ['status'],
+        where: { tenantId, createdAt: { gte: last30Start }, ...(q.entityId ? { entityId: q.entityId } : {}) },
+        _count: true,
+      }),
+      // Pull all in-window invoices once — feeds lane donut + match histogram
+      app.prisma.invoice.findMany({
+        where:  windowWhere,
+        select: { apLane: true, status: true, createdAt: true, approvedAt: true, matchScore: true, totalAmount: true, vendorId: true },
+      }),
+      // Top-5 vendors by total invoice value in window
+      app.prisma.invoice.groupBy({
+        by: ['vendorId'],
+        where: { ...windowWhere, vendorId: { not: null } },
+        _sum: { totalAmount: true },
+        orderBy: { _sum: { totalAmount: 'desc' } },
+        take: 5,
+      }),
+    ])
+
+    const vendorIds = topVendors.map(v => v.vendorId).filter(Boolean) as string[]
+    const vendors   = vendorIds.length > 0
+      ? await app.prisma.vendor.findMany({ where: { id: { in: vendorIds } }, select: { id: true, legalName: true, vendorCode: true } })
+      : []
+    const vendorMap = Object.fromEntries(vendors.map(v => [v.id, v]))
+
+    return reply.send({
+      statusLast30: statusLast30.map(s => ({ status: s.status, count: s._count })),
+      laneDonut:    calcLaneDistribution(windowInvoices),
+      topVendors:   topVendors.map(v => ({
+        vendorId:   v.vendorId,
+        legalName:  v.vendorId ? vendorMap[v.vendorId]?.legalName  ?? '—' : '—',
+        vendorCode: v.vendorId ? vendorMap[v.vendorId]?.vendorCode ?? '—' : '—',
+        amount:     Number(v._sum.totalAmount ?? 0),
+      })),
+      matchHistogram: matchScoreHistogram(windowInvoices),
+      dateRange:      { from: rangeStart.toISOString(), to: rangeEnd.toISOString() },
+    })
+  })
+
+  // ── Spend trend — last 6 months (unchanged) ──────────────────────────────
   app.get('/spend-trend', auth, async (request, reply) => {
     const tenantId = request.tenant.id
     const months: { label: string; start: Date; end: Date }[] = []
@@ -133,7 +262,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
     return reply.send(trend)
   })
 
-  // ── Spend by GL code ──
+  // ── Spend by GL code (unchanged) ─────────────────────────────────────────
   app.get('/spend-by-gl', auth, async (request, reply) => {
     const tenantId  = request.tenant.id
     const now       = new Date()
@@ -149,7 +278,6 @@ export async function dashboardRoutes(app: FastifyInstance) {
       take: 8,
     })
 
-    // Fetch GL code names
     const glIds = grouped.map(g => g.glCodeId).filter(Boolean) as string[]
     const glCodes = await app.prisma.glCode.findMany({ where: { id: { in: glIds } }, select: { id: true, code: true, name: true } })
     const glMap   = Object.fromEntries(glCodes.map(g => [g.id, g]))
@@ -162,7 +290,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
     })))
   })
 
-  // ── Recent activity ──
+  // ── Recent activity (unchanged) ──────────────────────────────────────────
   app.get('/activity', auth, async (request, reply) => {
     const events = await app.prisma.auditLog.findMany({
       where:   { tenantId: request.tenant.id },
