@@ -86,10 +86,16 @@ export async function invoiceRoutes(app: FastifyInstance) {
     const userId   = req.user.sub
     const tenantId = req.tenant.id
 
-    const pendingStages = await app.prisma.workflowInstanceStage.findMany({
+    // Future stages of a multi-stage workflow are pre-created with status
+    // PENDING (so the timeline is visible upfront). Filter to the CURRENT
+    // stage of each instance — instance.currentStageOrder must match.
+    const allPending = await app.prisma.workflowInstanceStage.findMany({
       where:   { tenantId, assignedTo: userId, status: 'PENDING' },
       include: { instance: true },
     })
+    const pendingStages = allPending.filter(
+      s => s.instance.status === 'IN_PROGRESS' && s.stageOrder === s.instance.currentStageOrder
+    )
     if (pendingStages.length === 0) return reply.send([])
 
     const invoiceIds = pendingStages.filter(s => s.instance.entityType === 'invoice').map(s => s.instance.entityId)
