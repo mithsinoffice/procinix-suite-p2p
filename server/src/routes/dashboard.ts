@@ -54,6 +54,8 @@ export async function dashboardRoutes(app: FastifyInstance) {
       monthlyTds,
       quarterTds,
       totalVendors,
+      msmeDueIn7Days,
+      paymentBatchesPending,
       invoicesInWindow,
       invoicesByStatus,
     ] = await Promise.all([
@@ -100,6 +102,23 @@ export async function dashboardRoutes(app: FastifyInstance) {
         _sum:  { tdsAmount: true },
       }),
       app.prisma.vendor.count({ where: { tenantId, status: 'ACTIVE' } }),
+      // MSME-due-in-7-days — invoices where the 45-day statutory deadline
+      // falls in the next week. Drives the Dashboard payment-urgency card.
+      app.prisma.invoice.findMany({
+        where: {
+          tenantId,
+          status: 'APPROVED',
+          paymentStatus: { in: ['UNPAID', 'PARTIALLY_PAID'] },
+          msmePaymentDue: { lte: new Date(now.getTime() + 7 * 86_400_000), not: null },
+          vendor: { msmeRegistered: true },
+        },
+        select: { netPayable: true, paidAmount: true },
+      }),
+      // Payment batches pending finance-manager approval — shows on the
+      // dashboard so approvers don't miss them.
+      app.prisma.paymentBatch.count({
+        where: { tenantId, status: 'PENDING_APPROVAL' },
+      }),
       // Raw invoice rows in the window — drives STP rate, avg processing, histogram, lane donut
       app.prisma.invoice.findMany({
         where:  windowWhere,
@@ -157,6 +176,11 @@ export async function dashboardRoutes(app: FastifyInstance) {
       stpCount:           stpRate.stpCount,
       avgProcessingDays,
       totalVendors,
+      msmeDueIn7Days: {
+        count:  msmeDueIn7Days.length,
+        amount: msmeDueIn7Days.reduce((s, i) => s + (Number(i.netPayable) - Number(i.paidAmount)), 0),
+      },
+      paymentBatchesPending,
       invoicesThisMonth:  invoicesInWindow.length,
       invoicesByStatus:   invoicesByStatus.map(s => ({ status: s.status, count: s._count })),
       balance,

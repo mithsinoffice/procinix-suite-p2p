@@ -11,8 +11,11 @@ const InvoiceDetailPage       = lazy(() => import('./pages/invoices/InvoiceDetai
 const InvoiceFormPage         = lazy(() => import('./pages/invoices/InvoiceFormPage'))
 const InvoiceNewPage          = lazy(() => import('./pages/invoices/InvoiceNewPage'))
 const InvoiceReviewQueuePage  = lazy(() => import('./pages/invoices/InvoiceReviewQueuePage'))
-const PaymentListPage    = lazy(() => import('./pages/payments/PaymentListPage'))
-const PaymentDetailPage  = lazy(() => import('./pages/payments/PaymentDetailPage'))
+const PaymentQueuePage        = lazy(() => import('./pages/payments/PaymentQueuePage'))
+const PaymentBatchListPage    = lazy(() => import('./pages/payments/PaymentBatchListPage'))
+const PaymentBatchDetailPage  = lazy(() => import('./pages/payments/PaymentBatchDetailPage'))
+const CreatePaymentBatch      = lazy(() => import('./pages/payments/CreatePaymentBatch'))
+const TdsChallanPage          = lazy(() => import('./pages/payments/TdsChallanPage'))
 const VendorListPage     = lazy(() => import('./pages/masters/vendors/VendorListPage'))
 const VendorDetailPage   = lazy(() => import('./pages/masters/vendors/VendorDetailPage'))
 const VendorFormPage     = lazy(() => import('./pages/masters/vendors/VendorFormPage'))
@@ -125,8 +128,11 @@ export const router = createBrowserRouter([
           { path: ':id/legacy', element: <S><InvoiceNewPage /></S>       },
         ]},
         { path: 'payments', children: [
-          { index: true, element: <S><PaymentListPage /></S> },
-          { path: ':id', element: <S><PaymentDetailPage /></S> },
+          { index: true,             element: <S><PaymentQueuePage /></S> },
+          { path: 'batches',         element: <S><PaymentBatchListPage /></S> },
+          { path: 'batches/new',     element: <S><CreatePaymentBatch /></S> },
+          { path: 'batches/:id',     element: <S><PaymentBatchDetailPage /></S> },
+          { path: 'tds-challans',    element: <S><TdsChallanPage /></S> },
         ]},
         { path: 'accounting', children: [
           { index: true,                element: <S><AccountingPage /></S> },

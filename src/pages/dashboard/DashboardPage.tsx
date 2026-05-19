@@ -6,7 +6,7 @@ import {
 } from 'recharts'
 import {
   Clock, AlertTriangle, TrendingUp, FileText, Zap, Timer,
-  RefreshCw, ArrowRight,
+  RefreshCw, ArrowRight, ShieldAlert, Banknote,
 } from 'lucide-react'
 import {
   useDashboardKpis, useDashboardCharts, type DashboardFilters, type PendingApproval,
@@ -234,7 +234,21 @@ export default function DashboardPage() {
               value={formatINRCompact(kpis.monthlyTds)}
               sub={`FY: ${formatINRCompact(kpis.quarterTds)}`}
               color="bg-indigo-100 text-indigo-600"
-              onClick={() => navigate('/payments/tds')}
+              onClick={() => navigate('/payments/tds-challans')}
+            />
+            <KpiCard
+              icon={ShieldAlert} label="MSME due 7d"
+              value={String(kpis.msmeDueIn7Days?.count ?? 0)}
+              sub={kpis.msmeDueIn7Days?.amount ? formatINRCompact(kpis.msmeDueIn7Days.amount) : 'None at risk'}
+              color={(kpis.msmeDueIn7Days?.count ?? 0) > 0 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}
+              onClick={() => navigate('/payments?priority=MSME')}
+            />
+            <KpiCard
+              icon={Banknote} label="Payment batches pending"
+              value={String(kpis.paymentBatchesPending ?? 0)}
+              sub="Awaiting approval"
+              color={(kpis.paymentBatchesPending ?? 0) > 0 ? 'bg-amber-100 text-amber-600' : 'bg-muted text-muted-foreground'}
+              onClick={() => navigate('/payments/batches?status=PENDING_APPROVAL')}
             />
           </>
         ) : null}

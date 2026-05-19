@@ -943,7 +943,183 @@ endpoints tenant-scoped via JWT.
 
 ---
 
-## §12 Pending work
+## §12 Payment module — batches, MSME compliance, TDS challans
+
+End-to-end vendor-payment flow. Sits downstream of invoice approval:
+approved invoices land in the payment queue, get bundled into a
+PaymentBatch, approve through the workflow engine, then execute (which
+captures UTR/cheque refs, posts JVs, and upserts TDS challans).
+
+### Schema additions
+
+- `PaymentBatch` — the parent document approvers sign off on. Lifecycle:
+  `DRAFT → PENDING_APPROVAL → APPROVED → EXECUTED | PARTIALLY_EXECUTED | FAILED`.
+  Stores `containsMsme + msmeVendorCount` (denormalised for listing) and
+  `isUrgent + urgentReason + urgentFlaggedBy` (routes through the
+  fast-track workflow). Indexed on `(tenantId, status)`,
+  `(tenantId, isUrgent, status)`.
+- `PaymentBatchLine` — one row per invoice/advance. Captures the chosen
+  rail (NEFT/RTGS/IMPS/CHEQUE), the actual remitted amount (may differ
+  from invoice.netPayable for partial payments), UTR/cheque ref at
+  execution, and denormalised MSME flags so detail pages render without
+  a vendor join per row.
+- `TdsChallan` — `(tenant, period, section)` unique. Aggregates withheld
+  TDS for the period. Status `PENDING → DEPOSITED` (with challanNumber
+  + depositedAt). Past-due PENDING surfaces as effective `OVERDUE` in
+  the API response (recomputed, not stored).
+- `Invoice` extensions: `paidAmount`, `paymentStatus`
+  (UNPAID/PARTIALLY_PAID/PAID), `msmePaymentDue`, `msmeDaysRemaining`,
+  `msmeBreach`, `msmeInterest`, `isUrgent`, `urgentReason`.
+- `Vendor` extension: `msmeRegistered Boolean` — auto-derived in
+  `vendor.service.ts` from whether `msmeCategory` is set, so the flag
+  and the category stay in lockstep. Existing `udyamNumber` carries the
+  registration number; existing `msmeCategory` (MICRO/SMALL/MEDIUM) is
+  reused.
+
+### Pure helpers
+
+[payment-engine.service.ts](../server/src/services/payment-engine.service.ts):
+
+- `computeMsmePaymentDue(invoiceDate, vendorCreditDays)` — `min(45,
+  creditDays)` days from invoice date. Caps at 45 per MSMED Act §15.
+- `computeMsmeDaysRemaining(due, today)` — whole-day delta (negative = overdue).
+- `getMsmePriority(days)` — `CRITICAL <7d | AT_RISK 7-14d | NORMAL ≥15d`.
+- `computeInterest(amount, daysLate, rbiRate)` — MSMED §16 interest
+  (3× bank rate, simple, prorated daily). Defaults to RBI bank rate
+  6.5% in the routes (constant for now; can move to tenant settings).
+- `buildPaymentJVs(line, glCodes, createdBy, opts)` — returns 1-2 JVs:
+  cash leg (DR AP, CR Bank, amount = paymentAmount) + TDS leg
+  (DR AP, CR TDS Payable, amount = tdsAmount, only when withheld).
+- `generateBatchRef(seq, year)` → `PAY-YYYY-NNNN`.
+- `computeBatchTotals(lines)` — sum across line shape for header.
+
+[tds-challan.service.ts](../server/src/services/tds-challan.service.ts):
+
+- `computeChallanDueDate(period)` — 7th of `period+1`, with Dec→Jan
+  year-roll.
+- `groupLinesByTdsSection(lines)` — sums tdsAmount by section, sorts by
+  section code, rounds float-safely.
+- `upsertChallans(prisma, tenantId, period, groups)` — additive: a
+  PENDING challan for (tenant, period, section) gets the new amount
+  incremented onto it; once DEPOSITED, the row is locked and further
+  withholding creates a new challan.
+
+36 Vitest specs in [payment-engine.test.ts](../server/src/services/__tests__/payment-engine.test.ts)
++ [tds-challan.test.ts](../server/src/services/__tests__/tds-challan.test.ts).
+
+### Routes
+
+[server/src/routes/payments.ts](../server/src/routes/payments.ts), mounted at `/api/payments`. All tenant-scoped via JWT.
+
+| Method | Path                                          | Notes                                                |
+| ------ | --------------------------------------------- | ---------------------------------------------------- |
+| GET    | `/queue`                                       | Combined invoice + advance queue, MSME-enriched      |
+| GET    | `/queue/summary`                               | Tab badges: total / urgent / msmeAtRisk / overdue / dueThisWeek / advances |
+| GET    | `/batches`                                     | Paginated batch list, status + MSME + urgent filters |
+| POST   | `/batches`                                     | Create batch from invoice/advance ids; derives MSME flags |
+| GET    | `/batches/:id`                                 | Batch detail with enriched lines (vendor + invoice)  |
+| POST   | `/batches/:id/submit`                          | Guard DRAFT → workflow start (WF-PAYMENT-001 or URGENT) |
+| POST   | `/batches/:id/execute`                         | Capture UTRs, post JVs, upsert TDS challans, ERP push |
+| POST   | `/batches/:id/flag-urgent`                     | Sets isUrgent + reason; later submits hit URGENT workflow |
+| GET    | `/tds-challans`                                | List with `effectiveStatus` (recomputed OVERDUE)     |
+| PATCH  | `/tds-challans/:id/mark-deposited`             | Capture challan number when deposited at bank        |
+| POST   | `/msme-refresh`                                | Recompute msmeDaysRemaining + breach + interest      |
+
+GL resolution for payment JVs mirrors the AP-priority resolver in
+[accounting-trigger.service.ts](../server/src/services/accounting-trigger.service.ts) — exact name → 203x code range
+→ fuzzy → fallback for AP; `name contains "Bank"` for the cash leg;
+`name contains <section>` for the TDS leg (e.g. 194C → "TDS Payable —
+194C"). Falls back to `'2030' / '1002' / undefined` if nothing matches.
+
+### Workflow integration
+
+Two workflow definitions seeded in [prisma/seed.ts](../prisma/seed.ts):
+
+- `WF-PAYMENT-001` (priority 15) — Finance Manager, 48h SLA. Default
+  for non-urgent batches.
+- `WF-PAYMENT-URGENT` (priority 25) — Finance Manager, 4h SLA, with a
+  workflow condition `isUrgent equals true`. Selected when the batch
+  carries the urgent flag at submit time (the `record` payload passed
+  into `startWorkflow` includes `isUrgent` so the engine's condition
+  evaluator picks the right one).
+
+The original `WF-PAY-001` (priority 10, TENANT_ADMIN) stays as a
+catch-all fallback for tenants without Finance Manager users seeded.
+
+`payment_batch` gets its own approve/reject branch in [workflow.ts](../server/src/routes/workflow.ts) —
+not via `MASTER_ENTITY_DELEGATES` because APPROVED isn't terminal for
+batches (execute is the next step). Approve flips status to APPROVED;
+reject (non REQUEST_INFO) collapses back to DRAFT.
+
+`pending-approvals` cross-module join includes batches with
+`module: 'PAYMENT'` and the line count + urgent/MSME flags surfaced in
+the row name.
+
+### Execute flow
+
+`POST /batches/:id/execute` is the load-bearing step. For each PAID
+line:
+
+1. Mark `PaymentBatchLine.status = PAID`, capture `utrNumber` /
+   `chequeNumber` / `paidAt`.
+2. **Invoice**: increment `Invoice.paidAmount`, recompute
+   `paymentStatus` (PAID if `paidAmount >= netPayable`, else
+   PARTIALLY_PAID). On full pay, also flip `Invoice.status = PAID`.
+   **Advance**: zero out `pendingAmount`, set `status = PAID`.
+3. Resolve GL codes (AP / Bank / TDS-section) → build JV(s) via
+   `buildPaymentJVs` → write to `journal_entries` → stub ERP push.
+4. After all lines: `groupLinesByTdsSection` → `upsertChallans` for
+   the batch's posting-date period. Existing PENDING challans get
+   the increment; deposited ones are skipped (lock invariant).
+5. Batch status: `EXECUTED` if all paid, `PARTIALLY_EXECUTED` if
+   some lines failed, `FAILED` if none paid.
+
+Idempotent on retry — lines already PAID are skipped silently.
+Wrapped in try/catch around ERP push so a single ERP timeout doesn't
+roll back the cash + JV writes.
+
+### Frontend
+
+| Route                              | Page                                                                                | Role                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `/payments`                         | [PaymentQueuePage](../src/pages/payments/PaymentQueuePage.tsx)                      | Combined queue, 6 priority tabs, multi-select → batch |
+| `/payments/batches`                 | [PaymentBatchListPage](../src/pages/payments/PaymentBatchListPage.tsx)              | Batch history with status tabs                        |
+| `/payments/batches/new`             | [CreatePaymentBatch](../src/pages/payments/CreatePaymentBatch.tsx)                  | Pre-populated from queue selection; per-line method   |
+| `/payments/batches/:id`             | [PaymentBatchDetailPage](../src/pages/payments/PaymentBatchDetailPage.tsx)          | Sections A-D + execute modal (UTR capture)            |
+| `/payments/tds-challans`            | [TdsChallanPage](../src/pages/payments/TdsChallanPage.tsx)                          | Period × section list, mark-deposited modal           |
+
+Sub-nav strip ([PaymentNav.tsx](../src/pages/payments/PaymentNav.tsx))
+across the queue / batches / TDS pages for discoverability.
+
+Selection from queue → drops a draft into `sessionStorage` and routes
+to `/batches/new`; the create page reads it on mount and pre-fills
+line rows with `paymentAmount = finalPayable`, default method NEFT.
+
+[payments.api.ts](../src/lib/api/payments.api.ts) is the typed http
+wrapper module — all routes go through TanStack Query in the pages.
+
+### Dashboard wiring
+
+[dashboard.ts](../server/src/routes/dashboard.ts) `/kpis` now returns:
+
+- `msmeDueIn7Days: { count, amount }` — MSME invoices whose statutory
+  deadline falls in the next week.
+- `paymentBatchesPending` — count of batches in PENDING_APPROVAL.
+
+Two new KPI cards in [DashboardPage.tsx](../src/pages/dashboard/DashboardPage.tsx) (red when
+count > 0; otherwise green / muted).
+
+### Forward-only invariant
+
+The schema additions are additive: existing invoices default to
+`paymentStatus = UNPAID`, `paidAmount = 0`; existing vendors to
+`msmeRegistered = false`. No retroactive data migration needed — the
+MSME refresh job (`POST /msme-refresh`) populates `msmePaymentDue` /
+`msmeDaysRemaining` lazily as it runs.
+
+---
+
+## §13 Pending work
 
 ### Wire remaining masters through the workflow engine
 
@@ -977,7 +1153,7 @@ PAN / GSTIN / IFSC verification via SurePass + OnGrid works on the vendor form; 
 
 ---
 
-## §13 Dev commands
+## §14 Dev commands
 
 ```bash
 npm run dev          # frontend :3000 + backend :8787
@@ -996,7 +1172,7 @@ Demo login (dev only) — `mithilesh@procinix.ai` / `Demo@123`. SUPER_ADMIN role
 
 ---
 
-## §14 Conventions
+## §15 Conventions
 
 - **Commit messages** — describe the *what* + *why*. When a working tree contains multiple semantic changes, the message must cover all of them (don't under-describe). The user has explicitly asked for "accurate (everything in one)" messages over partial ones.
 - **Comments** — default to none. Add only when the *why* is non-obvious (workaround, invariant, surprising decision). Never narrate *what* the code does.

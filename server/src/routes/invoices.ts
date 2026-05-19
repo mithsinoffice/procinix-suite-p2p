@@ -125,10 +125,12 @@ export async function invoiceRoutes(app: FastifyInstance) {
     const currencyIds    = pendingStages.filter(s => s.instance.entityType === 'currency').map(s => s.instance.entityId)
     const pcIds          = pendingStages.filter(s => s.instance.entityType === 'profit_centre').map(s => s.instance.entityId)
     const itemCatIds     = pendingStages.filter(s => s.instance.entityType === 'item_category').map(s => s.instance.entityId)
+    const paymentBatchIds = pendingStages.filter(s => s.instance.entityType === 'payment_batch').map(s => s.instance.entityId)
 
     const [
       invoices, prs, pos, items, itemChanges,
       vendors, employees, users, budgets, fys, currencies, profitCentres, itemCategories,
+      paymentBatches,
     ] = await Promise.all([
       invoiceIds.length
         ? app.prisma.invoice.findMany({
@@ -178,6 +180,12 @@ export async function invoiceRoutes(app: FastifyInstance) {
       itemCatIds.length
         ? app.prisma.itemCategory.findMany({ where: { id: { in: itemCatIds }, tenantId } })
         : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.itemCategory.findMany>>),
+      paymentBatchIds.length
+        ? app.prisma.paymentBatch.findMany({
+            where: { id: { in: paymentBatchIds }, tenantId },
+            include: { _count: { select: { lines: true } } },
+          })
+        : Promise.resolve([] as Array<{ id: string; batchRef: string; status: string; isUrgent: boolean; containsMsme: boolean; totalNetPayable: unknown; createdAt: Date; _count: { lines: number } }>),
     ])
 
     const rows: unknown[] = []
@@ -241,6 +249,17 @@ export async function invoiceRoutes(app: FastifyInstance) {
       } else if (entityType === 'item_category') {
         const ic = itemCategories.find(r => r.id === entityId)
         if (ic) rows.push({ ...ic, module: 'ITEM_CATEGORY', pendingStage: stage, invoiceNumber: ic.code, totalAmount: 0, currencyCode: 'INR' })
+      } else if (entityType === 'payment_batch') {
+        const pb = paymentBatches.find(r => r.id === entityId)
+        if (pb) rows.push({
+          ...pb,
+          module: 'PAYMENT',
+          pendingStage: stage,
+          invoiceNumber: pb.batchRef,
+          name:          `Payment batch (${pb._count.lines} lines)${pb.isUrgent ? ' — URGENT' : ''}${pb.containsMsme ? ' · MSME' : ''}`,
+          totalAmount:   Number(pb.totalNetPayable),
+          currencyCode:  'INR',
+        })
       }
     }
 

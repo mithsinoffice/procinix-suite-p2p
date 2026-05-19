@@ -159,6 +159,11 @@ model Vendor {
   kycCinCompanyName     String?
   kycCinDateOfReg       String?
   udyamNumber           String?
+  // MSME compliance flag — when true, invoices for this vendor inherit the
+  // 45-day statutory payment deadline (msmePaymentDue) and surface on the
+  // "MSME at risk" tab of the payment queue. Existing udyamNumber + kyc*
+  // fields above carry the registration details.
+  msmeRegistered        Boolean                 @default(false)
   kycMsmeStatus         String?
   kycMsmeCategory       String?
   kycMsmeRegisteredAt   String?
@@ -395,6 +400,22 @@ model Invoice {
   approvedByUserId   String?
   approvedAt         DateTime?
   paidAt             DateTime?
+  // Payment tracking — populated by the payment module on batch execution.
+  // paymentStatus drives filtering in the payment queue (UNPAID / PARTIALLY_PAID
+  // hide once PAID). paidAmount accumulates across multiple batch lines for
+  // partial-payment scenarios.
+  paidAmount         Decimal           @default(0) @db.Decimal(15, 2)
+  paymentStatus      String            @default("UNPAID")
+                                       // UNPAID | PARTIALLY_PAID | PAID
+  // MSME compliance — populated when vendor.msmeRegistered=true.
+  // msmePaymentDue = invoiceDate + min(45, vendor.paymentTerms) days.
+  // msmeBreach + msmeInterest get set by the daily refresh job when overdue.
+  msmePaymentDue     DateTime?         @db.Date
+  msmeDaysRemaining  Int?
+  msmeBreach         Boolean           @default(false)
+  msmeInterest       Decimal?          @db.Decimal(15, 2)
+  isUrgent           Boolean           @default(false)
+  urgentReason       String?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   matchType          String? // '2way' | '3way' — set when isPOInvoice = true
@@ -1993,4 +2014,111 @@ model AmortizationSchedule {
   @@index([tenantId, invoiceId])
   @@index([tenantId, status])
   @@map("amortization_schedules")
+}
+
+// ── PAYMENT BATCHES ──────────────────────────────────────────────────────────
+// Vendor payments flow through a batch wrapper so a finance manager can sign
+// off a single document covering N invoices / advances. Lifecycle:
+//   DRAFT → PENDING_APPROVAL → APPROVED → EXECUTED | PARTIALLY_EXECUTED
+//                                       ↓
+//                                     FAILED
+// MSME compliance: containsMsme + msmeVendorCount surface on the listing so
+// the AP team can see at-a-glance which batches must go out before the 45-day
+// statutory deadline. Urgent batches route to a separate workflow
+// (WF-PAYMENT-URGENT, 4h SLA) that bypasses the standard finance review.
+model PaymentBatch {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  batchRef           String   // PAY-2026-001
+  status             String   @default("DRAFT")
+                              // DRAFT | PENDING_APPROVAL | APPROVED |
+                              // EXECUTED | PARTIALLY_EXECUTED | FAILED
+  isUrgent           Boolean  @default(false)
+  urgentReason       String?
+  urgentFlaggedBy    String?
+  containsMsme       Boolean  @default(false)
+  msmeVendorCount    Int      @default(0)
+  totalAmount        Decimal  @db.Decimal(15, 2)
+  totalTds           Decimal  @db.Decimal(15, 2)
+  totalNetPayable    Decimal  @db.Decimal(15, 2)
+  paymentDate        DateTime?
+  entityId           String
+  bankAccountId      String?
+  narration          String?  @db.Text
+  workflowInstanceId String?
+  createdBy          String
+  createdAt          DateTime @default(now())
+  executedAt         DateTime?
+  lines              PaymentBatchLine[]
+
+  @@unique([tenantId, batchRef])
+  @@index([tenantId, status])
+  @@index([tenantId, entityId])
+  @@index([tenantId, isUrgent, status])
+  @@map("payment_batches")
+}
+
+// One row per invoice or advance being paid. Stores the actual remitted
+// amount (which may differ from invoice.netPayable for partial payments),
+// the chosen rail (NEFT/RTGS/IMPS/CHEQUE), and the UTR/cheque ref captured
+// at execution time. MSME flags are denormalised here so the batch detail
+// page renders without a vendor join per row.
+model PaymentBatchLine {
+  id                String       @id @default(uuid())
+  tenantId          String
+  batchId           String
+  lineType          String       // INVOICE | ADVANCE
+  invoiceId         String?
+  advanceId         String?
+  vendorId          String
+  isMsme            Boolean      @default(false)
+  msmePaymentDue    DateTime?
+  msmeDaysRemaining Int?
+  invoiceAmount     Decimal      @db.Decimal(15, 2)
+  tdsAmount         Decimal      @db.Decimal(15, 2)
+  advanceAdjusted   Decimal      @default(0) @db.Decimal(15, 2)
+  paymentAmount     Decimal      @db.Decimal(15, 2)
+  paymentType       String       // FULL | PARTIAL
+  paymentMethod     String       // NEFT | RTGS | IMPS | CHEQUE
+  tdsSection        String?      // 194C / 194J / 194I — drives challan grouping
+  utrNumber         String?
+  chequeNumber      String?
+  chequeDate        DateTime?
+  status            String       @default("PENDING")
+                                  // PENDING | PAID | FAILED
+  failureReason     String?
+  paidAt            DateTime?
+  batch             PaymentBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, vendorId])
+  @@index([tenantId, status])
+  @@map("payment_batch_lines")
+}
+
+// TDS challan = aggregate TDS withheld in a calendar month, due to government
+// by the 7th of the following month. Created/updated automatically when a
+// PaymentBatch executes — challans are upserted per (tenant, period, section).
+// Once deposited via the bank's TDS portal, the challan number is recorded
+// here for compliance reporting (Form 26Q / 27Q quarterly returns).
+model TdsChallan {
+  id            String    @id @default(uuid())
+  tenantId      String
+  tdsSection    String    // 194C, 194J etc.
+  period        String    // YYYY-MM
+  amount        Decimal   @db.Decimal(15, 2)
+  dueDate       DateTime  @db.Date
+  status        String    @default("PENDING")
+                          // PENDING | DEPOSITED | OVERDUE
+  challanNumber String?
+  depositedAt   DateTime?
+  depositedBy   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([tenantId, period, tdsSection])
+  @@index([tenantId, status])
+  @@index([tenantId, dueDate])
+  @@map("tds_challans")
 }

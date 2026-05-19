@@ -48,6 +48,8 @@ export interface DashboardKpis {
   stpCount:              number
   avgProcessingDays:     number | null
   totalVendors:          number
+  msmeDueIn7Days?:       { count: number; amount: number }
+  paymentBatchesPending?: number
   invoicesThisMonth:     number
   invoicesByStatus:      { status: string; count: number }[]
   balance?:              { availableBalance: number; currentBalance: number; currency: string; asOf: string }

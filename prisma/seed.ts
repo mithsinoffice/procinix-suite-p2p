@@ -921,6 +921,8 @@ async function main() {
     { code: 'WF-PR-001',      name: 'PR Approval',              module: 'PR',       priority: 5 },
     { code: 'WF-GRN-001',     name: 'GRN Approval',             module: 'GRN'             },
     { code: 'WF-PAY-001',     name: 'Payment Approval',         module: 'PAYMENT'         },
+    { code: 'WF-PAYMENT-001', name: 'Payment Batch Approval',   module: 'PAYMENT', priority: 15 },
+    { code: 'WF-PAYMENT-URGENT', name: 'Urgent Payment Batch Approval', module: 'PAYMENT', priority: 25 },
   ]
   let masterWfCreated = 0
   let masterWfRepriortised = 0
@@ -970,6 +972,35 @@ async function main() {
     masterWfCreated++
   }
   console.log(`✓ ${masterWorkflows.length} master workflow definitions seeded (${masterWfCreated} new, ${masterWorkflows.length - masterWfCreated} existing, ${masterWfRepriortised} repriortised)`)
+
+  // Payment workflows need overrides on top of the generic single-stage
+  // template above: WF-PAYMENT-001 has a Finance Manager stage, and
+  // WF-PAYMENT-URGENT has a 4h SLA + an isUrgent=true condition so it only
+  // matches when the batch carries an urgent flag.
+  const wfPayment       = await prisma.workflowDefinition.findFirst({ where: { tenantId, code: 'WF-PAYMENT-001' } })
+  const wfPaymentUrgent = await prisma.workflowDefinition.findFirst({ where: { tenantId, code: 'WF-PAYMENT-URGENT' } })
+
+  if (wfPayment) {
+    await prisma.workflowDefinitionStage.updateMany({
+      where: { definitionId: wfPayment.id },
+      data:  { name: 'Finance Manager Approval', approverRole: 'FINANCE_MANAGER', slaHours: 48 },
+    })
+  }
+  if (wfPaymentUrgent) {
+    await prisma.workflowDefinitionStage.updateMany({
+      where: { definitionId: wfPaymentUrgent.id },
+      data:  { name: 'Finance Manager Approval (Urgent)', approverRole: 'FINANCE_MANAGER', slaHours: 4 },
+    })
+    const existingCondition = await prisma.workflowDefinitionCondition.findFirst({
+      where: { definitionId: wfPaymentUrgent.id, field: 'isUrgent' },
+    })
+    if (!existingCondition) {
+      await prisma.workflowDefinitionCondition.create({
+        data: { definitionId: wfPaymentUrgent.id, field: 'isUrgent', operator: 'equals', value: 'true', logicGroup: 'AND' },
+      })
+    }
+  }
+  console.log('✓ Payment workflow overrides applied (Finance Manager + 4h urgent SLA)')
 
   // ── Super Admin ───────────────────────────────────────────────────────────────
   await prisma.user.update({

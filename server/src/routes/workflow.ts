@@ -37,6 +37,11 @@ const MASTER_ENTITY_DELEGATES: Record<string, { delegate: string; setsIsActive: 
   workflow_rule:  { delegate: 'workflowRule',   setsIsActive: true  },
 }
 
+// payment_batch has its own approve/reject contract: APPROVED is not the
+// terminal state (execute → EXECUTED comes later), so it's handled in its
+// own branch below rather than via MASTER_ENTITY_DELEGATES (which assumes
+// final approval → ACTIVE).
+
 export async function workflowRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
 
@@ -178,6 +183,16 @@ export async function workflowRoutes(app: FastifyInstance) {
           data:  { status: 'ACTIVE' },
         })
       }
+    } else if (instanceInfo?.entityType === 'payment_batch') {
+      // Payment batch: final approval flips to APPROVED (not ACTIVE) — the
+      // batch is then executed manually via POST /batches/:id/execute which
+      // posts JVs + creates TDS challans. Interim stages keep PENDING_APPROVAL.
+      if (result.data.finalStatus === 'APPROVED') {
+        await app.prisma.paymentBatch.update({
+          where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
+          data:  { status: 'APPROVED' },
+        })
+      }
     } else if (instanceInfo?.entityType && MASTER_ENTITY_DELEGATES[instanceInfo.entityType]) {
       // Generic master approve flow — applies to vendor, employee, user,
       // budget, financial_year, currency, profit_centre, item_category and
@@ -294,6 +309,16 @@ export async function workflowRoutes(app: FastifyInstance) {
         where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
         data:  { status: newStatus },
       })
+    } else if (instanceInfo?.entityType === 'payment_batch') {
+      // Reject a payment batch — collapse back to DRAFT so the creator can
+      // edit and resubmit. REQUEST_INFO keeps it in PENDING_APPROVAL while
+      // the chat thread resolves the question.
+      if (mode !== 'REQUEST_INFO') {
+        await app.prisma.paymentBatch.update({
+          where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
+          data:  { status: 'DRAFT' },
+        })
+      }
     } else if (instanceInfo?.entityType && MASTER_ENTITY_DELEGATES[instanceInfo.entityType]) {
       // Generic master reject flow. RETURN_TO_DRAFT / RETURN_TO_PREV_STAGE
       // flip the master back to DRAFT (single-stage default). REQUEST_INFO

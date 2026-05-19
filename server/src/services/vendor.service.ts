@@ -183,6 +183,10 @@ export async function createVendor(
         panEntityType:     input.panEntityType,
         aadharNo:          input.aadharNo,
         msmeCategory:      input.msmeCategory,
+        // msmeRegistered auto-derived from msmeCategory presence — keeps the
+        // boolean and the category in lockstep so the payment module's
+        // `vendor.msmeRegistered` filter (45-day deadline) stays consistent.
+        msmeRegistered:    !!input.msmeCategory,
         llpRegNo:          input.llpRegNo,
         trustRegNo:        input.trustRegNo,
         // Default to DRAFT — vendor moves to PENDING_APPROVAL only when the
@@ -387,6 +391,7 @@ export async function updateVendor(
         panEntityType:     input.panEntityType,
         aadharNo:          input.aadharNo,
         msmeCategory:      input.msmeCategory,
+        msmeRegistered:    input.msmeCategory !== undefined ? !!input.msmeCategory : undefined,
         llpRegNo:          input.llpRegNo,
         trustRegNo:        input.trustRegNo,
       },
