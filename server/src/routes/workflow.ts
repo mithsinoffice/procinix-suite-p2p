@@ -9,25 +9,16 @@ export async function workflowRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
 
   // Start a workflow for any module (transactional or master).
-  // Looks up the matching ACTIVE WorkflowDefinition; if none exists, signals
-  // the caller with { ok: false, reason: 'NO_WORKFLOW_DEFINED' } so it can
-  // fall back to a direct status update. Otherwise creates a WorkflowInstance
-  // via the engine's startWorkflow().
+  // The engine's startWorkflow() itself returns err(NO_WORKFLOW_DEFINED) when
+  // no ACTIVE definition matches — we surface that with the legacy
+  // { ok: false, reason: 'NO_WORKFLOW_DEFINED' } shape so callers can fall
+  // back to a direct status update.
   app.post('/start', auth, async (req, reply) => {
     const { module, entityType, entityId, record } = (req.body ?? {}) as {
       module?: string; entityType?: string; entityId?: string; record?: Record<string, unknown>
     }
     if (!module || !entityType || !entityId) {
       return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'module, entityType and entityId are required' })
-    }
-
-    const definition = await app.prisma.workflowDefinition.findFirst({
-      where:   { tenantId: req.tenant.id, module, status: 'ACTIVE' },
-      orderBy: { priority: 'desc' },
-      select:  { id: true },
-    })
-    if (!definition) {
-      return reply.send({ ok: false, reason: 'NO_WORKFLOW_DEFINED' })
     }
 
     const result = await startWorkflow(
@@ -38,8 +29,13 @@ export async function workflowRoutes(app: FastifyInstance) {
       record ?? {},
       { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as any).name ?? req.user.sub, userRole: (req.user as any).role },
     )
-    if (!result.ok) return reply.code(result.error.httpStatus ?? 400).send(result.error)
-    return reply.send({ ok: true, instanceId: result.data.instanceId })
+    if (!result.ok) {
+      if (result.error.message === 'NO_WORKFLOW_DEFINED') {
+        return reply.send({ ok: false, reason: 'NO_WORKFLOW_DEFINED' })
+      }
+      return reply.code(result.error.httpStatus ?? 400).send(result.error)
+    }
+    return reply.send({ ok: true, instanceId: result.data.instanceId, autoApproved: result.data.autoApproved ?? false })
   })
 
   // Get instance by ID directly
@@ -112,6 +108,24 @@ export async function workflowRoutes(app: FastifyInstance) {
           details: { comments, newStatus: newInvStatus },
         },
       })
+    } else if (instanceInfo?.entityType === 'purchase_requisition') {
+      // PR follows a simpler ladder: PENDING_L1/L2/… while stages progress,
+      // APPROVED on final stage approval. Status reflects the active stage.
+      const newStatus = result.data.finalStatus === 'APPROVED'
+        ? 'APPROVED'
+        : `PENDING_L${result.data.nextStage ?? 1}`
+      await app.prisma.purchaseRequisition.update({
+        where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
+        data:  { status: newStatus },
+      })
+    } else if (instanceInfo?.entityType === 'purchase_order') {
+      const newStatus = result.data.finalStatus === 'APPROVED'
+        ? 'APPROVED'
+        : `PENDING_L${result.data.nextStage ?? 1}`
+      await app.prisma.purchaseOrder.update({
+        where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
+        data:  { status: newStatus },
+      })
     }
 
     return reply.send(result.data)
@@ -161,6 +175,24 @@ export async function workflowRoutes(app: FastifyInstance) {
           userId: req.user.sub, userName: (req.user as any).name,
           details: { comments, mode, newStatus: newInvStatus },
         },
+      })
+    } else if (instanceInfo?.entityType === 'purchase_requisition') {
+      const newStatus = mode === 'REQUEST_INFO'
+        ? `PENDING_L${instanceInfo.currentStageOrder}`
+        : mode === 'RETURN_TO_DRAFT' ? 'REJECTED'
+        : `PENDING_L${Math.max(1, instanceInfo.currentStageOrder - 1)}`
+      await app.prisma.purchaseRequisition.update({
+        where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
+        data:  { status: newStatus, ...(mode === 'RETURN_TO_DRAFT' && { rejectionReason: comments }) },
+      })
+    } else if (instanceInfo?.entityType === 'purchase_order') {
+      const newStatus = mode === 'REQUEST_INFO'
+        ? `PENDING_L${instanceInfo.currentStageOrder}`
+        : mode === 'RETURN_TO_DRAFT' ? 'REJECTED'
+        : `PENDING_L${Math.max(1, instanceInfo.currentStageOrder - 1)}`
+      await app.prisma.purchaseOrder.update({
+        where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
+        data:  { status: newStatus, ...(mode === 'RETURN_TO_DRAFT' && { rejectionReason: comments }) },
       })
     }
 

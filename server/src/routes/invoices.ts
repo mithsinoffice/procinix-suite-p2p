@@ -77,7 +77,11 @@ export async function invoiceRoutes(app: FastifyInstance) {
     return reply.send({ total, draft, submitted, approved, rejected, onHold, paid })
   })
 
-  // ── Pending approvals (current user) ──
+  // ── Pending approvals (current user, cross-module) ──
+  // Returns every PENDING WorkflowInstanceStage assigned to the user across
+  // invoice / purchase_requisition / purchase_order. Each row is enriched with
+  // a `module` tag, document reference + amount + label so the Approval Desk
+  // can render a unified queue without N module-specific endpoints.
   app.get('/pending-approvals', auth, async (req, reply) => {
     const userId   = req.user.sub
     const tenantId = req.tenant.id
@@ -86,23 +90,55 @@ export async function invoiceRoutes(app: FastifyInstance) {
       where:   { tenantId, assignedTo: userId, status: 'PENDING' },
       include: { instance: true },
     })
+    if (pendingStages.length === 0) return reply.send([])
 
-    const invoiceIds = pendingStages
-      .filter(s => s.instance.entityType === 'invoice')
-      .map(s => s.instance.entityId)
+    const invoiceIds = pendingStages.filter(s => s.instance.entityType === 'invoice').map(s => s.instance.entityId)
+    const prIds      = pendingStages.filter(s => s.instance.entityType === 'purchase_requisition').map(s => s.instance.entityId)
+    const poIds      = pendingStages.filter(s => s.instance.entityType === 'purchase_order').map(s => s.instance.entityId)
 
-    if (!invoiceIds.length) return reply.send([])
+    const [invoices, prs, pos] = await Promise.all([
+      invoiceIds.length
+        ? app.prisma.invoice.findMany({
+            where:   { id: { in: invoiceIds }, tenantId },
+            include: { vendor: { select: { legalName: true, vendorCode: true } } },
+          })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.invoice.findMany>>),
+      prIds.length
+        ? app.prisma.purchaseRequisition.findMany({ where: { id: { in: prIds }, tenantId } })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.purchaseRequisition.findMany>>),
+      poIds.length
+        ? app.prisma.purchaseOrder.findMany({
+            where:   { id: { in: poIds }, tenantId },
+            include: { vendor: { select: { legalName: true, vendorCode: true } } },
+          })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.purchaseOrder.findMany>>),
+    ])
 
-    const invoices = await app.prisma.invoice.findMany({
-      where:   { id: { in: invoiceIds }, tenantId },
-      include: { vendor: { select: { legalName: true, vendorCode: true } } },
-      orderBy: { createdAt: 'desc' },
-    })
+    const rows: unknown[] = []
+    for (const stage of pendingStages) {
+      const { entityType, entityId } = stage.instance
+      if (entityType === 'invoice') {
+        const inv = invoices.find(i => i.id === entityId)
+        if (inv) rows.push({ ...inv, module: 'INVOICE', pendingStage: stage })
+      } else if (entityType === 'purchase_requisition') {
+        const pr = prs.find(p => p.id === entityId)
+        if (pr) rows.push({
+          ...pr, module: 'PR', pendingStage: stage,
+          // Keep field names parallel to the invoice shape so the desk renders
+          // both without per-module column logic.
+          invoiceNumber: pr.prRef, totalAmount: pr.estimatedTotal, currencyCode: 'INR',
+        })
+      } else if (entityType === 'purchase_order') {
+        const po = pos.find(p => p.id === entityId)
+        if (po) rows.push({
+          ...po, module: 'PO', pendingStage: stage,
+          invoiceNumber: po.poRef,
+        })
+      }
+    }
 
-    return reply.send(invoices.map(inv => ({
-      ...inv,
-      pendingStage: pendingStages.find(s => s.instance.entityId === inv.id),
-    })))
+    rows.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return reply.send(rows)
   })
 
   // ── Get detail ──
@@ -293,8 +329,24 @@ export async function invoiceRoutes(app: FastifyInstance) {
       { tenantId, userId, userName: (req.user as any).name ?? userId }
     )
 
-    const wfInstanceId = wfResult.ok ? wfResult.data.instanceId : null
-    const newStatus    = wfResult.ok ? 'PENDING_L1' : 'SUBMITTED'
+    // wfResult.ok with autoApproved=true → entire definition was auto-approved
+    //   (every stage had autoApproveBelow > amount). Invoice goes straight to
+    //   APPROVED — same end state as the final approve route would produce.
+    // wfResult.ok without autoApproved → workflow is IN_PROGRESS, invoice is
+    //   PENDING_L1.
+    // wfResult.error.message === 'NO_WORKFLOW_DEFINED' → no matching workflow
+    //   config for this tenant/module. Fall back to plain SUBMITTED so the
+    //   document isn't stranded in an unactionable state.
+    let wfInstanceId: string | null = null
+    let newStatus: string
+    if (wfResult.ok) {
+      wfInstanceId = wfResult.data.instanceId
+      newStatus    = wfResult.data.autoApproved ? 'APPROVED' : 'PENDING_L1'
+    } else if (wfResult.error.message === 'NO_WORKFLOW_DEFINED') {
+      newStatus = 'SUBMITTED'
+    } else {
+      return reply.code(wfResult.error.httpStatus ?? 400).send(wfResult.error)
+    }
 
     await app.prisma.invoice.update({
       where: { id: invoiceId },
@@ -305,11 +357,11 @@ export async function invoiceRoutes(app: FastifyInstance) {
       data: {
         invoiceId, tenantId, action: 'SUBMITTED',
         userId, userName: (req.user as any).name,
-        details: { workflowStarted: wfResult.ok, newStatus },
+        details: { workflowStarted: wfResult.ok, autoApproved: wfResult.ok && wfResult.data.autoApproved, newStatus },
       },
     })
 
-    return reply.send({ ok: true, status: newStatus, workflowInstanceId: wfInstanceId })
+    return reply.send({ ok: true, status: newStatus, workflowInstanceId: wfInstanceId, autoApproved: wfResult.ok && (wfResult.data.autoApproved ?? false) })
   })
 
   // ── Approve ──

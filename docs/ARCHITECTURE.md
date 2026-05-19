@@ -1,6 +1,6 @@
 # Procinix v2 (S2P) — Architecture
 
-_Last updated: 2026-05-19 (OCR dual-model routing + error surfacing)_
+_Last updated: 2026-05-19 (workflow engine audit — definition selection, approver resolution, auto-advance, PR/PO transitions)_
 
 Indian Source-to-Pay (S2P) platform — Procurement, Goods Receipt, AP Invoice processing, Payments, Vendor management, Approvals and Masters — for mid-market Indian enterprises. Multi-tenant, RBAC-gated, n8n-driven email ingestion, Gemini OCR.
 
@@ -285,18 +285,33 @@ The `WorkflowDefinitionFormPage` Module dropdown shows the same list with human-
 
 ### §7.4 Definition selection (`selectDefinition`)
 
-1. Query all ACTIVE definitions for `(tenantId, module)`, sorted by `priority desc`.
+1. Query all definitions for `(tenantId, module, status='ACTIVE')`, sorted by `priority desc`. Filter is on `status` only — the legacy `isActive` boolean is no longer consulted (CLAUDE.md mandate).
 2. Skip definitions where `entityId` / `departmentId` is set and doesn't match the record.
 3. First definition whose conditions all evaluate true (AND-group all true AND OR-group at least one true) wins.
 4. Else fall back to the first `isDefault` definition with no entity/department scope.
-5. Else null → caller decides what to do (typically auto-approve).
+5. Else return null → `startWorkflow` returns `err({ message: 'NO_WORKFLOW_DEFINED' })` and callers (invoice/PR/PO submit) flip the document to `SUBMITTED` with no instance. **No orphan IN_PROGRESS instance is ever created.**
+
+A pure helper `selectDefinitionFromList(defs, entityId, departmentId, record)` is exported alongside for unit testing — see [workflow-engine.test.ts](../server/src/services/__tests__/workflow-engine.test.ts).
 
 ### §7.5 Approver resolution (`resolveApprover`)
 
-- `USER` — the configured `approverUserId`.
-- `ROLE` — first active `User(role = stage.approverRole, departmentId?)` ordered by `createdAt asc`.
-- `MANAGER_OF` — `Employee(tenantId).managerId` (uses first employee; needs scoping by requester).
-- `DEPT_HEAD` — first active `User(role='DEPT_HEAD', departmentId = record.departmentId)`.
+Resolution is multi-source so a partially-seeded tenant doesn't strand workflows on `assignedTo: null`.
+
+- `USER` — the configured `approverUserId`, verified to be `tenantId == ctx.tenantId` and `isActive`.
+- `ROLE` — tries in order:
+  1. `User(role = stage.approverRole, isActive, [departmentId])` — the legacy single-role field on the user record.
+  2. `UserEntityRole(roleCode = stage.approverRole, isActive, user.tenantId)` — the canonical per-entity RBAC table. Department scope honoured when set on the record.
+  3. Fallback: first `User(role='SUPER_ADMIN', isActive)` in the tenant. SUPER_ADMIN bypasses RBAC anyway, so they're a legitimate approver for any otherwise-unassigned stage; this preserves business-flow continuity in dev / partially-seeded tenants instead of leaving the Approval Desk empty.
+- `MANAGER_OF` — looks up the **requester's** employee row (via `record.createdByUserId` → user → employeeId, then `email` fallback) and returns `Employee.managerId`. The previous version returned the first employee in the tenant — that bug is fixed.
+- `DEPT_HEAD` — first active `User(role='DEPT_HEAD', departmentId = record.departmentId)`, with `UserEntityRole(roleCode='DEPT_HEAD')` fallback.
+
+When a stage's PENDING current stage cannot be assigned to anyone (every source returned null), the engine `console.warn`s with `{ tenantId, instanceId, stageOrder, stageName, approverType, approverRole }` so operators can diagnose the missing-role config. The stage is still created (PENDING with `assignedTo: null`) — SUPER_ADMIN can advance it via the workflow detail page.
+
+### §7.5a Auto-approval & advancement (`computeAutoAdvance`)
+
+When a stage has `autoApproveBelow` set, `startWorkflow` walks consecutive stages from order 1 and auto-approves each one whose threshold exceeds the record amount. The walk stops at the first non-eligible stage, which becomes the new `currentStageOrder`. If every stage auto-approves, the instance is created with `status: 'APPROVED'` and the calling document is flipped to `APPROVED` in the same `startWorkflow` call (caller's `wfResult.data.autoApproved === true`).
+
+The walk is sequential — it does **not** skip a non-eligible middle stage. Pure helper `computeAutoAdvance(stages, amount)` is exported for unit testing (covers all-auto / partial / boundary / sort-order edge cases). The previous behaviour set stage 1 to `AUTO_APPROVED` without advancing `currentStageOrder` — workflow stuck with no PENDING stage to approve. Fixed.
 
 ### §7.6 Masters wired through the engine
 
@@ -316,6 +331,26 @@ The `WorkflowDefinitionFormPage` Module dropdown shows the same list with human-
 | `ApprovalDeskPage`                                | `/approvals`                                  | Cross-module pending-approvals queue                  |
 
 Legacy `/masters/workflow-definitions/*` routes are still registered for backwards compat — they render the same components.
+
+### §7.8 Cross-module document transitions
+
+`POST /api/workflow/instances/:id/approve` and `/reject` route based on `WorkflowInstance.entityType`:
+
+| `entityType`              | Approve (non-final)       | Approve (final)              | Reject `RETURN_TO_DRAFT` | Reject `RETURN_TO_PREV_STAGE`           | Reject `REQUEST_INFO`                  |
+| ------------------------- | ------------------------- | ---------------------------- | ------------------------- | --------------------------------------- | -------------------------------------- |
+| `invoice`                 | `PENDING_L<next>`         | `APPROVED` (+ PO link flip)  | `REJECTED` + rejectionReason | `PENDING_L<prev>`                        | `PENDING_L<current>` + INFO_REQUESTED chat |
+| `purchase_requisition`    | `PENDING_L<next>`         | `APPROVED`                   | `REJECTED` + rejectionReason | `PENDING_L<max(1, current-1)>`           | `PENDING_L<current>`                       |
+| `purchase_order`          | `PENDING_L<next>`         | `APPROVED`                   | `REJECTED` + rejectionReason | `PENDING_L<max(1, current-1)>`           | `PENDING_L<current>`                       |
+
+PR/PO transitions were previously missing — only invoices got their document status updated on workflow advance/reject. Fixed in the audit; PR and PO submissions now go through the same engine pathway as invoices and reflect stage progression on the document.
+
+### §7.9 Submit guards
+
+`POST /api/invoices/:id/submit`, `POST /api/pr/:id/submit`, and `POST /api/po/:id/submit` all enforce `status ∈ {DRAFT, REJECTED}` server-side before calling `startWorkflow`. Re-submitting an already-submitted document returns `400 WORKFLOW_INVALID_STATE` — prevents stacking workflow instances. The standard rejection loop sets the document to `REJECTED`, re-enabling resubmission.
+
+### §7.10 Cross-module pending-approvals queue
+
+`GET /api/invoices/pending-approvals` (despite the path, it's cross-module) returns every `WorkflowInstanceStage` with `assignedTo = currentUser, status = 'PENDING'` enriched with the underlying document. Each row carries a `module` tag (`INVOICE` / `PR` / `PO`) plus uniform `invoiceNumber` / `totalAmount` / `currencyCode` fields parallel to the invoice shape so the Approval Desk renders all three without per-module column logic. Previously the endpoint silently filtered to invoices only — PR and PO approvers saw "All caught up!" while their work queue grew.
 
 ---
 

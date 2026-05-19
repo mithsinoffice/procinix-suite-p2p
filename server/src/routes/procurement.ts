@@ -150,9 +150,23 @@ export async function procurementRoutes(app: FastifyInstance) {
   app.post('/pr/:id/submit', auth, async (req, reply) => {
     const pr = await app.prisma.purchaseRequisition.findFirst({ where: { id: (req.params as any).id, tenantId: req.tenant.id } })
     if (!pr) return reply.code(404).send({ message: 'PR not found' })
+    if (!['DRAFT', 'REJECTED'].includes(pr.status)) {
+      return reply.code(400).send({ code: 'WORKFLOW_INVALID_STATE', message: `Cannot submit PR in ${pr.status} status` })
+    }
     const record = { totalAmount: Number(pr.estimatedTotal), entityId: pr.entityId, departmentId: pr.departmentId ?? undefined, createdByUserId: pr.createdByUserId ?? undefined }
     const wf = await startWorkflow(app.prisma, 'PR', 'purchase_requisition', pr.id, record, { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as any).name ?? req.user.sub })
-    const updated = await app.prisma.purchaseRequisition.update({ where: { id: pr.id }, data: { status: 'SUBMITTED', workflowInstanceId: wf.ok ? wf.data.instanceId : undefined } })
+    let wfInstanceId: string | null = null
+    let newStatus = 'SUBMITTED'
+    if (wf.ok) {
+      wfInstanceId = wf.data.instanceId
+      newStatus    = wf.data.autoApproved ? 'APPROVED' : 'PENDING_L1'
+    } else if (wf.error.message !== 'NO_WORKFLOW_DEFINED') {
+      return reply.code(wf.error.httpStatus ?? 400).send(wf.error)
+    }
+    const updated = await app.prisma.purchaseRequisition.update({
+      where: { id: pr.id },
+      data:  { status: newStatus, workflowInstanceId: wfInstanceId ?? undefined },
+    })
     return reply.send(updated)
   })
 
@@ -265,9 +279,23 @@ export async function procurementRoutes(app: FastifyInstance) {
   app.post('/po/:id/submit', auth, async (req, reply) => {
     const po = await app.prisma.purchaseOrder.findFirst({ where: { id: (req.params as any).id, tenantId: req.tenant.id } })
     if (!po) return reply.code(404).send({ message: 'PO not found' })
+    if (!['DRAFT', 'REJECTED'].includes(po.status)) {
+      return reply.code(400).send({ code: 'WORKFLOW_INVALID_STATE', message: `Cannot submit PO in ${po.status} status` })
+    }
     const record = { totalAmount: Number(po.totalAmount), entityId: po.entityId, vendorId: po.vendorId, createdByUserId: po.createdByUserId ?? undefined }
     const wf = await startWorkflow(app.prisma, 'PO', 'purchase_order', po.id, record, { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as any).name ?? req.user.sub })
-    const updated = await app.prisma.purchaseOrder.update({ where: { id: po.id }, data: { status: 'SUBMITTED', workflowInstanceId: wf.ok ? wf.data.instanceId : undefined } })
+    let wfInstanceId: string | null = null
+    let newStatus = 'SUBMITTED'
+    if (wf.ok) {
+      wfInstanceId = wf.data.instanceId
+      newStatus    = wf.data.autoApproved ? 'APPROVED' : 'PENDING_L1'
+    } else if (wf.error.message !== 'NO_WORKFLOW_DEFINED') {
+      return reply.code(wf.error.httpStatus ?? 400).send(wf.error)
+    }
+    const updated = await app.prisma.purchaseOrder.update({
+      where: { id: po.id },
+      data:  { status: newStatus, workflowInstanceId: wfInstanceId ?? undefined },
+    })
     return reply.send(updated)
   })
 

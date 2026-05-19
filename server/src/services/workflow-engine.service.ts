@@ -7,6 +7,10 @@ import type { PrismaClient } from '@prisma/client'
 import { writeAuditLog } from '../lib/audit.js'
 import { ok, err, type Result } from '../lib/result.js'
 
+export const WORKFLOW_ERR = {
+  NO_WORKFLOW_DEFINED: 'NO_WORKFLOW_DEFINED',
+} as const
+
 // ── Constants ──
 export const STP_THRESHOLD_PO     = 98
 export const STP_THRESHOLD_NON_PO = 96
@@ -55,6 +59,30 @@ function matchesDefinition(conditions: { field: string; operator: string; value:
 
 // ── Definition selector ──
 
+// Pure: pick the matching definition from a pre-loaded list. Exported for tests.
+type DefinitionRow = {
+  id: string
+  entityId: string | null
+  departmentId: string | null
+  isDefault: boolean
+  conditions: { field: string; operator: string; value: string; logicGroup: string }[]
+}
+
+export function selectDefinitionFromList(
+  definitions: DefinitionRow[],
+  entityId: string | null,
+  departmentId: string | null,
+  record: Record<string, unknown>
+): string | null {
+  for (const def of definitions) {
+    if (def.entityId && def.entityId !== entityId) continue
+    if (def.departmentId && def.departmentId !== departmentId) continue
+    if (matchesDefinition(def.conditions, record)) return def.id
+  }
+  const defaultDef = definitions.find(d => d.isDefault && !d.entityId && !d.departmentId)
+  return defaultDef?.id ?? null
+}
+
 export async function selectDefinition(
   prisma: PrismaClient,
   tenantId: string,
@@ -63,23 +91,22 @@ export async function selectDefinition(
   departmentId: string | null,
   record: Record<string, unknown>
 ): Promise<string | null> {
+  // CLAUDE.md: filter by `status` (canonical), not the legacy `isActive` boolean.
   const definitions = await prisma.workflowDefinition.findMany({
-    where:   { tenantId, module, isActive: true, status: 'ACTIVE' },
+    where:   { tenantId, module, status: 'ACTIVE' },
     include: { conditions: true },
     orderBy: { priority: 'desc' },
   })
-
-  for (const def of definitions) {
-    if (def.entityId && def.entityId !== entityId) continue
-    if (def.departmentId && def.departmentId !== departmentId) continue
-    if (matchesDefinition(def.conditions, record)) return def.id
-  }
-
-  const defaultDef = definitions.find(d => d.isDefault && !d.entityId && !d.departmentId)
-  return defaultDef?.id ?? null
+  return selectDefinitionFromList(definitions, entityId, departmentId, record)
 }
 
 // ── Approver resolver ──
+// ROLE resolution consults TWO sources in order:
+//   1. User.role (primary role on the user record)
+//   2. UserEntityRole.roleCode (per-entity roles — the canonical RBAC table)
+// A SUPER_ADMIN tenant user is the universal fallback so workflow stages never
+// silently end up unassigned. Returns null only when zero users exist for the
+// tenant — the caller logs a warning in that case.
 
 async function resolveApprover(
   prisma: PrismaClient,
@@ -89,26 +116,76 @@ async function resolveApprover(
 ): Promise<string | null> {
   switch (stage.approverType) {
     case 'USER':
-      return stage.approverUserId ?? null
+      // Validate the configured user is in this tenant — prevents cross-tenant leak.
+      if (!stage.approverUserId) return null
+      {
+        const u = await prisma.user.findFirst({
+          where:  { id: stage.approverUserId, tenantId, isActive: true },
+          select: { id: true },
+        })
+        return u?.id ?? null
+      }
 
     case 'ROLE': {
+      if (!stage.approverRole) return null
       const departmentId = record.departmentId as string | undefined
-      const user = await prisma.user.findFirst({
+
+      // Source 1: User.role (legacy single role on user record).
+      const userByRole = await prisma.user.findFirst({
         where: {
           tenantId,
-          role: stage.approverRole as any,
+          role: stage.approverRole as never,
           isActive: true,
           ...(departmentId && { departmentId }),
         },
         orderBy: { createdAt: 'asc' },
       })
-      return user?.id ?? null
+      if (userByRole) return userByRole.id
+
+      // Source 2: UserEntityRole (per-entity role assignment — the canonical
+      // table). Most demo/real users get their role via this path, not User.role.
+      const entityRole = await prisma.userEntityRole.findFirst({
+        where:   { roleCode: stage.approverRole, isActive: true, user: { tenantId, isActive: true } },
+        include: { user: { select: { id: true, departmentId: true } } },
+        orderBy: { user: { createdAt: 'asc' } },
+      })
+      if (entityRole?.user) {
+        if (!departmentId || entityRole.user.departmentId === departmentId) {
+          return entityRole.user.id
+        }
+      }
+
+      // Fallback: any SUPER_ADMIN in the tenant. SUPER_ADMIN bypasses RBAC
+      // anyway, so they're a legitimate approver for any stage that would
+      // otherwise be unassigned (preserves business-flow continuity in dev /
+      // partially-seeded tenants instead of stranding the workflow).
+      const superAdmin = await prisma.user.findFirst({
+        where:   { tenantId, role: 'SUPER_ADMIN' as never, isActive: true },
+        orderBy: { createdAt: 'asc' },
+        select:  { id: true },
+      })
+      return superAdmin?.id ?? null
     }
 
     case 'MANAGER_OF': {
       const requesterId = record.createdByUserId as string | undefined
       if (!requesterId) return null
-      const emp = await prisma.employee.findFirst({ where: { tenantId }, select: { managerId: true } })
+      // Look up the requester's employee row, not an arbitrary employee.
+      const requesterUser = await prisma.user.findFirst({
+        where:  { id: requesterId, tenantId },
+        select: { email: true, employeeId: true },
+      })
+      if (!requesterUser) return null
+
+      const emp = requesterUser.employeeId
+        ? await prisma.employee.findFirst({
+            where:  { id: requesterUser.employeeId, tenantId },
+            select: { managerId: true },
+          })
+        : await prisma.employee.findFirst({
+            where:  { tenantId, email: requesterUser.email },
+            select: { managerId: true },
+          })
       return emp?.managerId ?? null
     }
 
@@ -116,9 +193,16 @@ async function resolveApprover(
       const deptId = record.departmentId as string | undefined
       if (!deptId) return null
       const head = await prisma.user.findFirst({
-        where: { tenantId, role: 'DEPT_HEAD' as any, departmentId: deptId, isActive: true },
+        where: { tenantId, role: 'DEPT_HEAD' as never, departmentId: deptId, isActive: true },
       })
-      return head?.id ?? null
+      if (head) return head.id
+
+      // Fallback via UserEntityRole when User.role isn't set.
+      const entityHead = await prisma.userEntityRole.findFirst({
+        where:   { roleCode: 'DEPT_HEAD', isActive: true, user: { tenantId, isActive: true, departmentId: deptId } },
+        include: { user: { select: { id: true } } },
+      })
+      return entityHead?.user.id ?? null
     }
 
     default:
@@ -126,7 +210,39 @@ async function resolveApprover(
   }
 }
 
+// ── Auto-advance helper ──
+// Pure: walks consecutive AUTO_APPROVED-eligible stages from stage 1, returning
+// the list of stage orders to auto-approve and the next-pending stage order
+// (null when all stages auto-approve). Exposed for unit tests.
+
+export interface AutoAdvanceStageInput { order: number; autoApproveBelow: number | null }
+export interface AutoAdvancePlan { autoApprovedOrders: number[]; nextPendingOrder: number | null }
+
+export function computeAutoAdvance(
+  stages: AutoAdvanceStageInput[],
+  amount: number
+): AutoAdvancePlan {
+  const sorted = [...stages].sort((a, b) => a.order - b.order)
+  const autoApprovedOrders: number[] = []
+  let nextPendingOrder: number | null = null
+  for (const s of sorted) {
+    const eligible = s.autoApproveBelow != null && amount < Number(s.autoApproveBelow)
+    if (eligible) {
+      autoApprovedOrders.push(s.order)
+      continue
+    }
+    nextPendingOrder = s.order
+    break
+  }
+  return { autoApprovedOrders, nextPendingOrder }
+}
+
 // ── Start workflow ──
+//
+// Returns err(NO_WORKFLOW_DEFINED) when no ACTIVE definition matches. Callers
+// (invoice/PR/PO submit) handle that explicitly — typically by flipping the
+// document to SUBMITTED with no workflow instance, so the engine never leaves
+// orphan IN_PROGRESS rows with zero stages.
 
 export async function startWorkflow(
   prisma: PrismaClient,
@@ -135,7 +251,7 @@ export async function startWorkflow(
   entityId: string,
   record: Record<string, unknown>,
   ctx: EngineCtx
-): Promise<Result<{ instanceId: string }>> {
+): Promise<Result<{ instanceId: string; autoApproved?: boolean }>> {
 
   const defId = await selectDefinition(
     prisma, ctx.tenantId, module,
@@ -144,45 +260,95 @@ export async function startWorkflow(
     record
   )
 
+  if (!defId) {
+    return err({
+      code: 'NOT_FOUND' as const,
+      message: 'NO_WORKFLOW_DEFINED',
+      details: { reason: 'NO_WORKFLOW_DEFINED', module },
+      httpStatus: 404,
+    })
+  }
+
+  const defStages = await prisma.workflowDefinitionStage.findMany({
+    where:   { definitionId: defId },
+    orderBy: { order: 'asc' },
+  })
+
+  if (defStages.length === 0) {
+    return err({
+      code: 'WORKFLOW_INVALID_STATE' as const,
+      message: 'Workflow definition has no stages',
+      httpStatus: 422,
+    })
+  }
+
+  const amount = Number(record.totalAmount ?? record.netPayable ?? 0)
+  const plan   = computeAutoAdvance(
+    defStages.map(s => ({ order: s.order, autoApproveBelow: s.autoApproveBelow == null ? null : Number(s.autoApproveBelow) })),
+    amount,
+  )
+  const allAuto = plan.nextPendingOrder === null
+
   const instance = await prisma.workflowInstance.create({
     data: {
       tenantId:          ctx.tenantId,
       definitionId:      defId,
       entityType,
       entityId,
-      status:            'IN_PROGRESS',
-      currentStageOrder: 1,
+      status:            allAuto ? 'APPROVED' : 'IN_PROGRESS',
+      currentStageOrder: plan.nextPendingOrder ?? defStages[defStages.length - 1].order,
+      completedAt:       allAuto ? new Date() : null,
     },
   })
 
-  if (defId) {
-    const stages = await prisma.workflowDefinitionStage.findMany({
-      where:   { definitionId: defId },
-      orderBy: { order: 'asc' },
-    })
+  const now = new Date()
+  for (const stage of defStages) {
+    const isAuto      = plan.autoApprovedOrders.includes(stage.order)
+    const slaDeadline = !isAuto && stage.slaHours ? new Date(Date.now() + stage.slaHours * 3_600_000) : null
+    const isCurrent   = !isAuto && stage.order === plan.nextPendingOrder
+    const assignedTo  = isCurrent || (!isAuto && !allAuto)
+      ? await resolveApprover(prisma, ctx.tenantId, stage, record)
+      : null
 
-    for (const stage of stages) {
-      const assignedTo  = await resolveApprover(prisma, ctx.tenantId, stage, record)
-      const slaDeadline = stage.slaHours ? new Date(Date.now() + stage.slaHours * 3_600_000) : null
-      const amount      = Number(record.totalAmount ?? record.netPayable ?? 0)
-      const autoApprove = stage.autoApproveBelow != null && amount < Number(stage.autoApproveBelow)
-
-      await prisma.workflowInstanceStage.create({
-        data: {
-          instanceId:  instance.id,
-          tenantId:    ctx.tenantId,
-          stageOrder:  stage.order,
-          stageName:   stage.name,
-          approverRole: stage.approverRole ?? undefined,
-          assignedTo:  assignedTo ?? undefined,
-          status:      stage.order === 1 ? (autoApprove ? 'AUTO_APPROVED' : 'PENDING') : 'PENDING',
-          slaDeadline,
-        },
+    if (isCurrent && !assignedTo) {
+      // Surfacing unassigned-stage clearly rather than letting it sit silently.
+      // The stage is still created (PENDING) so a SUPER_ADMIN can resolve it
+      // via the workflow detail page; but logging tells operators why nobody is
+      // seeing it on their Approval Desk.
+      console.warn('[workflow] PENDING stage has no resolvable approver', {
+        tenantId:     ctx.tenantId,
+        instanceId:   instance.id,
+        stageOrder:   stage.order,
+        stageName:    stage.name,
+        approverType: stage.approverType,
+        approverRole: stage.approverRole,
       })
     }
+
+    await prisma.workflowInstanceStage.create({
+      data: {
+        instanceId:   instance.id,
+        tenantId:     ctx.tenantId,
+        stageOrder:   stage.order,
+        stageName:    stage.name,
+        approverRole: stage.approverRole ?? undefined,
+        assignedTo:   assignedTo ?? undefined,
+        status:       isAuto ? 'AUTO_APPROVED' : (isCurrent ? 'PENDING' : 'PENDING'),
+        actionAt:     isAuto ? now : null,
+        slaDeadline,
+      },
+    })
   }
 
-  return ok({ instanceId: instance.id })
+  await writeAuditLog(prisma, {
+    tenantId: ctx.tenantId, userId: ctx.userId,
+    action:     allAuto ? 'workflow.started_auto_approved' : 'workflow.started',
+    entityType: 'workflow_instance', entityId: instance.id,
+    after: { module, definitionId: defId, autoApprovedStages: plan.autoApprovedOrders, currentStageOrder: plan.nextPendingOrder },
+    ipAddress: ctx.ip,
+  })
+
+  return ok({ instanceId: instance.id, autoApproved: allAuto })
 }
 
 // ── Approve stage ──
