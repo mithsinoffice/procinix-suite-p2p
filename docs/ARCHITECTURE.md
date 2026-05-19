@@ -1,313 +1,449 @@
-# Procinix S2P — Architecture
-
-## §1 Stack
-
-- Frontend: React 18 + Vite 6 + TypeScript, TailwindCSS, Radix, Recharts
-- Backend: Node ESM, raw `http.createServer`
-- DB: Azure MySQL (mysql2 pool); idempotent migrations, no runner
-- OCR / Agents: Gemini + n8n + Anthropic; 8-step orchestrator with retry queue
-- Auth: bcrypt + session tokens in `sessionStorage`; `Authorization: Bearer` for API
-- Ports: Vite `:3000`, API `:8787`
-- Tooling: ESLint 9 + Prettier 3, Husky + lint-staged, Vitest 4, GitHub Actions CI
-
-## §2 Modules
-
-| Module                                       | Status      | Notes                                                                                                |
-| -------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------- |
-| Auth                                         | Shipped     | `server/routes/auth.mjs`                                                                             |
-| Masters (V2)                                 | Shipped     | 16 on `SimpleMasterScreenV2`; rate-contract/kit-bundle/employee bespoke                              |
-| Item Master V2                               | Shipped     | ITM-\* canonical; manufacturer codes in `item_alias`                                                 |
-| Rate Contract                                | Shipped     | `useRateContractLookup` auto-enforces on invoice forms                                               |
-| Vendor Compliance                            | Shipped     | `GET /api/vendors/:id/compliance` in all 3 invoice forms                                             |
-| Procurement (PR/PO/GRN/SRN)                  | Shipped     | `server/routes/procurement.mjs`; uses `purchase_orders_proc`                                         |
-| Invoices + AP pipeline                       | Shipped     | touchless engine + 12-rule risk flags + retry                                                        |
-| Agent Pipeline                               | Shipped     | crash-safe, structured metrics                                                                       |
-| Payments — Queue/Dashboard/Forecast/Settings | Shipped     |                                                                                                      |
-| Payments — Banking                           | In Progress | Mode B shipped; Mode A is stub                                                                       |
-| Vendor Advances                              | Shipped     | `/ap/vendor-advances`                                                                                |
-| Vendor Management                            | Shipped     | invitations, review, KYC                                                                             |
-| Debit Notes                                  | In Progress | form done; backend partly blob-driven                                                                |
-| Bulk Upload                                  | Shipped     | `MasterBulkUpload.tsx`                                                                               |
-| Super Admin                                  | Shipped     | `/super-admin` RBAC-gated                                                                            |
-| Approvals + Workflows                        | Shipped     | multi-step engine + 4-step designer wizard (§6.7); dynamic field registry feeds the condition picker |
-| Dashboards                                   | In Progress | `*DeskAdvanced` live; legacy `*Desk` + `ReportDataService` are mock                                  |
-| Agent Configurator UI                        | In Progress | runtime gated by `ENABLE_AGENT_BUILDER_RUNTIME`                                                      |
-| Workflow Engine UI                           | Shipped     | list + 4-step wizard + AI-assistant draft + bell badge wired to `/api/notifications/unread-count`    |
-| Workflow Engine Runtime                      | Shipped     | dispatcher + step advancement + bell/email notifications (§6.7–6.8)                                  |
-| Budget module                                | Deferred    | blob-only, no nav                                                                                    |
-| AR (`/ar/*`)                                 | Deferred    | routes registered, no nav                                                                            |
-| Cash Flow (`/r2r/cash-flow/*`)               | Deferred    | routes registered, no nav                                                                            |
+# Procinix v2 (S2P) — Architecture
+
+_Last updated: 2026-05-19_
+
+Indian Source-to-Pay (S2P) platform — Procurement, Goods Receipt, AP Invoice processing, Payments, Vendor management, Approvals and Masters — for mid-market Indian enterprises. Multi-tenant, RBAC-gated, n8n-driven email ingestion, Gemini OCR.
+
+This document describes the **current state** of the codebase (not aspirational design). When state changes, update this file in the same commit.
+
+---
+
+## §1 Stack (locked — do not deviate)
+
+| Layer            | Choice                                                          |
+| ---------------- | --------------------------------------------------------------- |
+| Frontend         | React 18 + Vite + TypeScript strict                             |
+| Styling          | Tailwind CSS + shadcn/ui + Radix UI                             |
+| Server state     | TanStack Query v5 (no raw fetch anywhere — `src/lib/http.ts`)   |
+| Routing          | React Router v6 (all pages `React.lazy`)                        |
+| Forms            | React Hook Form + Zod (`src/lib/schemas/`)                      |
+| Global state     | Zustand (`src/stores/auth.store.ts`)                            |
+| Fuzzy match      | fuse.js                                                         |
+| Dates            | date-fns                                                        |
+| HTTP server      | Fastify (logger via pino, pino-pretty in dev)                   |
+| ORM              | Prisma (no raw SQL outside migration files)                     |
+| Database         | Azure MySQL Flexible (local: localhost:3306)                    |
+| Cache            | Redis (Azure Cache; local: localhost:6379)                      |
+| Auth             | httpOnly + SameSite=Strict cookies + JWT (access 15m, refresh 7d) |
+| Secrets          | `.env` in dev (gitignored), Azure Key Vault in prod             |
+| OCR              | `@google/generative-ai` — `gemini-2.0-flash`                    |
+| Email ingestion  | n8n (canonical) + Gmail API poller (legacy, gated by env flag)  |
+| Mobile           | PWA → Capacitor post-MVP                                        |
+| CI               | GitHub Actions + Vitest + Playwright + Snyk                     |
+
+Ports — Frontend `:3000`, Backend `:8787`, MySQL `:3306`, Redis `:6379`.
+
+---
+
+## §2 Repository layout
+
+```
+src/                                    # React frontend
+  components/
+    ErrorBoundary.tsx                   # Top-level + RouteErrorPage
+    Approvals/
+    layout/
+      AppShell.tsx                      # Sidebar + Outlet, perm-gated nav
+      TopBar.tsx                        # Sticky h-12, page title, entity chip, bell, avatar
+    masters/
+      MasterListScreen.tsx              # Generic list+form for masters
+      MasterFormLayout.tsx              # FormSection / FormField / FormInput / FormSelect / ApiSelect / MasterPageHeader
+      MasterTabs.tsx                    # ACTIVE / DRAFT / PENDING_APPROVAL / ALL counts
+    shared/
+      AuditTrailDrawer · BulkUploadModal · OcrUploader · MatchScoreBadge ·
+      KycBadge · ChannelBadge · FlagImage · PageSkeleton
+  hooks/  useFeature · useMasterData · usePermission
+  lib/
+    api/ auth · dashboard · invoices · vendors
+    http.ts                             # fetch wrapper + HttpError; throws on !ok
+    query-client.ts                     # TanStack Query singleton
+    schemas/  · utils/ formatters · utils.ts
+  pages/                                # All React.lazy in router.tsx
+    auth/LoginPage
+    dashboard/DashboardPage
+    approvals/ApprovalDeskPage
+    intake/IntakePage
+    purchase-orders/  PurchaseOrdersPage · PRFormPage · POFormPage
+    grn/  GRNPage · GRNFormPage
+    invoices/  InvoiceListPage · InvoiceFormPage · InvoiceDetailPage · InvoiceNewPage · InvoiceReviewQueuePage
+    payments/  PaymentListPage · PaymentDetailPage
+    workflow/WorkflowHubPage             # /workflow — engine entry
+    masters/                             # MastersPage + 30+ masters
+      Departments · GlCodes · CostCentres · TaxCodes · Designations · Locations ·
+      Entities · Employees · TaxRegimes · FinancialYears · CountryMaster · StateMaster ·
+      CityMaster · CurrencyMaster · FxRateMaster · VendorCategory · VendorGroup ·
+      ProfitCentre · TdsSections · WorkflowRules · MastersPage
+      vendors/  VendorListPage · VendorFormPage · VendorDetailPage
+      users/    UserListPage · UserFormPage
+      roles/    RolePrivilegePage
+      items/    ItemMasterPage · ItemFormPage · ItemCategoryPage
+      workflow/ WorkflowDefinitionsPage · WorkflowDefinitionFormPage
+      budget/   BudgetListPage · BudgetFormPage · BudgetDetailPage
+    admin/AdminTenantsPage
+    NotFoundPage
+  router.tsx                            # All routes; AppShell wraps authenticated pages
+  stores/ auth.store.ts                 # Zustand — current user + tenant
+
+server/src/                             # Fastify backend
+  plugins/                              # Registered in order (see §3)
+    env · cors · helmet · rate-limit · auth · tenant · error-handler
+  middleware/
+    rbac.ts                             # `preHandler` gates mutating routes
+  routes/
+    health · auth · vendors · masters · invoices · dashboard · workflow · admin ·
+    procurement · webhooks
+  services/
+    auth.service                        # loginUser, JWT mint, cookie opts
+    invoice.service · invoice-ingestion.service
+    gemini-ocr.service                  # extractInvoiceFromFile()
+    email-poller.service                # Gmail API poll, in-flight lock + 1h circuit-breaker
+    vendor.service · master.service
+    workflow-engine.service             # startWorkflow / approveStage / rejectStage / putOnHold / addChatMessage
+    match-scoring.service               # 2-way + 3-way match scoring
+    kyc.orchestrator.ts · kyc/          # PAN / GSTIN / IFSC verification
+    surepass.service · ongrid.service · transbnk.service
+  lib/
+    prisma · redis · audit · result
 
-## §3 DB
+prisma/
+  schema.prisma                         # 73 models + 7 enums
+  seed.ts                               # Master data seed (GL codes, TDS sections, etc.)
+```
 
-- `item_master.item_master` — canonical for every item code; V2 cols `standard_price` + `item_type` + `tax_code_id` + `expense_category_id`; `item_alias` carries manufacturer codes
-- `vendor_pan_compliance` — canonical TDS/RCM/MSME flags; projected by `projectVendorCompliance`
-- `tds_section_master` — 10 real Indian sections (194C/J/H/I-LAND/I-PLANT/A/B/D/M/Q)
-- `rate_contract_master` + `rate_contract_items` — UNIQUE (contract_id, item_code); INDEX (tenant_id, vendor_id, status)
-- `purchase_orders_proc` — procurement PO table; legacy `purchase_orders` still used by matchAgent
-- `doc_ref_sequences` — collision-safe refs under SELECT…FOR UPDATE
-- `bank_payment_batches` + `_items` — Banking tab (NOT `payment_batches` which is PaymentProposal)
-- `domain_documents` — JSON blobs for legacy PR/PO/GRN/Debit-Notes/Budget paths
-- `p2p_schema_mt.payments` — empty until banking batches execute; KPIs may show zero
-- Collation split: `tenants`/`entities` are `utf8mb4_unicode_ci`; business tables are `utf8mb4_0900_ai_ci` — no cross-boundary FKs
-- Cross-DB FKs are application-layer only
+---
 
-## §4 Current state
+## §3 Server boot (`server/src/server.ts`)
 
-**Last:** Workflow engine v1 — replaced every hardcoded `assigned_to='1'` insert with a real condition-driven dispatcher. New schema (`sql/mysql/migrations/20260512_workflow_engine.sql`): `user_roles` (role-name → user-id per tenant, seeded mithilesh→every role), `workflow_field_registry` (77 dynamic fields across 9 doc types), `notifications` (bell + email log), plus `approvals` columns `step_number`, `total_steps`, `workflow_config_id`, `parent_approval_id`, `token`, `token_expires_at`, `rejection_remarks`, `tenant_id`, `document_ref`, `document_name`; status enum widened with `pending_predecessor`+`cancelled`, module enum widened with `purchase_request`+`grn`. Active default workflows seeded for all 9 document types (ap_invoice 3-step, non_po_invoice 2-step, PO/PR 2-step, GRN/master_update/debit_note 1-step, payment/vendor_advance 2-step). New services: `server/services/workflow/{conditionEvaluator, roleResolver, dispatcher}.mjs` + `server/services/notifications/notificationService.mjs`. Routes consolidated under `server/routes/workflows.mjs` per CLAUDE.md (`GET /api/workflow/fields` with 5-min master-table option cache, `POST /api/workflow/configurations/:id/clone`, `GET /api/approvals/action?token=&action=` one-time-token email actions with 72h TTL, `GET /api/approvals/reject-remarks` + `POST /api/approvals/reject-with-remarks` for HTML reject form, `GET /api/notifications/unread-count`). Step advancement implemented in `triggerNextWorkflowStep` (approve → promote next `pending_predecessor` → `pending`; reject → cancel remaining). Anti-fraud guards: same-approver-as-submitter blocks dispatch with HTTP 422; legacy auto-close sync skips workflow rows (`workflow_config_id IS NULL`). All submission points wired: `ensureInvoiceApproval` (invoices.mjs), `ensureMasterApproval` (approvalService.mjs), PR `submit` action (procurement.mjs), PO `issue` action, payments batch submit, vendor advances submit, debit notes Pending-Approval create. New 8-smoke runner `server/scripts/smokeWorkflowE2E.mjs`: field registry, evaluator, resolver, dispatcher (token len 96 + ±5 min token TTL), same-approver block, step advancement, expired-token endpoint, npm test pass — **8/8 pass**. **TS 0 / lint 0 / tests 513 / 513 / 8 / 8 smokes.**
+Plugin registration order (each depends on those before it):
 
-**Previously:** End-to-end approvals workflow consolidation. Single hardcoded one-level approval for every submitted invoice + master change. New helpers: `ensureMasterApproval` (`server/services/approvals/approvalService.mjs`) mirrors `ensureInvoiceApproval` for the `master_update` module — used by the canonical + item_master PUT handlers; `backfillAllPendingApprovals` is the unified startup hook that sweeps every key in `MASTER_STORAGE` plus invoices and idempotently ensures a matching queue row. Bespoke-schema masters (kit_bundle / employee / rate_contract — they have their own routes) are skipped; missing dev-DB schemas (`ER_BAD_DB_ERROR` / `ER_NO_SUCH_TABLE`) are tolerated silently. **viewOnly review UI** added to both invoice forms + SimpleMasterScreenV2; `/invoices/:id/review?approvalId=…` dispatches to DirectV2 or PO based on `po_number`; My Approvals "View" buttons wire to either the invoice review route or `/masters/<key>?fromApprovals=1&viewOnly=1` for V2 masters, where a self-contained `MasterApprovalReviewPanel` renders the diff (current via `originalData` vs proposed via payload, changed fields amber-highlighted) and Approve/Reject. 7-smoke E2E runner (`server/scripts/smokeApprovalsE2E.mjs`) confirms backfill, queue surfacing, idempotency, and the live approve flow (lifecycle_state → Processed; approvals.status → approved). See §6 for the data-flow contract.
+1. `envPlugin` — validate env, crash on invalid
+2. `redisPlugin` — Redis connect + ping
+3. `prismaPlugin` — Prisma connect + ping
+4. `corsConfig` — CORS headers
+5. `helmetConfig` — security headers
+6. `rateLimitConfig` — per-IP rate limiting (needs Redis)
+7. `authPlugin` — JWT + cookies (`@fastify/cookie`, `@fastify/jwt`)
+8. `tenantPlugin` — `req.tenant` from JWT (never from body)
+9. `errorHandlerPlugin` — global catch (never leaks stack traces)
 
-**Earlier:** Vendor master ↔ operational vendors sync (`server/services/vendors/sync.mjs`). On `vendor_master` approve, the matching `p2p_schema_mt.vendors` row is upserted (+ `vendor_gst_registrations` / `vendor_pan_compliance` side tables) so newly-approved vendors appear in invoice / PO / GRN dropdowns immediately. Reject deactivates the operational row (`status='inactive'`, never deletes — preserves FK integrity). Backfill helper runs once at server boot, ensuring every Approved master row exists in the operational table (idempotent).
+After plugins: a `preHandler` hook runs `rbacHook` on every request that has a user; mutating routes are gated by the permission matrix (read routes fall through; SUPER_ADMIN bypasses).
 
-**Next:** Wire the WorkflowConfigurator UI (`/workflow-engine/designer`) to consume `GET /api/workflow/fields` for dynamic condition pickers (it currently uses a static field list); expose the `notifications` table to the header bell component (poll `/api/notifications/unread-count` on focus); onboard real role users via `user_roles` (currently every role → mithilesh). Dashboards still pending — `ReportDataService` + `EntityTransactionData.tsx` mocks → real queries against `invoices` / `purchase_orders_proc` / `goods_receipt_notes` / `vendor_pan_compliance`; seed `p2p_schema_mt.payments` so cash-outflow KPIs render.
+Route prefix table (registered in `buildApp()`):
 
-**Known issues:**
+| Prefix             | File                | Purpose                                    |
+| ------------------ | ------------------- | ------------------------------------------ |
+| (root)             | `health.ts`         | `/health/live`, `/health/ready`, `/health` |
+| (root)             | `webhooks.ts`       | n8n + TransBnk webhooks (HMAC-verified)    |
+| `/auth`            | `auth.ts`           | login / logout / me / refresh / OAuth      |
+| `/api/masters/vendors` | `vendors.ts`    | Vendor CRUD + KYC verifications            |
+| `/api/masters`     | `masters.ts`        | All masters + bulk + audit (~65 routes)    |
+| `/api/invoices`    | `invoices.ts`       | Invoice CRUD + approval + ingestion + OCR  |
+| `/api/dashboard`   | `dashboard.ts`      | KPIs + spend-trend + spend-by-gl + activity |
+| `/api/workflow`    | `workflow.ts`       | Workflow engine: definitions + instances + start |
+| `/api`             | `admin.ts`          | Tenant + user admin (`/api/admin/...`)     |
+| `/api`             | `procurement.ts`    | PR + PO + GRN + SRN + advances + budgets   |
+| `/api/email-poll`  | inline in server.ts | `/trigger` (auth) + `/debug` (auth)        |
 
-- `server/index.mjs` ~5400 lines; ~59% of endpoints inline (B4)
-- No migration runner — applied manually via Azure workbench (B5)
-- 7 pre-existing TS errors (`InvoiceFormPO`, `NonPOInvoiceForm`, `VendorGroupMaster`); strict mode blocked (F4)
-- ~1138 ESLint warnings in legacy files (deferred per-rule; new code must stay clean)
-- Bare `fetch()` in `EntityMaster.tsx`, `InvoiceFormPO.tsx:222`, `pages/Approvals.tsx` (F3)
-- `CFODesk`, `ManagementDesk`, `ProcurementHeadDesk`, `APDashboard`, `OperationalDashboard` are 100% mock
-- Banking Mode A returns fake balances + UTRs
+Gmail poller cron (`startEmailPoller`) starts only when `EMAIL_POLLER_ENABLED=true`. Default is **disabled** — n8n drives ingestion via `POST /webhooks/n8n/invoice-ingest`.
 
-**Deferred:**
+---
 
-- Budget module (no nav)
-- AR module (`/ar/*`)
-- Cash Flow (`/r2r/cash-flow/*`)
-- Orphan demo DBs (`product_master`, `sku_master`, `payment_method_master`, `color_master`, `size_master`) — kept on Azure
-- Asset register wiring for CAPEX PRs
-- Real bank API integration
+## §4 Modules — current state
 
-## §5 Invoice forms
+| Module                  | Status         | Notes                                                                              |
+| ----------------------- | -------------- | ---------------------------------------------------------------------------------- |
+| Auth                    | Shipped        | JWT in httpOnly cookies; `/auth/login` / `/logout` / `/me` / `/refresh`            |
+| Tenant + RBAC           | Shipped        | UserEntityAccess + UserEntityRole + RolePrivilege; 9-module × 6-action matrix      |
+| Masters (35+ entities)  | Shipped        | `MasterListScreen` generic UI; bespoke pages for Vendors, Employees, Items, Users, Budget, Workflow Defs |
+| Vendor Master           | Shipped        | Full form, KYC verification (PAN/GSTIN/IFSC via SurePass + OnGrid), bank accounts, entity mappings |
+| Item Master             | Shipped        | Category-typed items (EXPENSE / ASSET / PROVISION); per-entity GL mappings; rate contracts |
+| Intake (PR)             | Shipped        | Standalone nav module; PRFormPage with identity, line items, budget check          |
+| Purchase Orders         | Shipped        | POFormPage — GST type banner (CGST/SGST vs IGST), milestones for services, EXCLUSIVE/INCLUSIVE tax, GRN-driven |
+| GRN                     | Shipped        | PO-driven line auto-load, qty validation                                            |
+| Invoices                | Shipped        | OCR extract → form, n8n ingestion, 3-way match scoring, full workflow              |
+| Payments                | List/Detail    | List + detail pages; batch flow not yet wired                                       |
+| Budget                  | Shipped        | List, form, detail; utilisation check on PO                                          |
+| Dashboard               | Shipped        | KPIs, spend trend, spend by GL, recent activity                                     |
+| Approvals               | Shipped        | `ApprovalDeskPage` — pending approvals across modules                              |
+| Workflow Definitions    | Shipped        | `/workflow` hub + `/workflow/definitions` list + form (22 module types)             |
+| Workflow Engine Runtime | Shipped        | Definitions → instances → stages → approver routing; chat + holds + SLA tracking   |
+| Admin / Tenants         | Shipped        | SUPER_ADMIN-only — tenants, modules, features, users                                |
+| Email Ingestion         | Shipped via n8n | `POST /webhooks/n8n/invoice-ingest` (HMAC `X-N8N-Secret`) → `ingestInvoice()`     |
 
-Three forms share the Opptra layout convention (lettered sections, icon-prefixed labels, 2-col grid, sticky workflow banner). All three use `fetchVendorCompliance` for tax flags and `useRateContractLookup` for rate-contract auto-apply.
+---
 
-| Form               | Route                     | Component                 | Status              |
-| ------------------ | ------------------------- | ------------------------- | ------------------- |
-| Non-PO Invoice     | `/invoices/create-direct` | `InvoiceFormDirectV2.tsx` | V2 refit 2026-05-12 |
-| PO-matched Invoice | `/invoices/create-po`     | `InvoiceFormPO.tsx`       | F4 pending          |
-| Non-PO (legacy)    | `/invoices/non-po-form`   | `NonPOInvoiceForm.tsx`    | live                |
+## §5 Auth & RBAC
 
-### §5.1 `InvoiceFormDirectV2` field contract (2026-05-12)
+### §5.1 Cookies + JWT
 
-**Vendor source — operational, not governance.** The dropdown binds to `useMasterData().liveVendors` (rows from `/api/vendors`, i.e. `p2p_schema_mt.vendors`). Active filter is `status === 'active'`. The governance `vendors` array (master_data context) is the approval queue and was the cause of the empty-dropdown bug — never use it for an invoice picker.
+- Access token — JWT, 15-minute TTL (`JWT_EXPIRES_IN` env, default `15m`). Cookie name `access_token`, path `/`.
+- Refresh token — JWT, 7-day TTL (`JWT_REFRESH_EXPIRES_IN` env, default `7d`). Cookie name `refresh_token`, path `/auth/refresh`.
+- Both `httpOnly` + `sameSite: 'strict'`; `secure` in production only.
 
-**Vendor auto-populate.** On `<select>` change the form stores `vendorId` + `vendorCode` + `vendorGroupName` (from `LiveVendor`). Two side-effects then run:
+Sources — [server/src/services/auth.service.ts](../server/src/services/auth.service.ts), [server/src/routes/auth.ts](../server/src/routes/auth.ts).
 
-1. `fetchVendorCompliance(vendorId)` → projects `(vendors × vendor_pan_compliance × vendor_gst_registrations)` into `VendorCompliance`. Fills `vendorGstin`, derives `vendorState` from GSTIN digits 1-2.
-2. `mysqlApiRequest('/vendors/:id')` → reads `pan_compliance.pan` (PAN isn't on the compliance projection to keep `determineTDS` engine-tight) + `payment_terms` (defensive — column may not exist; gated by a ref so user input isn't clobbered).
+### §5.2 `/auth/me` resolution chain
 
-All five vendor-derived fields (Group, GSTIN, PAN, State, Vendor Code) render read-only with the `Auto` pill. **Payment Terms is the only vendor-related field the user can override.**
+Returns the current user plus pre-resolved profile defaults so forms can auto-populate without N round-trips:
 
-**Billing Location.** Single `<select>` from `useMasterData().locations` (active only). Stores both `billingLocationCode` and the resolved display name. OCR fuzzy-match isn't wired yet — see "Known issues" below.
+- `entityId` ← first `UserEntityAccess(isActive=true)` → fallback: first Entity in tenant by `createdAt asc`.
+- `accessibleEntityIds[]` ← all active UserEntityAccess rows.
+- `departmentId` ← `Employee(email = user.email).departmentId` → fallback: first ACTIVE Department by `name asc`.
+- `designationId` / `locationId` ← `Employee(email = user.email)` (null otherwise).
 
-**Department / Sub-Department.** Department prefills from `useAuth().user.department` once on mount via `departmentPrefilledRef`; the user can change it. Sub-Department is a plain text input (no master).
+Fallbacks are UI defaults, not authorisation grants.
 
-**Line items.** All editable inline: qty, rate, GST%, TDS Section, TDS%. The `recomputeLine` helper recalculates `amount = qty × rate`, splits GST via `isIntraState` (CGST+SGST intra-state, IGST inter-state), derives `tdsAmount`, `grossAmount`, `netPayable`. Item pick auto-fills description / HSN / UOM / rate / GST % / GL via `applyItemMasterDefaults`. **Rate priority:** active rate contract → `item_master.standard_price` → user-entered rate. The Rate input is `disabled` (with tooltip) when `rateContract.isActive(lineId)` returns true. Per-line chips: amber **RCM** when `isRcmApplicable({itemRcm, compliance})` is true; teal **Rate contract** when active.
+### §5.3 `/auth/my-permissions`
 
-**TDS section.** Per-line `<select>` populated from `getActiveTDSSections()`. On pick the rate auto-fills from `getTDSSectionByCode(code).rateCompany | rateIndividual`, branched by `vendorCompliance.entityType` (`individual` / `sole_prop` → individual rate, otherwise company rate).
+Per-user RBAC matrix `{ MODULE: { action: boolean } }`. Modules: `INTAKE`, `PO`, `GRN`, `INVOICE`, `PAYMENT`, `VENDOR`, `BUDGET`, `MASTERS`, `ADMIN`. Actions: `create`, `view`, `edit`, `delete`, `submit`, `approve`. SUPER_ADMIN gets implicit all-access. Otherwise: every role assigned via `UserEntityRole` (or `User.role` if no entity roles) → look up `RolePrivilege(roleCode).permissions` → OR-merge across roles.
 
-**Retentions.** GST Retention % and TDS Retention % both start blank with placeholder `Enter %`. Withheld amount = (totalGst | totalTds) × pct / 100, displayed inline.
+### §5.4 Server-side gate
 
-**Accounting Entry Preview (Section E).** Collapsible. Builds rows live from form state:
+`server/src/middleware/rbac.ts` runs as a `preHandler` on every authenticated request. Read routes and unmapped routes fall through. SUPER_ADMIN bypasses.
 
-1. Expense / Asset (Dr) — `totalBase` at GL code matching `name.includes('expense')` or `code.startsWith('5')`, fallback `5001`
-2. GST input (Dr) — IGST single line when interstate, CGST + SGST half-and-half when intra-state
-3. TDS Payable (Cr) — `totalTds` at GL matching `name.includes('tds')`, fallback `TDS001`
-4. Vendor Payable (Cr) — `totalBase + totalGst − totalTds` at GL matching `name.includes('payable')`, fallback `2001`
+### §5.5 Client-side gate
 
-Dr / Cr totals shown at the bottom with a green `Dr = Cr balanced` chip or red `Dr / Cr mismatch` banner.
+`AppShell.tsx` filters nav items by `view` permission. `ALWAYS_VISIBLE = ['/dashboard', '/masters', '/admin/tenants']` short-circuits the filter so these items render regardless of perms state — Masters must remain reachable even mid-refresh / on 401 from `/my-permissions`.
 
-**OCR provenance.** A single `OcrFlagMap` (keyed on `OcrFieldKey`) is populated by the AI-hydration `useEffect` for each field it writes. The `wasOcrField(key)` selector returns true only when `captureMode === 'ocr' && ocrFlags[key]`. Every `<OcrBadge />` render site is gated by it. Switching to Manual mode clears the map (`setOcrFlags({})`) — the chips disappear app-wide. **Never render `<OcrBadge />` unconditionally on a value-presence check.**
+---
 
-**System-generated fields.** Invoice Number is read-only with placeholder `Auto-generated on save`. Server generates on POST `/invoices`.
+## §6 Multi-tenancy
 
-### §5.2 Known issues — invoice forms
+- Every business table has `tenantId String` (FK to `Tenant`). Set on the request via `tenantPlugin` from the JWT — **never** trusted from request body.
+- Per-tenant `TenantModule` + `TenantFeature` rows gate which modules/features are enabled (admin-managed via `/api/admin/tenants/:id/modules`).
+- Local dev seed creates a single demo tenant (`procinix-s2p`) with one admin user (`mithilesh@procinix.ai` / `Demo@123`).
 
-- OCR address → `location_master` fuzzy-match isn't wired. Today an OCR-extracted billing-location string falls back to a free-text option appended to the dropdown.
-- `paymentTerms` isn't a column on `p2p_schema_mt.vendors`. The detail-fetch reads it defensively, but most vendors return undefined — terms stay user-entered.
-- `vendorCompliance.tdsRate` isn't currently piped into the per-line `tdsPercent` on vendor select; the auto-rate fires only on per-line TDS section pick. Vendor's preferred section (`vendor_pan_compliance.tds_sections[0]`) could pre-select section #1 across new lines — deferred.
-- `accountingEntries` GL-code resolution uses string-match against `name` / `code` because the schema doesn't carry an `accountSubType: 'GST Input'` taxonomy. Move to explicit GL-code-per-account-type mapping on `account_code_master` when the master gains that column.
+---
 
-## §6 Approvals workflow
+## §7 Workflow engine
 
-Multi-step condition-driven approvals via the workflow engine (2026-05-12). The `approvals` table is the shared queue; `module` is the document-type enum (`ap_invoice` / `non_po_invoice` / `purchase_order` / `purchase_request` / `grn` / `payment` / `vendor_advance` / `debit_note` / `master_update`). `reference_id` is the document key (raw `invoices.id` for invoices, `${masterKey}:${recordId}` for masters, native row id for everything else).
+Two halves: **definitions** (configured by admins) and **instances** (created on document submission).
 
-`assigned_to` is now the **resolved approver user id** (e.g. `user-mith-001`) for engine rows. Legacy non-workflow rows still use the `'1'` unclaimed marker, and the queue filter accepts both: `(a.assigned_to = approverId OR a.assigned_to = '1')`.
+### §7.1 Schema (Prisma)
 
-### §6.1 Submission helpers (route through workflow engine)
+| Model                          | Purpose                                                                                 |
+| ------------------------------ | --------------------------------------------------------------------------------------- |
+| `WorkflowDefinition`           | Per-tenant rule. Fields: `module`, `entityId?`, `departmentId?`, `priority`, `isDefault`, `status`. |
+| `WorkflowDefinitionStage`      | Ordered approval stages. `approverType` ∈ {USER, ROLE, MANAGER_OF, DEPT_HEAD}; SLA hours; auto-approve threshold. |
+| `WorkflowDefinitionCondition`  | Filter on the document. `field`, `operator` (GT/LT/EQ/IN/CONTAINS/STARTS/…), `value`, `logicGroup` (AND/OR). |
+| `WorkflowInstance`             | One per (entityType, entityId). `status` ∈ {IN_PROGRESS, APPROVED, REJECTED, ON_HOLD, CANCELLED}. |
+| `WorkflowInstanceStage`        | Stage state — `PENDING`, `APPROVED`, `REJECTED`, `SKIPPED`, `AUTO_APPROVED`, `ESCALATED`, `INFO_REQUESTED`. |
+| `WorkflowChat`, `WorkflowAttachment` | Conversation thread per instance.                                                  |
+| `ApprovalStep`                 | Legacy table — used by older invoice approval routes; superseded by `WorkflowInstanceStage`. |
 
-| Helper / call site                                                                   | Document type                                                    | Effect                                                                                                                                                      |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ensureInvoiceApproval(invoiceId, submittedBy)` (`server/routes/invoices.mjs`)       | `ap_invoice` / `non_po_invoice` (auto-detected from `po_number`) | Pre-flight idempotency check; on miss hydrates invoice payload and calls `enqueueApprovalFromWorkflow`. Returns `{ blocked, reason }` for HTTP 422 surface. |
-| `ensureMasterApproval(db, {...})` (`server/services/approvals/approvalService.mjs`)  | `master_update`                                                  | Same pattern: dispatch via the engine; `reference_id='${masterKey}:${recordId}'`.                                                                           |
-| PR `submit` action (`server/routes/procurement.mjs`)                                 | `purchase_request`                                               | Engine gate runs before status flip; on block, PR stays draft.                                                                                              |
-| PO `issue` action (`server/routes/procurement.mjs`)                                  | `purchase_order`                                                 | Engine gate runs before status flip; on block, PO stays draft.                                                                                              |
-| Bank payment batch `submit` (`server/routes/payments.mjs`)                           | `payment`                                                        | Same pattern.                                                                                                                                               |
-| Vendor advance `submit` (`server/routes/advances.mjs`)                               | `vendor_advance`                                                 | Same pattern.                                                                                                                                               |
-| Debit note create with `status='Pending Approval'` (`server/routes/debit-notes.mjs`) | `debit_note`                                                     | Engine gate runs post-create; block surfaces 422 with `{ id, dnNumber }`.                                                                                   |
+### §7.2 Modules (22 codes)
 
-All call `enqueueApprovalFromWorkflow` in `server/services/workflow/dispatcher.mjs`:
+`WfModule` (type union in `workflow-engine.service.ts`) — persisted as a plain string in `WorkflowDefinition.module`:
 
-1. `selectWorkflowForDocument(documentType, payload, tenantId, db)` — picks the highest-priority `Active` workflow_configuration (conditional rules before unconditional defaults). Returns `null` only when no configs exist for that type → fallback single-row insert with `assigned_to='1'` and `workflow_config_id IS NULL`.
-2. Filter steps whose `conditionJson` evaluates false (`evaluateConditions`).
-3. For each remaining step, `resolveStepApprover` → `[userId]`. Filters submittedBy (anti-fraud "no self-approve"); duplicate-across-steps logs a warning but keeps the step.
-4. Inserts step 1 as `status='pending'` with a 96-char hex token (72h `token_expires_at`), steps 2..N as `status='pending_predecessor'` linked by `parent_approval_id`.
-5. `invalidatePendingApprovalsSync` + best-effort bell + email notification to step 1's approver.
+```
+INVOICE · PAYMENT · VENDOR · MASTER · PR · PO · GRN · BUDGET ·
+DEPARTMENT · GL_CODE · COST_CENTRE · EMPLOYEE · DESIGNATION ·
+LOCATION · ITEM · VENDOR_CATEGORY · FINANCIAL_YEAR · TAX_CODE ·
+TDS_SECTION · ENTITY · USER · CURRENCY · PROFIT_CENTRE
+```
 
-### §6.1a Step advancement (`triggerNextWorkflowStep` in `approvalService.mjs`)
+The `WorkflowDefinitionFormPage` Module dropdown shows the same list with human-readable labels.
 
-- **Approve step N**: if `step_number < total_steps`, find the matching `pending_predecessor` row at step N+1 and promote to `pending`. Reset its `token_expires_at` to +72h. Post-commit notify next approver. If final step, notify submitter via `sendApprovalCompleteNotification`.
-- **Reject any step**: cancel every `pending_predecessor` row for the same `parent_approval_id` (status → `cancelled` + `completed_at = NOW()`). Post-commit notify submitter via `sendRejectionNotification`.
-- The legacy `syncPendingApprovals` "auto-close stale" path is now gated on `workflow_config_id IS NULL` so it never clobbers workflow-engine rows.
+### §7.3 Routes (`/api/workflow`)
 
-### §6.2 Background sync — `syncPendingApprovals`
+| Method | Path                            | Purpose                                                                                  |
+| ------ | ------------------------------- | ---------------------------------------------------------------------------------------- |
+| POST   | `/start`                        | Generic dispatcher. Body `{ module, entityType, entityId, record? }`. Returns `{ ok: false, reason: 'NO_WORKFLOW_DEFINED' }` if no ACTIVE definition matches, otherwise `{ ok: true, instanceId }`. |
+| GET    | `/instances/:id`                | Instance + stages + chat + definition.                                                   |
+| GET    | `/:entityType/:entityId`        | Active instance for a record.                                                            |
+| POST   | `/instances/:id/approve`        | Approve current stage; advances to next pending; on final stage flips invoice → APPROVED. |
+| POST   | `/instances/:id/reject`         | Reject with mode ∈ {`RETURN_TO_DRAFT`, `REQUEST_INFO`, `RETURN_TO_PREV`}. Comments required. |
+| POST   | `/instances/:id/hold`           | Put on hold with reason.                                                                 |
+| POST   | `/instances/:id/release`        | Release from hold; remarks required.                                                     |
+| POST   | `/instances/:id/chat`           | Add chat message + optional attachments.                                                 |
+| GET    | `/definitions`                  | List per tenant, filtered by `module` + `status`. Sorted by `priority desc`.             |
+| GET    | `/definitions/:id`              | Single definition with stages + conditions.                                              |
+| POST   | `/definitions`                  | Create. Transactional insert of definition + stages + conditions.                        |
+| PUT    | `/definitions/:id`              | Update — replaces stages + conditions in a transaction.                                   |
+| POST   | `/definitions/:id/duplicate`    | Clone → new code `<src>-COPY-<rand>` in DRAFT status.                                    |
 
-Runs on a 60-second loop and on every `/api/approvals/queue|kpis|module-counts` call. The queue endpoint calls `awaitApprovalSync(db, approverId, { force: true })` so a fresh user fetch bypasses the debounce and reflects submissions made seconds ago. The sync inserts approval rows for any pending invoice or master row that's missing one. Per-master schema gaps (`ER_BAD_DB_ERROR` / `ER_NO_SUCH_TABLE`) are tolerated silently — common on dev DBs that haven't seeded every master.
+### §7.4 Definition selection (`selectDefinition`)
 
-### §6.3 Approve / Reject
+1. Query all ACTIVE definitions for `(tenantId, module)`, sorted by `priority desc`.
+2. Skip definitions where `entityId` / `departmentId` is set and doesn't match the record.
+3. First definition whose conditions all evaluate true (AND-group all true AND OR-group at least one true) wins.
+4. Else fall back to the first `isDefault` definition with no entity/department scope.
+5. Else null → caller decides what to do (typically auto-approve).
 
-| Endpoint                          | Frontend caller                                                    | Effect                                                                                                                                                                                                                                                                 |
-| --------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/approvals/:id/approve` | My Approvals approve button + invoice/master review forms' Approve | `approveItem` flips approvals row to `approved`; `syncMasterSourceApprovalStatus` then flips the source — invoices → `lifecycle_state='Processed' status='approved'`; masters → `approval_status='Approved'` + `originalData` cleared (`applyApprovalActionToRecord`). |
-| `POST /api/approvals/:id/reject`  | Same as above                                                      | Flips approvals row to `rejected`; invoices → `lifecycle_state='Rejected' status='rejected'`; masters → restore `originalData` onto the live record + `approval_status='Rejected'`.                                                                                    |
+### §7.5 Approver resolution (`resolveApprover`)
 
-### §6.4 Combined startup backfill — `backfillAllPendingApprovals(db, { ensureInvoice })`
+- `USER` — the configured `approverUserId`.
+- `ROLE` — first active `User(role = stage.approverRole, departmentId?)` ordered by `createdAt asc`.
+- `MANAGER_OF` — `Employee(tenantId).managerId` (uses first employee; needs scoping by requester).
+- `DEPT_HEAD` — first active `User(role='DEPT_HEAD', departmentId = record.departmentId)`.
 
-Replaces the older single-purpose backfill helpers. Sweeps every key in `MASTER_STORAGE` (including `item_master`'s flat schema; bespoke-schema masters `kit_bundle_master` / `employee_master` / `rate_contract_master` are skipped — they have their own approval flows in their bespoke route files). Then sweeps `invoices` parked in `Under Verification`/pending. For each missing queue entry, calls `ensureMasterApproval` or the dependency-injected `ensureInvoice` (avoids circular import). Per-master errors are scoped + summarised in `{ masters: { perKey, … }, invoices: { … } }`. Non-fatal: ER_BAD_DB_ERROR / ER_NO_SUCH_TABLE on dev DBs is logged + treated as a skip. Wired into `server.listen`'s startup callback (replacing the prior two-call setup).
+### §7.6 Masters wired through the engine
 
-### §6.5 Review UI
+`MasterListScreen.MasterConfig.workflowModule` is the per-master opt-in:
 
-**Invoices** — `/invoices/:id/review?approvalId=…` mounts `InvoiceReviewLoader`, which fetches the invoice, branches on `po_number` to pick `InvoiceFormPO` or `InvoiceFormDirectV2`, and renders it with `viewOnly={true}` + `approvalId`. The forms each:
+- Set on: Departments → `DEPARTMENT`, GL Codes → `GL_CODE`, Cost Centres → `COST_CENTRE`, Tax Codes → `TAX_CODE`, Designations → `DESIGNATION`, Locations → `LOCATION`.
+- When set, the submit-for-approval button calls `POST /api/workflow/start`. On `NO_WORKFLOW_DEFINED` or a network failure, falls back to the legacy `POST /:apiPath/:id/submit` route (which just flips `status` to `PENDING_APPROVAL`).
+- Other masters (Vendors, Employees, Items, Users, Budget, Entity, FY, Currency, TDS, Profit Centres, etc.) use their own bespoke form pages and have **not** been wired to the engine yet — they still POST directly to `/{...}/submit`. See §11 Pending.
 
-- Accept `viewOnly` / `approvalId` / `reviewInvoiceId` props.
-- Render a teal "Viewing submitted invoice — awaiting your approval" banner.
-- Wrap the body in a native `<fieldset disabled>` so every input/select/textarea/button is automatically disabled (no per-input prop drilling).
-- Swap the header's Save Draft / Submit pair for Approve (teal) + Reject (red, prompts for reason).
-- Approve/Reject call `/api/approvals/:approvalId/approve|reject` then `navigate('/approvals')`.
+### §7.7 Engine-driven UI
 
-**Masters** — My Approvals routes `master_update` View buttons to `/masters/<route>?fromApprovals=1&viewOnly=1&approvalId=…&recordId=…`. Every V2 master is mounted via `SimpleMasterScreenV2`, which detects these query params and short-circuits to `MasterApprovalReviewPanel` (`src/components/masters/MasterApprovalReviewPanel.tsx`). The panel renders:
+| Page                                              | Path                                          | Role                                                  |
+| ------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------- |
+| `WorkflowHubPage`                                 | `/workflow`                                   | Engine entry — pending approvals, quick links, +New   |
+| `WorkflowDefinitionsPage`                         | `/workflow/definitions`                       | List + status tabs + module pills                     |
+| `WorkflowDefinitionFormPage`                      | `/workflow/definitions/new`, `/.../:id`       | 22-module dropdown; stages + conditions builder; JV preview |
+| `ApprovalDeskPage`                                | `/approvals`                                  | Cross-module pending-approvals queue                  |
 
-- Header with mode label + "N fields changed" badge + Approve/Reject buttons.
-- Teal "Viewing pending changes — awaiting your approval" banner.
-- Three-column diff table — Field / Current values (from `originalData`) / Proposed changes (from live payload). Changed rows highlighted amber with a CHANGED chip; unchanged rows shown muted for context. `originalData` / approvalStatus / timestamps / id are filtered out of the diff.
+Legacy `/masters/workflow-definitions/*` routes are still registered for backwards compat — they render the same components.
 
-EntityMaster (which doesn't use SimpleMasterScreenV2) retained its existing inline isApproverReview flow — unchanged.
+---
 
-### §6.6 Smoke runner
+## §8 Email ingestion
 
-`server/scripts/smokeApprovalsE2E.mjs` exercises 7 checks against the live DB:
+Two paths exist; n8n is canonical, the in-process Gmail poller is gated and used as fallback only.
 
-1. `backfillAllPendingApprovals` completes without crash; per-master errors=0 after dev-DB tolerances.
-2. `GET /api/approvals/queue?module=ap_invoice` returns non-empty.
-3. `GET /api/approvals/queue?module=master_update` count; 0 OK when no masters pending.
-4. `ensureMasterApproval` called twice → exactly 1 pending row.
-5. `ensureInvoiceApproval` called twice → exactly 1 pending row.
-6. Live `approveItem` flow → `approvals.status='approved'` + `invoice.lifecycle_state='Processed'` + `invoice.status='approved'`.
-7. `npm test` → 0 failures, all 496 tests pass.
+### §8.1 n8n → `POST /webhooks/n8n/invoice-ingest`
 
-Run via `node --env-file=.env.mysql.local server/scripts/smokeApprovalsE2E.mjs`. Exits non-zero on any FAIL.
+- HMAC-style shared secret in header `X-N8N-Secret`, compared via `Buffer.timingSafeEqual` (constant-time).
+- Body: Zod-validated envelope `{ gmailMessageId, from, subject, date, attachment: { filename, mimeType, base64 }, ocr: OcrInvoiceData }`.
+- Idempotency — per-message lookup on `InvoiceIngestionJob.extractedData JSON_EXTRACT($.gmailMessageId)` before inserting.
+- Path — Maps the request body to the canonical `OcrInvoiceData` shape (including ISO→DD/MM/YYYY date conversion) and delegates to `ingestInvoice()` in `invoice-ingestion.service.ts`. The service handles vendor match, dedupe, persist, match scoring and audit. No vendor match → job is parked as `NO_VENDOR_MATCH` (it does NOT FK-fail).
 
-### §6.7 Workflow engine tables + routes (2026-05-12)
+### §8.2 In-process Gmail poller (`email-poller.service.ts`) — fallback
 
-**Tables** — see `sql/mysql/migrations/20260512_workflow_engine.sql`:
+- Started only when `EMAIL_POLLER_ENABLED=true` (default off). 5-minute cron.
+- Per-tenant in-flight `Set` lock (prevents overlapping runs on the same tenant).
+- Module-level `rateLimitedUntil` circuit-breaker — when Gemini returns 429, no calls go out for 60 minutes (cleared on next process boot).
+- Retry wrapper does **not** retry 429/quota errors — only transient 5xx / network errors get one retry.
+- Dedup uses MySQL JSON path syntax `path: '$.gmailMessageId'` (not Postgres `path: ['gmailMessageId']`).
 
-| Table                     | Role                                                                                                                                               |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workflow_configurations` | Already existed; now consumed by the dispatcher. 9 default Active workflows seeded covering every `module` enum value.                             |
-| `user_roles`              | `(tenant_id, role_name, user_id)` mapping with `UNIQUE` on the triple. Mithilesh (`user-mith-001`) seeded for every role in `tenant-default-001`.  |
-| `workflow_field_registry` | 77 dynamic field definitions per document type. `source_table` + `source_column` let `GET /api/workflow/fields` hydrate enum options from masters. |
-| `notifications`           | Bell-notification log per (`user_id`, `tenant_id`); `is_read` flag drives the unread-count endpoint.                                               |
+### §8.3 Gemini OCR (`gemini-ocr.service.ts`)
 
-**Routes** (all in `server/routes/workflows.mjs` per CLAUDE.md):
+- Default model `gemini-2.0-flash`; overridable via `GEMINI_MODEL` env.
+- `extractInvoiceFromFile(base64, mimeType)` is the entry point. Vendor identity, line items, GST splits and TDS fields (`tdsRate`, `tdsAmount`, `tdsSection`) are extracted in a single prompt.
+- JSON.parse has a graceful fallback — if the model wraps the JSON, the service extracts the first `{...}` block via regex.
 
-| Method | Path                                                  | Purpose                                                                                                                                                                                                                             |
-| ------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/workflow/fields?documentType=`                  | Returns `{ fields: [{ key, label, dataType, options[] }] }` with 5-min in-memory cache per (tenant, documentType).                                                                                                                  |
-| POST   | `/api/workflow/configurations/:id/clone`              | Clone an existing config; body `targetDocumentType` optional. Status → `Draft`, name → `<original> (Copy)`.                                                                                                                         |
-| GET    | `/api/approvals/action?token=&action=approve\|reject` | One-time-token email actions. 72h expiry. `approve` runs `approveItem` and renders a static confirmation; `reject` redirects to the remarks form. Expired or used tokens render "Link expired or already used" (HTTP 200, not 500). |
-| GET    | `/api/approvals/reject-remarks?token=`                | Plain HTML form requesting rejection reason.                                                                                                                                                                                        |
-| POST   | `/api/approvals/reject-with-remarks`                  | Accepts `{ token, remarks }` (JSON or form-urlencoded); validates token + calls `rejectItem`.                                                                                                                                       |
-| GET    | `/api/notifications/unread-count?userId=`             | `{ count: number }`. Tenant-scoped via header.                                                                                                                                                                                      |
-| GET    | `/api/notifications?userId=`                          | List 50 most recent for a user.                                                                                                                                                                                                     |
-| POST   | `/api/notifications/:id/read`                         | Mark one notification as read.                                                                                                                                                                                                      |
+---
 
-**Notification helpers** (`server/services/notifications/notificationService.mjs`) — `sendApprovalRequestNotification`, `sendApprovalCompleteNotification`, `sendRejectionNotification`, `sendStepSkippedNotification`. Each writes a `notifications` row AND attempts SMTP via existing `SMTP_*` / `AP_EMAIL_*` env vars (`nodemailer`). SMTP failures log but don't break the dispatch.
+## §9 Frontend infrastructure
 
-### §6.8 Workflow smoke runner
+### §9.1 HTTP client (`src/lib/http.ts`)
 
-`server/scripts/smokeWorkflowE2E.mjs` exercises 8 checks (PASS/FAIL per check, non-zero exit on any FAIL):
+All API calls go through `http.get/post/put/delete<T>(url)`. Throws `HttpError` on non-2xx. **No raw `fetch()` is allowed** — TanStack Query wraps `http` for cache + invalidation. Cookies are sent with `credentials: 'include'`.
 
-1. Field registry returns `invoice_amount`, `gl_code`, `cost_centre` for `ap_invoice`.
-2. `evaluateConditions` gt/lt sanity check.
-3. `resolveApproversForRole('Finance Manager', 'tenant-default-001')` → contains `user-mith-001`.
-4. Dispatcher → step 1 pending, total_steps=3, 96-char token, expiry ~72h.
-5. Same-approver-as-submitter block — submitter `user-mith-001` + role mapped to `user-mith-001` → `{ blocked: true }`.
-6. Step advancement — approve step 1 → step 2 `pending_predecessor` → `pending`.
-7. Expired-token endpoint returns HTTP 200 with "expired" text (not 500).
-8. `npm test` exits 0.
+### §9.2 Routing (`src/router.tsx`)
 
-Run via `node --env-file=.env.mysql.local server/scripts/smokeWorkflowE2E.mjs`.
+- `createBrowserRouter` with `RequireAuth` → `AppShell` → page routes; every page is `React.lazy`.
+- `errorElement: <RouteErrorPage />` is set at every depth so route-level errors render a clickable retry UI instead of a blank screen.
+- Catch-all `*` → `NotFoundPage`.
 
-## §7 Vendor master ↔ operational vendors sync
+### §9.3 AppShell + TopBar
 
-Two tables, one logical vendor:
+- `AppShell` — left sidebar (h-screen), nav permission-gated, `ALWAYS_VISIBLE` shortcut for `/dashboard`, `/masters`, `/admin/tenants`.
+- `TopBar` — sticky `h-12 top-0 z-30`. Resolves page title via longest-prefix match on pathname. Right side: entity chip (`currentEntity.name` → `tenantCode` fallback), notification bell with pending-approvals badge, user avatar Radix DropdownMenu.
 
-| Table                         | Role                                                                                                                                                           | Read by                                                                                  |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `vendor_master.vendor_master` | Governance / approval queue. Canonical `record_code` / `record_name` / `payload` shape with `approval_status`.                                                 | Vendor Master UI, My Approvals dashboard                                                 |
-| `p2p_schema_mt.vendors`       | Operational reference data. Snake-case columns + side tables (`vendor_gst_registrations` / `vendor_pan_compliance` / `vendor_spocs` / `vendor_bank_accounts`). | Invoice / PO / GRN forms (vendor dropdown), agent pipeline, payments, GET `/api/vendors` |
+### §9.4 Auth store (`src/stores/auth.store.ts`)
 
-The two were historically disconnected — approving a vendor in the governance table had no effect on the operational table, so newly-approved vendors stayed invisible to transactions until manually re-seeded.
+Zustand store; `isAuthenticated` driven by presence of cookies. The store loads `/auth/me` on app boot and stores `currentUser`. Pages auto-populate from `currentUser` (e.g. `entityId`, `departmentId`).
 
-### §6.1 Sync trigger points
+### §9.5 Masters layer
 
-`server/services/vendors/sync.mjs` exports two entry points:
+- `MasterListScreen` — generic list + form (`FullPageForm`) for simple masters. Drives status tabs (ACTIVE / DRAFT / PENDING_APPROVAL / ALL), search, entity scoping, bulk upload, audit trail.
+- `MasterFormLayout` — `MasterPageHeader` (mandatory header with ← back), `FormSection`, `FormField`, `FormInput`, `FormSelect`, `FormTextarea`, `ApiSelect`, `AutoCodeField`. **All form inputs use `React.forwardRef` with `displayName`** — ESLint `no-restricted-syntax` blocks bare arrow-function inputs in `src/components/**`.
 
-- **`syncVendorMasterRecord(record, action)`** — called from `updateGenericMasterApproval` (`server/index.mjs`) immediately after a `vendor_master` row's approval state changes:
-  - `action === 'approve'` → upsert: insert (if no match) or update (if vendor_code or legal_name matches) the operational vendors row, plus upsert `vendor_gst_registrations` (primary, `sort_order=0`) and `vendor_pan_compliance` (UNIQUE on `vendor_id`). Sets `status='active'` + `is_active=1`.
-  - `action === 'reject'` → flip the matching operational row to `status='inactive'` + `is_active=0`. **Never deletes** — historical invoices / POs that reference the vendor must keep their FK.
-  - Any other action → no-op (currently `request_info` / `changes_requested` etc.).
-  - Errors are caught + logged; the master approval already committed, so the operational sync is best-effort. Ops can re-run the backfill to recover.
+---
 
-- **`backfillApprovedVendorMasters()`** — fires once at server boot inside the `server.listen` callback. Reads every `vendor_master` row with `approval_status='Approved'`, projects the payload, and runs the upsert path. Idempotent — matched rows hit the UPDATE branch with the same values. Returns `{ scanned, inserted, updated, errors }` for the startup log.
+## §10 Key invariants (DO NOT VIOLATE)
 
-### §6.2 Field mapping (`projectMasterToOperationalRow`)
+### Frontend
 
-Reads tolerate both camelCase and snake_case keys (the canonical PUT handler merges previous DB row + incoming payload, so the same logical field can land under either spelling).
+- No raw `fetch()` anywhere — TanStack Query + `http`.
+- No inline API call paths — go through `src/lib/api/` modules where they exist.
+- Master data — `useMasterData()` only; no hardcoded dropdowns.
+- Every form input wrapper is `React.forwardRef` + `displayName`. ESLint enforces this.
+- Every master/module page uses `<MasterPageHeader>` as its first element (provides the ← breadcrumb).
+- Mobile-first CSS — `sm:` for desktop breakpoints, never `max-md:`.
 
-| Master payload key (any of)                                        | → Operational column                                           | Notes                                                                                                                              |
-| ------------------------------------------------------------------ | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `vendorCode` / `vendor_code` / `code` / `recordCode`               | `vendor_code`                                                  | Primary match key on upsert.                                                                                                       |
-| `legalName` / `vendor_legal_name` / `name` / `recordName`          | `vendor_legal_name`                                            | Secondary match key (case-insensitive).                                                                                            |
-| `tradeName` / `vendor_trade_name`                                  | `vendor_trade_name`                                            | Nullable.                                                                                                                          |
-| `vendorType` / `vendor_type`                                       | `vendor_type`                                                  | Normalised to enum: `'Supplier'` / `'Distributor'` → `goods_supplier`; `'Service Provider'` / `'Contractor'` → `service_provider`. |
-| `vendorGroupName` / `vendor_group_name`                            | `vendor_group_name`                                            |                                                                                                                                    |
-| `vendorGroupCode` / `vendor_group_code`                            | `vendor_group_code`                                            |                                                                                                                                    |
-| `address` / `address_line`                                         | `address_line`                                                 |                                                                                                                                    |
-| `city` / `state` / `country`                                       | as-is                                                          | `country` defaults to `'India'`.                                                                                                   |
-| `pincode` / `pin_code`                                             | `pin_code`                                                     |                                                                                                                                    |
-| `tenant_id` / `tenantId`                                           | `tenant_id`                                                    | Defaults to `'tenant-default-001'`.                                                                                                |
-| `gstin`                                                            | `vendor_gst_registrations.gstin` (primary row, `sort_order=0`) | `gst_state_code` derived from first 2 digits via `stateCodeFromGstin`.                                                             |
-| `pan`, `msmeCategory` / `msme_category` / `msmeFlag`, `tdsSection` | `vendor_pan_compliance` (single row, UNIQUE on `vendor_id`)    | INSERT…ON DUPLICATE KEY UPDATE. `tdsSection` lands in `tds_sections` JSON array.                                                   |
+### Backend
 
-### §6.3 Match precedence + safety
+- Tenant from JWT only (`req.tenant.id`) — never from request body.
+- All inputs validated with Zod before touching Prisma.
+- No raw SQL outside migrations — Prisma queries only.
+- All mutations write to `AuditLog` (append-only, never delete).
+- Every Prisma model has `status String @default("ACTIVE")` — required for `MasterTabs` filtering. Route handlers filter by `status`, not the legacy `isActive` boolean.
 
-1. Match on `vendor_code` exact. If found → UPDATE.
-2. Else match on `LOWER(vendor_legal_name)` exact. If found → UPDATE (legacy seeds may carry a different code from the new governance row).
-3. Else INSERT with a fresh `randomUUID()`.
+### Validation
 
-The match precedence guards against duplicate operational rows when an admin approves a vendor that was already seeded manually under a slightly different code.
+- Deduplication is server-enforced (client warns, server is authoritative).
+- 3-way match (Invoice ↔ PO ↔ GRN) gates invoice approval.
+- GSTIN uniqueness is a DB constraint.
+- Invoice dedupe — unique index on `(tenantId, vendorId, invoiceNumber)`.
 
-### §6.4 What the user sees end-to-end
+### Performance
 
-1. User opens Vendor Master, fills the form, clicks Save → row enters `vendor_master.vendor_master` with `approval_status='Pending Approval'`. The Master Updates tab in My Approvals shows it within one refresh cycle (see the approval-sync debounce-bypass in `server/services/approvals/approvalService.mjs`).
-2. Approver clicks Approve → `updateGenericMasterApproval` flips `approval_status='Approved'` → `syncVendorMasterRecord(record, 'approve')` fires → operational vendors row is inserted/updated with `status='active'`.
-3. User opens any invoice / PO / GRN form → the vendor dropdown (sourced from `liveVendors` via `GET /api/vendors` filtered to `status='active'`) shows the newly-approved vendor.
+- Cursor pagination, never OFFSET.
+- Redis cache for master data — TTL 1h, invalidate on edit.
+- Skeleton loading on all listing pages.
+- Every page is `React.lazy()`.
 
-### §6.5 Tests
+---
 
-`server/services/vendors/__tests__/sync.test.mjs` — 17 vitest cases covering: state-code extraction, the projector's tolerance of both casings, the upsert dispatch (INSERT vs UPDATE branch), GST/PAN side-table writes only when fields are present, GSTIN state-code derivation, the reject deactivate path (and its no-op when nothing matches), unknown-action skip, and the backfill summary including the missing-schema fallback.
+## §11 Pending work
+
+### Wire remaining masters through the workflow engine
+
+Currently routed through the engine via `MasterListScreen.workflowModule`:
+- Departments, GL Codes, Cost Centres, Tax Codes, Designations, Locations.
+
+Not yet wired (still flip status directly):
+- Vendors, Employees, Items, Users, Budget, Entity, Financial Year, Currency, TDS Sections, Profit Centres, Item Categories, Vendor Categories/Groups, FX Rates, Countries/States/Cities, Tax Regimes.
+
+Each bespoke form page needs its "Submit for approval" button to call `POST /api/workflow/start` with the right `module` code (e.g. `VENDOR`, `EMPLOYEE`).
+
+### Workflow form condition templates
+
+`CONDITION_FIELDS` in `WorkflowDefinitionFormPage` only has templates for INVOICE / VENDOR / PAYMENT / PR / PO. New master modules currently fall back to the default field list. Add per-master condition fields where useful (e.g. DEPARTMENT → `name`, `parentId`).
+
+### Auto-refresh on 401
+
+`/auth/me` lives 15 min. The frontend `http` client doesn't currently catch 401 and silently call `/auth/refresh` — users hit a hard-401 if they leave a tab idle. Either add a TanStack Query global error handler that retries once after `/auth/refresh`, or wrap `http` itself.
+
+### Payments batch flow
+
+`PaymentListPage` + `PaymentDetailPage` exist; the actual batch-creation flow (select invoices → propose batch → submit → bank export) is not wired. `Payment` model exists in schema.
+
+### Dashboard mocks
+
+`/api/dashboard` returns real Prisma aggregates for KPIs and spend trend; verify per-tenant scoping and add filters (date range, entity) once business signs off on the metrics.
+
+### KYC flow polish
+
+PAN / GSTIN / IFSC verification via SurePass + OnGrid works on the vendor form; `KycBadge` chips render on detail pages. Bank-account verification via TransBnk webhook lands at `/webhooks/transbnk` — flow exists but UI feedback is minimal.
+
+---
+
+## §12 Dev commands
+
+```bash
+npm run dev          # frontend :3000 + backend :8787
+npm run dev:clean    # kill ports + restart (use after env changes / poller state resets)
+npm run typecheck    # 0 errors required
+npm run lint         # 0 warnings on new code
+npm run lint:forms   # enforces forwardRef on all native form components
+npm run test         # Vitest
+npm run test:e2e     # Playwright
+npm run db:push      # Prisma db push (dev only — no migrations dir)
+npm run db:seed      # seed demo tenant, users, masters
+npm run db:studio    # Prisma Studio
+```
+
+Demo login (dev only) — `mithilesh@procinix.ai` / `Demo@123`. SUPER_ADMIN role.
+
+---
+
+## §13 Conventions
+
+- **Commit messages** — describe the *what* + *why*. When a working tree contains multiple semantic changes, the message must cover all of them (don't under-describe). The user has explicitly asked for "accurate (everything in one)" messages over partial ones.
+- **Comments** — default to none. Add only when the *why* is non-obvious (workaround, invariant, surprising decision). Never narrate *what* the code does.
+- **Documentation files** — never create new top-level docs unless the user asks. Update this file when structure changes.
+- **Pre-commit hooks** — Husky + lint-staged run typecheck on staged files; never skip with `--no-verify` unless the user explicitly asks.

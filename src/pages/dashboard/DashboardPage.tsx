@@ -280,7 +280,7 @@ function PendingApprovalRow({ inv, onAction }: { inv: any; onAction: () => void 
   return (
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
       <div className="flex-1 min-w-0 cursor-pointer" onClick={onAction}>
-        <p className="text-sm font-medium truncate">{inv.vendor.legalName}</p>
+        <p className="text-sm font-medium truncate">{inv.vendor?.legalName ?? 'Unmatched vendor'}</p>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="font-mono text-xs text-muted-foreground">{inv.invoiceNumber}</span>
           {daysOld > 2 && (

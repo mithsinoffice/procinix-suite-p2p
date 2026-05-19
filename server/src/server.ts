@@ -62,12 +62,54 @@ export async function buildApp() {
   await app.register(adminRoutes,        { prefix: '/api' })
   await app.register(procurementRoutes,  { prefix: '/api' })
 
-  // Manual Gmail-poll trigger — uses the caller's tenant context
+  // Manual Gmail-poll trigger — fire-and-forget; returns a jobId immediately so
+  // the frontend can poll /status/:jobId instead of holding an open request for
+  // the full duration of the Gmail + Gemini round-trips.
+  // In-memory job store — single-process Node. If we ever go multi-instance
+  // this needs to move to Redis with TTL.
+  type PollJob = {
+    processed: number
+    errors:    string[]
+    done:      boolean
+    startedAt: Date
+  }
+  const pollJobs = new Map<string, PollJob>()
+
   app.post('/api/email-poll/trigger', { preHandler: [app.authenticate] }, async (req, reply) => {
     const tenantId = req.tenant?.id
     if (!tenantId) return reply.code(401).send({ message: 'No tenant context' })
-    const result = await pollGmailInbox(app.prisma, tenantId)
-    return reply.send(result)
+
+    const jobId = `poll-${Date.now()}`
+    pollJobs.set(jobId, { processed: 0, errors: [], done: false, startedAt: new Date() })
+
+    pollGmailInbox(app.prisma, tenantId)
+      .then(result => {
+        const prev = pollJobs.get(jobId)!
+        pollJobs.set(jobId, {
+          processed: result.processed,
+          errors:    result.errors,
+          done:      true,
+          startedAt: prev.startedAt,
+        })
+      })
+      .catch((err: unknown) => {
+        const prev = pollJobs.get(jobId)!
+        const msg  = err instanceof Error ? err.message : String(err)
+        pollJobs.set(jobId, {
+          processed: 0,
+          errors:    [msg],
+          done:      true,
+          startedAt: prev.startedAt,
+        })
+      })
+
+    return reply.send({ jobId, message: 'Poll started' })
+  })
+
+  app.get('/api/email-poll/status/:jobId', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const job = pollJobs.get((req.params as { jobId: string }).jobId)
+    if (!job) return reply.code(404).send({ message: 'Job not found' })
+    return reply.send(job)
   })
 
   // Debug — lists what Gmail returns for `has:attachment` regardless of read state

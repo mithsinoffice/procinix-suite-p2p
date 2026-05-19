@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Mail, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { http, HttpError } from '../../lib/http'
@@ -14,17 +14,31 @@ const AP_LANES = [
   { id: 'MANUAL', label: 'Manual' },
 ]
 
-const STATUS_TABS = [
-  'ALL', 'DRAFT', 'SUBMITTED', 'PENDING_L1', 'PENDING_L2',
-  'APPROVED', 'ON_HOLD', 'REJECTED', 'PAYMENT_INITIATED', 'PAID',
+const STATUS_TABS: { value: string; label: string; amber?: boolean }[] = [
+  { value: 'ALL',               label: 'All'               },
+  { value: 'UNMATCHED',         label: 'Unmatched',        amber: true },
+  { value: 'DRAFT',             label: 'Draft'             },
+  { value: 'SUBMITTED',         label: 'Submitted'         },
+  { value: 'PENDING_L1',        label: 'Pending L1'        },
+  { value: 'PENDING_L2',        label: 'Pending L2'        },
+  { value: 'APPROVED',          label: 'Approved'          },
+  { value: 'ON_HOLD',           label: 'On Hold'           },
+  { value: 'REJECTED',          label: 'Rejected'          },
+  { value: 'PAYMENT_INITIATED', label: 'Payment Initiated' },
+  { value: 'PAID',              label: 'Paid'              },
 ]
+
+interface PollJobStatus { processed: number; errors: string[]; done: boolean; startedAt: string }
 
 export default function InvoiceListPage() {
   const navigate        = useNavigate()
+  const queryClient     = useQueryClient()
   const [status, setStatus] = useState('ALL')
   const [apLane, setApLane] = useState('ALL')
   const [search, setSearch] = useState('')
   const [pollBanner, setPollBanner] = useState<{ tone: 'success' | 'error'; text: string; detail?: string } | null>(null)
+  const [pollJobId, setPollJobId]   = useState<string | null>(null)
+  const [pollStatus, setPollStatus] = useState<PollJobStatus | null>(null)
 
   const { data: invoices = [], isLoading, refetch } = useQuery({
     queryKey: ['invoices', status, apLane, search],
@@ -40,22 +54,46 @@ export default function InvoiceListPage() {
     staleTime:      30_000,
   })
 
+  // Trigger fires the poll on the server and immediately returns a jobId.
+  // The setInterval below polls /status/:jobId every 2s until done — this lets
+  // us show live progress instead of a single open request that hangs for minutes.
   const pollEmails = useMutation({
-    mutationFn: () => http.post<{ processed: number; errors: string[] }>('/api/email-poll/trigger', {}),
+    mutationFn: () => http.post<{ jobId: string; message: string }>('/api/email-poll/trigger', {}),
     onSuccess:  (res) => {
-      refetch()
-      const errCount = res.errors?.length ?? 0
-      setPollBanner({
-        tone:   res.processed > 0 || errCount === 0 ? 'success' : 'error',
-        text:   `Email poll complete — ${res.processed} invoice${res.processed === 1 ? '' : 's'} ingested` + (errCount ? `, ${errCount} skipped` : ''),
-        detail: errCount ? res.errors.slice(0, 3).join(' · ') : undefined,
-      })
+      setPollJobId(res.jobId)
+      setPollStatus({ processed: 0, errors: [], done: false, startedAt: new Date().toISOString() })
+      setPollBanner(null)
     },
     onError: (err: unknown) => {
       const msg = err instanceof HttpError ? err.error.message : err instanceof Error ? err.message : 'Email poll failed — check server logs'
       setPollBanner({ tone: 'error', text: 'Email poll failed', detail: msg })
     },
   })
+
+  // Poll /status/:jobId every 2s while a job is running. Stops when done.
+  useEffect(() => {
+    if (!pollJobId || pollStatus?.done) return
+    const interval = setInterval(async () => {
+      try {
+        const next = await http.get<PollJobStatus>(`/api/email-poll/status/${pollJobId}`)
+        setPollStatus(next)
+        if (next.done) {
+          clearInterval(interval)
+          setPollJobId(null)
+          queryClient.invalidateQueries({ queryKey: ['invoices'] })
+          refetch()
+          const processed = next.processed ?? 0
+          const errCount  = next.errors?.length ?? 0
+          setPollBanner({
+            tone:   processed > 0 || errCount === 0 ? 'success' : 'error',
+            text:   `Email poll complete — ${processed} invoice${processed === 1 ? '' : 's'} ingested` + (errCount ? `, ${errCount} skipped` : ''),
+            detail: errCount ? next.errors.slice(0, 3).join(' · ') : undefined,
+          })
+        }
+      } catch { /* transient — try again next tick */ }
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [pollJobId, pollStatus?.done, queryClient, refetch])
 
   // Auto-dismiss the success banner after 6s
   useEffect(() => {
@@ -64,6 +102,8 @@ export default function InvoiceListPage() {
     return () => clearTimeout(t)
   }, [pollBanner])
 
+  const isPolling = pollEmails.isPending || !!pollJobId
+
   return (
     <div className="flex flex-col h-full">
       <MasterPageHeader
@@ -71,12 +111,14 @@ export default function InvoiceListPage() {
         description="AP invoice processing — OCR ingestion, match scoring, approval workflow"
         actions={
           <div className="flex items-center gap-2">
-            <button onClick={() => pollEmails.mutate()} disabled={pollEmails.isPending}
+            <button onClick={() => pollEmails.mutate()} disabled={isPolling}
               className="flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60">
-              {pollEmails.isPending
+              {isPolling
                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 : <Mail className="h-3.5 w-3.5" />}
-              {pollEmails.isPending ? 'Polling…' : 'Poll emails'}
+              {isPolling
+                ? `Polling… (${pollStatus?.processed ?? 0} processed)`
+                : 'Poll emails'}
             </button>
             <button onClick={() => navigate('/invoices/new')}
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
@@ -107,10 +149,14 @@ export default function InvoiceListPage() {
       {/* Status tabs */}
       <div className="flex gap-0 border-b border-border overflow-x-auto">
         {STATUS_TABS.map(s => (
-          <button key={s} onClick={() => setStatus(s)}
-            className={cn('px-3 py-2.5 text-xs font-medium border-b-2 whitespace-nowrap transition-colors',
-              status === s ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}>
-            {s === 'ALL' ? 'All' : formatStatus(s)}
+          <button key={s.value} onClick={() => setStatus(s.value)}
+            className={cn(
+              'px-3 py-2.5 text-xs font-medium border-b-2 whitespace-nowrap transition-colors',
+              status === s.value
+                ? s.amber ? 'border-amber-500 text-amber-600' : 'border-primary text-primary'
+                : s.amber ? 'border-transparent text-amber-600/70 hover:text-amber-600' : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}>
+            {s.label}
           </button>
         ))}
       </div>

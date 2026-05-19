@@ -65,7 +65,7 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
     const listRes = await gmail.users.messages.list({
       userId:     'me',
       q:          'has:attachment',
-      maxResults: 50,
+      maxResults: 10,
     })
 
     const messages = listRes.data.messages ?? []
@@ -94,7 +94,8 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
       return { processed: 0, errors }
     }
 
-    for (const msg of messages) {
+    for (let msgIndex = 0; msgIndex < messages.length; msgIndex++) {
+      const msg = messages[msgIndex]
       try {
         // Skip if this Gmail message was already ingested (dedup via audit log).
         // Required now that we no longer filter on is:unread — without this the
@@ -148,6 +149,8 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
           continue
         }
 
+        console.log(`[EmailPoller] (${msgIndex + 1}/${messages.length}) Processing "${subject}" from ${senderEmail}`)
+
         for (const attachment of attachments) {
           try {
             const attId = attachment.body?.attachmentId
@@ -172,24 +175,51 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
                 : extractInvoiceFromImage(base64Data, mimeType),
             )
 
-            // Match vendor by sender email, GSTIN, or sender-domain (website).
-            // Invoice.vendorId FK is NOT NULL — missing match = skip with note.
-            const vendor = await prisma.vendor.findFirst({
-              where: {
-                tenantId,
-                OR: [
-                  ...(senderEmail     ? [{ email:   senderEmail }] : []),
-                  ...(ocr.vendorGSTIN ? [{ gstin:   ocr.vendorGSTIN }] : []),
-                  ...(senderDomain    ? [{ website: { contains: senderDomain } }] : []),
-                ],
-              },
-            })
+            console.log(`[EmailPoller] OCR done — confidence: ${ocr.confidence?.overall ?? '—'}%, vendor: ${ocr.vendorGSTIN ?? 'unknown'}`)
 
-            if (!vendor) {
-              errors.push(`No vendor matched for "${subject}" (sender=${senderEmail}, gstin=${ocr.vendorGSTIN ?? '—'}) — invoice not created`)
-              continue
+            // Vendor match — priority order:
+            //   1. GSTIN from OCR (most reliable — invoice itself carries it)
+            //   2. Vendor name from OCR (contains-match on legalName / tradeName)
+            //   3. Sender email (often the user's own inbox, not the vendor — kept as last resort)
+            //   4. Sender domain (website contains)
+            // Required because invoices are typically forwarded *from* the user's
+            // mailbox, so senderEmail rarely matches a real vendor.
+            // Invoice.vendorId FK is NOT NULL — missing match = skip with note.
+            let vendor = null
+
+            if (ocr.vendorGSTIN) {
+              vendor = await prisma.vendor.findFirst({
+                where: { tenantId, gstin: ocr.vendorGSTIN },
+              })
             }
 
+            if (!vendor && ocr.vendorName) {
+              vendor = await prisma.vendor.findFirst({
+                where: {
+                  tenantId,
+                  OR: [
+                    { legalName: { contains: ocr.vendorName } },
+                    { tradeName: { contains: ocr.vendorName } },
+                  ],
+                },
+              })
+            }
+
+            if (!vendor && senderEmail) {
+              vendor = await prisma.vendor.findFirst({
+                where: { tenantId, email: senderEmail },
+              })
+            }
+
+            if (!vendor && senderDomain) {
+              vendor = await prisma.vendor.findFirst({
+                where: { tenantId, website: { contains: senderDomain } },
+              })
+            }
+
+            // No-vendor-match no longer skips the message — we persist an
+            // UNMATCHED invoice (vendorId=null, apLane=MANUAL) so AP can triage
+            // it from the UI instead of losing the row.
             if (!defaultEntity) {
               errors.push(`No entity configured for tenant — cannot create invoice from "${subject}"`)
               continue
@@ -199,14 +229,19 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
             const tdsAmount   = ocr.tdsAmount   ?? 0
             const invoiceNum  = ocr.invoiceNumber || `EMAIL-${Date.now()}`
 
-            // Pre-check duplicate (defense in depth — P2002 still caught below)
-            const existing = await prisma.invoice.findFirst({
-              where:  { tenantId, invoiceNumber: invoiceNum, vendorId: vendor.id },
-              select: { id: true },
-            })
-            if (existing) {
-              errors.push(`Duplicate: invoice "${invoiceNum}" from ${vendor.legalName} already exists`)
-              continue
+            // Pre-check duplicate only when we have a vendor — the unique
+            // constraint (tenantId, invoiceNumber, vendorId) is effectively
+            // non-restricting for null vendorIds in MySQL, and the audit-log
+            // dedup at the top of the loop catches re-runs by gmailMessageId.
+            if (vendor) {
+              const existing = await prisma.invoice.findFirst({
+                where:  { tenantId, invoiceNumber: invoiceNum, vendorId: vendor.id },
+                select: { id: true },
+              })
+              if (existing) {
+                errors.push(`Duplicate: invoice "${invoiceNum}" from ${vendor.legalName} already exists`)
+                continue
+              }
             }
 
             try {
@@ -215,10 +250,12 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
                   tenantId,
                   invoiceNumber:  invoiceNum,
                   invoiceDate:    ocr.invoiceDate ? new Date(ocr.invoiceDate) : new Date(),
-                  vendorId:       vendor.id,
+                  vendorId:       vendor?.id ?? null,
                   entityId:       defaultEntity.id,
                   channelType:    'EMAIL_INGEST',
-                  status:         'DRAFT',
+                  status:         vendor ? 'DRAFT' : 'UNMATCHED',
+                  apLane:         vendor ? null : 'MANUAL',
+                  notes:          vendor ? null : `Unmatched — OCR: ${ocr.vendorName ?? 'unknown'} | GSTIN: ${ocr.vendorGSTIN ?? '—'} | Sender: ${senderEmail}`,
                   subtotal:       ocr.subtotal,
                   cgstAmount:     ocr.cgstAmount,
                   sgstAmount:     ocr.sgstAmount,
@@ -254,25 +291,32 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
                 })
               }
 
-              // Match scoring — also persists invoiceMatchScore and updates invoice.apLane/matchScore/matchLane.
-              // Failures here must NOT fail the ingestion — invoice stays DRAFT with no score.
-              try {
-                const score = await calculateMatchScore(prisma, {
-                  invoiceId:     invoice.id,
-                  tenantId,
-                  vendorId:      vendor.id,
-                  totalAmount,
-                  ocrConfidence: invoice.ocrConfidence ?? undefined,
-                })
-                if (score.lane === 'STP') {
-                  await prisma.invoice.update({
-                    where: { id: invoice.id },
-                    data:  { status: 'SUBMITTED' },
+              // Match scoring — skipped entirely for UNMATCHED (no vendorId to score against).
+              // For matched invoices: also persists invoiceMatchScore and updates apLane/matchScore/matchLane.
+              // Failures must NOT fail the ingestion — invoice stays DRAFT with no score.
+              let scoreLane: string | null = vendor ? null : 'MANUAL'
+              if (vendor) {
+                try {
+                  const score = await calculateMatchScore(prisma, {
+                    invoiceId:     invoice.id,
+                    tenantId,
+                    vendorId:      vendor.id,
+                    totalAmount,
+                    ocrConfidence: invoice.ocrConfidence ?? undefined,
                   })
+                  scoreLane = score.lane
+                  if (score.lane === 'STP') {
+                    await prisma.invoice.update({
+                      where: { id: invoice.id },
+                      data:  { status: 'SUBMITTED' },
+                    })
+                  }
+                } catch (scoreErr: any) {
+                  console.warn('[EmailPoller] Match scoring failed for', invoice.id, scoreErr?.message ?? scoreErr)
                 }
-              } catch (scoreErr: any) {
-                console.warn('[EmailPoller] Match scoring failed for', invoice.id, scoreErr?.message ?? scoreErr)
               }
+
+              console.log(`[EmailPoller] Invoice created: ${invoice.invoiceNumber} — status: ${invoice.status}, lane: ${scoreLane ?? 'unscored'}`)
 
               // Ingestion audit log
               try {
@@ -289,7 +333,8 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
                       subject,
                       ocrConfidence:  ocr.confidence?.overall ?? null,
                       attachmentName: attachment.filename ?? null,
-                      matchedVendor:  vendor.legalName,
+                      matchedVendor:  vendor?.legalName ?? null,
+                      unmatched:      !vendor,
                     },
                   },
                 })
@@ -301,7 +346,7 @@ export async function pollGmailInbox(prisma: PrismaClient, tenantId: string): Pr
             } catch (createErr: any) {
               // P2002 = duplicate (tenantId, invoiceNumber, vendorId) — race against pre-check
               if (createErr?.code === 'P2002') {
-                errors.push(`Duplicate invoice "${invoiceNum}" from ${vendor.legalName} — already ingested`)
+                errors.push(`Duplicate invoice "${invoiceNum}" from ${vendor?.legalName ?? 'unmatched vendor'} — already ingested`)
               } else {
                 errors.push(`DB error for "${subject}": ${createErr.message ?? createErr}`)
               }

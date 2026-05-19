@@ -870,6 +870,87 @@ async function main() {
   }
   console.log('✓ 3 workflow definitions + stages seeded')
 
+  // ── Master workflow definitions — single-stage approvals for every module ─────
+  // One definition per module wired by MasterListScreen.workflowModule so that
+  // POST /api/workflow/start always finds an ACTIVE config to dispatch against.
+  // Priority 10 + isDefault means these are catch-alls; higher-priority module-
+  // specific configs (e.g. INV-STD-HIGH at priority 30) still take precedence.
+  // priority defaults to 10; INVOICE/PO/PR drop to 5 so the existing tiered
+  // ladders (INV-STD-LOW/MID/HIGH at priority 10–30) always win over these
+  // generic catch-all defaults.
+  const masterWorkflows: { code: string; name: string; module: string; priority?: number }[] = [
+    { code: 'WF-DEPT-001',    name: 'Department Approval',      module: 'DEPARTMENT'      },
+    { code: 'WF-GL-001',      name: 'GL Code Approval',         module: 'GL_CODE'         },
+    { code: 'WF-CC-001',      name: 'Cost Centre Approval',     module: 'COST_CENTRE'     },
+    { code: 'WF-EMP-001',     name: 'Employee Approval',        module: 'EMPLOYEE'        },
+    { code: 'WF-DESIG-001',   name: 'Designation Approval',     module: 'DESIGNATION'     },
+    { code: 'WF-LOC-001',     name: 'Location Approval',        module: 'LOCATION'        },
+    { code: 'WF-ITEM-001',    name: 'Item Master Approval',     module: 'ITEM'            },
+    { code: 'WF-VENDOR-001',  name: 'Vendor Approval',          module: 'VENDOR'          },
+    { code: 'WF-VCAT-001',    name: 'Vendor Category Approval', module: 'VENDOR_CATEGORY' },
+    { code: 'WF-TAX-001',     name: 'Tax Code Approval',        module: 'TAX_CODE'        },
+    { code: 'WF-TDS-001',     name: 'TDS Section Approval',     module: 'TDS_SECTION'     },
+    { code: 'WF-FY-001',      name: 'Financial Year Approval',  module: 'FINANCIAL_YEAR'  },
+    { code: 'WF-CURR-001',    name: 'Currency Approval',        module: 'CURRENCY'        },
+    { code: 'WF-PC-001',      name: 'Profit Centre Approval',   module: 'PROFIT_CENTRE'   },
+    { code: 'WF-ENTITY-001',  name: 'Entity Approval',          module: 'ENTITY'          },
+    { code: 'WF-USER-001',    name: 'User Approval',            module: 'USER'            },
+    { code: 'WF-BUDGET-001',  name: 'Budget Approval',          module: 'BUDGET'          },
+    { code: 'WF-INV-001',     name: 'Invoice Approval',         module: 'INVOICE',  priority: 5 },
+    { code: 'WF-PO-001',      name: 'Purchase Order Approval',  module: 'PO',       priority: 5 },
+    { code: 'WF-PR-001',      name: 'PR Approval',              module: 'PR',       priority: 5 },
+    { code: 'WF-GRN-001',     name: 'GRN Approval',             module: 'GRN'             },
+    { code: 'WF-PAY-001',     name: 'Payment Approval',         module: 'PAYMENT'         },
+  ]
+  let masterWfCreated = 0
+  let masterWfRepriortised = 0
+  for (const wf of masterWorkflows) {
+    const priority = wf.priority ?? 10
+    const existing = await prisma.workflowDefinition.findFirst({
+      where: { tenantId, code: wf.code },
+    })
+    if (existing) {
+      if (existing.priority !== priority) {
+        await prisma.workflowDefinition.update({
+          where: { id: existing.id },
+          data:  { priority },
+        })
+        masterWfRepriortised++
+      }
+      continue
+    }
+
+    const def = await prisma.workflowDefinition.create({
+      data: {
+        tenantId,
+        code:        wf.code,
+        name:        wf.name,
+        module:      wf.module,
+        priority,
+        isDefault:   true,
+        isActive:    true,
+        status:      'ACTIVE',
+        description: `Default single-stage approval workflow for ${wf.name}`,
+      },
+    })
+
+    await prisma.workflowDefinitionStage.create({
+      data: {
+        definitionId:    def.id,
+        order:           1,
+        name:            'Tenant Admin Approval',
+        approverType:    'ROLE',
+        approverRole:    'TENANT_ADMIN',
+        slaHours:        48,
+        requiresComment: false,
+        allowDelegation: false,
+        onReject:        'RETURN_TO_DRAFT',
+      },
+    })
+    masterWfCreated++
+  }
+  console.log(`✓ ${masterWorkflows.length} master workflow definitions seeded (${masterWfCreated} new, ${masterWorkflows.length - masterWfCreated} existing, ${masterWfRepriortised} repriortised)`)
+
   // ── Super Admin ───────────────────────────────────────────────────────────────
   await prisma.user.update({
     where: { tenantId_email: { tenantId, email: 'mithilesh@procinix.ai' } },
@@ -1086,8 +1167,52 @@ async function main() {
         blockPO: false, blockPayment: false, paymentTermsDays: 0, paymentMode: 'RTGS',
       }],
     },
+    {
+      vendorCode:         'VND-0005',
+      legalName:          'Amazon Web Services India Private Limited',
+      tradeName:          'AWS India',
+      vendorType:         'SERVICE_PROVIDER',
+      panEntityType:      'COMPANY',
+      pan:                'AAACA0011P',
+      gstin:              '29AAACA0011P1Z3',
+      tdsApplicable:      true,
+      tdsSectionId:       tdsSection194J?.id,
+      tdsRate:            10,
+      is206ABApplicable:  false,
+      einvoiceRequired:   true,
+      kycPanStatus:       'VALID',
+      kycPanName:         'AMAZON WEB SERVICES INDIA PRIVATE LIMITED',
+      kycGstStatus:       'VALID',
+      kycGstName:         'AMAZON WEB SERVICES INDIA PRIVATE LIMITED',
+      gstComplianceScore: 95,
+      gstReturnRisk:      'LOW_RISK',
+      city:               'Bengaluru',
+      stateCode:          'KA',
+      email:              'billing-in@amazon.com',
+      website:            'aws.amazon.com',
+      paymentTerms:       30,
+      paymentCurrency:    'INR',
+      paymentMode:        'NEFT',
+      status:             'ACTIVE',
+      gstRegistrations: [{
+        stateCode: 'KA', gstin: '29AAACA0011P1Z3', registrationType: 'REGULAR',
+        isPrimary: true, kycStatus: 'VALID', status: 'ACTIVE',
+      }],
+      bankAccounts: [{
+        accountNo: '1234567890', ifsc: 'HDFC0001234', bankName: 'HDFC Bank',
+        branch: 'Bengaluru', accountType: 'CURRENT', currencyCode: 'INR',
+        accountHolderName: 'AMAZON WEB SERVICES INDIA PVT LTD', isPrimary: true,
+        kycStatus: 'VALID', status: 'ACTIVE',
+      }],
+      entityMappings: [{
+        entityId: ptplEntity!.id,
+        currencyCode: 'INR', paymentTermsDays: 30, paymentMode: 'NEFT',
+        blockPO: false, blockPayment: false,
+      }],
+    },
   ]
 
+  let vendorsCreated = 0
   for (const v of vendors) {
     const { gstRegistrations, bankAccounts, entityMappings, ...vendorData } = v
     const existing = await prisma.vendor.findFirst({ where: { tenantId, vendorCode: v.vendorCode } })
@@ -1096,8 +1221,9 @@ async function main() {
     await prisma.vendorGstRegistration.createMany({ data: gstRegistrations.map(g => ({ ...g, vendorId: vendor.id })) })
     await prisma.vendorBankAccount.createMany({ data: bankAccounts.map(b => ({ ...b, vendorId: vendor.id })) })
     await prisma.vendorEntityMapping.createMany({ data: entityMappings.map(e => ({ ...e, vendorId: vendor.id, isActive: true })) })
+    vendorsCreated++
   }
-  console.log('✓ 4 vendors seeded (Infosys BPM, G4S Security, Crawford Bayley, Oberoi Realty)')
+  console.log(`✓ ${vendors.length} vendors seeded (${vendorsCreated} new, ${vendors.length - vendorsCreated} existing) — Infosys BPM, G4S Security, Crawford Bayley, Oberoi Realty, AWS India`)
 
   // ── Budgets — FY 2025-26, PTPL ───────────────────────────────────────────────
   const currentFy = await prisma.financialYear.findFirst({ where: { tenantId, isCurrent: true } })

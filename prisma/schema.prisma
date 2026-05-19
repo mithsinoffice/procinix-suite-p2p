@@ -331,7 +331,7 @@ model Invoice {
   invoiceRef          String?
   invoiceDate         DateTime  @db.Date
   dueDate             DateTime? @db.Date
-  vendorId            String
+  vendorId            String?
   vendorGSTIN         String?
   vendorPAN           String?
   entityId            String?
@@ -379,7 +379,7 @@ model Invoice {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   tenant              Tenant    @relation(fields: [tenantId], references: [id])
-  vendor              Vendor    @relation(fields: [vendorId], references: [id])
+  vendor              Vendor?   @relation(fields: [vendorId], references: [id])
   lines               InvoiceLine[]
   auditLogs           InvoiceAuditLog[]
   approvals           ApprovalStep[]
