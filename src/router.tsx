@@ -11,9 +11,6 @@ const InvoiceDetailPage       = lazy(() => import('./pages/invoices/InvoiceDetai
 const InvoiceFormPage         = lazy(() => import('./pages/invoices/InvoiceFormPage'))
 const InvoiceNewPage          = lazy(() => import('./pages/invoices/InvoiceNewPage'))
 const InvoiceReviewQueuePage  = lazy(() => import('./pages/invoices/InvoiceReviewQueuePage'))
-// InvoiceTypeSelector / InvoiceCreatePO / InvoiceCreateDirect were a brief
-// wizard experiment — superseded by inline mode-switching inside InvoiceFormPage
-// via ?type=po|direct. Files retained for reference but no longer routed.
 const PaymentListPage    = lazy(() => import('./pages/payments/PaymentListPage'))
 const PaymentDetailPage  = lazy(() => import('./pages/payments/PaymentDetailPage'))
 const VendorListPage     = lazy(() => import('./pages/masters/vendors/VendorListPage'))

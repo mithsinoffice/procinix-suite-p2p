@@ -1,6 +1,6 @@
 # Procinix v2 (S2P) — Architecture
 
-_Last updated: 2026-05-19 (PR edit mode + init.sql cleanup + back-button fix)_
+_Last updated: 2026-05-19 (wizard files deleted — InvoiceFormPage is the single creation path)_
 
 Indian Source-to-Pay (S2P) platform — Procurement, Goods Receipt, AP Invoice processing, Payments, Vendor management, Approvals and Masters — for mid-market Indian enterprises. Multi-tenant, RBAC-gated, n8n-driven email ingestion, Gemini OCR.
 
@@ -67,7 +67,6 @@ src/                                    # React frontend
     grn/  GRNPage · GRNFormPage
     invoices/  InvoiceListPage · InvoiceFormPage · InvoiceDetailPage · InvoiceNewPage · InvoiceReviewQueuePage ·
                components/invoice-shared.ts
-               (InvoiceTypeSelector / InvoiceCreatePO / InvoiceCreateDirect — orphaned wizard files, retained on disk but not routed; see §10b)
     payments/  PaymentListPage · PaymentDetailPage
     workflow/WorkflowHubPage             # /workflow — engine entry
     masters/                             # MastersPage + 30+ masters
@@ -414,7 +413,7 @@ Zustand store; `isAuthenticated` driven by presence of cookies. The store loads 
 
 `/invoices/new` renders the existing [InvoiceFormPage.tsx](../src/pages/invoices/InvoiceFormPage.tsx) for both PO-based and direct invoices. The form switches modes based on a `?type=po|direct` query param; opening `/invoices/new` with no query param renders a small `InvoiceTypePicker` modal (a two-card overlay) that flips the URL to the chosen mode and lets the rest of the form mount.
 
-This replaces an earlier wizard experiment ([InvoiceTypeSelector.tsx](../src/pages/invoices/InvoiceTypeSelector.tsx), [InvoiceCreatePO.tsx](../src/pages/invoices/InvoiceCreatePO.tsx), [InvoiceCreateDirect.tsx](../src/pages/invoices/InvoiceCreateDirect.tsx)) — those files remain on disk but are no longer routed; do not navigate to them.
+An earlier wizard experiment (`InvoiceTypeSelector.tsx` / `InvoiceCreatePO.tsx` / `InvoiceCreateDirect.tsx`) was deleted in commit 2026-05-19 — those files no longer exist on disk.
 
 ### §10b.1 PO-based mode (`/invoices/new?type=po`)
 
