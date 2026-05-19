@@ -7,6 +7,35 @@ import {
 import { resolveItemStatusAfterReject } from '../services/item-submit.service.js'
 import { applyChangeDiff } from '../services/item-change.service.js'
 import { triggerOnInvoiceApproval } from '../services/accounting-trigger.service.js'
+import { resolveMasterStatusAfterReject } from '../services/master-submit.service.js'
+
+// Maps entityType (workflow_instance.entity_type) → Prisma delegate name.
+// Used by the generic master approve/reject branches below so every master
+// follows the same final-flip semantics: APPROVED → status=ACTIVE +
+// isActive=true (where applicable). Centralised here so adding a new master
+// is one map entry, not a new handler branch.
+const MASTER_ENTITY_DELEGATES: Record<string, { delegate: string; setsIsActive: boolean }> = {
+  vendor:         { delegate: 'vendor',         setsIsActive: false },
+  employee:       { delegate: 'employee',       setsIsActive: true  },
+  user:           { delegate: 'user',           setsIsActive: true  },
+  budget:         { delegate: 'budget',         setsIsActive: false },
+  financial_year: { delegate: 'financialYear',  setsIsActive: true  },
+  currency:       { delegate: 'currency',       setsIsActive: true  },
+  profit_centre:  { delegate: 'profitCentre',   setsIsActive: false },
+  item_category:  { delegate: 'itemCategory',   setsIsActive: false },
+  // Generic-CRUD masters that route through TABLE_ROUTE_MAP also flow through
+  // here on approve/reject — keeps the workflow engine the single source of
+  // truth for "what does APPROVED do to the master record".
+  department:     { delegate: 'department',     setsIsActive: true  },
+  gl_code:        { delegate: 'glCode',         setsIsActive: true  },
+  cost_centre:    { delegate: 'costCentre',     setsIsActive: true  },
+  tax_code:       { delegate: 'taxCode',        setsIsActive: true  },
+  designation:    { delegate: 'designation',    setsIsActive: true  },
+  entity:         { delegate: 'entity',         setsIsActive: true  },
+  location:       { delegate: 'location',       setsIsActive: true  },
+  tax_regime:     { delegate: 'taxRegime',      setsIsActive: true  },
+  workflow_rule:  { delegate: 'workflowRule',   setsIsActive: true  },
+}
 
 export async function workflowRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
@@ -149,6 +178,22 @@ export async function workflowRoutes(app: FastifyInstance) {
           data:  { status: 'ACTIVE' },
         })
       }
+    } else if (instanceInfo?.entityType && MASTER_ENTITY_DELEGATES[instanceInfo.entityType]) {
+      // Generic master approve flow — applies to vendor, employee, user,
+      // budget, financial_year, currency, profit_centre, item_category and
+      // the 9 generic-CRUD masters from TABLE_ROUTE_MAP. Final approval flips
+      // status → ACTIVE (+ isActive for masters that track both); interim
+      // stages keep PENDING_APPROVAL.
+      if (result.data.finalStatus === 'APPROVED') {
+        const cfg = MASTER_ENTITY_DELEGATES[instanceInfo.entityType]
+        const delegate = (app.prisma as unknown as Record<string, { update: (q: { where: { id: string }; data: Record<string, unknown> }) => Promise<unknown> }>)[cfg.delegate]
+        await delegate.update({
+          where: { id: instanceInfo.entityId },
+          data:  cfg.setsIsActive
+            ? { status: 'ACTIVE', isActive: true, approvedByUserId: req.user.sub, approvedAt: new Date() }
+            : { status: 'ACTIVE' },
+        })
+      }
     } else if (instanceInfo?.entityType === 'item_change') {
       // Material-field change request on an ACTIVE item. On final approval,
       // load the persisted diff and apply it to the live item. The change
@@ -248,6 +293,17 @@ export async function workflowRoutes(app: FastifyInstance) {
       await app.prisma.itemMaster.update({
         where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
         data:  { status: newStatus },
+      })
+    } else if (instanceInfo?.entityType && MASTER_ENTITY_DELEGATES[instanceInfo.entityType]) {
+      // Generic master reject flow. RETURN_TO_DRAFT / RETURN_TO_PREV_STAGE
+      // flip the master back to DRAFT (single-stage default). REQUEST_INFO
+      // holds PENDING_APPROVAL while the chat thread resolves.
+      const cfg = MASTER_ENTITY_DELEGATES[instanceInfo.entityType]
+      const newStatus = resolveMasterStatusAfterReject(mode as 'RETURN_TO_DRAFT' | 'RETURN_TO_PREV_STAGE' | 'REQUEST_INFO')
+      const delegate = (app.prisma as unknown as Record<string, { update: (q: { where: { id: string }; data: Record<string, unknown> }) => Promise<unknown> }>)[cfg.delegate]
+      await delegate.update({
+        where: { id: instanceInfo.entityId },
+        data:  cfg.setsIsActive ? { status: newStatus, isActive: false } : { status: newStatus },
       })
     } else if (instanceInfo?.entityType === 'item_change') {
       // Reject a change request — discard. The live item stays ACTIVE

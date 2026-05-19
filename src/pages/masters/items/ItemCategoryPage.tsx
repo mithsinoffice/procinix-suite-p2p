@@ -15,13 +15,20 @@ interface ItemCategory { id: string; code: string; name: string; description?: s
 
 function ItemCategoryForm({ record, onClose, onSaved }: { record?: ItemCategory; onClose: () => void; onSaved: () => void }) {
   const qc = useQueryClient()
-  const [form, setForm] = useState<Record<string, unknown>>(record ? { ...record } : { status: 'ACTIVE' })
+  const [form, setForm] = useState<Record<string, unknown>>(record ? { ...record } : { status: 'DRAFT' })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // Two-step save: persist → optional /submit. Workflow-driven approval, so
+  // the status drop-down lists only ACTIVE/INACTIVE (workflow-only states
+  // like PENDING_APPROVAL are reached by hitting Submit, not by typing).
   const save = useMutation({
-    mutationFn: () => record
-      ? http.put<any>(`/api/masters/item-categories/${record.id}`, form)
-      : http.post<any>('/api/masters/item-categories', form),
+    mutationFn: async (submit: boolean) => {
+      const saved = record
+        ? await http.put<ItemCategory>(`/api/masters/item-categories/${record.id}`, form)
+        : await http.post<ItemCategory>('/api/masters/item-categories', form)
+      if (submit) await http.post(`/api/masters/item-categories/${saved.id}/submit`, {})
+      return saved
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['itemCategory'] }); onSaved(); onClose() },
   })
 
@@ -64,8 +71,8 @@ function ItemCategoryForm({ record, onClose, onSaved }: { record?: ItemCategory;
       <WorkflowBanner />
       <FormFooter
         onCancel={onClose}
-        onDraft={() => { if (validate()) save.mutate() }}
-        onSubmit={() => { if (validate()) save.mutate() }}
+        onDraft={() => { if (validate()) save.mutate(false) }}
+        onSubmit={() => { if (validate()) save.mutate(true) }}
         isPending={save.isPending}
       />
     </div>

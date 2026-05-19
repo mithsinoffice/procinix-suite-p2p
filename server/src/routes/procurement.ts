@@ -3,6 +3,9 @@ import { startWorkflow } from '../services/workflow-engine.service.js'
 import {
   validatePrEditable, diffPrFields, calcEstimatedTotal, EDITABLE_FIELDS,
 } from '../services/pr-edit.service.js'
+import {
+  validateMasterSubmittable, resolveMasterStatusAfterSubmit,
+} from '../services/master-submit.service.js'
 
 export async function procurementRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
@@ -527,6 +530,29 @@ export async function procurementRoutes(app: FastifyInstance) {
       return b
     })
     return reply.send(updated)
+  })
+
+  // Submit budget for approval — same DRAFT/REJECTED → workflow gate as items.
+  app.post('/budgets/:id/submit', auth, async (req, reply) => {
+    const id = (req.params as { id: string }).id
+    const existing = await app.prisma.budget.findFirst({
+      where: { id, tenantId: req.tenant.id }, select: { id: true, status: true },
+    })
+    if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Budget not found' })
+    const guard = validateMasterSubmittable('budget', existing.status)
+    if (!guard.ok) return reply.code(422).send({ code: 'WORKFLOW_INVALID_STATE', message: guard.message })
+    const wf = await startWorkflow(
+      app.prisma, 'BUDGET', 'budget', id, {},
+      { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as { name?: string }).name ?? req.user.sub },
+    )
+    if (!wf.ok && wf.error.message !== 'NO_WORKFLOW_DEFINED') {
+      return reply.code(wf.error.httpStatus ?? 400).send(wf.error)
+    }
+    const newStatus = resolveMasterStatusAfterSubmit({
+      ok: wf.ok, autoApproved: wf.ok ? wf.data.autoApproved : false, noWorkflowDefined: !wf.ok,
+    })
+    await app.prisma.budget.update({ where: { id }, data: { status: newStatus } })
+    return reply.send({ ok: true, status: newStatus, workflowInstanceId: wf.ok ? wf.data.instanceId : null })
   })
 
   app.post('/budgets/:id/revise', auth, async (req, reply) => {

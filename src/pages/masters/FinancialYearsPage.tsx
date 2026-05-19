@@ -32,11 +32,15 @@ function FinancialYearForm({ record, onClose, onSaved }: { record?: FY; onClose:
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const save = useMutation({
-    mutationFn: ({ submitForApproval }: { submitForApproval: boolean }) => {
-      const payload = { ...form, submitForApproval }
-      return record
-        ? http.put<FY>(`/api/masters/financial-years/${record.id}`, payload)
-        : http.post<FY>('/api/masters/financial-years', payload)
+    mutationFn: async ({ submitForApproval }: { submitForApproval: boolean }) => {
+      const payload = { ...form }
+      const saved = record
+        ? await http.put<FY>(`/api/masters/financial-years/${record.id}`, payload)
+        : await http.post<FY>('/api/masters/financial-years', payload)
+      if (submitForApproval) {
+        await http.post(`/api/masters/financial-years/${saved.id}/submit`, {})
+      }
+      return saved
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['financialYear'] }); onSaved(); onClose() },
   })

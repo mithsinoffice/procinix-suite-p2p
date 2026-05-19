@@ -115,8 +115,21 @@ export async function invoiceRoutes(app: FastifyInstance) {
     const poIds          = pendingStages.filter(s => s.instance.entityType === 'purchase_order').map(s => s.instance.entityId)
     const itemIds        = pendingStages.filter(s => s.instance.entityType === 'item').map(s => s.instance.entityId)
     const itemChangeIds  = pendingStages.filter(s => s.instance.entityType === 'item_change').map(s => s.instance.entityId)
+    // Master modules — same cross-module pattern; each gets a separate batch
+    // findMany so we can include the relations each one needs for display.
+    const vendorIds      = pendingStages.filter(s => s.instance.entityType === 'vendor').map(s => s.instance.entityId)
+    const employeeIds    = pendingStages.filter(s => s.instance.entityType === 'employee').map(s => s.instance.entityId)
+    const userIds        = pendingStages.filter(s => s.instance.entityType === 'user').map(s => s.instance.entityId)
+    const budgetIds      = pendingStages.filter(s => s.instance.entityType === 'budget').map(s => s.instance.entityId)
+    const fyIds          = pendingStages.filter(s => s.instance.entityType === 'financial_year').map(s => s.instance.entityId)
+    const currencyIds    = pendingStages.filter(s => s.instance.entityType === 'currency').map(s => s.instance.entityId)
+    const pcIds          = pendingStages.filter(s => s.instance.entityType === 'profit_centre').map(s => s.instance.entityId)
+    const itemCatIds     = pendingStages.filter(s => s.instance.entityType === 'item_category').map(s => s.instance.entityId)
 
-    const [invoices, prs, pos, items, itemChanges] = await Promise.all([
+    const [
+      invoices, prs, pos, items, itemChanges,
+      vendors, employees, users, budgets, fys, currencies, profitCentres, itemCategories,
+    ] = await Promise.all([
       invoiceIds.length
         ? app.prisma.invoice.findMany({
             where:   { id: { in: invoiceIds }, tenantId },
@@ -141,6 +154,30 @@ export async function invoiceRoutes(app: FastifyInstance) {
             include: { item: { select: { itemCode: true, name: true } } },
           })
         : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.itemMasterChangeRequest.findMany>>),
+      vendorIds.length
+        ? app.prisma.vendor.findMany({ where: { id: { in: vendorIds }, tenantId } })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.vendor.findMany>>),
+      employeeIds.length
+        ? app.prisma.employee.findMany({ where: { id: { in: employeeIds }, tenantId } })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.employee.findMany>>),
+      userIds.length
+        ? app.prisma.user.findMany({ where: { id: { in: userIds }, tenantId }, select: { id: true, name: true, email: true, role: true, status: true, createdAt: true } })
+        : Promise.resolve([] as Array<{ id: string; name: string; email: string; role: string; status: string; createdAt: Date }>),
+      budgetIds.length
+        ? app.prisma.budget.findMany({ where: { id: { in: budgetIds }, tenantId } })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.budget.findMany>>),
+      fyIds.length
+        ? app.prisma.financialYear.findMany({ where: { id: { in: fyIds }, tenantId } })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.financialYear.findMany>>),
+      currencyIds.length
+        ? app.prisma.currency.findMany({ where: { id: { in: currencyIds } } })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.currency.findMany>>),
+      pcIds.length
+        ? app.prisma.profitCentre.findMany({ where: { id: { in: pcIds }, tenantId } })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.profitCentre.findMany>>),
+      itemCatIds.length
+        ? app.prisma.itemCategory.findMany({ where: { id: { in: itemCatIds }, tenantId } })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.itemCategory.findMany>>),
     ])
 
     const rows: unknown[] = []
@@ -180,6 +217,30 @@ export async function invoiceRoutes(app: FastifyInstance) {
             totalAmount:   0, currencyCode: 'INR',
           })
         }
+      } else if (entityType === 'vendor') {
+        const v = vendors.find(r => r.id === entityId)
+        if (v) rows.push({ ...v, module: 'VENDOR', pendingStage: stage, invoiceNumber: v.vendorCode, name: v.legalName, totalAmount: 0, currencyCode: 'INR' })
+      } else if (entityType === 'employee') {
+        const e = employees.find(r => r.id === entityId)
+        if (e) rows.push({ ...e, module: 'EMPLOYEE', pendingStage: stage, invoiceNumber: e.code, totalAmount: 0, currencyCode: 'INR' })
+      } else if (entityType === 'user') {
+        const u = users.find(r => r.id === entityId)
+        if (u) rows.push({ ...u, module: 'USER', pendingStage: stage, invoiceNumber: u.email, name: u.name, totalAmount: 0, currencyCode: 'INR' })
+      } else if (entityType === 'budget') {
+        const b = budgets.find(r => r.id === entityId)
+        if (b) rows.push({ ...b, module: 'BUDGET', pendingStage: stage, invoiceNumber: b.budgetRef, totalAmount: Number(b.budgetAmount), currencyCode: 'INR' })
+      } else if (entityType === 'financial_year') {
+        const f = fys.find(r => r.id === entityId)
+        if (f) rows.push({ ...f, module: 'FY', pendingStage: stage, invoiceNumber: f.code, totalAmount: 0, currencyCode: 'INR' })
+      } else if (entityType === 'currency') {
+        const c = currencies.find(r => r.id === entityId)
+        if (c) rows.push({ ...c, module: 'CURRENCY', pendingStage: stage, invoiceNumber: c.code, totalAmount: 0, currencyCode: c.code })
+      } else if (entityType === 'profit_centre') {
+        const p = profitCentres.find(r => r.id === entityId)
+        if (p) rows.push({ ...p, module: 'PROFIT_CENTRE', pendingStage: stage, invoiceNumber: p.code, totalAmount: 0, currencyCode: 'INR' })
+      } else if (entityType === 'item_category') {
+        const ic = itemCategories.find(r => r.id === entityId)
+        if (ic) rows.push({ ...ic, module: 'ITEM_CATEGORY', pendingStage: stage, invoiceNumber: ic.code, totalAmount: 0, currencyCode: 'INR' })
       }
     }
 

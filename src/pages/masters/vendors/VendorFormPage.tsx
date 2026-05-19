@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, useFieldArray, type UseFormRegister, type UseFormWatch, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -611,6 +611,13 @@ export default function VendorFormPage({ mode }: Props) {
     if (panEntityType === 'GOVT') setValue('tdsExempt', true)
   }, [panEntityType, setValue])
 
+  // Two-button footer pattern (mirrors ItemFormPage): a ref records which
+  // button kicked off the submit, then onSubmit branches between "save draft"
+  // (PUT/POST only) and "submit for approval" (PUT/POST → /:id/submit).
+  const submitModeRef = useRef<'draft' | 'submit'>('draft')
+  const handleSaveDraft         = () => { submitModeRef.current = 'draft';  handleSubmit(onSubmit)() }
+  const handleSubmitForApproval = () => { submitModeRef.current = 'submit'; handleSubmit(onSubmit)() }
+
   async function onSubmit(data: VendorFormInput) {
     try {
       const payload = {
@@ -649,13 +656,16 @@ export default function VendorFormPage({ mode }: Props) {
           erpSystem: e.erpSystem || undefined,
         })),
       }
-      if (mode === 'create') {
-        const res = await createVendor.mutateAsync(payload as any)
-        navigate(`/vendors/${res.id}`)
-      } else {
-        await updateVendor.mutateAsync(payload as any)
-        navigate(`/vendors/${id}`)
+      const saved = mode === 'create'
+        ? await createVendor.mutateAsync(payload as any)
+        : (await updateVendor.mutateAsync(payload as any), { id: id as string })
+      // Submit-for-approval path: kick off the workflow after the save lands.
+      // Save-draft path persists only — record stays in DRAFT until the user
+      // hits Submit later.
+      if (submitModeRef.current === 'submit') {
+        await http.post(`/api/masters/vendors/${saved.id}/submit`, {})
       }
+      navigate(mode === 'create' ? `/vendors/${saved.id}` : `/vendors/${id}`)
     } catch { /* errors surfaced by query client toast */ }
   }
 
@@ -669,17 +679,33 @@ export default function VendorFormPage({ mode }: Props) {
         backLabel="Vendors"
         backTo="/vendors"
         actions={
-          <button
-            form="vendor-form"
-            type="submit"
-            disabled={isSubmitting}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-          >
-            {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {isSubmitting ? 'Saving…' : 'Save vendor'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={isSubmitting}
+              className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60"
+            >
+              Save draft
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmitForApproval}
+              disabled={isSubmitting}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+            >
+              {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Submit for approval
+            </button>
+          </div>
         }
       />
+
+      {v?.status === 'PENDING_APPROVAL' && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 sm:px-6 text-xs text-amber-800">
+          Approval pending — current values remain active until approved.
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <form id="vendor-form" onSubmit={handleSubmit(onSubmit)} className="max-w-5xl mx-auto space-y-5">

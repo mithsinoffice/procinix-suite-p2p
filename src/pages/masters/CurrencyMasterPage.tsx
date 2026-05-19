@@ -35,10 +35,16 @@ function CurrencyForm({ record, onClose, onSaved }: {
     return Object.keys(e).length === 0
   }
 
+  // Two-step save: PUT/POST → optional /submit. Same as the rest of the
+  // master forms — keeps the workflow start out of the create body.
   const save = useMutation({
-    mutationFn: (submit: boolean) => record
-      ? http.put(`/api/masters/currencies/${record.code}`, { ...form, submitForApproval: submit })
-      : http.post('/api/masters/currencies', { ...form, submitForApproval: submit }),
+    mutationFn: async (submit: boolean) => {
+      const saved = record
+        ? await http.put<Currency>(`/api/masters/currencies/${record.code}`, form)
+        : await http.post<Currency>('/api/masters/currencies', form)
+      if (submit) await http.post(`/api/masters/currencies/${saved.id}/submit`, {})
+      return saved
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['currency'] }); onSaved(); onClose() },
   })
 

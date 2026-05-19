@@ -51,6 +51,7 @@ model User {
   inAppNotifications Boolean            @default(true)
   dailyDigest        Boolean            @default(false)
   isActive           Boolean            @default(true)
+  status             String             @default("ACTIVE")
   lastLoginAt        DateTime?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
@@ -60,6 +61,7 @@ model User {
 
   @@unique([tenantId, email])
   @@index([tenantId, isActive])
+  @@index([tenantId, status])
   @@map("users")
 }
 
@@ -251,10 +253,12 @@ enum VendorType {
 }
 
 enum VendorStatus {
+  DRAFT
   ACTIVE
   INACTIVE
   BLOCKED
   PENDING_APPROVAL
+  REJECTED
 }
 
 enum PanCompliance {

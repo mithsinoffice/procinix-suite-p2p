@@ -1,6 +1,10 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { createVendor, listVendors, getVendor, updateVendor } from '../services/vendor.service.js'
+import { startWorkflow } from '../services/workflow-engine.service.js'
+import {
+  validateMasterSubmittable, resolveMasterStatusAfterSubmit,
+} from '../services/master-submit.service.js'
 
 const bankAccountRowSchema = z.object({
   id:                z.string().optional(),
@@ -157,6 +161,31 @@ export async function vendorRoutes(app: FastifyInstance) {
     })
     if (!result.ok) return reply.code(result.error.httpStatus ?? 400).send(result.error)
     return reply.send(result.data)
+  })
+
+  // Submit vendor for approval. Mirrors items: DRAFT/REJECTED → start workflow
+  // → PENDING_APPROVAL (or ACTIVE if auto-approved). NO_WORKFLOW_DEFINED still
+  // flips to PENDING_APPROVAL so the record visibly leaves DRAFT.
+  app.post('/:id/submit', opts, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const existing = await app.prisma.vendor.findFirst({
+      where: { id, tenantId: request.tenant.id }, select: { id: true, status: true },
+    })
+    if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Vendor not found' })
+    const guard = validateMasterSubmittable('vendor', existing.status)
+    if (!guard.ok) return reply.code(422).send({ code: 'WORKFLOW_INVALID_STATE', message: guard.message })
+    const wf = await startWorkflow(
+      app.prisma, 'VENDOR', 'vendor', id, {},
+      { tenantId: request.tenant.id, userId: request.user.sub, userName: (request.user as { name?: string }).name ?? request.user.sub },
+    )
+    if (!wf.ok && wf.error.message !== 'NO_WORKFLOW_DEFINED') {
+      return reply.code(wf.error.httpStatus ?? 400).send(wf.error)
+    }
+    const newStatus = resolveMasterStatusAfterSubmit({
+      ok: wf.ok, autoApproved: wf.ok ? wf.data.autoApproved : false, noWorkflowDefined: !wf.ok,
+    })
+    await app.prisma.vendor.update({ where: { id }, data: { status: newStatus as never } })
+    return reply.send({ ok: true, status: newStatus, workflowInstanceId: wf.ok ? wf.data.instanceId : null })
   })
 
   // KYC — one-click PAN chain

@@ -185,7 +185,10 @@ export async function createVendor(
         msmeCategory:      input.msmeCategory,
         llpRegNo:          input.llpRegNo,
         trustRegNo:        input.trustRegNo,
-        status:            'PENDING_APPROVAL',
+        // Default to DRAFT — vendor moves to PENDING_APPROVAL only when the
+        // submit-for-approval endpoint is called (matches the item / generic
+        // master pattern; the workflow engine then drives the approval).
+        status:            'DRAFT',
       },
     })
 

@@ -236,10 +236,17 @@ export default function BudgetFormPage() {
     },
   })
 
-  const activate = useMutation({
-    mutationFn: (data: BudgetForm) => {
-      const payload = buildPayload({ ...data, status: 'ACTIVE' })
-      return isEdit ? http.put<any>(`/api/budgets/${id}`, payload) : http.post<any>('/api/budgets', payload)
+  // Submit-for-approval path: save the budget as DRAFT, then POST /submit so
+  // the workflow engine kicks in. Replaces the old direct status='ACTIVE'
+  // flip — budgets now require TENANT_ADMIN sign-off before going live.
+  const submitForApproval = useMutation({
+    mutationFn: async (data: BudgetForm) => {
+      const payload = buildPayload({ ...data, status: 'DRAFT' })
+      const saved = isEdit
+        ? await http.put<{ id: string }>(`/api/budgets/${id}`, payload)
+        : await http.post<{ id: string }>('/api/budgets', payload)
+      await http.post(`/api/budgets/${saved.id}/submit`, {})
+      return saved
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['budget-list'] })
@@ -251,7 +258,7 @@ export default function BudgetFormPage() {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
   }
 
-  const isPending = saveDraft.isPending || activate.isPending
+  const isPending = saveDraft.isPending || submitForApproval.isPending
 
   return (
     <div className="flex flex-col h-full">
@@ -271,14 +278,21 @@ export default function BudgetFormPage() {
               Save draft
             </button>
             <button type="button" disabled={isPending || !periodValid}
-              onClick={handleSubmit(d => activate.mutate(d))}
+              onClick={handleSubmit(d => submitForApproval.mutate(d))}
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
               <Send className="h-3.5 w-3.5" />
-              Activate
+              {submitForApproval.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin inline" />}
+              Submit for approval
             </button>
           </div>
         }
       />
+
+      {existing?.status === 'PENDING_APPROVAL' && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 sm:px-6 text-xs text-amber-800">
+          Approval pending — current values remain active until approved.
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto">
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 space-y-6">

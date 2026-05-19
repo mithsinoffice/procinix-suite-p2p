@@ -16,13 +16,19 @@ interface ProfitCentre { id: string; code: string; name: string; entityId: strin
 
 function ProfitCentreForm({ record, onClose, onSaved }: { record?: ProfitCentre; onClose: () => void; onSaved: () => void }) {
   const qc = useQueryClient()
-  const [form, setForm] = useState<Record<string, unknown>>(record ? { ...record } : { status: 'ACTIVE' })
+  const [form, setForm] = useState<Record<string, unknown>>(record ? { ...record } : { status: 'DRAFT' })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // Two-step save mirrors ItemFormPage — Save draft just persists, Submit
+  // hits POST /:id/submit afterwards so the workflow engine kicks in.
   const save = useMutation({
-    mutationFn: () => record
-      ? http.put<any>(`/api/masters/profit-centres/${record.id}`, form)
-      : http.post<any>('/api/masters/profit-centres', form),
+    mutationFn: async (submit: boolean) => {
+      const saved = record
+        ? await http.put<ProfitCentre>(`/api/masters/profit-centres/${record.id}`, form)
+        : await http.post<ProfitCentre>('/api/masters/profit-centres', form)
+      if (submit) await http.post(`/api/masters/profit-centres/${saved.id}/submit`, {})
+      return saved
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['profitCentre'] }); onSaved(); onClose() },
   })
 
@@ -76,8 +82,8 @@ function ProfitCentreForm({ record, onClose, onSaved }: { record?: ProfitCentre;
       <WorkflowBanner />
       <FormFooter
         onCancel={onClose}
-        onDraft={() => { if (validate()) save.mutate() }}
-        onSubmit={() => { if (validate()) save.mutate() }}
+        onDraft={() => { if (validate()) save.mutate(false) }}
+        onSubmit={() => { if (validate()) save.mutate(true) }}
         isPending={save.isPending}
       />
     </div>

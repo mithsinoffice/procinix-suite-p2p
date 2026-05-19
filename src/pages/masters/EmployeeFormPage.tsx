@@ -253,6 +253,12 @@ export default function EmployeeFormPage() {
         }
       />
 
+      {existing?.status === 'PENDING_APPROVAL' && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 sm:px-6 text-xs text-amber-800">
+          Approval pending — current values remain active until approved.
+        </div>
+      )}
+
       <div className="flex-1 overflow-auto">
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 space-y-6">
 

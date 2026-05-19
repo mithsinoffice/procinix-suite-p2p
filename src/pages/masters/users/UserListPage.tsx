@@ -17,6 +17,7 @@ interface User {
   additionalRoles?:  string[] | null
   employeeId?:       string | null
   isActive:          boolean
+  status?:           string
   mustResetPassword: boolean
   lastLoginAt?:      string | null
   entityAccess?:     EntityAccess[]
@@ -188,10 +189,20 @@ export default function UserListPage() {
                       )}
                     </td>
                     <td className="px-3 py-3">
-                      <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium',
-                        u.isActive ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-muted text-muted-foreground')}>
-                        {u.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      {u.status === 'PENDING_APPROVAL' ? (
+                        <span className="rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-xs font-medium">
+                          Pending approval
+                        </span>
+                      ) : u.status === 'DRAFT' ? (
+                        <span className="rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5 text-xs font-medium">
+                          Draft
+                        </span>
+                      ) : (
+                        <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium',
+                          u.isActive ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-muted text-muted-foreground')}>
+                          {u.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center gap-1">

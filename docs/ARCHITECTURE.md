@@ -315,11 +315,52 @@ The walk is sequential — it does **not** skip a non-eligible middle stage. Pur
 
 ### §7.6 Masters wired through the engine
 
-`MasterListScreen.MasterConfig.workflowModule` is the per-master opt-in:
+All master forms now follow the unified **DRAFT → PENDING_APPROVAL → ACTIVE**
+lifecycle. Submit-for-approval kicks off a workflow instance via
+[startWorkflow](../server/src/services/workflow-engine.service.ts); the
+listing page shows a `Pending approval` chip until an approver lands the
+record. `NO_WORKFLOW_DEFINED` still flips status (so the record leaves
+DRAFT) but creates no instance — TENANT_ADMIN can hand-flip from the list.
 
-- Set on: Departments → `DEPARTMENT`, GL Codes → `GL_CODE`, Cost Centres → `COST_CENTRE`, Tax Codes → `TAX_CODE`, Designations → `DESIGNATION`, Locations → `LOCATION`.
-- When set, the submit-for-approval button calls `POST /api/workflow/start`. On `NO_WORKFLOW_DEFINED` or a network failure, falls back to the legacy `POST /:apiPath/:id/submit` route (which just flips `status` to `PENDING_APPROVAL`).
-- Other masters (Vendors, Employees, Items, Users, Budget, Entity, FY, Currency, TDS, Profit Centres, etc.) use their own bespoke form pages and have **not** been wired to the engine yet — they still POST directly to `/{...}/submit`. See §12 Pending.
+The shared pure helpers live in [master-submit.service.ts](../server/src/services/master-submit.service.ts):
+
+- `validateMasterSubmittable(label, status)` — DRAFT/REJECTED only;
+  everything else is 422.
+- `resolveMasterStatusAfterSubmit({ ok, autoApproved, noWorkflowDefined })`
+  — auto-approved → `ACTIVE`, otherwise `PENDING_APPROVAL`.
+- `resolveMasterStatusAfterReject(mode)` — `REQUEST_INFO` →
+  `PENDING_APPROVAL`, else `DRAFT`.
+- `ENTITY_TO_WF_MODULE` — single source of truth mapping entityType →
+  WfModule. Adding a new master is one entry + a row in workflow.ts's
+  `MASTER_ENTITY_DELEGATES` map (final-flip semantics).
+
+**In-scope masters wired with full DRAFT → PENDING_APPROVAL → ACTIVE flow:**
+
+| Master                | Frontend                                                                                         | Backend submit endpoint                         | WfModule          |
+| --------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------- | ----------------- |
+| Vendor                | [VendorFormPage](../src/pages/masters/vendors/VendorFormPage.tsx) (submitModeRef + 2 buttons)    | `POST /api/masters/vendors/:id/submit`          | `VENDOR`          |
+| Employee              | [EmployeeFormPage](../src/pages/masters/EmployeeFormPage.tsx) (existing `submitForApproval` flag) | Generic loop in [masters.ts](../server/src/routes/masters.ts) | `EMPLOYEE`        |
+| User                  | [UserFormPage](../src/pages/masters/users/UserFormPage.tsx) (submitModeRef + 2 buttons)          | `POST /api/admin/users/:id/submit`              | `USER`            |
+| Budget                | [BudgetFormPage](../src/pages/masters/budget/BudgetFormPage.tsx) (Activate → Submit-for-approval) | `POST /api/budgets/:id/submit`                  | `BUDGET`          |
+| Financial Year        | [FinancialYearsPage](../src/pages/masters/FinancialYearsPage.tsx) (inline modal + FormFooter)    | `POST /api/masters/financial-years/:id/submit`  | `FINANCIAL_YEAR`  |
+| Currency              | [CurrencyMasterPage](../src/pages/masters/CurrencyMasterPage.tsx) (inline modal + FormFooter)    | `POST /api/masters/currencies/:id/submit`       | `CURRENCY`        |
+| Profit Centre         | [ProfitCentrePage](../src/pages/masters/ProfitCentrePage.tsx) (inline modal + FormFooter)        | `POST /api/masters/profit-centres/:id/submit`   | `PROFIT_CENTRE`   |
+| Item Category         | [ItemCategoryPage](../src/pages/masters/items/ItemCategoryPage.tsx) (inline modal + FormFooter)  | `POST /api/masters/item-categories/:id/submit`  | `ITEM_CATEGORY`   |
+
+**Already-wired generic-CRUD masters** (via the loop at [masters.ts:759](../server/src/routes/masters.ts)) —
+upgraded so `submitMasterRecord` calls the workflow engine, not just a status
+flip: Departments, GL Codes, Cost Centres, Tax Codes, Designations, Entities,
+Locations, Tax Regimes, Workflow Rules, Employees.
+
+**Schema deltas to support the flow:**
+- `VendorStatus` enum gained `DRAFT` + `REJECTED` values (existing rows
+  preserved — non-breaking).
+- `User` model gained `status String @default("ACTIVE")` field plus
+  `@@index([tenantId, status])`. `User.isActive` is still the live auth
+  gate; `status` drives workflow visibility on the Approval Desk.
+
+**Forward-only:** existing seeded ACTIVE records stay ACTIVE. The DRAFT
+default kicks in only on new creates.
 
 ### §7.7 Engine-driven UI
 
@@ -342,8 +383,10 @@ Legacy `/masters/workflow-definitions/*` routes are still registered for backwar
 | `purchase_requisition`    | `PENDING_L<next>`         | `APPROVED`                   | `REJECTED` + rejectionReason | `PENDING_L<max(1, current-1)>`           | `PENDING_L<current>`                       |
 | `purchase_order`          | `PENDING_L<next>`         | `APPROVED`                   | `REJECTED` + rejectionReason | `PENDING_L<max(1, current-1)>`           | `PENDING_L<current>`                       |
 | `item`                    | (single stage; no non-final transition) | `ACTIVE`        | `DRAFT`                       | `DRAFT` (single-stage collapses to DRAFT) | `PENDING_APPROVAL` (held while chat resolves) |
+| `vendor`, `employee`, `user`, `budget`, `financial_year`, `currency`, `profit_centre`, `item_category` | (single stage; no non-final transition) | `ACTIVE` (+`isActive=true` where applicable) | `DRAFT` (+`isActive=false`) | `DRAFT` (single-stage collapses) | `PENDING_APPROVAL` |
+| `department`, `gl_code`, `cost_centre`, `tax_code`, `designation`, `entity`, `location`, `tax_regime`, `workflow_rule` | (single stage; no non-final transition) | `ACTIVE` (+`isActive=true`) | `DRAFT` (+`isActive=false`) | `DRAFT` | `PENDING_APPROVAL` |
 
-PR/PO transitions were previously missing — only invoices got their document status updated on workflow advance/reject. Fixed in the audit; PR and PO submissions now go through the same engine pathway as invoices and reflect stage progression on the document. Item master added with the same pattern — see §7.9b.
+PR/PO transitions were previously missing — only invoices got their document status updated on workflow advance/reject. Fixed in the audit; PR and PO submissions now go through the same engine pathway as invoices and reflect stage progression on the document. Item master added with the same pattern — see §7.9b. Every other master (8 in-scope + 9 generic-CRUD) now follows the same flow via `MASTER_ENTITY_DELEGATES` in [workflow.ts](../server/src/routes/workflow.ts) — see §7.6.
 
 ### §7.9 Submit guards
 
@@ -362,7 +405,7 @@ Pure helpers in [server/src/services/item-submit.service.ts](../server/src/servi
 
 **Frontend** — [ItemFormPage.tsx](../src/pages/masters/items/ItemFormPage.tsx) routes the FormFooter's two buttons through distinct paths. `Save as draft` does just the POST/PUT. `Submit for approval` does POST/PUT and then `POST /api/masters/items/:id/submit`. A ref tracks which button was clicked so the wrapped RHF `handleSubmit` can branch without duplicating the handler.
 
-Other bespoke masters (Vendors, Employees, Users, Budget, etc.) still follow the legacy "save with status='ACTIVE'" pattern — same gap exists there. Not addressed in this commit; pattern is reusable when each form's submit handler is wired through.
+The 8 bespoke masters (Vendor, Employee, User, Budget, Financial Year, Currency, Profit Centre, Item Category) now follow the same pattern — see §7.6 for the full per-master breakdown. Shared pure helpers live in [master-submit.service.ts](../server/src/services/master-submit.service.ts).
 
 ### §7.9c Item master change request flow (material edits on ACTIVE items)
 

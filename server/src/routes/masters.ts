@@ -8,6 +8,9 @@ import {
   validateItemSubmittable, resolveItemStatusAfterSubmit,
 } from '../services/item-submit.service.js'
 import {
+  validateMasterSubmittable, resolveMasterStatusAfterSubmit,
+} from '../services/master-submit.service.js'
+import {
   detectMaterialChange, buildChangeRequestPayload, validateChangeRequest,
   MATERIAL_FIELDS,
 } from '../services/item-change.service.js'
@@ -175,16 +178,41 @@ export async function masterRoutes(app: FastifyInstance) {
     return reply.send(await app.prisma.currency.findMany({ where, orderBy: { code: 'asc' } }))
   })
   app.post('/currencies', auth, async (req, reply) => {
-    const row = await app.prisma.currency.create({ data: req.body as any })
+    const body = req.body as Record<string, unknown>
+    const row = await app.prisma.currency.create({
+      data: { ...body, status: (body.status as string) ?? 'DRAFT', createdByUserId: req.user.sub } as never,
+    })
     return reply.code(201).send(row)
   })
   app.put('/currencies/:code', auth, async (req, reply) => {
-    const { submitForApproval: _sf, ...data } = req.body as any
-    const row = await app.prisma.currency.update({ where: { code: (req.params as any).code }, data })
+    const { submitForApproval: _sf, ...data } = req.body as Record<string, unknown>
+    const row = await app.prisma.currency.update({ where: { code: (req.params as { code: string }).code }, data: data as never })
     return reply.send(row)
   })
+  // Submit currency for approval. Currency is global (no tenantId column) but
+  // we still gate by DRAFT/REJECTED and start a workflow scoped to the
+  // submitter's tenant so the Approval Desk in that tenant picks it up.
+  app.post('/currencies/:id/submit', auth, async (req, reply) => {
+    const id = (req.params as { id: string }).id
+    const existing = await app.prisma.currency.findFirst({ where: { id }, select: { id: true, status: true } })
+    if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Currency not found' })
+    const guard = validateMasterSubmittable('currency', existing.status)
+    if (!guard.ok) return reply.code(422).send({ code: 'WORKFLOW_INVALID_STATE', message: guard.message })
+    const wf = await startWorkflow(
+      app.prisma, 'CURRENCY', 'currency', id, {},
+      { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as { name?: string }).name ?? req.user.sub },
+    )
+    if (!wf.ok && wf.error.message !== 'NO_WORKFLOW_DEFINED') {
+      return reply.code(wf.error.httpStatus ?? 400).send(wf.error)
+    }
+    const newStatus = resolveMasterStatusAfterSubmit({
+      ok: wf.ok, autoApproved: wf.ok ? wf.data.autoApproved : false, noWorkflowDefined: !wf.ok,
+    })
+    await app.prisma.currency.update({ where: { id }, data: { status: newStatus, isActive: newStatus === 'ACTIVE' } })
+    return reply.send({ ok: true, status: newStatus, workflowInstanceId: wf.ok ? wf.data.instanceId : null })
+  })
   app.post('/currencies/:id/approve', auth, async (req, reply) => {
-    const row = await app.prisma.currency.update({ where: { id: (req.params as any).id }, data: { status: 'ACTIVE' } })
+    const row = await app.prisma.currency.update({ where: { id: (req.params as { id: string }).id }, data: { status: 'ACTIVE', isActive: true } })
     return reply.send(row)
   })
   app.get('/currencies/:id/audit', auth, async (req, reply) => {
@@ -276,10 +304,13 @@ export async function masterRoutes(app: FastifyInstance) {
   })
 
   app.post('/financial-years', auth, async (req, reply) => {
-    const { code, name, startDate, endDate, isCurrent = false, submitForApproval = false, status: bodyStatus } = req.body as any
-    const status = bodyStatus ?? (submitForApproval ? 'PENDING_APPROVAL' : 'DRAFT')
+    const { code, name, startDate, endDate, isCurrent = false, status: bodyStatus } = req.body as Record<string, unknown>
+    // Always create as DRAFT — the workflow engine (POST /:id/submit) drives
+    // the PENDING_APPROVAL → ACTIVE transition. Callers that explicitly need
+    // ACTIVE (seeds, admin tools) can pass a status override in the body.
+    const status = (bodyStatus as string | undefined) ?? 'DRAFT'
     const fy = await app.prisma.financialYear.create({
-      data: { tenantId: req.tenant.id, code, name, startDate: new Date(startDate), endDate: new Date(endDate), isCurrent, status, isActive: status === 'ACTIVE', createdByUserId: req.user.sub },
+      data: { tenantId: req.tenant.id, code: code as string, name: name as string, startDate: new Date(startDate as string), endDate: new Date(endDate as string), isCurrent: !!isCurrent, status, isActive: status === 'ACTIVE', createdByUserId: req.user.sub },
     })
     return reply.code(201).send(fy)
   })
@@ -294,8 +325,23 @@ export async function masterRoutes(app: FastifyInstance) {
   })
 
   app.post('/financial-years/:id/submit', auth, async (req, reply) => {
-    const fy = await app.prisma.financialYear.update({ where: { id: (req.params as any).id }, data: { status: 'PENDING_APPROVAL' } })
-    return reply.send(fy)
+    const id = (req.params as { id: string }).id
+    const existing = await app.prisma.financialYear.findFirst({ where: { id, tenantId: req.tenant.id }, select: { id: true, status: true } })
+    if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Financial year not found' })
+    const guard = validateMasterSubmittable('financial year', existing.status)
+    if (!guard.ok) return reply.code(422).send({ code: 'WORKFLOW_INVALID_STATE', message: guard.message })
+    const wf = await startWorkflow(
+      app.prisma, 'FINANCIAL_YEAR', 'financial_year', id, {},
+      { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as { name?: string }).name ?? req.user.sub },
+    )
+    if (!wf.ok && wf.error.message !== 'NO_WORKFLOW_DEFINED') {
+      return reply.code(wf.error.httpStatus ?? 400).send(wf.error)
+    }
+    const newStatus = resolveMasterStatusAfterSubmit({
+      ok: wf.ok, autoApproved: wf.ok ? wf.data.autoApproved : false, noWorkflowDefined: !wf.ok,
+    })
+    await app.prisma.financialYear.update({ where: { id }, data: { status: newStatus, isActive: newStatus === 'ACTIVE' } })
+    return reply.send({ ok: true, status: newStatus, workflowInstanceId: wf.ok ? wf.data.instanceId : null })
   })
 
   app.post('/financial-years/:id/approve', auth, async (req, reply) => {
@@ -351,14 +397,34 @@ export async function masterRoutes(app: FastifyInstance) {
     return reply.send(await app.prisma.profitCentre.findMany({ where, orderBy: { code: 'asc' } }))
   })
   app.post('/profit-centres', auth, async (req, reply) => {
+    const body = req.body as Record<string, unknown>
     const row = await app.prisma.profitCentre.create({
-      data: { ...(req.body as any), tenantId: req.tenant.id, createdByUserId: req.user.sub },
+      data: { ...body, tenantId: req.tenant.id, createdByUserId: req.user.sub, status: (body.status as string) ?? 'DRAFT' } as never,
     })
     return reply.code(201).send(row)
   })
   app.put('/profit-centres/:id', auth, async (req, reply) => {
     const row = await app.prisma.profitCentre.update({ where: { id: (req.params as any).id }, data: req.body as any })
     return reply.send(row)
+  })
+  app.post('/profit-centres/:id/submit', auth, async (req, reply) => {
+    const id = (req.params as { id: string }).id
+    const existing = await app.prisma.profitCentre.findFirst({ where: { id, tenantId: req.tenant.id }, select: { id: true, status: true } })
+    if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Profit centre not found' })
+    const guard = validateMasterSubmittable('profit centre', existing.status)
+    if (!guard.ok) return reply.code(422).send({ code: 'WORKFLOW_INVALID_STATE', message: guard.message })
+    const wf = await startWorkflow(
+      app.prisma, 'PROFIT_CENTRE', 'profit_centre', id, {},
+      { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as { name?: string }).name ?? req.user.sub },
+    )
+    if (!wf.ok && wf.error.message !== 'NO_WORKFLOW_DEFINED') {
+      return reply.code(wf.error.httpStatus ?? 400).send(wf.error)
+    }
+    const newStatus = resolveMasterStatusAfterSubmit({
+      ok: wf.ok, autoApproved: wf.ok ? wf.data.autoApproved : false, noWorkflowDefined: !wf.ok,
+    })
+    await app.prisma.profitCentre.update({ where: { id }, data: { status: newStatus } })
+    return reply.send({ ok: true, status: newStatus, workflowInstanceId: wf.ok ? wf.data.instanceId : null })
   })
 
   // ── TDS Sections ──
@@ -406,14 +472,34 @@ export async function masterRoutes(app: FastifyInstance) {
     return reply.send(await app.prisma.itemCategory.findMany({ where, orderBy: { name: 'asc' } }))
   })
   app.post('/item-categories', auth, async (req, reply) => {
+    const body = req.body as Record<string, unknown>
     const row = await app.prisma.itemCategory.create({
-      data: { ...(req.body as any), tenantId: req.tenant.id, createdByUserId: req.user.sub },
+      data: { ...body, tenantId: req.tenant.id, createdByUserId: req.user.sub, status: (body.status as string) ?? 'DRAFT' } as never,
     })
     return reply.code(201).send(row)
   })
   app.put('/item-categories/:id', auth, async (req, reply) => {
     const row = await app.prisma.itemCategory.update({ where: { id: (req.params as any).id }, data: req.body as any })
     return reply.send(row)
+  })
+  app.post('/item-categories/:id/submit', auth, async (req, reply) => {
+    const id = (req.params as { id: string }).id
+    const existing = await app.prisma.itemCategory.findFirst({ where: { id, tenantId: req.tenant.id }, select: { id: true, status: true } })
+    if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Item category not found' })
+    const guard = validateMasterSubmittable('item category', existing.status)
+    if (!guard.ok) return reply.code(422).send({ code: 'WORKFLOW_INVALID_STATE', message: guard.message })
+    const wf = await startWorkflow(
+      app.prisma, 'ITEM_CATEGORY', 'item_category', id, {},
+      { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as { name?: string }).name ?? req.user.sub },
+    )
+    if (!wf.ok && wf.error.message !== 'NO_WORKFLOW_DEFINED') {
+      return reply.code(wf.error.httpStatus ?? 400).send(wf.error)
+    }
+    const newStatus = resolveMasterStatusAfterSubmit({
+      ok: wf.ok, autoApproved: wf.ok ? wf.data.autoApproved : false, noWorkflowDefined: !wf.ok,
+    })
+    await app.prisma.itemCategory.update({ where: { id }, data: { status: newStatus } })
+    return reply.send({ ok: true, status: newStatus, workflowInstanceId: wf.ok ? wf.data.instanceId : null })
   })
 
   // ── Item Master ──
@@ -795,7 +881,11 @@ export async function masterRoutes(app: FastifyInstance) {
 
     // Submit for approval
     app.post(`/${route}/:id/submit`, auth, async (req, reply) => {
-      const result = await submitMasterRecord(app.prisma, table, (req.params as any).id, req.tenant.id, { tenantId: req.tenant.id, userId: req.user.sub, ip: req.ip })
+      const result = await submitMasterRecord(app.prisma, table, (req.params as any).id, req.tenant.id, {
+        tenantId: req.tenant.id, userId: req.user.sub,
+        userName: (req.user as { name?: string }).name ?? req.user.sub,
+        ip: req.ip,
+      })
       if (!result.ok) return reply.code(result.error.httpStatus ?? 400).send(result.error)
       return reply.send({ ok: true })
     })

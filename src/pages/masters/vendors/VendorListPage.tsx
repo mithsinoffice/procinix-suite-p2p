@@ -52,8 +52,10 @@ export default function VendorListPage() {
           className="rounded-md border border-input bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">All statuses</option>
+          <option value="DRAFT">Draft</option>
+          <option value="PENDING_APPROVAL">Pending approval</option>
           <option value="ACTIVE">Active</option>
-          <option value="PENDING_APPROVAL">Pending</option>
+          <option value="REJECTED">Rejected</option>
           <option value="INACTIVE">Inactive</option>
           <option value="BLOCKED">Blocked</option>
         </select>

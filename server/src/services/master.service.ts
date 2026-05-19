@@ -6,10 +6,30 @@ import type { PrismaClient } from '@prisma/client'
 import { ok, err, Errors, type Result } from '../lib/result.js'
 import { writeAuditLog } from '../lib/audit.js'
 import { cacheInvalidate, CacheKeys, type Redis } from '../lib/redis.js'
+import { startWorkflow, type WfModule } from './workflow-engine.service.js'
+import {
+  validateMasterSubmittable, resolveMasterStatusAfterSubmit,
+} from './master-submit.service.js'
 
 export type MasterTable = 'department' | 'glCode' | 'costCentre' | 'taxCode' | 'designation' | 'entity' | 'location' | 'taxRegime' | 'workflowRule' | 'employee'
 
-interface Ctx { tenantId: string; userId: string; ip?: string }
+interface Ctx { tenantId: string; userId: string; ip?: string; userName?: string }
+
+// Maps each generic-CRUD master table to its workflow module + entityType.
+// Keeps the seed's WF-XXX-001 module names, the /submit endpoint, and the
+// workflow approve/reject branches aligned via a single source of truth.
+const TABLE_TO_WF: Record<MasterTable, { module: WfModule; entityType: string }> = {
+  department:   { module: 'DEPARTMENT',  entityType: 'department'   },
+  glCode:       { module: 'GL_CODE',     entityType: 'gl_code'      },
+  costCentre:   { module: 'COST_CENTRE', entityType: 'cost_centre'  },
+  taxCode:      { module: 'TAX_CODE',    entityType: 'tax_code'     },
+  designation:  { module: 'DESIGNATION', entityType: 'designation'  },
+  entity:       { module: 'ENTITY',      entityType: 'entity'       },
+  location:     { module: 'LOCATION',    entityType: 'location'     },
+  taxRegime:    { module: 'MASTER',      entityType: 'tax_regime'   },
+  workflowRule: { module: 'MASTER',      entityType: 'workflow_rule' },
+  employee:     { module: 'EMPLOYEE',    entityType: 'employee'     },
+}
 
 // ── Map table name to Prisma delegate ──
 function getDelegate(prisma: PrismaClient, table: MasterTable) {
@@ -86,6 +106,10 @@ async function generateCode(
 }
 
 // ── Create (as DRAFT) ──
+// submitForApproval=true → record is created as DRAFT, then immediately
+// submitted through submitMasterRecord() so the workflow engine kicks in.
+// Two-step (create + submit) keeps the workflow start logic centralised
+// rather than duplicating audit/workflow plumbing in the create path.
 export async function createMasterRecord(
   prisma: PrismaClient,
   redis: Redis,
@@ -108,7 +132,7 @@ export async function createMasterRecord(
     data: {
       ...input,
       tenantId,
-      status:          submitForApproval ? 'PENDING_APPROVAL' : 'DRAFT',
+      status:          'DRAFT',
       createdByUserId: ctx.userId,
       isActive:        false, // only becomes true on approval
     },
@@ -123,6 +147,11 @@ export async function createMasterRecord(
   })
 
   await cacheInvalidate(redis, CacheKeys.masterData(tenantId))
+
+  if (submitForApproval) {
+    const submit = await submitMasterRecord(prisma, table, row.id, tenantId, ctx)
+    if (!submit.ok) return err(submit.error)
+  }
   return ok({ id: row.id })
 }
 
@@ -158,6 +187,10 @@ export async function updateMasterRecord(
 }
 
 // ── Submit for approval ──
+// Kicks off the workflow engine so the record appears on the Approval Desk
+// alongside invoices/POs/items. NO_WORKFLOW_DEFINED still flips to
+// PENDING_APPROVAL so the record visibly leaves DRAFT — tenant-admin can
+// hand-flip on the listing page. Mirrors the item-master pattern.
 export async function submitMasterRecord(
   prisma: PrismaClient,
   table: MasterTable,
@@ -168,12 +201,34 @@ export async function submitMasterRecord(
   const delegate = getDelegate(prisma, table)
   const existing = await delegate.findFirst({ where: { id, tenantId } })
   if (!existing) return err(Errors.notFound(table, id))
-  if (existing.status !== 'DRAFT') {
-    return err({ code: 'WORKFLOW_INVALID_STATE' as const, message: `Cannot submit — status is ${existing.status}`, httpStatus: 422 })
+
+  const guard = validateMasterSubmittable(table, existing.status)
+  if (!guard.ok) {
+    return err({ code: 'WORKFLOW_INVALID_STATE' as const, message: guard.message ?? 'Not submittable', httpStatus: 422 })
   }
 
-  await delegate.update({ where: { id }, data: { status: 'PENDING_APPROVAL' } })
-  await writeAuditLog(prisma, { tenantId, userId: ctx.userId, action: `${table}.submitted`, entityType: table, entityId: id, ipAddress: ctx.ip })
+  const wfRoute = TABLE_TO_WF[table]
+  const wf = await startWorkflow(
+    prisma, wfRoute.module, wfRoute.entityType, id, {},
+    { tenantId, userId: ctx.userId, userName: ctx.userName ?? ctx.userId },
+  )
+  if (!wf.ok && wf.error.message !== 'NO_WORKFLOW_DEFINED') {
+    return err({ code: 'WORKFLOW_INVALID_STATE' as const, message: wf.error.message, httpStatus: wf.error.httpStatus ?? 400 })
+  }
+  const newStatus = resolveMasterStatusAfterSubmit({
+    ok:                wf.ok,
+    autoApproved:      wf.ok ? wf.data.autoApproved : false,
+    noWorkflowDefined: !wf.ok,
+  })
+
+  await delegate.update({ where: { id }, data: { status: newStatus, isActive: newStatus === 'ACTIVE' } })
+  await writeAuditLog(prisma, {
+    tenantId, userId: ctx.userId,
+    action: `${table}.submitted`,
+    entityType: table, entityId: id,
+    after: { status: newStatus, workflowInstanceId: wf.ok ? wf.data.instanceId : null },
+    ipAddress: ctx.ip,
+  })
   return ok(undefined)
 }
 
@@ -222,15 +277,19 @@ export async function bulkCreateMasterRecords(
     if (existing) { failed.push({ row: i + 1, reason: `Code '${row.code}' already exists` }); continue }
 
     try {
-      await delegate.create({
+      const created_ = await delegate.create({
         data: {
           ...row,
           tenantId,
-          status:          submitForApproval ? 'PENDING_APPROVAL' : 'DRAFT',
+          status:          'DRAFT',
           createdByUserId: ctx.userId,
           isActive:        false,
         },
       })
+      if (submitForApproval) {
+        // Best-effort submit — a single failure shouldn't roll back the batch.
+        await submitMasterRecord(prisma, table, created_.id, tenantId, ctx)
+      }
       created++
     } catch (e) {
       failed.push({ row: i + 1, reason: e instanceof Error ? e.message : 'Unknown error' })

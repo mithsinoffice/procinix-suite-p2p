@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, useWatch } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -220,6 +220,12 @@ export default function UserFormPage() {
     return () => { cancelled = true }
   }, [employeeIdWatch])
 
+  // Two-button submit pattern — ref records which footer button kicked off the
+  // submit so the mutation can decide whether to also call /submit.
+  const submitModeRef = useRef<'draft' | 'submit'>('draft')
+  const handleSaveDraft         = () => { submitModeRef.current = 'draft';  handleSubmit(d => save.mutate(d))() }
+  const handleSubmitForApproval = () => { submitModeRef.current = 'submit'; handleSubmit(d => save.mutate(d))() }
+
   // ── Save ──
   const save = useMutation({
     mutationFn: async (data: UserForm) => {
@@ -245,9 +251,14 @@ export default function UserFormPage() {
       if (!payload.mobile)          delete payload.mobile
       if (!payload.profilePhoto)    delete payload.profilePhoto
 
-      return isEdit
-        ? http.put<any>(`/api/admin/users/${id}`, payload)
-        : http.post<any>('/api/admin/users', payload)
+      const saved = isEdit
+        ? await http.put<{ id: string }>(`/api/admin/users/${id}`, payload)
+        : await http.post<{ id: string; generatedPassword?: string }>('/api/admin/users', payload)
+      // Submit-for-approval path kicks off the workflow after the save lands.
+      if (submitModeRef.current === 'submit') {
+        await http.post(`/api/admin/users/${saved.id}/submit`, {})
+      }
+      return saved
     },
     onSuccess: (res: any) => {
       setApiError(null)
@@ -304,15 +315,26 @@ export default function UserFormPage() {
               </button>
             )}
             <button type="button" disabled={isPending}
-              onClick={handleSubmit(d => save.mutate(d))}
+              onClick={handleSaveDraft}
+              className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60">
+              Save draft
+            </button>
+            <button type="button" disabled={isPending}
+              onClick={handleSubmitForApproval}
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
               <Send className="h-3.5 w-3.5" />
               {save.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1" />}
-              {isEdit ? 'Save changes' : 'Create user'}
+              Submit for approval
             </button>
           </div>
         }
       />
+
+      {existing?.status === 'PENDING_APPROVAL' && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 sm:px-6 text-xs text-amber-800">
+          Approval pending — current values remain active until approved.
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto">
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 space-y-6">

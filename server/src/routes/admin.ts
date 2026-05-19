@@ -1,6 +1,10 @@
 import type { FastifyInstance } from 'fastify'
 import bcrypt from 'bcryptjs'
 import { requireSuperAdmin } from '../middleware/feature-gate.js'
+import { startWorkflow } from '../services/workflow-engine.service.js'
+import {
+  validateMasterSubmittable, resolveMasterStatusAfterSubmit,
+} from '../services/master-submit.service.js'
 
 // Fields safe to return for User rows — passwordHash never leaves the server
 const USER_SELECT = {
@@ -207,6 +211,11 @@ export async function adminRoutes(app: FastifyInstance) {
             tenantId:          req.tenant.id,
             passwordHash,
             mustResetPassword: data.mustResetPassword ?? !supplied,
+            // New users start as DRAFT — TENANT_ADMIN approval activates them.
+            // The User.isActive boolean is the live auth gate; status drives
+            // workflow visibility on the Approval Desk.
+            status:            (data.status as string | undefined) ?? 'DRAFT',
+            isActive:          false,
           },
         })
         if (Array.isArray(entityAccess) && entityAccess.length) {
@@ -294,6 +303,31 @@ export async function adminRoutes(app: FastifyInstance) {
       data:  { passwordHash: await bcrypt.hash(newPassword, 12), mustResetPassword: false },
     })
     return reply.send({ ok: true })
+  })
+
+  // Submit user for approval — DRAFT/REJECTED → workflow start → PENDING_APPROVAL
+  // (or ACTIVE if auto-approved). isActive flips with status: a user only
+  // becomes a live login once an approver flips them to ACTIVE.
+  app.post('/admin/users/:id/submit', tenantAuth, async (req, reply) => {
+    const id = (req.params as { id: string }).id
+    const existing = await app.prisma.user.findFirst({
+      where: { id, tenantId: req.tenant.id }, select: { id: true, status: true },
+    })
+    if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'User not found' })
+    const guard = validateMasterSubmittable('user', existing.status)
+    if (!guard.ok) return reply.code(422).send({ code: 'WORKFLOW_INVALID_STATE', message: guard.message })
+    const wf = await startWorkflow(
+      app.prisma, 'USER', 'user', id, {},
+      { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as { name?: string }).name ?? req.user.sub },
+    )
+    if (!wf.ok && wf.error.message !== 'NO_WORKFLOW_DEFINED') {
+      return reply.code(wf.error.httpStatus ?? 400).send(wf.error)
+    }
+    const newStatus = resolveMasterStatusAfterSubmit({
+      ok: wf.ok, autoApproved: wf.ok ? wf.data.autoApproved : false, noWorkflowDefined: !wf.ok,
+    })
+    await app.prisma.user.update({ where: { id }, data: { status: newStatus, isActive: newStatus === 'ACTIVE' } })
+    return reply.send({ ok: true, status: newStatus, workflowInstanceId: wf.ok ? wf.data.instanceId : null })
   })
 
   // Toggle active
