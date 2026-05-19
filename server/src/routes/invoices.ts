@@ -3,6 +3,18 @@ import { createInvoice, listInvoices, getInvoice, approveInvoice, rejectInvoice 
 import { startWorkflow } from '../services/workflow-engine.service.js'
 import { extractInvoiceFromFile } from '../services/gemini-ocr.service.js'
 import { saveInvoiceFile, readInvoiceFile } from '../services/invoice-file-storage.service.js'
+import { sanitisePayload } from '../lib/payload.js'
+
+// Invoice DateTime? columns surfaced as HTML <input type="date"> on the form —
+// empty input sends `""`, which Prisma rejects with "premature end of input".
+// Listed once so POST + PUT share the same coercion.
+const INVOICE_NULLABLE_DATES = ['dueDate', 'periodFrom', 'periodTo'] as const
+
+// Relation / derived fields that the GET response includes but Prisma's
+// scalar update() rejects ("Unknown argument `vendor`"). Stripped before
+// the payload reaches Prisma so InvoiceFormPage can edit by reading the
+// full record and PUTting it back without per-field surgery on the client.
+const INVOICE_STRIP_FIELDS = ['vendor', 'lines', 'auditLogs', 'approvals', 'poLinks', 'hasFile'] as const
 
 export async function invoiceRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
@@ -203,16 +215,23 @@ export async function invoiceRoutes(app: FastifyInstance) {
       }
     }
 
+    // Strip immutable fields + coerce empty-string dates to null. The form's
+    // <input type="date"> emits "" for blank fields, which Prisma rejects.
+    const cleanData = sanitisePayload(data, {
+      nullableFields: [...INVOICE_NULLABLE_DATES],
+      stripFields:    [...INVOICE_STRIP_FIELDS],
+    })
+
     const invoice = await app.prisma.$transaction(async tx => {
       const inv = await tx.invoice.create({
         data: {
-          ...data,
+          ...cleanData,
           tenantId:        req.tenant.id,
           createdByUserId: req.user.sub,
           status:          'DRAFT',
           isPOInvoice:     poRefs.length > 0,
           matchType:       poRefs.length > 0 ? (matchType ?? '2way') : null,
-        },
+        } as never,
       })
       if (lines.length) {
         await tx.invoiceLine.createMany({
@@ -287,15 +306,35 @@ export async function invoiceRoutes(app: FastifyInstance) {
 
   // ── Update invoice ──
   app.put('/:id', auth, async (req, reply) => {
-    const { lines, ...data } = req.body as any
+    const { lines, fileBase64: _fb, fileMimeType: _fm, fileName: _fn, ...data } = req.body as Record<string, unknown> & { lines?: unknown[] }
+    const invoiceId = (req.params as { id: string }).id
+
+    // Tenant-scope guard before mutation.
+    const existing = await app.prisma.invoice.findFirst({
+      where: { id: invoiceId, tenantId: req.tenant.id }, select: { id: true },
+    })
+    if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Invoice not found' })
+
+    const cleanData = sanitisePayload(data, {
+      nullableFields: [...INVOICE_NULLABLE_DATES],
+      stripFields:    [...INVOICE_STRIP_FIELDS],
+    })
+
     const invoice = await app.prisma.$transaction(async tx => {
-      const inv = await tx.invoice.update({ where: { id: (req.params as any).id }, data })
-      if (lines) {
+      const inv = await tx.invoice.update({ where: { id: invoiceId }, data: cleanData as never })
+      if (Array.isArray(lines)) {
         await tx.invoiceLine.deleteMany({ where: { invoiceId: inv.id } })
         if (lines.length) {
-          await tx.invoiceLine.createMany({
-            data: lines.map((l: any, i: number) => ({ ...l, invoiceId: inv.id, lineNumber: i + 1 })),
+          // Strip line-level relation accessors (item, invoice) + immutable
+          // fields. Real form payloads don't carry these, but if a caller
+          // echoes the GET response (which includes them via include:), the
+          // createMany would crash.
+          const cleanLines = lines.map((l, i) => {
+            const raw = l as Record<string, unknown>
+            const { id: _id, invoiceId: _iid, item: _it, invoice: _inv, itemMatchScore: _ims, itemCandidates: _ic, createdAt: _ca, updatedAt: _ua, ...rest } = raw
+            return { ...rest, invoiceId: inv.id, lineNumber: i + 1 }
           })
+          await tx.invoiceLine.createMany({ data: cleanLines as never })
         }
       }
       await tx.invoiceAuditLog.create({

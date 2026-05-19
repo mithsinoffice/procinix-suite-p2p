@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify'
+import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { cacheGet, cacheSet, TTL, CacheKeys } from '../lib/redis.js'
+import { sanitisePayload } from '../lib/payload.js'
 import {
   listMaster, createMasterRecord, updateMasterRecord,
   submitMasterRecord, approveMasterRecord, bulkCreateMasterRecords,
@@ -457,24 +459,75 @@ export async function masterRoutes(app: FastifyInstance) {
   })
 
   app.put('/items/:id', auth, async (req, reply) => {
-    const { entityMappings, approvedVendors, ...data } = req.body as any
-    const item = await app.prisma.$transaction(async tx => {
-      const i = await tx.itemMaster.update({ where: { id: (req.params as any).id }, data })
-      if (entityMappings !== undefined) {
-        await tx.itemEntityMapping.deleteMany({ where: { itemId: i.id } })
-        if (entityMappings.length) {
-          await tx.itemEntityMapping.createMany({ data: entityMappings.map((e: any) => ({ ...e, itemId: i.id })) })
-        }
-      }
-      if (approvedVendors !== undefined) {
-        await tx.itemApprovedVendor.deleteMany({ where: { itemId: i.id } })
-        if (approvedVendors.length) {
-          await tx.itemApprovedVendor.createMany({ data: approvedVendors.map((v: any) => ({ itemId: i.id, vendorId: v.vendorId })) })
-        }
-      }
-      return i
+    const itemId = (req.params as { id: string }).id
+    const { entityMappings, approvedVendors, ...raw } = req.body as Record<string, unknown>
+
+    // Tenant-scoped read first — never trust an unverified PK from the URL.
+    const existing = await app.prisma.itemMaster.findFirst({
+      where: { id: itemId, tenantId: req.tenant.id }, select: { id: true },
     })
-    return reply.send(item)
+    if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Item not found' })
+
+    // Empty strings on these nullable fields trip Prisma:
+    //   - depreciationStartDate (DateTime?) → "premature end of input"
+    //   - tdsSectionId / taxCodeId / itemCategoryId / assetCategoryId (FK String?) → FK constraint
+    // Coerce "" → null on all of them so the form can stay UX-friendly with
+    // empty inputs without each consumer needing to remember to normalise.
+    const data = sanitisePayload(raw, {
+      nullableFields: [
+        'depreciationStartDate',
+        'tdsSectionId', 'taxCodeId', 'itemCategoryId', 'assetCategoryId',
+      ],
+    })
+
+    try {
+      const item = await app.prisma.$transaction(async tx => {
+        const i = await tx.itemMaster.update({ where: { id: itemId }, data })
+        if (Array.isArray(entityMappings)) {
+          await tx.itemEntityMapping.deleteMany({ where: { itemId: i.id } })
+          if (entityMappings.length) {
+            // Strip auto-managed fields off each mapping row so the form can
+            // echo the GET response (which includes them) without crashing.
+            const cleaned = entityMappings.map((e) => {
+              const { id: _id, itemId: _iid, ...rest } = e as Record<string, unknown>
+              return { ...rest, itemId: i.id }
+            })
+            await tx.itemEntityMapping.createMany({ data: cleaned as never })
+          }
+        }
+        if (Array.isArray(approvedVendors)) {
+          await tx.itemApprovedVendor.deleteMany({ where: { itemId: i.id } })
+          if (approvedVendors.length) {
+            await tx.itemApprovedVendor.createMany({
+              data: approvedVendors.map((v) => ({ itemId: i.id, vendorId: (v as { vendorId: string }).vendorId })),
+            })
+          }
+        }
+        return i
+      })
+      return reply.send(item)
+    } catch (err) {
+      // Surface Prisma validation/constraint errors as a 422 with a useful
+      // body — the global handler would otherwise return a generic 500 and
+      // bury the actionable detail.
+      if (err instanceof Prisma.PrismaClientValidationError) {
+        req.log.warn({ err, itemId }, 'item update — validation rejection')
+        return reply.code(422).send({
+          code: 'VALIDATION_ERROR',
+          message: 'Item update failed — invalid field value',
+          detail: err.message.split('\n').slice(-1)[0]?.trim(),
+        })
+      }
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        req.log.warn({ err, itemId }, 'item update — Prisma error ' + err.code)
+        return reply.code(422).send({
+          code: err.code,
+          message: 'Item update failed',
+          detail: err.message.split('\n').slice(-1)[0]?.trim(),
+        })
+      }
+      throw err
+    }
   })
 
   // ── Role privileges (RBAC) ──
