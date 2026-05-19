@@ -71,6 +71,7 @@ async function main() {
     { code: '1050', name: 'GST Input Tax Credit',             accountType: 'ASSET' },
     { code: '1051', name: 'TDS Receivable',                   accountType: 'ASSET' },
     { code: '1052', name: 'Advance to Vendors',               accountType: 'ASSET' },
+    { code: '1060', name: 'Prepaid Expenses',                 accountType: 'ASSET' },
     // ─ Fixed Assets ─
     { code: '1100', name: 'Computer Equipment',               accountType: 'ASSET' },
     { code: '1101', name: 'Accumulated Depn — Computer',      accountType: 'ASSET' },

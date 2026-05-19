@@ -28,6 +28,8 @@ model Tenant {
   payments       Payment[]
   modules        TenantModule[]
   features       TenantFeature[]
+  provisionSchedules     ProvisionSchedule[]
+  amortizationSchedules  AmortizationSchedule[]
 
   @@map("tenants")
 }
@@ -1897,4 +1899,94 @@ model VendorAdvanceAdjustment {
   advance        VendorAdvance @relation(fields: [advanceId], references: [id])
 
   @@map("vendor_advance_adjustments")
+}
+
+// ── ACCOUNTING (provisioning + amortization + GL push) ────────────────────────
+// JournalEntry is the canonical record of every GL impact Procinix posts.
+// Status lifecycle: POSTED (active) → REVERSED (paired reversal executed) or
+// NULLIFIED (invoice arrived and cancelled the provision). reversalSkipped
+// marks the paired reversal JV that was short-circuited because the original
+// provision was nullified before month-end.
+model JournalEntry {
+  id                     String    @id @default(uuid())
+  tenantId               String
+  entryDate              DateTime  @db.Date
+  postingDate            DateTime  @db.Date
+  period                 String    // "YYYY-MM"
+  entryType              String    // PROVISION | PROVISION_REVERSAL | PROVISION_NULLIFIED | ACCRUAL | AMORTIZATION | MANUAL
+  status                 String    @default("POSTED") // POSTED | REVERSED | NULLIFIED | SKIP_REVERSAL
+  debitGlCode            String
+  creditGlCode           String
+  amount                 Decimal   @db.Decimal(15, 2)
+  currencyCode           String    @default("INR")
+  narration              String    @db.Text
+  invoiceId              String?
+  invoiceLineId          String?
+  provisionScheduleId    String?
+  amortizationScheduleId String?
+  nullifiedByInvoiceId   String?
+  reversalOfId           String?
+  reversalJvId           String?
+  reversalSkipped        Boolean   @default(false)
+  erpStatus              String    @default("PENDING") // PENDING | SYNCED | FAILED | SKIPPED | MANUAL_OVERRIDE
+  erpRef                 String?
+  erpPushedAt            DateTime?
+  erpPayload             Json?
+  erpResponse            Json?
+  retryCount             Int       @default(0)
+  lastRetryAt            DateTime?
+  createdBy              String
+  createdAt              DateTime  @default(now())
+
+  @@index([tenantId, period])
+  @@index([tenantId, erpStatus])
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, entryType])
+  @@index([tenantId, provisionScheduleId])
+  @@index([tenantId, amortizationScheduleId])
+  @@map("journal_entries")
+}
+
+model ProvisionSchedule {
+  id              String    @id @default(uuid())
+  tenantId        String
+  itemId          String
+  vendorId        String?
+  frequency       String    // MONTHLY | QUARTERLY
+  amount          Decimal   @db.Decimal(15, 2)
+  basis           String    // FIXED_AMOUNT | PERCENTAGE
+  status          String    @default("ACTIVE") // ACTIVE | PAUSED | CLOSED
+  lastRunDate     DateTime?
+  nextRunDate     DateTime?
+  expenseGlCode   String
+  provisionGlCode String
+  createdAt       DateTime  @default(now())
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, itemId])
+  @@map("provision_schedules")
+}
+
+model AmortizationSchedule {
+  id            String   @id @default(uuid())
+  tenantId      String
+  invoiceId     String
+  invoiceLineId String?
+  totalAmount   Decimal  @db.Decimal(15, 2)
+  monthlyAmount Decimal  @db.Decimal(15, 2)
+  periodFrom    DateTime @db.Date
+  periodTo      DateTime @db.Date
+  totalMonths   Int
+  basis         String   @default("STRAIGHT_LINE") // STRAIGHT_LINE | DAY_APPORTIONED
+  status        String   @default("ACTIVE") // ACTIVE | COMPLETED | CANCELLED
+  expenseGlCode String
+  prepaidGlCode String
+  apGlCode      String
+  createdAt     DateTime @default(now())
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, status])
+  @@map("amortization_schedules")
 }

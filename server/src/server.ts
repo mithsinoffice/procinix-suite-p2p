@@ -20,6 +20,7 @@ import { dashboardRoutes }    from './routes/dashboard.js'
 import { workflowRoutes }     from './routes/workflow.js'
 import { adminRoutes }        from './routes/admin.js'
 import { procurementRoutes }  from './routes/procurement.js'
+import { accountingRoutes }   from './routes/accounting.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -61,6 +62,7 @@ export async function buildApp() {
   await app.register(workflowRoutes,   { prefix: '/api/workflow'   })
   await app.register(adminRoutes,        { prefix: '/api' })
   await app.register(procurementRoutes,  { prefix: '/api' })
+  await app.register(accountingRoutes,   { prefix: '/api/accounting' })
 
   // Manual Gmail-poll trigger — fire-and-forget; returns a jobId immediately so
   // the frontend can poll /status/:jobId instead of holding an open request for

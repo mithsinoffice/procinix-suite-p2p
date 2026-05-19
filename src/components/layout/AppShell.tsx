@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, CheckSquare, ShoppingCart, ClipboardList,
   FileText, CreditCard, Users, GitBranch, Database,
-  Shield, Truck, LogOut, X, PiggyBank,
+  Shield, Truck, LogOut, X, PiggyBank, Calculator,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '../../stores/auth.store'
@@ -39,6 +39,7 @@ const BASE_NAV = [
   { to: '/grn',             icon: Truck,           label: 'GRN'             },
   { to: '/invoices',        icon: FileText,        label: 'Invoices'        },
   { to: '/payments',        icon: CreditCard,      label: 'Payments'        },
+  { to: '/accounting',      icon: Calculator,      label: 'Accounting'      },
   { to: '/vendors',         icon: Users,           label: 'Vendors'         },
   { to: '/workflow',        icon: GitBranch,       label: 'Workflow'        },
   { to: '/masters',         icon: Database,        label: 'Masters'         },

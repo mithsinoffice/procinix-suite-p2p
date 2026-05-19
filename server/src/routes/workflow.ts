@@ -6,6 +6,7 @@ import {
 } from '../services/workflow-engine.service.js'
 import { resolveItemStatusAfterReject } from '../services/item-submit.service.js'
 import { applyChangeDiff } from '../services/item-change.service.js'
+import { triggerOnInvoiceApproval } from '../services/accounting-trigger.service.js'
 
 export async function workflowRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
@@ -100,6 +101,16 @@ export async function workflowRoutes(app: FastifyInstance) {
             where: { id: { in: fullLinks.map(l => l.poId) }, tenantId: req.tenant.id },
             data:  { status: 'FULLY_INVOICED' },
           })
+        }
+        // Accounting trigger: post accrual / amortization schedule /
+        // provision nullification depending on invoice shape. Wrapped in
+        // try/catch — accounting errors must not block the approval itself.
+        try {
+          await triggerOnInvoiceApproval(app.prisma, instanceInfo.entityId, {
+            tenantId: req.tenant.id, userId: req.user.sub,
+          })
+        } catch (err) {
+          app.log.error({ err, invoiceId: instanceInfo.entityId }, '[Accounting] trigger failed')
         }
       }
       await app.prisma.invoiceAuditLog.create({

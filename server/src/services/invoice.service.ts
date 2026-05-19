@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client'
 import { ok, err, Errors, type Result } from '../lib/result.js'
 import { writeAuditLog, AuditAction } from '../lib/audit.js'
 import type { Redis } from '../lib/redis.js'
+import { triggerOnInvoiceApproval } from './accounting-trigger.service.js'
 
 // ── Types ──
 
@@ -265,6 +266,13 @@ export async function approveInvoice(
     action: AuditAction.INVOICE_APPROVED, entityType: 'invoice', entityId: id,
     after: { comments }, ipAddress: ctx.ip,
   })
+
+  // Accounting trigger — wrapped: accounting errors don't block approval.
+  try {
+    await triggerOnInvoiceApproval(prisma, id, { tenantId: ctx.tenantId, userId: ctx.userId })
+  } catch (e) {
+    console.error('[Accounting] trigger failed for invoice', id, e)
+  }
 
   return ok(undefined)
 }

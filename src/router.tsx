@@ -58,6 +58,8 @@ const GRNPage                       = lazy(() => import('./pages/grn/GRNPage'))
 const GRNFormPage                   = lazy(() => import('./pages/grn/GRNFormPage'))
 const WorkflowHubPage               = lazy(() => import('./pages/workflow/WorkflowHubPage'))
 const AdminTenantsPage              = lazy(() => import('./pages/admin/AdminTenantsPage'))
+const AccountingPage                = lazy(() => import('./pages/accounting/AccountingPage'))
+const AmortizationDetailPage        = lazy(() => import('./pages/accounting/AmortizationDetailPage'))
 const NotFoundPage           = lazy(() => import('./pages/NotFoundPage'))
 
 function PageLoader() {
@@ -125,6 +127,10 @@ export const router = createBrowserRouter([
         { path: 'payments', children: [
           { index: true, element: <S><PaymentListPage /></S> },
           { path: ':id', element: <S><PaymentDetailPage /></S> },
+        ]},
+        { path: 'accounting', children: [
+          { index: true,                element: <S><AccountingPage /></S> },
+          { path: 'amortization/:id',   element: <S><AmortizationDetailPage /></S> },
         ]},
         { path: 'masters', children: [
           { index: true,              element: <S><MastersPage /></S>                        },

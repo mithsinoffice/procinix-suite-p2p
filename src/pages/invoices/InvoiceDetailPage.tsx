@@ -969,9 +969,12 @@ export default function InvoiceDetailPage() {
               </div>
             </Section>
 
-            {/* Section E — Audit Trail */}
+            {/* Section E — Amortization schedule (only if one exists for this invoice) */}
+            <AmortizationSection invoiceId={inv.id} />
+
+            {/* Section F — Audit Trail */}
             {(inv.auditLogs?.length > 0 || inv.approvals?.length > 0) && (
-              <Section letter="E" title="Audit Trail" subtitle="Chronological event history and legacy approval steps">
+              <Section letter="F" title="Audit Trail" subtitle="Chronological event history and legacy approval steps">
                 {inv.auditLogs?.length > 0 && (
                   <div className="space-y-3">
                     {inv.auditLogs.map((log: any) => (
@@ -1020,9 +1023,9 @@ export default function InvoiceDetailPage() {
               </Section>
             )}
 
-            {/* Section F — Approval Workflow */}
+            {/* Section G — Approval Workflow */}
             {inv.workflowInstanceId && (
-              <Section letter="F" title="Approval Workflow" subtitle="Stage timeline and discussion thread">
+              <Section letter="G" title="Approval Workflow" subtitle="Stage timeline and discussion thread">
                 <div className="-m-5">
                   <WorkflowPanel
                     invoiceId={inv.id}
@@ -1230,5 +1233,57 @@ function ReplyBox({ instanceId, onReplied }: { instanceId: string; onReplied: ()
         Send
       </button>
     </div>
+  )
+}
+
+// ── Amortization mini-section ────────────────────────────────────────────────
+// Only renders when an AmortizationSchedule exists for this invoice. Shows the
+// schedule header (period, monthly amount, progress) and the first 3 months of
+// the timeline, with a deep link to /accounting/amortization/:id.
+function AmortizationSection({ invoiceId }: { invoiceId: string }) {
+  const navigate = useNavigate()
+  const { data: schedules = [] } = useQuery({
+    queryKey: ['accounting', 'amort-by-invoice', invoiceId],
+    queryFn:  async () => {
+      const qs = new URLSearchParams({ invoiceId })
+      return http.get<Array<{
+        id: string; totalAmount: number; monthlyAmount: number; periodFrom: string; periodTo: string;
+        totalMonths: number; status: string; postedMonths: number; progressPct: number;
+      }>>(`/api/accounting/amortization-schedules?${qs}`)
+    },
+  })
+  if (schedules.length === 0) return null
+  const s = schedules[0]
+
+  return (
+    <Section letter="E" title="Amortization Schedule" subtitle="Multi-month expense recognition">
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div>
+            <p className="text-xs text-muted-foreground">Period</p>
+            <p className="font-medium">{formatDate(s.periodFrom)} → {formatDate(s.periodTo)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total months</p>
+            <p className="font-medium tabular-nums">{s.totalMonths}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Monthly amount</p>
+            <p className="font-medium tabular-nums">{formatCurrency(s.monthlyAmount)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Progress</p>
+            <p className="font-medium tabular-nums">{s.postedMonths} of {s.totalMonths} · {s.progressPct}%</p>
+          </div>
+        </div>
+        <div className="h-2 rounded-full bg-muted">
+          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, s.progressPct)}%` }} />
+        </div>
+        <button onClick={() => navigate(`/accounting/amortization/${s.id}`)}
+          className="text-xs text-primary font-medium hover:underline">
+          View full schedule →
+        </button>
+      </div>
+    </Section>
   )
 }

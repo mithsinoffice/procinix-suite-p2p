@@ -319,7 +319,7 @@ The walk is sequential — it does **not** skip a non-eligible middle stage. Pur
 
 - Set on: Departments → `DEPARTMENT`, GL Codes → `GL_CODE`, Cost Centres → `COST_CENTRE`, Tax Codes → `TAX_CODE`, Designations → `DESIGNATION`, Locations → `LOCATION`.
 - When set, the submit-for-approval button calls `POST /api/workflow/start`. On `NO_WORKFLOW_DEFINED` or a network failure, falls back to the legacy `POST /:apiPath/:id/submit` route (which just flips `status` to `PENDING_APPROVAL`).
-- Other masters (Vendors, Employees, Items, Users, Budget, Entity, FY, Currency, TDS, Profit Centres, etc.) use their own bespoke form pages and have **not** been wired to the engine yet — they still POST directly to `/{...}/submit`. See §11 Pending.
+- Other masters (Vendors, Employees, Items, Users, Budget, Entity, FY, Currency, TDS, Profit Centres, etc.) use their own bespoke form pages and have **not** been wired to the engine yet — they still POST directly to `/{...}/submit`. See §12 Pending.
 
 ### §7.7 Engine-driven UI
 
@@ -712,7 +712,195 @@ Pure helpers ([server/src/services/pr-edit.service.ts](../server/src/services/pr
 
 ---
 
-## §11 Pending work
+## §11 Accounting — provisioning, amortization & ERP push
+
+End-to-end GL workflow that runs alongside the AP flow. When an invoice is
+approved, the trigger writes the right journal entries; at month-end a job
+posts provisions + amortizations; an ERP-push adapter syncs the JVs to an
+external GL system (stub for now).
+
+### Schema additions
+
+Three models, all tenant-scoped:
+
+- `JournalEntry` — the canonical record of every GL impact.
+  Status lifecycle: `POSTED → REVERSED` (paired reversal executed) /
+  `NULLIFIED` (invoice nullified the open provision) /
+  `SKIP_REVERSAL` (paired reversal that was short-circuited).
+  ERP lifecycle: `PENDING → SYNCED | FAILED | SKIPPED | MANUAL_OVERRIDE`
+  with `retryCount`, `erpRef`, `erpPayload`, `erpResponse`.
+  Indexed on `(tenantId, period)`, `(tenantId, erpStatus)`,
+  `(tenantId, invoiceId)`, `(tenantId, entryType)`,
+  `(tenantId, provisionScheduleId)`, `(tenantId, amortizationScheduleId)`.
+
+- `ProvisionSchedule` — recurring provision rule per (item, vendor).
+  Frequency `MONTHLY | QUARTERLY`, basis `FIXED_AMOUNT | PERCENTAGE`,
+  status `ACTIVE | PAUSED | CLOSED`. Tracks `lastRunDate` and `nextRunDate`
+  so the month-end job knows when to fire.
+
+- `AmortizationSchedule` — prepaid-expense recognition over a multi-month
+  period. Created on invoice approval when `period_to - period_from > 1
+  month`. Status `ACTIVE | COMPLETED | CANCELLED`. Basis
+  `STRAIGHT_LINE | DAY_APPORTIONED`.
+
+GL codes are stored as `code` strings on JournalEntry (not FKs) so the JV
+survives a future GL code rename/delete. Resolution at trigger time falls
+back: `line.glCodeId → itemEntityMapping.expenseGlCodeId → invoice.glCodeId
+→ '5080' (Misc)`. Prepaid GL resolves to tenant GL named `/prepaid/i` else
+`'1060'`; AP GL resolves to `accountType=LIABILITY` named `/payable/i` else
+`'2030'`.
+
+### Engine flow
+
+**Pure helpers** (no Prisma, fully Vitest-covered):
+
+- [server/src/services/provision-engine.service.ts](../server/src/services/provision-engine.service.ts)
+  - `computeNextRunDate(lastRun, frequency)` → MONTHLY = end of next month;
+    QUARTERLY = end of next quarter.
+  - `isProvisionDue(schedule, forDate)` — true iff `nextRunDate <= forDate
+    && status === 'ACTIVE'`; null `nextRunDate` is treated as immediate.
+  - `buildProvisionJV(schedule, forDate, createdBy, { itemName? })` — DR
+    expense, CR provision. Narration `"{item} — {Mon Year} provision"`.
+  - `buildReversalJV(originalJV, reversalDate, createdBy)` — DR/CR swap,
+    `postingDate = 1st of month after original.postingDate`,
+    `reversalOfId = original.id`, `entryType = PROVISION_REVERSAL`.
+  - `buildNullificationJV(originalJV, invoiceId, invoiceDate, createdBy)` —
+    DR/CR swap, posted on invoice date, `nullifiedByInvoiceId = invoiceId`.
+  - `shouldSkipReversal(jv)` — true when original PROVISION is NULLIFIED.
+
+- [server/src/services/amortization-engine.service.ts](../server/src/services/amortization-engine.service.ts)
+  - `computeAmortizationSchedule(total, from, to, basis)` — returns one
+    row per calendar month. STRAIGHT_LINE: `total / numberOfMonths`, last
+    month gets the rounding remainder. DAY_APPORTIONED: per-month amount
+    weighted by `daysInMonth ∩ [from,to] / totalDays`, last month picks up
+    the rounding drift to keep the sum exact.
+  - `isAmortizationDue(schedule, forMonth, alreadyPosted: Set<string>)` —
+    pure check; caller looks up posted months by `amortizationScheduleId`.
+  - `buildAmortizationJV` — DR expense, CR prepaid.
+  - `buildAccrualJV(invoice, { debitGlCode, creditGlCode }, createdBy)` —
+    single ACCRUAL row, full invoice amount, caller decides DR side
+    (prepaid for multi-month, expense for single/no period).
+
+- [server/src/services/erp-push.service.ts](../server/src/services/erp-push.service.ts)
+  - `pushJournalEntry(prisma, jv, _erpConfig?)` — stub ERP adapter. Logs
+    payload, generates `erpRef = ERP/STUB-{jv.id.slice(0,8)}`, flips
+    `erpStatus → SYNCED`. Real adapter (Tally/SAP/Zoho/Oracle Fusion) plugs
+    in here later with the same `Promise<ErpPushResult>` contract.
+  - `retryFailed(prisma, tenantId)` — picks up FAILED JVs with
+    `retryCount < 3`, pushes each, returns counts.
+  - `pushBulk(prisma, tenantId, ids[])` — manual selection from the
+    journal-entries tab.
+
+### Invoice approval trigger
+
+[server/src/services/accounting-trigger.service.ts](../server/src/services/accounting-trigger.service.ts) fires once per
+`finalStatus === 'APPROVED'` (wired both into the workflow approve route
+and the legacy `approveInvoice()` in invoice.service). Idempotent on
+retry — checks for an existing ACCRUAL/AMORTIZATION JV on the invoice
+before doing anything.
+
+Three branches:
+
+1. **Multi-month period** (`period_to - period_from > 1 month`):
+   - Create `AmortizationSchedule` with split GLs
+   - ACCRUAL JV — DR prepaid, CR AP, full invoice amount
+   - First-month AMORTIZATION JV if `periodFrom`'s month is the
+     current period
+
+2. **Single-month / no period**:
+   - ACCRUAL JV — DR expense (line-level), CR AP. No schedule row.
+
+3. **Open provision exists for this item+vendor in the invoice's period**:
+   - NULLIFICATION JV (swap DR/CR)
+   - Source PROVISION → `status = NULLIFIED`
+   - Paired PROVISION_REVERSAL → `status = SKIP_REVERSAL`,
+     `reversalSkipped = true`
+
+The trigger is wrapped in `try/catch` at both call sites — accounting
+failures log but do **not** block the approval. The user can retry from
+the ERP sync log.
+
+### Month-end job
+
+[server/src/jobs/month-end.job.ts](../server/src/jobs/month-end.job.ts).
+`runMonthEnd(prisma, ctx, period, { dryRun? })` returns
+`MonthEndResult { provisionsPosted, amortizationsPosted,
+reversalsExecuted, reversalsSkipped, jvs[] }`.
+
+Step 1 — Provisions:
+- For every `ProvisionSchedule` with `status=ACTIVE` and
+  `nextRunDate <= periodEnd`:
+  - Skip if any APPROVED invoice exists for the same item (+ vendor if
+    bound) with `invoiceDate` in `[periodStart..periodEnd]`. The invoice
+    trigger has already nullified the open provision; posting a new one
+    would double-count.
+  - Otherwise: post PROVISION JV on `periodEnd`, post paired
+    PROVISION_REVERSAL with `postingDate = 1st of next month`, set
+    `reversalJvId` on the source, advance `lastRunDate / nextRunDate`.
+
+Step 2 — Amortizations:
+- For every `AmortizationSchedule` with `status=ACTIVE`:
+  - Query already-posted months for this schedule.
+  - For each row in the canonical split that is due (`row.month <= period`)
+    and not yet posted, write the AMORTIZATION JV.
+  - If all months are posted after the run, close the schedule
+    (`status = COMPLETED`).
+
+Step 3 — Execute scheduled reversals:
+- Find PROVISION_REVERSAL JVs with `postingDate <= periodEnd` and
+  `status='POSTED'` that haven't been actioned (`period` in
+  `[prev, current]`).
+- If source PROVISION is NULLIFIED → mark this reversal SKIP_REVERSAL.
+- Otherwise → mark source REVERSED.
+
+Preview mode (`dryRun: true`) returns the same `jvs[]` payload with
+`(preview)` ids without writing anything.
+
+### Accounting routes
+
+[server/src/routes/accounting.ts](../server/src/routes/accounting.ts) — mounted at `/api/accounting`. All
+endpoints tenant-scoped via JWT.
+
+- `GET  /dashboard` — KPIs for the Overview tab
+- `GET  /journal-entries?period&entryType&erpStatus&invoiceId&scheduleId&take&cursor` — paginated
+- `POST /journal-entries/:id/push-erp` · `POST /journal-entries/push-erp-bulk`
+- `POST /journal-entries/:id/retry` · `POST /journal-entries/retry-all-failed`
+- `GET  /provision-schedules` · `PATCH /provision-schedules/:id` (pause/resume/close)
+- `GET  /amortization-schedules?invoiceId=...` · `GET /amortization-schedules/:id/timeline`
+- `POST /month-end` (TENANT_ADMIN) · `POST /month-end/preview`
+
+### Frontend
+
+- [src/pages/accounting/AccountingPage.tsx](../src/pages/accounting/AccountingPage.tsx) — 6 tabs (Overview /
+  Journal entries / Provision schedules / Amortization schedules /
+  Month-end close / ERP sync log).
+- [src/pages/accounting/AmortizationDetailPage.tsx](../src/pages/accounting/AmortizationDetailPage.tsx) — drill-down at
+  `/accounting/amortization/:id`. Vertical timeline: green dot = posted,
+  amber pulsing clock = due this month, gray circle = future.
+- [src/pages/invoices/InvoiceDetailPage.tsx](../src/pages/invoices/InvoiceDetailPage.tsx) Section E surfaces an
+  amortization mini-card with `View full schedule →` to the drill-down
+  (only renders when a schedule exists for the invoice).
+- Nav entry: between Payments and Vendors in
+  [AppShell](../src/components/layout/AppShell.tsx).
+- [src/lib/api/accounting.api.ts](../src/lib/api/accounting.api.ts) — typed http wrappers; everything
+  goes through TanStack Query in the page.
+
+### ERP adapter pattern (future)
+
+`pushJournalEntry()` is the boundary. To wire a real ERP:
+
+1. Add a new adapter module (e.g. `erp-tally.service.ts`) exporting an
+   `async push(jv, config)` returning the same `ErpPushResult` shape.
+2. Dispatch by `tenantSettings.erpSystem` inside
+   `erp-push.service.ts::pushJournalEntry()`. The DB update logic stays
+   the same so retry/audit semantics are preserved.
+3. Persist auth credentials in `tenantSettings.erpAuthCredentials` (already
+   on the schema) — read via `app.config` so secrets never appear in
+   query results.
+
+---
+
+## §12 Pending work
 
 ### Wire remaining masters through the workflow engine
 
@@ -746,7 +934,7 @@ PAN / GSTIN / IFSC verification via SurePass + OnGrid works on the vendor form; 
 
 ---
 
-## §12 Dev commands
+## §13 Dev commands
 
 ```bash
 npm run dev          # frontend :3000 + backend :8787
@@ -765,7 +953,7 @@ Demo login (dev only) — `mithilesh@procinix.ai` / `Demo@123`. SUPER_ADMIN role
 
 ---
 
-## §13 Conventions
+## §14 Conventions
 
 - **Commit messages** — describe the *what* + *why*. When a working tree contains multiple semantic changes, the message must cover all of them (don't under-describe). The user has explicitly asked for "accurate (everything in one)" messages over partial ones.
 - **Comments** — default to none. Add only when the *why* is non-obvious (workaround, invariant, surprising decision). Never narrate *what* the code does.
