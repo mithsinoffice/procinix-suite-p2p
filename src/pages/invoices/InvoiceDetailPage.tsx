@@ -8,7 +8,6 @@ import {
 import { http } from '../../lib/http'
 import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { formatDate, formatDateTime, formatCurrency, formatStatus, getStatusColor } from '../../lib/utils/formatters'
-import { MatchScoreBadge } from '../../components/shared/MatchScoreBadge'
 import { ChannelBadge } from '../../components/shared/ChannelBadge'
 import { KycBadge } from '../../components/shared/KycBadge'
 import { cn } from '../../lib/utils'
@@ -279,25 +278,58 @@ function LineItemsTable({ lines, currency, subtotal }: { lines: any[]; currency:
       <table className="w-full text-xs">
         <thead className="border-b border-border bg-muted/30">
           <tr>
-            {['#','Item / description','HSN','GST','Qty','Unit price','Base','GST amt','TDS','Total'].map(h => (
+            {['#','Item / description','Qty','Unit price','Base','GST amt','TDS','Total'].map(h => (
               <th key={h} className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {lines.map((line: any) => {
-            const matchScore = Number(line.itemMatchScore ?? 0)   // populated by the match agent when available
-            const isStrong   = !!line.itemId && matchScore >= 98
+            const matchScore = Number(line.itemMatchScore ?? 0)
+            const isMapped   = !!line.itemId
+            const isStrong   = isMapped && matchScore >= 98
             const candidates = (line.itemCandidates ?? []) as ItemCandidate[]
+            // Item-master gstRate wins (it's the authoritative rate); fall back
+            // to the line's own gstRate (set by ingestion when no match), then 0.
+            const gstRate    = Number(line.item?.gstRate ?? line.gstRate ?? 0)
+            const tdsRate    = Number(line.tdsRate ?? 0)
             const baseAmt    = Number(line.quantity) * Number(line.unitPrice)
-            const gstAmt     = Number(line.cgstAmount) + Number(line.sgstAmount) + Number(line.igstAmount)
+            const gstAmt     = baseAmt * (gstRate / 100)
+            const tdsAmt     = baseAmt * (tdsRate / 100)
+            const itemName   = line.itemName ?? line.item?.name ?? null
+            const hsn        = line.item?.hsnCode ?? line.hsnCode ?? null
             return (
               <tr key={line.id} className="border-b border-border last:border-0 align-top">
                 <td className="px-3 py-2 text-muted-foreground">{line.lineNumber}</td>
-                <td className="px-3 py-2 max-w-[280px]">
+                <td className="px-3 py-2 max-w-[320px]">
+                  {/* Line 1: primary headline — item master name when mapped, otherwise OCR text + Unmatched badge */}
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-medium">{line.itemName ?? line.itemCode ?? line.description}</span>
-                    {line.itemId && (
+                    {itemName ? (
+                      <span className="font-medium">{itemName}</span>
+                    ) : (
+                      <>
+                        <span className="font-medium">{line.description}</span>
+                        <span className="rounded-full border border-amber-200 bg-amber-50 text-amber-700 px-1.5 py-0.5 text-[10px] font-medium">
+                          Unmatched
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Line 2: OCR raw description (2-line clamp + tooltip) — only when distinct from headline */}
+                  {itemName && line.description && line.description !== itemName && (
+                    <p
+                      className="text-[10px] text-muted-foreground mt-0.5 overflow-hidden"
+                      style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
+                      title={line.description}
+                    >
+                      OCR: {line.description}
+                    </p>
+                  )}
+
+                  {/* Line 3: match score badge + HSN chip + GST rate chip */}
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                    {isMapped && (
                       <span className={cn(
                         'rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
                         isStrong ? 'bg-green-50 text-green-700 border-green-200'
@@ -306,12 +338,18 @@ function LineItemsTable({ lines, currency, subtotal }: { lines: any[]; currency:
                         {matchScore > 0 ? `Match · ${matchScore}%` : 'Mapped'}
                       </span>
                     )}
+                    {hsn && (
+                      <span className="rounded-full border border-input bg-muted/50 px-1.5 py-0.5 text-[10px] font-mono">
+                        HSN {hsn}
+                      </span>
+                    )}
+                    {gstRate > 0 && (
+                      <span className="rounded-full border border-input bg-muted/50 px-1.5 py-0.5 text-[10px] font-mono">
+                        GST {gstRate}%
+                      </span>
+                    )}
                   </div>
-                  {line.description && line.itemName && line.description !== line.itemName && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate" title={line.description}>
-                      OCR: {line.description}
-                    </p>
-                  )}
+
                   {!isStrong && candidates.length > 1 && (
                     <details className="mt-1 text-[10px]">
                       <summary className="cursor-pointer text-amber-700 font-medium">
@@ -328,37 +366,24 @@ function LineItemsTable({ lines, currency, subtotal }: { lines: any[]; currency:
                     </details>
                   )}
                 </td>
-                <td className="px-3 py-2">
-                  {line.hsnCode ? (
-                    <span className="inline-flex items-center gap-1">
-                      <span className="font-mono">{line.hsnCode}</span>
-                      {line.itemId && <AutoChip label="item master" />}
-                    </span>
-                  ) : '—'}
-                </td>
-                <td className="px-3 py-2 tabular-nums">
-                  {line.gstRate != null ? `${Number(line.gstRate)}%` : '—'}
-                  {line.itemId && line.gstRate != null && <AutoChip label="item" />}
-                </td>
                 <td className="px-3 py-2 tabular-nums">{Number(line.quantity)}</td>
                 <td className="px-3 py-2 tabular-nums font-mono">{formatCurrency(line.unitPrice, currency)}</td>
                 <td className="px-3 py-2 tabular-nums font-mono">
                   <span>{formatCurrency(baseAmt, currency)}</span>
                   <span className="ml-1 rounded-full border border-green-200 bg-green-50 text-green-700 px-1 py-0.5 text-[9px] font-medium">= Q×R</span>
                 </td>
-                <td className="px-3 py-2 tabular-nums font-mono text-green-700">
+                <td className="px-3 py-2 tabular-nums font-mono text-teal-700">
                   {formatCurrency(gstAmt, currency)}
-                  {line.itemId && <AutoChip label="calc" />}
                 </td>
                 <td className="px-3 py-2 tabular-nums font-mono text-amber-700">
-                  {formatCurrency(line.tdsAmount, currency)}
+                  {formatCurrency(tdsAmt, currency)}
                 </td>
                 <td className="px-3 py-2 tabular-nums font-mono font-semibold">{formatCurrency(line.lineTotal, currency)}</td>
               </tr>
             )
           })}
           <tr className={cn('border-t border-border', match ? 'bg-green-50/40' : 'bg-red-50/40')}>
-            <td colSpan={6} className="px-3 py-2 text-right text-[11px] font-medium">
+            <td colSpan={4} className="px-3 py-2 text-right text-[11px] font-medium">
               Line items sum
             </td>
             <td className="px-3 py-2 tabular-nums font-mono font-semibold">{formatCurrency(lineSum, currency)}</td>
@@ -374,11 +399,11 @@ function LineItemsTable({ lines, currency, subtotal }: { lines: any[]; currency:
   )
 }
 
-// ── Match-score banner — moved out of Section D, sits above the form ────────
-// Renders: 6 score cards + large overall score + lane badge + guardrails row,
-// and the OCR model + ingestion timestamp top-right. "Always visible" =
-// always above the fold; scrolls with the body but is the first thing the
-// reviewer sees after the page header.
+// ── Match-score banner — full-width teal banner above the lettered sections ─
+// Visually distinct from the Section cards: tinted background, no letter prefix,
+// large overall score as the headline. The 78/100 pill that used to live in
+// the status row is removed — this banner is the canonical place to read the
+// score from.
 function ScoreBanner({
   totalScore, lane, scoreItems, guardrails, ingestedAt, ocrModel,
 }: {
@@ -390,30 +415,16 @@ function ScoreBanner({
   ocrModel:    string
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex items-start justify-between border-b border-border px-5 py-3">
-        <h2 className="text-sm font-semibold">Match Score</h2>
-        {ingestedAt && (
-          <p className="text-[10px] text-muted-foreground leading-tight text-right">
-            OCR · {ocrModel}<br />
-            {formatDateTime(ingestedAt)}
-          </p>
-        )}
-      </div>
-      <div className="p-5 space-y-3">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {scoreItems.map(item => (
-            <ScoreCard key={item.label} label={item.label} score={item.score} max={item.max} />
-          ))}
-        </div>
-        <div className="flex items-center gap-4 p-3 rounded-xl bg-muted/20 border border-border">
-          <div className="text-3xl font-bold tabular-nums">{totalScore ?? '—'}</div>
-          <div>
-            <p className="text-sm font-semibold">/100</p>
-            <p className="text-xs text-muted-foreground">Overall match score</p>
-          </div>
+    <div className="rounded-xl border border-teal-200 bg-teal-50/30 px-5 py-4 space-y-4">
+      {/* Headline row — large score + lane + OCR meta top-right */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-baseline gap-3">
+          <span className="text-3xl font-semibold text-teal-700 tabular-nums leading-none">
+            {totalScore ?? '—'}
+          </span>
+          <span className="text-sm text-teal-700/80 font-medium">/100 overall match score</span>
           {lane && (
-            <span className={cn('ml-auto rounded-full px-3 py-1 text-xs font-bold border',
+            <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-bold border',
               lane === 'STP'    ? 'bg-green-50 text-green-700 border-green-200' :
               lane === 'REVIEW' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                                   'bg-red-50 text-red-700 border-red-200')}>
@@ -421,19 +432,34 @@ function ScoreBanner({
             </span>
           )}
         </div>
-        {guardrails.length > 0 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-            <p className="text-xs font-semibold text-amber-700 mb-1">Guardrails triggered</p>
-            <div className="flex flex-wrap gap-1.5">
-              {guardrails.map(g => (
-                <span key={g} className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-medium text-amber-800">
-                  {g}
-                </span>
-              ))}
-            </div>
-          </div>
+        {ingestedAt && (
+          <p className="text-[10px] text-muted-foreground leading-tight text-right">
+            OCR · {ocrModel}<br />
+            {formatDateTime(ingestedAt)}
+          </p>
         )}
       </div>
+
+      {/* Six score cards — fill the row, one per bucket */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {scoreItems.map(item => (
+          <ScoreCard key={item.label} label={item.label} score={item.score} max={item.max} />
+        ))}
+      </div>
+
+      {/* Guardrails row — only when something tripped */}
+      {guardrails.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+          <p className="text-xs font-semibold text-amber-700 mb-1">Guardrails triggered</p>
+          <div className="flex flex-wrap gap-1.5">
+            {guardrails.map(g => (
+              <span key={g} className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                {g}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -670,17 +696,7 @@ export default function InvoiceDetailPage() {
                 {formatStatus(status)}
               </span>
               <ChannelBadge channelType={inv.channelType ?? 'MANUAL_UPLOAD'} ocrConfidence={inv.ocrConfidence} isEInvoice={!!inv.irnNumber} />
-              {inv.apLane && (
-                <span className={cn('rounded-full px-2.5 py-1 text-xs font-semibold border',
-                  inv.apLane === 'STP'    ? 'bg-green-50 text-green-700 border-green-200' :
-                  inv.apLane === 'REVIEW' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                            'bg-red-50 text-red-700 border-red-200')}>
-                  {inv.apLane} lane
-                </span>
-              )}
-              {inv.matchScore != null && (
-                <MatchScoreBadge score={inv.matchScore} lane={inv.apLane ?? 'MANUAL'} guardrails={scoreData?.guardrailsTriggered} compact />
-              )}
+              {/* Lane badge and match score moved to the ScoreBanner above Section A. */}
             </div>
 
             {/* Reject / Hold input panels */}
@@ -785,22 +801,35 @@ export default function InvoiceDetailPage() {
                   chip={<OcrChip score={fieldConf('invoiceDate')} />}
                 />
 
-                {/* Due date — auto-computed from vendor.paymentTerms when OCR didn't extract one */}
-                <ReadOnlyField
-                  label="Due date"
-                  value={
-                    inv.dueDate
-                      ? formatDate(inv.dueDate)
-                      : (inv.vendor?.paymentTerms == null
-                          ? <FieldWarning>Payment term not set on vendor master — enter manually</FieldWarning>
-                          : '—')
-                  }
-                  chip={
-                    inv.dueDate && inv.vendor?.paymentTerms != null
-                      ? <AutoChip label={`${inv.vendor.paymentTerms}-day net`} title={`Computed as invoice date + ${inv.vendor.paymentTerms} days from vendor.paymentTerms`} />
-                      : undefined
-                  }
-                />
+                {/* Due date — three states:
+                    1. inv.dueDate matches invoice_date + paymentTerms → AutoChip
+                    2. inv.dueDate set but differs → manually entered / OCR-extracted, no chip
+                    3. inv.dueDate null + paymentTerms null → FieldWarning */}
+                {(() => {
+                  const paymentTerms     = inv.vendor?.paymentTerms ?? null
+                  const proposedDueDate  = paymentTerms != null && inv.invoiceDate
+                    ? new Date(new Date(inv.invoiceDate).getTime() + paymentTerms * 86_400_000)
+                    : null
+                  const sameYmd = (a: Date, b: Date) => a.toISOString().slice(0, 10) === b.toISOString().slice(0, 10)
+                  const dueIsAutoComputed = inv.dueDate && proposedDueDate && sameYmd(new Date(inv.dueDate), proposedDueDate)
+                  return (
+                    <ReadOnlyField
+                      label="Due date"
+                      value={
+                        inv.dueDate
+                          ? formatDate(inv.dueDate)
+                          : (paymentTerms == null
+                              ? <FieldWarning>Payment term not set on vendor master — enter due date manually</FieldWarning>
+                              : formatDate(proposedDueDate!))
+                      }
+                      chip={
+                        dueIsAutoComputed || (!inv.dueDate && paymentTerms != null)
+                          ? <AutoChip label={`${paymentTerms}-day net`} title={`Computed as invoice date + ${paymentTerms} days from vendor.paymentTerms`} />
+                          : undefined
+                      }
+                    />
+                  )
+                })()}
 
                 <ReadOnlyField
                   label="Currency"
