@@ -1,6 +1,6 @@
 # Procinix v2 (S2P) — Architecture
 
-_Last updated: 2026-05-19 (simplified invoice creation — single InvoiceFormPage)_
+_Last updated: 2026-05-19 (PR edit mode + init.sql cleanup + back-button fix)_
 
 Indian Source-to-Pay (S2P) platform — Procurement, Goods Receipt, AP Invoice processing, Payments, Vendor management, Approvals and Masters — for mid-market Indian enterprises. Multi-tenant, RBAC-gated, n8n-driven email ingestion, Gemini OCR.
 
@@ -112,8 +112,25 @@ prisma/
   schema.prisma                         # 74 models + 7 enums
   seed.ts                               # Master data seed (GL codes, TDS sections, etc.)
 
+sql/mysql/                              # Legacy v1 SQL — reference only, NOT applied
+  README.md                             # Explains why this dir is preserved but unused
+  migrations/                           # Historical discovery-era migrations
+
 vitest.config.ts                        # Frontend + backend pure-function specs
 ```
+
+**Fresh database provisioning** — schema.prisma is the single source of truth.
+A clean clone gets a working DB with two commands:
+
+```bash
+npm run db:push     # apply schema.prisma to MySQL via Prisma (creates all 74 tables)
+npm run db:seed     # demo tenant + masters + workflow definitions
+```
+
+The legacy `sql/mysql/init.sql` was removed (2026-05-19) — it had drifted to
+cover only ~31 of the live 74 tables. The `migrations/` subdirectory is kept
+as a historical reference for early v1 discovery work but is not applied by
+any current script. See [sql/mysql/README.md](../sql/mysql/README.md).
 
 ---
 
@@ -562,6 +579,25 @@ All endpoints scope by `request.tenant.id` (JWT claim — never trust a request 
 ### §10e.5 Frontend filter state
 
 `DashboardPage` keeps three local pieces of state — `entityId`, `preset` (`this_month` | `last_month` | `last_3_months` | `custom`), and `customFrom` / `customTo`. The active filter object is memoised and passed through to `useDashboardKpis(filters)` and `useDashboardCharts(filters)` so changing the entity or range refetches both endpoints. The refresh button calls `queryClient.invalidateQueries(['dashboard', ...])`.
+
+---
+
+## §10f Purchase requisition edit mode
+
+PRs are editable only while in `DRAFT` status. Once submitted (any of `SUBMITTED` / `PENDING_L1` / `APPROVED` / `REJECTED` / `ON_HOLD`), `PRFormPage` switches to a read-only view and the backend rejects mutations with `422 WORKFLOW_INVALID_STATE`. The standard rejection loop returns a PR to `DRAFT`, re-enabling edits.
+
+**Backend** ([server/src/routes/procurement.ts](../server/src/routes/procurement.ts)) — `PUT /api/pr/:id`:
+
+1. Tenant-scoped read (`findFirst` with `tenantId` from JWT) — 404 if missing.
+2. `validatePrEditable()` guard — 422 if `status !== 'DRAFT'`.
+3. Payload filtered down to `EDITABLE_FIELDS` (`departmentId`, `locationId`, `costCentreId`, `notes`, `narration`, `requestedDeliveryDate`, `lines`, `estimatedTotal`). Anything else is silently dropped — `prRef`, `requesterId`, `entityId`, `createdAt`, `status` can't be smuggled in.
+4. `diffPrFields()` computes the changed-fields list before the transaction.
+5. Atomic update: header `update()` + `purchaseRequisitionLine.deleteMany() → createMany()`. `estimatedTotal` recomputed from the new lines via `calcEstimatedTotal()`.
+6. Append-only audit log entry `{ action: 'pr.edited', after: { changedFields, userName } }`. Log failures warn but don't fail the request.
+
+Pure helpers ([server/src/services/pr-edit.service.ts](../server/src/services/pr-edit.service.ts)) covered by 14 Vitest specs at [pr-edit.test.ts](../server/src/services/__tests__/pr-edit.test.ts) — DRAFT-only enforcement across every non-DRAFT status, field-level diff with date normalisation, line-collapse to single entry, total recomputation including string-number coercion.
+
+**Frontend** ([src/pages/purchase-orders/PRFormPage.tsx](../src/pages/purchase-orders/PRFormPage.tsx)): when `isEdit && existing.status !== 'DRAFT'`, the page wraps the form in `<fieldset disabled>`, hides the Save Draft + Submit buttons, swaps the title to "PR-XXXX" (no "Edit" prefix), shows an amber lock banner explaining the status, and changes Cancel → Back.
 
 ---
 

@@ -256,35 +256,57 @@ export default function PRFormPage() {
 
   const isPending   = saveDraft.isPending || submitForApproval.isPending
   const isHardBlock = budgetCheck?.status === 'HARD_BLOCK'
+  // Only DRAFT PRs are editable. Anything past DRAFT renders as read-only —
+  // matches the backend guard in PUT /api/pr/:id which 422s non-DRAFT edits.
+  const prStatus    = (existing?.status as string | undefined) ?? 'DRAFT'
+  const isReadOnly  = isEdit && prStatus !== 'DRAFT'
 
   return (
     <div className="flex flex-col h-full">
       <MasterPageHeader
-        title={isEdit ? `Edit ${existing?.prRef ?? 'PR'}` : 'New Intake Request'}
-        description="Request items or services — budget-checked and routed for approval"
+        title={isEdit ? `${isReadOnly ? '' : 'Edit '}${existing?.prRef ?? 'PR'}` : 'New Intake Request'}
+        description={isReadOnly
+          ? `Locked — PR is in ${prStatus} status. Only DRAFT requisitions are editable.`
+          : 'Request items or services — budget-checked and routed for approval'}
         backLabel="Intake"
         backTo="/intake"
         actions={
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => navigate('/intake')}
-              className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted">Cancel</button>
-            <button type="button" disabled={isPending}
-              onClick={handleSubmit(d => saveDraft.mutate(d))}
-              className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60">
-              {saveDraft.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1" />}
-              Save draft
+              className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted">
+              {isReadOnly ? 'Back' : 'Cancel'}
             </button>
-            <button type="button" disabled={isPending || isHardBlock}
-              onClick={handleSubmit(d => submitForApproval.mutate(d))}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
-              <Send className="h-3.5 w-3.5" />
-              Submit for approval
-            </button>
+            {!isReadOnly && (
+              <>
+                <button type="button" disabled={isPending}
+                  onClick={handleSubmit(d => saveDraft.mutate(d))}
+                  className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60">
+                  {saveDraft.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1" />}
+                  Save draft
+                </button>
+                <button type="button" disabled={isPending || isHardBlock}
+                  onClick={handleSubmit(d => submitForApproval.mutate(d))}
+                  className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
+                  <Send className="h-3.5 w-3.5" />
+                  Submit for approval
+                </button>
+              </>
+            )}
           </div>
         }
       />
 
+      {isReadOnly && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2.5 sm:px-6">
+          <p className="text-xs text-amber-700">
+            <span className="font-semibold">Read-only.</span> This PR is in <span className="font-mono">{prStatus}</span> status — edits are blocked.
+            {prStatus === 'REJECTED' && ' Approver can reject to return it to DRAFT for editing.'}
+          </p>
+        </div>
+      )}
+
       <div className="flex-1 overflow-auto">
+        <fieldset disabled={isReadOnly} className="contents">
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 space-y-6">
 
           {/* A. PR Identity */}
@@ -471,6 +493,7 @@ export default function PRFormPage() {
             </div>
           </div>
         </div>
+        </fieldset>
       </div>
     </div>
   )

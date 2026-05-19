@@ -1,5 +1,8 @@
 import type { FastifyInstance } from 'fastify'
 import { startWorkflow } from '../services/workflow-engine.service.js'
+import {
+  validatePrEditable, diffPrFields, calcEstimatedTotal, EDITABLE_FIELDS,
+} from '../services/pr-edit.service.js'
 
 export async function procurementRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
@@ -79,15 +82,68 @@ export async function procurementRoutes(app: FastifyInstance) {
   })
 
   app.put('/pr/:id', auth, async (req, reply) => {
-    const { lines, ...data } = req.body as any
+    const prId  = (req.params as any).id
+    const body  = req.body as Record<string, unknown>
+
+    // Tenant-scoped read — never trust the request body for tenant.
+    const existing = await app.prisma.purchaseRequisition.findFirst({
+      where: { id: prId, tenantId: req.tenant.id },
+    })
+    if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'PR not found' })
+
+    const guard = validatePrEditable(existing)
+    if (!guard.ok) {
+      return reply.code(422).send({
+        code: 'WORKFLOW_INVALID_STATE',
+        message: `Cannot edit a PR in ${guard.status} status — only DRAFT PRs are editable`,
+      })
+    }
+
+    // Filter the payload down to the explicitly editable fields. Anything else
+    // (prRef, requesterId, entityId, createdAt, status …) is silently dropped.
+    const editable: Record<string, unknown> = {}
+    for (const f of EDITABLE_FIELDS) {
+      if (f === 'lines' || f === 'estimatedTotal') continue   // handled below
+      if (f in body) editable[f] = body[f]
+    }
+    const incomingLines = Array.isArray(body.lines) ? body.lines as any[] : null
+
+    // Compute the changed-fields list for the audit log BEFORE we mutate.
+    const changedFields = diffPrFields(existing, { ...editable, ...(incomingLines ? { lines: incomingLines } : {}) })
+
     const pr = await app.prisma.$transaction(async tx => {
-      const p = await tx.purchaseRequisition.update({ where: { id: (req.params as any).id }, data })
-      if (lines) {
+      const data: Record<string, unknown> = { ...editable }
+      if (incomingLines) {
+        data.estimatedTotal = calcEstimatedTotal(incomingLines)
+      }
+      const p = await tx.purchaseRequisition.update({ where: { id: prId }, data })
+      if (incomingLines) {
         await tx.purchaseRequisitionLine.deleteMany({ where: { prId: p.id } })
-        if (lines.length) await tx.purchaseRequisitionLine.createMany({ data: lines.map((l: any, i: number) => ({ ...l, prId: p.id, lineNo: i + 1 })) })
+        if (incomingLines.length) {
+          await tx.purchaseRequisitionLine.createMany({
+            data: incomingLines.map((l: any, i: number) => ({ ...l, prId: p.id, lineNo: i + 1 })),
+          })
+        }
       }
       return p
     })
+
+    // Audit log — append-only, never failing the request on log errors.
+    try {
+      await app.prisma.auditLog.create({
+        data: {
+          tenantId:   req.tenant.id,
+          userId:     req.user.sub,
+          action:     'pr.edited',
+          entityType: 'purchase_requisition',
+          entityId:   pr.id,
+          after:      { changedFields, userName: (req.user as any).name ?? null },
+        },
+      })
+    } catch (err) {
+      app.log.warn({ err, prId }, 'audit log write failed for pr.edited')
+    }
+
     return reply.send(pr)
   })
 

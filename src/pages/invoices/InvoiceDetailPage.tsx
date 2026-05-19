@@ -633,6 +633,8 @@ export default function InvoiceDetailPage() {
       <MasterPageHeader
         title={inv.invoiceNumber}
         description={`${inv.vendor?.legalName ?? 'Unmatched vendor'} · ${formatDate(inv.invoiceDate)}`}
+        backLabel="Invoices"
+        backTo="/invoices"
         actions={
           <div className="flex items-center gap-2 flex-wrap">
             {canEdit && (
