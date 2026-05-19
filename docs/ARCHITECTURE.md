@@ -1,6 +1,6 @@
 # Procinix v2 (S2P) — Architecture
 
-_Last updated: 2026-05-19 (dashboard KPIs + charts)_
+_Last updated: 2026-05-19 (simplified invoice creation — single InvoiceFormPage)_
 
 Indian Source-to-Pay (S2P) platform — Procurement, Goods Receipt, AP Invoice processing, Payments, Vendor management, Approvals and Masters — for mid-market Indian enterprises. Multi-tenant, RBAC-gated, n8n-driven email ingestion, Gemini OCR.
 
@@ -66,7 +66,8 @@ src/                                    # React frontend
     purchase-orders/  PurchaseOrdersPage · PRFormPage · POFormPage
     grn/  GRNPage · GRNFormPage
     invoices/  InvoiceListPage · InvoiceFormPage · InvoiceDetailPage · InvoiceNewPage · InvoiceReviewQueuePage ·
-               InvoiceTypeSelector · InvoiceCreatePO · InvoiceCreateDirect · components/invoice-shared.ts
+               components/invoice-shared.ts
+               (InvoiceTypeSelector / InvoiceCreatePO / InvoiceCreateDirect — orphaned wizard files, retained on disk but not routed; see §10b)
     payments/  PaymentListPage · PaymentDetailPage
     workflow/WorkflowHubPage             # /workflow — engine entry
     masters/                             # MastersPage + 30+ masters
@@ -394,24 +395,28 @@ Zustand store; `isAuthenticated` driven by presence of cookies. The store loads 
 
 ## §10b Invoice creation — two-path flow
 
-`POST /invoices/new` no longer goes straight to a form. The route renders `InvoiceTypeSelector`, which branches into one of two creation paths.
+`/invoices/new` renders the existing [InvoiceFormPage.tsx](../src/pages/invoices/InvoiceFormPage.tsx) for both PO-based and direct invoices. The form switches modes based on a `?type=po|direct` query param; opening `/invoices/new` with no query param renders a small `InvoiceTypePicker` modal (a two-card overlay) that flips the URL to the chosen mode and lets the rest of the form mount.
 
-### §10b.1 PO-based invoice (`/invoices/new/po`)
+This replaces an earlier wizard experiment ([InvoiceTypeSelector.tsx](../src/pages/invoices/InvoiceTypeSelector.tsx), [InvoiceCreatePO.tsx](../src/pages/invoices/InvoiceCreatePO.tsx), [InvoiceCreateDirect.tsx](../src/pages/invoices/InvoiceCreateDirect.tsx)) — those files remain on disk but are no longer routed; do not navigate to them.
 
-[InvoiceCreatePO.tsx](../src/pages/invoices/InvoiceCreatePO.tsx) — 4-step wizard: **Vendor → Link PO → Details → Review**.
+### §10b.1 PO-based mode (`/invoices/new?type=po`)
 
-- **Vendor step** — picks an `ACTIVE` non-`INTERCOMPANY` vendor from `/api/masters/vendors`.
-- **Link PO step** — fetches `GET /api/po?vendorId=X&entityId=Y&status=APPROVED&hasOpenValue=true`. Renders a multi-select table with PO ref / date / total / **consumed (with progress bar, amber > 80%)** / open value / GRN count. Per selected PO the user picks **PARTIAL** or **FULL** consumption and an invoice amount (auto-clamped on FULL). Match-type toggle `2-way` vs `3-way`; 3-way is disabled when no GRN exists on any selected PO and shows an amber hint banner if a GRN is available but the user picked 2-way.
-- **Details step** — invoice number, dates; PO refs render as chips; total amount auto-summed from the link drafts.
-- **Review step** — final read-only summary then `POST /api/invoices` with `poRefs[]` + `matchType`.
+A `POSelectionPanel` renders above Section A:
 
-### §10b.2 Direct invoice (`/invoices/new/direct`)
+- Vendor dropdown — picking a vendor fires `GET /api/po?vendorId=X&entityId=Y&status=APPROVED&hasOpenValue=true` to list open POs.
+- Open POs table with PO ref / date / open value / GRN count. Picking one auto-fills the form's `vendorId`, `entityId`, `currencyCode`, and `poRef`.
+- Consumption toggle: `PARTIAL` / `FULL`.
+- Match-type toggle: `2-way` / `3-way`. 3-way disabled when the selected PO has no GRN.
 
-[InvoiceCreateDirect.tsx](../src/pages/invoices/InvoiceCreateDirect.tsx) — single-page form. Sections A Cost Allocation, B Vendor & Invoice Details, C Amount.
+At submit, the panel's selection is threaded into the create payload as `poRefs: [{ poId, consumptionType, invoiceAmount: totals.totalAmount }]` and `matchType`. The existing backend route at [server/src/routes/invoices.ts:114](../server/src/routes/invoices.ts#L114) handles `validatePOConsumption()` and `InvoicePOLink` creation atomically.
 
-- Mandatory **Cost Centre + GL Code** from `useMasterData()` / `/api/masters/cost-centres` + `/api/masters/gl-codes` (only `status === 'ACTIVE'`).
-- PO reference field is locked with an amber `DIRECT — no PO` chip.
-- When `totalAmount > ₹25,000`: shows a blue info banner pointing at workflow code `WF-INV-DIRECT-L2`; the engine routes the invoice through that 2-stage L2 flow on submit. No UI hardcoding of the lane.
+### §10b.2 Direct mode (`/invoices/new?type=direct`)
+
+Same InvoiceFormPage, three render-time differences:
+
+- PO reference field is replaced by a read-only "Not applicable" box with an amber `DIRECT — no PO` chip; an `<input type="hidden">` keeps the form value empty so the backend never receives a phantom PO ref.
+- Cost Centre + GL Code fields in Section A become required (`register(..., { required: mode === 'direct' })`).
+- When `totals.totalAmount > ₹25,000`: blue info banner above Section A pointing at workflow code `WF-INV-DIRECT-L2`. The engine routes the invoice through that 2-stage L2 flow on submit. No UI hardcoding of the lane.
 
 ### §10b.3 Backend changes
 

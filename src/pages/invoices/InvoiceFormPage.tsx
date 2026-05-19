@@ -1,16 +1,20 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Plus, Trash2, Loader2, Upload, FileText, AlertTriangle, Send,
+  Plus, Trash2, Loader2, Upload, FileText, AlertTriangle, Send, Info, Zap,
   ChevronDown, ChevronLeft, ChevronRight, X,
 } from 'lucide-react'
 import { http } from '../../lib/http'
 import { MasterPageHeader, FormInput, FormSelect, FormTextarea } from '../../components/masters/MasterFormLayout'
 import { useAuthStore } from '../../stores/auth.store'
-import { formatCurrency } from '../../lib/utils/formatters'
+import { formatCurrency, formatDate } from '../../lib/utils/formatters'
 import { cn } from '../../lib/utils'
+
+// Direct-invoice L2 threshold — also baked into WF-INV-DIRECT-L2 (prisma/seed.ts).
+// Above this, the L2 approval workflow kicks in for direct (non-PO) invoices.
+const L2_THRESHOLD = 25_000
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -54,6 +58,9 @@ interface FormValues {
   currencyCode:       string
   poRef?:             string
   irnNumber?:         string
+  // Header-level cost allocation — required when direct (?type=direct), optional otherwise
+  costCentreId?:      string
+  glCodeId?:          string
   // Section C — additional
   narration?:         string
   periodFrom?:        string
@@ -63,6 +70,19 @@ interface FormValues {
   retentionGlCodeId?: string
   // Lines
   lines: LineItem[]
+}
+
+interface POSummary {
+  id:             string
+  poRef:          string
+  poDate:         string
+  vendorId:       string
+  entityId:       string
+  totalAmount:    string | number
+  consumedAmount: string | number
+  openValue:      number
+  grnCount:       number
+  status:         string
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -344,6 +364,26 @@ export default function InvoiceFormPage() {
   const qc       = useQueryClient()
   const authUser = useAuthStore(s => s.user)
 
+  // Mode is derived from the ?type query param on the /invoices/new route.
+  //   ?type=po     → PO selection panel above Section A, poRef populated by picker
+  //   ?type=direct → poRef locked with amber "DIRECT — no PO" chip + costCentre/GL required
+  //   no ?type     → modal overlay forcing the choice (only when creating new)
+  //   editing      → ignore query, always render the full form
+  const [searchParams, setSearchParams] = useSearchParams()
+  const queryType = searchParams.get('type')
+  const mode: 'edit' | 'po' | 'direct' | 'choose' =
+    isEdit ? 'edit'
+    : queryType === 'po'     ? 'po'
+    : queryType === 'direct' ? 'direct'
+    :                          'choose'
+
+  // PO-mode selection state — single PO per invoice (matches the existing
+  // POST /api/invoices poRefs[] payload). consumptionType + matchType flow
+  // into the InvoicePOLink rows + Invoice.matchType at submit time.
+  const [selectedPoId,    setSelectedPoId]    = useState<string | null>(null)
+  const [consumptionType, setConsumptionType] = useState<'PARTIAL' | 'FULL'>('PARTIAL')
+  const [matchType,       setMatchType]       = useState<'2way' | '3way'>('2way')
+
   const [leftOpen, setLeftOpen]   = useState(true)
   const [file, setFile]           = useState<File | null>(null)
   const [fileURL, setFileURL]     = useState<string | null>(null)
@@ -433,6 +473,17 @@ export default function InvoiceFormPage() {
 
   const totals         = recalcTotals(lines)
   const selectedVendor = useMemo(() => (vendors as any[]).find((v: any) => v.id === vendorId), [vendorId, vendors])
+
+  // Open POs for PO mode — only fires when vendor + entity are picked. Reuses
+  // GET /api/po with hasOpenValue=true so fully-consumed POs are pre-filtered.
+  const { data: openPOs = [], isLoading: posLoading } = useQuery<POSummary[]>({
+    queryKey: ['po-list-for-invoice', vendorId, entityId],
+    queryFn:  () => http.get<POSummary[]>(`/api/po?vendorId=${vendorId}&entityId=${entityId}&status=APPROVED&hasOpenValue=true`),
+    enabled:  mode === 'po' && !!vendorId && !!entityId,
+    staleTime: 30_000,
+  })
+  const selectedPo  = useMemo(() => (openPOs ?? []).find(p => p.id === selectedPoId) ?? null, [openPOs, selectedPoId])
+  const triggersL2  = mode === 'direct' && (Number(totals.totalAmount) || 0) > L2_THRESHOLD
 
   // Auto-populate entity + department from /auth/me. Two passes:
   // (1) immediate — fires as soon as currentUser resolves
@@ -546,6 +597,8 @@ export default function InvoiceFormPage() {
   // path. fileBase64/fileMimeType/fileName get stripped by the update route
   // (it spreads `data` and Prisma ignores unknown keys via the route handler),
   // but we only attach for new invoices to avoid re-uploading on every edit.
+  // PO mode also threads poRefs[] + matchType into the create payload so the
+  // backend creates the InvoicePOLink rows + bumps PO.consumedAmount.
   const buildPayload = useCallback(async (data: FormValues) => {
     const base: Record<string, unknown> = { ...data, ...totals }
     if (!isEdit && file) {
@@ -553,8 +606,12 @@ export default function InvoiceFormPage() {
       base.fileMimeType = file.type
       base.fileName     = file.name
     }
+    if (!isEdit && mode === 'po' && selectedPoId) {
+      base.poRefs   = [{ poId: selectedPoId, consumptionType, invoiceAmount: Number(totals.totalAmount) || 0 }]
+      base.matchType = matchType
+    }
     return base
-  }, [file, isEdit, totals])
+  }, [file, isEdit, totals, mode, selectedPoId, consumptionType, matchType])
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const saveDraft = useMutation({
@@ -587,6 +644,17 @@ export default function InvoiceFormPage() {
 
   if (isEdit && loadingInv) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+  }
+
+  // Type-selector modal — only when creating new with no ?type query param.
+  // Clicking a card flips ?type and the rest of the form mounts.
+  if (mode === 'choose') {
+    return (
+      <InvoiceTypePicker
+        onPick={t => setSearchParams({ type: t }, { replace: true })}
+        onCancel={() => navigate('/invoices')}
+      />
+    )
   }
 
   const isPending = saveDraft.isPending || submitForApproval.isPending
@@ -637,6 +705,51 @@ export default function InvoiceFormPage() {
         {/* RIGHT — scrollable form */}
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-6 sm:px-6 space-y-6 max-w-[1400px]">
+
+            {/* PO selection panel — only when mode=po. Sits above Section A so
+                vendor + entity + currency + poRef can be auto-populated before
+                the user touches the rest of the form. */}
+            {mode === 'po' && !isEdit && (
+              <POSelectionPanel
+                vendors={vendors as any[]}
+                vendorId={vendorId ?? ''}
+                onVendorChange={v => {
+                  setValue('vendorId', v, { shouldDirty: true })
+                  setSelectedPoId(null)
+                }}
+                entityId={entityId ?? ''}
+                pos={openPOs}
+                loading={posLoading}
+                selectedPoId={selectedPoId}
+                onSelectPo={po => {
+                  setSelectedPoId(po.id)
+                  setValue('vendorId',     po.vendorId,    { shouldDirty: true })
+                  setValue('entityId',     po.entityId,    { shouldDirty: true })
+                  setValue('poRef',        po.poRef,       { shouldDirty: true })
+                  setValue('currencyCode', 'INR',          { shouldDirty: true })
+                  // 3-way only available when a GRN exists for the PO.
+                  if (po.grnCount === 0 && matchType === '3way') setMatchType('2way')
+                }}
+                consumptionType={consumptionType}
+                onConsumptionChange={setConsumptionType}
+                matchType={matchType}
+                onMatchTypeChange={setMatchType}
+                selectedPo={selectedPo}
+                currency={currencyCode}
+              />
+            )}
+
+            {/* Direct-mode L2 banner — kicks in when total crosses ₹25,000 */}
+            {triggersL2 && (
+              <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5">
+                <Info className="h-4 w-4 text-blue-700 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-blue-700">
+                  Amount exceeds ₹{L2_THRESHOLD.toLocaleString('en-IN')} — will route through{' '}
+                  <span className="font-semibold">L2 approval</span> (Finance Manager → CFO) per workflow rule{' '}
+                  <code className="font-mono text-xs">WF-INV-DIRECT-L2</code>.
+                </p>
+              </div>
+            )}
 
             {/* A. Invoice Header */}
             <div className="rounded-xl border border-border bg-card p-6">
@@ -709,8 +822,45 @@ export default function InvoiceFormPage() {
                     {['INR','USD','EUR','GBP','AED','SGD'].map(c => <option key={c}>{c}</option>)}
                   </FormSelect>
                 </Field>
-                <Field label="PO reference">
-                  <FormInput placeholder="PO-2025-0001" {...register('poRef')} />
+                {/* PO reference — locked with an amber chip in direct mode */}
+                {mode === 'direct' ? (
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                      PO reference
+                      <span className="rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium">
+                        DIRECT — no PO
+                      </span>
+                    </label>
+                    <div className="mt-1 flex min-h-9 items-center rounded-lg border border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                      Not applicable
+                    </div>
+                    <input type="hidden" {...register('poRef')} value="" />
+                  </div>
+                ) : (
+                  <Field label="PO reference">
+                    <FormInput placeholder="PO-2025-0001" readOnly={mode === 'po' && !!selectedPoId}
+                      className={cn(mode === 'po' && !!selectedPoId && 'bg-muted/40')}
+                      {...register('poRef')} />
+                  </Field>
+                )}
+
+                {/* Cost centre + GL code — required when direct (direct invoices need explicit
+                    cost allocation since they don't ride on a PO's allocation). */}
+                <Field label={`Cost centre${mode === 'direct' ? ' *' : ''}`}>
+                  <FormSelect {...register('costCentreId', { required: mode === 'direct' })}>
+                    <option value="">Select cost centre…</option>
+                    {(costCentres as any[]).filter((c: any) => c.status === 'ACTIVE').map((c: any) => (
+                      <option key={c.id} value={c.id}>{c.code} — {c.name}</option>
+                    ))}
+                  </FormSelect>
+                </Field>
+                <Field label={`GL code${mode === 'direct' ? ' *' : ''}`}>
+                  <FormSelect {...register('glCodeId', { required: mode === 'direct' })}>
+                    <option value="">Select GL code…</option>
+                    {(glCodes as any[]).filter((g: any) => g.status === 'ACTIVE').map((g: any) => (
+                      <option key={g.id} value={g.id}>{g.code} — {g.name}</option>
+                    ))}
+                  </FormSelect>
                 </Field>
 
                 <Field label="IRN (e-Invoice)" span>
@@ -981,6 +1131,190 @@ export default function InvoiceFormPage() {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Type-selector modal ─────────────────────────────────────────────────────
+// Centred two-card picker, shown when /invoices/new is opened without ?type.
+// Clicking a card updates the URL — the rest of InvoiceFormPage mounts on the
+// next render with the matching mode.
+function InvoiceTypePicker({ onPick, onCancel }: {
+  onPick:   (t: 'po' | 'direct') => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="w-full max-w-2xl mx-4 rounded-2xl border border-border bg-card shadow-lg">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div>
+            <h2 className="text-base font-semibold">New invoice</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Pick a path</p>
+          </div>
+          <button onClick={onCancel} className="rounded-md p-1 hover:bg-muted" aria-label="Cancel">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 gap-3 p-6 sm:grid-cols-2">
+          <button
+            onClick={() => onPick('po')}
+            className="group flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-teal-300 hover:ring-4 hover:ring-teal-100"
+          >
+            <div className="rounded-lg border border-teal-200 bg-teal-50 p-2 text-teal-700">
+              <FileText className="h-5 w-5" />
+            </div>
+            <h3 className="text-sm font-semibold">PO-based invoice</h3>
+            <p className="text-xs text-muted-foreground">References an approved PO. Supports 2-way or 3-way match.</p>
+          </button>
+          <button
+            onClick={() => onPick('direct')}
+            className="group flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-blue-300 hover:ring-4 hover:ring-blue-100"
+          >
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-2 text-blue-700">
+              <Zap className="h-5 w-5" />
+            </div>
+            <h3 className="text-sm font-semibold">Direct invoice (no PO)</h3>
+            <p className="text-xs text-muted-foreground">Utilities, reimbursements, one-off purchases.</p>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── PO selection panel (mode=po only) ───────────────────────────────────────
+// Renders above Section A. Vendor dropdown drives the open-PO list query;
+// picking a PO sets the form's vendorId / entityId / currency / poRef and
+// surfaces consumption-type + match-type toggles. The 3-way toggle is gated
+// on the PO actually having a GRN.
+function POSelectionPanel({
+  vendors, vendorId, onVendorChange,
+  entityId, pos, loading,
+  selectedPoId, onSelectPo,
+  consumptionType, onConsumptionChange,
+  matchType, onMatchTypeChange,
+  selectedPo, currency,
+}: {
+  vendors:             any[]
+  vendorId:            string
+  onVendorChange:      (v: string) => void
+  entityId:            string
+  pos:                 POSummary[]
+  loading:             boolean
+  selectedPoId:        string | null
+  onSelectPo:          (po: POSummary) => void
+  consumptionType:     'PARTIAL' | 'FULL'
+  onConsumptionChange: (c: 'PARTIAL' | 'FULL') => void
+  matchType:           '2way' | '3way'
+  onMatchTypeChange:   (m: '2way' | '3way') => void
+  selectedPo:          POSummary | null
+  currency:            string
+}) {
+  const external = vendors.filter(v => v.status === 'ACTIVE' && v.vendorType !== 'INTERCOMPANY')
+  const hasGrn   = (selectedPo?.grnCount ?? 0) > 0
+
+  return (
+    <div className="rounded-xl border border-teal-200 bg-teal-50/30 p-5 space-y-3">
+      <div className="flex items-center gap-2">
+        <FileText className="h-4 w-4 text-teal-700" />
+        <h3 className="text-sm font-semibold text-teal-900">Link a PO</h3>
+        <span className="text-xs text-teal-700/80">Vendor, entity, currency &amp; PO ref will auto-fill</span>
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-muted-foreground">Vendor</label>
+        <FormSelect value={vendorId} onChange={e => onVendorChange(e.target.value)}>
+          <option value="">Select vendor…</option>
+          {external.map((v: any) => (
+            <option key={v.id} value={v.id}>{v.legalName} — {v.vendorCode}</option>
+          ))}
+        </FormSelect>
+      </div>
+
+      {vendorId && (
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Open POs for this vendor + entity</label>
+          {!entityId ? (
+            <p className="text-xs text-amber-700 mt-1">Pick an entity in Section A first — POs are entity-scoped.</p>
+          ) : loading ? (
+            <p className="text-xs text-muted-foreground mt-1">Loading POs…</p>
+          ) : pos.length === 0 ? (
+            <p className="text-xs text-muted-foreground mt-1">No open POs for this vendor on this entity.</p>
+          ) : (
+            <div className="mt-1 rounded-lg border border-border bg-background overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="border-b border-border bg-muted/30">
+                  <tr>
+                    <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Pick</th>
+                    <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">PO ref</th>
+                    <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">PO date</th>
+                    <th className="px-3 py-1.5 text-right font-medium text-muted-foreground">Open value</th>
+                    <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">GRNs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pos.map(po => {
+                    const selected = po.id === selectedPoId
+                    return (
+                      <tr key={po.id} className={cn('border-b border-border last:border-0 cursor-pointer hover:bg-muted/30', selected && 'bg-teal-50')} onClick={() => onSelectPo(po)}>
+                        <td className="px-3 py-1.5">
+                          <input type="radio" checked={selected} onChange={() => onSelectPo(po)} />
+                        </td>
+                        <td className="px-3 py-1.5 font-mono">{po.poRef}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{formatDate(po.poDate)}</td>
+                        <td className="px-3 py-1.5 text-right tabular-nums font-mono">{formatCurrency(po.openValue, currency)}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{po.grnCount}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {selectedPo && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-1">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Consumption</label>
+            <div className="mt-1 flex rounded-lg border border-input overflow-hidden">
+              {(['PARTIAL', 'FULL'] as const).map(t => (
+                <button
+                  type="button" key={t}
+                  onClick={() => onConsumptionChange(t)}
+                  className={cn('flex-1 px-3 py-1.5 text-xs font-medium', consumptionType === t ? 'bg-teal-600 text-white' : 'bg-background hover:bg-muted')}
+                >
+                  {t === 'PARTIAL' ? 'Partial' : 'Full'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Match type</label>
+            <div className="mt-1 flex rounded-lg border border-input overflow-hidden">
+              {(['2way', '3way'] as const).map(t => {
+                const disabled = t === '3way' && !hasGrn
+                return (
+                  <button
+                    type="button" key={t}
+                    onClick={() => !disabled && onMatchTypeChange(t)}
+                    disabled={disabled}
+                    title={disabled ? 'No GRN exists for this PO yet' : ''}
+                    className={cn(
+                      'flex-1 px-3 py-1.5 text-xs font-medium',
+                      matchType === t ? 'bg-teal-600 text-white' : 'bg-background hover:bg-muted',
+                      disabled && 'opacity-50 cursor-not-allowed',
+                    )}
+                  >
+                    {t === '2way' ? '2-way (Inv ↔ PO)' : '3-way (Inv ↔ PO ↔ GRN)'}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
