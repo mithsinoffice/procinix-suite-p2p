@@ -14,8 +14,11 @@
 //   expense: line.glCodeId → itemEntityMapping.expenseGlCodeId
 //            → invoice.glCodeId (direct invoices) → default '5080' (Misc)
 //   prepaid: tenant GL named matching /prepaid/i → default '1060'
-//   AP:      tenant GL with accountType=LIABILITY + name matching
-//            /accounts? payable/i → default '2030'
+//   AP:      see resolveApGlCodeFromList — exact name → 203x code range →
+//            /accounts payable/i → /payable/i last-resort → throws if none.
+//            Loose /payable/i match was demoted because it would otherwise
+//            return TDS Payable for the AP credit leg, which silently
+//            mis-allocates the liability and breaks reconciliation.
 
 import type { PrismaClient } from '@prisma/client'
 import { buildAccrualJV, buildAmortizationJV, computeAmortizationSchedule, type AmortizationBasis } from './amortization-engine.service.js'
@@ -23,23 +26,74 @@ import { buildNullificationJV, periodOf, type JournalEntryLike } from './provisi
 
 interface Ctx { tenantId: string; userId: string }
 
-// Cached per-tenant defaults — fetched once per trigger run; falls back to
-// hardcoded codes when the tenant has no matching GL row (e.g. fresh
-// install). Returning codes (strings), not ids — JournalEntry stores codes.
-async function resolveTenantDefaults(prisma: PrismaClient, tenantId: string): Promise<{ prepaidGlCode: string; apGlCode: string }> {
-  const [prepaid, ap] = await Promise.all([
+// Pure resolver — chooses the Accounts Payable GL code from a list of the
+// tenant's LIABILITY GLs. Exported so the priority can be unit-tested
+// without a live DB. Priority is strict and order-sensitive: an earlier
+// match short-circuits later steps.
+//
+//   1. Exact name match `accounts payable` (case-insensitive)
+//   2. Code starts with '203' — matches the seed range
+//      (2030 IT Vendors / 2031 Services / 2032 Rent)
+//   3. Name contains `accounts payable` (handles "Accounts Payable — Foo")
+//   4. Last-resort: name contains `payable` — only fires when nothing
+//      better exists. Picking TDS Payable here mis-allocates the liability,
+//      so this step is intentionally last.
+//
+// Returns null when no candidate matches; the DB-aware wrapper throws.
+export function resolveApGlCodeFromList(gls: { code: string; name: string }[]): string | null {
+  const exact = gls.find(g => g.name.toLowerCase() === 'accounts payable')
+  if (exact) return exact.code
+
+  const codeRange = gls.find(g => g.code.startsWith('203'))
+  if (codeRange) return codeRange.code
+
+  const fuzzy = gls.find(g => g.name.toLowerCase().includes('accounts payable'))
+  if (fuzzy) return fuzzy.code
+
+  const fallback = gls.find(g => g.name.toLowerCase().includes('payable'))
+  if (fallback) return fallback.code
+
+  return null
+}
+
+async function resolveApGlCode(
+  prisma:   PrismaClient,
+  tenantId: string,
+  entityId: string | null,
+): Promise<string> {
+  const gls = await prisma.glCode.findMany({
+    where:   { tenantId, status: 'ACTIVE', accountType: 'LIABILITY' },
+    select:  { code: true, name: true },
+    orderBy: { code: 'asc' },
+  })
+  const code = resolveApGlCodeFromList(gls)
+  if (!code) {
+    throw new Error(
+      `No Accounts Payable GL found for entity ${entityId ?? '(default)'} — ` +
+      `configure AP GL in entity master or seed GL codes starting with 203x`,
+    )
+  }
+  return code
+}
+
+// Cached per-tenant defaults — fetched once per trigger run. Prepaid uses
+// the loose /prepaid/i match (only one match in the seed); AP delegates to
+// the strict resolver above which throws on miss.
+async function resolveTenantDefaults(
+  prisma:   PrismaClient,
+  tenantId: string,
+  entityId: string | null,
+): Promise<{ prepaidGlCode: string; apGlCode: string }> {
+  const [prepaid, apCode] = await Promise.all([
     prisma.glCode.findFirst({
-      where: { tenantId, status: 'ACTIVE', accountType: 'ASSET', name: { contains: 'Prepaid' } },
+      where:  { tenantId, status: 'ACTIVE', accountType: 'ASSET', name: { contains: 'Prepaid' } },
       select: { code: true },
     }),
-    prisma.glCode.findFirst({
-      where: { tenantId, status: 'ACTIVE', accountType: 'LIABILITY', name: { contains: 'Payable' } },
-      select: { code: true },
-    }),
+    resolveApGlCode(prisma, tenantId, entityId),
   ])
   return {
     prepaidGlCode: prepaid?.code ?? '1060',
-    apGlCode:      ap?.code      ?? '2030',
+    apGlCode:      apCode,
   }
 }
 
@@ -113,7 +167,7 @@ export async function triggerOnInvoiceApproval(
   })
   if (existing) return { skipped: 'ALREADY_TRIGGERED' }
 
-  const defaults = await resolveTenantDefaults(prisma, ctx.tenantId)
+  const defaults = await resolveTenantDefaults(prisma, ctx.tenantId, invoice.entityId)
   const result: TriggerResult = { nullifications: [] }
 
   const hasPeriod    = !!(invoice.periodFrom && invoice.periodTo)
