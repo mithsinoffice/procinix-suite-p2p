@@ -176,11 +176,11 @@ function Field({ label, required, error, span, children }: {
 }) {
   return (
     <div className={cn('space-y-1.5', span && 'col-span-2')}>
-      <label className="text-sm font-medium">
-        {label}{required && <span className="text-destructive ml-0.5">*</span>}
+      <label className={cn('text-sm font-medium', error && 'text-red-600')}>
+        {label}{required && <span className={cn('ml-0.5', error ? 'text-red-600' : 'text-destructive')}>*</span>}
       </label>
       {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   )
 }
@@ -467,6 +467,13 @@ export default function InvoiceFormPage() {
     queryFn:  () => http.get<any>('/api/masters/items').then(toArray),
     staleTime: 5 * 60_000,
   })
+  // Needed for the line-item Item-master auto-fill: items reference TDS via
+  // tdsSectionId (FK) — we resolve the actual rate from defaultRate here.
+  const { data: tdsSections = [] } = useQuery({
+    queryKey: ['tds-sections-list'],
+    queryFn:  () => http.get<any>('/api/masters/tds-sections').then(toArray),
+    staleTime: 5 * 60_000,
+  })
 
   // ── Form ──────────────────────────────────────────────────────────────────
   const { register, control, handleSubmit, setValue, getValues, formState: { errors } } =
@@ -560,6 +567,35 @@ export default function InvoiceFormPage() {
     if (!l) return
     update(idx, recalcLine(l as LineItem, vendorState, entityState))
   }, [lines, vendorState, entityState, update])
+
+  // Item-master auto-fill: when the user picks an Item from the line dropdown,
+  // pull gstRate, tdsRate (via tdsSectionId → defaultRate), hsn/sac, uom,
+  // description, rcmApplicable onto the line, then run recalcLine so GST/TDS
+  // amounts populate immediately. Manual overrides remain possible — the
+  // user can still type a different GST% / TDS% after selection.
+  const applyItemPreset = useCallback((idx: number, itemId: string) => {
+    if (!itemId) return
+    const it = (items as any[]).find((x: any) => x.id === itemId)
+    if (!it) return
+
+    const current = (getValues(`lines.${idx}`) as LineItem | undefined) ?? emptyLine()
+    const section = (tdsSections as any[]).find((s: any) => s.id === it.tdsSectionId)
+    const tdsRate = section ? Number(section.defaultRate) || 0 : 0
+
+    const next: LineItem = {
+      ...current,
+      itemId,
+      itemCode:      it.itemCode ?? current.itemCode,
+      description:   current.description || it.name || '',
+      uom:           current.uom        || it.uom  || undefined,
+      hsnCode:       it.hsnCode  ?? current.hsnCode,
+      sacCode:       it.sacCode  ?? current.sacCode,
+      gstRate:       Number(it.gstRate) || 0,
+      tdsRate,
+      rcmApplicable: it.rcmApplicable ?? current.rcmApplicable ?? false,
+    }
+    update(idx, recalcLine(next, vendorState, entityState))
+  }, [items, tdsSections, vendorState, entityState, getValues, update])
 
   // GL / CC resolvers for the JV preview
   const glLabel = useCallback((glId?: string) => {
@@ -669,6 +705,20 @@ export default function InvoiceFormPage() {
     },
   })
 
+  // Smooth-scroll to the first invalid field on submit failure. RHF's default
+  // shouldFocusError still fires focus(); this just adds a smooth scroll so
+  // the user sees the red field appear in view rather than jumping silently.
+  const scrollToFirstError = useCallback((errs: Record<string, unknown>) => {
+    const firstKey = Object.keys(errs)[0]
+    if (!firstKey) return
+    const el = document.querySelector<HTMLElement>(`[name="${firstKey}"]`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // Defer focus so the smooth-scroll animation isn't preempted by focus().
+      setTimeout(() => el.focus({ preventScroll: true }), 250)
+    }
+  }, [])
+
   if (isEdit && loadingInv) {
     return <div className="flex items-center justify-center h-full"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
   }
@@ -701,13 +751,13 @@ export default function InvoiceFormPage() {
               Cancel
             </button>
             <button type="button" disabled={isPending}
-              onClick={handleSubmit(d => saveDraft.mutate(d))}
+              onClick={handleSubmit(d => saveDraft.mutate(d), scrollToFirstError)}
               className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60">
               {saveDraft.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1" /> : null}
               Save draft
             </button>
             <button type="button" disabled={isPending}
-              onClick={handleSubmit(d => submitForApproval.mutate(d))}
+              onClick={handleSubmit(d => submitForApproval.mutate(d), scrollToFirstError)}
               className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
               <Send className="h-3.5 w-3.5" />
               Submit for approval
@@ -876,16 +926,34 @@ export default function InvoiceFormPage() {
 
                 {/* Cost centre + GL code — required when direct (direct invoices need explicit
                     cost allocation since they don't ride on a PO's allocation). */}
-                <Field label={`Cost centre${mode === 'direct' ? ' *' : ''}`}>
-                  <FormSelect {...register('costCentreId', { required: mode === 'direct' })}>
+                <Field
+                  label="Cost centre"
+                  required={mode === 'direct'}
+                  error={errors.costCentreId?.message as string | undefined}
+                >
+                  <FormSelect
+                    className={cn(errors.costCentreId && 'border-red-500 focus:ring-red-500')}
+                    {...register('costCentreId', {
+                      required: mode === 'direct' ? 'Cost centre is required for direct invoices' : false,
+                    })}
+                  >
                     <option value="">Select cost centre…</option>
                     {(costCentres as any[]).filter((c: any) => c.status === 'ACTIVE').map((c: any) => (
                       <option key={c.id} value={c.id}>{c.code} — {c.name}</option>
                     ))}
                   </FormSelect>
                 </Field>
-                <Field label={`GL code${mode === 'direct' ? ' *' : ''}`}>
-                  <FormSelect {...register('glCodeId', { required: mode === 'direct' })}>
+                <Field
+                  label="GL code"
+                  required={mode === 'direct'}
+                  error={errors.glCodeId?.message as string | undefined}
+                >
+                  <FormSelect
+                    className={cn(errors.glCodeId && 'border-red-500 focus:ring-red-500')}
+                    {...register('glCodeId', {
+                      required: mode === 'direct' ? 'GL code is required for direct invoices' : false,
+                    })}
+                  >
                     <option value="">Select GL code…</option>
                     {(glCodes as any[]).filter((g: any) => g.status === 'ACTIVE').map((g: any) => (
                       <option key={g.id} value={g.id}>{g.code} — {g.name}</option>
@@ -930,13 +998,21 @@ export default function InvoiceFormPage() {
                   <tbody className="divide-y divide-border">
                     {fields.map((field, i) => {
                       const l = lines[i] ?? {}
+                      const itemReg = register(`lines.${i}.itemId`)
                       return (
                         <tr key={field.id} className="align-middle h-9 hover:bg-muted/10">
                           <td className="px-2 py-1.5 text-muted-foreground">{i + 1}</td>
                           <td className="px-2 py-1">
-                            <FormSelect className={CELL_SELECT} {...register(`lines.${i}.itemId`)}>
+                            <FormSelect
+                              className={CELL_SELECT}
+                              {...itemReg}
+                              onChange={(e) => {
+                                itemReg.onChange(e)
+                                applyItemPreset(i, e.target.value)
+                              }}
+                            >
                               <option value="">Item…</option>
-                              {(items as any[]).map((it: any) => <option key={it.id} value={it.id}>{it.code} — {it.name}</option>)}
+                              {(items as any[]).map((it: any) => <option key={it.id} value={it.id}>{it.itemCode ?? it.code} — {it.name}</option>)}
                             </FormSelect>
                           </td>
                           <td className="px-2 py-1">
@@ -963,10 +1039,21 @@ export default function InvoiceFormPage() {
                           <td className="px-2 py-1.5 tabular-nums font-mono text-right whitespace-nowrap">
                             {fmt(l.taxableAmount, currencyCode)}
                           </td>
-                          <td className="px-2 py-1">
-                            <FormInput className={CELL_INPUT} type="number" step="0.01" min="0" placeholder="18"
+                          <td className="px-2 py-1 relative">
+                            <FormInput
+                              className={cn(CELL_INPUT, l.itemId && 'pr-9')}
+                              type="number" step="0.01" min="0" placeholder="18"
                               {...register(`lines.${i}.gstRate`, { valueAsNumber: true })}
-                              onBlur={() => recalc(i)} />
+                              onBlur={() => recalc(i)}
+                            />
+                            {l.itemId && (
+                              <span
+                                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-blue-200 bg-blue-50 px-1 text-[9px] font-medium text-blue-600"
+                                title="Auto-filled from item master"
+                              >
+                                auto
+                              </span>
+                            )}
                           </td>
                           <td className="px-2 py-1.5 tabular-nums font-mono text-right text-green-700 whitespace-nowrap">
                             {fmt(l.cgstAmount, currencyCode)}
@@ -977,10 +1064,21 @@ export default function InvoiceFormPage() {
                           <td className="px-2 py-1.5 tabular-nums font-mono text-right text-blue-700 whitespace-nowrap">
                             {fmt(l.igstAmount, currencyCode)}
                           </td>
-                          <td className="px-2 py-1">
-                            <FormInput className={CELL_INPUT} type="number" step="0.01" min="0" placeholder="10"
+                          <td className="px-2 py-1 relative">
+                            <FormInput
+                              className={cn(CELL_INPUT, l.itemId && 'pr-9')}
+                              type="number" step="0.01" min="0" placeholder="10"
                               {...register(`lines.${i}.tdsRate`, { valueAsNumber: true })}
-                              onBlur={() => recalc(i)} />
+                              onBlur={() => recalc(i)}
+                            />
+                            {l.itemId && (
+                              <span
+                                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-blue-200 bg-blue-50 px-1 text-[9px] font-medium text-blue-600"
+                                title="Auto-filled from item master"
+                              >
+                                auto
+                              </span>
+                            )}
                           </td>
                           <td className="px-2 py-1.5 tabular-nums font-mono text-right text-amber-600 whitespace-nowrap">
                             {fmt(l.tdsAmount, currencyCode)}
