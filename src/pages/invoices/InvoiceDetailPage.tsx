@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   CheckCircle, XCircle, Send, Loader2, Edit, PauseCircle, PlayCircle,
-  ChevronLeft, ChevronRight, FileText,
+  ChevronLeft, ChevronRight, FileText, ExternalLink,
 } from 'lucide-react'
 import { http } from '../../lib/http'
 import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
@@ -130,10 +130,22 @@ function LeftPanel({ open, onToggle, fileUrl, fileName, mimeType, ocrConfidence,
 
       {open && (
         <div className="flex-1 flex flex-col p-4 gap-3 overflow-hidden">
-          {fileName && (
+          {(fileName || fileUrl) && (
             <div className="flex items-center gap-2 text-xs">
-              <FileText className="h-3.5 w-3.5 text-primary" />
-              <span className="font-medium truncate" title={fileName}>{fileName}</span>
+              <FileText className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+              <span className="font-medium truncate flex-1" title={fileName ?? ''}>{fileName ?? 'Attachment'}</span>
+              {fileUrl && (
+                <a
+                  href={fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded border border-input px-1.5 py-0.5 text-[10px] font-medium hover:bg-muted"
+                  title="Open in new tab"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Open
+                </a>
+              )}
             </div>
           )}
 
@@ -280,7 +292,9 @@ export default function InvoiceDetailPage() {
   const canRelease  = !isWfManaged && status === 'ON_HOLD'
   const canEdit     = status === 'DRAFT' || status === 'REJECTED'
 
-  // OCR raw data — only EmailPollerOcrResult shape exists today (confidence.overall is a single number)
+  // OCR raw data — only EmailPollerOcrResult shape exists today (confidence.overall is a single number).
+  // attachmentData/attachmentMime were stripped server-side as of getInvoice's slimming —
+  // the bytes are streamed via GET /api/invoices/:id/file instead.
   const ocr           = (inv.ocrRawData ?? null) as null | {
     confidence?:    { overall?: number }
     invoiceNumber?: string | null
@@ -289,19 +303,17 @@ export default function InvoiceDetailPage() {
     vendorPAN?:     string | null
     vendorName?:    string | null
     totalAmount?:   number | null
-    attachmentData?: string | null
-    attachmentMime?: string | null
   }
   const ocrConfidence = ocr?.confidence?.overall ?? inv.ocrConfidence ?? null
   const isOcrInvoice  = inv.channelType === 'EMAIL_INGEST' || !!ocr
   const fieldScore    = isOcrInvoice ? ocrConfidence : null
 
-  // Prefer real file URL; otherwise reconstruct a data URL from the bytes that
-  // the email-poller stashed in ocrRawData.attachmentData. Returns null when
-  // neither is present, which renders the LeftPanel "Document not available" placeholder.
-  const previewMime = ocr?.attachmentMime ?? inv.mimeType ?? 'application/pdf'
-  const previewUrl  = inv.fileUrl
-    ?? (ocr?.attachmentData ? `data:${previewMime};base64,${ocr.attachmentData}` : null)
+  // Stream bytes through the auth'd endpoint — covers both disk-stored uploads
+  // (manual flow) and the email-poller's JSON-blob bytes (legacy back-compat).
+  // The server's hasFile flag drives whether the LeftPanel renders the iframe
+  // or the "Document not available" placeholder.
+  const previewMime = inv.mimeType ?? 'application/pdf'
+  const previewUrl  = inv.hasFile ? `/api/invoices/${id}/file` : null
 
   const ingestedAuditLog = inv.auditLogs?.find((l: any) => l.action === 'EMAIL_INGESTED')
   const ingestedAt       = ingestedAuditLog?.createdAt ?? null

@@ -1,6 +1,6 @@
 # Procinix v2 (S2P) — Architecture
 
-_Last updated: 2026-05-19 (two-path invoice creation)_
+_Last updated: 2026-05-19 (invoice attachment storage)_
 
 Indian Source-to-Pay (S2P) platform — Procurement, Goods Receipt, AP Invoice processing, Payments, Vendor management, Approvals and Masters — for mid-market Indian enterprises. Multi-tenant, RBAC-gated, n8n-driven email ingestion, Gemini OCR.
 
@@ -430,6 +430,23 @@ Zustand store; `isAuthenticated` driven by presence of cookies. The store loads 
 ### §10b.4 Workflow seed — `WF-INV-DIRECT-L2`
 
 [prisma/seed.ts:861-876](../prisma/seed.ts#L861-L876) — new INVOICE-module definition, priority **25** (sits between INV-STD-LOW and INV-STD-MID). Conditions: `totalAmount >= 25000 AND isPOInvoice == false`. Stages: Finance Manager L2 → CFO L2 Sign-off. Catches direct invoices above the L2 threshold without breaking the existing amount-tier ladder (INV-STD-LOW/MID/HIGH).
+
+---
+
+## §10c Invoice attachment storage
+
+PDF / image attachments are stored on disk and streamed through an auth-gated endpoint — no `@fastify/static` mount, since invoices are tenant-scoped and the read must run through `req.tenant.id` checks.
+
+**Layout** — files land under `uploads/invoices/<tenantId>/<invoiceId>.<ext>`. `Invoice.fileUrl` holds the path relative to `uploads/` (e.g. `"invoices/<tenantId>/<invoiceId>.pdf"`) so a future move to S3 / Azure Blob only needs to swap the resolver in [invoice-file-storage.service.ts](../server/src/services/invoice-file-storage.service.ts). The `uploads/invoices/` tree is gitignored.
+
+**Write paths** — three entry points all funnel into `saveInvoiceFile()`:
+- `POST /api/invoices` with `fileBase64` / `fileMimeType` / `fileName` — manual upload from `InvoiceFormPage`. Bytes written after the DB transaction commits; storage failure logs but doesn't fail the create.
+- `POST /api/invoices/ingest` and `/webhooks/n8n/invoice-email` — both call `ingestInvoice()` in [invoice-ingestion.service.ts](../server/src/services/invoice-ingestion.service.ts), which now also persists the bytes when `base64Data` is supplied. Pre-OCR'd structured-data paths (`/webhooks/n8n/invoice-ingest`) have nothing to store.
+- Email poller — continues to stash bytes in `ocrRawData.attachmentData` (legacy JSON-blob path). New rows from this path don't yet hit disk; covered by the read-path fallback below.
+
+**Read path** — `GET /api/invoices/:id/file` (auth + tenant-scoped) calls `readInvoiceFile()`, which prefers disk (`fileUrl`) and falls back to `ocrRawData.attachmentData` for back-compat. Streams with `Content-Type: <mimeType>` and `Content-Disposition: inline`, plus `Cache-Control: private, max-age=300`. Path-traversal is refused by checking the resolved absolute path stays under `UPLOADS_ROOT`.
+
+**Detail page** — `getInvoice()` in [invoice.service.ts](../server/src/services/invoice.service.ts) strips `ocrRawData.attachmentData` from the response (so the JSON payload stays small) and adds a derived `hasFile: boolean`. The `InvoiceDetailPage` iframe points at `/api/invoices/${id}/file` when `hasFile` is true, and the LeftPanel header shows an "Open" button that opens the same URL in a new tab as a fallback when the in-page iframe fails to render.
 
 ---
 

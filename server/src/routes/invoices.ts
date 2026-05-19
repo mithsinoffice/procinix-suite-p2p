@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { createInvoice, listInvoices, getInvoice, approveInvoice, rejectInvoice } from '../services/invoice.service.js'
 import { startWorkflow } from '../services/workflow-engine.service.js'
 import { extractInvoiceFromFile } from '../services/gemini-ocr.service.js'
+import { saveInvoiceFile, readInvoiceFile } from '../services/invoice-file-storage.service.js'
 
 export async function invoiceRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
@@ -122,12 +123,18 @@ export async function invoiceRoutes(app: FastifyInstance) {
       poRefs = [],
       matchType,
       grnIds: _grnIds = [],
+      fileBase64,
+      fileMimeType,
+      fileName,
       ...data
     } = req.body as {
-      lines?: any[]
-      poRefs?: { poId: string; consumptionType: 'PARTIAL' | 'FULL'; invoiceAmount: number }[]
-      matchType?: '2way' | '3way'
-      grnIds?: string[]
+      lines?:        any[]
+      poRefs?:       { poId: string; consumptionType: 'PARTIAL' | 'FULL'; invoiceAmount: number }[]
+      matchType?:    '2way' | '3way'
+      grnIds?:       string[]
+      fileBase64?:   string
+      fileMimeType?: string
+      fileName?:     string
       [k: string]: unknown
     }
 
@@ -194,7 +201,46 @@ export async function invoiceRoutes(app: FastifyInstance) {
       })
       return inv
     })
+
+    // Persist the uploaded PDF/image after the transaction commits — disk I/O
+    // shouldn't hold the DB transaction open. fileUrl is a relative path under
+    // uploads/ so a future move to object storage only changes the resolver.
+    if (fileBase64 && fileMimeType) {
+      try {
+        const saved = await saveInvoiceFile(
+          req.tenant.id, invoice.id, fileBase64, fileMimeType, fileName ?? 'invoice',
+        )
+        await app.prisma.invoice.update({
+          where: { id: invoice.id },
+          data:  { fileUrl: saved.fileUrl, fileName: saved.fileName, mimeType: saved.mimeType },
+        })
+      } catch (e) {
+        // Don't fail the invoice create on a storage hiccup — just log and move on.
+        app.log.error({ err: e, invoiceId: invoice.id }, 'invoice file persist failed')
+      }
+    }
+
     return reply.code(201).send(invoice)
+  })
+
+  // ── Stream the original attachment ──
+  // Auth + tenant-scoped. Reads from disk if `fileUrl` is set, otherwise falls
+  // back to bytes stashed in `ocrRawData.attachmentData` (email-poller legacy
+  // path). Used by the detail-page iframe + "Open in new tab" fallback.
+  app.get('/:id/file', auth, async (req, reply) => {
+    const inv = await app.prisma.invoice.findFirst({
+      where:  { id: (req.params as any).id, tenantId: req.tenant.id },
+      select: { id: true, fileUrl: true, fileName: true, mimeType: true, ocrRawData: true },
+    })
+    if (!inv) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Invoice not found' })
+
+    const file = await readInvoiceFile(inv)
+    if (!file) return reply.code(404).send({ code: 'NOT_FOUND', message: 'No file attached' })
+
+    reply.header('Content-Type', file.mimeType)
+    reply.header('Content-Disposition', `inline; filename="${file.fileName.replace(/"/g, '')}"`)
+    reply.header('Cache-Control', 'private, max-age=300')
+    return reply.send(file.buffer)
   })
 
   // ── Update invoice ──

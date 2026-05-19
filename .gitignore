@@ -16,3 +16,7 @@ server/middleware/
 server/utils/
 server/db/
 server/config/
+
+# Invoice attachments — written by saveInvoiceFile(), served via
+# GET /api/invoices/:id/file. Per-tenant subdirs, must not enter VCS.
+uploads/invoices/

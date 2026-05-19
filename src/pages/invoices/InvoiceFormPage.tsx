@@ -542,10 +542,24 @@ export default function InvoiceFormPage() {
 
   const dismissOcr = useCallback(() => { setOcrError(null); setOcrConfidence(null) }, [])
 
+  // Builds the create/update payload with file bytes attached for the create
+  // path. fileBase64/fileMimeType/fileName get stripped by the update route
+  // (it spreads `data` and Prisma ignores unknown keys via the route handler),
+  // but we only attach for new invoices to avoid re-uploading on every edit.
+  const buildPayload = useCallback(async (data: FormValues) => {
+    const base: Record<string, unknown> = { ...data, ...totals }
+    if (!isEdit && file) {
+      base.fileBase64   = await fileToBase64(file)
+      base.fileMimeType = file.type
+      base.fileName     = file.name
+    }
+    return base
+  }, [file, isEdit, totals])
+
   // ── Mutations ─────────────────────────────────────────────────────────────
   const saveDraft = useMutation({
-    mutationFn: (data: FormValues) => {
-      const payload = { ...data, ...totals }
+    mutationFn: async (data: FormValues) => {
+      const payload = await buildPayload(data)
       return isEdit
         ? http.put<any>(`/api/invoices/${id}`, payload)
         : http.post<any>('/api/invoices', payload)
@@ -558,7 +572,7 @@ export default function InvoiceFormPage() {
 
   const submitForApproval = useMutation({
     mutationFn: async (data: FormValues) => {
-      const payload = { ...data, ...totals }
+      const payload = await buildPayload(data)
       const inv = isEdit
         ? await http.put<any>(`/api/invoices/${id}`, payload)
         : await http.post<any>('/api/invoices', payload)

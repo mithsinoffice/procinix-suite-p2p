@@ -170,7 +170,16 @@ export async function getInvoice(prisma: PrismaClient, id: string, tenantId: str
     },
   })
   if (!invoice) return err(Errors.notFound('Invoice', id))
-  return ok(invoice)
+
+  // Strip the inlined PDF bytes from ocrRawData so detail responses stay small —
+  // the bytes are streamed separately via GET /api/invoices/:id/file. `hasFile`
+  // tells the UI whether to render the preview at all.
+  const ocr = invoice.ocrRawData as { attachmentData?: string; attachmentMime?: string } | null
+  const hasFile = !!invoice.fileUrl || !!ocr?.attachmentData
+  const ocrSlim = ocr
+    ? (() => { const { attachmentData: _d, ...rest } = ocr; return rest })()
+    : ocr
+  return ok({ ...invoice, ocrRawData: ocrSlim, hasFile })
 }
 
 // ── Submit ──

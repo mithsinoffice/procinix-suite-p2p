@@ -5,6 +5,7 @@
 import type { PrismaClient } from '@prisma/client'
 import { extractInvoiceFromFile, type OcrInvoiceData } from './gemini-ocr.service.js'
 import { calculateMatchScore, routeInvoiceToLane } from './match-scoring.service.js'
+import { saveInvoiceFile } from './invoice-file-storage.service.js'
 import { writeAuditLog } from '../lib/audit.js'
 import { ok, err, type Result } from '../lib/result.js'
 import Fuse from 'fuse.js'
@@ -158,6 +159,24 @@ export async function ingestInvoice(
         createdByUserId: ctx.userId,
       },
     })
+
+    // Persist the original attachment to disk so the detail page can preview
+    // it via GET /api/invoices/:id/file. Only when base64 was actually supplied —
+    // structured-data paths (n8n pre-OCR) have nothing to store.
+    if (payload.base64Data && payload.mimeType) {
+      try {
+        const saved = await saveInvoiceFile(
+          ctx.tenantId, invoice.id,
+          payload.base64Data, payload.mimeType, payload.fileName ?? 'invoice',
+        )
+        await prisma.invoice.update({
+          where: { id: invoice.id },
+          data:  { fileUrl: saved.fileUrl, fileName: saved.fileName, mimeType: saved.mimeType },
+        })
+      } catch {
+        // Storage failures shouldn't sink the ingestion — log and continue.
+      }
+    }
 
     // Create line items from OCR
     if (extracted.lineItems?.length > 0) {
