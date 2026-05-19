@@ -374,8 +374,11 @@ model Invoice {
   mimeType           String?
   notes              String?           @db.Text
   narration          String?           @db.Text
-  expenseFrom        DateTime?         @db.Date
-  expenseTo          DateTime?         @db.Date
+  periodFrom         DateTime?         @db.Date
+  periodTo           DateTime?         @db.Date
+  // How the vendor was resolved by the match agent:
+  // 'gstin_lookup' | 'fuzzy_name' | 'email_domain' | 'manual' | null
+  vendorMatchMethod  String?
   retentionRequired  Boolean           @default(false)
   retentionAmount    Decimal?          @db.Decimal(15, 2)
   retentionGlCodeId  String?
@@ -430,7 +433,8 @@ model InvoiceLine {
   costCentreId   String?
   profitCentreId String?
   lineTotal      Decimal  @default(0) @db.Decimal(15, 2)
-  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice        Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  item           ItemMaster? @relation(fields: [itemId], references: [id])
 
   @@index([invoiceId])
   @@map("invoice_lines")
@@ -1355,6 +1359,7 @@ model ItemMaster {
   updatedAt             DateTime             @updatedAt
   entityMappings        ItemEntityMapping[]
   approvedVendors       ItemApprovedVendor[]
+  invoiceLines          InvoiceLine[]
 
   @@unique([tenantId, itemCode])
   @@index([tenantId, itemType, expenseType])

@@ -30,34 +30,6 @@ function OcrChip({ score }: { score: number | null | undefined }) {
   )
 }
 
-// ── Fuzzy match hint ────────────────────────────────────────────────────────
-// Shown when the stored value diverges from the raw OCR value — gives the
-// reviewer a quick "what did OCR see vs what was kept" diff.
-function FuzzyMatchHint({ ocrValue, storedValue, confidence }: {
-  ocrValue:    string | number | null | undefined
-  storedValue: string | number | null | undefined
-  confidence:  number | null | undefined
-}) {
-  const ocr    = ocrValue == null    ? '' : String(ocrValue)
-  const stored = storedValue == null ? '' : String(storedValue)
-  if (!confidence || confidence >= 99) return null
-  if (!ocr || ocr === stored) return null
-  return (
-    <div className="mt-1 rounded-lg border border-amber-200 bg-amber-50/50 px-2.5 py-1.5">
-      <p className="text-[10px] uppercase tracking-wide text-amber-700 font-semibold">Near matches</p>
-      <div className="mt-1 space-y-1">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-mono">{stored}</span>
-          <span className="text-xs text-green-600 font-medium">Used · {confidence}%</span>
-        </div>
-        <div className="flex items-center justify-between opacity-60">
-          <span className="text-xs font-mono">{ocr}</span>
-          <span className="text-xs text-muted-foreground">{Math.max(confidence - 12, 0)}%</span>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // ── Read-only field — visually matches InvoiceFormPage's input rows ─────────
 function ReadOnlyField({ label, value, chip, hint }: {
@@ -209,6 +181,263 @@ function ScoreCard({ label, score, max }: { label: string; score: number; max: n
   )
 }
 
+// ── Field-level chips ───────────────────────────────────────────────────────
+// Green pill — used when a per-field exact-match check passes against the
+// vendor master (GSTIN, PAN, currency). The score on this chip is NOT inherited
+// from OCR confidence — that was the bug the match-agent refactor fixed.
+function MatchChip({ matched, label }: { matched: boolean; label?: string }) {
+  const color = matched
+    ? 'bg-green-50 text-green-700 border-green-200'
+    : 'bg-red-50 text-red-700 border-red-200'
+  const text = matched ? (label ?? 'Exact match · 100%') : (label ?? 'Mismatch')
+  return (
+    <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ml-1.5', color)}>
+      {text}
+    </span>
+  )
+}
+
+// Blue pill — flags an auto-computed value (due-date from paymentTerms,
+// HSN/GST/TDS pulled from item_master). Hover reveals the source.
+function AutoChip({ label, title }: { label: string; title?: string }) {
+  return (
+    <span title={title} className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 px-1.5 py-0.5 text-[10px] font-medium ml-1.5">
+      Auto · {label}
+    </span>
+  )
+}
+
+// Method chip — how the vendor was resolved by the match agent.
+function MappingChip({ method }: { method: string | null | undefined }) {
+  if (!method) return null
+  const map: Record<string, { label: string; tone: string }> = {
+    gstin_lookup: { label: 'GSTIN lookup',  tone: 'bg-green-50 text-green-700 border-green-200' },
+    fuzzy_name:   { label: 'Fuzzy name',    tone: 'bg-amber-50 text-amber-700 border-amber-200' },
+    email_domain: { label: 'Email domain',  tone: 'bg-blue-50 text-blue-700 border-blue-200'  },
+    manual:       { label: 'Manual',        tone: 'bg-muted text-foreground border-input'     },
+  }
+  const m = map[method] ?? { label: method, tone: 'bg-muted text-foreground border-input' }
+  return (
+    <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ml-1.5', m.tone)}>
+      Mapped via {m.label}
+    </span>
+  )
+}
+
+// Inline amber warning rendered inside ReadOnlyField.value when an expected
+// field is null and we want to surface remediation in-context.
+function FieldWarning({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-amber-700">
+      <span className="rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[10px] font-medium">!</span>
+      {children}
+    </span>
+  )
+}
+
+// Top-3 vendor near-matches block — shown beneath the Vendor field when the
+// match agent's confidence is < 98 (so the reviewer can pick the right one).
+function VendorNearMatches({ matches }: { matches: VendorNearMatch[] | null | undefined }) {
+  if (!matches || matches.length === 0) return null
+  return (
+    <div className="mt-1 rounded-lg border border-amber-200 bg-amber-50/40 px-2.5 py-1.5">
+      <p className="text-[10px] uppercase tracking-wide text-amber-700 font-semibold">Near matches</p>
+      <div className="mt-1 space-y-1">
+        {matches.map(m => (
+          <div key={m.id} className="flex items-center justify-between">
+            <span className="text-xs">
+              <span className="font-medium">{m.legalName}</span>
+              <span className="text-muted-foreground ml-1.5">{m.vendorCode}</span>
+            </span>
+            <span className={cn(
+              'text-xs font-medium tabular-nums',
+              m.score >= 98 ? 'text-green-600' : m.score >= 80 ? 'text-amber-600' : 'text-muted-foreground',
+            )}>
+              {m.score}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+interface VendorNearMatch { id: string; legalName: string; vendorCode: string; gstin?: string | null; score: number }
+interface ItemCandidate   { id: string; itemCode: string; name: string; description: string | null; hsnCode: string | null; gstRate: number | null; score: number }
+
+// ── Line items table ────────────────────────────────────────────────────────
+// Each row shows the resolved item-master name as the headline + match-score
+// badge, with the raw OCR description rendered smaller below it. HSN / GST /
+// TDS section appear as blue "auto" chips because they come from the item
+// master, not the OCR text. A footer row cross-checks the sum against the
+// Section B subtotal — red callout when it diverges.
+function LineItemsTable({ lines, currency, subtotal }: { lines: any[]; currency: string; subtotal: number }) {
+  const lineSum = lines.reduce((s, l) => s + Number(l.lineTotal ?? 0), 0)
+  const match   = Math.abs(lineSum - subtotal) < 0.5
+  return (
+    <div className="-mx-5 -mb-5 overflow-x-auto border-t border-border">
+      <table className="w-full text-xs">
+        <thead className="border-b border-border bg-muted/30">
+          <tr>
+            {['#','Item / description','HSN','GST','Qty','Unit price','Base','GST amt','TDS','Total'].map(h => (
+              <th key={h} className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line: any) => {
+            const matchScore = Number(line.itemMatchScore ?? 0)   // populated by the match agent when available
+            const isStrong   = !!line.itemId && matchScore >= 98
+            const candidates = (line.itemCandidates ?? []) as ItemCandidate[]
+            const baseAmt    = Number(line.quantity) * Number(line.unitPrice)
+            const gstAmt     = Number(line.cgstAmount) + Number(line.sgstAmount) + Number(line.igstAmount)
+            return (
+              <tr key={line.id} className="border-b border-border last:border-0 align-top">
+                <td className="px-3 py-2 text-muted-foreground">{line.lineNumber}</td>
+                <td className="px-3 py-2 max-w-[280px]">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-medium">{line.itemName ?? line.itemCode ?? line.description}</span>
+                    {line.itemId && (
+                      <span className={cn(
+                        'rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
+                        isStrong ? 'bg-green-50 text-green-700 border-green-200'
+                                 : 'bg-amber-50 text-amber-700 border-amber-200',
+                      )}>
+                        {matchScore > 0 ? `Match · ${matchScore}%` : 'Mapped'}
+                      </span>
+                    )}
+                  </div>
+                  {line.description && line.itemName && line.description !== line.itemName && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate" title={line.description}>
+                      OCR: {line.description}
+                    </p>
+                  )}
+                  {!isStrong && candidates.length > 1 && (
+                    <details className="mt-1 text-[10px]">
+                      <summary className="cursor-pointer text-amber-700 font-medium">
+                        Pick from {candidates.length} candidates
+                      </summary>
+                      <div className="mt-1 space-y-0.5">
+                        {candidates.map(c => (
+                          <div key={c.id} className="flex items-center justify-between">
+                            <span>{c.name} <span className="text-muted-foreground">{c.itemCode}</span></span>
+                            <span className="tabular-nums">{c.score}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  {line.hsnCode ? (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="font-mono">{line.hsnCode}</span>
+                      {line.itemId && <AutoChip label="item master" />}
+                    </span>
+                  ) : '—'}
+                </td>
+                <td className="px-3 py-2 tabular-nums">
+                  {line.gstRate != null ? `${Number(line.gstRate)}%` : '—'}
+                  {line.itemId && line.gstRate != null && <AutoChip label="item" />}
+                </td>
+                <td className="px-3 py-2 tabular-nums">{Number(line.quantity)}</td>
+                <td className="px-3 py-2 tabular-nums font-mono">{formatCurrency(line.unitPrice, currency)}</td>
+                <td className="px-3 py-2 tabular-nums font-mono">
+                  <span>{formatCurrency(baseAmt, currency)}</span>
+                  <span className="ml-1 rounded-full border border-green-200 bg-green-50 text-green-700 px-1 py-0.5 text-[9px] font-medium">= Q×R</span>
+                </td>
+                <td className="px-3 py-2 tabular-nums font-mono text-green-700">
+                  {formatCurrency(gstAmt, currency)}
+                  {line.itemId && <AutoChip label="calc" />}
+                </td>
+                <td className="px-3 py-2 tabular-nums font-mono text-amber-700">
+                  {formatCurrency(line.tdsAmount, currency)}
+                </td>
+                <td className="px-3 py-2 tabular-nums font-mono font-semibold">{formatCurrency(line.lineTotal, currency)}</td>
+              </tr>
+            )
+          })}
+          <tr className={cn('border-t border-border', match ? 'bg-green-50/40' : 'bg-red-50/40')}>
+            <td colSpan={6} className="px-3 py-2 text-right text-[11px] font-medium">
+              Line items sum
+            </td>
+            <td className="px-3 py-2 tabular-nums font-mono font-semibold">{formatCurrency(lineSum, currency)}</td>
+            <td colSpan={3} className={cn('px-3 py-2 text-[11px] font-medium', match ? 'text-green-700' : 'text-red-700')}>
+              {match
+                ? '= Financial summary subtotal · 100%'
+                : `≠ subtotal ${formatCurrency(subtotal, currency)} (Δ ${formatCurrency(subtotal - lineSum, currency)})`}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ── Match-score banner — moved out of Section D, sits above the form ────────
+// Renders: 6 score cards + large overall score + lane badge + guardrails row,
+// and the OCR model + ingestion timestamp top-right. "Always visible" =
+// always above the fold; scrolls with the body but is the first thing the
+// reviewer sees after the page header.
+function ScoreBanner({
+  totalScore, lane, scoreItems, guardrails, ingestedAt, ocrModel,
+}: {
+  totalScore:  number | null
+  lane:        string | null
+  scoreItems:  { label: string; score: number; max: number }[]
+  guardrails:  string[]
+  ingestedAt:  string | null
+  ocrModel:    string
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex items-start justify-between border-b border-border px-5 py-3">
+        <h2 className="text-sm font-semibold">Match Score</h2>
+        {ingestedAt && (
+          <p className="text-[10px] text-muted-foreground leading-tight text-right">
+            OCR · {ocrModel}<br />
+            {formatDateTime(ingestedAt)}
+          </p>
+        )}
+      </div>
+      <div className="p-5 space-y-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {scoreItems.map(item => (
+            <ScoreCard key={item.label} label={item.label} score={item.score} max={item.max} />
+          ))}
+        </div>
+        <div className="flex items-center gap-4 p-3 rounded-xl bg-muted/20 border border-border">
+          <div className="text-3xl font-bold tabular-nums">{totalScore ?? '—'}</div>
+          <div>
+            <p className="text-sm font-semibold">/100</p>
+            <p className="text-xs text-muted-foreground">Overall match score</p>
+          </div>
+          {lane && (
+            <span className={cn('ml-auto rounded-full px-3 py-1 text-xs font-bold border',
+              lane === 'STP'    ? 'bg-green-50 text-green-700 border-green-200' :
+              lane === 'REVIEW' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                  'bg-red-50 text-red-700 border-red-200')}>
+              {lane} lane
+            </span>
+          )}
+        </div>
+        {guardrails.length > 0 && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <p className="text-xs font-semibold text-amber-700 mb-1">Guardrails triggered</p>
+            <div className="flex flex-wrap gap-1.5">
+              {guardrails.map(g => (
+                <span key={g} className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                  {g}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Main page ───────────────────────────────────────────────────────────────
 export default function InvoiceDetailPage() {
   const { id }   = useParams<{ id: string }>()
@@ -292,21 +521,66 @@ export default function InvoiceDetailPage() {
   const canRelease  = !isWfManaged && status === 'ON_HOLD'
   const canEdit     = status === 'DRAFT' || status === 'REJECTED'
 
-  // OCR raw data — only EmailPollerOcrResult shape exists today (confidence.overall is a single number).
-  // attachmentData/attachmentMime were stripped server-side as of getInvoice's slimming —
-  // the bytes are streamed via GET /api/invoices/:id/file instead.
-  const ocr           = (inv.ocrRawData ?? null) as null | {
+  // OCR raw data — the Gemini extractor now emits per-field confidence via
+  // `fieldConfidence`. Legacy rows pre-dating that prompt change carry only
+  // `confidence.overall`; per-field readers fall back to overall so chips
+  // still render. attachmentData/attachmentMime are stripped server-side —
+  // bytes are streamed via GET /api/invoices/:id/file.
+  type OcrFieldKey =
+    | 'invoiceNumber' | 'invoiceDate' | 'dueDate'
+    | 'vendorName'    | 'vendorGstin' | 'vendorPan'
+    | 'subtotal'      | 'totalAmount' | 'currency'
+    | 'narration'     | 'periodFrom'  | 'periodTo'
+  const ocr = (inv.ocrRawData ?? null) as null | {
     confidence?:    { overall?: number }
+    overallConfidence?: number
     invoiceNumber?: string | null
     invoiceDate?:   string | null
+    dueDate?:       string | null
     vendorGSTIN?:   string | null
+    vendorGstin?:   string | null
     vendorPAN?:     string | null
+    vendorPan?:     string | null
     vendorName?:    string | null
+    poReference?:   string | null
     totalAmount?:   number | null
+    subtotal?:      number | null
+    currency?:      string | null
+    narration?:     string | null
+    periodFrom?:    string | null
+    periodTo?:      string | null
+    fieldConfidence?: Partial<Record<OcrFieldKey, number>>
   }
-  const ocrConfidence = ocr?.confidence?.overall ?? inv.ocrConfidence ?? null
+  const ocrConfidence = ocr?.confidence?.overall ?? ocr?.overallConfidence ?? inv.ocrConfidence ?? null
   const isOcrInvoice  = inv.channelType === 'EMAIL_INGEST' || !!ocr
-  const fieldScore    = isOcrInvoice ? ocrConfidence : null
+  // Pull per-field confidence, falling back to overall (so legacy rows still chip).
+  const fieldConf = (key: OcrFieldKey): number | null => {
+    if (!isOcrInvoice) return null
+    return ocr?.fieldConfidence?.[key] ?? ocrConfidence
+  }
+
+  // Score breakdown from the match agent — InvoiceMatchScore.scoreBreakdown
+  // carries vendorNearMatches[], itemMatchAvgScore, currencyMatch, narrationConfidence.
+  const breakdown = (scoreData?.scoreBreakdown ?? null) as null | {
+    vendorMatchMethod?:   string | null
+    vendorNearMatches?:   VendorNearMatch[]
+    itemMatchAvgScore?:   number
+    currencyMatch?:       boolean
+    narrationConfidence?: number
+  }
+  const vendorNearMatches = breakdown?.vendorNearMatches ?? []
+  const vendorMatchMethod = inv.vendorMatchMethod ?? breakdown?.vendorMatchMethod ?? null
+
+  // Per-field exact-match outcomes (rendered as green chips on Section A).
+  // Computed frontend-side — the match agent doesn't expose these as fields
+  // because they're trivially derivable from the raw values.
+  const vendorGstin     = inv.vendorGSTIN ?? inv.vendor?.gstin ?? null
+  const vendorPan       = inv.vendorPAN   ?? inv.vendor?.pan   ?? null
+  const ocrGstinClean   = (ocr?.vendorGstin ?? ocr?.vendorGSTIN ?? '').trim().toUpperCase() || null
+  const ocrPanClean     = (ocr?.vendorPan   ?? ocr?.vendorPAN   ?? '').trim().toUpperCase() || null
+  const gstinExactMatch = !!vendorGstin && !!ocrGstinClean && vendorGstin.toUpperCase() === ocrGstinClean
+  const panExactMatch   = !!vendorPan   && !!ocrPanClean   && vendorPan.toUpperCase()   === ocrPanClean
+  const currencyExactMatch = breakdown?.currencyMatch ?? true   // true when match agent didn't flag a mismatch
 
   // Stream bytes through the auth'd endpoint — covers both disk-stored uploads
   // (manual flow) and the email-poller's JSON-blob bytes (legacy back-compat).
@@ -445,43 +719,94 @@ export default function InvoiceDetailPage() {
               </div>
             )}
 
+            {/* Match score banner — moved out of Section D, always above the form */}
+            {scoreData && (
+              <ScoreBanner
+                totalScore={inv.matchScore ?? scoreData.totalScore ?? null}
+                lane={inv.apLane ?? scoreData.lane ?? null}
+                scoreItems={scoreItems}
+                guardrails={Array.isArray(scoreData.guardrailsTriggered) ? scoreData.guardrailsTriggered : []}
+                ingestedAt={ingestedAt}
+                ocrModel="gemini-2.5-flash"
+              />
+            )}
+
             {/* Section A — Invoice Header */}
             <Section letter="A" title="Invoice Header" subtitle="Core invoice identifiers and dates">
               <div className="grid grid-cols-2 gap-4">
                 <ReadOnlyField label="Entity"      value={entityName(inv.entityId)} />
                 <ReadOnlyField label="Created by"  value={userName(inv.createdByUserId)} />
-                <ReadOnlyField label="Department"  value={departmentName(inv.departmentId)} />
-                <div />
                 <ReadOnlyField
-                  label="Vendor"
-                  value={inv.vendor?.legalName ?? <span className="text-amber-600">Unmatched</span>}
+                  label="Department"
+                  value={inv.departmentId
+                    ? departmentName(inv.departmentId)
+                    : <FieldWarning>Not set on user profile — configure in user master</FieldWarning>}
                 />
+                <ReadOnlyField label="Bill-to location" value={locationName(inv.billToLocationId)} />
+
+                {/* Vendor — mapping method chip + OCR confidence chip + near-matches block below */}
+                <div className="col-span-2">
+                  <ReadOnlyField
+                    label="Vendor"
+                    value={inv.vendor?.legalName ?? <FieldWarning>Unmatched — pick from near-matches below</FieldWarning>}
+                    chip={
+                      <>
+                        <OcrChip score={fieldConf('vendorName')} />
+                        <MappingChip method={vendorMatchMethod} />
+                      </>
+                    }
+                    hint={
+                      (fieldConf('vendorName') ?? 100) < 98
+                        ? <VendorNearMatches matches={vendorNearMatches} />
+                        : undefined
+                    }
+                  />
+                </div>
+
                 <ReadOnlyField
                   label="Vendor GSTIN"
-                  value={<span className="font-mono">{inv.vendorGSTIN || inv.vendor?.gstin || '—'}</span>}
-                  chip={<OcrChip score={fieldScore} />}
-                  hint={<FuzzyMatchHint ocrValue={ocr?.vendorGSTIN} storedValue={inv.vendorGSTIN ?? inv.vendor?.gstin} confidence={ocrConfidence} />}
+                  value={<span className="font-mono">{vendorGstin ?? '—'}</span>}
+                  chip={vendorGstin ? <MatchChip matched={gstinExactMatch} /> : undefined}
                 />
                 <ReadOnlyField
                   label="Vendor PAN"
-                  value={<span className="font-mono">{inv.vendorPAN || inv.vendor?.pan || '—'}</span>}
-                  chip={<OcrChip score={fieldScore} />}
-                  hint={<FuzzyMatchHint ocrValue={ocr?.vendorPAN} storedValue={inv.vendorPAN ?? inv.vendor?.pan} confidence={ocrConfidence} />}
+                  value={<span className="font-mono">{vendorPan ?? '—'}</span>}
+                  chip={vendorPan ? <MatchChip matched={panExactMatch} /> : undefined}
                 />
-                <ReadOnlyField label="Bill-to location" value={locationName(inv.billToLocationId)} />
+
                 <ReadOnlyField
                   label="Invoice number"
                   value={<span className="font-mono font-medium">{inv.invoiceNumber}</span>}
-                  chip={<OcrChip score={fieldScore} />}
-                  hint={<FuzzyMatchHint ocrValue={ocr?.invoiceNumber} storedValue={inv.invoiceNumber} confidence={ocrConfidence} />}
+                  chip={<OcrChip score={fieldConf('invoiceNumber')} />}
                 />
                 <ReadOnlyField
                   label="Invoice date"
                   value={formatDate(inv.invoiceDate)}
-                  chip={<OcrChip score={fieldScore} />}
-                  hint={<FuzzyMatchHint ocrValue={ocr?.invoiceDate} storedValue={formatDate(inv.invoiceDate)} confidence={ocrConfidence} />}
+                  chip={<OcrChip score={fieldConf('invoiceDate')} />}
                 />
-                <ReadOnlyField label="Due date" value={inv.dueDate ? formatDate(inv.dueDate) : null} />
+
+                {/* Due date — auto-computed from vendor.paymentTerms when OCR didn't extract one */}
+                <ReadOnlyField
+                  label="Due date"
+                  value={
+                    inv.dueDate
+                      ? formatDate(inv.dueDate)
+                      : (inv.vendor?.paymentTerms == null
+                          ? <FieldWarning>Payment term not set on vendor master — enter manually</FieldWarning>
+                          : '—')
+                  }
+                  chip={
+                    inv.dueDate && inv.vendor?.paymentTerms != null
+                      ? <AutoChip label={`${inv.vendor.paymentTerms}-day net`} title={`Computed as invoice date + ${inv.vendor.paymentTerms} days from vendor.paymentTerms`} />
+                      : undefined
+                  }
+                />
+
+                <ReadOnlyField
+                  label="Currency"
+                  value={currency}
+                  chip={isOcrInvoice ? <MatchChip matched={currencyExactMatch} label={currencyExactMatch ? 'Exact match · 100%' : 'Mismatch'} /> : undefined}
+                />
                 <ReadOnlyField
                   label="Channel"
                   value={
@@ -490,8 +815,15 @@ export default function InvoiceDetailPage() {
                     </span>
                   }
                 />
-                <ReadOnlyField label="Currency"     value={currency} />
-                <ReadOnlyField label="PO reference" value={inv.poRef ? <span className="font-mono">{inv.poRef}</span> : null} />
+
+                <ReadOnlyField
+                  label="PO reference"
+                  value={inv.poRef
+                    ? <span className="font-mono">{inv.poRef}</span>
+                    : <FieldWarning>No PO linked — reduces match score by 20 pts</FieldWarning>}
+                />
+                <div />
+
                 {inv.irnNumber && (
                   <div className="col-span-2">
                     <ReadOnlyField
@@ -512,132 +844,99 @@ export default function InvoiceDetailPage() {
               </div>
             </Section>
 
-            {/* Section B — Financial Summary */}
-            <Section letter="B" title="Financial Summary" subtitle="Amounts, taxes, and net payable">
-              <div className="grid grid-cols-2 gap-4">
-                <ReadOnlyField
-                  label="Subtotal"
-                  value={<span className="font-mono tabular-nums">{formatCurrency(inv.subtotal, currency)}</span>}
-                />
-                <ReadOnlyField
-                  label="GST (total)"
-                  value={<span className="font-mono tabular-nums">{formatCurrency(Number(inv.cgstAmount) + Number(inv.sgstAmount) + Number(inv.igstAmount), currency)}</span>}
-                />
-                <ReadOnlyField
-                  label="TDS"
-                  value={<span className="font-mono tabular-nums text-amber-600">{formatCurrency(inv.tdsAmount, currency)}</span>}
-                />
-                <ReadOnlyField
-                  label="Net payable"
-                  value={<span className="font-mono tabular-nums font-semibold">{formatCurrency(inv.netPayable, currency)}</span>}
-                />
-                <div className="col-span-2">
-                  <ReadOnlyField
-                    label="Total amount"
-                    value={<span className="font-mono tabular-nums">{formatCurrency(inv.totalAmount, currency)}</span>}
-                    chip={<OcrChip score={fieldScore} />}
-                    hint={ocr?.totalAmount != null ? (
-                      <FuzzyMatchHint ocrValue={ocr.totalAmount} storedValue={Number(inv.totalAmount)} confidence={ocrConfidence} />
-                    ) : undefined}
-                  />
-                </div>
-                {Number(inv.cgstAmount) > 0 && (
-                  <>
-                    <ReadOnlyField
-                      label="CGST"
-                      value={<span className="font-mono tabular-nums text-green-700">{formatCurrency(inv.cgstAmount, currency)}</span>}
-                    />
-                    <ReadOnlyField
-                      label="SGST"
-                      value={<span className="font-mono tabular-nums text-green-700">{formatCurrency(inv.sgstAmount, currency)}</span>}
-                    />
-                  </>
-                )}
-                {Number(inv.igstAmount) > 0 && (
-                  <div className="col-span-2">
-                    <ReadOnlyField
-                      label="IGST"
-                      value={<span className="font-mono tabular-nums text-blue-700">{formatCurrency(inv.igstAmount, currency)}</span>}
-                    />
-                  </div>
-                )}
+            {/* Section B — Financial Summary (simplified to 4 fields with cross-check footnotes) */}
+            <Section letter="B" title="Financial Summary" subtitle="Base, GST, total, TDS — auto cross-checked">
+              <div className="grid grid-cols-1 gap-4">
+                {(() => {
+                  const subtotal    = Number(inv.subtotal) || 0
+                  const gstTotal    = Number(inv.cgstAmount) + Number(inv.sgstAmount) + Number(inv.igstAmount)
+                  const totalAmount = Number(inv.totalAmount) || 0
+                  const tdsAmount   = Number(inv.tdsAmount) || 0
+                  const netPayable  = Number(inv.netPayable) || (totalAmount - tdsAmount)
+                  // Cross-checks — base+gst should equal total; lines should sum to base.
+                  const lineSum     = (inv.lines ?? []).reduce((s: number, l: any) => s + Number(l.lineTotal ?? 0), 0)
+                  const lineMatch   = Math.abs(lineSum - subtotal) < 0.5
+                  const sumMatch    = Math.abs(subtotal + gstTotal - totalAmount) < 0.5
+                  const gstSplit    = Number(inv.igstAmount) > 0 ? 'IGST' : 'CGST + SGST'
+                  return (
+                    <>
+                      <ReadOnlyField
+                        label="Base amount (subtotal)"
+                        value={<span className="font-mono tabular-nums">{formatCurrency(subtotal, currency)}</span>}
+                        chip={<OcrChip score={fieldConf('subtotal')} />}
+                        hint={
+                          <p className={cn('text-[11px] mt-1', lineMatch ? 'text-green-600' : 'text-red-600')}>
+                            {lineMatch ? 'Matches line item total · 100%' : `Line items sum ${formatCurrency(lineSum, currency)} — discrepancy ${formatCurrency(subtotal - lineSum, currency)}`}
+                          </p>
+                        }
+                      />
+                      <ReadOnlyField
+                        label="GST total"
+                        value={<span className="font-mono tabular-nums">{formatCurrency(gstTotal, currency)}</span>}
+                        chip={<AutoChip label={gstSplit} title="Auto-summed from CGST + SGST + IGST" />}
+                        hint={
+                          <p className="text-[11px] mt-1 text-muted-foreground">
+                            {gstSplit} · CGST {formatCurrency(inv.cgstAmount, currency)} · SGST {formatCurrency(inv.sgstAmount, currency)} · IGST {formatCurrency(inv.igstAmount, currency)}
+                          </p>
+                        }
+                      />
+                      <ReadOnlyField
+                        label="Total amount"
+                        value={<span className="font-mono tabular-nums font-semibold">{formatCurrency(totalAmount, currency)}</span>}
+                        chip={<OcrChip score={fieldConf('totalAmount')} />}
+                        hint={
+                          <p className={cn('text-[11px] mt-1', sumMatch ? 'text-green-600' : 'text-red-600')}>
+                            {sumMatch ? 'Base + GST = Total · 100%' : `Base + GST = ${formatCurrency(subtotal + gstTotal, currency)} — does not match`}
+                          </p>
+                        }
+                      />
+                      <ReadOnlyField
+                        label="TDS deducted"
+                        value={<span className="font-mono tabular-nums text-amber-700">{formatCurrency(tdsAmount, currency)}</span>}
+                        chip={tdsAmount > 0
+                          ? <AutoChip label={`Sec ${(ocr as any)?.tdsSection ?? '194J'} · ${Math.round((tdsAmount / Math.max(subtotal, 1)) * 100)}%`} />
+                          : undefined}
+                        hint={
+                          <p className="text-[11px] mt-1 text-muted-foreground">
+                            Net payable = <span className="font-mono">{formatCurrency(netPayable, currency)}</span>
+                          </p>
+                        }
+                      />
+                    </>
+                  )
+                })()}
               </div>
             </Section>
 
-            {/* Section D — Match Score */}
-            {scoreData && (
-              <Section letter="D" title="Match Score" subtitle="Vendor, PO, GRN, GST, and OCR confidence">
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                    {scoreItems.map(item => (
-                      <ScoreCard key={item.label} label={item.label} score={item.score} max={item.max} />
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-4 p-3 rounded-xl bg-muted/20 border border-border">
-                    <div className="text-3xl font-bold tabular-nums">{inv.matchScore ?? scoreData.totalScore}</div>
-                    <div>
-                      <p className="text-sm font-semibold">/100</p>
-                      <p className="text-xs text-muted-foreground">Overall match score</p>
-                    </div>
-                    {(inv.apLane ?? scoreData.lane) && (
-                      <span className={cn('ml-auto rounded-full px-3 py-1 text-xs font-bold border',
-                        (inv.apLane ?? scoreData.lane) === 'STP'    ? 'bg-green-50 text-green-700 border-green-200' :
-                        (inv.apLane ?? scoreData.lane) === 'REVIEW' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                                                      'bg-red-50 text-red-700 border-red-200')}>
-                        {inv.apLane ?? scoreData.lane} lane
-                      </span>
-                    )}
-                  </div>
-                  {Array.isArray(scoreData.guardrailsTriggered) && scoreData.guardrailsTriggered.length > 0 && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                      <p className="text-xs font-semibold text-amber-700 mb-1">Guardrails triggered</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {scoreData.guardrailsTriggered.map((g: string) => (
-                          <span key={g} className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-medium text-amber-800">
-                            {g}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+            {/* Section C — Line items (mapped to item_master with per-row match scores) */}
+            {inv.lines?.length > 0 && (
+              <Section letter="C" title="Line Items" subtitle={`${inv.lines.length} line${inv.lines.length === 1 ? '' : 's'} · mapped to item master`}>
+                <LineItemsTable lines={inv.lines} currency={currency} subtotal={Number(inv.subtotal) || 0} />
               </Section>
             )}
 
-            {/* Section C — Line items */}
-            {inv.lines?.length > 0 && (
-              <Section letter="C" title="Line Items" subtitle={`${inv.lines.length} line${inv.lines.length === 1 ? '' : 's'}`}>
-                <div className="-mx-5 -mb-5 overflow-x-auto border-t border-border">
-                  <table className="w-full text-xs">
-                    <thead className="border-b border-border bg-muted/30">
-                      <tr>
-                        {['#','Description','Qty','UOM','Unit Price','Taxable','CGST','SGST','IGST','TDS','RCM','Total'].map(h => (
-                          <th key={h} className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {inv.lines.map((line: any) => (
-                        <tr key={line.id} className="border-b border-border last:border-0">
-                          <td className="px-3 py-2 text-muted-foreground">{line.lineNumber}</td>
-                          <td className="px-3 py-2 max-w-[200px] truncate">{line.description}</td>
-                          <td className="px-3 py-2 tabular-nums">{line.quantity}</td>
-                          <td className="px-3 py-2">{line.uom ?? '—'}</td>
-                          <td className="px-3 py-2 tabular-nums font-mono">{formatCurrency(line.unitPrice, currency)}</td>
-                          <td className="px-3 py-2 tabular-nums font-mono">{formatCurrency(line.taxableAmount, currency)}</td>
-                          <td className="px-3 py-2 tabular-nums font-mono text-green-700">{formatCurrency(line.cgstAmount, currency)}</td>
-                          <td className="px-3 py-2 tabular-nums font-mono text-green-700">{formatCurrency(line.sgstAmount, currency)}</td>
-                          <td className="px-3 py-2 tabular-nums font-mono text-blue-700">{formatCurrency(line.igstAmount, currency)}</td>
-                          <td className="px-3 py-2 tabular-nums font-mono text-amber-600">{formatCurrency(line.tdsAmount, currency)}</td>
-                          <td className="px-3 py-2 text-center">{line.rcmApplicable ? '✓' : '—'}</td>
-                          <td className="px-3 py-2 tabular-nums font-mono font-semibold">{formatCurrency(line.lineTotal, currency)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {/* Section D (new) — Narration & period of expense */}
+            <Section letter="D" title="Narration & Period of Expense" subtitle="Free-text narrative + billing period">
+              <div className="grid grid-cols-1 gap-4">
+                <ReadOnlyField
+                  label="Narration"
+                  value={inv.narration ?? <span className="text-muted-foreground">— not extracted —</span>}
+                  chip={<OcrChip score={fieldConf('narration')} />}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <ReadOnlyField
+                    label="Period from"
+                    value={inv.periodFrom ? formatDate(inv.periodFrom) : '—'}
+                    chip={<OcrChip score={fieldConf('periodFrom')} />}
+                  />
+                  <ReadOnlyField
+                    label="Period to"
+                    value={inv.periodTo ? formatDate(inv.periodTo) : '—'}
+                    chip={<OcrChip score={fieldConf('periodTo')} />}
+                  />
                 </div>
-              </Section>
-            )}
+              </div>
+            </Section>
 
             {/* Section E — Audit Trail */}
             {(inv.auditLogs?.length > 0 || inv.approvals?.length > 0) && (

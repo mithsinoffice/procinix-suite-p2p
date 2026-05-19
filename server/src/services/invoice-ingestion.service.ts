@@ -4,7 +4,8 @@
 
 import type { PrismaClient } from '@prisma/client'
 import { extractInvoiceFromFile, type OcrInvoiceData } from './gemini-ocr.service.js'
-import { calculateMatchScore, routeInvoiceToLane } from './match-scoring.service.js'
+import { calculateMatchScore, routeInvoiceToLane, type VendorMatchMethod, type VendorCandidate } from './match-scoring.service.js'
+import { matchOcrLinesToItems } from './item-match.service.js'
 import { saveInvoiceFile } from './invoice-file-storage.service.js'
 import { writeAuditLog } from '../lib/audit.js'
 import { ok, err, type Result } from '../lib/result.js'
@@ -27,30 +28,55 @@ interface IngestCtx { tenantId: string; userId: string; ip?: string }
 
 // ── Vendor identification from OCR data ──
 
+interface VendorResolution {
+  vendorId:     string | null
+  method:       VendorMatchMethod | null
+  /** Top-3 fuzzy candidates including the winner. Populated for fuzzy_name resolution. */
+  nearMatches:  VendorCandidate[]
+}
+
 async function identifyVendor(
   prisma: PrismaClient,
   tenantId: string,
-  extracted: OcrInvoiceData
-): Promise<string | null> {
-  // 1. GSTIN exact match (most reliable)
+  extracted: OcrInvoiceData,
+): Promise<VendorResolution> {
+  // 1. GSTIN exact match (most reliable). Winner is unambiguous — no near-matches.
   if (extracted.vendorGstin) {
     const byGstin = await prisma.vendor.findFirst({ where: { tenantId, gstin: extracted.vendorGstin } })
-    if (byGstin) return byGstin.id
+    if (byGstin) return { vendorId: byGstin.id, method: 'gstin_lookup', nearMatches: [] }
   }
 
-  // 2. Fuzzy name match using fuse.js
+  // 2. Fuzzy name match — return winner + top-3 candidates with scores so the
+  //    detail page can surface a near-matches dropdown when confidence is low.
   if (extracted.vendorName) {
     const vendors = await prisma.vendor.findMany({
       where:  { tenantId, status: 'ACTIVE' },
-      select: { id: true, legalName: true, tradeName: true },
+      select: { id: true, vendorCode: true, legalName: true, tradeName: true, gstin: true },
     })
-    const fuse    = new Fuse(vendors, { keys: ['legalName', 'tradeName'], threshold: 0.3, includeScore: true })
-    const results = fuse.search(extracted.vendorName, { limit: 1 })
-    if (results.length > 0 && (results[0].score ?? 1) < 0.3) return results[0].item.id
+    const fuse = new Fuse(vendors, {
+      keys: ['legalName', 'tradeName'],
+      threshold: 0.5,           // loose enough to surface near-matches
+      includeScore: true,
+      ignoreLocation: true,
+    })
+    const results = fuse.search(extracted.vendorName, { limit: 3 })
+    const nearMatches: VendorCandidate[] = results.map(r => ({
+      id:         r.item.id,
+      legalName:  r.item.legalName,
+      vendorCode: r.item.vendorCode,
+      gstin:      r.item.gstin,
+      score:      Math.round((1 - Math.min(Math.max(r.score ?? 1, 0), 1)) * 100),
+    }))
+    const winner = results[0]
+    if (winner && (winner.score ?? 1) < 0.3) {
+      return { vendorId: winner.item.id, method: 'fuzzy_name', nearMatches }
+    }
+    // Winner not confident enough — return null vendor but expose near-matches
+    // so the UI can render a "pick the right vendor" picker.
+    return { vendorId: null, method: null, nearMatches }
   }
 
-  // 3. Email domain match (for email channel)
-  return null
+  return { vendorId: null, method: null, nearMatches: [] }
 }
 
 // ── Main ingestion function ──
@@ -99,11 +125,11 @@ export async function ingestInvoice(
       return err({ code: 'VALIDATION_ERROR' as const, message: 'No file or structured data provided', httpStatus: 400 })
     }
 
-    // 3. Identify vendor — fail fast if no match. Invoice.vendorId is a NOT NULL
-    //    FK, so the old `vendorId ?? ctx.userId` fallback would have caused a
-    //    P2003 / corrupt data scenario. Return a clean 404 so callers can
-    //    treat this as a skip, not a server error.
-    const vendorId = await identifyVendor(prisma, ctx.tenantId, extracted)
+    // 3. Identify vendor — returns winner + method + near-matches for the UI.
+    //    Invoice.vendorId is nullable; an unresolved vendor lands the invoice
+    //    in UNMATCHED status (handled below) rather than 404'ing the ingestion.
+    const vendorResolution = await identifyVendor(prisma, ctx.tenantId, extracted)
+    const { vendorId, method: vendorMatchMethod, nearMatches: vendorNearMatches } = vendorResolution
     if (!vendorId) {
       await prisma.invoiceIngestionJob.update({
         where: { id: job.id },
@@ -138,25 +164,50 @@ export async function ingestInvoice(
     const totalAmount = extracted.totalAmount ?? (subtotal + totalTax)
     const tdsAmount   = (extracted as any).tdsAmount ?? 0
 
+    // Resolve due date — prefer OCR value, otherwise auto-compute from the
+    // vendor master's paymentTerms. Falls back to null if the vendor has no
+    // paymentTerms (frontend renders an amber "configure on vendor master" warning).
+    const ocrInvoiceDate = extracted.invoiceDate ? new Date(extracted.invoiceDate.split('/').reverse().join('-')) : new Date()
+    let dueDate: Date | null = extracted.dueDate
+      ? new Date(extracted.dueDate.split('/').reverse().join('-'))
+      : null
+    if (!dueDate) {
+      const v = await prisma.vendor.findFirst({ where: { id: vendorId, tenantId: ctx.tenantId }, select: { paymentTerms: true } })
+      if (v?.paymentTerms != null) {
+        dueDate = new Date(ocrInvoiceDate)
+        dueDate.setDate(dueDate.getDate() + v.paymentTerms)
+      }
+    }
+
+    // Period dates — OCR returns DD/MM/YYYY; null when the invoice has no period.
+    const dmyToDate = (s: string | null | undefined) =>
+      s ? new Date(s.split('/').reverse().join('-')) : null
+
     const invoice = await prisma.invoice.create({
       data: {
-        tenantId:        ctx.tenantId,
-        invoiceNumber:   extracted.invoiceNumber ?? `DRAFT-${job.id.slice(0, 8)}`,
+        tenantId:          ctx.tenantId,
+        invoiceNumber:     extracted.invoiceNumber ?? `DRAFT-${job.id.slice(0, 8)}`,
         vendorId,
-        invoiceDate:     extracted.invoiceDate ? new Date(extracted.invoiceDate.split('/').reverse().join('-')) : new Date(),
-        dueDate:         extracted.dueDate ? new Date(extracted.dueDate.split('/').reverse().join('-')) : null,
-        currencyCode:    extracted.currency ?? 'INR',
+        vendorGSTIN:       extracted.vendorGstin ?? undefined,
+        vendorPAN:         extracted.vendorPan   ?? undefined,
+        invoiceDate:       ocrInvoiceDate,
+        dueDate,
+        currencyCode:      extracted.currency ?? 'INR',
         subtotal,
         tdsAmount,
         totalAmount,
-        netPayable:      totalAmount - tdsAmount,
-        channelType:     payload.channelType,
+        netPayable:        totalAmount - tdsAmount,
+        channelType:       payload.channelType,
         ocrConfidence,
-        irnNumber:       extracted.irn,
-        ocrRawData:      extracted as any,
-        status:          'DRAFT',
-        apLane:          'MANUAL',
-        createdByUserId: ctx.userId,
+        irnNumber:         extracted.irn,
+        ocrRawData:        extracted as any,
+        narration:         extracted.narration ?? undefined,
+        periodFrom:        dmyToDate(extracted.periodFrom),
+        periodTo:          dmyToDate(extracted.periodTo),
+        vendorMatchMethod: vendorMatchMethod ?? undefined,
+        status:            'DRAFT',
+        apLane:            'MANUAL',
+        createdByUserId:   ctx.userId,
       },
     })
 
@@ -178,12 +229,23 @@ export async function ingestInvoice(
       }
     }
 
-    // Create line items from OCR
+    // Fuzzy-match each OCR line against item_master. The winner's itemId is
+    // stored on InvoiceLine so the detail page can render the mapped item name
+    // alongside the OCR raw description; the full top-3 set is fed into the
+    // match agent (line-item match feeds the Amount bucket) and persisted on
+    // the InvoiceMatchScore breakdown JSON for the UI dropdown.
+    const itemMatches = await matchOcrLinesToItems(
+      prisma, ctx.tenantId,
+      (extracted.lineItems ?? []).map(l => l.description ?? ''),
+    )
+
     if (extracted.lineItems?.length > 0) {
       await prisma.invoiceLine.createMany({
         data: extracted.lineItems.map((l, i) => ({
           invoiceId:    invoice.id,
           lineNumber:   i + 1,
+          itemId:       itemMatches[i]?.winner?.id ?? null,
+          itemCode:     itemMatches[i]?.winner?.itemCode ?? null,
           description:  l.description,
           quantity:     l.quantity  ?? 1,
           unitPrice:    l.unitPrice ?? 0,
@@ -192,6 +254,11 @@ export async function ingestInvoice(
         })),
       })
     }
+
+    // Pull the entity's base currency for the currency-mismatch guardrail.
+    const entity = invoice.entityId
+      ? await prisma.entity.findFirst({ where: { id: invoice.entityId }, select: { baseCurrencyCode: true } })
+      : null
 
     // 6. Calculate match score + route to lane
     const isFirstInvoice = vendorId ? (await prisma.invoice.count({ where: { tenantId: ctx.tenantId, vendorId, id: { not: invoice.id } } })) === 0 : true
@@ -204,6 +271,10 @@ export async function ingestInvoice(
       ocrConfidence,
       extractedData: extracted,
       isFirstInvoice,
+      vendorMatchMethod,
+      vendorNearMatches,
+      itemMatches,
+      entityDefaultCurrency: entity?.baseCurrencyCode ?? undefined,
     })
 
     await routeInvoiceToLane(prisma, invoice.id, ctx.tenantId, ctx.userId, scoreResult)

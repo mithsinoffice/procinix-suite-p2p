@@ -163,8 +163,14 @@ export async function getInvoice(prisma: PrismaClient, id: string, tenantId: str
   const invoice = await prisma.invoice.findFirst({
     where:   { id, tenantId },
     include: {
-      vendor:    { select: { legalName: true, vendorCode: true, gstin: true, pan: true, panCompliance: true } },
-      lines:     { orderBy: { lineNumber: 'asc' } },
+      // paymentTerms drives the auto-due-date chip on the detail page.
+      vendor:    { select: { legalName: true, vendorCode: true, gstin: true, pan: true, panCompliance: true, paymentTerms: true, kycPanStatus: true, kycGstStatus: true, kycBankStatus: true } },
+      lines:     {
+        orderBy: { lineNumber: 'asc' },
+        // item.name renders as the line's headline; the raw OCR description
+        // is kept on the line itself and shown smaller underneath.
+        include: { item: { select: { id: true, name: true, hsnCode: true, gstRate: true } } },
+      },
       auditLogs: { orderBy: { createdAt: 'asc' } },
       approvals: { orderBy: { createdAt: 'asc' } },
     },
@@ -179,7 +185,26 @@ export async function getInvoice(prisma: PrismaClient, id: string, tenantId: str
   const ocrSlim = ocr
     ? (() => { const { attachmentData: _d, ...rest } = ocr; return rest })()
     : ocr
-  return ok({ ...invoice, ocrRawData: ocrSlim, hasFile })
+
+  // Merge per-line item-master match summaries from InvoiceMatchScore.scoreBreakdown
+  // onto each line. The match agent stores top-3 candidates + winner score
+  // keyed by line index when the invoice was ingested.
+  const matchScoreRow = await prisma.invoiceMatchScore.findUnique({
+    where: { invoiceId: id }, select: { scoreBreakdown: true },
+  })
+  const breakdown   = matchScoreRow?.scoreBreakdown as { itemMatches?: { lineIndex: number; score: number; candidates: unknown[] }[] } | null
+  const itemMatches = breakdown?.itemMatches ?? []
+  const enrichedLines = invoice.lines.map((l, idx) => {
+    const m = itemMatches.find(im => im.lineIndex === idx)
+    return {
+      ...l,
+      itemName:        l.item?.name ?? null,
+      itemMatchScore:  m?.score ?? null,
+      itemCandidates:  m?.candidates ?? [],
+    }
+  })
+
+  return ok({ ...invoice, lines: enrichedLines, ocrRawData: ocrSlim, hasFile })
 }
 
 // ── Submit ──

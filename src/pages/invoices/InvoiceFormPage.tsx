@@ -56,8 +56,8 @@ interface FormValues {
   irnNumber?:         string
   // Section C — additional
   narration?:         string
-  expenseFrom?:       string
-  expenseTo?:         string
+  periodFrom?:        string
+  periodTo?:          string
   retentionRequired?: boolean
   retentionAmount?:   number
   retentionGlCodeId?: string
@@ -872,10 +872,10 @@ export default function InvoiceFormPage() {
                 </Field>
 
                 <Field label="Period of expense — from">
-                  <FormInput type="date" {...register('expenseFrom')} />
+                  <FormInput type="date" {...register('periodFrom')} />
                 </Field>
                 <Field label="Period of expense — to">
-                  <FormInput type="date" {...register('expenseTo')} />
+                  <FormInput type="date" {...register('periodTo')} />
                 </Field>
 
                 <Field label="Provision / Retention required">

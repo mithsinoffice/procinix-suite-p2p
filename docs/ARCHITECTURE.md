@@ -1,6 +1,6 @@
 # Procinix v2 (S2P) — Architecture
 
-_Last updated: 2026-05-19 (invoice attachment storage)_
+_Last updated: 2026-05-19 (invoice detail redesign + match agent overhaul)_
 
 Indian Source-to-Pay (S2P) platform — Procurement, Goods Receipt, AP Invoice processing, Payments, Vendor management, Approvals and Masters — for mid-market Indian enterprises. Multi-tenant, RBAC-gated, n8n-driven email ingestion, Gemini OCR.
 
@@ -447,6 +447,70 @@ PDF / image attachments are stored on disk and streamed through an auth-gated en
 **Read path** — `GET /api/invoices/:id/file` (auth + tenant-scoped) calls `readInvoiceFile()`, which prefers disk (`fileUrl`) and falls back to `ocrRawData.attachmentData` for back-compat. Streams with `Content-Type: <mimeType>` and `Content-Disposition: inline`, plus `Cache-Control: private, max-age=300`. Path-traversal is refused by checking the resolved absolute path stays under `UPLOADS_ROOT`.
 
 **Detail page** — `getInvoice()` in [invoice.service.ts](../server/src/services/invoice.service.ts) strips `ocrRawData.attachmentData` from the response (so the JSON payload stays small) and adds a derived `hasFile: boolean`. The `InvoiceDetailPage` iframe points at `/api/invoices/${id}/file` when `hasFile` is true, and the LeftPanel header shows an "Open" button that opens the same URL in a new tab as a fallback when the in-page iframe fails to render.
+
+---
+
+## §10d Invoice match agent + detail-page layout
+
+The match agent (the "matchAgent" the UI refers to) is composed of two services plus a one-off Gemini OCR call. Together they produce the data that drives every field-level chip, near-match dropdown, and the match-score banner on `InvoiceDetailPage`.
+
+### §10d.1 Pipeline at ingestion time
+
+`ingestInvoice()` in [invoice-ingestion.service.ts](../server/src/services/invoice-ingestion.service.ts) runs:
+
+1. **OCR** ([gemini-ocr.service.ts](../server/src/services/gemini-ocr.service.ts)) — Gemini extracts the invoice into `OcrInvoiceData`. As of the detail-page redesign the response carries both a flat `overallConfidence` and a `fieldConfidence` map keyed by field name (`vendorName`, `invoiceDate`, `narration`, `periodFrom`, etc.). New fields `narration`, `periodFrom`, `periodTo` are extracted alongside the existing identifiers.
+2. **Vendor resolution** — `identifyVendor()` returns `{ vendorId, method, nearMatches[] }`. Method is one of `gstin_lookup` (exact GSTIN hit), `fuzzy_name` (fuse.js across `legalName` + `tradeName`), `email_domain`, or `manual`. The full top-3 fuzzy candidates are returned even when the winner is confident enough to auto-pick — the UI uses them when overall vendor confidence is < 98.
+3. **Item-master fuzzy match** ([item-match.service.ts](../server/src/services/item-match.service.ts)) — every OCR line description is matched against `item_master.name` / `description` / `ocrKeywords` / `ocrSynonyms`. Top-3 candidates per line with 0–100 scores. Winners are written to `InvoiceLine.itemId`; the full set is persisted on `InvoiceMatchScore.scoreBreakdown.itemMatches[]` (keyed by `lineIndex`).
+4. **Invoice create** — `vendorMatchMethod`, `narration`, `periodFrom`, `periodTo`, `vendorGSTIN`, `vendorPAN` all persist on the Invoice. If the OCR didn't extract a `dueDate`, the service auto-computes one from `vendor.paymentTerms` (defaults to 30 days) and stores that.
+5. **Match scoring** ([match-scoring.service.ts](../server/src/services/match-scoring.service.ts)) — see below.
+
+### §10d.2 Scoring (6 buckets, total 100)
+
+| Bucket | Max | Computation |
+| --- | --- | --- |
+| Vendor KYC      | 25 | PAN-valid (+15) + GST-active (+10). Field-level GSTIN/PAN exact-match is a **render-time** chip on the detail page, **not** inherited from OCR confidence (that was the bug the rewrite fixed). |
+| PO reference    | 20 | 20 if `Invoice.poRef` resolves to a row in `purchase_orders`, else 0. |
+| Amount match    | 15 | PO invoices: 8 PO-tolerance + 7 × line-item-master avg quality. Non-PO: full 15 × line-item-master avg quality. |
+| GRN match       | 20 | 20 if a GRN exists, else 0. |
+| GST compliance  | 10 | 10 when `vendor.gstComplianceScore ≥ 80`, 5 when ≥ 60. 206AB-flagged vendors get the bucket docked to 0 + a `206AB_FLAG` guardrail. |
+| OCR confidence  | 10 | Blend of `overallConfidence` (weight 0.7) and `fieldConfidence.narration` (weight 0.3) when narration is present. Otherwise overall as-is. |
+
+Non-PO invoices redistribute weight: vendor → 55, amount → 20, GST → 15, OCR → 10. Total still caps at 100.
+
+Currency mismatch (invoice currency ≠ entity `baseCurrencyCode`) raises a `CURRENCY_MISMATCH` guardrail. Any guardrail forces `MANUAL` lane regardless of score.
+
+**Pure-function core**: `scoreFromInputs()` is exported alongside `calculateMatchScore()` so the maths can be tested without a Prisma client — see [match-scoring.test.ts](../server/src/services/__tests__/match-scoring.test.ts) for the 13 Vitest specs covering PO/non-PO redistribution, narration blending, and 206AB dock.
+
+### §10d.3 Persistence
+
+`InvoiceMatchScore.scoreBreakdown` (JSON) now carries:
+
+```ts
+{
+  vendor / po / amount / grn / gst / ocr / mode: string  // human-readable bucket explanation
+  vendorMatchMethod:   'gstin_lookup' | 'fuzzy_name' | 'email_domain' | 'manual' | null
+  vendorNearMatches:   { id, legalName, vendorCode, gstin?, score }[]   // top-3
+  itemMatchAvgScore:   number   // 0–100, drives the Amount bucket
+  itemMatches:         { lineIndex, winnerId, winnerName, score, candidates: top3 }[]
+  currencyMatch:       boolean
+  narrationConfidence: number | undefined
+}
+```
+
+`getInvoice()` reads this row and merges `itemMatches` onto each `InvoiceLine` (as `itemMatchScore` + `itemCandidates`) so the detail page can render per-line match badges and near-match dropdowns without a second query.
+
+### §10d.4 Detail-page layout
+
+`InvoiceDetailPage.tsx` renders:
+
+- **Match score banner** at the top (out of the lettered sections) — 6 score cards, large overall score, lane badge, guardrails row, OCR model + timestamp top-right.
+- **Section A — Invoice Header**: vendor row with `MappingChip` (resolution method) + `OcrChip` (per-field confidence) + `VendorNearMatches` block when confidence < 98; GSTIN/PAN show green `MatchChip` ("Exact match · 100%") computed render-time from `invoice.vendorGSTIN` vs `vendor.gstin`. Due-date renders an `AutoChip` like "Auto · 30-day net" when computed from `vendor.paymentTerms`, or an amber `FieldWarning` when `paymentTerms` is null. PO ref / Department render `FieldWarning` text when null.
+- **Section B — Financial Summary**: 4 rows only (Base, GST total, Total, TDS deducted) with cross-check footnotes ("Matches line item total · 100%", "Base + GST = Total · 100%", or red discrepancy callout).
+- **Section C — Line Items**: each row shows `item.name` as the headline + a match-score badge (green ≥ 98, amber < 98); raw OCR description rendered smaller below; HSN / GST rate / TDS chip "Auto · item master"; near-matches dropdown when the winner score < 98. A footer row cross-checks line sum vs Section B subtotal.
+- **Section D — Narration & Period of Expense**: narration + `periodFrom` / `periodTo`, each with `OcrChip` from `fieldConfidence`.
+- **Section E — Audit Trail** and **Section F — Approval Workflow** are unchanged.
+
+The detail-page chips that compare against the vendor master (GSTIN, PAN, currency) are computed in the React component — they don't round-trip to the server because they're trivially derivable from the raw fields and tend to update faster than the match-score row gets refreshed.
 
 ---
 

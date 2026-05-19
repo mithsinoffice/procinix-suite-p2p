@@ -20,6 +20,22 @@ export interface OcrLineItem {
   confidence:   number
 }
 
+// Per-field OCR confidence map — Gemini reports a 0–100 score for each scalar
+// it extracted. Used by the match agent (e.g. narration confidence feeds the
+// OCR bucket) and by InvoiceDetailPage (per-field OCR chips). Optional so old
+// rows that pre-date this prompt change still parse without error.
+export type OcrFieldConfidence = Partial<Record<
+  | 'invoiceNumber' | 'invoiceDate'  | 'dueDate'
+  | 'vendorName'    | 'vendorGstin'  | 'vendorPan'  | 'vendorAddress'
+  | 'buyerName'     | 'buyerGstin'
+  | 'poReference'   | 'irn'
+  | 'subtotal'      | 'cgst' | 'sgst' | 'igst'
+  | 'tdsRate'       | 'tdsAmount' | 'tdsSection' | 'totalTax' | 'totalAmount'
+  | 'currency'
+  | 'narration'     | 'periodFrom' | 'periodTo',
+  number
+>>
+
 export interface OcrInvoiceData {
   invoiceNumber:  string | null
   invoiceDate:    string | null   // DD/MM/YYYY
@@ -44,7 +60,13 @@ export interface OcrInvoiceData {
   totalAmount:    number | null
   currency:       string
   isEInvoice:     boolean
-  overallConfidence: number       // 0–100
+  // Free-text narrative on the invoice ("Engagement for Q1 2026 audit services") —
+  // captured for downstream readers (Section D of InvoiceDetailPage).
+  narration:      string | null
+  periodFrom:     string | null   // DD/MM/YYYY — billing period start
+  periodTo:       string | null   // DD/MM/YYYY — billing period end
+  overallConfidence: number       // 0–100 — fallback when fieldConfidence is sparse
+  fieldConfidence?: OcrFieldConfidence
   rawText:        string
 }
 
@@ -87,7 +109,31 @@ Return this exact structure:
   "totalAmount": number or null,
   "currency": "INR",
   "isEInvoice": true if IRN present else false,
+  "narration": "any free-text narrative / description of the engagement (e.g. 'Q1 2026 audit services'), or null",
+  "periodFrom": "billing period start in DD/MM/YYYY (look for 'From', 'Service period', 'Billing period') or null",
+  "periodTo": "billing period end in DD/MM/YYYY or null",
   "overallConfidence": 0-100 based on image quality and data completeness,
+  "fieldConfidence": {
+    "invoiceNumber": 0-100,
+    "invoiceDate":   0-100,
+    "dueDate":       0-100,
+    "vendorName":    0-100,
+    "vendorGstin":   0-100,
+    "vendorPan":     0-100,
+    "vendorAddress": 0-100,
+    "poReference":   0-100,
+    "irn":           0-100,
+    "subtotal":      0-100,
+    "cgst":          0-100,
+    "sgst":          0-100,
+    "igst":          0-100,
+    "tdsAmount":     0-100,
+    "totalAmount":   0-100,
+    "currency":      0-100,
+    "narration":     0-100,
+    "periodFrom":    0-100,
+    "periodTo":      0-100
+  },
   "rawText": "first 500 chars of visible text on invoice"
 }
 
@@ -95,8 +141,10 @@ Rules:
 - All amounts as plain numbers (no commas, no ₹ symbol)
 - Dates as DD/MM/YYYY
 - GSTIN must be exactly 15 alphanumeric characters
-- If a field is unclear or absent, use null
-- overallConfidence: 95+ = crystal clear, 80-94 = readable with minor issues, <80 = poor quality or unusual format`
+- If a field is unclear or absent, use null AND set its fieldConfidence to 0
+- fieldConfidence per key: 100 = absolutely certain, 80–99 = clear but minor doubt, 50–79 = best-effort guess, <50 = unreliable / inferred
+- overallConfidence: 95+ = crystal clear, 80-94 = readable with minor issues, <80 = poor quality or unusual format
+- Always include the fieldConfidence object even if some keys are 0; never omit it`
 
 // ── Main OCR function ──
 
