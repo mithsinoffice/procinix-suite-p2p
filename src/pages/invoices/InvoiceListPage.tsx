@@ -109,6 +109,8 @@ export default function InvoiceListPage() {
       <MasterPageHeader
         title="Invoices"
         description="AP invoice processing — OCR ingestion, match scoring, approval workflow"
+        backLabel="Dashboard"
+        backTo="/dashboard"
         actions={
           <div className="flex items-center gap-2">
             <button onClick={() => pollEmails.mutate()} disabled={isPolling}

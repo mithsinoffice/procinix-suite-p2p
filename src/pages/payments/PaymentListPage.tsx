@@ -6,6 +6,8 @@ export default function PaymentListPage() {
       <MasterPageHeader
         title="Payments"
         description="Payment runs, TDS challans and remittances"
+        backLabel="Dashboard"
+        backTo="/dashboard"
       />
       <div className="flex-1 flex items-center justify-center">
         <p className="text-sm text-muted-foreground">Payment management — coming soon</p>

@@ -665,6 +665,8 @@ export default function InvoiceFormPage() {
       <MasterPageHeader
         title={isEdit ? 'Edit Invoice' : 'New Invoice'}
         description="AP Invoice — OCR · GST auto-calc · 3-way match"
+        backLabel="Invoices"
+        backTo="/invoices"
         actions={
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => navigate('/invoices')}

@@ -128,6 +128,8 @@ export default function AdminTenantsPage() {
       <MasterPageHeader
         title="Tenant Management"
         description="Procinix super admin — manage all client tenants, modules and features"
+        backLabel="Dashboard"
+        backTo="/dashboard"
         actions={
           <button onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">

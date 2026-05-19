@@ -16,6 +16,8 @@ export default function InvoiceReviewQueuePage() {
       <MasterPageHeader
         title="AP Review Queue"
         description={`${invoices.length} invoices need review`}
+        backLabel="Invoices"
+        backTo="/invoices"
       />
 
       <div className="flex-1 overflow-auto">
