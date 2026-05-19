@@ -211,7 +211,6 @@ export default function BudgetFormPage() {
     if (!fy?.startDate) return
     const newPeriods = buildPeriods(periodType, Number(budgetAmount) || 0, new Date(fy.startDate))
     replace(newPeriods)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodType, budgetAmount, financialYearId])
 
   const periodSum    = periods.reduce((s, p) => s + (Number(p.allocatedAmount) || 0), 0)

@@ -268,7 +268,8 @@ export default function ItemFormPage() {
       ocrMatchConfidence:  Number(data.ocrMatchConfidence),
       entityMappings:      entityMappingsPayload,
     }
-    isEdit ? updateItem.mutate(payload) : createItem.mutate(payload)
+    if (isEdit) updateItem.mutate(payload)
+    else createItem.mutate(payload)
   })
 
   const isPending = createItem.isPending || updateItem.isPending

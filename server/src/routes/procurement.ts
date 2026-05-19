@@ -129,15 +129,28 @@ export async function procurementRoutes(app: FastifyInstance) {
   })
 
   app.get('/po', auth, async (req, reply) => {
-    const { status, vendorId, search } = req.query as any
+    const { status, vendorId, entityId, search, hasOpenValue } = req.query as {
+      status?: string; vendorId?: string; entityId?: string; search?: string; hasOpenValue?: string
+    }
     const where: any = { tenantId: req.tenant.id }
     if (status && status !== 'ALL') where.status = status
     if (vendorId) where.vendorId = vendorId
+    if (entityId) where.entityId = entityId
     if (search) where.OR = [{ poRef: { contains: search } }]
-    return reply.send(await app.prisma.purchaseOrder.findMany({
+
+    const pos = await app.prisma.purchaseOrder.findMany({
       where, orderBy: { createdAt: 'desc' }, take: 50,
-      include: { lines: true, milestones: true },
-    }))
+      include: {
+        lines:      true,
+        milestones: true,
+        _count:     { select: { grns: true } },
+      },
+    })
+
+    // Augment + optional filter through pure helpers (covered by unit tests).
+    const { augmentPOWithOpenValue, filterByOpenValue } = await import('../services/po-consumption.service.js')
+    const augmented = filterByOpenValue(pos.map(augmentPOWithOpenValue), hasOpenValue === 'true')
+    return reply.send(augmented)
   })
 
   app.get('/po/:id', auth, async (req, reply) => {

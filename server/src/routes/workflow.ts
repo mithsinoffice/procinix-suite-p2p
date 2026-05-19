@@ -90,6 +90,20 @@ export async function workflowRoutes(app: FastifyInstance) {
         where: { id: instanceInfo.entityId },
         data:  { status: newInvStatus },
       })
+      // Final approval — flip linked POs marked FULL to FULLY_INVOICED so they
+      // disappear from the open-POs list.
+      if (result.data.finalStatus === 'APPROVED') {
+        const fullLinks = await app.prisma.invoicePOLink.findMany({
+          where:  { invoiceId: instanceInfo.entityId, consumptionType: 'FULL' },
+          select: { poId: true },
+        })
+        if (fullLinks.length > 0) {
+          await app.prisma.purchaseOrder.updateMany({
+            where: { id: { in: fullLinks.map(l => l.poId) }, tenantId: req.tenant.id },
+            data:  { status: 'FULLY_INVOICED' },
+          })
+        }
+      }
       await app.prisma.invoiceAuditLog.create({
         data: {
           invoiceId: instanceInfo.entityId, tenantId: req.tenant.id,

@@ -317,7 +317,6 @@ export default function POFormPage() {
   useEffect(() => {
     if (!gstType) return
     lines.forEach((l, i) => updateLine(i, calcLine(l as POLine, gstType, taxType)))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gstType, taxType])
 
   const recalc = (idx: number) => {
@@ -349,7 +348,6 @@ export default function POFormPage() {
         setValue(`milestones.${i}.amount`, expected)
       }
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totals.total, milestones.map(m => m.pct).join(',')])
 
   // Budget check

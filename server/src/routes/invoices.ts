@@ -112,8 +112,48 @@ export async function invoiceRoutes(app: FastifyInstance) {
   })
 
   // ── Create invoice ──
+  // Accepts optional poRefs[] (multi-PO link) and matchType / grnIds[] for PO-based
+  // invoices. For each poRef the server validates that invoiceAmount <= openValue
+  // (totalAmount - consumedAmount) and bumps PO.consumedAmount in the same
+  // transaction. Pure DIRECT invoices pass no poRefs.
   app.post('/', auth, async (req, reply) => {
-    const { lines = [], ...data } = req.body as any
+    const {
+      lines = [],
+      poRefs = [],
+      matchType,
+      grnIds: _grnIds = [],
+      ...data
+    } = req.body as {
+      lines?: any[]
+      poRefs?: { poId: string; consumptionType: 'PARTIAL' | 'FULL'; invoiceAmount: number }[]
+      matchType?: '2way' | '3way'
+      grnIds?: string[]
+      [k: string]: unknown
+    }
+
+    // Validate poRefs consumption against PO open value.
+    if (poRefs.length > 0) {
+      const poIds = poRefs.map(p => p.poId)
+      const pos = await app.prisma.purchaseOrder.findMany({
+        where:  { id: { in: poIds }, tenantId: req.tenant.id },
+        select: { id: true, poRef: true, totalAmount: true, consumedAmount: true },
+      })
+      const { validatePOConsumption } = await import('../services/po-consumption.service.js')
+      const result = validatePOConsumption(
+        poRefs.map(p => ({ poId: p.poId, invoiceAmount: p.invoiceAmount })),
+        pos.map(p => ({ id: p.id, poRef: p.poRef, totalAmount: Number(p.totalAmount), consumedAmount: Number(p.consumedAmount) })),
+      )
+      if (!result.ok) {
+        if (result.error.code === 'PO_NOT_FOUND') {
+          return reply.code(400).send({ code: 'VALIDATION_ERROR', message: `PO ${result.error.poId} not found in this tenant` })
+        }
+        return reply.code(400).send({
+          code:    'VALIDATION_ERROR',
+          message: `Invoice amount ${result.error.invoiceAmount} exceeds open value ${result.error.openValue.toFixed(2)} on PO ${result.error.poRef}`,
+        })
+      }
+    }
+
     const invoice = await app.prisma.$transaction(async tx => {
       const inv = await tx.invoice.create({
         data: {
@@ -121,12 +161,33 @@ export async function invoiceRoutes(app: FastifyInstance) {
           tenantId:        req.tenant.id,
           createdByUserId: req.user.sub,
           status:          'DRAFT',
+          isPOInvoice:     poRefs.length > 0,
+          matchType:       poRefs.length > 0 ? (matchType ?? '2way') : null,
         },
       })
       if (lines.length) {
         await tx.invoiceLine.createMany({
           data: lines.map((l: any, i: number) => ({ ...l, invoiceId: inv.id, lineNumber: i + 1 })),
         })
+      }
+      if (poRefs.length > 0) {
+        await tx.invoicePOLink.createMany({
+          data: poRefs.map(p => ({
+            tenantId:        req.tenant.id,
+            invoiceId:       inv.id,
+            poId:            p.poId,
+            invoiceAmount:   p.invoiceAmount,
+            consumptionType: p.consumptionType,
+          })),
+        })
+        // Bump consumedAmount on each PO. Stays inside the transaction so the
+        // running total can't drift if two invoices race against the same PO.
+        for (const p of poRefs) {
+          await tx.purchaseOrder.update({
+            where: { id: p.poId },
+            data:  { consumedAmount: { increment: p.invoiceAmount } },
+          })
+        }
       }
       await tx.invoiceAuditLog.create({
         data: { invoiceId: inv.id, tenantId: req.tenant.id, action: 'CREATED', userId: req.user.sub, userName: (req.user as any).name },

@@ -857,6 +857,23 @@ async function main() {
         { order: 3, name: 'MD Sign-off',     approverType: 'ROLE', approverRole: 'MD',              slaHours: 72, requiresComment: true,  onReject: 'RETURN_TO_PREV_STAGE' },
       ],
     },
+    {
+      // Direct (non-PO) invoices above ₹25K — auto-route to L2 (Finance Manager + CFO).
+      // Conditions: totalAmount >= 25000 AND isPOInvoice == false.
+      // Priority 25 — sits between INV-STD-LOW (10) and INV-STD-MID (20) so it wins
+      // when totalAmount >= 25K AND not a PO invoice; otherwise the standard ladder
+      // matches based on amount alone.
+      code: 'INV-DIRECT-L2', name: 'Direct Invoice Approval — Above ₹25K (no PO)',
+      module: 'INVOICE', isDefault: false, priority: 25,
+      conditions: [
+        { field: 'totalAmount', operator: 'GTE', value: '25000', logicGroup: 'AND' },
+        { field: 'isPOInvoice', operator: 'EQ',  value: 'false', logicGroup: 'AND' },
+      ],
+      stages: [
+        { order: 1, name: 'Finance Manager L2', approverType: 'ROLE', approverRole: 'FINANCE_MANAGER', slaHours: 24, requiresComment: false, onReject: 'RETURN_TO_DRAFT'      },
+        { order: 2, name: 'CFO L2 Sign-off',    approverType: 'ROLE', approverRole: 'CFO',             slaHours: 48, requiresComment: true,  onReject: 'RETURN_TO_PREV_STAGE' },
+      ],
+    },
   ]
   for (const def of workflowDefs) {
     const { conditions, stages, ...defData } = def
@@ -868,7 +885,7 @@ async function main() {
     await prisma.workflowDefinitionCondition.createMany({ data: conditions.map(c => ({ ...c, definitionId: created.id })) })
     await prisma.workflowDefinitionStage.createMany({    data: stages.map(s => ({ ...s, definitionId: created.id })) })
   }
-  console.log('✓ 3 workflow definitions + stages seeded')
+  console.log(`✓ ${workflowDefs.length} workflow definitions + stages seeded`)
 
   // ── Master workflow definitions — single-stage approvals for every module ─────
   // One definition per module wired by MasterListScreen.workflowModule so that

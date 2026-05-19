@@ -59,25 +59,47 @@ function FuzzyMatchHint({ ocrValue, storedValue, confidence }: {
   )
 }
 
-// ── Field with optional OCR chip + fuzzy hint ───────────────────────────────
-function Field({ label, value, ocrScore, ocrValue, confidence, mono }: {
-  label:       string
-  value:       React.ReactNode
-  ocrScore?:   number | null
-  ocrValue?:   string | number | null
-  confidence?: number | null
-  mono?:       boolean
+// ── Read-only field — visually matches InvoiceFormPage's input rows ─────────
+function ReadOnlyField({ label, value, chip, hint }: {
+  label: string
+  value: React.ReactNode
+  chip?: React.ReactNode
+  hint?: React.ReactNode
+}) {
+  const isEmpty = value == null || value === ''
+  return (
+    <div className="space-y-1">
+      <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        {label}
+        {chip}
+      </label>
+      <div className="flex min-h-9 w-full items-center rounded-lg border border-input bg-muted/30 px-3 py-2 text-sm">
+        {isEmpty ? <span className="text-muted-foreground">—</span> : value}
+      </div>
+      {hint}
+    </div>
+  )
+}
+
+// ── Section wrapper — A/B/C lettered cards like InvoiceFormPage ─────────────
+function Section({ letter, title, subtitle, children }: {
+  letter:    string
+  title:     string
+  subtitle?: string
+  children:  React.ReactNode
 }) {
   return (
-    <div className="space-y-0.5">
-      <label className="text-xs font-medium text-muted-foreground flex items-center">
-        <span>{label}</span>
-        <OcrChip score={ocrScore ?? null} />
-      </label>
-      <div className={cn('text-sm font-medium', mono && 'font-mono tabular-nums')}>{value ?? '—'}</div>
-      {ocrValue != null && confidence != null && (
-        <FuzzyMatchHint ocrValue={ocrValue} storedValue={value as any} confidence={confidence} />
-      )}
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="border-b border-border px-5 py-3">
+        <h2 className="text-sm font-semibold">
+          <span className="text-primary font-bold mr-1.5">{letter}.</span>
+          {title}
+        </h2>
+        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+      </div>
+      <div className="p-5">
+        {children}
+      </div>
     </div>
   )
 }
@@ -402,75 +424,7 @@ export default function InvoiceDetailPage() {
               </div>
             )}
 
-            {/* Section A — Invoice header */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">A. Invoice header</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                <Field label="Entity"        value={entityName(inv.entityId)} />
-                <Field label="Created by"    value={userName(inv.createdByUserId)} />
-                <Field label="Department"    value={departmentName(inv.departmentId)} />
-                <div />
-                <Field
-                  label="Vendor"
-                  value={inv.vendor?.legalName ?? <span className="text-amber-600">Unmatched</span>}
-                />
-                <Field
-                  label="Vendor GSTIN"
-                  value={inv.vendorGSTIN}
-                  ocrScore={fieldScore}
-                  ocrValue={ocr?.vendorGSTIN}
-                  confidence={ocrConfidence}
-                  mono
-                />
-                <Field
-                  label="Vendor PAN"
-                  value={inv.vendorPAN ?? inv.vendor?.pan}
-                  ocrScore={fieldScore}
-                  ocrValue={ocr?.vendorPAN}
-                  confidence={ocrConfidence}
-                  mono
-                />
-                <Field label="Bill-to location" value={locationName(inv.billToLocationId)} />
-                <Field
-                  label="Invoice number"
-                  value={inv.invoiceNumber}
-                  ocrScore={fieldScore}
-                  ocrValue={ocr?.invoiceNumber}
-                  confidence={ocrConfidence}
-                  mono
-                />
-                <Field
-                  label="Invoice date"
-                  value={formatDate(inv.invoiceDate)}
-                  ocrScore={fieldScore}
-                  ocrValue={ocr?.invoiceDate}
-                  confidence={ocrConfidence}
-                />
-                <Field label="Due date" value={inv.dueDate ? formatDate(inv.dueDate) : '—'} />
-                <Field label="Channel"  value={inv.channelType ?? 'MANUAL_UPLOAD'} />
-                <Field label="Currency" value={currency} />
-                <Field label="PO reference" value={inv.poRef ?? '—'} mono />
-                <div className="sm:col-span-2">
-                  <Field
-                    label="IRN (e-Invoice)"
-                    value={
-                      inv.irnNumber ? (
-                        <span className="flex items-center gap-2">
-                          <span className="font-mono text-xs break-all">{inv.irnNumber}</span>
-                          {inv.irnVerified && (
-                            <span className="rounded-full bg-green-50 border border-green-200 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
-                              Verified ✓
-                            </span>
-                          )}
-                        </span>
-                      ) : '—'
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* KYC chips */}
+            {/* KYC chips — vendor-level KYC status row, sits above sections */}
             {inv.vendor && (
               <div className="flex flex-wrap gap-2">
                 <KycBadge label="PAN" status={inv.vendor.kycPanStatus} />
@@ -479,101 +433,171 @@ export default function InvoiceDetailPage() {
               </div>
             )}
 
-            {/* Financial summary */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                { label: 'Subtotal',    value: inv.subtotal },
-                { label: 'GST',         value: (Number(inv.cgstAmount) + Number(inv.sgstAmount) + Number(inv.igstAmount)) },
-                { label: 'TDS',         value: inv.tdsAmount },
-                { label: 'Net payable', value: inv.netPayable },
-              ].map(({ label, value }) => (
-                <div key={label} className="rounded-lg border border-border p-3">
-                  <p className="text-xs text-muted-foreground">{label}</p>
-                  <p className="text-sm font-semibold tabular-nums mt-0.5">{formatCurrency(value, currency)}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Total amount with fuzzy hint */}
-            {ocr?.totalAmount != null && (
-              <div className="rounded-lg border border-border p-3">
-                <Field
-                  label="Total amount"
-                  value={formatCurrency(inv.totalAmount, currency)}
-                  ocrScore={fieldScore}
-                  ocrValue={ocr.totalAmount}
-                  confidence={ocrConfidence}
-                  mono
+            {/* Section A — Invoice Header */}
+            <Section letter="A" title="Invoice Header" subtitle="Core invoice identifiers and dates">
+              <div className="grid grid-cols-2 gap-4">
+                <ReadOnlyField label="Entity"      value={entityName(inv.entityId)} />
+                <ReadOnlyField label="Created by"  value={userName(inv.createdByUserId)} />
+                <ReadOnlyField label="Department"  value={departmentName(inv.departmentId)} />
+                <div />
+                <ReadOnlyField
+                  label="Vendor"
+                  value={inv.vendor?.legalName ?? <span className="text-amber-600">Unmatched</span>}
                 />
-              </div>
-            )}
-
-            {/* GST breakdown */}
-            {(Number(inv.cgstAmount) > 0 || Number(inv.igstAmount) > 0) && (
-              <div className="rounded-lg border border-border p-4 grid grid-cols-3 gap-4 text-sm">
-                <div>
-                  <p className="text-xs text-muted-foreground">CGST</p>
-                  <p className="font-mono tabular-nums text-green-700">{formatCurrency(inv.cgstAmount, currency)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">SGST</p>
-                  <p className="font-mono tabular-nums text-green-700">{formatCurrency(inv.sgstAmount, currency)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">IGST</p>
-                  <p className="font-mono tabular-nums text-blue-700">{formatCurrency(inv.igstAmount, currency)}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Match score — score cards */}
-            {scoreData && (
-              <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Match score breakdown</p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                  {scoreItems.map(item => (
-                    <ScoreCard key={item.label} label={item.label} score={item.score} max={item.max} />
-                  ))}
-                </div>
-                <div className="flex items-center gap-4 mt-3 p-3 rounded-xl bg-muted/20 border border-border">
-                  <div className="text-3xl font-bold tabular-nums">{inv.matchScore ?? scoreData.totalScore}</div>
-                  <div>
-                    <p className="text-sm font-semibold">/100</p>
-                    <p className="text-xs text-muted-foreground">Overall match score</p>
-                  </div>
-                  {(inv.apLane ?? scoreData.lane) && (
-                    <span className={cn('ml-auto rounded-full px-3 py-1 text-xs font-bold border',
-                      (inv.apLane ?? scoreData.lane) === 'STP'    ? 'bg-green-50 text-green-700 border-green-200' :
-                      (inv.apLane ?? scoreData.lane) === 'REVIEW' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                                                    'bg-red-50 text-red-700 border-red-200')}>
-                      {inv.apLane ?? scoreData.lane} lane
+                <ReadOnlyField
+                  label="Vendor GSTIN"
+                  value={<span className="font-mono">{inv.vendorGSTIN || inv.vendor?.gstin || '—'}</span>}
+                  chip={<OcrChip score={fieldScore} />}
+                  hint={<FuzzyMatchHint ocrValue={ocr?.vendorGSTIN} storedValue={inv.vendorGSTIN ?? inv.vendor?.gstin} confidence={ocrConfidence} />}
+                />
+                <ReadOnlyField
+                  label="Vendor PAN"
+                  value={<span className="font-mono">{inv.vendorPAN || inv.vendor?.pan || '—'}</span>}
+                  chip={<OcrChip score={fieldScore} />}
+                  hint={<FuzzyMatchHint ocrValue={ocr?.vendorPAN} storedValue={inv.vendorPAN ?? inv.vendor?.pan} confidence={ocrConfidence} />}
+                />
+                <ReadOnlyField label="Bill-to location" value={locationName(inv.billToLocationId)} />
+                <ReadOnlyField
+                  label="Invoice number"
+                  value={<span className="font-mono font-medium">{inv.invoiceNumber}</span>}
+                  chip={<OcrChip score={fieldScore} />}
+                  hint={<FuzzyMatchHint ocrValue={ocr?.invoiceNumber} storedValue={inv.invoiceNumber} confidence={ocrConfidence} />}
+                />
+                <ReadOnlyField
+                  label="Invoice date"
+                  value={formatDate(inv.invoiceDate)}
+                  chip={<OcrChip score={fieldScore} />}
+                  hint={<FuzzyMatchHint ocrValue={ocr?.invoiceDate} storedValue={formatDate(inv.invoiceDate)} confidence={ocrConfidence} />}
+                />
+                <ReadOnlyField label="Due date" value={inv.dueDate ? formatDate(inv.dueDate) : null} />
+                <ReadOnlyField
+                  label="Channel"
+                  value={
+                    <span className="rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-xs font-medium">
+                      {(inv.channelType ?? 'MANUAL_UPLOAD').replace(/_/g, ' ')}
                     </span>
-                  )}
-                </div>
-                {Array.isArray(scoreData.guardrailsTriggered) && scoreData.guardrailsTriggered.length > 0 && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                    <p className="text-xs font-semibold text-amber-700 mb-1">Guardrails triggered</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {scoreData.guardrailsTriggered.map((g: string) => (
-                        <span key={g} className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-medium text-amber-800">
-                          {g}
-                        </span>
-                      ))}
-                    </div>
+                  }
+                />
+                <ReadOnlyField label="Currency"     value={currency} />
+                <ReadOnlyField label="PO reference" value={inv.poRef ? <span className="font-mono">{inv.poRef}</span> : null} />
+                {inv.irnNumber && (
+                  <div className="col-span-2">
+                    <ReadOnlyField
+                      label="IRN (e-Invoice)"
+                      value={
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-mono text-xs break-all">{inv.irnNumber}</span>
+                          {inv.irnVerified && (
+                            <span className="rounded-full bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 text-xs font-medium ml-2 flex-shrink-0">
+                              e-Invoice ✓
+                            </span>
+                          )}
+                        </div>
+                      }
+                    />
                   </div>
                 )}
               </div>
+            </Section>
+
+            {/* Section B — Financial Summary */}
+            <Section letter="B" title="Financial Summary" subtitle="Amounts, taxes, and net payable">
+              <div className="grid grid-cols-2 gap-4">
+                <ReadOnlyField
+                  label="Subtotal"
+                  value={<span className="font-mono tabular-nums">{formatCurrency(inv.subtotal, currency)}</span>}
+                />
+                <ReadOnlyField
+                  label="GST (total)"
+                  value={<span className="font-mono tabular-nums">{formatCurrency(Number(inv.cgstAmount) + Number(inv.sgstAmount) + Number(inv.igstAmount), currency)}</span>}
+                />
+                <ReadOnlyField
+                  label="TDS"
+                  value={<span className="font-mono tabular-nums text-amber-600">{formatCurrency(inv.tdsAmount, currency)}</span>}
+                />
+                <ReadOnlyField
+                  label="Net payable"
+                  value={<span className="font-mono tabular-nums font-semibold">{formatCurrency(inv.netPayable, currency)}</span>}
+                />
+                <div className="col-span-2">
+                  <ReadOnlyField
+                    label="Total amount"
+                    value={<span className="font-mono tabular-nums">{formatCurrency(inv.totalAmount, currency)}</span>}
+                    chip={<OcrChip score={fieldScore} />}
+                    hint={ocr?.totalAmount != null ? (
+                      <FuzzyMatchHint ocrValue={ocr.totalAmount} storedValue={Number(inv.totalAmount)} confidence={ocrConfidence} />
+                    ) : undefined}
+                  />
+                </div>
+                {Number(inv.cgstAmount) > 0 && (
+                  <>
+                    <ReadOnlyField
+                      label="CGST"
+                      value={<span className="font-mono tabular-nums text-green-700">{formatCurrency(inv.cgstAmount, currency)}</span>}
+                    />
+                    <ReadOnlyField
+                      label="SGST"
+                      value={<span className="font-mono tabular-nums text-green-700">{formatCurrency(inv.sgstAmount, currency)}</span>}
+                    />
+                  </>
+                )}
+                {Number(inv.igstAmount) > 0 && (
+                  <div className="col-span-2">
+                    <ReadOnlyField
+                      label="IGST"
+                      value={<span className="font-mono tabular-nums text-blue-700">{formatCurrency(inv.igstAmount, currency)}</span>}
+                    />
+                  </div>
+                )}
+              </div>
+            </Section>
+
+            {/* Section D — Match Score */}
+            {scoreData && (
+              <Section letter="D" title="Match Score" subtitle="Vendor, PO, GRN, GST, and OCR confidence">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    {scoreItems.map(item => (
+                      <ScoreCard key={item.label} label={item.label} score={item.score} max={item.max} />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-4 p-3 rounded-xl bg-muted/20 border border-border">
+                    <div className="text-3xl font-bold tabular-nums">{inv.matchScore ?? scoreData.totalScore}</div>
+                    <div>
+                      <p className="text-sm font-semibold">/100</p>
+                      <p className="text-xs text-muted-foreground">Overall match score</p>
+                    </div>
+                    {(inv.apLane ?? scoreData.lane) && (
+                      <span className={cn('ml-auto rounded-full px-3 py-1 text-xs font-bold border',
+                        (inv.apLane ?? scoreData.lane) === 'STP'    ? 'bg-green-50 text-green-700 border-green-200' :
+                        (inv.apLane ?? scoreData.lane) === 'REVIEW' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                                                      'bg-red-50 text-red-700 border-red-200')}>
+                        {inv.apLane ?? scoreData.lane} lane
+                      </span>
+                    )}
+                  </div>
+                  {Array.isArray(scoreData.guardrailsTriggered) && scoreData.guardrailsTriggered.length > 0 && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                      <p className="text-xs font-semibold text-amber-700 mb-1">Guardrails triggered</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {scoreData.guardrailsTriggered.map((g: string) => (
+                          <span key={g} className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                            {g}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Section>
             )}
 
-            {/* Line items */}
+            {/* Section C — Line items */}
             {inv.lines?.length > 0 && (
-              <div className="rounded-xl border border-border overflow-hidden">
-                <div className="border-b border-border bg-muted/40 px-4 py-2.5">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Line items</p>
-                </div>
-                <div className="overflow-x-auto">
+              <Section letter="C" title="Line Items" subtitle={`${inv.lines.length} line${inv.lines.length === 1 ? '' : 's'}`}>
+                <div className="-mx-5 -mb-5 overflow-x-auto border-t border-border">
                   <table className="w-full text-xs">
-                    <thead className="border-b border-border">
+                    <thead className="border-b border-border bg-muted/30">
                       <tr>
                         {['#','Description','Qty','UOM','Unit Price','Taxable','CGST','SGST','IGST','TDS','RCM','Total'].map(h => (
                           <th key={h} className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
@@ -600,67 +624,71 @@ export default function InvoiceDetailPage() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </Section>
             )}
 
-            {/* Audit trail */}
-            {inv.auditLogs?.length > 0 && (
-              <div className="rounded-xl border border-border p-5 space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Audit trail</p>
-                <div className="space-y-3">
-                  {inv.auditLogs.map((log: any) => (
-                    <div key={log.id} className="flex items-start gap-3">
-                      <div className="mt-0.5 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-[9px] font-bold text-primary">
-                          {log.action.slice(0, 2)}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold">{formatStatus(log.action)}</span>
-                          {log.userName && <span className="text-xs text-muted-foreground">by {log.userName}</span>}
+            {/* Section E — Audit Trail */}
+            {(inv.auditLogs?.length > 0 || inv.approvals?.length > 0) && (
+              <Section letter="E" title="Audit Trail" subtitle="Chronological event history and legacy approval steps">
+                {inv.auditLogs?.length > 0 && (
+                  <div className="space-y-3">
+                    {inv.auditLogs.map((log: any) => (
+                      <div key={log.id} className="flex items-start gap-3">
+                        <div className="mt-0.5 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-[9px] font-bold text-primary">
+                            {log.action.slice(0, 2)}
+                          </span>
                         </div>
-                        <p className="text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</p>
-                        {log.details && Object.keys(log.details).length > 0 && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {Object.entries(log.details as Record<string, string>).map(([k, v]) => `${k}: ${v}`).join(' · ')}
-                          </p>
-                        )}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold">{formatStatus(log.action)}</span>
+                            {log.userName && <span className="text-xs text-muted-foreground">by {log.userName}</span>}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</p>
+                          {log.details && Object.keys(log.details).length > 0 && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {Object.entries(log.details as Record<string, string>).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Legacy approval steps */}
-            {inv.approvals?.length > 0 && (
-              <div className="rounded-xl border border-border p-5 space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Approval steps</p>
-                {inv.approvals.map((step: any) => (
-                  <div key={step.id} className="flex items-start gap-3">
-                    <div className={cn('mt-0.5 h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-bold',
-                      step.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                      step.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700')}>
-                      L{step.level}
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold">{formatStatus(step.status)}</p>
-                      {step.comments && <p className="text-xs text-muted-foreground">{step.comments}</p>}
-                      {step.actionAt && <p className="text-xs text-muted-foreground">{formatDate(step.actionAt)}</p>}
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+
+                {inv.approvals?.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Legacy approval steps</p>
+                    {inv.approvals.map((step: any) => (
+                      <div key={step.id} className="flex items-start gap-3">
+                        <div className={cn('mt-0.5 h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-bold',
+                          step.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                          step.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700')}>
+                          L{step.level}
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold">{formatStatus(step.status)}</p>
+                          {step.comments && <p className="text-xs text-muted-foreground">{step.comments}</p>}
+                          {step.actionAt && <p className="text-xs text-muted-foreground">{formatDate(step.actionAt)}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Section>
             )}
 
-            {/* Workflow panel */}
+            {/* Section F — Approval Workflow */}
             {inv.workflowInstanceId && (
-              <WorkflowPanel
-                invoiceId={inv.id}
-                workflowInstanceId={inv.workflowInstanceId}
-                onAction={() => qc.invalidateQueries({ queryKey: ['invoices', id] })}
-              />
+              <Section letter="F" title="Approval Workflow" subtitle="Stage timeline and discussion thread">
+                <div className="-m-5">
+                  <WorkflowPanel
+                    invoiceId={inv.id}
+                    workflowInstanceId={inv.workflowInstanceId}
+                    onAction={() => qc.invalidateQueries({ queryKey: ['invoices', id] })}
+                  />
+                </div>
+              </Section>
             )}
 
           </div>
@@ -705,11 +733,10 @@ function WorkflowPanel({ invoiceId: _invoiceId, workflowInstanceId, onAction }: 
   const currentStage = instance.stages?.find((s: any) => s.status === 'PENDING' || s.status === 'INFO_REQUESTED')
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/20">
+    <div className="overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/20">
         <div>
-          <p className="text-sm font-semibold">Approval Workflow</p>
-          <p className="text-xs text-muted-foreground">{instance.definition?.name ?? 'Standard workflow'}</p>
+          <p className="text-xs font-medium text-muted-foreground">{instance.definition?.name ?? 'Standard workflow'}</p>
         </div>
         <span className={cn('rounded-full px-2.5 py-1 text-xs font-semibold border',
           instance.status === 'APPROVED' ? 'bg-green-50 text-green-700 border-green-200' :

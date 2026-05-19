@@ -212,6 +212,18 @@ export async function approveInvoice(
   await prisma.$transaction(async (tx) => {
     await tx.approvalStep.update({ where: { id: pendingStep.id }, data: { status: 'APPROVED', comments, actionAt: new Date() } })
     await tx.invoice.update({ where: { id }, data: { status: 'APPROVED' } })
+    // Any linked PO marked FULL by this invoice is now fully invoiced — flip
+    // its status so it stops appearing in the "open POs" list.
+    const fullLinks = await tx.invoicePOLink.findMany({
+      where:  { invoiceId: id, consumptionType: 'FULL' },
+      select: { poId: true },
+    })
+    if (fullLinks.length > 0) {
+      await tx.purchaseOrder.updateMany({
+        where: { id: { in: fullLinks.map(l => l.poId) }, tenantId: ctx.tenantId },
+        data:  { status: 'FULLY_INVOICED' },
+      })
+    }
   })
 
   await writeAuditLog(prisma, {

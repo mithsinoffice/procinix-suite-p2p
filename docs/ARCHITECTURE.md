@@ -1,6 +1,6 @@
 # Procinix v2 (S2P) — Architecture
 
-_Last updated: 2026-05-19_
+_Last updated: 2026-05-19 (two-path invoice creation)_
 
 Indian Source-to-Pay (S2P) platform — Procurement, Goods Receipt, AP Invoice processing, Payments, Vendor management, Approvals and Masters — for mid-market Indian enterprises. Multi-tenant, RBAC-gated, n8n-driven email ingestion, Gemini OCR.
 
@@ -65,7 +65,8 @@ src/                                    # React frontend
     intake/IntakePage
     purchase-orders/  PurchaseOrdersPage · PRFormPage · POFormPage
     grn/  GRNPage · GRNFormPage
-    invoices/  InvoiceListPage · InvoiceFormPage · InvoiceDetailPage · InvoiceNewPage · InvoiceReviewQueuePage
+    invoices/  InvoiceListPage · InvoiceFormPage · InvoiceDetailPage · InvoiceNewPage · InvoiceReviewQueuePage ·
+               InvoiceTypeSelector · InvoiceCreatePO · InvoiceCreateDirect · components/invoice-shared.ts
     payments/  PaymentListPage · PaymentDetailPage
     workflow/WorkflowHubPage             # /workflow — engine entry
     masters/                             # MastersPage + 30+ masters
@@ -100,14 +101,17 @@ server/src/                             # Fastify backend
     vendor.service · master.service
     workflow-engine.service             # startWorkflow / approveStage / rejectStage / putOnHold / addChatMessage
     match-scoring.service               # 2-way + 3-way match scoring
+    po-consumption.service              # augmentPOWithOpenValue / filterByOpenValue / validatePOConsumption (pure, unit-tested)
     kyc.orchestrator.ts · kyc/          # PAN / GSTIN / IFSC verification
     surepass.service · ongrid.service · transbnk.service
   lib/
     prisma · redis · audit · result
 
 prisma/
-  schema.prisma                         # 73 models + 7 enums
+  schema.prisma                         # 74 models + 7 enums
   seed.ts                               # Master data seed (GL codes, TDS sections, etc.)
+
+vitest.config.ts                        # Frontend + backend pure-function specs
 ```
 
 ---
@@ -385,6 +389,47 @@ Zustand store; `isAuthenticated` driven by presence of cookies. The store loads 
 - Redis cache for master data — TTL 1h, invalidate on edit.
 - Skeleton loading on all listing pages.
 - Every page is `React.lazy()`.
+
+---
+
+## §10b Invoice creation — two-path flow
+
+`POST /invoices/new` no longer goes straight to a form. The route renders `InvoiceTypeSelector`, which branches into one of two creation paths.
+
+### §10b.1 PO-based invoice (`/invoices/new/po`)
+
+[InvoiceCreatePO.tsx](../src/pages/invoices/InvoiceCreatePO.tsx) — 4-step wizard: **Vendor → Link PO → Details → Review**.
+
+- **Vendor step** — picks an `ACTIVE` non-`INTERCOMPANY` vendor from `/api/masters/vendors`.
+- **Link PO step** — fetches `GET /api/po?vendorId=X&entityId=Y&status=APPROVED&hasOpenValue=true`. Renders a multi-select table with PO ref / date / total / **consumed (with progress bar, amber > 80%)** / open value / GRN count. Per selected PO the user picks **PARTIAL** or **FULL** consumption and an invoice amount (auto-clamped on FULL). Match-type toggle `2-way` vs `3-way`; 3-way is disabled when no GRN exists on any selected PO and shows an amber hint banner if a GRN is available but the user picked 2-way.
+- **Details step** — invoice number, dates; PO refs render as chips; total amount auto-summed from the link drafts.
+- **Review step** — final read-only summary then `POST /api/invoices` with `poRefs[]` + `matchType`.
+
+### §10b.2 Direct invoice (`/invoices/new/direct`)
+
+[InvoiceCreateDirect.tsx](../src/pages/invoices/InvoiceCreateDirect.tsx) — single-page form. Sections A Cost Allocation, B Vendor & Invoice Details, C Amount.
+
+- Mandatory **Cost Centre + GL Code** from `useMasterData()` / `/api/masters/cost-centres` + `/api/masters/gl-codes` (only `status === 'ACTIVE'`).
+- PO reference field is locked with an amber `DIRECT — no PO` chip.
+- When `totalAmount > ₹25,000`: shows a blue info banner pointing at workflow code `WF-INV-DIRECT-L2`; the engine routes the invoice through that 2-stage L2 flow on submit. No UI hardcoding of the lane.
+
+### §10b.3 Backend changes
+
+**Schema** ([prisma/schema.prisma](../prisma/schema.prisma)):
+- `PurchaseOrder.consumedAmount Decimal @default(0)` — running total of invoice value charged to the PO.
+- `InvoicePOLink` join model — `{ invoiceId, poId, invoiceAmount, consumptionType: 'PARTIAL'|'FULL' }`. Cascade on invoice delete; tenant-scoped.
+- `Invoice.matchType String?` (`'2way' | '3way'`) + `Invoice.costCentreId String?` + `Invoice.glCodeId String?` for direct-invoice allocation.
+
+**Routes:**
+- `GET /api/po` ([server/src/routes/procurement.ts:131](../server/src/routes/procurement.ts#L131)) — accepts `vendorId`, `entityId`, `status`, `hasOpenValue`. Augments each PO with `openValue = totalAmount - consumedAmount` and `grnCount = _count.grns` via `augmentPOWithOpenValue`. When `hasOpenValue=true`, applies `filterByOpenValue`.
+- `POST /api/invoices` ([server/src/routes/invoices.ts:114](../server/src/routes/invoices.ts#L114)) — accepts optional `poRefs[]`, `matchType`, `grnIds[]`. Calls `validatePOConsumption()` before the transaction; on success creates the invoice + `InvoicePOLink` rows + increments `PurchaseOrder.consumedAmount` for each link, all atomically. Sets `Invoice.isPOInvoice = true` when `poRefs.length > 0`.
+- Invoice approval (both `approveInvoice` in invoice.service.ts AND the workflow-engine path in `routes/workflow.ts`) — on final APPROVED status, looks up `InvoicePOLink` rows with `consumptionType: 'FULL'` and flips the linked POs to `status: 'FULLY_INVOICED'` so they disappear from the open-PO list.
+
+**Pure helpers** ([server/src/services/po-consumption.service.ts](../server/src/services/po-consumption.service.ts)) — `augmentPOWithOpenValue`, `filterByOpenValue`, `validatePOConsumption`. Zero I/O; covered by 12 Vitest specs at [server/src/services/__tests__/po-consumption.test.ts](../server/src/services/__tests__/po-consumption.test.ts).
+
+### §10b.4 Workflow seed — `WF-INV-DIRECT-L2`
+
+[prisma/seed.ts:861-876](../prisma/seed.ts#L861-L876) — new INVOICE-module definition, priority **25** (sits between INV-STD-LOW and INV-STD-MID). Conditions: `totalAmount >= 25000 AND isPOInvoice == false`. Stages: Finance Manager L2 → CFO L2 Sign-off. Catches direct invoices above the L2 threshold without breaking the existing amount-tier ladder (INV-STD-LOW/MID/HIGH).
 
 ---
 

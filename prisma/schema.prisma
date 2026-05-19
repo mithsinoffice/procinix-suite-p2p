@@ -8,52 +8,54 @@ datasource db {
 }
 
 model Tenant {
-  id               String    @id @default(uuid())
-  code             String    @unique
-  name             String
-  gstin            String?
-  pan              String?
-  plan             String    @default("TRIAL")
-  trialExpiresAt   DateTime?
-  maxEntities      Int       @default(1)
-  maxUsers         Int       @default(5)
-  maxStorageMb     Int       @default(5120)
-  isActive         Boolean   @default(true)
-  status           String    @default("ACTIVE")
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  users            User[]
-  vendors          Vendor[]
-  invoices         Invoice[]
-  payments         Payment[]
-  modules          TenantModule[]
-  features         TenantFeature[]
+  id             String          @id @default(uuid())
+  code           String          @unique
+  name           String
+  gstin          String?
+  pan            String?
+  plan           String          @default("TRIAL")
+  trialExpiresAt DateTime?
+  maxEntities    Int             @default(1)
+  maxUsers       Int             @default(5)
+  maxStorageMb   Int             @default(5120)
+  isActive       Boolean         @default(true)
+  status         String          @default("ACTIVE")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  users          User[]
+  vendors        Vendor[]
+  invoices       Invoice[]
+  payments       Payment[]
+  modules        TenantModule[]
+  features       TenantFeature[]
+
   @@map("tenants")
 }
 
 model User {
-  id                  String    @id @default(uuid())
-  tenantId            String
-  email               String
-  passwordHash        String
-  name                String
-  mobile              String?
-  role                UserRole  @default(USER)
-  additionalRoles     Json?
-  departmentId        String?
-  employeeId          String?
-  profilePhoto        String?
-  mustResetPassword   Boolean   @default(true)
-  emailNotifications  Boolean   @default(true)
-  inAppNotifications  Boolean   @default(true)
-  dailyDigest         Boolean   @default(false)
-  isActive            Boolean   @default(true)
-  lastLoginAt         DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  tenant              Tenant    @relation(fields: [tenantId], references: [id])
-  entityAccess        UserEntityAccess[]
-  entityRoles         UserEntityRole[]
+  id                 String             @id @default(uuid())
+  tenantId           String
+  email              String
+  passwordHash       String
+  name               String
+  mobile             String?
+  role               UserRole           @default(USER)
+  additionalRoles    Json?
+  departmentId       String?
+  employeeId         String?
+  profilePhoto       String?
+  mustResetPassword  Boolean            @default(true)
+  emailNotifications Boolean            @default(true)
+  inAppNotifications Boolean            @default(true)
+  dailyDigest        Boolean            @default(false)
+  isActive           Boolean            @default(true)
+  lastLoginAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  tenant             Tenant             @relation(fields: [tenantId], references: [id])
+  entityAccess       UserEntityAccess[]
+  entityRoles        UserEntityRole[]
+
   @@unique([tenantId, email])
   @@index([tenantId, isActive])
   @@map("users")
@@ -83,12 +85,13 @@ model UserEntityAccess {
   entityId         String
   roleOverride     String?
   canApprove       Boolean  @default(false)
-  approvalLimit    Decimal? @db.Decimal(15,2)
+  approvalLimit    Decimal? @db.Decimal(15, 2)
   canCreatePO      Boolean  @default(false)
   canCreateInvoice Boolean  @default(true)
   canViewOnly      Boolean  @default(false)
   isActive         Boolean  @default(true)
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, entityId])
   @@map("user_entity_access")
 }
@@ -104,6 +107,7 @@ model RolePrivilege {
   status      String   @default("ACTIVE")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
   @@unique([tenantId, roleCode])
   @@map("role_privileges")
 }
@@ -115,36 +119,37 @@ model UserEntityRole {
   roleCode String
   isActive Boolean @default(true)
   user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, entityId, roleCode])
   @@map("user_entity_roles")
 }
 
 model Vendor {
-  id             String        @id @default(uuid())
-  tenantId       String
-  vendorCode     String
-  legalName      String
-  tradeName      String?
-  gstin          String?
-  pan            String
-  vendorType     VendorType    @default(SUPPLIER)
-  email          String?
-  mobile         String?
-  city           String?
-  state          String?
-  pincode        String?
-  bankAccountNo  String?
-  ifscCode       String?
-  bankName       String?
-  paymentTerms   Int           @default(30)
-  tdsApplicable  Boolean       @default(false)
-  tdsSectionCode String?
-  panCompliance  PanCompliance @default(COMPLIANT)
-  status         VendorStatus  @default(ACTIVE)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  tenant         Tenant        @relation(fields: [tenantId], references: [id])
-  invoices       Invoice[]
+  id                    String                  @id @default(uuid())
+  tenantId              String
+  vendorCode            String
+  legalName             String
+  tradeName             String?
+  gstin                 String?
+  pan                   String
+  vendorType            VendorType              @default(SUPPLIER)
+  email                 String?
+  mobile                String?
+  city                  String?
+  state                 String?
+  pincode               String?
+  bankAccountNo         String?
+  ifscCode              String?
+  bankName              String?
+  paymentTerms          Int                     @default(30)
+  tdsApplicable         Boolean                 @default(false)
+  tdsSectionCode        String?
+  panCompliance         PanCompliance           @default(COMPLIANT)
+  status                VendorStatus            @default(ACTIVE)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  tenant                Tenant                  @relation(fields: [tenantId], references: [id])
+  invoices              Invoice[]
   cin                   String?
   kycCinStatus          String?
   kycCinCompanyName     String?
@@ -170,10 +175,10 @@ model Vendor {
   kycBankNameMatchedAt  DateTime?
   kycLastCheckedAt      DateTime?
   gstComplianceScore    Int?
-  einvoiceRequired      Boolean   @default(false)
+  einvoiceRequired      Boolean                 @default(false)
   itcRisk               String?
-  is206ABApplicable     Boolean   @default(false)
-  section206ABRate      Decimal?  @db.Decimal(5, 2)
+  is206ABApplicable     Boolean                 @default(false)
+  section206ABRate      Decimal?                @db.Decimal(5, 2)
   section206ABReason    String?
   lastItrFiledYear      String?
   section206ABCheckedAt DateTime?
@@ -189,19 +194,19 @@ model Vendor {
   // Extended classification
   vendorCategoryId      String?
   vendorGroupId         String?
-  countryCode           String    @default("IN")
+  countryCode           String                  @default("IN")
   taxRegimeCode         String?
   tan                   String?
   // TDS extensions
   tdsSectionId          String?
-  tdsRate               Decimal?  @db.Decimal(5, 2)
-  tdsExempt             Boolean   @default(false)
+  tdsRate               Decimal?                @db.Decimal(5, 2)
+  tdsExempt             Boolean                 @default(false)
   lowerTdsCertNo        String?
   lowerTdsSection       String?
-  lowerTdsRate          Decimal?  @db.Decimal(5, 2)
+  lowerTdsRate          Decimal?                @db.Decimal(5, 2)
   lowerTdsValidFrom     DateTime?
   lowerTdsValidTo       DateTime?
-  lowerTdsAlertDays     Int       @default(30)
+  lowerTdsAlertDays     Int                     @default(30)
   // International tax
   vatNumber             String?
   whtRegistration       String?
@@ -213,8 +218,8 @@ model Vendor {
   contactName           String?
   website               String?
   // Payment
-  paymentCurrency       String    @default("INR")
-  paymentMode           String    @default("NEFT")
+  paymentCurrency       String                  @default("INR")
+  paymentMode           String                  @default("NEFT")
   // ERP sync
   erpVendorCode         String?
   erpSystem             String?
@@ -228,6 +233,7 @@ model Vendor {
   bankAccounts          VendorBankAccount[]
   entityMappings        VendorEntityMapping[]
   documents             VendorDocument[]
+
   @@unique([tenantId, gstin])
   @@unique([tenantId, vendorCode])
   @@index([tenantId, status, createdAt(sort: Desc)])
@@ -268,6 +274,7 @@ model Department {
   approvedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @default(now()) @updatedAt
+
   @@unique([tenantId, code])
   @@map("departments")
 }
@@ -285,6 +292,7 @@ model GlCode {
   approvedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @default(now()) @updatedAt
+
   @@unique([tenantId, code])
   @@map("gl_codes")
 }
@@ -301,6 +309,7 @@ model CostCentre {
   approvedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @default(now()) @updatedAt
+
   @@unique([tenantId, code])
   @@map("cost_centres")
 }
@@ -320,69 +329,75 @@ model TaxCode {
   approvedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @default(now()) @updatedAt
+
   @@unique([tenantId, code])
   @@map("tax_codes")
 }
 
 model Invoice {
-  id                  String    @id @default(uuid())
-  tenantId            String
-  invoiceNumber       String
-  invoiceRef          String?
-  invoiceDate         DateTime  @db.Date
-  dueDate             DateTime? @db.Date
-  vendorId            String?
-  vendorGSTIN         String?
-  vendorPAN           String?
-  entityId            String?
-  billToLocationId    String?
-  channelType         String    @default("MANUAL_UPLOAD")
-  status              String    @default("DRAFT")
-  apLane              String?
-  matchScore          Int?
-  matchLane           String?
-  isPOInvoice         Boolean   @default(false)
-  poRef               String?
-  grnRef              String?
-  subtotal            Decimal   @db.Decimal(15, 2) @default(0)
-  discountAmount      Decimal   @db.Decimal(15, 2) @default(0)
-  taxableAmount       Decimal   @db.Decimal(15, 2) @default(0)
-  cgstAmount          Decimal   @db.Decimal(15, 2) @default(0)
-  sgstAmount          Decimal   @db.Decimal(15, 2) @default(0)
-  igstAmount          Decimal   @db.Decimal(15, 2) @default(0)
-  tdsAmount           Decimal   @db.Decimal(15, 2) @default(0)
-  totalAmount         Decimal   @db.Decimal(15, 2) @default(0)
-  netPayable          Decimal   @db.Decimal(15, 2) @default(0)
-  currencyCode        String    @default("INR")
-  exchangeRate        Decimal?  @db.Decimal(18, 8)
-  irnNumber           String?
-  irnVerified         Boolean   @default(false)
-  ocrConfidence       Int?
-  ocrRawData          Json?
-  fileUrl             String?   @db.Text
-  fileName            String?
-  mimeType            String?
-  notes               String?   @db.Text
-  narration           String?   @db.Text
-  expenseFrom         DateTime? @db.Date
-  expenseTo           DateTime? @db.Date
-  retentionRequired   Boolean   @default(false)
-  retentionAmount     Decimal?  @db.Decimal(15, 2)
-  retentionGlCodeId   String?
-  departmentId        String?
-  rejectionReason     String?
-  workflowInstanceId  String?
-  createdByUserId     String
-  approvedByUserId    String?
-  approvedAt          DateTime?
-  paidAt              DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  tenant              Tenant    @relation(fields: [tenantId], references: [id])
-  vendor              Vendor?   @relation(fields: [vendorId], references: [id])
-  lines               InvoiceLine[]
-  auditLogs           InvoiceAuditLog[]
-  approvals           ApprovalStep[]
+  id                 String            @id @default(uuid())
+  tenantId           String
+  invoiceNumber      String
+  invoiceRef         String?
+  invoiceDate        DateTime          @db.Date
+  dueDate            DateTime?         @db.Date
+  vendorId           String?
+  vendorGSTIN        String?
+  vendorPAN          String?
+  entityId           String?
+  billToLocationId   String?
+  channelType        String            @default("MANUAL_UPLOAD")
+  status             String            @default("DRAFT")
+  apLane             String?
+  matchScore         Int?
+  matchLane          String?
+  isPOInvoice        Boolean           @default(false)
+  poRef              String?
+  grnRef             String?
+  subtotal           Decimal           @default(0) @db.Decimal(15, 2)
+  discountAmount     Decimal           @default(0) @db.Decimal(15, 2)
+  taxableAmount      Decimal           @default(0) @db.Decimal(15, 2)
+  cgstAmount         Decimal           @default(0) @db.Decimal(15, 2)
+  sgstAmount         Decimal           @default(0) @db.Decimal(15, 2)
+  igstAmount         Decimal           @default(0) @db.Decimal(15, 2)
+  tdsAmount          Decimal           @default(0) @db.Decimal(15, 2)
+  totalAmount        Decimal           @default(0) @db.Decimal(15, 2)
+  netPayable         Decimal           @default(0) @db.Decimal(15, 2)
+  currencyCode       String            @default("INR")
+  exchangeRate       Decimal?          @db.Decimal(18, 8)
+  irnNumber          String?
+  irnVerified        Boolean           @default(false)
+  ocrConfidence      Int?
+  ocrRawData         Json?
+  fileUrl            String?           @db.Text
+  fileName           String?
+  mimeType           String?
+  notes              String?           @db.Text
+  narration          String?           @db.Text
+  expenseFrom        DateTime?         @db.Date
+  expenseTo          DateTime?         @db.Date
+  retentionRequired  Boolean           @default(false)
+  retentionAmount    Decimal?          @db.Decimal(15, 2)
+  retentionGlCodeId  String?
+  departmentId       String?
+  rejectionReason    String?
+  workflowInstanceId String?
+  createdByUserId    String
+  approvedByUserId   String?
+  approvedAt         DateTime?
+  paidAt             DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  matchType          String? // '2way' | '3way' — set when isPOInvoice = true
+  costCentreId       String? // direct-invoice cost allocation
+  glCodeId           String? // direct-invoice GL allocation
+  tenant             Tenant            @relation(fields: [tenantId], references: [id])
+  vendor             Vendor?           @relation(fields: [vendorId], references: [id])
+  lines              InvoiceLine[]
+  auditLogs          InvoiceAuditLog[]
+  approvals          ApprovalStep[]
+  poLinks            InvoicePOLink[]
+
   @@unique([tenantId, invoiceNumber, vendorId])
   @@index([tenantId, status])
   @@index([tenantId, vendorId])
@@ -400,22 +415,23 @@ model InvoiceLine {
   uom            String?
   unitPrice      Decimal  @db.Decimal(15, 4)
   discountPct    Decimal? @db.Decimal(5, 2)
-  discountAmount Decimal  @db.Decimal(15, 2) @default(0)
-  taxableAmount  Decimal  @db.Decimal(15, 2) @default(0)
+  discountAmount Decimal  @default(0) @db.Decimal(15, 2)
+  taxableAmount  Decimal  @default(0) @db.Decimal(15, 2)
   gstRate        Decimal? @db.Decimal(5, 2)
-  cgstAmount     Decimal  @db.Decimal(15, 2) @default(0)
-  sgstAmount     Decimal  @db.Decimal(15, 2) @default(0)
-  igstAmount     Decimal  @db.Decimal(15, 2) @default(0)
+  cgstAmount     Decimal  @default(0) @db.Decimal(15, 2)
+  sgstAmount     Decimal  @default(0) @db.Decimal(15, 2)
+  igstAmount     Decimal  @default(0) @db.Decimal(15, 2)
   tdsRate        Decimal? @db.Decimal(5, 2)
-  tdsAmount      Decimal  @db.Decimal(15, 2) @default(0)
+  tdsAmount      Decimal  @default(0) @db.Decimal(15, 2)
   rcmApplicable  Boolean  @default(false)
   hsnCode        String?
   sacCode        String?
   glCodeId       String?
   costCentreId   String?
   profitCentreId String?
-  lineTotal      Decimal  @db.Decimal(15, 2) @default(0)
+  lineTotal      Decimal  @default(0) @db.Decimal(15, 2)
   invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
   @@index([invoiceId])
   @@map("invoice_lines")
 }
@@ -430,33 +446,35 @@ model InvoiceAuditLog {
   details   Json?
   createdAt DateTime @default(now())
   invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
   @@index([invoiceId])
   @@map("invoice_audit_logs")
 }
 
 model Payment {
-  id              String        @id @default(uuid())
-  tenantId        String
-  paymentRef      String
-  invoiceId       String
-  vendorId        String
-  amount          Decimal       @db.Decimal(15, 2)
-  currency        String        @default("INR")
-  paymentDate     DateTime?     @db.Date
-  paymentMode     PaymentMode   @default(NEFT)
-  bankRefNumber   String?
-  status          PaymentStatus @default(PENDING)
-  narration       String?
-  createdByUserId String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  id                    String        @id @default(uuid())
+  tenantId              String
+  paymentRef            String
+  invoiceId             String
+  vendorId              String
+  amount                Decimal       @db.Decimal(15, 2)
+  currency              String        @default("INR")
+  paymentDate           DateTime?     @db.Date
+  paymentMode           PaymentMode   @default(NEFT)
+  bankRefNumber         String?
+  status                PaymentStatus @default(PENDING)
+  narration             String?
+  createdByUserId       String
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  tenant                Tenant        @relation(fields: [tenantId], references: [id])
   transbnkTransactionId String?
   transbnkUtr           String?
   transbnkRawStatus     String?
   transbnkInitiatedAt   DateTime?
   transbnkCompletedAt   DateTime?
   transbnkFailureReason String?
+
   @@unique([tenantId, paymentRef])
   @@index([tenantId, status, createdAt(sort: Desc)])
   @@index([tenantId, vendorId])
@@ -484,44 +502,46 @@ enum PaymentStatus {
 }
 
 model WorkflowInstance {
-  id                String    @id @default(uuid())
+  id                String                  @id @default(uuid())
   tenantId          String
   definitionId      String?
   entityType        String
   entityId          String
-  status            String    @default("IN_PROGRESS")
-  currentStageOrder Int       @default(1)
+  status            String                  @default("IN_PROGRESS")
+  currentStageOrder Int                     @default(1)
   onHoldReason      String?
   onHoldBy          String?
   onHoldAt          DateTime?
   releasedBy        String?
   releasedAt        DateTime?
   releaseRemarks    String?
-  startedAt         DateTime  @default(now())
+  startedAt         DateTime                @default(now())
   completedAt       DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  definition        WorkflowDefinition? @relation(fields: [definitionId], references: [id])
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  definition        WorkflowDefinition?     @relation(fields: [definitionId], references: [id])
   stages            WorkflowInstanceStage[]
   chats             WorkflowChat[]
+
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, status])
   @@map("workflow_instances")
 }
 
 model ApprovalStep {
-  id                 String            @id @default(uuid())
+  id                 String         @id @default(uuid())
   workflowInstanceId String?
   invoiceId          String?
   tenantId           String
   level              Int
   approverId         String
-  status             ApprovalStatus    @default(PENDING)
-  comments           String?           @db.Text
+  status             ApprovalStatus @default(PENDING)
+  comments           String?        @db.Text
   actionAt           DateTime?
   delegatedTo        String?
-  createdAt          DateTime          @default(now())
-  invoice            Invoice?          @relation(fields: [invoiceId], references: [id])
+  createdAt          DateTime       @default(now())
+  invoice            Invoice?       @relation(fields: [invoiceId], references: [id])
+
   @@index([tenantId, status])
   @@index([approverId, status])
   @@map("approval_steps")
@@ -547,6 +567,7 @@ model AuditLog {
   ipAddress  String?
   userAgent  String?
   createdAt  DateTime @default(now())
+
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, createdAt(sort: Desc)])
   @@map("audit_logs")
@@ -569,6 +590,7 @@ model InvoiceIngestionJob {
   ocrJobId      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
   @@index([tenantId, status])
   @@index([tenantId, channelType])
   @@map("invoice_ingestion_jobs")
@@ -590,6 +612,7 @@ model InvoiceMatchScore {
   guardrailsTriggered Json?
   scoreBreakdown      Json?
   createdAt           DateTime @default(now())
+
   @@index([tenantId])
   @@map("invoice_match_scores")
 }
@@ -608,6 +631,7 @@ model Country {
   createdByUserId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt
+
   @@map("countries")
 }
 
@@ -622,6 +646,7 @@ model State {
   createdByUserId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt
+
   @@unique([code, countryCode])
   @@map("states")
 }
@@ -639,6 +664,7 @@ model City {
   createdByUserId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
   @@unique([name, stateCode])
   @@map("cities")
 }
@@ -656,6 +682,7 @@ model FxRate {
   createdByUserId String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
   @@index([fromCurrency, toCurrency, effectiveDate])
   @@map("fx_rates")
 }
@@ -673,43 +700,45 @@ model Designation {
   approvedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
   @@unique([tenantId, code])
   @@map("designations")
 }
 
 model Entity {
-  id                String    @id @default(uuid())
+  id                String         @id @default(uuid())
   tenantId          String
   code              String
   name              String
   shortName         String?
-  entityType        String?   @default("SUBSIDIARY")
+  entityType        String?        @default("SUBSIDIARY")
   cinNumber         String?
-  incorporationDate DateTime? @db.Date
+  incorporationDate DateTime?      @db.Date
   website           String?
   phone             String?
   gstin             String?
   pan               String?
   tan               String?
   addressLine1      String?
-  city             String?
-  state            String?
-  pincode          String?
-  countryCode      String    @default("IN")
-  taxRegimeId      String?
-  vatNumber        String?
-  taxRegime        TaxRegime? @relation(fields: [taxRegimeId], references: [id])
-  logoUrl          String?
-  baseCurrencyCode String?   @default("INR")
-  currentFyId      String?
-  currentFy        FinancialYear? @relation(fields: [currentFyId], references: [id])
-  isActive         Boolean   @default(true)
-  status           String    @default("ACTIVE")
-  createdByUserId  String?
-  approvedByUserId String?
-  approvedAt       DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  city              String?
+  state             String?
+  pincode           String?
+  countryCode       String         @default("IN")
+  taxRegimeId       String?
+  vatNumber         String?
+  taxRegime         TaxRegime?     @relation(fields: [taxRegimeId], references: [id])
+  logoUrl           String?
+  baseCurrencyCode  String?        @default("INR")
+  currentFyId       String?
+  currentFy         FinancialYear? @relation(fields: [currentFyId], references: [id])
+  isActive          Boolean        @default(true)
+  status            String         @default("ACTIVE")
+  createdByUserId   String?
+  approvedByUserId  String?
+  approvedAt        DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
   @@unique([tenantId, code])
   @@map("entities")
 }
@@ -736,6 +765,7 @@ model Location {
   approvedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
   @@unique([tenantId, code])
   @@map("locations")
 }
@@ -745,13 +775,14 @@ model Currency {
   code            String   @unique
   name            String
   symbol          String
-  exchangeRate    Decimal  @db.Decimal(12, 6) @default(1)
+  exchangeRate    Decimal  @default(1) @db.Decimal(12, 6)
   isBase          Boolean  @default(false)
   isActive        Boolean  @default(true)
   status          String   @default("ACTIVE")
   createdByUserId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt
+
   @@map("currencies")
 }
 
@@ -771,22 +802,24 @@ model FinancialYear {
   entities         Entity[]
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
   @@unique([tenantId, code])
   @@map("financial_years")
 }
 
 model HolidayCalendar {
-  id               String    @id @default(uuid())
-  tenantId         String
-  code             String
-  name             String
-  year             Int
-  isActive         Boolean   @default(true)
-  status           String    @default("ACTIVE")
-  createdByUserId  String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  holidays         Holiday[]
+  id              String    @id @default(uuid())
+  tenantId        String
+  code            String
+  name            String
+  year            Int
+  isActive        Boolean   @default(true)
+  status          String    @default("ACTIVE")
+  createdByUserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  holidays        Holiday[]
+
   @@unique([tenantId, code])
   @@map("holiday_calendars")
 }
@@ -798,31 +831,32 @@ model Holiday {
   date       DateTime        @db.Date
   type       String          @default("PUBLIC")
   calendar   HolidayCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+
   @@map("holidays")
 }
 
 model TaxRegime {
-  id               String    @id @default(uuid())
-  tenantId         String
-  code             String
-  name             String
-  description      String?
-  isActive         Boolean   @default(true)
-  status           String    @default("ACTIVE")
-  createdByUserId  String?
-  approvedByUserId String?
-  approvedAt       DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  countryCode      String   @default("IN")
-  regimeType       String   @default("GST")
-  requiresGstin    Boolean  @default(false)
-  requiresVat      Boolean  @default(false)
-  requiresPan      Boolean  @default(false)
-  tdsApplicable    Boolean  @default(false)
-  vatRate          Decimal? @db.Decimal(5, 2)
-  withholdingRate  Decimal? @db.Decimal(5, 2)
-  currencyCode     String   @default("INR")
+  id                   String    @id @default(uuid())
+  tenantId             String
+  code                 String
+  name                 String
+  description          String?
+  isActive             Boolean   @default(true)
+  status               String    @default("ACTIVE")
+  createdByUserId      String?
+  approvedByUserId     String?
+  approvedAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  countryCode          String    @default("IN")
+  regimeType           String    @default("GST")
+  requiresGstin        Boolean   @default(false)
+  requiresVat          Boolean   @default(false)
+  requiresPan          Boolean   @default(false)
+  tdsApplicable        Boolean   @default(false)
+  vatRate              Decimal?  @db.Decimal(5, 2)
+  withholdingRate      Decimal?  @db.Decimal(5, 2)
+  currencyCode         String    @default("INR")
   effectiveFrom        DateTime? @db.Date
   effectiveTo          DateTime? @db.Date
   einvoicingRequired   Boolean   @default(false)
@@ -832,7 +866,8 @@ model TaxRegime {
   placeOfSupplyRuleSet String?
   kycFieldSchema       Json?
   taxTypes             Json?
-  entities         Entity[]
+  entities             Entity[]
+
   @@unique([tenantId, code])
   @@map("tax_regimes")
 }
@@ -856,58 +891,60 @@ model WorkflowRule {
   approvedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
   @@unique([tenantId, code])
   @@map("workflow_rules")
 }
 
 model Employee {
-  id                  String    @id @default(uuid())
-  tenantId            String
-  code                String
-  name                String
-  firstName           String?
-  lastName            String?
-  email               String?
-  mobile              String?
-  gender              String?
-  dateOfBirth         DateTime? @db.Date
-  bloodGroup          String?
-  employeeCategory    String?   @default("ON_ROLL")
-  entityId            String?
-  departmentId        String?
-  designationId       String?
-  locationId          String?
-  costCentreId        String?
-  managerId           String?
-  systemRole          String?   @default("USER")
-  userId              String?
-  joiningDate         DateTime? @db.Date
-  confirmationDate    DateTime? @db.Date
-  resignationDate     DateTime? @db.Date
-  lastWorkingDate     DateTime? @db.Date
-  pan                 String?
-  aadhaarNo           String?
-  pfAccountNo         String?
-  esiNo               String?
-  bankAccountNo       String?
-  ifsc                String?
-  bankName            String?
-  emergencyName       String?
-  emergencyPhone      String?
-  emergencyRelation   String?
-  isActive            Boolean   @default(true)
-  status              String    @default("ACTIVE")
-  createdByUserId     String?
-  approvedByUserId    String?
-  approvedAt          DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  tenantId          String
+  code              String
+  name              String
+  firstName         String?
+  lastName          String?
+  email             String?
+  mobile            String?
+  gender            String?
+  dateOfBirth       DateTime? @db.Date
+  bloodGroup        String?
+  employeeCategory  String?   @default("ON_ROLL")
+  entityId          String?
+  departmentId      String?
+  designationId     String?
+  locationId        String?
+  costCentreId      String?
+  managerId         String?
+  systemRole        String?   @default("USER")
+  userId            String?
+  joiningDate       DateTime? @db.Date
+  confirmationDate  DateTime? @db.Date
+  resignationDate   DateTime? @db.Date
+  lastWorkingDate   DateTime? @db.Date
+  pan               String?
+  aadhaarNo         String?
+  pfAccountNo       String?
+  esiNo             String?
+  bankAccountNo     String?
+  ifsc              String?
+  bankName          String?
+  emergencyName     String?
+  emergencyPhone    String?
+  emergencyRelation String?
+  isActive          Boolean   @default(true)
+  status            String    @default("ACTIVE")
+  createdByUserId   String?
+  approvedByUserId  String?
+  approvedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
   @@unique([tenantId, code])
   @@map("employees")
 }
 
 model WorkflowDefinition {
-  id              String   @id @default(uuid())
+  id              String                        @id @default(uuid())
   tenantId        String
   code            String
   name            String
@@ -915,62 +952,65 @@ model WorkflowDefinition {
   module          String
   entityId        String?
   departmentId    String?
-  priority        Int      @default(0)
-  isDefault       Boolean  @default(false)
-  isActive        Boolean  @default(true)
-  status          String   @default("ACTIVE")
+  priority        Int                           @default(0)
+  isDefault       Boolean                       @default(false)
+  isActive        Boolean                       @default(true)
+  status          String                        @default("ACTIVE")
   createdByUserId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
   stages          WorkflowDefinitionStage[]
   conditions      WorkflowDefinitionCondition[]
   instances       WorkflowInstance[]
+
   @@unique([tenantId, code])
   @@index([tenantId, module])
   @@map("workflow_definitions")
 }
 
 model WorkflowDefinitionStage {
-  id               String   @id @default(uuid())
+  id               String             @id @default(uuid())
   definitionId     String
   order            Int
   name             String
-  approverType     String   @default("ROLE")
+  approverType     String             @default("ROLE")
   approverRole     String?
   approverUserId   String?
   slaHours         Int?
   escalateToRole   String?
-  autoApproveBelow Decimal? @db.Decimal(15, 2)
-  allowDelegation  Boolean  @default(false)
-  requiresComment  Boolean  @default(false)
-  onReject         String   @default("RETURN_TO_DRAFT")
+  autoApproveBelow Decimal?           @db.Decimal(15, 2)
+  allowDelegation  Boolean            @default(false)
+  requiresComment  Boolean            @default(false)
+  onReject         String             @default("RETURN_TO_DRAFT")
   definition       WorkflowDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
   @@index([definitionId])
   @@map("workflow_definition_stages")
 }
 
 model WorkflowDefinitionCondition {
-  id           String   @id @default(uuid())
+  id           String             @id @default(uuid())
   definitionId String
   field        String
   operator     String
   value        String
-  logicGroup   String   @default("AND")
+  logicGroup   String             @default("AND")
   definition   WorkflowDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
   @@index([definitionId])
   @@map("workflow_definition_conditions")
 }
 
 model WorkflowInstanceStage {
-  id            String    @id @default(uuid())
+  id            String           @id @default(uuid())
   instanceId    String
   tenantId      String
   stageOrder    Int
   stageName     String
   approverRole  String?
   assignedTo    String?
-  status        String    @default("PENDING")
-  comments      String?   @db.Text
+  status        String           @default("PENDING")
+  comments      String?          @db.Text
   actionAt      DateTime?
   actionBy      String?
   slaDeadline   DateTime?
@@ -979,6 +1019,7 @@ model WorkflowInstanceStage {
   delegatedTo   String?
   rejectionMode String?
   instance      WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
   @@index([instanceId])
   @@index([tenantId, assignedTo, status])
   @@map("workflow_instance_stages")
@@ -996,6 +1037,7 @@ model WorkflowChat {
   createdAt   DateTime             @default(now())
   attachments WorkflowAttachment[]
   instance    WorkflowInstance     @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
   @@index([instanceId])
   @@map("workflow_chats")
 }
@@ -1009,6 +1051,7 @@ model WorkflowAttachment {
   fileSize  Int?
   createdAt DateTime     @default(now())
   chat      WorkflowChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
   @@map("workflow_attachments")
 }
 
@@ -1022,6 +1065,7 @@ model VendorCategory {
   createdByUserId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
   @@unique([tenantId, code])
   @@map("vendor_categories")
 }
@@ -1036,6 +1080,7 @@ model VendorGroup {
   createdByUserId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
   @@unique([tenantId, code])
   @@map("vendor_groups")
 }
@@ -1052,6 +1097,7 @@ model ProfitCentre {
   createdByUserId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
   @@unique([tenantId, entityId, code])
   @@index([tenantId, entityId])
   @@map("profit_centres")
@@ -1071,6 +1117,7 @@ model VendorGstRegistration {
   kycVerifiedAt    DateTime?
   status           String    @default("ACTIVE")
   vendor           Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
   @@index([vendorId])
   @@map("vendor_gst_registrations")
 }
@@ -1093,20 +1140,21 @@ model VendorBankAccount {
   transbnkRegisteredAt  DateTime?
   status                String    @default("ACTIVE")
   vendor                Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
   @@unique([accountNo, ifsc])
   @@index([vendorId])
   @@map("vendor_bank_accounts")
 }
 
 model VendorEntityMapping {
-  id             String   @id @default(uuid())
-  vendorId       String
-  entityId       String
-  glCodeId       String?
-  costCentreId   String?
-  profitCentreId String?
-  currencyCode   String   @default("INR")
-  creditLimit    Decimal? @db.Decimal(15, 2)
+  id               String   @id @default(uuid())
+  vendorId         String
+  entityId         String
+  glCodeId         String?
+  costCentreId     String?
+  profitCentreId   String?
+  currencyCode     String   @default("INR")
+  creditLimit      Decimal? @db.Decimal(15, 2)
   blockPO          Boolean  @default(false)
   blockPayment     Boolean  @default(false)
   blockReason      String?
@@ -1115,7 +1163,8 @@ model VendorEntityMapping {
   erpVendorCode    String?
   erpSystem        String?
   isActive         Boolean  @default(true)
-  vendor         Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendor           Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
   @@unique([vendorId, entityId])
   @@index([vendorId])
   @@map("vendor_entity_mappings")
@@ -1132,6 +1181,7 @@ model VendorDocument {
   uploadedBy String?
   uploadedAt DateTime @default(now())
   vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
   @@index([vendorId])
   @@map("vendor_documents")
 }
@@ -1156,38 +1206,41 @@ model VendorInvitation {
   createdBy      String
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
   @@index([tenantId, status])
   @@map("vendor_invitations")
 }
 
 model TenantModule {
-  id          String    @id @default(uuid())
-  tenantId    String
-  moduleCode  String
-  isEnabled   Boolean   @default(false)
-  enabledAt   DateTime?
-  enabledBy   String?
-  config      Json?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  features    TenantFeature[]
+  id         String          @id @default(uuid())
+  tenantId   String
+  moduleCode String
+  isEnabled  Boolean         @default(false)
+  enabledAt  DateTime?
+  enabledBy  String?
+  config     Json?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  features   TenantFeature[]
+
   @@unique([tenantId, moduleCode])
   @@map("tenant_modules")
 }
 
 model TenantFeature {
-  id          String    @id @default(uuid())
+  id          String       @id @default(uuid())
   tenantId    String
   moduleCode  String
   featureCode String
-  isEnabled   Boolean   @default(false)
+  isEnabled   Boolean      @default(false)
   enabledAt   DateTime?
   enabledBy   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   module      TenantModule @relation(fields: [tenantId, moduleCode], references: [tenantId, moduleCode], onDelete: Cascade)
+
   @@unique([tenantId, moduleCode, featureCode])
   @@map("tenant_features")
 }
@@ -1204,6 +1257,7 @@ model TDSSection {
   createdByUserId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
   @@unique([tenantId, code])
   @@map("tds_sections")
 }
@@ -1231,6 +1285,7 @@ model TenantSettings {
   invitationReminderDays Int      @default(2)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+
   @@map("tenant_settings")
 }
 
@@ -1244,16 +1299,17 @@ model ItemCategory {
   createdByUserId String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
   @@unique([tenantId, code])
   @@map("item_categories")
 }
 
 model ItemMaster {
-  id                    String    @id @default(uuid())
+  id                    String               @id @default(uuid())
   tenantId              String
   itemCode              String
   name                  String
-  description           String?   @db.Text
+  description           String?              @db.Text
   itemType              String
   nature                String?
   expenseType           String
@@ -1261,83 +1317,86 @@ model ItemMaster {
   hsnCode               String?
   sacCode               String?
   itemCategoryId        String?
-  gstRate               Decimal?  @db.Decimal(5,2)
-  rcmApplicable         Boolean   @default(false)
+  gstRate               Decimal?             @db.Decimal(5, 2)
+  rcmApplicable         Boolean              @default(false)
   tdsSectionId          String?
   taxCodeId             String?
-  poRequired            String    @default("YES")
-  poThresholdAmount     Decimal?  @db.Decimal(15,2)
-  poAtLocation          Boolean   @default(false)
-  threeWayMatch         Boolean   @default(true)
-  grnRequired           Boolean   @default(true)
-  advanceAllowed        Boolean   @default(false)
+  poRequired            String               @default("YES")
+  poThresholdAmount     Decimal?             @db.Decimal(15, 2)
+  poAtLocation          Boolean              @default(false)
+  threeWayMatch         Boolean              @default(true)
+  grnRequired           Boolean              @default(true)
+  advanceAllowed        Boolean              @default(false)
   assetCategoryId       String?
   usefulLifeYears       Int?
   depreciationMethod    String?
-  depreciationRate      Decimal?  @db.Decimal(5,2)
-  residualValuePct      Decimal?  @db.Decimal(5,2)
-  autoCreateAsset       Boolean   @default(false)
-  capitalisationLimit   Decimal?  @db.Decimal(15,2)
-  autoPostDepreciation  Boolean   @default(false)
+  depreciationRate      Decimal?             @db.Decimal(5, 2)
+  residualValuePct      Decimal?             @db.Decimal(5, 2)
+  autoCreateAsset       Boolean              @default(false)
+  capitalisationLimit   Decimal?             @db.Decimal(15, 2)
+  autoPostDepreciation  Boolean              @default(false)
   depreciationFrequency String?
-  depreciationStartDate DateTime? @db.Date
-  provisionRequired     Boolean   @default(false)
-  autoPostProvision     Boolean   @default(false)
+  depreciationStartDate DateTime?            @db.Date
+  provisionRequired     Boolean              @default(false)
+  autoPostProvision     Boolean              @default(false)
   provisionFrequency    String?
   provisionBasis        String?
-  provisionAmount       Decimal?  @db.Decimal(15,2)
-  autoReverse           Boolean   @default(true)
+  provisionAmount       Decimal?             @db.Decimal(15, 2)
+  autoReverse           Boolean              @default(true)
   reversalTrigger       String?
-  ocrKeywords           String?   @db.Text
-  ocrSynonyms           String?   @db.Text
-  ocrMatchConfidence    Int       @default(80)
-  ocrNegativeKeywords   String?   @db.Text
-  approvedVendorsOnly   Boolean   @default(false)
-  status                String    @default("ACTIVE")
+  ocrKeywords           String?              @db.Text
+  ocrSynonyms           String?              @db.Text
+  ocrMatchConfidence    Int                  @default(80)
+  ocrNegativeKeywords   String?              @db.Text
+  approvedVendorsOnly   Boolean              @default(false)
+  status                String               @default("ACTIVE")
   createdByUserId       String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
   entityMappings        ItemEntityMapping[]
   approvedVendors       ItemApprovedVendor[]
+
   @@unique([tenantId, itemCode])
   @@index([tenantId, itemType, expenseType])
   @@map("item_master")
 }
 
 model ItemEntityMapping {
-  id                         String   @id @default(uuid())
-  itemId                     String
-  entityId                   String
-  itemDescription            String?
-  expenseGlCodeId            String?
-  assetGlCodeId              String?
-  depreciationGlCodeId       String?
-  accumulatedDepnGlCodeId    String?
-  provisionGlCodeId          String?
-  provisionExpenseGlCodeId   String?
-  rcmGlCodeId                String?
-  tdsPayableGlCodeId         String?
-  gstItcGlCodeId             String?
-  costCentreId               String?
-  profitCentreId             String?
-  assetCategoryId            String?
-  poThresholdOverride        Decimal? @db.Decimal(15,2)
-  capitalisationLimitOverride Decimal? @db.Decimal(15,2)
-  provisionAmountOverride    Decimal? @db.Decimal(15,2)
-  isActive                   Boolean  @default(true)
-  item                       ItemMaster @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  id                          String     @id @default(uuid())
+  itemId                      String
+  entityId                    String
+  itemDescription             String?
+  expenseGlCodeId             String?
+  assetGlCodeId               String?
+  depreciationGlCodeId        String?
+  accumulatedDepnGlCodeId     String?
+  provisionGlCodeId           String?
+  provisionExpenseGlCodeId    String?
+  rcmGlCodeId                 String?
+  tdsPayableGlCodeId          String?
+  gstItcGlCodeId              String?
+  costCentreId                String?
+  profitCentreId              String?
+  assetCategoryId             String?
+  poThresholdOverride         Decimal?   @db.Decimal(15, 2)
+  capitalisationLimitOverride Decimal?   @db.Decimal(15, 2)
+  provisionAmountOverride     Decimal?   @db.Decimal(15, 2)
+  isActive                    Boolean    @default(true)
+  item                        ItemMaster @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
   @@unique([itemId, entityId])
   @@map("item_entity_mappings")
 }
 
 model ItemApprovedVendor {
-  id       String @id @default(uuid())
+  id       String     @id @default(uuid())
   itemId   String
   entityId String?
   vendorId String
   item     ItemMaster @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  @@index([itemId])
+
   @@unique([itemId, entityId, vendorId])
+  @@index([itemId])
   @@map("item_approved_vendors")
 }
 
@@ -1355,13 +1414,13 @@ model RecurringInvoiceMaster {
   endDate            DateTime? @db.Date
   generationDay      Int       @default(1)
   advanceDays        Int       @default(3)
-  baseAmount         Decimal?  @db.Decimal(15,2)
+  baseAmount         Decimal?  @db.Decimal(15, 2)
   currencyCode       String    @default("INR")
   gstApplicable      Boolean   @default(false)
-  gstRate            Decimal?  @db.Decimal(5,2)
+  gstRate            Decimal?  @db.Decimal(5, 2)
   tdsApplicable      Boolean   @default(false)
   tdsSectionId       String?
-  escalationPct      Decimal?  @db.Decimal(5,2)
+  escalationPct      Decimal?  @db.Decimal(5, 2)
   escalationMonth    Int?
   bbpsBillerCategory String?
   bbpsBillerName     String?
@@ -1371,7 +1430,7 @@ model RecurringInvoiceMaster {
   costCentreId       String?
   profitCentreId     String?
   provisionGlCodeId  String?
-  autoApproveBelow   Decimal?  @db.Decimal(15,2)
+  autoApproveBelow   Decimal?  @db.Decimal(15, 2)
   isActive           Boolean   @default(true)
   status             String    @default("ACTIVE")
   lastGeneratedAt    DateTime?
@@ -1379,6 +1438,7 @@ model RecurringInvoiceMaster {
   createdByUserId    String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+
   @@unique([tenantId, code])
   @@index([tenantId, nextGenerationAt])
   @@map("recurring_invoice_masters")
@@ -1386,44 +1446,46 @@ model RecurringInvoiceMaster {
 
 // ── RATE CONTRACT ─────────────────────────────────────────────────────────────
 model RateContract {
-  id              String   @id @default(uuid())
+  id              String             @id @default(uuid())
   tenantId        String
   contractRef     String
   vendorId        String
   entityId        String
-  validFrom       DateTime @db.Date
-  validTo         DateTime @db.Date
+  validFrom       DateTime           @db.Date
+  validTo         DateTime           @db.Date
   description     String?
-  currencyCode    String   @default("INR")
-  escalationPct   Decimal? @db.Decimal(5,2)
-  status          String   @default("DRAFT")
+  currencyCode    String             @default("INR")
+  escalationPct   Decimal?           @db.Decimal(5, 2)
+  status          String             @default("DRAFT")
   createdByUserId String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
   lines           RateContractLine[]
+
   @@unique([tenantId, contractRef])
   @@map("rate_contracts")
 }
 
 model RateContractLine {
-  id             String       @id @default(uuid())
-  contractId     String
-  itemId         String?
-  description    String
-  uom            String?
-  agreedRate     Decimal      @db.Decimal(15,4)
-  currencyCode   String       @default("INR")
-  minQty         Decimal?     @db.Decimal(15,4)
-  maxQty         Decimal?     @db.Decimal(15,4)
-  utilisedQty    Decimal      @db.Decimal(15,4) @default(0)
-  utilisedValue  Decimal      @db.Decimal(15,2) @default(0)
-  contract       RateContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  id            String       @id @default(uuid())
+  contractId    String
+  itemId        String?
+  description   String
+  uom           String?
+  agreedRate    Decimal      @db.Decimal(15, 4)
+  currencyCode  String       @default("INR")
+  minQty        Decimal?     @db.Decimal(15, 4)
+  maxQty        Decimal?     @db.Decimal(15, 4)
+  utilisedQty   Decimal      @default(0) @db.Decimal(15, 4)
+  utilisedValue Decimal      @default(0) @db.Decimal(15, 2)
+  contract      RateContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
   @@map("rate_contract_lines")
 }
 
 // ── BUDGET ────────────────────────────────────────────────────────────────────
 model Budget {
-  id                  String   @id @default(uuid())
+  id                  String           @id @default(uuid())
   tenantId            String
   budgetRef           String
   name                String
@@ -1433,23 +1495,24 @@ model Budget {
   glCodeId            String?
   costCentreId        String?
   profitCentreId      String?
-  periodType          String   @default("ANNUAL")
-  budgetAmount        Decimal  @db.Decimal(15,2)
-  revisedAmount       Decimal  @db.Decimal(15,2) @default(0)
-  committedAmount     Decimal  @db.Decimal(15,2) @default(0)
-  actualAmount        Decimal  @db.Decimal(15,2) @default(0)
-  carryForwardAmount  Decimal  @db.Decimal(15,2) @default(0)
-  toleranceZonePct    Decimal  @db.Decimal(5,2)  @default(10)
-  hardBlock           Boolean  @default(true)
+  periodType          String           @default("ANNUAL")
+  budgetAmount        Decimal          @db.Decimal(15, 2)
+  revisedAmount       Decimal          @default(0) @db.Decimal(15, 2)
+  committedAmount     Decimal          @default(0) @db.Decimal(15, 2)
+  actualAmount        Decimal          @default(0) @db.Decimal(15, 2)
+  carryForwardAmount  Decimal          @default(0) @db.Decimal(15, 2)
+  toleranceZonePct    Decimal          @default(10) @db.Decimal(5, 2)
+  hardBlock           Boolean          @default(true)
   exceptionWorkflowId String?
-  carryForward        Boolean  @default(false)
+  carryForward        Boolean          @default(false)
   carryForwardType    String?
-  status              String   @default("DRAFT")
+  status              String           @default("DRAFT")
   createdByUserId     String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   periods             BudgetPeriod[]
   revisions           BudgetRevision[]
+
   @@unique([tenantId, budgetRef])
   @@index([tenantId, entityId, financialYearId])
   @@map("budgets")
@@ -1461,10 +1524,11 @@ model BudgetPeriod {
   periodLabel     String
   periodStart     DateTime @db.Date
   periodEnd       DateTime @db.Date
-  allocatedAmount Decimal  @db.Decimal(15,2)
-  committedAmount Decimal  @db.Decimal(15,2) @default(0)
-  actualAmount    Decimal  @db.Decimal(15,2) @default(0)
+  allocatedAmount Decimal  @db.Decimal(15, 2)
+  committedAmount Decimal  @default(0) @db.Decimal(15, 2)
+  actualAmount    Decimal  @default(0) @db.Decimal(15, 2)
   budget          Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
   @@map("budget_periods")
 }
 
@@ -1472,39 +1536,41 @@ model BudgetRevision {
   id             String   @id @default(uuid())
   budgetId       String
   revisionNo     Int
-  previousAmount Decimal  @db.Decimal(15,2)
-  revisedAmount  Decimal  @db.Decimal(15,2)
+  previousAmount Decimal  @db.Decimal(15, 2)
+  revisedAmount  Decimal  @db.Decimal(15, 2)
   reason         String
   approvedBy     String?
   createdAt      DateTime @default(now())
   budget         Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
   @@map("budget_revisions")
 }
 
 // ── PURCHASE REQUISITION ──────────────────────────────────────────────────────
 model PurchaseRequisition {
-  id                 String   @id @default(uuid())
+  id                 String                    @id @default(uuid())
   tenantId           String
   prRef              String
-  prType             String   @default("STANDARD")
+  prType             String                    @default("STANDARD")
   requestedBy        String
   departmentId       String?
   entityId           String
-  requiredBy         DateTime @db.Date
-  justification      String?  @db.Text
-  priority           String   @default("NORMAL")
-  estimatedTotal     Decimal  @db.Decimal(15,2) @default(0)
-  currencyCode       String   @default("INR")
+  requiredBy         DateTime                  @db.Date
+  justification      String?                   @db.Text
+  priority           String                    @default("NORMAL")
+  estimatedTotal     Decimal                   @default(0) @db.Decimal(15, 2)
+  currencyCode       String                    @default("INR")
   budgetId           String?
-  budgetAvailable    Decimal? @db.Decimal(15,2)
+  budgetAvailable    Decimal?                  @db.Decimal(15, 2)
   budgetStatus       String?
   workflowInstanceId String?
-  status             String   @default("DRAFT")
+  status             String                    @default("DRAFT")
   rejectionReason    String?
   createdByUserId    String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
   lines              PurchaseRequisitionLine[]
+
   @@unique([tenantId, prRef])
   @@index([tenantId, status])
   @@map("purchase_requisitions")
@@ -1516,121 +1582,146 @@ model PurchaseRequisitionLine {
   lineNo           Int
   itemId           String?
   description      String
-  qty              Decimal             @db.Decimal(15,4)
+  qty              Decimal             @db.Decimal(15, 4)
   uom              String?
-  estimatedPrice   Decimal             @db.Decimal(15,4) @default(0)
+  estimatedPrice   Decimal             @default(0) @db.Decimal(15, 4)
   deliveryLocation String?
   requiredBy       DateTime?           @db.Date
   glCodeId         String?
   costCentreId     String?
   poLineId         String?
   pr               PurchaseRequisition @relation(fields: [prId], references: [id], onDelete: Cascade)
+
   @@map("purchase_requisition_lines")
 }
 
 // ── PURCHASE ORDER ────────────────────────────────────────────────────────────
 model PurchaseOrder {
-  id                 String   @id @default(uuid())
+  id                 String               @id @default(uuid())
   tenantId           String
   poRef              String
-  poType             String   @default("STANDARD")
-  poDate             DateTime @db.Date
-  poExpiryDate       DateTime? @db.Date
-  autoExpire         Boolean  @default(false)
+  poType             String               @default("STANDARD")
+  poDate             DateTime             @db.Date
+  poExpiryDate       DateTime?            @db.Date
+  autoExpire         Boolean              @default(false)
   vendorId           String
   entityId           String
   shipToLocationId   String?
   billToEntityId     String?
   rateContractId     String?
   blanketPoId        String?
-  currencyCode       String   @default("INR")
-  exchangeRate       Decimal? @db.Decimal(18,8)
-  paymentTermsDays   Int      @default(30)
-  paymentMode        String   @default("NEFT")
+  currencyCode       String               @default("INR")
+  exchangeRate       Decimal?             @db.Decimal(18, 8)
+  paymentTermsDays   Int                  @default(30)
+  paymentMode        String               @default("NEFT")
   deliveryTerms      String?
   warrantyPeriod     String?
-  taxType            String   @default("EXCLUSIVE")
-  subtotal           Decimal  @db.Decimal(15,2) @default(0)
-  taxAmount          Decimal  @db.Decimal(15,2) @default(0)
-  tdsAmount          Decimal  @db.Decimal(15,2) @default(0)
-  totalAmount        Decimal  @db.Decimal(15,2) @default(0)
-  advanceAmount      Decimal  @db.Decimal(15,2) @default(0)
-  advancePct         Decimal? @db.Decimal(5,2)
+  taxType            String               @default("EXCLUSIVE")
+  subtotal           Decimal              @default(0) @db.Decimal(15, 2)
+  taxAmount          Decimal              @default(0) @db.Decimal(15, 2)
+  tdsAmount          Decimal              @default(0) @db.Decimal(15, 2)
+  totalAmount        Decimal              @default(0) @db.Decimal(15, 2)
+  consumedAmount     Decimal              @default(0) @db.Decimal(15, 2)
+  advanceAmount      Decimal              @default(0) @db.Decimal(15, 2)
+  advancePct         Decimal?             @db.Decimal(5, 2)
   budgetId           String?
   workflowInstanceId String?
   prRefs             Json?
-  notes              String?  @db.Text
-  status             String   @default("DRAFT")
+  notes              String?              @db.Text
+  status             String               @default("DRAFT")
   rejectionReason    String?
   sentToVendorAt     DateTime?
   closedAt           DateTime?
   createdByUserId    String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
   lines              PurchaseOrderLine[]
   milestones         POPaymentMilestone[]
   releases           BlanketPORelease[]
   grns               GoodsReceiptNote[]
   advances           VendorAdvance[]
+  invoiceLinks       InvoicePOLink[]
+
   @@unique([tenantId, poRef])
   @@index([tenantId, status])
   @@index([tenantId, vendorId])
   @@map("purchase_orders")
 }
 
+// Multi-PO-per-invoice link table. One invoice can be split across multiple POs;
+// each link carries the portion of the invoice charged to that PO and whether
+// the PO is fully consumed by this invoice (closes the PO on approval).
+model InvoicePOLink {
+  id              String        @id @default(uuid())
+  tenantId        String
+  invoiceId       String
+  poId            String
+  invoiceAmount   Decimal       @db.Decimal(15, 2)
+  consumptionType String // 'PARTIAL' | 'FULL'
+  createdAt       DateTime      @default(now())
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  po              PurchaseOrder @relation(fields: [poId], references: [id])
+
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, poId])
+  @@map("invoice_po_links")
+}
+
 model PurchaseOrderLine {
-  id                 String        @id @default(uuid())
+  id                 String             @id @default(uuid())
   poId               String
   lineNo             Int
   prLineId           String?
   itemId             String?
   description        String
-  qty                Decimal       @db.Decimal(15,4)
+  qty                Decimal            @db.Decimal(15, 4)
   uom                String?
-  unitPrice          Decimal       @db.Decimal(15,4)
-  discountPct        Decimal?      @db.Decimal(5,2)
-  taxType            String        @default("EXCLUSIVE")
-  gstRate            Decimal?      @db.Decimal(5,2)
-  cgstAmount         Decimal       @db.Decimal(15,2) @default(0)
-  sgstAmount         Decimal       @db.Decimal(15,2) @default(0)
-  igstAmount         Decimal       @db.Decimal(15,2) @default(0)
-  tdsApplicable      Boolean       @default(false)
-  tdsRate            Decimal?      @db.Decimal(5,2)
-  tdsAmount          Decimal       @db.Decimal(15,2) @default(0)
-  rcmApplicable      Boolean       @default(false)
+  unitPrice          Decimal            @db.Decimal(15, 4)
+  discountPct        Decimal?           @db.Decimal(5, 2)
+  taxType            String             @default("EXCLUSIVE")
+  gstRate            Decimal?           @db.Decimal(5, 2)
+  cgstAmount         Decimal            @default(0) @db.Decimal(15, 2)
+  sgstAmount         Decimal            @default(0) @db.Decimal(15, 2)
+  igstAmount         Decimal            @default(0) @db.Decimal(15, 2)
+  tdsApplicable      Boolean            @default(false)
+  tdsRate            Decimal?           @db.Decimal(5, 2)
+  tdsAmount          Decimal            @default(0) @db.Decimal(15, 2)
+  rcmApplicable      Boolean            @default(false)
   hsnCode            String?
   sacCode            String?
-  lineTotal          Decimal       @db.Decimal(15,2) @default(0)
+  lineTotal          Decimal            @default(0) @db.Decimal(15, 2)
   shipToLocationId   String?
-  deliveryDate       DateTime?     @db.Date
+  deliveryDate       DateTime?          @db.Date
   glCodeId           String?
   costCentreId       String?
   profitCentreId     String?
-  toleranceZonePct   Decimal?      @db.Decimal(5,2)
-  grnQty             Decimal       @db.Decimal(15,4) @default(0)
-  pendingQty         Decimal       @db.Decimal(15,4) @default(0)
-  invoicedQty        Decimal       @db.Decimal(15,4) @default(0)
+  toleranceZonePct   Decimal?           @db.Decimal(5, 2)
+  grnQty             Decimal            @default(0) @db.Decimal(15, 4)
+  pendingQty         Decimal            @default(0) @db.Decimal(15, 4)
+  invoicedQty        Decimal            @default(0) @db.Decimal(15, 4)
   rateContractLineId String?
-  po                 PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  po                 PurchaseOrder      @relation(fields: [poId], references: [id], onDelete: Cascade)
   grnLines           GoodsReceiptLine[]
+
   @@map("purchase_order_lines")
 }
 
 model POPaymentMilestone {
-  id               String        @id @default(uuid())
-  poId             String
-  milestoneNo      Int
-  description      String
-  pct              Decimal       @db.Decimal(5,2)
-  amount           Decimal       @db.Decimal(15,2)
-  triggerEvent     String        @default("ON_GRN")
-  dueDate          DateTime?     @db.Date
-  isAdvance        Boolean       @default(false)
-  advanceAdjusted  Boolean       @default(false)
-  status           String        @default("PENDING")
-  paidAt           DateTime?
-  invoiceId        String?
-  po               PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  id              String        @id @default(uuid())
+  poId            String
+  milestoneNo     Int
+  description     String
+  pct             Decimal       @db.Decimal(5, 2)
+  amount          Decimal       @db.Decimal(15, 2)
+  triggerEvent    String        @default("ON_GRN")
+  dueDate         DateTime?     @db.Date
+  isAdvance       Boolean       @default(false)
+  advanceAdjusted Boolean       @default(false)
+  status          String        @default("PENDING")
+  paidAt          DateTime?
+  invoiceId       String?
+  po              PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+
   @@map("po_payment_milestones")
 }
 
@@ -1639,19 +1730,20 @@ model BlanketPORelease {
   blanketPoId        String
   releaseRef         String
   releaseDate        DateTime      @db.Date
-  releaseAmount      Decimal       @db.Decimal(15,2)
+  releaseAmount      Decimal       @db.Decimal(15, 2)
   workflowInstanceId String?
   status             String        @default("DRAFT")
   blanketPo          PurchaseOrder @relation(fields: [blanketPoId], references: [id], onDelete: Cascade)
+
   @@map("blanket_po_releases")
 }
 
 // ── GRN ───────────────────────────────────────────────────────────────────────
 model GoodsReceiptNote {
-  id                 String        @id @default(uuid())
+  id                 String             @id @default(uuid())
   tenantId           String
   grnRef             String
-  grnDate            DateTime      @db.Date
+  grnDate            DateTime           @db.Date
   poId               String
   vendorId           String
   deliveryLocation   String?
@@ -1659,12 +1751,13 @@ model GoodsReceiptNote {
   lrNumber           String?
   deliveryNote       String?
   workflowInstanceId String?
-  status             String        @default("DRAFT")
+  status             String             @default("DRAFT")
   createdByUserId    String?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
   lines              GoodsReceiptLine[]
-  po                 PurchaseOrder @relation(fields: [poId], references: [id])
+  po                 PurchaseOrder      @relation(fields: [poId], references: [id])
+
   @@unique([tenantId, grnRef])
   @@index([tenantId, poId])
   @@map("goods_receipt_notes")
@@ -1676,10 +1769,10 @@ model GoodsReceiptLine {
   poLineId        String
   itemId          String?
   description     String
-  orderedQty      Decimal           @db.Decimal(15,4)
-  receivedQty     Decimal           @db.Decimal(15,4)
-  acceptedQty     Decimal           @db.Decimal(15,4)
-  rejectedQty     Decimal           @db.Decimal(15,4) @default(0)
+  orderedQty      Decimal           @db.Decimal(15, 4)
+  receivedQty     Decimal           @db.Decimal(15, 4)
+  acceptedQty     Decimal           @db.Decimal(15, 4)
+  rejectedQty     Decimal           @default(0) @db.Decimal(15, 4)
   rejectionReason String?
   batchNo         String?
   serialNo        String?
@@ -1688,70 +1781,74 @@ model GoodsReceiptLine {
   qualityStatus   String            @default("PENDING")
   grn             GoodsReceiptNote  @relation(fields: [grnId], references: [id], onDelete: Cascade)
   poLine          PurchaseOrderLine @relation(fields: [poLineId], references: [id])
+
   @@map("goods_receipt_lines")
 }
 
 // ── SRN ───────────────────────────────────────────────────────────────────────
 model SupplierReturnNote {
-  id                 String   @id @default(uuid())
+  id                 String               @id @default(uuid())
   tenantId           String
   srnRef             String
-  srnDate            DateTime @db.Date
+  srnDate            DateTime             @db.Date
   grnId              String
   vendorId           String
   returnReason       String?
   creditNoteRef      String?
   workflowInstanceId String?
-  status             String   @default("DRAFT")
+  status             String               @default("DRAFT")
   createdByUserId    String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
   lines              SupplierReturnLine[]
+
   @@unique([tenantId, srnRef])
   @@map("supplier_return_notes")
 }
 
 model SupplierReturnLine {
-  id             String             @id @default(uuid())
-  srnId          String
-  grnLineId      String
-  itemId         String?
-  description    String
-  returnQty      Decimal            @db.Decimal(15,4)
-  returnReason   String
-  reverseGst     Boolean            @default(true)
-  reverseTds     Boolean            @default(false)
-  srn            SupplierReturnNote @relation(fields: [srnId], references: [id], onDelete: Cascade)
+  id           String             @id @default(uuid())
+  srnId        String
+  grnLineId    String
+  itemId       String?
+  description  String
+  returnQty    Decimal            @db.Decimal(15, 4)
+  returnReason String
+  reverseGst   Boolean            @default(true)
+  reverseTds   Boolean            @default(false)
+  srn          SupplierReturnNote @relation(fields: [srnId], references: [id], onDelete: Cascade)
+
   @@map("supplier_return_lines")
 }
 
 // ── VENDOR ADVANCE ────────────────────────────────────────────────────────────
 model VendorAdvance {
-  id                 String   @id @default(uuid())
+  id                 String                    @id @default(uuid())
   tenantId           String
   advanceRef         String
   vendorId           String
   entityId           String
   poId               String?
   milestoneId        String?
-  advanceAmount      Decimal  @db.Decimal(15,2)
-  currencyCode       String   @default("INR")
-  advanceDate        DateTime @db.Date
+  advanceAmount      Decimal                   @db.Decimal(15, 2)
+  currencyCode       String                    @default("INR")
+  advanceDate        DateTime                  @db.Date
   purpose            String?
   glCodeId           String?
-  tdsApplicable      Boolean  @default(false)
+  tdsApplicable      Boolean                   @default(false)
   tdsSectionId       String?
-  tdsAmount          Decimal  @db.Decimal(15,2) @default(0)
-  adjustedAmount     Decimal  @db.Decimal(15,2) @default(0)
-  pendingAmount      Decimal  @db.Decimal(15,2) @default(0)
+  tdsAmount          Decimal                   @default(0) @db.Decimal(15, 2)
+  adjustedAmount     Decimal                   @default(0) @db.Decimal(15, 2)
+  pendingAmount      Decimal                   @default(0) @db.Decimal(15, 2)
   workflowInstanceId String?
-  status             String   @default("DRAFT")
+  status             String                    @default("DRAFT")
   paidAt             DateTime?
   createdByUserId    String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
   adjustments        VendorAdvanceAdjustment[]
-  po                 PurchaseOrder? @relation(fields: [poId], references: [id])
+  po                 PurchaseOrder?            @relation(fields: [poId], references: [id])
+
   @@unique([tenantId, advanceRef])
   @@index([tenantId, vendorId, status])
   @@map("vendor_advances")
@@ -1761,9 +1858,10 @@ model VendorAdvanceAdjustment {
   id             String        @id @default(uuid())
   advanceId      String
   invoiceId      String
-  adjustedAmount Decimal       @db.Decimal(15,2)
+  adjustedAmount Decimal       @db.Decimal(15, 2)
   adjustmentDate DateTime      @db.Date
-  tdsCredit      Decimal       @db.Decimal(15,2) @default(0)
+  tdsCredit      Decimal       @default(0) @db.Decimal(15, 2)
   advance        VendorAdvance @relation(fields: [advanceId], references: [id])
+
   @@map("vendor_advance_adjustments")
 }

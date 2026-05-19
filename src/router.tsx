@@ -11,6 +11,9 @@ const InvoiceDetailPage       = lazy(() => import('./pages/invoices/InvoiceDetai
 const InvoiceFormPage         = lazy(() => import('./pages/invoices/InvoiceFormPage'))
 const InvoiceNewPage          = lazy(() => import('./pages/invoices/InvoiceNewPage'))
 const InvoiceReviewQueuePage  = lazy(() => import('./pages/invoices/InvoiceReviewQueuePage'))
+const InvoiceTypeSelector     = lazy(() => import('./pages/invoices/InvoiceTypeSelector'))
+const InvoiceCreatePO         = lazy(() => import('./pages/invoices/InvoiceCreatePO'))
+const InvoiceCreateDirect     = lazy(() => import('./pages/invoices/InvoiceCreateDirect'))
 const PaymentListPage    = lazy(() => import('./pages/payments/PaymentListPage'))
 const PaymentDetailPage  = lazy(() => import('./pages/payments/PaymentDetailPage'))
 const VendorListPage     = lazy(() => import('./pages/masters/vendors/VendorListPage'))
@@ -113,7 +116,10 @@ export const router = createBrowserRouter([
         { path: 'vendors/:id/edit', element: <S><VendorFormPage mode="edit" /></S> },
         { path: 'invoices', children: [
           { index: true,        element: <S><InvoiceListPage /></S>      },
-          { path: 'new',        element: <S><InvoiceFormPage /></S>      },
+          { path: 'new',        element: <S><InvoiceTypeSelector /></S>  },
+          { path: 'new/po',     element: <S><InvoiceCreatePO /></S>      },
+          { path: 'new/direct', element: <S><InvoiceCreateDirect /></S>  },
+          { path: 'new/legacy', element: <S><InvoiceFormPage /></S>      },
           { path: 'review',     element: <S><InvoiceReviewQueuePage /></S> },
           { path: ':id',        element: <S><InvoiceDetailPage /></S>   },
           { path: ':id/edit',   element: <S><InvoiceFormPage /></S>      },
