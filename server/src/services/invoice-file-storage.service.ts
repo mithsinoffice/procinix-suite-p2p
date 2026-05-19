@@ -13,8 +13,15 @@
 
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const UPLOADS_ROOT = path.resolve(process.cwd(), 'uploads')
+// Anchor to the source file, not process.cwd(). The dev script runs the server
+// from server/ (via `cd server && tsx ...`), so cwd-based resolution would land
+// uploads under server/uploads/ — which the repo-root .gitignore can't match.
+// This file lives at server/src/services/, so three "../" hops lands at repo root.
+const __filename   = fileURLToPath(import.meta.url)
+const __dirname    = path.dirname(__filename)
+const UPLOADS_ROOT = path.resolve(__dirname, '..', '..', '..', 'uploads')
 
 const EXT_BY_MIME: Record<string, string> = {
   'application/pdf': 'pdf',
