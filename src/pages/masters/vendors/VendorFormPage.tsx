@@ -10,7 +10,7 @@ import { useMasterData } from '../../../hooks/useMasterData'
 import { MasterPageHeader } from '../../../components/masters/MasterFormLayout'
 import { http } from '../../../lib/http'
 import { STALE_TIMES } from '../../../lib/query-client'
-import { cn } from '../../../lib/utils'
+import { cn, toArray } from '../../../lib/utils'
 
 // ── Entity-type compliance rules ──
 
@@ -452,24 +452,27 @@ export default function VendorFormPage({ mode }: Props) {
 
   const { entities, glCodes, costCentres } = useMasterData()
 
+  // toArray() guards against the three observed response shapes (bare array,
+  // paginated { data: [...] }, null). Without it any endpoint flip to the
+  // paginated envelope crashes downstream .find/.filter calls.
   const { data: vendorCategories = [] } = useQuery<{ id: string; code: string; name: string }[]>({
     queryKey: ['masters', 'vendor-categories'],
-    queryFn:  () => http.get('/api/masters/vendor-categories'),
+    queryFn:  async () => toArray<{ id: string; code: string; name: string }>(await http.get('/api/masters/vendor-categories')),
     staleTime: STALE_TIMES.MASTER,
   })
   const { data: vendorGroups = [] } = useQuery<{ id: string; code: string; name: string }[]>({
     queryKey: ['masters', 'vendor-groups'],
-    queryFn:  () => http.get('/api/masters/vendor-groups'),
+    queryFn:  async () => toArray<{ id: string; code: string; name: string }>(await http.get('/api/masters/vendor-groups')),
     staleTime: STALE_TIMES.MASTER,
   })
   const { data: tdsSections = [] } = useQuery<{ id: string; section: string; description?: string; defaultRate?: number }[]>({
     queryKey: ['masters', 'tds-sections'],
-    queryFn:  () => http.get('/api/masters/tds-sections'),
+    queryFn:  async () => toArray<{ id: string; section: string; description?: string; defaultRate?: number }>(await http.get('/api/masters/tds-sections')),
     staleTime: STALE_TIMES.MASTER,
   })
   const { data: profitCentresRaw = [] } = useQuery<{ id: string; code: string; name: string }[]>({
     queryKey: ['masters', 'profit-centres'],
-    queryFn:  () => http.get('/api/masters/profit-centres'),
+    queryFn:  async () => toArray<{ id: string; code: string; name: string }>(await http.get('/api/masters/profit-centres')),
     staleTime: STALE_TIMES.MASTER,
   })
 

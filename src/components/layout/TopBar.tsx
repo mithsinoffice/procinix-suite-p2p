@@ -5,7 +5,7 @@ import { Menu, Bell, Building2, ChevronDown, Settings, LogOut } from 'lucide-rea
 import { useAuthStore } from '../../stores/auth.store'
 import { http } from '../../lib/http'
 import { queryClient } from '../../lib/query-client'
-import { cn } from '../../lib/utils'
+import { cn, toArray } from '../../lib/utils'
 
 // Route → page title. Longest-prefix match wins (so '/invoices/new' shows 'Invoices').
 const PATH_TITLES: Record<string, string> = {
@@ -69,13 +69,17 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
     staleTime: 5 * 60_000,
     enabled:   !!user,
   })
-  const { data: entities = [] } = useQuery({
+  const { data: entities } = useQuery({
     queryKey: ['entities'],
-    queryFn:  () => http.get<any>('/api/masters/entities').then((r: any) => Array.isArray(r) ? r : r?.data ?? []),
+    queryFn:  async () => toArray<{ id: string; code: string; name: string }>(await http.get<unknown>('/api/masters/entities')),
     staleTime: 10 * 60_000,
     enabled:   !!user,
   })
-  const currentEntity = (entities as any[]).find((e: any) => e.id === currentUser?.entityId)
+  // Belt-and-suspenders: even though the queryFn always returns an array and
+  // the destructure has its own default, guard the consumer call too so a
+  // briefly-undefined state during cache transitions can't crash the chrome.
+  const entityList    = toArray<{ id: string; code: string; name: string }>(entities)
+  const currentEntity = entityList.find(e => e.id === currentUser?.entityId)
   const entityDisplay = currentEntity?.name ?? currentUser?.tenantCode ?? user?.tenantCode ?? '…'
 
   async function handleLogout() {
