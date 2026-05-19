@@ -157,6 +157,15 @@ export default function ItemFormPage() {
     enabled:  isEdit,
   })
 
+  // Pending change request, if any. Loaded for ACTIVE items in edit mode so
+  // the form can render the amber banner explaining that live values are
+  // locked until the request resolves.
+  const { data: pendingChange, refetch: refetchPendingChange } = useQuery<any>({
+    queryKey: ['itemMaster', id, 'pending-change'],
+    queryFn:  () => http.get<any>(`/api/masters/items/${id}/pending-change`),
+    enabled:  isEdit && existing?.status === 'ACTIVE',
+  })
+
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<ItemFormValues>({
     defaultValues: DEFAULTS,
   })
@@ -244,6 +253,30 @@ export default function ItemFormPage() {
   // wrapped handler — using state would race with React batching.
   const submitModeRef = useRef<'draft' | 'submit'>('draft')
   const [submitting, setSubmitting] = useState(false)
+  const [changeRequestNotice, setChangeRequestNotice] = useState<string | null>(null)
+
+  // Mirrors server/src/services/item-change.service.ts MATERIAL_FIELDS.
+  // Best-effort frontend detection of "this edit needs the change-request
+  // path" — backend is the source of truth (422 NO_MATERIAL_CHANGE if our
+  // detection mis-fires, in which case we fall back to PUT).
+  const MATERIAL_FIELDS_FE = [
+    'gstRate', 'tdsSectionId', 'hsnCode', 'sacCode',
+    'provisionRequired', 'provisionAmount', 'provisionFrequency', 'provisionBasis',
+  ] as const
+
+  function hasMaterialChange(oldItem: any, next: any): boolean {
+    if (!oldItem) return false
+    const norm = (v: any) => v === '' || v == null ? null : v
+    return MATERIAL_FIELDS_FE.some(f => {
+      const o = norm(oldItem[f])
+      const n = norm(next[f])
+      // Numeric Decimal fields can drift between '18' and 18 — compare as Number.
+      if ((f === 'gstRate' || f === 'provisionAmount') && (o != null || n != null)) {
+        return Number(o ?? 0) !== Number(n ?? 0)
+      }
+      return String(o) !== String(n)
+    })
+  }
 
   const performSave = handleSubmit(async (data) => {
     const entityMappingsPayload = entityMappings.map(e => ({
@@ -267,7 +300,29 @@ export default function ItemFormPage() {
     }
 
     setSubmitting(true)
+    setChangeRequestNotice(null)
     try {
+      // Material edits on an ACTIVE item don't mutate the live record — they
+      // create a workflow-gated change request. Caller can still save non-
+      // material edits (description, OCR keywords, RCM toggle) directly via
+      // the regular PUT below.
+      if (isEdit && existing?.status === 'ACTIVE' && hasMaterialChange(existing, payload)) {
+        // Build the proposed-values block — only material fields. Sending
+        // the whole payload would be ignored server-side but is wasteful.
+        const proposed: Record<string, unknown> = {}
+        for (const f of MATERIAL_FIELDS_FE) proposed[f] = (payload as any)[f]
+        const created = await http.post<{ ok: boolean; changeRequestId: string; changedFields: string[] }>(
+          `/api/masters/items/${id}/request-change`, proposed,
+        )
+        setChangeRequestNotice(
+          `Change request submitted — pending approval. Fields: ${created.changedFields.join(', ')}. Live values remain active until approved.`,
+        )
+        qc.invalidateQueries({ queryKey: ['itemMaster'] })
+        await refetchPendingChange()
+        // Stay on the page so the user can see the banner + read the notice.
+        return
+      }
+
       const saved = isEdit
         ? await http.put<{ id: string }>(`/api/masters/items/${id}`, payload)
         : await http.post<{ id: string; itemCode: string }>('/api/masters/items', payload)
@@ -314,6 +369,25 @@ export default function ItemFormPage() {
             subtitle="Fill all sections. CAPEX and Provision sections appear based on your expense type selection."
             onBack={() => navigate('/masters/items')}
           />
+
+          {/* Amber banner when a pending change request exists OR when one was
+              just created from this form. Material edits on ACTIVE items go
+              through this workflow — live values stay active until approved. */}
+          {(pendingChange || changeRequestNotice) && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+              <p className="text-sm font-semibold text-amber-900">
+                {changeRequestNotice ? 'Change request submitted' : 'Change request pending approval'}
+              </p>
+              <p className="text-xs text-amber-800 mt-1">
+                {changeRequestNotice ?? 'A material-field change is awaiting approval. Current values remain active until approved.'}
+              </p>
+              {pendingChange?.changedFields?.fields?.length > 0 && !changeRequestNotice && (
+                <p className="text-xs text-amber-700 mt-1.5 font-mono">
+                  Fields: {(pendingChange.changedFields.fields as string[]).join(', ')}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* A. Identity */}
           <FormSection title="A. Identity & Classification">

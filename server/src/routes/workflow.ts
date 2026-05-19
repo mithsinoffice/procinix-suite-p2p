@@ -5,6 +5,7 @@ import {
   type WfModule,
 } from '../services/workflow-engine.service.js'
 import { resolveItemStatusAfterReject } from '../services/item-submit.service.js'
+import { applyChangeDiff } from '../services/item-change.service.js'
 
 export async function workflowRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }
@@ -137,6 +138,29 @@ export async function workflowRoutes(app: FastifyInstance) {
           data:  { status: 'ACTIVE' },
         })
       }
+    } else if (instanceInfo?.entityType === 'item_change') {
+      // Material-field change request on an ACTIVE item. On final approval,
+      // load the persisted diff and apply it to the live item. The change
+      // request itself is marked APPROVED and the reviewer is recorded.
+      if (result.data.finalStatus === 'APPROVED') {
+        const cr = await app.prisma.itemMasterChangeRequest.findFirst({
+          where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
+        })
+        if (cr) {
+          const payload = cr.changedFields as { after: Record<string, unknown> }
+          const update  = applyChangeDiff(payload.after ?? {})
+          await app.prisma.$transaction([
+            app.prisma.itemMaster.update({
+              where: { id: cr.itemId, tenantId: req.tenant.id },
+              data:  update as never,
+            }),
+            app.prisma.itemMasterChangeRequest.update({
+              where: { id: cr.id },
+              data:  { status: 'APPROVED', reviewedBy: req.user.sub, reviewedAt: new Date(), reviewComments: comments },
+            }),
+          ])
+        }
+      }
     }
 
     return reply.send(result.data)
@@ -214,6 +238,15 @@ export async function workflowRoutes(app: FastifyInstance) {
         where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
         data:  { status: newStatus },
       })
+    } else if (instanceInfo?.entityType === 'item_change') {
+      // Reject a change request — discard. The live item stays ACTIVE
+      // (untouched). REQUEST_INFO leaves the request PENDING_APPROVAL.
+      if (mode !== 'REQUEST_INFO') {
+        await app.prisma.itemMasterChangeRequest.update({
+          where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
+          data:  { status: 'REJECTED', reviewedBy: req.user.sub, reviewedAt: new Date(), reviewComments: comments },
+        })
+      }
     }
 
     return reply.send({ ok: true })

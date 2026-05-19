@@ -8,6 +8,10 @@ import {
   validateItemSubmittable, resolveItemStatusAfterSubmit,
 } from '../services/item-submit.service.js'
 import {
+  detectMaterialChange, buildChangeRequestPayload, validateChangeRequest,
+  MATERIAL_FIELDS,
+} from '../services/item-change.service.js'
+import {
   listMaster, createMasterRecord, updateMasterRecord,
   submitMasterRecord, approveMasterRecord, bulkCreateMasterRecords,
   type MasterTable,
@@ -425,10 +429,23 @@ export async function masterRoutes(app: FastifyInstance) {
       { hsnCode:  { contains: search } },
       { sacCode:  { contains: search } },
     ]
-    return reply.send(await app.prisma.itemMaster.findMany({
+    const items = await app.prisma.itemMaster.findMany({
       where, orderBy: { itemCode: 'asc' },
-      include: { entityMappings: true },
-    }))
+      include: {
+        entityMappings: true,
+        changeRequests: {
+          where:  { status: 'PENDING_APPROVAL' },
+          select: { id: true },
+          take:   1,
+        },
+      },
+    })
+    // Flatten the relation into a boolean so the listing can render a
+    // "CHANGE PENDING" badge without exposing the join shape to the client.
+    return reply.send(items.map(({ changeRequests, ...rest }) => ({
+      ...rest,
+      hasPendingChange: changeRequests.length > 0,
+    })))
   })
 
   app.get('/items/:id', auth, async (req, reply) => {
@@ -594,6 +611,84 @@ export async function masterRoutes(app: FastifyInstance) {
       }
       throw err
     }
+  })
+
+  // ── Item master change request (material edits on ACTIVE items) ──
+  // Material fields (gstRate, tdsSectionId, hsn/sac, provision *) on an
+  // ACTIVE item are gated behind a workflow. Posting the proposed values
+  // creates a PENDING_APPROVAL change request — the live item is unchanged
+  // until the workflow approves and the diff is applied.
+  app.post('/items/:id/request-change', auth, async (req, reply) => {
+    const itemId = (req.params as { id: string }).id
+    const proposed = req.body as Record<string, unknown>
+
+    const item = await app.prisma.itemMaster.findFirst({
+      where: { id: itemId, tenantId: req.tenant.id },
+    })
+    if (!item) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Item not found' })
+
+    // Build the diff using only material fields the caller sent. Non-material
+    // edits are not this route's concern — caller should hit PUT instead.
+    const diff = detectMaterialChange(item as unknown as Record<string, unknown>, proposed)
+
+    // One pending request at a time per item. Approve/reject the existing
+    // one before submitting a new diff.
+    const pendingExisting = await app.prisma.itemMasterChangeRequest.findFirst({
+      where: { itemId, tenantId: req.tenant.id, status: 'PENDING_APPROVAL' },
+    })
+
+    const guard = validateChangeRequest(item.status, diff, !!pendingExisting)
+    if (!guard.ok) {
+      return reply.code(422).send({ code: 'WORKFLOW_INVALID_STATE', message: guard.message, reason: guard.reason })
+    }
+
+    const payload = buildChangeRequestPayload(diff)
+    const created = await app.prisma.itemMasterChangeRequest.create({
+      data: {
+        tenantId:      req.tenant.id,
+        itemId,
+        changedFields: payload as never,
+        status:        'PENDING_APPROVAL',
+        createdBy:     req.user.sub,
+      },
+    })
+
+    // Start the workflow against the change-request id (not the item id) so
+    // approve/reject in the engine can locate the diff to apply.
+    const wf = await startWorkflow(
+      app.prisma, 'ITEM_CHANGE', 'item_change', created.id, {},
+      { tenantId: req.tenant.id, userId: req.user.sub, userName: (req.user as any).name ?? req.user.sub },
+    )
+    if (wf.ok) {
+      await app.prisma.itemMasterChangeRequest.update({
+        where: { id: created.id }, data: { workflowInstanceId: wf.data.instanceId },
+      })
+    }
+    // NO_WORKFLOW_DEFINED leaves the request in PENDING_APPROVAL with no
+    // instance — admin can manually approve via PATCH if needed (out of
+    // scope for this commit).
+
+    return reply.code(201).send({
+      ok: true,
+      changeRequestId:    created.id,
+      workflowInstanceId: wf.ok ? wf.data.instanceId : null,
+      changedFields:      payload.fields,
+    })
+  })
+
+  // GET the active pending change request for an item, or null.
+  app.get('/items/:id/pending-change', auth, async (req, reply) => {
+    const itemId = (req.params as { id: string }).id
+    const pending = await app.prisma.itemMasterChangeRequest.findFirst({
+      where: { itemId, tenantId: req.tenant.id, status: 'PENDING_APPROVAL' },
+      orderBy: { createdAt: 'desc' },
+    })
+    return reply.send(pending ?? null)
+  })
+
+  // Wire MATERIAL_FIELDS into the response so frontend can drive parity diff UI.
+  app.get('/items/material-fields', auth, async (_req, reply) => {
+    return reply.send({ fields: [...MATERIAL_FIELDS] })
   })
 
   // ── Role privileges (RBAC) ──

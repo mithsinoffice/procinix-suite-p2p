@@ -1360,10 +1360,38 @@ model ItemMaster {
   entityMappings        ItemEntityMapping[]
   approvedVendors       ItemApprovedVendor[]
   invoiceLines          InvoiceLine[]
+  changeRequests        ItemMasterChangeRequest[]
 
   @@unique([tenantId, itemCode])
   @@index([tenantId, itemType, expenseType])
   @@map("item_master")
+}
+
+// Pending change request for an ACTIVE item master. Material edits (gstRate,
+// tdsSectionId, hsn/sac, provision fields, etc.) on an ACTIVE item don't
+// mutate the live record — they create a row here with the field diff, kick
+// off a workflow, and apply the diff to the live item only on approval. Lets
+// finance compliance gate tax-rate and HSN/SAC changes without taking the
+// item out of circulation.
+model ItemMasterChangeRequest {
+  id                 String     @id @default(uuid())
+  tenantId           String
+  itemId             String
+  // JSON: { before: {field: prevValue, ...}, after: {field: newValue, ...},
+  //        fields: ['gstRate', 'hsnCode', ...] }
+  changedFields      Json
+  status             String     @default("PENDING_APPROVAL")
+  workflowInstanceId String?
+  createdBy          String
+  createdAt          DateTime   @default(now())
+  reviewedBy         String?
+  reviewedAt         DateTime?
+  reviewComments     String?    @db.Text
+  item               ItemMaster @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([tenantId, itemId])
+  @@map("item_master_change_requests")
 }
 
 model ItemEntityMapping {

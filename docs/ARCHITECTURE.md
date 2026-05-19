@@ -364,6 +364,47 @@ Pure helpers in [server/src/services/item-submit.service.ts](../server/src/servi
 
 Other bespoke masters (Vendors, Employees, Users, Budget, etc.) still follow the legacy "save with status='ACTIVE'" pattern — same gap exists there. Not addressed in this commit; pattern is reusable when each form's submit handler is wired through.
 
+### §7.9c Item master change request flow (material edits on ACTIVE items)
+
+ACTIVE items can't have material fields mutated directly. Editing `gstRate`, `tdsSectionId`, `hsnCode`, `sacCode`, or any of the provision fields (`provisionRequired`, `provisionAmount`, `provisionFrequency`, `provisionBasis`) creates a workflow-gated change request. The live item stays ACTIVE and unchanged until the request is approved. Non-material edits (description, OCR keywords, RCM toggle, advance flag) save directly via the existing PUT route.
+
+**Data model** — [prisma/schema.prisma](../prisma/schema.prisma) `ItemMasterChangeRequest`:
+
+```
+id, tenantId, itemId, changedFields Json, status,
+workflowInstanceId?, createdBy, createdAt,
+reviewedBy?, reviewedAt?, reviewComments?
+```
+
+`changedFields` holds `{ before, after, fields[] }` — both pre/post values for diff display and the field list for quick filtering. Only one PENDING_APPROVAL request per item at a time (enforced by the route guard, not a DB constraint, so REJECTED/APPROVED rows remain as history).
+
+**Routes** — all in [server/src/routes/masters.ts](../server/src/routes/masters.ts):
+
+| Method | Path                                       | Purpose                                                                 |
+| ------ | ------------------------------------------ | ----------------------------------------------------------------------- |
+| POST   | `/api/masters/items/:id/request-change`    | Detect material diff, persist a PENDING_APPROVAL request, start `WF-ITEM-CHANGE`. 422 if item not ACTIVE / no material change / pending request already exists. |
+| GET    | `/api/masters/items/:id/pending-change`    | The current pending request for an item, or `null`.                     |
+| GET    | `/api/masters/items`                       | Augments every list row with `hasPendingChange: boolean` for the listing's "CHANGE PENDING" badge. |
+
+**Workflow approve/reject** — [server/src/routes/workflow.ts](../server/src/routes/workflow.ts) adds an `entityType === 'item_change'` branch:
+
+- **Final approve** → load the change request, run `applyChangeDiff(after)` to extract only material fields from the persisted payload, and apply them to the live item inside a transaction. Mark the request `APPROVED` with reviewer + timestamp.
+- **Reject (RETURN_TO_DRAFT / RETURN_TO_PREV_STAGE)** → mark the request `REJECTED`. The live item is untouched.
+- **REQUEST_INFO** → leave the request `PENDING_APPROVAL` while the chat thread resolves.
+
+**Pure helpers** ([server/src/services/item-change.service.ts](../server/src/services/item-change.service.ts)) covered by 19 Vitest specs at [item-change.test.ts](../server/src/services/__tests__/item-change.test.ts):
+
+- `MATERIAL_FIELDS` — the policy-pinned list of fields that require approval. Changing the list is a deliberate decision; one spec locks it.
+- `detectMaterialChange(old, new)` — returns `{ hasMaterialChange, fields[], before, after }`. Normalises Decimal-as-string vs Decimal-as-number drift (only for numeric fields like `gstRate`, `provisionAmount` — HSN/SAC codes stay strings to preserve leading zeros). Treats `null`/`undefined`/`""` as the same "absent" value so empty-input forms don't register false diffs.
+- `validateChangeRequest(status, diff, hasPendingChange)` — gate logic surfaced as a structured error (`ITEM_NOT_ACTIVE` / `NO_MATERIAL_CHANGE` / `PENDING_CHANGE_EXISTS`).
+- `applyChangeDiff(after)` — defensive: strips any non-material keys that snuck into the payload before applying to the item, so a manually-crafted JSON can't override fields the policy excludes.
+
+**Frontend** — [ItemFormPage.tsx](../src/pages/masters/items/ItemFormPage.tsx) detects material change locally (best-effort, backend is authoritative). For an ACTIVE item with a material edit, the save path calls `POST /request-change` instead of `PUT`. An amber banner above the form shows when a pending change exists (loaded via `pending-change` query) or when one was just submitted (in-form state). [ItemMasterPage.tsx](../src/pages/masters/items/ItemMasterPage.tsx) adds a `CHANGE PENDING` chip next to PROV/CAPEX flags in the listing when `hasPendingChange === true`.
+
+**Existing data** — Seeded items remain `ACTIVE`. The flow only applies to material edits on those items going forward. The 30 seed items were created before the DRAFT default was introduced; retroactively flipping them was deliberately avoided so an admin run doesn't suddenly fill the Approval Desk.
+
+**Seed** — `WF-ITEM-CHANGE` workflow definition added to [prisma/seed.ts](../prisma/seed.ts) (TENANT_ADMIN approver, priority 10). Wired via `module: 'ITEM_CHANGE'`.
+
 ### §7.10 Cross-module pending-approvals queue
 
 `GET /api/invoices/pending-approvals` (despite the path, it's cross-module) returns every `WorkflowInstanceStage` with `assignedTo = currentUser, status = 'PENDING'` enriched with the underlying document. Each row carries a `module` tag (`INVOICE` / `PR` / `PO`) plus uniform `invoiceNumber` / `totalAmount` / `currencyCode` fields parallel to the invoice shape so the Approval Desk renders all three without per-module column logic. Previously the endpoint silently filtered to invoices only — PR and PO approvers saw "All caught up!" while their work queue grew.

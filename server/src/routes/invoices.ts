@@ -110,12 +110,13 @@ export async function invoiceRoutes(app: FastifyInstance) {
     )
     if (pendingStages.length === 0) return reply.send([])
 
-    const invoiceIds = pendingStages.filter(s => s.instance.entityType === 'invoice').map(s => s.instance.entityId)
-    const prIds      = pendingStages.filter(s => s.instance.entityType === 'purchase_requisition').map(s => s.instance.entityId)
-    const poIds      = pendingStages.filter(s => s.instance.entityType === 'purchase_order').map(s => s.instance.entityId)
-    const itemIds    = pendingStages.filter(s => s.instance.entityType === 'item').map(s => s.instance.entityId)
+    const invoiceIds     = pendingStages.filter(s => s.instance.entityType === 'invoice').map(s => s.instance.entityId)
+    const prIds          = pendingStages.filter(s => s.instance.entityType === 'purchase_requisition').map(s => s.instance.entityId)
+    const poIds          = pendingStages.filter(s => s.instance.entityType === 'purchase_order').map(s => s.instance.entityId)
+    const itemIds        = pendingStages.filter(s => s.instance.entityType === 'item').map(s => s.instance.entityId)
+    const itemChangeIds  = pendingStages.filter(s => s.instance.entityType === 'item_change').map(s => s.instance.entityId)
 
-    const [invoices, prs, pos, items] = await Promise.all([
+    const [invoices, prs, pos, items, itemChanges] = await Promise.all([
       invoiceIds.length
         ? app.prisma.invoice.findMany({
             where:   { id: { in: invoiceIds }, tenantId },
@@ -134,6 +135,12 @@ export async function invoiceRoutes(app: FastifyInstance) {
       itemIds.length
         ? app.prisma.itemMaster.findMany({ where: { id: { in: itemIds }, tenantId } })
         : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.itemMaster.findMany>>),
+      itemChangeIds.length
+        ? app.prisma.itemMasterChangeRequest.findMany({
+            where:   { id: { in: itemChangeIds }, tenantId },
+            include: { item: { select: { itemCode: true, name: true } } },
+          })
+        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.itemMasterChangeRequest.findMany>>),
     ])
 
     const rows: unknown[] = []
@@ -162,6 +169,17 @@ export async function invoiceRoutes(app: FastifyInstance) {
           ...it, module: 'ITEM', pendingStage: stage,
           invoiceNumber: it.itemCode, totalAmount: 0, currencyCode: 'INR',
         })
+      } else if (entityType === 'item_change') {
+        const cr = itemChanges.find(c => c.id === entityId)
+        if (cr) {
+          const fieldsList = ((cr.changedFields as { fields?: string[] })?.fields ?? []).join(', ')
+          rows.push({
+            ...cr, module: 'ITEM_CHANGE', pendingStage: stage,
+            invoiceNumber: cr.item?.itemCode ?? cr.itemId,
+            name:          `${cr.item?.name ?? 'Item'} — change: ${fieldsList}`,
+            totalAmount:   0, currencyCode: 'INR',
+          })
+        }
       }
     }
 

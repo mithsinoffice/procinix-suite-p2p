@@ -13,6 +13,7 @@ interface ItemRow {
   expenseType: string; hsnCode?: string; sacCode?: string; gstRate?: number
   poRequired: string; rcmApplicable: boolean; provisionRequired: boolean
   autoPostDepreciation: boolean; depreciationMethod?: string; status: string
+  hasPendingChange?: boolean
 }
 
 const NATURE_LABELS: Record<string, string> = {
@@ -152,6 +153,14 @@ export default function ItemMasterPage() {
                       {r.provisionRequired   && <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-teal-50 border border-teal-200 text-teal-700">PROV</span>}
                       {r.autoPostDepreciation && r.depreciationMethod && (
                         <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-amber-50 border border-amber-200 text-amber-700">{r.depreciationMethod}</span>
+                      )}
+                      {r.hasPendingChange    && (
+                        <span
+                          className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-amber-50 border border-amber-300 text-amber-800"
+                          title="A material-field change is awaiting approval"
+                        >
+                          CHANGE PENDING
+                        </span>
                       )}
                     </div>
                   </td>

@@ -903,6 +903,7 @@ async function main() {
     { code: 'WF-DESIG-001',   name: 'Designation Approval',     module: 'DESIGNATION'     },
     { code: 'WF-LOC-001',     name: 'Location Approval',        module: 'LOCATION'        },
     { code: 'WF-ITEM-001',    name: 'Item Master Approval',     module: 'ITEM'            },
+    { code: 'WF-ITEM-CHANGE', name: 'Item Master Change Request', module: 'ITEM_CHANGE'    },
     { code: 'WF-VENDOR-001',  name: 'Vendor Approval',          module: 'VENDOR'          },
     { code: 'WF-VCAT-001',    name: 'Vendor Category Approval', module: 'VENDOR_CATEGORY' },
     { code: 'WF-TAX-001',     name: 'Tax Code Approval',        module: 'TAX_CODE'        },
