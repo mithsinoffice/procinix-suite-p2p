@@ -1,6 +1,6 @@
 # Procinix v2 (S2P) — Architecture
 
-_Last updated: 2026-05-19 (wizard files deleted — InvoiceFormPage is the single creation path)_
+_Last updated: 2026-05-19 (OCR dual-model routing + error surfacing)_
 
 Indian Source-to-Pay (S2P) platform — Procurement, Goods Receipt, AP Invoice processing, Payments, Vendor management, Approvals and Masters — for mid-market Indian enterprises. Multi-tenant, RBAC-gated, n8n-driven email ingestion, Gemini OCR.
 
@@ -581,7 +581,27 @@ All endpoints scope by `request.tenant.id` (JWT claim — never trust a request 
 
 ---
 
-## §10f Purchase requisition edit mode
+## §10f Gemini OCR — dual-model routing + error surfacing
+
+The OCR call ([gemini-ocr.service.ts](../server/src/services/gemini-ocr.service.ts)) picks one of two models per call:
+
+| Input | Model | Why |
+| --- | --- | --- |
+| Image (`image/jpeg` / `image/png` / `image/webp`) | `gemini-2.5-pro` | Pro is significantly better at handwriting. Phone-camera shots of paper invoices land here. |
+| PDF with raw size > 500 KB | `gemini-2.5-pro` | Big PDFs are usually scans (no text layer); pro again. |
+| PDF with raw size ≤ 500 KB | `gemini-2.5-flash` | Small PDFs are typically born-digital with clean text — flash is ~3× faster and ~10× cheaper. |
+
+Raw-byte size is estimated from the base64 string length (`base64.length × 0.75`) so the caller doesn't have to ship the file size separately. The routing decision is **always input-driven** — there's deliberately no single `GEMINI_MODEL` env knob, since pinning everything to one model defeats the purpose. Individual model ids are overridable via `GEMINI_MODEL_FLASH` / `GEMINI_MODEL_PRO` if you need a preview build or a specific pinned version.
+
+Pure picker: `pickModelForOcr(mimeType, base64Length)` — no I/O, covered by 7 Vitest specs at [gemini-ocr.test.ts](../server/src/services/__tests__/gemini-ocr.test.ts).
+
+**Prompt**: the extraction prompt now opens with an explicit handwriting block — common confusions (1/l/I, 0/O, 5/S, 8/B), Indian-style comma thousands separators, multi-format date normalisation, and "return null when illegible, do not guess". This is independent of which model runs; both benefit but pro acts on it more reliably.
+
+**Error path**: every catch in the OCR service `console.error()`s with `{ model, reason, mimeType, bytes, message, stack }`. The route handler forwards the full error object (`{ code, message, detail, details, httpStatus }`) so the frontend can render the actual Gemini message instead of the global handler's generic "An unexpected error occurred". On the form, the OCR error banner shows the detail verbatim with a "Try manual entry instead" link that dismisses OCR state and lets the user type in the form directly. The "OCR extracted · gemini-2.5-pro" tag below the confidence bar makes the routing visible to the operator.
+
+---
+
+## §10g Purchase requisition edit mode
 
 PRs are editable only while in `DRAFT` status. Once submitted (any of `SUBMITTED` / `PENDING_L1` / `APPROVED` / `REJECTED` / `ON_HOLD`), `PRFormPage` switches to a read-only view and the backend rejects mutations with `422 WORKFLOW_INVALID_STATE`. The standard rejection loop returns a PR to `DRAFT`, re-enabling edits.
 

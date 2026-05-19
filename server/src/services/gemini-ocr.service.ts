@@ -1,12 +1,42 @@
-// Gemini Vision OCR — extracts structured invoice data from PDF or image
-// Uses gemini-2.0-flash for speed + cost efficiency
-// Returns typed extraction with per-field confidence scores
+// Gemini Vision OCR — extracts structured invoice data from PDF or image.
+// Model is picked per-call by pickModelForOcr() — pro for images and large
+// (likely scanned) PDFs because of its much better handwriting recognition;
+// flash for small digital PDFs where speed/cost matter and the text layer is
+// already clean. The chosen model is returned alongside the data so the UI
+// can surface it ("OCR extracted · gemini-2.5-pro").
 
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
 import { ok, err, type Result } from '../lib/result.js'
 
-const API_KEY = process.env.GEMINI_API_KEY ?? ''
-const MODEL   = process.env.GEMINI_MODEL   ?? 'gemini-2.0-flash'
+const API_KEY        = process.env.GEMINI_API_KEY ?? ''
+const FLASH_MODEL    = process.env.GEMINI_MODEL_FLASH ?? 'gemini-2.5-flash'
+const PRO_MODEL      = process.env.GEMINI_MODEL_PRO   ?? 'gemini-2.5-pro'
+
+// Roughly 500 KB of raw bytes is our heuristic for "this PDF is probably a
+// scan, not a digital invoice" — base64 expansion is ~1.33×, so 667 KB of
+// base64 maps to 500 KB of raw bytes.
+const PRO_ROUTE_RAW_BYTES = 500_000
+
+export interface ModelPick {
+  /** The Gemini model id, e.g. 'gemini-2.5-pro' */
+  model:  string
+  /** Why this model was chosen — surfaces in logs + (in dev) the error detail. */
+  reason: 'image-input' | 'large-pdf' | 'small-digital-pdf'
+}
+
+/**
+ * Pure picker — no I/O, exported for unit tests. Images and PDFs above the
+ * raw-bytes threshold route to pro for handwriting fidelity; small PDFs stay
+ * on flash. Individual model ids can be customised via GEMINI_MODEL_FLASH /
+ * GEMINI_MODEL_PRO, but the routing decision itself is always input-driven —
+ * a single global pin would defeat the point of having two models.
+ */
+export function pickModelForOcr(mimeType: string, base64Length: number): ModelPick {
+  if (mimeType.startsWith('image/')) return { model: PRO_MODEL, reason: 'image-input' }
+  const estimatedBytes = base64Length * 0.75
+  if (estimatedBytes > PRO_ROUTE_RAW_BYTES) return { model: PRO_MODEL, reason: 'large-pdf' }
+  return { model: FLASH_MODEL, reason: 'small-digital-pdf' }
+}
 
 // ── Extracted invoice structure ──
 
@@ -68,11 +98,28 @@ export interface OcrInvoiceData {
   overallConfidence: number       // 0–100 — fallback when fieldConfidence is sparse
   fieldConfidence?: OcrFieldConfidence
   rawText:        string
+  /** Gemini model id used for this extraction — set by extractInvoiceFromFile. */
+  model?:         string
 }
 
 // ── Extraction prompt ──
 
 const EXTRACTION_PROMPT = `You are an expert Indian GST invoice parser. Extract all data from this invoice and return ONLY a valid JSON object with no markdown, no explanation.
+
+This document may be handwritten, printed, or a mix of both.
+For handwritten content:
+- Read characters carefully — distinguish 1/l/I, 0/O, 5/S, 8/B
+- Numbers written in Indian style may use commas as thousands separators (e.g. "1,23,456"); strip commas before parsing
+- Amounts may be written without the ₹ symbol — assume INR as the currency
+- Line items may be laid out in a table with columns: particulars / description, qty, rate / unit price, amount
+- Grand total may be written as "Total", "Grand Total", "Amount", "Rs." or similar at the bottom
+- Vendor name is usually at the top of the document (header / letterhead)
+- Date formats vary: DD/MM/YY, DD/MM/YYYY, DD-MM-YY, DD.MM.YYYY — always emit DD/MM/YYYY per the spec below
+- If a field is genuinely illegible, return null for that field (do NOT guess — low confidence is better than wrong data)
+- fieldConfidence (0-100) should reflect handwriting clarity:
+    printed = 95-100, handwritten clear = 80-90, handwritten unclear = 50-70, illegible = 0
+
+
 
 Return this exact structure:
 {
@@ -156,10 +203,12 @@ export async function extractInvoiceFromFile(
     return err({ code: 'INTERNAL_ERROR' as const, message: 'GEMINI_API_KEY not configured', httpStatus: 500 })
   }
 
+  const pick = pickModelForOcr(mimeType, base64Data.length)
+
   try {
     const genAI = new GoogleGenerativeAI(API_KEY)
     const model = genAI.getGenerativeModel({
-      model: MODEL,
+      model: pick.model,
       safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_NONE },
         { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -186,29 +235,46 @@ export async function extractInvoiceFromFile(
       if (jsonMatch) {
         try {
           parsed = JSON.parse(jsonMatch[0]) as OcrInvoiceData
-        } catch {
+        } catch (e2) {
+          console.error('[Gemini OCR] JSON parse failed', { model: pick.model, raw: text.slice(0, 500), err: e2 })
           return err({
             code: 'INTERNAL_ERROR' as const,
-            message: `Gemini returned non-JSON response: ${clean.slice(0, 200)}`,
-            details: { raw: text.slice(0, 300) },
+            message: `Gemini (${pick.model}) returned non-JSON response`,
+            detail:  clean.slice(0, 300),
+            details: { raw: text.slice(0, 300), model: pick.model, reason: pick.reason },
             httpStatus: 502,
           })
         }
       } else {
+        console.error('[Gemini OCR] No JSON in response', { model: pick.model, raw: text.slice(0, 500) })
         return err({
           code: 'INTERNAL_ERROR' as const,
-          message: `Gemini returned non-JSON response: ${clean.slice(0, 200)}`,
-          details: { raw: text.slice(0, 300) },
+          message: `Gemini (${pick.model}) returned non-JSON response`,
+          detail:  clean.slice(0, 300),
+          details: { raw: text.slice(0, 300), model: pick.model, reason: pick.reason },
           httpStatus: 502,
         })
       }
     }
 
+    parsed.model = pick.model
     return ok(parsed)
   } catch (e) {
+    const errMsg = e instanceof Error ? e.message : String(e)
+    const stack  = e instanceof Error ? e.stack : undefined
+    console.error('[Gemini OCR] generateContent threw', {
+      model:    pick.model,
+      reason:   pick.reason,
+      mimeType,
+      bytes:    Math.round(base64Data.length * 0.75),
+      message:  errMsg,
+      stack,
+    })
     return err({
-      code: 'EXTERNAL_SERVICE_ERROR' as const,
-      message: `Gemini OCR failed: ${e instanceof Error ? e.message : String(e)}`,
+      code:    'EXTERNAL_SERVICE_ERROR' as const,
+      message: `Gemini OCR failed (${pick.model})`,
+      detail:  errMsg,
+      details: { model: pick.model, reason: pick.reason },
       httpStatus: 502,
     })
   }

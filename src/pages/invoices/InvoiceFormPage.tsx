@@ -197,11 +197,12 @@ interface LeftPanelProps {
   ocrLoading:  boolean
   ocrError:    string | null
   ocrConfidence: number | null
+  ocrModel:    string | null
   onDismissOcr: () => void
 }
 
 function LeftPanel({
-  open, onToggle, file, fileURL, onFile, onExtract, ocrLoading, ocrError, ocrConfidence, onDismissOcr,
+  open, onToggle, file, fileURL, onFile, onExtract, ocrLoading, ocrError, ocrConfidence, ocrModel, onDismissOcr,
 }: LeftPanelProps) {
   const [drag, setDrag] = useState(false)
   const inputRef        = useRef<HTMLInputElement>(null)
@@ -292,17 +293,22 @@ function LeftPanel({
           )}
 
           {ocrConfidence != null && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-muted-foreground">OCR confidence</span>
-              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                <div
-                  className={cn('h-full rounded-full', ocrConfidence >= 80 ? 'bg-green-500' : ocrConfidence >= 60 ? 'bg-amber-500' : 'bg-red-500')}
-                  style={{ width: `${ocrConfidence}%` }}
-                />
+            <div className="flex flex-col gap-1 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">OCR confidence</span>
+                <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={cn('h-full rounded-full', ocrConfidence >= 80 ? 'bg-green-500' : ocrConfidence >= 60 ? 'bg-amber-500' : 'bg-red-500')}
+                    style={{ width: `${ocrConfidence}%` }}
+                  />
+                </div>
+                <span className={cn('font-medium', ocrConfidence >= 80 ? 'text-green-600' : ocrConfidence >= 60 ? 'text-amber-600' : 'text-red-600')}>
+                  {ocrConfidence}%
+                </span>
               </div>
-              <span className={cn('font-medium', ocrConfidence >= 80 ? 'text-green-600' : ocrConfidence >= 60 ? 'text-amber-600' : 'text-red-600')}>
-                {ocrConfidence}%
-              </span>
+              {ocrModel && (
+                <p className="text-[10px] text-muted-foreground">OCR extracted · <span className="font-mono">{ocrModel}</span></p>
+              )}
             </div>
           )}
 
@@ -316,21 +322,30 @@ function LeftPanel({
                   : 'border-destructive/30 bg-destructive/5 text-destructive',
               )}>
                 <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                {isQuotaError ? (
-                  <p className="flex-1 break-words">
-                    Gemini free-tier quota exceeded. Use <span className="font-medium">Manual entry</span> or try again later.
-                    <a
-                      href="https://ai.google.dev/pricing"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline ml-1"
-                    >
-                      Upgrade plan →
-                    </a>
-                  </p>
-                ) : (
-                  <span className="flex-1 break-words">{ocrError}</span>
-                )}
+                <div className="flex-1 min-w-0">
+                  {isQuotaError ? (
+                    <p className="break-words">
+                      Gemini free-tier quota exceeded.
+                      <a
+                        href="https://ai.google.dev/pricing"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline ml-1"
+                      >
+                        Upgrade plan →
+                      </a>
+                    </p>
+                  ) : (
+                    <p className="break-words whitespace-pre-wrap">{ocrError}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onDismissOcr}
+                    className="mt-1 underline font-medium hover:opacity-80"
+                  >
+                    Try manual entry instead
+                  </button>
+                </div>
               </div>
             )
           })()}
@@ -390,6 +405,7 @@ export default function InvoiceFormPage() {
   const [ocrLoading, setOcrLoading] = useState(false)
   const [ocrError, setOcrError]   = useState<string | null>(null)
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null)
+  const [ocrModel,   setOcrModel]   = useState<string | null>(null)
   const [jvOpen, setJvOpen]       = useState(false)
   const [vendorState, setVendorState] = useState('')
   const [entityState, setEntityState] = useState('')
@@ -557,6 +573,7 @@ export default function InvoiceFormPage() {
     if (!file) return
     setOcrLoading(true)
     setOcrError(null)
+    setOcrModel(null)
     try {
       const base64Data = await fileToBase64(file)
       const res        = await http.post<{ ocr: any; matchedVendorId: string | null }>(
@@ -584,14 +601,24 @@ export default function InvoiceFormPage() {
         }, vendorState, entityState)))
       }
       setOcrConfidence(ocr.overallConfidence ?? null)
+      setOcrModel(ocr.model ?? null)
     } catch (err: any) {
-      setOcrError(err?.error?.message ?? err?.message ?? 'OCR failed')
+      // The backend now returns { code, message, detail, details, httpStatus }.
+      // Prefer the detail (raw Gemini error string) — it's what an engineer
+      // needs to debug. Fall back to message, then a generic.
+      const apiError = err?.error
+      const detail   = apiError?.detail || apiError?.message || err?.message
+      setOcrError(detail ?? 'OCR failed — Gemini returned no error message')
     } finally {
       setOcrLoading(false)
     }
   }, [file, setValue, replace, vendorState, entityState])
 
-  const dismissOcr = useCallback(() => { setOcrError(null); setOcrConfidence(null) }, [])
+  const dismissOcr = useCallback(() => {
+    setOcrError(null)
+    setOcrConfidence(null)
+    setOcrModel(null)
+  }, [])
 
   // Builds the create/update payload with file bytes attached for the create
   // path. fileBase64/fileMimeType/fileName get stripped by the update route
@@ -701,6 +728,7 @@ export default function InvoiceFormPage() {
           ocrLoading    ={ocrLoading}
           ocrError      ={ocrError}
           ocrConfidence ={ocrConfidence}
+          ocrModel      ={ocrModel}
           onDismissOcr  ={dismissOcr}
         />
 
