@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, CheckSquare, ShoppingCart, ClipboardList,
   FileText, CreditCard, Users, GitBranch, Database,
-  Shield, Truck, LogOut, X, PiggyBank, Calculator,
+  Shield, Truck, LogOut, X, PiggyBank, Calculator, BarChart3,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '../../stores/auth.store'
@@ -28,10 +28,13 @@ const NAV_VIEW_PERMISSION: Record<string, string> = {
 // Nav items that are always visible regardless of permission state — these are
 // either entry points (Dashboard) or admin surfaces (Masters, Admin) that must
 // be reachable even when perms haven't loaded or the user is mid-refresh.
-const ALWAYS_VISIBLE = ['/dashboard', '/masters', '/admin/tenants']
+const ALWAYS_VISIBLE = ['/dashboard', '/analytics', '/masters', '/admin/tenants']
 
-const BASE_NAV = [
-  { to: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard'       },
+// `title` is the native browser tooltip (shows on hover); used to clarify
+// the difference between Dashboard (daily ops) and Analytics (deep-dive).
+const BASE_NAV: { to: string; icon: typeof LayoutDashboard; label: string; title?: string }[] = [
+  { to: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard',     title: 'Operational view — daily KPIs at a glance' },
+  { to: '/analytics',       icon: BarChart3,       label: 'Analytics',     title: 'Deep-dive · drill-down · persona views' },
   { to: '/approvals',       icon: CheckSquare,     label: 'Approval Desk'   },
   { to: '/budgets',         icon: PiggyBank,       label: 'Budget'          },
   { to: '/intake',          icon: ClipboardList,   label: 'Intake'          },
@@ -101,9 +104,10 @@ export function AppShell() {
 
         {/* Nav */}
         <nav className="flex-1 space-y-0.5 p-2 overflow-y-auto">
-          {NAV.map(({ to, icon: Icon, label }) => (
+          {NAV.map(({ to, icon: Icon, label, title }) => (
             <NavLink
               key={to} to={to}
+              title={title}
               className={({ isActive }) => cn(
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
                 isActive

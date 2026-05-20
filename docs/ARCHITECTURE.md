@@ -1119,7 +1119,101 @@ MSME refresh job (`POST /msme-refresh`) populates `msmePaymentDue` /
 
 ---
 
-## §13 Pending work
+## §13 Analytics module — five-persona dashboards
+
+End-to-end persona analytics layered on top of the operational dashboard
+([`/dashboard`](../src/pages/dashboard/DashboardPage.tsx) stays as-is).
+Each persona gets its own tab, filter state, drill-downs and recommendation
+cards driven by real Prisma aggregates from `/api/analytics`.
+
+### Routes
+
+[server/src/routes/analytics.ts](../server/src/routes/analytics.ts) registered
+at `/api/analytics`. All endpoints tenant-scoped via JWT (`req.tenant.id`),
+accept `entityId`, `period` (`YYYY-MM`), `dateFrom` / `dateTo` query params.
+`resolveRange()` defaults to the current calendar month.
+
+| Endpoint | Returns (high-level) |
+| --- | --- |
+| `GET /procurement` | Maverick spend %, PR→PO cycle (avg/P50/P90), savings vs target, vendor concentration top-5, contract %, compliance trend (6 mo), category spend, savings leakage breakdown |
+| `GET /ap`          | DPO + working-capital impact, touchless STP rate, exception rate, overdue count + amount, cost-per-invoice (blended + auto), aging buckets (0-30/31-60/61-90/90+), STP-readiness guardrails, match-type breakdown, exception register, OCR field accuracy |
+| `GET /payments`    | On-time rate vs 85% target, 30-day cash outflow + 4-week breakdown, MSME register (at-risk + breached), early-pay discount opportunity, TDS payable by section, payment method mix, ERP sync counts, optimised payment queue, late-payment penalty register |
+| `GET /cfo`         | Total AP liability + MoM movement, working-capital leakage breakdown, accrual snapshot (provision / prepaid / TDS / MSME interest), BS positions, 8-week + 3-month cash forecast, budget vs actual with run-rate projection, provision adequacy, amortization next-6, reforecast signals |
+| `GET /ceo`         | Total FY spend + annualised, P2P maturity composite (0-100) across 5 dimensions, working capital at risk, financial risk exposure, 3 ranked strategic initiatives with ROI/payback/effort, 6-month spend trend with anomaly markers, top vendor concentration, risk register, key alerts |
+
+### Pure helpers
+
+[analytics.service.ts](../server/src/services/analytics.service.ts) — eight
+exported pure functions covering the testable KPI calculations:
+
+- `computeDpo(apBalance, totalSpend, daysInPeriod?)` — `(AP / spend) × days`,
+  clamps negative AP to 0, returns 0 on zero spend.
+- `computeMaverickPct(posWithoutPr, totalPos)` — 0-100 to one decimal.
+- `computeOnTimeRate(invoices[])` — judges per invoice using `paidAt` vs
+  `dueDate`; unpaid invoices count "on time" only if `now ≤ dueDate`. Invoices
+  without `dueDate` are excluded from both numerator and denominator.
+- `computeMsmeDaysRemaining(deadline, today)` — calendar-day delta;
+  negative = overdue.
+- `computeBudgetUtilisation({budget, committed, actual, monthsElapsed, tolerance?})`
+  — returns `{utilPct, monthlyRunRate, projectedFY, variance, signal}` where
+  signal ∈ `RED | AMBER | GREEN`.
+- `computeCyclePercentiles(deltas[])` — avg / p50 / p90 in whole days.
+- `classifyVendorRisk(spendPct)` — `HIGH` ≥40, `MEDIUM` ≥20, else `LOW`.
+- `classifyAging(ageDays)` — bucket label `0-30 | 31-60 | 61-90 | 90+`.
+- `computeMaturityScore({digitisation, controlsCompliance, workingCapital, vendorRisk, insightAnalytics})`
+  — equal-weighted composite rounded to integer.
+
+30 Vitest specs in [analytics.test.ts](../server/src/services/__tests__/analytics.test.ts)
+cover boundary + edge-case behaviour (zero spend, no POs, no due dates, all
+overdue, zero-month-elapsed projections, anniversary rollover).
+
+### Frontend
+
+| Path                              | File                                                                                       | Role                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `/analytics`                      | [AnalyticsPage](../src/pages/analytics/AnalyticsPage.tsx)                                  | Shell: 5 persona pills, period preset, entity filter   |
+| `…/tabs/ProcurementTab.tsx`       | [ProcurementTab](../src/pages/analytics/tabs/ProcurementTab.tsx)                           | Maverick spend, cycle, savings, concentration drills   |
+| `…/tabs/APTab.tsx`                | [APTab](../src/pages/analytics/tabs/APTab.tsx)                                             | DPO, STP, aging, exception drills                      |
+| `…/tabs/PaymentsTab.tsx`          | [PaymentsTab](../src/pages/analytics/tabs/PaymentsTab.tsx)                                 | On-time, cash, MSME, early-pay, TDS, queue drills      |
+| `…/tabs/CFOTab.tsx`               | [CFOTab](../src/pages/analytics/tabs/CFOTab.tsx)                                           | AP liability, WC leakage, BS, budget reforecast, cash  |
+| `…/tabs/CEOTab.tsx`               | [CEOTab](../src/pages/analytics/tabs/CEOTab.tsx)                                           | Maturity, initiatives, spend, vendor, risk register    |
+
+Shared components in [`src/pages/analytics/components/`](../src/pages/analytics/components/):
+`KpiCard` (clickable enterprise tile with delta + drill arrow), `DrillDown` +
+`InsightCard` (reusable drill wrapper + tinted recommendation cards),
+`HBarChart` (compact horizontal bar list with tone prop), `AgingBars` (4-bucket
+aging visualisation). Time-series charts use [Recharts](https://recharts.org).
+
+Each tab lazy-loads via `React.lazy` so the persona switcher only fetches the
+active tab's bundle. The shared `useQuery` hooks in
+[analytics.api.ts](../src/lib/api/analytics.api.ts) cache responses at the
+`STALE_TIMES.DASHBOARD` interval (matches the operational dashboard).
+
+### Drill-down catalogue
+
+Each tab implements at least four drill views beyond the main KPI grid:
+
+- **Procurement** — maverick PO table, cycle health by stage, savings by
+  category, vendor concentration detail.
+- **AP** — DPO composition, STP readiness + match-score histogram, aging
+  bucket with overdue invoice list, exception register, OCR field accuracy.
+- **Payments** — cash outflow chart + week table, MSME register with penalty
+  estimate, early-pay vendor table, TDS section register, optimised queue.
+- **CFO** — WC leakage cards, BS positions table, budget reforecast table
+  with run-rate signals, cash forecast bar chart.
+- **CEO** — maturity dimension table, 3 strategic initiatives with current
+  vs target state, spend trend with anomaly callouts, vendor concentration
+  detail, risk register.
+
+### Nav
+
+[AppShell](../src/components/layout/AppShell.tsx) — "Analytics" entry sits
+between Dashboard and Approval Desk; `/analytics` is in `ALWAYS_VISIBLE` so
+operators reach it even when permissions haven't loaded.
+
+---
+
+## §14 Pending work
 
 ### Wire remaining masters through the workflow engine
 
@@ -1153,7 +1247,7 @@ PAN / GSTIN / IFSC verification via SurePass + OnGrid works on the vendor form; 
 
 ---
 
-## §14 Dev commands
+## §15 Dev commands
 
 ```bash
 npm run dev          # frontend :3000 + backend :8787
@@ -1172,7 +1266,7 @@ Demo login (dev only) — `mithilesh@procinix.ai` / `Demo@123`. SUPER_ADMIN role
 
 ---
 
-## §15 Conventions
+## §16 Conventions
 
 - **Commit messages** — describe the *what* + *why*. When a working tree contains multiple semantic changes, the message must cover all of them (don't under-describe). The user has explicitly asked for "accurate (everything in one)" messages over partial ones.
 - **Comments** — default to none. Add only when the *why* is non-obvious (workaround, invariant, surprising decision). Never narrate *what* the code does.

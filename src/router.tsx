@@ -6,6 +6,7 @@ import { useAuthStore } from './stores/auth.store'
 
 const LoginPage          = lazy(() => import('./pages/auth/LoginPage'))
 const DashboardPage      = lazy(() => import('./pages/dashboard/DashboardPage'))
+const AnalyticsPage      = lazy(() => import('./pages/analytics/AnalyticsPage'))
 const InvoiceListPage         = lazy(() => import('./pages/invoices/InvoiceListPage'))
 const InvoiceDetailPage       = lazy(() => import('./pages/invoices/InvoiceDetailPage'))
 const InvoiceFormPage         = lazy(() => import('./pages/invoices/InvoiceFormPage'))
@@ -94,6 +95,7 @@ export const router = createBrowserRouter([
       children: [
         { index: true, element: <Navigate to="/dashboard" replace /> },
         { path: 'dashboard',       element: <S><DashboardPage /></S>       },
+        { path: 'analytics',       element: <S><AnalyticsPage /></S>       },
         { path: 'approvals',       element: <S><ApprovalDeskPage /></S>    },
         { path: 'intake',                   element: <S><IntakePage /></S>          },
         { path: 'intake/new',               element: <S><PRFormPage /></S>          },
