@@ -923,6 +923,7 @@ async function main() {
     { code: 'WF-PAY-001',     name: 'Payment Approval',         module: 'PAYMENT'         },
     { code: 'WF-PAYMENT-001', name: 'Payment Batch Approval',   module: 'PAYMENT', priority: 15 },
     { code: 'WF-PAYMENT-URGENT', name: 'Urgent Payment Batch Approval', module: 'PAYMENT', priority: 25 },
+    { code: 'WF-PROVISION-001', name: 'Provision Batch Approval', module: 'PROVISION', priority: 10 },
   ]
   let masterWfCreated = 0
   let masterWfRepriortised = 0
@@ -1001,6 +1002,45 @@ async function main() {
     }
   }
   console.log('✓ Payment workflow overrides applied (Finance Manager + 4h urgent SLA)')
+
+  // Provision batch workflow: Stage 1 = FINANCE_MANAGER (auto-approves under
+  // ₹5L), Stage 2 = TENANT_ADMIN. Stage 2 is reached only when totalAmount ≥
+  // ₹5L because computeAutoAdvance skips Stage 2 below its autoApproveBelow.
+  const wfProvision = await prisma.workflowDefinition.findFirst({ where: { tenantId, code: 'WF-PROVISION-001' } })
+  if (wfProvision) {
+    // Replace the default single stage with our two-stage ladder.
+    await prisma.workflowDefinitionStage.deleteMany({ where: { definitionId: wfProvision.id } })
+    await prisma.workflowDefinitionStage.createMany({
+      data: [
+        {
+          definitionId:    wfProvision.id,
+          order:           1,
+          name:            'Finance Manager Review',
+          approverType:    'ROLE',
+          approverRole:    'FINANCE_MANAGER',
+          slaHours:        48,
+          requiresComment: false,
+          allowDelegation: true,
+          onReject:        'RETURN_TO_DRAFT',
+        },
+        {
+          definitionId:     wfProvision.id,
+          order:            2,
+          name:             'Tenant Admin Approval',
+          approverType:     'ROLE',
+          approverRole:     'TENANT_ADMIN',
+          slaHours:         24,
+          requiresComment:  false,
+          allowDelegation:  false,
+          // Below ₹5L the second stage auto-approves so small monthly cycles
+          // close at Finance Manager without round-tripping the admin.
+          autoApproveBelow: 500_000,
+          onReject:         'RETURN_TO_PREV_STAGE',
+        },
+      ],
+    })
+    console.log('✓ WF-PROVISION-001 override applied (Finance Manager → Tenant Admin ≥ ₹5L)')
+  }
 
   // ── Super Admin ───────────────────────────────────────────────────────────────
   await prisma.user.update({

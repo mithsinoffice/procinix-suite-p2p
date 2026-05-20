@@ -23,6 +23,8 @@ import { procurementRoutes }  from './routes/procurement.js'
 import { accountingRoutes }   from './routes/accounting.js'
 import { paymentRoutes }      from './routes/payments.js'
 import { analyticsRoutes }    from './routes/analytics.js'
+import { navBadgesRoutes }    from './routes/nav-badges.js'
+import { provisionsRoutes }   from './routes/provisions.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -67,6 +69,8 @@ export async function buildApp() {
   await app.register(accountingRoutes,   { prefix: '/api/accounting' })
   await app.register(paymentRoutes,      { prefix: '/api/payments' })
   await app.register(analyticsRoutes,    { prefix: '/api/analytics' })
+  await app.register(navBadgesRoutes,    { prefix: '/api/nav' })
+  await app.register(provisionsRoutes,   { prefix: '/api/provisions' })
 
   // Manual Gmail-poll trigger — fire-and-forget; returns a jobId immediately so
   // the frontend can poll /status/:jobId instead of holding an open request for

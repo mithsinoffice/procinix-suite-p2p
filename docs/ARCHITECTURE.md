@@ -495,7 +495,13 @@ All API calls go through `http.get/post/put/delete<T>(url)`. Throws `HttpError` 
 
 ### §9.3 AppShell + TopBar
 
-- `AppShell` — left sidebar (h-screen), nav permission-gated, `ALWAYS_VISIBLE` shortcut for `/dashboard`, `/masters`, `/admin/tenants`.
+- `AppShell` — left sidebar (h-screen), section-grouped nav with smart 5-second auto-collapse on inactive sections and live badge counts.
+  - **Sections** (collapsible group headers, top→bottom): Overview, Budget, Procurement, Accounts Payable, Payments, Accounting, Vendor Portal, Configuration. Workflow Engine renders standalone with an `ENGINE` pill outside any section. Admin renders below for `SUPER_ADMIN`.
+  - **Sub-items** — items with sub-items render an inline expand tray under the parent (auto-expanded when the current route matches any sub-route).
+  - **Auto-collapse** — every section that isn't the active one starts a 5-second close timer. Hovering an open section cancels its timer; clicking an item in a section marks that section active and cancels its timer. Active section persists across soft nav via `sessionStorage`.
+  - **Permission gating** — items with a `module` key are filtered through `usePermissions()`. Items without a module (Dashboard, Analytics, Workflow Engine) are always visible. Sections whose every item is gated out are dropped from the render.
+  - **Badge counts** — driven by [src/hooks/useNavBadges.ts](../src/hooks/useNavBadges.ts) which calls a single `GET /api/nav/badges` and refreshes every 60s. Counts wire to Approvals, Invoices (pending / unmatched), Payment queue, TDS challans, MSME at risk, KYC gaps, failed ERP sync, pending provisions. Each backend count is wrapped in a `safe()` so a single failing branch returns 0 rather than zeroing the whole nav.
+- `useNavBadges()` returns `{ badges, isLoading }`. The endpoint shape is exported from [server/src/routes/nav-badges.ts](../server/src/routes/nav-badges.ts) as `NavBadges`.
 - `TopBar` — sticky `h-12 top-0 z-30`. Resolves page title via longest-prefix match on pathname. Right side: entity chip (`currentEntity.name` → `tenantCode` fallback), notification bell with pending-approvals badge, user avatar Radix DropdownMenu.
 
 ### §9.4 Auth store (`src/stores/auth.store.ts`)
@@ -911,6 +917,118 @@ endpoints tenant-scoped via JWT.
 - `GET  /provision-schedules` · `PATCH /provision-schedules/:id` (pause/resume/close)
 - `GET  /amortization-schedules?invoiceId=...` · `GET /amortization-schedules/:id/timeline`
 - `POST /month-end` (TENANT_ADMIN) · `POST /month-end/preview`
+
+### §11.x Provisioning module (`/accounting/provisions`)
+
+Sits on top of the existing accounting engine. Where `ProvisionSchedule`
+is the recurring-rule store, the **provisions module** is the human
+workflow that wraps each month-end: surface every applicable item, mark
+those already covered by an invoice, let finance edit / select / approve,
+then post the JV cluster as one batched workflow.
+
+Schema additions ([prisma/schema.prisma](../prisma/schema.prisma)):
+
+- `ProvisionProposal` — one row per (period, item or manual addition).
+  Fields: `itemId?`, `vendorId?`, `description`, `proposedAmount`,
+  `approvedAmount?`, `isManual`, `source` (`ITEM_MASTER | MANUAL |
+  SYSTEM_SUGGESTION`), `expenseGlCode`, `provisionGlCode`,
+  `tdsSection?`, `reversalTrigger` (`FIRST_OF_NEXT_MONTH | ON_INVOICE_APPROVAL
+  | MANUAL`), `status` (`DRAFT | SUBMITTED | APPROVED | REJECTED`),
+  `invoiceCoveredId?`, `batchId?`, `jvId?`, `reversalJvId?`. Indexed on
+  `(tenantId, period, status)` and `(tenantId, itemId)`.
+
+- `ProvisionBatch` — wraps N proposals into one workflow approval.
+  Fields: `period`, `status` (`DRAFT | SUBMITTED | APPROVED | REJECTED`),
+  `totalAmount`, `proposalIds` (JSON array — MySQL has no native
+  `String[]`), `workflowInstanceId?`. Indexed on
+  `(tenantId, period, status)`.
+
+Pure helpers ([server/src/services/provision.service.ts](../server/src/services/provision.service.ts)):
+
+- `isPeriodApplicable(frequency, period)` — `MONTHLY` always applies;
+  `QUARTERLY` only on FY quarter-ends (Mar/Jun/Sep/Dec); `YEARLY` only on
+  March. Drives which items show up on the proposals table.
+- `generateProposals(items, period, coverage, persistedDrafts)` —
+  produces the per-item list. Invoice-covered items get
+  `invoiceCovered=true` + ref; persisted drafts override generated rows;
+  manual additions are appended.
+- `detectPromoteToRecurring(manualOccurrences)` — flags manual items
+  recurring 2+ months at the same amount, same vendor (confidence HIGH).
+- `detectAmountDrift(driftObservations)` — flags items whose actuals
+  exceed provision by >20% for 2+ months, recommends average of last 3
+  (confidence MEDIUM).
+- `detectGaps(gapObservations)` — flags 2+ consecutive MISS months,
+  prompts a backdated JV (confidence HIGH, not auto-acceptable).
+- `classifyPattern(months, monthKeys)` —
+  `CONSISTENT | GAPS | MANUAL | UNDER_PROVISION` per item-row in MoM.
+- `buildMoMRows(items, cellsByItem, monthKeys)` — assembles the MoM grid.
+
+Side-effect glue ([server/src/services/provision-jv.service.ts](../server/src/services/provision-jv.service.ts)):
+
+- `postBatchJVs(prisma, batchId, userId)` — on workflow approval: for
+  each proposal in the batch, post a PROVISION JV (DR expense / CR
+  provision, posted on last day of period), and a paired
+  PROVISION_REVERSAL JV (postingDate = first of next month) when
+  `reversalTrigger === 'FIRST_OF_NEXT_MONTH'`. Updates each proposal with
+  `jvId`, `reversalJvId`, `status='APPROVED'`. Wrapped in `try/catch` at
+  the workflow route so JV failures don't block approval.
+- `rejectBatch(prisma, batchId)` — flips proposals back to DRAFT and
+  batch to REJECTED, clearing the batch back-reference.
+
+Routes ([server/src/routes/provisions.ts](../server/src/routes/provisions.ts)) — mounted at `/api/provisions`:
+
+| Endpoint                           | Method  | Purpose                                                |
+| ---------------------------------- | ------- | ------------------------------------------------------ |
+| `/proposals?period=YYYY-MM`        | GET     | Generate + return proposal list (live merge of master + persisted + coverage) |
+| `/proposals`                       | POST    | Upsert N draft proposals                               |
+| `/proposals/:id`                   | DELETE  | Remove a DRAFT proposal (used by Manual Additions tab) |
+| `/batch/submit`                    | POST    | Wrap selected proposals in a batch + start workflow    |
+| `/register?period=YYYY-MM`         | GET     | Approved proposals + JV refs + ERP status              |
+| `/mom?months=6`                    | GET     | Item × month grid with INV/PROV/MAN/MISS/NA cells     |
+| `/suggestions?period=YYYY-MM`      | GET     | System suggestions (promote / update / backdate)       |
+| `/suggestions/accept`              | POST    | Apply a suggestion to the item master                  |
+| `/manual`                          | POST    | Add a manual provision proposal                        |
+
+Workflow integration:
+
+- `WF-PROVISION-001` (priority 10, module `PROVISION`) — two-stage
+  ladder: Stage 1 Finance Manager (48h SLA) → Stage 2 Tenant Admin (24h),
+  with `autoApproveBelow=500000` on Stage 2 so batches under ₹5L close at
+  Finance Manager. Seeded in [prisma/seed.ts](../prisma/seed.ts) alongside the existing
+  payment workflows.
+- `WfModule` extended with `'PROVISION'`. The workflow engine treats
+  this generically; the approve/reject branches in
+  [server/src/routes/workflow.ts](../server/src/routes/workflow.ts) dispatch on
+  `entityType === 'provision_batch'` to call `postBatchJVs` / `rejectBatch`.
+
+Frontend ([src/pages/accounting/provisions/](../src/pages/accounting/provisions/)):
+
+- `ProvisionsPage` — shell with period picker + 4 tabs (Overview /
+  Provision register / Month-on-month / Manual additions). Reads `?tab`
+  + `?period` from the URL so deep-links land on the right view.
+- `ProvisionOverviewTab` — proposal table with inline amount edit,
+  invoice-coverage badging, ad-hoc adequacy warning when an invoice was
+  >20% above master, Save draft + Submit for approval footer.
+- `ProvisionRegisterTab` — approved-row table with JV refs, reversal JV
+  + date, ERP status chip; Push-to-ERP button placeholder.
+- `ProvisionMoMTab` — Item × Month grid with status-coloured cells +
+  legend, pattern column, system-suggestion cards underneath
+  (Accept / Dismiss / inline edit-amount), inline "Promote to recurring"
+  expand panel for `MAN`-pattern rows.
+- `ManualAdditionsTab` — form (description, vendor, amount, expense GL,
+  provision GL, TDS section, reversal trigger, narration) + table of
+  manual proposals for the period with remove action.
+
+API hooks live in [src/lib/api/provisions.api.ts](../src/lib/api/provisions.api.ts):
+`useProposals`, `useProvisionRegister`, `useProvisionMoM`,
+`useProvisionSuggestions`, `useSaveProposalsDraft`,
+`useSubmitProvisionBatch`, `useAcceptSuggestion`,
+`useAddManualProvision`, `useDeleteProposal`.
+
+Tests: [server/src/services/__tests__/provision-suggestions.test.ts](../server/src/services/__tests__/provision-suggestions.test.ts)
+covers `consecutiveMonths`, `isPeriodApplicable`, three suggestion
+detectors, `generateProposals` (coverage + quarterly skip + persisted
+override), `classifyPattern`, `buildMoMRows`. 24 specs.
 
 ### Frontend
 

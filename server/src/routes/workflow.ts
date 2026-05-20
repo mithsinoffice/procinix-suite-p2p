@@ -8,6 +8,7 @@ import { resolveItemStatusAfterReject } from '../services/item-submit.service.js
 import { applyChangeDiff } from '../services/item-change.service.js'
 import { triggerOnInvoiceApproval } from '../services/accounting-trigger.service.js'
 import { resolveMasterStatusAfterReject } from '../services/master-submit.service.js'
+import { postBatchJVs, rejectBatch } from '../services/provision-jv.service.js'
 
 // Maps entityType (workflow_instance.entity_type) → Prisma delegate name.
 // Used by the generic master approve/reject branches below so every master
@@ -209,6 +210,19 @@ export async function workflowRoutes(app: FastifyInstance) {
             : { status: 'ACTIVE' },
         })
       }
+    } else if (instanceInfo?.entityType === 'provision_batch') {
+      // Provision batch — on final approval, post the provision JV (DR
+      // expense / CR provision) and its paired reversal JV for the first of
+      // next month. Interim stages keep the batch in SUBMITTED. Wrapped in
+      // try/catch — JV posting errors must not block the approval action
+      // itself; operators can replay via the provisions register.
+      if (result.data.finalStatus === 'APPROVED') {
+        try {
+          await postBatchJVs(app.prisma, instanceInfo.entityId, req.user.sub)
+        } catch (err) {
+          app.log.error({ err, batchId: instanceInfo.entityId }, '[Provisions] JV post failed')
+        }
+      }
     } else if (instanceInfo?.entityType === 'item_change') {
       // Material-field change request on an ACTIVE item. On final approval,
       // load the persisted diff and apply it to the live item. The change
@@ -338,6 +352,13 @@ export async function workflowRoutes(app: FastifyInstance) {
           where: { id: instanceInfo.entityId, tenantId: req.tenant.id },
           data:  { status: 'REJECTED', reviewedBy: req.user.sub, reviewedAt: new Date(), reviewComments: comments },
         })
+      }
+    } else if (instanceInfo?.entityType === 'provision_batch') {
+      // Reject a provision batch — flip all proposals back to DRAFT so the
+      // creator can edit and resubmit. REQUEST_INFO keeps the batch in
+      // SUBMITTED while the chat thread resolves.
+      if (mode !== 'REQUEST_INFO') {
+        await rejectBatch(app.prisma, instanceInfo.entityId)
       }
     }
 

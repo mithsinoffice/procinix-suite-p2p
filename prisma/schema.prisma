@@ -2122,3 +2122,71 @@ model TdsChallan {
   @@index([tenantId, dueDate])
   @@map("tds_challans")
 }
+
+// ── PROVISIONS ───────────────────────────────────────────────────────────────
+// Provision proposals: month-by-month suggestions generated from item master
+// (provisionRequired=true) + any invoices already received for that item in
+// the period (mark them invoice-covered so finance doesn't double-book). A
+// proposal carries the full GL pair (debit expense / credit provision) so the
+// JV post on approval is purely a write, not a re-resolve. ProvisionBatch
+// groups N proposals into a single workflow approval — keeps the audit trail
+// tight (one approval = one batch JV cluster).
+model ProvisionProposal {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  period             String    // "YYYY-MM"
+  itemId             String?   // null for manual additions
+  vendorId           String?
+  description        String    @db.Text
+  proposedAmount     Decimal   @db.Decimal(15, 2)
+  approvedAmount     Decimal?  @db.Decimal(15, 2)
+  isManual           Boolean   @default(false)
+  source             String    @default("ITEM_MASTER")
+                               // ITEM_MASTER | MANUAL | SYSTEM_SUGGESTION
+  expenseGlCode      String
+  provisionGlCode    String
+  tdsSection         String?
+  reversalTrigger    String    @default("FIRST_OF_NEXT_MONTH")
+                               // FIRST_OF_NEXT_MONTH | ON_INVOICE_APPROVAL | MANUAL
+  narration          String?   @db.Text
+  status             String    @default("DRAFT")
+                               // DRAFT | SUBMITTED | APPROVED | REJECTED
+  workflowInstanceId String?
+  // Set when an approved invoice for this item+period already exists — the
+  // proposal is then surfaced as "Invoice covered" and no JV gets posted.
+  invoiceCoveredId   String?
+  batchId            String?
+  jvId               String?
+  reversalJvId       String?
+  createdBy          String
+  reviewedBy         String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  approvedAt         DateTime?
+
+  @@index([tenantId, period, status])
+  @@index([tenantId, itemId])
+  @@index([tenantId, batchId])
+  @@map("provision_proposals")
+}
+
+model ProvisionBatch {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  period             String    // "YYYY-MM"
+  status             String    @default("DRAFT")
+                               // DRAFT | SUBMITTED | APPROVED | REJECTED
+  totalAmount        Decimal   @db.Decimal(15, 2)
+  // MySQL doesn't have a native string-array type — proposalIds is stored as
+  // JSON so the engine can serialise/deserialise the membership list without
+  // a join table. ProvisionProposal.batchId is the back-pointer for queries.
+  proposalIds        Json
+  workflowInstanceId String?
+  submittedBy        String?
+  approvedBy         String?
+  createdAt          DateTime  @default(now())
+  approvedAt         DateTime?
+
+  @@index([tenantId, period, status])
+  @@map("provision_batches")
+}

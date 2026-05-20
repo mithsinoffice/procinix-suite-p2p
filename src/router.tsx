@@ -64,6 +64,7 @@ const WorkflowHubPage               = lazy(() => import('./pages/workflow/Workfl
 const AdminTenantsPage              = lazy(() => import('./pages/admin/AdminTenantsPage'))
 const AccountingPage                = lazy(() => import('./pages/accounting/AccountingPage'))
 const AmortizationDetailPage        = lazy(() => import('./pages/accounting/AmortizationDetailPage'))
+const ProvisionsPage                = lazy(() => import('./pages/accounting/provisions/ProvisionsPage'))
 const NotFoundPage           = lazy(() => import('./pages/NotFoundPage'))
 
 function PageLoader() {
@@ -139,6 +140,7 @@ export const router = createBrowserRouter([
         { path: 'accounting', children: [
           { index: true,                element: <S><AccountingPage /></S> },
           { path: 'amortization/:id',   element: <S><AmortizationDetailPage /></S> },
+          { path: 'provisions',         element: <S><ProvisionsPage /></S> },
         ]},
         { path: 'masters', children: [
           { index: true,              element: <S><MastersPage /></S>                        },
