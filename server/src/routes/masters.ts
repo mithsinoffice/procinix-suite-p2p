@@ -549,8 +549,20 @@ export async function masterRoutes(app: FastifyInstance) {
     // string fields, which Prisma rejects on insert with a bare 500.
     const data = sanitisePayload(rawData, {
       nullableFields: [
+        // DateTime?
         'depreciationStartDate',
+        // FK String?
         'tdsSectionId', 'taxCodeId', 'itemCategoryId', 'assetCategoryId',
+        // Decimal? — Prisma rejects empty-string with
+        // "Failed to parse empty string. Expected decimal String." (422).
+        // HTML number inputs emit "" on blur of an empty field, so every
+        // optional Decimal on ItemMaster that the form can leave blank needs
+        // this coercion.
+        'gstRate', 'poThresholdAmount', 'depreciationRate', 'residualValuePct',
+        'capitalisationLimit', 'provisionAmount',
+        // Int? — same failure mode as Decimal? when the form leaves the
+        // field blank.
+        'usefulLifeYears',
       ],
     })
     const lastItem = await app.prisma.itemMaster.findFirst({
@@ -644,8 +656,20 @@ export async function masterRoutes(app: FastifyInstance) {
     // empty inputs without each consumer needing to remember to normalise.
     const data = sanitisePayload(raw, {
       nullableFields: [
+        // DateTime?
         'depreciationStartDate',
+        // FK String?
         'tdsSectionId', 'taxCodeId', 'itemCategoryId', 'assetCategoryId',
+        // Decimal? — Prisma rejects empty-string with
+        // "Failed to parse empty string. Expected decimal String." (422).
+        // HTML number inputs emit "" on blur of an empty field, so every
+        // optional Decimal on ItemMaster that the form can leave blank needs
+        // this coercion.
+        'gstRate', 'poThresholdAmount', 'depreciationRate', 'residualValuePct',
+        'capitalisationLimit', 'provisionAmount',
+        // Int? — same failure mode as Decimal? when the form leaves the
+        // field blank.
+        'usefulLifeYears',
       ],
     })
 

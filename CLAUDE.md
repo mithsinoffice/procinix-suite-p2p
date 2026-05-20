@@ -58,6 +58,34 @@
 - Every Prisma model MUST have `status String @default("ACTIVE")`. Models without it will cause MasterTabs to return empty on the Active tab. Flag any model missing this field.
 - Never filter by `isActive` in route handlers — always use `status`. `isActive` is a legacy boolean kept only for backwards-compat; `status` is the canonical field.
 
+#### HARD RULE — Prisma `include`: relation field check is MANDATORY
+Before writing `include: { fieldName }`, open `prisma/schema.prisma` and verify `fieldName` is a **declared relation** (its own line on the model, type referencing another model, with `@relation(...)`). FK columns alone (`vendorId String`) are NOT relations and `include`-ing them returns HTTP 500 with `Unknown field 'X' for include statement on model 'Y'`.
+
+**FK columns — WRONG to include:**
+```prisma
+vendorId    String           // ← FK column, not a relation
+itemId      String?          // ← FK column, not a relation
+itemCategoryId String?       // ← FK column, not a relation
+```
+
+**Declared relations — safe to include:**
+```prisma
+vendor      Vendor   @relation(fields: [vendorId], references: [id])
+item        ItemMaster @relation(fields: [itemId], references: [id])
+```
+
+**Pattern for FK-only columns** — fetch the referenced table separately in the same `Promise.all`, build a `Map` keyed by id, resolve at use site:
+```ts
+const [pos, vendors] = await Promise.all([
+  prisma.purchaseOrder.findMany({ where: { tenantId } }),       // no include
+  prisma.vendor.findMany({ where: { tenantId }, select: { id: true, legalName: true } }),
+])
+const vendorById = new Map(vendors.map(v => [v.id, v]))
+const name = vendorById.get(po.vendorId)?.legalName ?? 'Unknown'
+```
+
+**Why this matters:** `PurchaseOrder.vendor`, `PurchaseOrderLine.item`, and `ItemMaster.itemCategory` are all FK columns without back-relations. Any `include` against them silently breaks the endpoint at runtime — typecheck passes because Prisma's generated types accept the include shape but the validator throws at query time. This bug has bitten three separate analytics endpoints; the rule above prevents recurrence.
+
 ### Validation
 - Deduplication server-side — client warns, server enforces
 - 3-way match (Invoice ↔ PO ↔ GRN) enforced before invoice approval

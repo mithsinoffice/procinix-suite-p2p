@@ -52,6 +52,7 @@ export interface ItemForProposal {
   tdsSection:         string | null
   vendorId?:          string | null
   vendorName?:        string | null
+  basis?:             string | null   // FIXED_AMOUNT | PERCENTAGE — surfaces as a chip
 }
 
 export interface InvoiceCoverage {
@@ -59,25 +60,52 @@ export interface InvoiceCoverage {
   invoiceId:   string
   invoiceRef:  string
   amount:      number
+  // Resolved from the invoice itself — preferred over the item-master default
+  // vendor when present (the actual receipt is the source of truth).
+  vendorId?:   string
+  vendorName?: string
+}
+
+// Where the proposedAmount on a row came from. Drives the small "source"
+// chip + the adequacy hint logic on the Overview tab.
+//   ITEM_MASTER  — `item.provisionAmount > 0` won the lookup
+//   LAST_INVOICE — item-master amount was unset, fell back to most recent
+//                  approved invoice for this item in the last 6 months
+//   UNKNOWN      — no item-master amount AND no invoice history → TYPE C row
+export type AmountSource = 'ITEM_MASTER' | 'LAST_INVOICE' | 'UNKNOWN'
+
+export interface LastInvoice {
+  ref:    string
+  amount: number
+  date:   Date | string
 }
 
 export interface ProposalDraft {
-  id?:               string
-  itemId?:           string
-  vendorId?:         string
-  vendorName?:       string
-  description:       string
-  proposedAmount:    number
-  isManual:          boolean
-  source:            string
-  status:            string
-  invoiceCovered:    boolean
-  invoiceRef?:       string
-  invoiceAmount?:    number
-  expenseGlCode:     string
-  provisionGlCode:   string
-  tdsSection?:       string
-  frequency:         string
+  id?:                 string
+  itemId?:             string
+  vendorId?:           string
+  vendorName?:         string
+  description:         string
+  proposedAmount:      number
+  isManual:            boolean
+  source:              string
+  status:              string
+  invoiceCovered:      boolean
+  invoiceRef?:         string
+  invoiceAmount?:      number
+  expenseGlCode:       string
+  provisionGlCode:     string
+  tdsSection?:         string
+  frequency:           string
+  basis?:              string
+  // Resolution outcome — see AmountSource above. `amountNotSet` is kept for
+  // the top-banner count; it's now true only in the UNKNOWN case (no master
+  // amount AND no invoice history), not for items rescued by last-invoice.
+  amountSource?:       AmountSource
+  amountNotSet?:       boolean
+  lastInvoiceRef?:     string
+  lastInvoiceAmount?:  number
+  lastInvoiceDate?:    string
 }
 
 // QUARTERLY provisions only count for periods that fall on Q-end months
@@ -105,6 +133,7 @@ export function generateProposals(
   period:       string,
   coverage:     InvoiceCoverage[],
   persistedDrafts: ProposalDraft[] = [],
+  lastInvoices: Map<string, LastInvoice> = new Map(),
 ): ProposalDraft[] {
   const coverageByItem = new Map(coverage.map(c => [c.itemId, c]))
   const persistedByItem = new Map<string, ProposalDraft>()
@@ -114,18 +143,73 @@ export function generateProposals(
 
   const proposals: ProposalDraft[] = []
 
-  // Item-driven proposals (auto-generated from item master).
+  // Item-driven proposals (auto-generated from item master). The proposed
+  // amount always reflects the item-master figure — never the invoice
+  // amount — so finance can see at a glance what *would* have been
+  // provisioned. The invoice amount lives in invoiceAmount for the
+  // covered-row chip + adequacy hint.
   for (const item of items) {
     if (!isPeriodApplicable(item.provisionFrequency, period)) continue
     const persisted = persistedByItem.get(item.itemId)
-    const cov = coverageByItem.get(item.itemId)
+    const cov  = coverageByItem.get(item.itemId)
+    const last = lastInvoices.get(item.itemId)
 
-    proposals.push(persisted ?? {
+    // 3-tier resolution. Item-master amount wins when set; otherwise fall
+    // back to the most recent approved invoice; only mark UNKNOWN when
+    // neither source has a number.
+    const masterAmount = Number(item.provisionAmount) || 0
+    let amountSource: AmountSource
+    let proposedAmount: number
+    if (masterAmount > 0) {
+      amountSource = 'ITEM_MASTER'
+      proposedAmount = masterAmount
+    } else if (last) {
+      amountSource = 'LAST_INVOICE'
+      proposedAmount = last.amount
+    } else {
+      amountSource = 'UNKNOWN'
+      proposedAmount = 0
+    }
+
+    const lastInvoiceDate = last
+      ? (typeof last.date === 'string' ? last.date : last.date.toISOString())
+      : undefined
+
+    if (persisted) {
+      // Enrich the persisted draft with master-data fields that aren't stored
+      // on the proposal row (basis, frequency, default vendor name, last
+      // invoice ref). The persisted amount + GL codes are authoritative
+      // because the user may have already edited them.
+      proposals.push({
+        ...persisted,
+        basis:        persisted.basis     ?? item.basis ?? undefined,
+        frequency:    persisted.frequency || (item.provisionFrequency ?? 'MONTHLY'),
+        vendorName:   persisted.vendorName ?? (cov?.vendorName ?? item.vendorName ?? undefined),
+        vendorId:     persisted.vendorId   ?? (cov?.vendorId   ?? item.vendorId   ?? undefined),
+        invoiceCovered: persisted.invoiceCovered || !!cov,
+        invoiceRef:    persisted.invoiceRef    ?? cov?.invoiceRef,
+        invoiceAmount: persisted.invoiceAmount ?? cov?.amount,
+        amountSource:  persisted.amountSource ?? amountSource,
+        amountNotSet:  persisted.proposedAmount === 0 && amountSource === 'UNKNOWN' && !cov,
+        lastInvoiceRef:    persisted.lastInvoiceRef    ?? last?.ref,
+        lastInvoiceAmount: persisted.lastInvoiceAmount ?? last?.amount,
+        lastInvoiceDate:   persisted.lastInvoiceDate   ?? lastInvoiceDate,
+      })
+      continue
+    }
+
+    // Prefer the actual invoice vendor on covered rows — the receipt is the
+    // source of truth. Falls back to the item-master default vendor when no
+    // invoice came (or the invoice line carries no vendor).
+    const vendorId   = cov?.vendorId   ?? item.vendorId   ?? undefined
+    const vendorName = cov?.vendorName ?? item.vendorName ?? undefined
+
+    proposals.push({
       itemId:          item.itemId,
-      vendorId:        item.vendorId ?? undefined,
-      vendorName:      item.vendorName ?? undefined,
+      vendorId,
+      vendorName,
       description:     item.description,
-      proposedAmount:  cov?.amount ?? Number(item.provisionAmount) ?? 0,
+      proposedAmount,
       isManual:        false,
       source:          'ITEM_MASTER',
       status:          cov ? 'AUTO_COVERED' : 'DRAFT',
@@ -136,6 +220,14 @@ export function generateProposals(
       provisionGlCode: item.provisionGlCode,
       tdsSection:      item.tdsSection ?? undefined,
       frequency:       item.provisionFrequency ?? 'MONTHLY',
+      basis:           item.basis ?? undefined,
+      amountSource,
+      // UNKNOWN is the only case the top-banner cares about — items rescued
+      // by last-invoice are submittable, not "setup-blocked".
+      amountNotSet:    amountSource === 'UNKNOWN' && !cov,
+      lastInvoiceRef:    last?.ref,
+      lastInvoiceAmount: last?.amount,
+      lastInvoiceDate,
     })
   }
 

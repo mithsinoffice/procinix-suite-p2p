@@ -14,6 +14,7 @@ import {
   detectGaps,
   type ProposalDraft,
   type InvoiceCoverage,
+  type LastInvoice,
   type MoMCell,
   type MoMStatus,
   type ManualOccurrence,
@@ -56,20 +57,29 @@ interface ProvisionableItem {
   expenseGlCode:      string
   provisionGlCode:    string
   tdsSection:         string | null
+  basis:              string | null
+  vendorId:           string | null
+  vendorName:         string | null
 }
 
 // Fetch every provisionable item (provisionRequired=true) for the tenant,
-// resolving each item's expense + provision GL codes from ItemEntityMapping
-// (first mapping wins — caller can extend with entity scoping later).
+// resolving GL codes + the default-vendor candidate (first ItemApprovedVendor)
+// in bulk. The "default vendor" is a best-effort fallback — most items don't
+// pin one, and that's fine; the UI falls back to "—".
 async function fetchProvisionableItems(prisma: PrismaClient, tenantId: string): Promise<ProvisionableItem[]> {
   const items = await prisma.itemMaster.findMany({
     where: { tenantId, status: 'ACTIVE', provisionRequired: true },
     select: {
       id: true, name: true, provisionAmount: true, provisionFrequency: true,
+      provisionBasis: true,
       tdsSectionId: true,
       entityMappings: {
         take: 1,
         select: { expenseGlCodeId: true, provisionGlCodeId: true, provisionAmountOverride: true },
+      },
+      approvedVendors: {
+        take: 1,
+        select: { vendorId: true },
       },
     },
   })
@@ -93,6 +103,16 @@ async function fetchProvisionableItems(prisma: PrismaClient, tenantId: string): 
     : []
   const glById = new Map(glRows.map(r => [r.id, r.code]))
 
+  // Resolve default vendor names from the first approved vendor per item.
+  const defaultVendorIds = [...new Set(items.flatMap(i => i.approvedVendors.map(av => av.vendorId)).filter(Boolean))]
+  const defaultVendors = defaultVendorIds.length > 0
+    ? await prisma.vendor.findMany({
+        where:  { id: { in: defaultVendorIds }, tenantId },
+        select: { id: true, legalName: true, tradeName: true },
+      })
+    : []
+  const vendorById = new Map(defaultVendors.map(v => [v.id, v.tradeName ?? v.legalName]))
+
   return items.map(i => {
     const mapping = i.entityMappings[0]
     const expenseCode  = mapping ? glById.get(mapping.expenseGlCodeId ?? '') ?? '5080' : '5080'
@@ -100,6 +120,7 @@ async function fetchProvisionableItems(prisma: PrismaClient, tenantId: string): 
     const amount = mapping?.provisionAmountOverride
       ? Number(mapping.provisionAmountOverride)
       : Number(i.provisionAmount ?? 0)
+    const defaultVendorId = i.approvedVendors[0]?.vendorId ?? null
     return {
       itemId:             i.id,
       description:        i.name,
@@ -108,11 +129,62 @@ async function fetchProvisionableItems(prisma: PrismaClient, tenantId: string): 
       expenseGlCode:      expenseCode,
       provisionGlCode:    provisionCode,
       tdsSection:         (i.tdsSectionId && tdsById.get(i.tdsSectionId)) ?? null,
+      basis:              i.provisionBasis ?? null,
+      vendorId:           defaultVendorId,
+      vendorName:         defaultVendorId ? vendorById.get(defaultVendorId) ?? null : null,
     }
   })
 }
 
+// Most recent approved invoice per item in the 6 calendar months BEFORE the
+// selected period. Excludes the period itself because that overlap is the
+// "coverage" check — surfacing both here would double-account. Used to back-
+// fill `proposedAmount` when item-master has no `provisionAmount` set.
+async function fetchLastInvoicesPerItem(
+  prisma:   PrismaClient,
+  tenantId: string,
+  itemIds:  string[],
+  period:   string,
+): Promise<Map<string, LastInvoice>> {
+  if (itemIds.length === 0) return new Map()
+  const [y, m] = period.split('-').map(Number)
+  const windowEnd   = new Date(Date.UTC(y, m - 1, 1))               // first day of selected period (exclusive)
+  const windowStart = new Date(Date.UTC(y, m - 1 - 6, 1))           // 6 months earlier
+
+  // Pull every approved invoice line in the window for these items, newest
+  // first; the loop below picks the first row per item (= most recent).
+  const lines = await prisma.invoiceLine.findMany({
+    where: {
+      itemId: { in: itemIds },
+      invoice: {
+        tenantId,
+        status:      'APPROVED',
+        invoiceDate: { gte: windowStart, lt: windowEnd },
+      },
+    },
+    select: {
+      itemId:    true,
+      lineTotal: true,
+      invoice:   { select: { invoiceNumber: true, invoiceRef: true, invoiceDate: true } },
+    },
+    orderBy: { invoice: { invoiceDate: 'desc' } },
+  })
+
+  const out = new Map<string, LastInvoice>()
+  for (const l of lines) {
+    if (!l.itemId || out.has(l.itemId)) continue
+    out.set(l.itemId, {
+      ref:    l.invoice.invoiceRef ?? l.invoice.invoiceNumber,
+      amount: Number(l.lineTotal),
+      date:   l.invoice.invoiceDate,
+    })
+  }
+  return out
+}
+
 // Build the (itemId → coverage) map for a given period from approved invoices.
+// Also surfaces the invoice's vendor — preferred over the item-master default
+// because the receipt is the source of truth.
 async function fetchInvoiceCoverage(prisma: PrismaClient, tenantId: string, period: string): Promise<InvoiceCoverage[]> {
   const [y, m] = period.split('-').map(Number)
   const periodStart = new Date(Date.UTC(y, m - 1, 1))
@@ -129,12 +201,23 @@ async function fetchInvoiceCoverage(prisma: PrismaClient, tenantId: string, peri
     },
     select: {
       itemId: true, lineTotal: true,
-      invoice: { select: { id: true, invoiceNumber: true, invoiceRef: true } },
+      invoice: {
+        select: {
+          id: true, invoiceNumber: true, invoiceRef: true, vendorId: true,
+        },
+      },
     },
   })
 
+  // Resolve vendor names for every invoice that surfaced.
+  const vendorIds = [...new Set(lines.map(l => l.invoice.vendorId).filter(Boolean) as string[])]
+  const vendors = vendorIds.length > 0
+    ? await prisma.vendor.findMany({ where: { id: { in: vendorIds }, tenantId }, select: { id: true, legalName: true, tradeName: true } })
+    : []
+  const vendorById = new Map(vendors.map(v => [v.id, v.tradeName ?? v.legalName]))
+
   // Collapse by itemId — multiple lines / invoices for the same item in the
-  // same period: sum amounts, pick the first invoice ref.
+  // same period: sum amounts, pick the first invoice ref + vendor.
   const byItem = new Map<string, InvoiceCoverage>()
   for (const l of lines) {
     if (!l.itemId) continue
@@ -147,6 +230,8 @@ async function fetchInvoiceCoverage(prisma: PrismaClient, tenantId: string, peri
         invoiceId:  l.invoice.id,
         invoiceRef: l.invoice.invoiceRef ?? l.invoice.invoiceNumber,
         amount:     Number(l.lineTotal),
+        vendorId:   l.invoice.vendorId ?? undefined,
+        vendorName: l.invoice.vendorId ? vendorById.get(l.invoice.vendorId) ?? undefined : undefined,
       })
     }
   }
@@ -168,6 +253,13 @@ export async function provisionsRoutes(app: FastifyInstance) {
       fetchInvoiceCoverage(app.prisma, tenantId, period),
       app.prisma.provisionProposal.findMany({ where: { tenantId, period } }),
     ])
+
+    // Last-invoice lookup happens after items resolve so we know which IDs
+    // to query — keeps the query tight to ~9 items instead of scanning every
+    // invoice line in the tenant.
+    const lastInvoices = await fetchLastInvoicesPerItem(
+      app.prisma, tenantId, items.map(i => i.itemId), period,
+    )
 
     // Vendor names for any persisted draft that has a vendorId. We resolve in
     // bulk to avoid an N+1 inside the merge loop.
@@ -194,7 +286,7 @@ export async function provisionsRoutes(app: FastifyInstance) {
       frequency:       'MONTHLY',
     }))
 
-    const proposals = generateProposals(items, period, coverage, persistedDrafts)
+    const proposals = generateProposals(items, period, coverage, persistedDrafts, lastInvoices)
 
     const summary = {
       totalApplicable:    proposals.length,

@@ -439,7 +439,7 @@ export function AppShell() {
         </div>
 
         {/* Sections */}
-        <nav className="flex-1 overflow-y-auto py-2">
+        <nav className="flex-1 overflow-y-auto py-2 space-y-1">
           {visibleSections.map(section => {
             const isOpen = openSections.has(section.id)
             return (
@@ -451,7 +451,7 @@ export function AppShell() {
                 <button
                   type="button"
                   onClick={() => toggleSection(section.id)}
-                  className="flex w-full items-center justify-between px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#5BA0A3] hover:text-[#D6F7F9]"
+                  className="flex w-full items-center justify-between px-2 py-1.5 text-[10px] font-semibold tracking-wide text-[#5BA0A3] hover:text-[#D6F7F9]"
                 >
                   <span>{section.label}</span>
                   <ChevronDown

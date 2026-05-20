@@ -32,23 +32,31 @@ export interface MomResponse {
   gaps:   { itemId: string; description: string; month: string; suggestedAction: string }[]
 }
 
+export type AmountSource = 'ITEM_MASTER' | 'LAST_INVOICE' | 'UNKNOWN'
+
 export interface Proposal {
-  id?:               string
-  itemId?:           string
-  vendorId?:         string
-  vendorName?:       string
-  description:       string
-  proposedAmount:    number
-  isManual:          boolean
-  source:            string
-  status:            string
-  invoiceCovered:    boolean
-  invoiceRef?:       string
-  invoiceAmount?:    number
-  expenseGlCode:     string
-  provisionGlCode:   string
-  tdsSection?:       string
-  frequency:         string
+  id?:                 string
+  itemId?:             string
+  vendorId?:           string
+  vendorName?:         string
+  description:         string
+  proposedAmount:      number
+  isManual:            boolean
+  source:              string
+  status:              string
+  invoiceCovered:      boolean
+  invoiceRef?:         string
+  invoiceAmount?:      number
+  expenseGlCode:       string
+  provisionGlCode:     string
+  tdsSection?:         string
+  frequency:           string
+  basis?:              string
+  amountSource?:       AmountSource
+  amountNotSet?:       boolean
+  lastInvoiceRef?:     string
+  lastInvoiceAmount?:  number
+  lastInvoiceDate?:    string
 }
 
 export interface ProposalsResponse {

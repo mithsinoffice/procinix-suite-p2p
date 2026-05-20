@@ -61,22 +61,25 @@ export async function analyticsRoutes(app: FastifyInstance) {
     const q = req.query as AnalyticsQuery
     const range = resolveRange(q)
 
-    // ItemMaster has no Prisma relation to ItemCategory (the schema keeps
-    // itemCategoryId as a plain string column, see prisma/schema.prisma:1350),
-    // so we resolve category names via a separate fetch + Map rather than a
-    // Prisma `include` — attempting the include would 500 the endpoint.
+    // PurchaseOrder has NO `vendor` relation in the schema (just a
+    // `vendorId String` column). ItemMaster→ItemCategory is the same shape.
+    // Both are resolved via separate fetches + a Map — attempting either as
+    // a Prisma `include` would 500 the endpoint.
     const [pos, prs, vendors, glCodes, budgets, itemCategories] = await Promise.all([
       prisma.purchaseOrder.findMany({
         where: { tenantId, ...(q.entityId ? { entityId: q.entityId } : {}) },
-        include: { vendor: { select: { legalName: true, msmeRegistered: true, kycGstStatus: true, kycPanStatus: true } } },
       }),
       prisma.purchaseRequisition.findMany({ where: { tenantId } }),
-      prisma.vendor.findMany({ where: { tenantId, status: 'ACTIVE' }, select: { id: true, legalName: true, msmeRegistered: true, kycGstStatus: true, kycPanStatus: true, vendorCategoryId: true } }),
+      // Don't filter by status here — POs / invoices may reference an
+      // inactive vendor; we still want its KYC flags on the analytics view
+      // rather than collapsing to "Unknown".
+      prisma.vendor.findMany({ where: { tenantId }, select: { id: true, legalName: true, msmeRegistered: true, kycGstStatus: true, kycPanStatus: true, vendorCategoryId: true, status: true } }),
       prisma.glCode.findMany({ where: { tenantId } }),
       prisma.budget.findMany({ where: { tenantId, ...(q.entityId ? { entityId: q.entityId } : {}) }, include: { periods: true } }),
       prisma.itemCategory.findMany({ where: { tenantId } }),
     ])
     const catNameById = new Map(itemCategories.map(c => [c.id, c.name]))
+    const vendorById  = new Map(vendors.map(v => [v.id, v]))
 
     // Maverick = PO without prRefs[]
     const maverickPOs = pos.filter(p => {
@@ -103,10 +106,28 @@ export async function analyticsRoutes(app: FastifyInstance) {
     // Savings — we don't store contract baseline; proxy with negotiated
     // discount on PO lines (sum of discountPct × subtotal). 3% target on
     // total spend.
-    const poLines = await prisma.purchaseOrderLine.findMany({
-      where: { po: { tenantId, ...(q.entityId ? { entityId: q.entityId } : {}) } },
-      include: { item: true, po: { select: { totalAmount: true } } },
-    })
+    // PurchaseOrderLine has NO `item` relation — itemId is a plain string
+    // column (same pattern as PurchaseOrder.vendor and ItemMaster.itemCategory
+    // above). Resolve via a separate itemMaster lookup + Map.
+    const [poLines, items] = await Promise.all([
+      prisma.purchaseOrderLine.findMany({
+        where: { po: { tenantId, ...(q.entityId ? { entityId: q.entityId } : {}) } },
+      }),
+      prisma.itemMaster.findMany({
+        where:  { tenantId },
+        select: { id: true, itemCategoryId: true },
+      }),
+    ])
+    const itemById = new Map(items.map(i => [i.id, i]))
+    // Resolves a PO-line's category name via the two-hop lookup
+    // (line.itemId → itemMaster.itemCategoryId → category.name). Returns
+    // 'Uncategorised' for lines without an itemId or whose item has no
+    // category — same fallback semantics the previous Prisma include had.
+    const categoryOf = (itemId: string | null): string => {
+      if (!itemId) return 'Uncategorised'
+      const catId = itemById.get(itemId)?.itemCategoryId
+      return (catId && catNameById.get(catId)) || 'Uncategorised'
+    }
     const savingsAchieved = Math.round(
       poLines.reduce((s, l) => {
         const taxable = Number(l.qty) * Number(l.unitPrice)
@@ -119,7 +140,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
     // Savings by category (top 6)
     const catAgg = new Map<string, { baseline: number; actual: number }>()
     for (const l of poLines) {
-      const cat = (l.item?.itemCategoryId && catNameById.get(l.item.itemCategoryId)) || 'Uncategorised'
+      const cat = categoryOf(l.itemId)
       const taxable = Number(l.qty) * Number(l.unitPrice)
       const disc    = Number(l.discountPct ?? 0)
       const prev    = catAgg.get(cat) ?? { baseline: 0, actual: 0 }
@@ -139,15 +160,17 @@ export async function analyticsRoutes(app: FastifyInstance) {
       .sort((a, b) => b.actual - a.actual)
       .slice(0, 6)
 
-    // Vendor concentration (top 5)
+    // Vendor concentration (top 5). Resolves vendor via vendorById Map —
+    // PurchaseOrder has no Prisma relation to Vendor.
     const vendorAgg = new Map<string, { name: string; amount: number; isMsme: boolean; kycOk: boolean }>()
     for (const p of pos) {
       const key = p.vendorId
+      const v = vendorById.get(p.vendorId)
       const cur = vendorAgg.get(key) ?? {
-        name:   p.vendor?.legalName ?? 'Unknown',
+        name:   v?.legalName ?? 'Unknown',
         amount: 0,
-        isMsme: !!p.vendor?.msmeRegistered,
-        kycOk:  p.vendor?.kycGstStatus === 'VALID' && p.vendor?.kycPanStatus === 'VALID',
+        isMsme: !!v?.msmeRegistered,
+        kycOk:  v?.kycGstStatus === 'VALID' && v?.kycPanStatus === 'VALID',
       }
       cur.amount += Number(p.totalAmount)
       vendorAgg.set(key, cur)
@@ -216,7 +239,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
     const glById    = new Map(glCodes.map(g => [g.id, g]))
     const catSpend  = new Map<string, { amount: number; budget: number }>()
     for (const l of poLines) {
-      const cat = (l.item?.itemCategoryId && catNameById.get(l.item.itemCategoryId)) || 'Uncategorised'
+      const cat = categoryOf(l.itemId)
       const prev = catSpend.get(cat) ?? { amount: 0, budget: 0 }
       prev.amount += Number(l.lineTotal ?? 0)
       catSpend.set(cat, prev)
@@ -226,9 +249,10 @@ export async function analyticsRoutes(app: FastifyInstance) {
       if (!l.glCodeId) continue
       const b = budgetByGl.get(l.glCodeId)
       if (!b) continue
-      const cat = (l.item?.itemCategoryId && catNameById.get(l.item.itemCategoryId))
-        || glById.get(l.glCodeId)?.name
-        || 'Uncategorised'
+      // This site falls back to GL-code name when no category is set —
+      // categoryOf()'s "Uncategorised" default would beat the GL name.
+      const catId = l.itemId ? itemById.get(l.itemId)?.itemCategoryId : null
+      const cat = (catId && catNameById.get(catId)) || glById.get(l.glCodeId)?.name || 'Uncategorised'
       const prev = catSpend.get(cat) ?? { amount: 0, budget: 0 }
       prev.budget += b.budget / 12   // pro-rate annual to monthly
       catSpend.set(cat, prev)
@@ -255,7 +279,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
       maverickSpendAmount: Math.round(maverickSpendAmount * 100) / 100,
       maverickPOs: maverickPOs.slice(0, 25).map(p => ({
         poRef:     p.poRef,
-        vendorName: p.vendor?.legalName ?? 'Unknown',
+        vendorName: vendorById.get(p.vendorId)?.legalName ?? 'Unknown',
         amount:    Number(p.totalAmount),
         category:  'Uncategorised',
         requester: p.createdByUserId,
