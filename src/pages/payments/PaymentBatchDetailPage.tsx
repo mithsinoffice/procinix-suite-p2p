@@ -5,7 +5,7 @@ import { AlertTriangle, CheckCircle2, Clock, Send, Loader2 } from 'lucide-react'
 import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { paymentsApi, type ExecuteBatchLine, type PaymentBatchLine } from '../../lib/api/payments.api'
 import { formatINR, formatDate, formatDateTime, formatStatus, getStatusColor } from '../../lib/utils/formatters'
-import { cn } from '../../lib/utils'
+import { cn, toArray } from '../../lib/utils'
 
 export default function PaymentBatchDetailPage() {
   const { id = '' } = useParams<{ id: string }>()
@@ -50,8 +50,13 @@ export default function PaymentBatchDetailPage() {
   const canExecute = batch.status === 'APPROVED'
   const canFlag    = batch.status === 'DRAFT' || batch.status === 'PENDING_APPROVAL'
 
+  // toArray() guards against a null/missing `lines` field on the batch
+  // response — the API contract is array but defensive coercion stops
+  // the .reduce/.map/.filter calls from crashing on shape drift.
+  const batchLines = toArray<PaymentBatchLine>(batch.lines)
+
   // Group lines by TDS section for Section D
-  const tdsBySection = batch.lines.reduce<Record<string, { amount: number; count: number }>>((acc, l) => {
+  const tdsBySection = batchLines.reduce<Record<string, { amount: number; count: number }>>((acc, l) => {
     if (!l.tdsSection || l.tdsAmount <= 0) return acc
     const k = l.tdsSection
     acc[k] = { amount: (acc[k]?.amount ?? 0) + l.tdsAmount, count: (acc[k]?.count ?? 0) + 1 }
@@ -128,7 +133,7 @@ export default function PaymentBatchDetailPage() {
         {/* Section B — Lines */}
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="border-b border-border px-4 py-2.5">
-            <h3 className="text-sm font-semibold">Payment lines · {batch.lines.length}</h3>
+            <h3 className="text-sm font-semibold">Payment lines · {batchLines.length}</h3>
           </div>
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
@@ -143,7 +148,7 @@ export default function PaymentBatchDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {batch.lines.map((l: PaymentBatchLine) => (
+              {batchLines.map((l: PaymentBatchLine) => (
                 <tr key={l.id} className="border-t border-border">
                   <td className="px-3 py-2 max-w-[180px] truncate">
                     <div className="flex items-center gap-1">
@@ -182,7 +187,7 @@ export default function PaymentBatchDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {batch.lines.filter(l => l.isMsme).map(l => (
+                {batchLines.filter(l => l.isMsme).map(l => (
                   <tr key={l.id} className="border-t border-amber-200/60">
                     <td className="py-1.5">{l.vendor?.legalName ?? '—'}</td>
                     <td className="py-1.5 text-xs">{l.vendor?.msmeCategory ?? '—'}</td>
@@ -259,7 +264,7 @@ export default function PaymentBatchDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {batch.lines.filter(l => l.status === 'PENDING').map(l => {
+                {batchLines.filter(l => l.status === 'PENDING').map(l => {
                   const key = l.id
                   const v = execLines[key] ?? { lineId: l.id }
                   return (

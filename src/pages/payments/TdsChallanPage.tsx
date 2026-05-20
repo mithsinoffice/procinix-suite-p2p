@@ -5,7 +5,7 @@ import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { PaymentNav } from './PaymentNav'
 import { paymentsApi, type TdsChallan } from '../../lib/api/payments.api'
 import { formatINR, formatDate } from '../../lib/utils/formatters'
-import { cn } from '../../lib/utils'
+import { cn, toArray } from '../../lib/utils'
 
 export default function TdsChallanPage() {
   const qc = useQueryClient()
@@ -15,10 +15,11 @@ export default function TdsChallanPage() {
   const [challanNumber, setChallanNumber] = useState('')
   const [depositedAt, setDepositedAt] = useState(() => new Date().toISOString().slice(0, 10))
 
-  const { data: rows = [], isLoading } = useQuery({
+  const { data: rowsRaw, isLoading } = useQuery({
     queryKey: ['payments', 'tds-challans', period, statusFilter],
     queryFn:  () => paymentsApi.listChallans({ period: period || undefined, status: statusFilter || undefined }),
   })
+  const rows = toArray<TdsChallan>(rowsRaw)
 
   const markDeposited = useMutation({
     mutationFn: (id: string) => paymentsApi.markChallanDeposited(id, { challanNumber, depositedAt }),

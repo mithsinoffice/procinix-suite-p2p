@@ -6,7 +6,7 @@ import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { PaymentNav } from './PaymentNav'
 import { paymentsApi, type QueueRow, type QueuePriority } from '../../lib/api/payments.api'
 import { formatINR, formatDate } from '../../lib/utils/formatters'
-import { cn } from '../../lib/utils'
+import { cn, toArray } from '../../lib/utils'
 
 type Tab = 'ALL' | 'MSME' | 'OVERDUE' | 'URGENT' | 'DUE_WEEK' | 'ADVANCES'
 
@@ -45,7 +45,7 @@ export default function PaymentQueuePage() {
     queryFn:  () => paymentsApi.queue(queryParams),
     refetchInterval: 60_000,
   })
-  const rows = queueResp?.data ?? []
+  const rows = toArray<QueueRow>(queueResp?.data)
 
   const { data: summary } = useQuery({
     queryKey: ['payments', 'queue-summary'],

@@ -6,7 +6,7 @@ import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { PaymentNav } from './PaymentNav'
 import { paymentsApi, type BatchStatus, type PaymentBatchRow } from '../../lib/api/payments.api'
 import { formatINR, formatDate, formatStatus, getStatusColor } from '../../lib/utils/formatters'
-import { cn } from '../../lib/utils'
+import { cn, toArray } from '../../lib/utils'
 
 type StatusTab = 'ALL' | BatchStatus
 
@@ -21,7 +21,7 @@ export default function PaymentBatchListPage() {
     queryKey: ['payments', 'batches', status],
     queryFn:  () => paymentsApi.listBatches({ status, take: 100 }),
   })
-  const rows = data?.data ?? []
+  const rows = toArray<PaymentBatchRow>(data?.data)
 
   return (
     <div className="flex flex-col h-full">

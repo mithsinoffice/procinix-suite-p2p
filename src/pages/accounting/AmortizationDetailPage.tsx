@@ -2,9 +2,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { CheckCircle2, Clock, AlertTriangle, Circle } from 'lucide-react'
 import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
-import { accountingApi } from '../../lib/api/accounting.api'
+import { accountingApi, type AmortizationTimelineRow } from '../../lib/api/accounting.api'
 import { formatINR, formatDate } from '../../lib/utils/formatters'
-import { cn } from '../../lib/utils'
+import { cn, toArray } from '../../lib/utils'
 
 export default function AmortizationDetailPage() {
   const { id = '' } = useParams<{ id: string }>()
@@ -30,7 +30,10 @@ export default function AmortizationDetailPage() {
     )
   }
 
-  const { schedule, timeline } = data
+  const { schedule } = data
+  // toArray() guards against a malformed `timeline` field on the response
+  // (null / missing key) — see [[utils.toArray]] in src/lib/utils.ts.
+  const timeline = toArray<AmortizationTimelineRow>(data.timeline)
   const postedCount = timeline.filter(t => t.jv?.status === 'POSTED').length
   const dueThisMonth = timeline.filter(t => {
     if (t.jv) return false

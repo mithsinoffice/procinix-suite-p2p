@@ -5,7 +5,7 @@ import { CheckCircle2, AlertTriangle, Clock, RefreshCw, Send, ChevronRight, Paus
 import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { accountingApi, type JournalEntry, type ProvisionScheduleRow, type AmortizationScheduleRow, type MonthEndResult } from '../../lib/api/accounting.api'
 import { formatINR, formatINRCompact, formatDate } from '../../lib/utils/formatters'
-import { cn } from '../../lib/utils'
+import { cn, toArray } from '../../lib/utils'
 
 type Tab = 'overview' | 'journal' | 'provision' | 'amort' | 'monthend' | 'erp'
 
@@ -114,7 +114,7 @@ function JournalTab() {
     queryKey: ['accounting', 'jvs', period, entryType, erpStatus],
     queryFn:  () => accountingApi.listJvs({ period, entryType, erpStatus, take: 100 }),
   })
-  const rows = data?.data ?? []
+  const rows = toArray<JournalEntry>(data?.data)
 
   const pushBulk = useMutation({
     mutationFn: () => accountingApi.pushBulk(selected),
@@ -219,10 +219,11 @@ function JournalTab() {
 // ── Provision schedules ─────────────────────────────────────────────────
 function ProvisionTab() {
   const qc = useQueryClient()
-  const { data: rows = [], isLoading } = useQuery({
+  const { data: rowsRaw, isLoading } = useQuery({
     queryKey: ['accounting', 'provision-schedules'],
     queryFn:  () => accountingApi.listProvisionSchedules(),
   })
+  const rows = toArray<ProvisionScheduleRow>(rowsRaw)
 
   const patch = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'ACTIVE' | 'PAUSED' | 'CLOSED' }) =>
@@ -295,10 +296,11 @@ function ProvisionTab() {
 // ── Amortization schedules ──────────────────────────────────────────────
 function AmortTab() {
   const navigate = useNavigate()
-  const { data: rows = [], isLoading } = useQuery({
+  const { data: rowsRaw, isLoading } = useQuery({
     queryKey: ['accounting', 'amort-schedules'],
     queryFn:  () => accountingApi.listAmortizationSchedules(),
   })
+  const rows = toArray<AmortizationScheduleRow>(rowsRaw)
 
   return (
     <div className="space-y-3">
@@ -369,8 +371,9 @@ function MonthEndTab() {
   const totals = useMemo(() => {
     const src = preview ?? committed
     if (!src) return null
-    const provAmount = src.jvs.filter(j => j.entryType === 'PROVISION').reduce((s, j) => s + j.amount, 0)
-    const amortAmount = src.jvs.filter(j => j.entryType === 'AMORTIZATION').reduce((s, j) => s + j.amount, 0)
+    const jvs = toArray<MonthEndResult['jvs'][number]>(src.jvs)
+    const provAmount = jvs.filter(j => j.entryType === 'PROVISION').reduce((s, j) => s + j.amount, 0)
+    const amortAmount = jvs.filter(j => j.entryType === 'AMORTIZATION').reduce((s, j) => s + j.amount, 0)
     return { provAmount, amortAmount }
   }, [preview, committed])
 
@@ -406,7 +409,7 @@ function MonthEndTab() {
 
         {committed && (
           <Banner tone="green" icon={<CheckCircle2 className="h-4 w-4" />}>
-            <span>Month-end committed for {committed.period} — {committed.jvs.length} JVs posted.</span>
+            <span>Month-end committed for {committed.period} — {toArray(committed.jvs).length} JVs posted.</span>
           </Banner>
         )}
       </div>
@@ -417,7 +420,7 @@ function MonthEndTab() {
           <p className="text-xs text-muted-foreground">Run preview to see the breakdown.</p>
         ) : (
           <div className="space-y-1 max-h-[480px] overflow-auto">
-            {(preview ?? committed)!.jvs.map((j, i) => (
+            {toArray<MonthEndResult['jvs'][number]>((preview ?? committed)!.jvs).map((j, i) => (
               <div key={`${j.id}-${i}`} className="flex items-center gap-2 rounded border border-border bg-background px-2 py-1.5 text-xs">
                 <EntryTypeChip type={j.entryType} status="POSTED" />
                 <span className="font-mono text-[10px]">{j.debit} → {j.credit}</span>
@@ -439,7 +442,7 @@ function ErpTab() {
     queryKey: ['accounting', 'erp-jvs'],
     queryFn:  () => accountingApi.listJvs({ erpStatus: 'FAILED', take: 100 }),
   })
-  const failed = data?.data ?? []
+  const failed = toArray<JournalEntry>(data?.data)
 
   const retryAll = useMutation({
     mutationFn: () => accountingApi.retryAll(),

@@ -6,7 +6,7 @@ import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { paymentsApi, type CreateBatchLine, type PaymentMethod, type PaymentType } from '../../lib/api/payments.api'
 import { http } from '../../lib/http'
 import { formatINR } from '../../lib/utils/formatters'
-import { cn } from '../../lib/utils'
+import { cn, toArray } from '../../lib/utils'
 
 // Draft payload structure deposited by PaymentQueuePage's selection bar.
 interface DraftRow {
@@ -57,10 +57,13 @@ export default function CreatePaymentBatch() {
   const [isUrgent, setIsUrgent] = useState<boolean>(false)
   const [urgentReason, setUrgentReason] = useState<string>('')
 
-  const { data: entities = [] } = useQuery({
+  // toArray() guards against null / { data: [...] } / non-array responses —
+  // the destructure default `= []` only fires on undefined.
+  const { data: entitiesRaw } = useQuery({
     queryKey: ['entities'],
-    queryFn:  () => http.get<Entity[]>('/api/masters/entities'),
+    queryFn:  () => http.get<unknown>('/api/masters/entities'),
   })
+  const entities = toArray<Entity>(entitiesRaw)
 
   // Default entityId to the first available once entities load.
   useEffect(() => {
