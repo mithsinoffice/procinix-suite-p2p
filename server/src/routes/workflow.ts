@@ -501,4 +501,283 @@ export async function workflowRoutes(app: FastifyInstance) {
     })
     return reply.send({ ok: true })
   })
+
+  // PATCH — partial update used by the listing page toggle action.
+  // The full PUT above replaces stages + conditions which would lose data
+  // when the caller only wants to flip status. PATCH whitelists the
+  // metadata-only fields that the listing can mutate.
+  app.patch('/definitions/:id', auth, async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const body = req.body as Partial<{
+      status: string; name: string; description: string; priority: number; isDefault: boolean
+    }>
+    const data: Record<string, unknown> = {}
+    if (body.status      !== undefined) data.status      = body.status
+    if (body.name        !== undefined) data.name        = body.name
+    if (body.description !== undefined) data.description = body.description
+    if (body.priority    !== undefined) data.priority    = body.priority
+    if (body.isDefault   !== undefined) data.isDefault   = body.isDefault
+    if (Object.keys(data).length === 0) {
+      return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'No mutable fields supplied' })
+    }
+    const updated = await app.prisma.workflowDefinition.update({
+      where: { id, tenantId: req.tenant.id },
+      data,
+    })
+    return reply.send(updated)
+  })
+
+  // DELETE — guarded against in-flight instances so we don't strand live
+  // approvals. Use status=ARCHIVED + soft hide if the caller wants to retire
+  // a definition that's been used.
+  app.delete('/definitions/:id', auth, async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const instanceCount = await app.prisma.workflowInstance.count({
+      where: { definitionId: id, tenantId: req.tenant.id, status: { in: ['IN_PROGRESS', 'ON_HOLD'] } },
+    })
+    if (instanceCount > 0) {
+      return reply.code(409).send({
+        code:    'IN_USE',
+        message: `Cannot delete — ${instanceCount} in-flight instance${instanceCount === 1 ? '' : 's'} reference this definition. Archive instead.`,
+      })
+    }
+    await app.prisma.$transaction([
+      app.prisma.workflowDefinitionStage.deleteMany({ where: { definitionId: id } }),
+      app.prisma.workflowDefinitionCondition.deleteMany({ where: { definitionId: id } }),
+      app.prisma.workflowDefinition.delete({ where: { id, tenantId: req.tenant.id } }),
+    ])
+    return reply.send({ ok: true })
+  })
+
+  // Clone — same as /duplicate but a separate name to match the redesigned
+  // UI's vocabulary. Returns the new id so the caller can jump straight
+  // into the configurator.
+  app.post('/definitions/:id/clone', auth, async (req, reply) => {
+    const src = await app.prisma.workflowDefinition.findFirst({
+      where:   { id: (req.params as { id: string }).id, tenantId: req.tenant.id },
+      include: { stages: { orderBy: { order: 'asc' } }, conditions: true },
+    })
+    if (!src) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Workflow definition not found' })
+
+    const { id: _id, tenantId: _t, createdAt: _ca, updatedAt: _ua, stages, conditions, ...rest } = src as Record<string, unknown> & {
+      stages: Array<Record<string, unknown>>; conditions: Array<Record<string, unknown>>
+    }
+
+    const copy = await app.prisma.$transaction(async tx => {
+      const d = await tx.workflowDefinition.create({
+        data: {
+          ...(rest as Record<string, unknown>),
+          tenantId:        req.tenant.id,
+          createdByUserId: req.user.sub,
+          name:            `${src.name} (Copy)`,
+          code:            `${src.code}-COPY-${Date.now().toString(36).slice(-4).toUpperCase()}`,
+          status:          'DRAFT',
+        } as never,
+      })
+      if (stages.length) {
+        await tx.workflowDefinitionStage.createMany({
+          data: stages.map(({ id: _sid, definitionId: _did, ...s }) => ({ ...s, definitionId: d.id })) as never,
+        })
+      }
+      if (conditions.length) {
+        await tx.workflowDefinitionCondition.createMany({
+          data: conditions.map(({ id: _cid, definitionId: _did, ...c }) => ({ ...c, definitionId: d.id })) as never,
+        })
+      }
+      return d
+    })
+    return reply.code(201).send(copy)
+  })
+
+  // Field catalog for the condition builder. Static per module — moving it
+  // server-side means the UI doesn't have to duplicate the list and new
+  // fields appear everywhere without a frontend deploy. Selecting modules
+  // not in the catalog returns an empty list (free-form field name fallback
+  // is fine for those — admin-only masters rarely need conditions).
+  app.get('/fields', auth, async (req, reply) => {
+    const { module } = req.query as { module?: string }
+    return reply.send(FIELD_CATALOG[module ?? ''] ?? [])
+  })
+
+  // AI assistant — rule-based plain-English → step list. No external LLM
+  // call; instead we keyword-match against known role names + recognise
+  // a small set of connectors ("then", "and then", "if X then"). Returns
+  // a draft chain the user can then edit in the configurator. The contract
+  // matches what the configurator expects so the prefill is one-shot.
+  app.post('/assistant', auth, async (req, reply) => {
+    const body = (req.body ?? {}) as { prompt?: string; module?: string }
+    if (!body.prompt) return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'prompt is required' })
+    const draft = parsePromptToChain(body.prompt, body.module ?? 'INVOICE')
+    return reply.send(draft)
+  })
+}
+
+// ── Field catalog ──
+// Per-module condition fields. Mirrors the inline catalog in the legacy
+// configurator so the new UI can call the API instead of hard-coding it.
+// Adding a new module: drop another entry here.
+type FieldDef = { field: string; label: string; type: 'number' | 'string' | 'boolean' | 'select' }
+const FIELD_CATALOG: Record<string, FieldDef[]> = {
+  INVOICE: [
+    { field: 'totalAmount',    label: 'Total amount (₹)', type: 'number'  },
+    { field: 'entityId',       label: 'Entity',           type: 'select'  },
+    { field: 'vendorType',     label: 'Vendor type',      type: 'select'  },
+    { field: 'currencyCode',   label: 'Currency',         type: 'select'  },
+    { field: 'isPOInvoice',    label: 'Is PO invoice',    type: 'boolean' },
+    { field: 'isFirstInvoice', label: 'First invoice',    type: 'boolean' },
+    { field: 'channelType',    label: 'Channel type',     type: 'select'  },
+  ],
+  VENDOR: [
+    { field: 'vendorType',  label: 'Vendor type', type: 'select' },
+    { field: 'countryCode', label: 'Country',     type: 'select' },
+  ],
+  PAYMENT: [
+    { field: 'totalAmount',  label: 'Batch amount (₹)', type: 'number'  },
+    { field: 'currencyCode', label: 'Currency',         type: 'select'  },
+    { field: 'isUrgent',     label: 'Urgent',           type: 'boolean' },
+  ],
+  PR: [
+    { field: 'totalAmount',  label: 'PR amount (₹)', type: 'number' },
+    { field: 'departmentId', label: 'Department',    type: 'select' },
+    { field: 'entityId',     label: 'Entity',        type: 'select' },
+  ],
+  PO: [
+    { field: 'totalAmount',  label: 'PO amount (₹)', type: 'number' },
+    { field: 'entityId',     label: 'Entity',        type: 'select' },
+  ],
+  PROVISION: [
+    { field: 'totalAmount', label: 'Batch amount (₹)', type: 'number' },
+  ],
+  GRN: [
+    { field: 'totalAmount', label: 'GRN value (₹)', type: 'number' },
+  ],
+}
+
+// ── AI assistant — rule-based prompt parser ──
+// Recognised role keywords map English phrases ("HOD", "finance manager",
+// "CFO") to the canonical role codes the engine resolves against. Order
+// in this map matters — longer keys are matched first so "finance
+// manager" wins over a stray "manager".
+const ROLE_KEYWORDS: Array<{ keys: string[]; role: string; name: string }> = [
+  { keys: ['finance manager', 'finance head'],   role: 'FINANCE_MANAGER', name: 'Finance Manager Review'  },
+  { keys: ['ap manager', 'ap head', 'ap clerk'], role: 'AP_MANAGER',      name: 'AP Review'               },
+  { keys: ['procurement head', 'procurement'],   role: 'PROCUREMENT_HEAD',name: 'Procurement Review'      },
+  { keys: ['dept head', 'department head', 'hod'], role: 'DEPT_HEAD',     name: 'Department Head Approval'},
+  { keys: ['tenant admin', 'admin'],             role: 'TENANT_ADMIN',    name: 'Tenant Admin Approval'   },
+  { keys: ['cfo'],                                role: 'CFO',             name: 'CFO Approval'            },
+  { keys: ['md', 'managing director'],           role: 'MD',              name: 'MD Approval'             },
+  { keys: ['ceo'],                                role: 'CEO',             name: 'CEO Approval'            },
+]
+
+interface DraftStage {
+  order:           number
+  name:            string
+  approverType:    'ROLE' | 'USER' | 'MANAGER_OF' | 'DEPT_HEAD'
+  approverRole:    string | null
+  slaHours:        number
+  requiresComment: boolean
+  allowDelegation: boolean
+  onReject:        'RETURN_TO_DRAFT' | 'RETURN_TO_PREV_STAGE' | 'REQUEST_INFO'
+}
+interface DraftCondition {
+  field:      string
+  operator:   string
+  value:      string
+  logicGroup: 'AND' | 'OR'
+}
+interface DraftChain {
+  name:        string
+  description: string
+  stages:      DraftStage[]
+  conditions:  DraftCondition[]
+}
+
+// Naive prompt parser. Splits on connectors, walks the resulting fragments
+// in order, matches each against ROLE_KEYWORDS. "if amount > X then Y"
+// gets pulled out as a condition. Good enough for a UX-helper draft —
+// the user always confirms in the configurator before save.
+export function parsePromptToChain(prompt: string, module: string): DraftChain {
+  const lower = prompt.toLowerCase()
+  const stages: DraftStage[] = []
+  const conditions: DraftCondition[] = []
+  let order = 1
+
+  // Extract any "if AMOUNT > X" / ">= X" condition at the front. Anchors
+  // the rest of the parser since the condition routes a specific later step.
+  const numMatch = lower.match(/(?:if|when|above|over|>\s*=?|greater than)\s*[₹]?\s*([\d,]+(?:\.\d+)?)\s*(?:k|lakh|cr|crore)?/i)
+  let amountThreshold: number | null = null
+  if (numMatch) {
+    const raw = numMatch[1].replace(/,/g, '')
+    let v = Number(raw)
+    if (/lakh/i.test(lower)) v *= 100_000
+    if (/cr|crore/i.test(lower)) v *= 10_000_000
+    if (/k\b/i.test(lower) && !/lakh|cr/.test(lower)) v *= 1_000
+    amountThreshold = v
+  }
+
+  // Walk through the role keywords in textual order — `indexOf` lets us
+  // sort the matches by their appearance in the prompt.
+  const found: Array<{ idx: number; role: string; name: string }> = []
+  for (const r of ROLE_KEYWORDS) {
+    for (const key of r.keys) {
+      const idx = lower.indexOf(key)
+      if (idx >= 0) {
+        found.push({ idx, role: r.role, name: r.name })
+        break
+      }
+    }
+  }
+  found.sort((a, b) => a.idx - b.idx)
+
+  // Deduplicate consecutive same-role hits.
+  const ordered: typeof found = []
+  for (const f of found) {
+    if (ordered.at(-1)?.role !== f.role) ordered.push(f)
+  }
+
+  for (const f of ordered) {
+    stages.push({
+      order:           order++,
+      name:            f.name,
+      approverType:    'ROLE',
+      approverRole:    f.role,
+      slaHours:        48,
+      requiresComment: false,
+      allowDelegation: true,
+      onReject:        'RETURN_TO_DRAFT',
+    })
+  }
+
+  // If a threshold was found and we have ≥2 stages, gate the LAST stage
+  // behind the condition. This mirrors the spec's "if > X then CFO" example.
+  if (amountThreshold != null && stages.length >= 2) {
+    conditions.push({
+      field:      module === 'INVOICE' || module === 'PR' || module === 'PO' ? 'totalAmount' : 'totalAmount',
+      operator:   'GT',
+      value:      String(amountThreshold),
+      logicGroup: 'AND',
+    })
+  }
+
+  // Fallback — empty parse just emits a single Finance Manager stage so
+  // the user has *something* to edit.
+  if (stages.length === 0) {
+    stages.push({
+      order:           1,
+      name:            'Finance Manager Review',
+      approverType:    'ROLE',
+      approverRole:    'FINANCE_MANAGER',
+      slaHours:        48,
+      requiresComment: false,
+      allowDelegation: true,
+      onReject:        'RETURN_TO_DRAFT',
+    })
+  }
+
+  return {
+    name:        prompt.length > 60 ? prompt.slice(0, 57) + '…' : prompt,
+    description: `Drafted from prompt: "${prompt}"`,
+    stages,
+    conditions,
+  }
 }

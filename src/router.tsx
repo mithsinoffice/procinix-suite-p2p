@@ -60,7 +60,6 @@ const PRFormPage                    = lazy(() => import('./pages/purchase-orders
 const POFormPage                    = lazy(() => import('./pages/purchase-orders/POFormPage'))
 const GRNPage                       = lazy(() => import('./pages/grn/GRNPage'))
 const GRNFormPage                   = lazy(() => import('./pages/grn/GRNFormPage'))
-const WorkflowHubPage               = lazy(() => import('./pages/workflow/WorkflowHubPage'))
 const AdminTenantsPage              = lazy(() => import('./pages/admin/AdminTenantsPage'))
 const AccountingPage                = lazy(() => import('./pages/accounting/AccountingPage'))
 const AmortizationDetailPage        = lazy(() => import('./pages/accounting/AmortizationDetailPage'))
@@ -111,10 +110,9 @@ export const router = createBrowserRouter([
         { path: 'budgets/new',              element: <S><BudgetFormPage /></S>      },
         { path: 'budgets/:id',              element: <S><BudgetDetailPage /></S>    },
         { path: 'budgets/:id/edit',         element: <S><BudgetFormPage /></S>      },
-        { path: 'workflow',                 element: <S><WorkflowHubPage /></S>            },
-        { path: 'workflow/definitions',     element: <S><WorkflowDefinitionsPage /></S>    },
-        { path: 'workflow/definitions/new', element: <S><WorkflowDefinitionFormPage /></S> },
-        { path: 'workflow/definitions/:id', element: <S><WorkflowDefinitionFormPage /></S> },
+        { path: 'workflow-engine',          element: <S><WorkflowDefinitionsPage /></S>    },
+        { path: 'workflow-engine/new',      element: <S><WorkflowDefinitionFormPage /></S> },
+        { path: 'workflow-engine/:id/edit', element: <S><WorkflowDefinitionFormPage /></S> },
         { path: 'vendors',         element: <S><VendorListPage /></S>      },
         { path: 'vendors/new',     element: <S><VendorFormPage mode="create" /></S> },
         { path: 'vendors/:id',     element: <S><VendorDetailPage /></S>    },
@@ -174,9 +172,6 @@ export const router = createBrowserRouter([
           { path: 'items/new',                    element: <S><ItemFormPage /></S>                      },
           { path: 'items/:id',                    element: <S><ItemFormPage /></S>                      },
           { path: 'item-categories',              element: <S><ItemCategoryPage /></S>                  },
-          { path: 'workflow-definitions',         element: <S><WorkflowDefinitionsPage /></S>           },
-          { path: 'workflow-definitions/new',     element: <S><WorkflowDefinitionFormPage /></S>        },
-          { path: 'workflow-definitions/:id',     element: <S><WorkflowDefinitionFormPage /></S>        },
         ]},
         { path: 'admin', children: [
           { path: 'tenants', element: <S><AdminTenantsPage /></S> },

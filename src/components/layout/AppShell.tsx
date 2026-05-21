@@ -240,7 +240,7 @@ const SECTIONS: Section[] = [
 // slightly different style — a teal ENGINE pill — so it reads as a distinct
 // surface from the master-data items inside Configuration.
 const WORKFLOW_ITEM: Item = {
-  to: '/workflow', icon: GitBranch, label: 'Workflow Engine',
+  to: '/workflow-engine', icon: GitBranch, label: 'Workflow Engine',
   title: 'Configure approval workflows · view live instances',
 }
 

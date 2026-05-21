@@ -86,6 +86,69 @@ const name = vendorById.get(po.vendorId)?.legalName ?? 'Unknown'
 
 **Why this matters:** `PurchaseOrder.vendor`, `PurchaseOrderLine.item`, and `ItemMaster.itemCategory` are all FK columns without back-relations. Any `include` against them silently breaks the endpoint at runtime — typecheck passes because Prisma's generated types accept the include shape but the validator throws at query time. This bug has bitten three separate analytics endpoints; the rule above prevents recurrence.
 
+#### Workflow engine — schema & rules (MANDATORY)
+
+##### Schema — 8 normalized tables (DO NOT change this model)
+- `WorkflowDefinition` — one row per workflow (name, module, status, priority, isDefault)
+- `WorkflowDefinitionStage` — one row per approval step (role, sla, autoApproveBelow, onReject)
+- `WorkflowDefinitionCondition` — one row per match condition (field, operator, value, AND/OR)
+- `WorkflowInstance` — created when a document enters approval
+- `WorkflowInstanceStage` — one row per step per instance (status, assignedTo, actedAt)
+- `UserEntityRole` — resolves role → user at runtime (never hardcode user IDs)
+- `WorkflowAuditLog` — immutable audit trail
+- `WorkflowNotificationConfig` — notification preferences per definition
+
+##### NEVER do any of the following
+- Migrate to a `config_json` single-table model (breaks 80+ live instances)
+- Add a `workflow_configurations` table or `config_json` column
+- Hardcode approver user IDs — always resolve via `UserEntityRole` at runtime
+- Use `include: { vendorId }` or `include: { itemId }` — FK strings are not Prisma relations (see rule above)
+
+##### Condition semantics
+Conditions on `WorkflowDefinition` are **MATCH** conditions — they filter
+WHICH workflow definition applies to a document at dispatch time.
+They are NOT per-step gates.
+
+Per-step gating is handled via:
+- `WorkflowDefinitionStage.autoApproveBelow` (numeric threshold)
+- `WorkflowDefinitionStage.onReject` (`STOP | SKIP | ESCALATE`)
+
+##### User override pattern
+To assign a specific user to a step (not just a role):
+```
+approverType  = 'USER'
+approverUserId = <uuid>
+```
+Default (role only): `approverType = 'ROLE'`, `approverUserId = null`.
+
+##### API endpoints (existing — do not rename or duplicate)
+```
+GET    /api/workflow/definitions           — list all
+GET    /api/workflow/definitions/:id       — single load
+POST   /api/workflow/definitions           — create
+PUT    /api/workflow/definitions/:id       — full update
+PATCH  /api/workflow/definitions/:id       — partial update (status/name/desc/priority/isDefault only)
+DELETE /api/workflow/definitions/:id       — guarded by IN_USE 409
+POST   /api/workflow/definitions/:id/clone — copies definition, name + " (Copy)", status DRAFT
+GET    /api/workflow/fields?module=X       — field catalog for condition builder
+POST   /api/workflow/assistant             — plain-English → stage draft
+```
+
+##### Dispatch rule
+When a document is submitted:
+1. Query `WorkflowDefinition` WHERE `module = docType` AND `status = ACTIVE`
+2. Evaluate match conditions against document fields → pick highest-priority match
+3. If no match and `isDefault = true` → use default definition
+4. If no definition found → HOLD document as Pending, never auto-approve
+5. Insert `WorkflowInstance` + all `WorkflowInstanceStage` rows upfront — step 1 → `PENDING`, step 2+ → `PENDING_PREDECESSOR`
+6. Resolve approver via `UserEntityRole` for the assigned role + tenant
+
+##### UI components
+- `src/pages/masters/workflow/WorkflowDefinitionsPage.tsx` — list page
+- `src/pages/masters/workflow/WorkflowDefinitionFormPage.tsx` — 2-panel designer
+
+Do not create `WorkflowManagement.tsx` or `WorkflowConfigurator.tsx` — those are the old replaced components.
+
 ### Validation
 - Deduplication server-side — client warns, server enforces
 - 3-way match (Invoice ↔ PO ↔ GRN) enforced before invoice approval

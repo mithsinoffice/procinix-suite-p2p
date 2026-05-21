@@ -18,7 +18,7 @@ const PATH_TITLES: Record<string, string> = {
   '/invoices':        'Invoices',
   '/payments':        'Payments',
   '/vendors':         'Vendors',
-  '/workflow':        'Workflow',
+  '/workflow-engine': 'Workflow Engine',
   '/masters':         'Masters',
   '/admin/tenants':   'Admin · Tenants',
   '/profile':         'Profile',

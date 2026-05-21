@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, CheckCircle2, Clock, Send, Loader2 } from 'lucide-react'
 import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
@@ -9,7 +9,6 @@ import { cn, toArray } from '../../lib/utils'
 
 export default function PaymentBatchDetailPage() {
   const { id = '' } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const qc = useQueryClient()
   const [urgentOpen, setUrgentOpen] = useState(false)
   const [urgentReason, setUrgentReason] = useState('')
@@ -237,15 +236,6 @@ export default function PaymentBatchDetailPage() {
           </div>
         )}
 
-        {/* Section E — Workflow (link to existing panel) */}
-        {batch.workflowInstanceId && (
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h3 className="text-sm font-semibold mb-2">Workflow</h3>
-            <a href={`/workflow#${batch.workflowInstanceId}`}
-              onClick={e => { e.preventDefault(); navigate(`/workflow`) }}
-              className="text-xs text-primary hover:underline">View workflow instance →</a>
-          </div>
-        )}
       </div>
 
       {/* Execute modal */}
