@@ -85,7 +85,10 @@ export function verifyN8nSecret(
 // validation and the endpoint persisted an empty invoice. Strict mode forces
 // the integrator to either match the shape or explicitly extend the schema.
 export const n8nFlatInvoiceSchema = z.object({
-  source: z.literal('email'),
+  // Optional with default — n8n's native nested format omits `source` entirely
+  // and the flat shape doesn't need to require it either (every call to this
+  // endpoint is from n8n, so 'email' is the only meaningful value).
+  source: z.literal('email').optional().default('email'),
   rawEmail: z.object({
     from:       z.string().optional().nullable(),
     subject:    z.string().optional().nullable(),
@@ -166,6 +169,184 @@ export function flatToOcrInvoiceData(body: N8nFlatInvoice): Partial<OcrInvoiceDa
   } as Partial<OcrInvoiceData> & { messageId: string }
 }
 
+// ── n8n native nested payload ───────────────────────────────────────────────
+// n8n's HTTP node emits scalars as { value, confidence } envelopes nested
+// under `invoice / vendor / amounts / lineItems`. Numeric fields commonly
+// arrive as strings ("2030") because n8n's JSON nodes don't coerce numerics
+// out of OCR providers. Both the schema (per-field envelope) and the mapper
+// below handle that.
+//
+// Why two schemas instead of one: the flat shape is the documented spec for
+// new integrations and the nested shape is what the live n8n workflow
+// already emits. The handler detects which is which by checking for a
+// top-level `invoice` key. Strict mode on both prevents silent shape drift.
+
+const nestedScalarSchema = z.object({
+  value:      z.union([z.string(), z.number()]).nullable().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+}).strict()
+type NestedScalar = z.infer<typeof nestedScalarSchema>
+
+export const n8nNativeInvoiceSchema = z.object({
+  // n8n's native shape doesn't carry `source` — accepted if present, ignored.
+  source: z.literal('email').optional(),
+  invoice: z.object({
+    invoiceNumber: nestedScalarSchema.optional(),
+    invoiceDate:   nestedScalarSchema.optional(),
+    dueDate:       nestedScalarSchema.optional(),
+    irnNumber:     nestedScalarSchema.optional(),
+    poReference:   nestedScalarSchema.optional(),
+  }).strict().optional(),
+  vendor: z.object({
+    vendorName:  nestedScalarSchema.optional(),
+    vendorGSTIN: nestedScalarSchema.optional(),
+    vendorPAN:   nestedScalarSchema.optional(),
+  }).strict().optional(),
+  amounts: z.object({
+    baseAmount:  nestedScalarSchema.optional(),  // subtotal
+    grossAmount: nestedScalarSchema.optional(),  // totalAmount
+    taxAmount:   nestedScalarSchema.optional(),
+    cgst:        nestedScalarSchema.optional(),
+    sgst:        nestedScalarSchema.optional(),
+    igst:        nestedScalarSchema.optional(),
+    currency:    nestedScalarSchema.optional(),
+  }).strict().optional(),
+  lineItems: z.array(z.object({
+    description: nestedScalarSchema.optional(),
+    quantity:    nestedScalarSchema.optional(),
+    rate:        nestedScalarSchema.optional(),  // unitPrice
+    amount:      nestedScalarSchema.optional(),
+    hsn:         nestedScalarSchema.optional(),
+  }).strict()).optional(),
+  // n8n stamps a status string on the body; recorded but not enforced.
+  status: z.string().optional(),
+  rawEmail: z.object({
+    from:       z.string().optional().nullable(),
+    subject:    z.string().optional().nullable(),
+    receivedAt: z.string().optional().nullable(),
+  }).strict().optional(),
+  confidence: z.number().min(0).max(1).optional(),
+}).strict()
+export type N8nNativeInvoice = z.infer<typeof n8nNativeInvoiceSchema>
+
+// Helpers for reading the nested envelope. Each field may be missing entirely,
+// have a null value, or carry a string/number — all funnelled into safe types.
+
+function readNestedString(f: NestedScalar | undefined): string | null {
+  if (!f || f.value === null || f.value === undefined) return null
+  return String(f.value).trim() || null
+}
+
+function readNestedNumber(f: NestedScalar | undefined): number {
+  if (!f || f.value === null || f.value === undefined) return 0
+  const n = typeof f.value === 'number' ? f.value : Number(String(f.value).replace(/,/g, ''))
+  return Number.isFinite(n) ? n : 0
+}
+
+function readNestedConfidence(f: NestedScalar | undefined): number {
+  if (!f || f.confidence === undefined) return 0
+  const c = Number(f.confidence)
+  return Number.isFinite(c) ? Math.max(0, Math.min(1, c)) : 0
+}
+
+// Parse n8n's date strings into the DD/MM/YYYY format OcrInvoiceData expects.
+// Accepts: ISO YYYY-MM-DD, "DD/MM/YYYY", "DD-MM-YYYY", "18 Jul 2026".
+// We do NOT use Date.parse — it interprets bare date strings as midnight in
+// LOCAL time, which becomes the previous day in UTC for any timezone east of
+// UTC (an IST clock pushes "18 Jul 2026" to "17 Jul 2026" in getUTCDate()).
+// All parsing here is explicit-regex against the literal string.
+const MONTHS_3 = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
+function parseFlexibleDate(s: string | null): string | null {
+  if (!s) return null
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`
+  const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/)
+  if (dmy) return `${dmy[1].padStart(2, '0')}/${dmy[2].padStart(2, '0')}/${dmy[3]}`
+  // "DD MMM YYYY" (n8n's common emit) — parsed without Date.parse so the
+  // result is locale- and timezone-independent.
+  const ddMmmYyyy = s.match(/^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/)
+  if (ddMmmYyyy) {
+    const dd  = ddMmmYyyy[1].padStart(2, '0')
+    const mon = MONTHS_3.indexOf(ddMmmYyyy[2].slice(0, 3).toLowerCase())
+    const yyyy = ddMmmYyyy[3]
+    if (mon >= 0) return `${dd}/${String(mon + 1).padStart(2, '0')}/${yyyy}`
+  }
+  return s
+}
+
+// Transformer — exported for unit tests. Same return shape as
+// flatToOcrInvoiceData so the handler can call either and pipe straight into
+// ingestInvoice().
+export function mapN8nNativePayload(body: N8nNativeInvoice): Partial<OcrInvoiceData> & { messageId: string } {
+  const inv   = body.invoice  ?? {}
+  const ven   = body.vendor   ?? {}
+  const amt   = body.amounts  ?? {}
+  const lines = body.lineItems ?? []
+
+  const invoiceNumber = readNestedString(inv.invoiceNumber)
+  const vendorName    = readNestedString(ven.vendorName)
+  const vendorGstin   = readNestedString(ven.vendorGSTIN)
+  const irn           = readNestedString(inv.irnNumber)
+
+  const dedupKey = [
+    invoiceNumber ?? '',
+    vendorGstin   ?? vendorName ?? '',
+    body.rawEmail?.from       ?? '',
+    body.rawEmail?.receivedAt ?? '',
+  ].join('|') || `n8n-native:${Date.now()}`
+
+  // Per-field confidences average to a single overall score (0–100) so the
+  // existing OcrInvoiceData.overallConfidence consumer doesn't need to change.
+  const confidences = [
+    readNestedConfidence(inv.invoiceNumber),
+    readNestedConfidence(inv.invoiceDate),
+    readNestedConfidence(ven.vendorName),
+    readNestedConfidence(ven.vendorGSTIN),
+    readNestedConfidence(amt.grossAmount),
+  ].filter(c => c > 0)
+  const overall = confidences.length > 0
+    ? confidences.reduce((a, b) => a + b, 0) / confidences.length
+    : (body.confidence ?? 0)
+
+  return {
+    messageId:         dedupKey,
+    invoiceNumber,
+    invoiceDate:       parseFlexibleDate(readNestedString(inv.invoiceDate)),
+    dueDate:           parseFlexibleDate(readNestedString(inv.dueDate)),
+    vendorName,
+    vendorGstin,
+    vendorPan:         readNestedString(ven.vendorPAN),
+    poReference:       readNestedString(inv.poReference),
+    irn,
+    subtotal:          readNestedNumber(amt.baseAmount),
+    totalTax:          readNestedNumber(amt.taxAmount),
+    totalAmount:       readNestedNumber(amt.grossAmount),
+    cgst:              readNestedNumber(amt.cgst),
+    sgst:              readNestedNumber(amt.sgst),
+    igst:              readNestedNumber(amt.igst),
+    currency:          readNestedString(amt.currency) ?? 'INR',
+    isEInvoice:        !!irn,
+    overallConfidence: Math.round(overall * 100),
+    rawText:           '',
+    lineItems: lines.map(l => ({
+      description: readNestedString(l.description) ?? 'Line item',
+      hsn:         readNestedString(l.hsn) ?? undefined,
+      quantity:    readNestedNumber(l.quantity),
+      unitPrice:   readNestedNumber(l.rate),
+      amount:      readNestedNumber(l.amount),
+      gstRate:     0,
+      confidence:  Math.round(readNestedConfidence(l.amount) * 100),
+    })),
+  } as Partial<OcrInvoiceData> & { messageId: string }
+}
+
+// Detect which shape the caller sent — n8n's native nested format has a
+// top-level `invoice` object; the flat format has `ocr` (or nothing if just
+// pinging). Tested in webhooks.test.ts to lock the heuristic.
+export function isN8nNativeShape(body: unknown): boolean {
+  return !!body && typeof body === 'object' && body !== null && 'invoice' in (body as Record<string, unknown>)
+}
+
 // Pure handler — no Fastify dependency, easy to unit test.
 // Resolves auth, validates query/body, delegates to ingestInvoice, normalises the
 // response into the spec's { invoiceId, vendorMatched, status } shape.
@@ -194,9 +375,29 @@ export async function handleN8nFlatInvoice(deps: {
     return { status: 400, body: { error: 'missing_tenant', message: 'tenantId query param required' } }
   }
 
-  const parsed = n8nFlatInvoiceSchema.safeParse(deps.body)
-  if (!parsed.success) {
-    return { status: 400, body: { error: 'invalid_body', issues: parsed.error.flatten() } }
+  // Branch on shape: n8n's live workflow already emits the nested
+  // {value, confidence} format; the flat shape is the documented spec for
+  // new integrations. Both schemas are strict so unknown keys still fail.
+  let structuredData: Partial<OcrInvoiceData> & { messageId: string }
+  let emailFrom:      string | undefined
+  let emailSubject:   string | undefined
+
+  if (isN8nNativeShape(deps.body)) {
+    const parsed = n8nNativeInvoiceSchema.safeParse(deps.body)
+    if (!parsed.success) {
+      return { status: 400, body: { error: 'invalid_body', issues: parsed.error.flatten() } }
+    }
+    structuredData = mapN8nNativePayload(parsed.data)
+    emailFrom      = parsed.data.rawEmail?.from    ?? undefined
+    emailSubject   = parsed.data.rawEmail?.subject ?? undefined
+  } else {
+    const parsed = n8nFlatInvoiceSchema.safeParse(deps.body)
+    if (!parsed.success) {
+      return { status: 400, body: { error: 'invalid_body', issues: parsed.error.flatten() } }
+    }
+    structuredData = flatToOcrInvoiceData(parsed.data)
+    emailFrom      = parsed.data.rawEmail?.from    ?? undefined
+    emailSubject   = parsed.data.rawEmail?.subject ?? undefined
   }
 
   const tenant = await deps.prisma.tenant.findFirst({ where: { id: deps.tenantId } })
@@ -213,15 +414,13 @@ export async function handleN8nFlatInvoice(deps: {
   })
   if (!systemUser) return { status: 409, body: { error: 'no_user_for_tenant' } }
 
-  const structuredData = flatToOcrInvoiceData(parsed.data)
-
   const result = await ingest(
     deps.prisma,
     {
       channelType:  'EMAIL',
       structuredData,
-      emailFrom:    parsed.data.rawEmail?.from    ?? undefined,
-      emailSubject: parsed.data.rawEmail?.subject ?? undefined,
+      emailFrom,
+      emailSubject,
       fileName:     'invoice.pdf',
       mimeType:     'application/pdf',
     },

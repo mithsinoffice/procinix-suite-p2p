@@ -8,9 +8,12 @@ import {
   verifyN8nSecret,
   flatToOcrInvoiceData,
   handleN8nFlatInvoice,
+  isN8nNativeShape,
+  mapN8nNativePayload,
   n8nFlatInvoiceSchema,
+  n8nNativeInvoiceSchema,
 } from '../webhooks'
-import type { N8nFlatInvoice } from '../webhooks'
+import type { N8nFlatInvoice, N8nNativeInvoice } from '../webhooks'
 import { ok, err } from '../../lib/result.js'
 
 const SECRET = 'test-secret-abc123'
@@ -164,19 +167,25 @@ describe('handleN8nFlatInvoice', () => {
     expect(out.status).toBe(401)
   })
 
-  // Test 3 (spec): missing source → 400
-  it('returns 400 when source is missing from the body', async () => {
-    const bad = { ...validBody() } as Record<string, unknown>
-    delete bad.source
+  // Source is optional and defaults to 'email' — n8n's native nested format
+  // omits it, and the flat shape doesn't need to require it. A missing
+  // source on an otherwise-valid flat body should now succeed (201).
+  it('defaults source to "email" when missing from a flat body', async () => {
+    const noSource = { ...validBody() } as Record<string, unknown>
+    delete noSource.source
+    const fakeIngest = vi.fn().mockResolvedValue(
+      ok({ jobId: 'job-1', invoiceId: 'inv-1', lane: 'auto-stp', score: 92 }),
+    )
     const out = await handleN8nFlatInvoice({
-      body:     bad,
+      body:     noSource,
       tenantId: 'tenant-default-001',
       headers:  { authorization: `Bearer ${SECRET}` },
       prisma:   stubPrisma(),
       secret:   SECRET,
+      ingest:   fakeIngest as never,
+      scoreAndPersist: vi.fn(),
     })
-    expect(out.status).toBe(400)
-    expect((out.body as { error: string }).error).toBe('invalid_body')
+    expect(out.status).toBe(201)
   })
 
   // Additional 400: missing tenantId query param
@@ -335,5 +344,172 @@ describe('n8nFlatInvoiceSchema', () => {
       ocr: { vendorName: 'A', vendor_gstin_wrong: 'X' },  // typo'd key
     })
     expect(out.success).toBe(false)
+  })
+})
+
+// ── 5. n8n native nested shape ──────────────────────────────────────────────
+
+const NATIVE_BODY: Record<string, unknown> = {
+  invoice: {
+    invoiceNumber: { value: 'KWE-2026-001', confidence: 0.9 },
+    invoiceDate:   { value: '18 Jul 2026',  confidence: 0.7 },
+  },
+  vendor: {
+    vendorName:  { value: 'KWALITY INDUSTRIAL ELECTRIC SOLUTIONS', confidence: 1 },
+    vendorGSTIN: { value: '27AABCK1234N1Z1',                       confidence: 0.8 },
+  },
+  amounts: {
+    baseAmount:  { value: '2030', confidence: 1 },
+    grossAmount: { value: '2030', confidence: 1 },
+    currency:    { value: 'INR',  confidence: 1 },
+  },
+  lineItems: [
+    { description: { value: 'MCB Box',         confidence: 1 },
+      quantity:    { value: '1',               confidence: 1 },
+      rate:        { value: '130',             confidence: 1 },
+      amount:      { value: '130',             confidence: 1 } },
+    { description: { value: '25A 4P MCB Long', confidence: 1 },
+      quantity:    { value: '1',               confidence: 1 },
+      rate:        { value: '1800',            confidence: 1 },
+      amount:      { value: '1800',            confidence: 1 } },
+  ],
+  status: 'needs_review',
+}
+
+describe('isN8nNativeShape', () => {
+  it('returns true when body has a top-level `invoice` object', () => {
+    expect(isN8nNativeShape(NATIVE_BODY)).toBe(true)
+  })
+
+  it('returns false for flat-shape bodies', () => {
+    expect(isN8nNativeShape(validBody())).toBe(false)
+  })
+
+  it('returns false for non-object bodies', () => {
+    expect(isN8nNativeShape(null)).toBe(false)
+    expect(isN8nNativeShape('string')).toBe(false)
+    expect(isN8nNativeShape(undefined)).toBe(false)
+  })
+})
+
+describe('n8nNativeInvoiceSchema', () => {
+  it("accepts n8n's native nested payload as-is", () => {
+    const out = n8nNativeInvoiceSchema.safeParse(NATIVE_BODY)
+    expect(out.success).toBe(true)
+  })
+
+  it('still rejects unknown root-level keys via .strict()', () => {
+    const out = n8nNativeInvoiceSchema.safeParse({ ...NATIVE_BODY, extraJunk: true })
+    expect(out.success).toBe(false)
+  })
+
+  it('rejects unknown keys inside a nested scalar envelope', () => {
+    const out = n8nNativeInvoiceSchema.safeParse({
+      invoice: { invoiceNumber: { value: 'X', confidence: 0.9, source: 'gemini' } },
+    })
+    expect(out.success).toBe(false)
+  })
+})
+
+describe('mapN8nNativePayload', () => {
+  it('unwraps {value, confidence} envelopes into flat scalars', () => {
+    const parsed = n8nNativeInvoiceSchema.parse(NATIVE_BODY) as N8nNativeInvoice
+    const out = mapN8nNativePayload(parsed)
+    expect(out.invoiceNumber).toBe('KWE-2026-001')
+    expect(out.vendorName).toBe('KWALITY INDUSTRIAL ELECTRIC SOLUTIONS')
+    expect(out.vendorGstin).toBe('27AABCK1234N1Z1')
+  })
+
+  it('parses dd-MMM-yyyy dates into DD/MM/YYYY (the OcrInvoiceData format)', () => {
+    const parsed = n8nNativeInvoiceSchema.parse(NATIVE_BODY) as N8nNativeInvoice
+    const out = mapN8nNativePayload(parsed)
+    expect(out.invoiceDate).toBe('18/07/2026')
+  })
+
+  it('coerces string amount values to numbers (n8n emits "2030" not 2030)', () => {
+    const parsed = n8nNativeInvoiceSchema.parse(NATIVE_BODY) as N8nNativeInvoice
+    const out = mapN8nNativePayload(parsed)
+    expect(out.subtotal).toBe(2030)
+    expect(out.totalAmount).toBe(2030)
+  })
+
+  it('maps lineItems.rate → unitPrice and coerces line numerics', () => {
+    const parsed = n8nNativeInvoiceSchema.parse(NATIVE_BODY) as N8nNativeInvoice
+    const out = mapN8nNativePayload(parsed)
+    expect(out.lineItems).toHaveLength(2)
+    expect(out.lineItems![0]).toEqual(expect.objectContaining({
+      description: 'MCB Box',
+      quantity:    1,
+      unitPrice:   130,
+      amount:      130,
+    }))
+    expect(out.lineItems![1].unitPrice).toBe(1800)
+  })
+
+  it('averages per-field confidences into overallConfidence (0–100)', () => {
+    const parsed = n8nNativeInvoiceSchema.parse(NATIVE_BODY) as N8nNativeInvoice
+    const out = mapN8nNativePayload(parsed)
+    // confidences present: 0.9 (invoiceNumber) + 0.7 (invoiceDate) + 1 (vendorName)
+    //                    + 0.8 (vendorGSTIN) + 1 (grossAmount)  = 4.4 / 5 = 0.88
+    expect(out.overallConfidence).toBe(88)
+  })
+
+  it('builds a stable messageId from invoiceNumber + vendor + sender', () => {
+    const parsed = n8nNativeInvoiceSchema.parse(NATIVE_BODY) as N8nNativeInvoice
+    const a = mapN8nNativePayload(parsed)
+    const b = mapN8nNativePayload(parsed)
+    expect(a.messageId).toBe(b.messageId)
+    expect(a.messageId).toContain('KWE-2026-001')
+    expect(a.messageId).toContain('27AABCK1234N1Z1')
+  })
+
+  it('falls back to INR when currency.value is missing', () => {
+    const noCurrency = JSON.parse(JSON.stringify(NATIVE_BODY))
+    delete noCurrency.amounts.currency
+    const parsed = n8nNativeInvoiceSchema.parse(noCurrency) as N8nNativeInvoice
+    expect(mapN8nNativePayload(parsed).currency).toBe('INR')
+  })
+})
+
+describe('handleN8nFlatInvoice — native nested shape', () => {
+  it('routes a nested payload through mapN8nNativePayload and ingests on 201', async () => {
+    const fakeIngest = vi.fn().mockResolvedValue(
+      ok({ jobId: 'job-1', invoiceId: 'inv-native-001', lane: 'auto-stp', score: 88 }),
+    )
+    const scoreAndPersist = vi.fn()
+    const out = await handleN8nFlatInvoice({
+      body:     NATIVE_BODY,
+      tenantId: 'tenant-default-001',
+      headers:  { authorization: `Bearer ${SECRET}` },
+      prisma:   stubPrisma(),
+      secret:   SECRET,
+      ingest:   fakeIngest as never,
+      scoreAndPersist,
+    })
+    expect(out.status).toBe(201)
+    // The mapped OCR data should reach ingest with the unwrapped values
+    const ingestCall = fakeIngest.mock.calls[0][1]
+    expect(ingestCall.structuredData.invoiceNumber).toBe('KWE-2026-001')
+    expect(ingestCall.structuredData.vendorName).toBe('KWALITY INDUSTRIAL ELECTRIC SOLUTIONS')
+    expect(ingestCall.structuredData.totalAmount).toBe(2030)
+    // And scoring should fire with the same shape
+    expect(scoreAndPersist).toHaveBeenCalledWith('inv-native-001', expect.objectContaining({
+      invoiceNumber: 'KWE-2026-001',
+      vendorGstin:   '27AABCK1234N1Z1',
+    }))
+  })
+
+  it('returns 400 with a clear schema error when nested body has unknown root keys', async () => {
+    const out = await handleN8nFlatInvoice({
+      body:     { ...NATIVE_BODY, surprise: true },
+      tenantId: 'tenant-default-001',
+      headers:  { authorization: `Bearer ${SECRET}` },
+      prisma:   stubPrisma(),
+      secret:   SECRET,
+      ingest:   vi.fn() as never,
+      scoreAndPersist: vi.fn(),
+    })
+    expect(out.status).toBe(400)
+    expect((out.body as { error: string }).error).toBe('invalid_body')
   })
 })
