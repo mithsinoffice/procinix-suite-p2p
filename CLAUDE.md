@@ -162,6 +162,28 @@ Do not create `WorkflowManagement.tsx` or `WorkflowConfigurator.tsx` — those a
 - Optimistic updates on approve/reject
 - Every page is React.lazy()
 
+## Integrations
+
+### n8n (email ingestion)
+- **n8n is the only path** for email-driven invoice ingestion. It monitors the mailbox, runs OCR, and POSTs structured data to Procinix.
+- **Canonical endpoint:** `POST /api/webhooks/n8n/invoice?tenantId=<id>` — flat payload shape, Bearer auth.
+- **Auth:** `Authorization: Bearer <N8N_WEBHOOK_SECRET>` (preferred) or `x-n8n-secret: <secret>` (legacy back-compat). Both compared via `Buffer.timingSafeEqual`. `verifyN8nSecret()` is the single resolver.
+- **Code:** [server/src/routes/webhooks.ts](server/src/routes/webhooks.ts) — `handleN8nFlatInvoice()` is the pure handler (no Fastify dependency, unit-tested). It delegates to `ingestInvoice()` for vendor match + dedup + audit.
+- **Two older n8n endpoints exist** (`/webhooks/n8n/invoice-email`, `/webhooks/n8n/invoice-ingest`) for back-compat with previously-configured workflows. New workflows should target `/api/webhooks/n8n/invoice`.
+- **Idempotency:** built-in via `InvoiceIngestionJob.extractedData.messageId` lookup. n8n retries collide cleanly.
+- **No in-process poller.** The Gmail API poller (`email-poller.service.ts`) and `googleapis` dep were removed 2026-05-21. **Do not re-add.** Manual upload OCR (Gemini) is a separate code path inside `/api/invoices/ocr-extract` and stays.
+
+### LLM invoice scoring (OpenAI)
+- After n8n webhook saves an invoice, **async LLM scoring runs** — webhook always returns 201 fast.
+- **Service:** [server/src/services/invoice-scorer.service.ts](server/src/services/invoice-scorer.service.ts) — `scoreInvoiceWithLLM(ocrData)` + `scoreAndPersistInvoice(prisma, invoiceId, ocrData)`.
+- **Model:** `gpt-4o-mini` via the `openai` SDK.
+- Scores per-field confidence, validates GSTIN/PAN/amounts, suggests vendor match, flags review items.
+- **Result stored on `Invoice`:** `ocrConfidenceMap`, `validationIssues`, `reviewFlags`, `vendorMatchSuggestion`, `recommendedAction`, `llmScoredAt` (camelCase Prisma fields matching the rest of the schema).
+- **`recommendedAction`** values: `'auto_process' | 'needs_review' | 'hold'`. When `'hold'`, the invoice's existing `status` is also set to `'ON_HOLD'` (existing uppercase enum). Lowercase status values (`on_hold`, `needs_review`) are NOT introduced — they would break every status filter in the app.
+- **Safe fallback:** if `OPENAI_API_KEY` is missing, the SDK errors, or JSON parsing fails, returns a result with `overallScore=0`, `recommendedAction='needs_review'`, and a `validationIssues[0]` carrying the failure reason. Never throws — invoice stays in normal review flow.
+- **Async dispatch:** `setImmediate(...)` inside `handleN8nFlatInvoice` after the ingest succeeds. The handler also accepts a `scoreAndPersist?` dep override for unit tests.
+- **Do NOT switch this to Anthropic/Claude or any other provider** — OpenAI is intentional. The `@google/generative-ai` SDK in this repo is for manual-upload OCR only, not scoring.
+
 ## Dev commands
 ```bash
 npm run dev          # frontend :3000 + backend :8787

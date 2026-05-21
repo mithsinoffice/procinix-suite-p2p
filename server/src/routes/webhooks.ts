@@ -1,9 +1,11 @@
 import type { FastifyInstance } from 'fastify'
+import type { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
 import { timingSafeEqual } from 'node:crypto'
 import { verifyWebhookSignature } from '../services/transbnk.service.js'
 import { writeAuditLog, AuditAction } from '../lib/audit.js'
 import { ingestInvoice } from '../services/invoice-ingestion.service.js'
+import { scoreAndPersistInvoice } from '../services/invoice-scorer.service.js'
 import type { OcrInvoiceData } from '../services/gemini-ocr.service.js'
 
 // Pre-OCR'd invoice payload from n8n. OCR happens in n8n (Gemini/Mistral/etc),
@@ -58,6 +60,218 @@ function isoToDmy(iso: string | null | undefined): string | null {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso
 }
 
+// ── n8n auth: accept either `x-n8n-secret: <token>` or `Authorization: Bearer <token>`.
+// Bearer is the standard machine-to-machine convention; x-n8n-secret kept for back-compat
+// with workflows already configured.
+export function verifyN8nSecret(
+  headers: Record<string, string | string[] | undefined>,
+  expected: string,
+): boolean {
+  if (!expected) return false
+  const xSecret = (headers['x-n8n-secret'] as string | undefined) ?? ''
+  if (xSecret && constantTimeEqual(xSecret, expected)) return true
+  const auth = (headers['authorization'] as string | undefined) ?? ''
+  const m = auth.match(/^Bearer\s+(.+)$/i)
+  if (m && constantTimeEqual(m[1].trim(), expected)) return true
+  return false
+}
+
+// ── Flat n8n payload (vendor-neutral, used by the new /api/webhooks/n8n/invoice route).
+// Mirrors the shape n8n's HTTP node emits by default; translated into the Indian-GST
+// flavoured OcrInvoiceData inside the handler.
+// .strict() on every object so unknown keys are rejected with a clear 400
+// instead of silently dropped. n8n payload-shape drift bit us once in dev —
+// a per-field {value, confidence} envelope sailed past Zod's default-loose
+// validation and the endpoint persisted an empty invoice. Strict mode forces
+// the integrator to either match the shape or explicitly extend the schema.
+export const n8nFlatInvoiceSchema = z.object({
+  source: z.literal('email'),
+  rawEmail: z.object({
+    from:       z.string().optional().nullable(),
+    subject:    z.string().optional().nullable(),
+    receivedAt: z.string().optional().nullable(),
+  }).strict().optional(),
+  ocr: z.object({
+    vendorName:    z.string().optional().nullable(),
+    vendorGstin:   z.string().optional().nullable(),
+    invoiceNumber: z.string().optional().nullable(),
+    invoiceDate:   z.string().optional().nullable(),  // ISO YYYY-MM-DD
+    dueDate:       z.string().optional().nullable(),
+    currency:      z.string().optional().nullable(),
+    subtotal:      z.number().optional().nullable(),
+    taxAmount:     z.number().optional().nullable(),
+    totalAmount:   z.number().optional().nullable(),
+    lineItems: z.array(z.object({
+      description: z.string().default('Line item'),
+      quantity:    z.number().default(1),
+      unitPrice:   z.number().default(0),
+      amount:      z.number().default(0),
+      hsn:         z.string().optional().nullable(),
+    }).strict()).optional().default([]),
+    bankDetails: z.object({
+      accountNumber: z.string().optional().nullable(),
+      ifsc:          z.string().optional().nullable(),
+      bankName:      z.string().optional().nullable(),
+    }).strict().optional().nullable(),
+    poReference:   z.string().optional().nullable(),
+    irn:           z.string().optional().nullable(),
+  }).strict().optional(),
+  attachmentUrl: z.string().optional().nullable(),
+  confidence:    z.number().min(0).max(1).optional().nullable(),
+}).strict()
+export type N8nFlatInvoice = z.infer<typeof n8nFlatInvoiceSchema>
+
+// Translate the flat n8n shape into OcrInvoiceData. India-specific tax splits
+// (CGST/SGST/IGST) are not in the source — totalTax carries the aggregate, the
+// reviewer splits it during invoice review. Exported for unit tests.
+export function flatToOcrInvoiceData(body: N8nFlatInvoice): Partial<OcrInvoiceData> & { messageId: string } {
+  const ocr = body.ocr ?? {}
+  // Stable per-payload dedup key: prefer invoiceNumber+vendor combo, fall back
+  // to a hash-like composite so retries with identical body collide.
+  const dedupKey = [
+    ocr.invoiceNumber ?? '',
+    ocr.vendorGstin   ?? ocr.vendorName ?? '',
+    body.rawEmail?.from ?? '',
+    body.rawEmail?.receivedAt ?? '',
+  ].join('|') || `flat:${Date.now()}`
+
+  return {
+    messageId:         dedupKey,
+    invoiceNumber:     ocr.invoiceNumber ?? null,
+    invoiceDate:       isoToDmy(ocr.invoiceDate),
+    dueDate:           isoToDmy(ocr.dueDate),
+    vendorName:        ocr.vendorName  ?? null,
+    vendorGstin:       ocr.vendorGstin ?? null,
+    poReference:       ocr.poReference ?? null,
+    irn:               ocr.irn         ?? null,
+    subtotal:          ocr.subtotal    ?? 0,
+    totalTax:          ocr.taxAmount   ?? 0,
+    totalAmount:       ocr.totalAmount ?? 0,
+    cgst:              0,
+    sgst:              0,
+    igst:              0,
+    currency:          ocr.currency    ?? 'INR',
+    isEInvoice:        !!ocr.irn,
+    overallConfidence: Math.round(((body.confidence ?? 0) * 100)),
+    rawText:           '',
+    lineItems: (ocr.lineItems ?? []).map(l => ({
+      description: l.description,
+      hsn:         l.hsn ?? undefined,
+      quantity:    Number(l.quantity)  || 0,
+      unitPrice:   Number(l.unitPrice) || 0,
+      amount:      Number(l.amount)    || 0,
+      gstRate:     0,
+      confidence:  Math.round(((body.confidence ?? 0) * 100)),
+    })),
+  } as Partial<OcrInvoiceData> & { messageId: string }
+}
+
+// Pure handler — no Fastify dependency, easy to unit test.
+// Resolves auth, validates query/body, delegates to ingestInvoice, normalises the
+// response into the spec's { invoiceId, vendorMatched, status } shape.
+export async function handleN8nFlatInvoice(deps: {
+  body:     unknown
+  tenantId: string | undefined
+  headers:  Record<string, string | string[] | undefined>
+  prisma:   PrismaClient
+  secret:   string
+  ip?:      string
+  ingest?:  typeof ingestInvoice
+  // Fired (sync) after a successful ingest so the route can kick off async
+  // LLM scoring via setImmediate without blocking the 201 response. Tests
+  // pass a mock to assert it was called with the right args.
+  scoreAndPersist?: (invoiceId: string, ocrData: Partial<OcrInvoiceData>) => void
+}): Promise<{ status: number; body: unknown }> {
+  const ingest = deps.ingest ?? ingestInvoice
+
+  if (!deps.secret) {
+    return { status: 503, body: { error: 'webhook_not_configured' } }
+  }
+  if (!verifyN8nSecret(deps.headers, deps.secret)) {
+    return { status: 401, body: { error: 'unauthorized' } }
+  }
+  if (!deps.tenantId) {
+    return { status: 400, body: { error: 'missing_tenant', message: 'tenantId query param required' } }
+  }
+
+  const parsed = n8nFlatInvoiceSchema.safeParse(deps.body)
+  if (!parsed.success) {
+    return { status: 400, body: { error: 'invalid_body', issues: parsed.error.flatten() } }
+  }
+
+  const tenant = await deps.prisma.tenant.findFirst({ where: { id: deps.tenantId } })
+  if (!tenant) return { status: 404, body: { error: 'tenant_not_found' } }
+
+  const systemUser = await deps.prisma.user.findFirst({
+    where:   { tenantId: tenant.id, role: { in: ['SUPER_ADMIN', 'TENANT_ADMIN', 'AP_MANAGER'] } },
+    orderBy: { createdAt: 'asc' },
+    select:  { id: true },
+  }) ?? await deps.prisma.user.findFirst({
+    where:   { tenantId: tenant.id },
+    orderBy: { createdAt: 'asc' },
+    select:  { id: true },
+  })
+  if (!systemUser) return { status: 409, body: { error: 'no_user_for_tenant' } }
+
+  const structuredData = flatToOcrInvoiceData(parsed.data)
+
+  const result = await ingest(
+    deps.prisma,
+    {
+      channelType:  'EMAIL',
+      structuredData,
+      emailFrom:    parsed.data.rawEmail?.from    ?? undefined,
+      emailSubject: parsed.data.rawEmail?.subject ?? undefined,
+      fileName:     'invoice.pdf',
+      mimeType:     'application/pdf',
+    },
+    { tenantId: tenant.id, userId: systemUser.id, ip: deps.ip },
+  )
+
+  if (!result.ok) {
+    const httpStatus = result.error.httpStatus ?? 500
+    // NOT_FOUND (no vendor match) → 404 with vendorMatched:false. ingestInvoice
+    // currently requires a vendor match; surfacing that explicitly is more
+    // useful than collapsing it into a generic 500.
+    const isNoVendor  = result.error.code === 'NOT_FOUND'
+    return {
+      status: httpStatus,
+      body: {
+        error:         result.error.code,
+        message:       result.error.message,
+        vendorMatched: isNoVendor ? false : undefined,
+      },
+    }
+  }
+
+  // Fire async LLM scoring — runs after the 201 is flushed so n8n's webhook
+  // timeout (~30 s) is never affected by an Anthropic/OpenAI round-trip.
+  const invoiceId = result.data.invoiceId
+  if (invoiceId) {
+    if (deps.scoreAndPersist) {
+      deps.scoreAndPersist(invoiceId, structuredData)
+    } else {
+      const prisma = deps.prisma
+      setImmediate(() => {
+        scoreAndPersistInvoice(prisma, invoiceId, structuredData).catch(err => {
+          // Intentionally never rethrows — invoice already saved, scoring
+          // failure leaves recommendedAction='needs_review' (the default).
+          console.error('[invoice-scorer] failed for', invoiceId, err)
+        })
+      })
+    }
+  }
+
+  return {
+    status: 201,
+    body: {
+      invoiceId,
+      vendorMatched: true,
+      status:        'ingested',
+    },
+  }
+}
+
 export async function webhookRoutes(app: FastifyInstance) {
   app.post('/webhooks/transbnk', async (request, reply) => {
     const signature = (request.headers['x-transbnk-signature'] as string) ?? ''
@@ -104,10 +318,9 @@ export async function webhookRoutes(app: FastifyInstance) {
   // N8N email invoice webhook
   // N8N monitors ap@procinix.ai → extracts PDF attachments → calls this endpoint
   app.post('/webhooks/n8n/invoice-email', async (request, reply) => {
-    // Verify N8N shared secret
-    const secret     = process.env.N8N_WEBHOOK_SECRET ?? ''
-    const authHeader = request.headers['x-n8n-secret'] as string ?? ''
-    if (secret && authHeader !== secret) {
+    // Verify N8N shared secret (accepts either x-n8n-secret or Authorization: Bearer …)
+    const secret = process.env.N8N_WEBHOOK_SECRET ?? ''
+    if (secret && !verifyN8nSecret(request.headers as Record<string, string | string[] | undefined>, secret)) {
       app.log.warn({ ip: request.ip }, 'N8N webhook: invalid secret')
       return reply.code(401).send({ error: 'Unauthorized' })
     }
@@ -163,13 +376,12 @@ export async function webhookRoutes(app: FastifyInstance) {
   // live there. We only add: webhook auth, body validation, and per-message
   // idempotency (so n8n retries don't double-create).
   app.post('/webhooks/n8n/invoice-ingest', async (request, reply) => {
-    const secret      = process.env.N8N_WEBHOOK_SECRET ?? ''
-    const headerValue = (request.headers['x-n8n-secret'] as string) ?? ''
+    const secret = process.env.N8N_WEBHOOK_SECRET ?? ''
     if (!secret) {
       app.log.error('N8N_WEBHOOK_SECRET not configured — refusing all ingest webhooks')
       return reply.code(503).send({ error: 'webhook not configured' })
     }
-    if (!constantTimeEqual(headerValue, secret)) {
+    if (!verifyN8nSecret(request.headers as Record<string, string | string[] | undefined>, secret)) {
       app.log.warn({ ip: request.ip }, 'n8n invoice-ingest: bad secret')
       return reply.code(401).send({ error: 'Unauthorized' })
     }
@@ -267,5 +479,21 @@ export async function webhookRoutes(app: FastifyInstance) {
     }
 
     return reply.code(201).send(result.data)
+  })
+
+  // ── n8n flat-shape webhook (canonical machine-to-machine entry) ─────────────
+  // Same downstream as /webhooks/n8n/invoice-ingest, but with the flat payload
+  // shape n8n's HTTP node emits by default, Bearer-token auth (with x-n8n-secret
+  // as fallback), tenantId via query param, and a normalised response.
+  app.post('/api/webhooks/n8n/invoice', async (request, reply) => {
+    const out = await handleN8nFlatInvoice({
+      body:     request.body,
+      tenantId: (request.query as { tenantId?: string } | undefined)?.tenantId,
+      headers:  request.headers as Record<string, string | string[] | undefined>,
+      prisma:   app.prisma,
+      secret:   process.env.N8N_WEBHOOK_SECRET ?? '',
+      ip:       request.ip,
+    })
+    return reply.code(out.status).send(out.body)
   })
 }

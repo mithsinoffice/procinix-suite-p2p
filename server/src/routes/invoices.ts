@@ -394,8 +394,9 @@ export async function invoiceRoutes(app: FastifyInstance) {
 
   // ── Stream the original attachment ──
   // Auth + tenant-scoped. Reads from disk if `fileUrl` is set, otherwise falls
-  // back to bytes stashed in `ocrRawData.attachmentData` (email-poller legacy
-  // path). Used by the detail-page iframe + "Open in new tab" fallback.
+  // back to bytes stashed in `ocrRawData.attachmentData` (legacy JSON-blob
+  // path on older rows). Used by the detail-page iframe + "Open in new tab"
+  // fallback.
   app.get('/:id/file', auth, async (req, reply) => {
     const inv = await app.prisma.invoice.findFirst({
       where:  { id: (req.params as any).id, tenantId: req.tenant.id },

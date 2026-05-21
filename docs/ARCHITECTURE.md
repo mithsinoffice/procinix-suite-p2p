@@ -1,6 +1,6 @@
 # Procinix v2 (S2P) — Architecture
 
-_Last updated: 2026-05-19 (workflow engine audit — definition selection, approver resolution, auto-advance, PR/PO transitions)_
+_Last updated: 2026-05-21 (n8n integration — removed Gmail poller + googleapis, added `/api/webhooks/n8n/invoice` flat-shape route with Bearer auth)_
 
 Indian Source-to-Pay (S2P) platform — Procurement, Goods Receipt, AP Invoice processing, Payments, Vendor management, Approvals and Masters — for mid-market Indian enterprises. Multi-tenant, RBAC-gated, n8n-driven email ingestion, Gemini OCR.
 
@@ -27,7 +27,7 @@ This document describes the **current state** of the codebase (not aspirational 
 | Auth             | httpOnly + SameSite=Strict cookies + JWT (access 15m, refresh 7d) |
 | Secrets          | `.env` in dev (gitignored), Azure Key Vault in prod             |
 | OCR              | `@google/generative-ai` — `gemini-2.0-flash`                    |
-| Email ingestion  | n8n (canonical) + Gmail API poller (legacy, gated by env flag)  |
+| Email ingestion  | n8n (external) — `POST /api/webhooks/n8n/invoice` (Bearer auth)  |
 | Mobile           | PWA → Capacitor post-MVP                                        |
 | CI               | GitHub Actions + Vitest + Playwright + Snyk                     |
 
@@ -97,7 +97,6 @@ server/src/                             # Fastify backend
     auth.service                        # loginUser, JWT mint, cookie opts
     invoice.service · invoice-ingestion.service
     gemini-ocr.service                  # extractInvoiceFromFile()
-    email-poller.service                # Gmail API poll, in-flight lock + 1h circuit-breaker
     vendor.service · master.service
     workflow-engine.service             # startWorkflow / approveStage / rejectStage / putOnHold / addChatMessage
     match-scoring.service               # 2-way + 3-way match scoring
@@ -155,7 +154,7 @@ Route prefix table (registered in `buildApp()`):
 | ------------------ | ------------------- | ------------------------------------------ |
 | (root)             | `health.ts`         | `/health/live`, `/health/ready`, `/health` |
 | (root)             | `webhooks.ts`       | n8n + TransBnk webhooks (HMAC-verified)    |
-| `/auth`            | `auth.ts`           | login / logout / me / refresh / OAuth      |
+| `/auth`            | `auth.ts`           | login / logout / me / refresh              |
 | `/api/masters/vendors` | `vendors.ts`    | Vendor CRUD + KYC verifications            |
 | `/api/masters`     | `masters.ts`        | All masters + bulk + audit (~65 routes)    |
 | `/api/invoices`    | `invoices.ts`       | Invoice CRUD + approval + ingestion + OCR  |
@@ -163,9 +162,8 @@ Route prefix table (registered in `buildApp()`):
 | `/api/workflow`    | `workflow.ts`       | Workflow engine: definitions + instances + start |
 | `/api`             | `admin.ts`          | Tenant + user admin (`/api/admin/...`)     |
 | `/api`             | `procurement.ts`    | PR + PO + GRN + SRN + advances + budgets   |
-| `/api/email-poll`  | inline in server.ts | `/trigger` (auth) + `/debug` (auth)        |
 
-Gmail poller cron (`startEmailPoller`) starts only when `EMAIL_POLLER_ENABLED=true`. Default is **disabled** — n8n drives ingestion via `POST /webhooks/n8n/invoice-ingest`.
+Email ingestion is fully external — n8n monitors the mailbox and POSTs structured data to `/api/webhooks/n8n/invoice` (see §8). There is no in-process Gmail/IMAP poller.
 
 ---
 
@@ -189,7 +187,7 @@ Gmail poller cron (`startEmailPoller`) starts only when `EMAIL_POLLER_ENABLED=tr
 | Workflow Definitions    | Shipped        | `/workflow` hub + `/workflow/definitions` list + form (22 module types)             |
 | Workflow Engine Runtime | Shipped        | Definitions → instances → stages → approver routing; chat + holds + SLA tracking   |
 | Admin / Tenants         | Shipped        | SUPER_ADMIN-only — tenants, modules, features, users                                |
-| Email Ingestion         | Shipped via n8n | `POST /webhooks/n8n/invoice-ingest` (HMAC `X-N8N-Secret`) → `ingestInvoice()`     |
+| Email Ingestion         | Shipped via n8n | `POST /api/webhooks/n8n/invoice` (Bearer `N8N_WEBHOOK_SECRET`) → `ingestInvoice()` |
 
 ---
 
@@ -454,24 +452,30 @@ reviewedBy?, reviewedAt?, reviewComments?
 
 ---
 
-## §8 Email ingestion
+## §8 Invoice ingestion
 
-Two paths exist; n8n is canonical, the in-process Gmail poller is gated and used as fallback only.
+Two paths, both terminating in `ingestInvoice()` ([invoice-ingestion.service.ts](../server/src/services/invoice-ingestion.service.ts)). n8n is canonical for email; manual upload is the in-app review flow. **There is no in-process email poller** — the legacy Gmail API poller was removed (2026-05-21) along with the `googleapis` dependency.
 
-### §8.1 n8n → `POST /webhooks/n8n/invoice-ingest`
+### §8.1 Manual upload (in-app OCR)
 
-- HMAC-style shared secret in header `X-N8N-Secret`, compared via `Buffer.timingSafeEqual` (constant-time).
-- Body: Zod-validated envelope `{ gmailMessageId, from, subject, date, attachment: { filename, mimeType, base64 }, ocr: OcrInvoiceData }`.
-- Idempotency — per-message lookup on `InvoiceIngestionJob.extractedData JSON_EXTRACT($.gmailMessageId)` before inserting.
-- Path — Maps the request body to the canonical `OcrInvoiceData` shape (including ISO→DD/MM/YYYY date conversion) and delegates to `ingestInvoice()` in `invoice-ingestion.service.ts`. The service handles vendor match, dedupe, persist, match scoring and audit. No vendor match → job is parked as `NO_VENDOR_MATCH` (it does NOT FK-fail).
+- User uploads PDF/image via `InvoiceFormPage` → `POST /api/invoices/ocr-extract` → Gemini extract → fields pre-populated in the form → user reviews + submits.
+- Entry point: [server/src/routes/invoices.ts](../server/src/routes/invoices.ts) `app.post('/ocr-extract', …)`, calls `extractInvoiceFromFile(base64, mime)`.
 
-### §8.2 In-process Gmail poller (`email-poller.service.ts`) — fallback
+### §8.2 n8n email ingestion (external)
 
-- Started only when `EMAIL_POLLER_ENABLED=true` (default off). 5-minute cron.
-- Per-tenant in-flight `Set` lock (prevents overlapping runs on the same tenant).
-- Module-level `rateLimitedUntil` circuit-breaker — when Gemini returns 429, no calls go out for 60 minutes (cleared on next process boot).
-- Retry wrapper does **not** retry 429/quota errors — only transient 5xx / network errors get one retry.
-- Dedup uses MySQL JSON path syntax `path: '$.gmailMessageId'` (not Postgres `path: ['gmailMessageId']`).
+n8n monitors the mailbox, runs OCR, and posts structured data. Three endpoints exist on the same router ([server/src/routes/webhooks.ts](../server/src/routes/webhooks.ts)):
+
+| Endpoint | Body shape | Auth |
+|---|---|---|
+| `POST /api/webhooks/n8n/invoice` | **Flat** — `{ source: 'email', rawEmail, ocr: { vendorName, vendorGstin, subtotal, taxAmount, totalAmount, lineItems, … }, attachmentUrl, confidence }` | `Authorization: Bearer <N8N_WEBHOOK_SECRET>` or `x-n8n-secret` header |
+| `POST /webhooks/n8n/invoice-ingest` | **Indian-GST nested** — `{ tenantId, messageId, invoice: { vendorGSTIN, cgstAmount, sgstAmount, igstAmount, irnNumber, … } }` | same |
+| `POST /webhooks/n8n/invoice-email` | **Raw attachment** — n8n posts PDF bytes, in-app Gemini OCRs, then ingests | same |
+
+- **Auth** — `verifyN8nSecret(headers, expected)` accepts either `Authorization: Bearer <token>` (preferred) or `x-n8n-secret: <token>` (legacy back-compat). Compared via `Buffer.timingSafeEqual`.
+- **Tenant resolution** — `/api/webhooks/n8n/invoice` takes `?tenantId=` query param; the older routes take `tenantId` in body.
+- **Idempotency** — flat-shape route derives a `messageId` from `invoiceNumber|vendorGstin|sender|receivedAt`; nested route uses the supplied `messageId`. Lookup is `InvoiceIngestionJob.extractedData JSON_EXTRACT($.messageId)` before insert — n8n retries collide cleanly.
+- **Vendor required** — `ingestInvoice()` returns 404 `NOT_FOUND` when no vendor matches (GSTIN exact then fuse.js fuzzy on legalName+tradeName, threshold 0.3). The flat route surfaces this as `{ status: 404, vendorMatched: false }` so n8n can route to a manual-review queue. Vendorless drafts are not auto-created — every downstream feature (3-way match, payment routing, audit) assumes a vendor.
+- **Response (flat route, success)** — `{ status: 201, body: { invoiceId, vendorMatched: true, status: 'ingested' } }`.
 
 ### §8.3 Gemini OCR (`gemini-ocr.service.ts`)
 
@@ -601,10 +605,10 @@ PDF / image attachments are stored on disk and streamed through an auth-gated en
 
 **Layout** — files land under `uploads/invoices/<tenantId>/<invoiceId>.<ext>`. `Invoice.fileUrl` holds the path relative to `uploads/` (e.g. `"invoices/<tenantId>/<invoiceId>.pdf"`) so a future move to S3 / Azure Blob only needs to swap the resolver in [invoice-file-storage.service.ts](../server/src/services/invoice-file-storage.service.ts). The `uploads/invoices/` tree is gitignored.
 
-**Write paths** — three entry points all funnel into `saveInvoiceFile()`:
+**Write paths** — entry points all funnel into `saveInvoiceFile()`:
 - `POST /api/invoices` with `fileBase64` / `fileMimeType` / `fileName` — manual upload from `InvoiceFormPage`. Bytes written after the DB transaction commits; storage failure logs but doesn't fail the create.
-- `POST /api/invoices/ingest` and `/webhooks/n8n/invoice-email` — both call `ingestInvoice()` in [invoice-ingestion.service.ts](../server/src/services/invoice-ingestion.service.ts), which now also persists the bytes when `base64Data` is supplied. Pre-OCR'd structured-data paths (`/webhooks/n8n/invoice-ingest`) have nothing to store.
-- Email poller — continues to stash bytes in `ocrRawData.attachmentData` (legacy JSON-blob path). New rows from this path don't yet hit disk; covered by the read-path fallback below.
+- `POST /api/invoices/ingest` and `/webhooks/n8n/invoice-email` — both call `ingestInvoice()` in [invoice-ingestion.service.ts](../server/src/services/invoice-ingestion.service.ts), which also persists the bytes when `base64Data` is supplied.
+- Pre-OCR'd structured-data paths (`/api/webhooks/n8n/invoice` and `/webhooks/n8n/invoice-ingest`) have nothing to store — n8n keeps the source PDF.
 
 **Read path** — `GET /api/invoices/:id/file` (auth + tenant-scoped) calls `readInvoiceFile()`, which prefers disk (`fileUrl`) and falls back to `ocrRawData.attachmentData` for back-compat. Streams with `Content-Type: <mimeType>` and `Content-Disposition: inline`, plus `Cache-Control: private, max-age=300`. Path-traversal is refused by checking the resolved absolute path stays under `UPLOADS_ROOT`.
 

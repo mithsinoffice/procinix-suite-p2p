@@ -380,6 +380,14 @@ model Invoice {
   irnVerified        Boolean           @default(false)
   ocrConfidence      Int?
   ocrRawData         Json?
+  // LLM scoring (async, populated by invoice-scorer.service after n8n ingest)
+  ocrConfidenceMap      Json?            // per-field 0–1 confidence map
+  validationIssues      Json?            // [{ field, severity, message }]
+  reviewFlags           Json?            // [{ flag, reason, severity }]
+  vendorMatchSuggestion Json?            // { suggestedName, gstin, confidence }
+  recommendedAction     String?          @default("needs_review")
+                                         // 'auto_process' | 'needs_review' | 'hold'
+  llmScoredAt           DateTime?
   fileUrl            String?           @db.Text
   fileName           String?
   mimeType           String?
