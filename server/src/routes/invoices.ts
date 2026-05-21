@@ -1,9 +1,84 @@
 import type { FastifyInstance } from 'fastify'
+import type { PrismaClient, Prisma } from '@prisma/client'
 import { createInvoice, listInvoices, getInvoice, approveInvoice, rejectInvoice } from '../services/invoice.service.js'
 import { startWorkflow } from '../services/workflow-engine.service.js'
 import { extractInvoiceFromFile } from '../services/gemini-ocr.service.js'
 import { saveInvoiceFile, readInvoiceFile } from '../services/invoice-file-storage.service.js'
 import { sanitisePayload } from '../lib/payload.js'
+
+// ── List-route projection ────────────────────────────────────────────────────
+// The default `findMany` returns every Invoice column. After we added the LLM
+// scoring JSON blobs (ocrConfidenceMap, validationIssues, reviewFlags,
+// vendorMatchSuggestion) on top of the existing heavy fields (ocrRawData,
+// narration, notes), 50 rows × wide JSON blobs blew Azure MySQL's tmp/sort
+// buffer (`code: 1038 — Out of sort memory`) and the entire endpoint started
+// returning 500. Worse, it returned 500 *silently* from the UI's perspective —
+// the listing just disappeared.
+//
+// INVOICE_LIST_SELECT enumerates ONLY the columns the listing UI renders. The
+// JSON blobs are detail-page concerns; fetched on demand via GET /:id (single
+// row, not 50). Exported so tests can lock the shape.
+
+export const INVOICE_LIST_SELECT = {
+  id: true, invoiceNumber: true, invoiceDate: true, dueDate: true,
+  status: true, channelType: true,
+  vendorId: true, entityId: true,
+  totalAmount: true, tdsAmount: true, netPayable: true, currencyCode: true,
+  apLane: true, matchScore: true, matchLane: true,
+  recommendedAction: true, llmScoredAt: true, ocrConfidence: true,
+  paymentStatus: true, paidAmount: true,
+  isPOInvoice: true, irnNumber: true, irnVerified: true,
+  msmeBreach: true, isUrgent: true,
+  createdAt: true, updatedAt: true,
+  vendor: { select: { legalName: true, vendorCode: true, kycPanStatus: true } },
+} satisfies Prisma.InvoiceSelect
+
+export interface InvoiceListQuery {
+  status?:   string
+  vendorId?: string
+  entityId?: string
+  search?:   string
+  apLane?:   string
+  dateFrom?: string
+  dateTo?:   string
+}
+
+// Pure: builds the Prisma where clause from query params. Exported so the
+// regression tests can assert defaults — particularly that no implicit
+// status / channelType filter sneaks in and hides freshly-ingested rows.
+export function buildInvoiceListWhere(tenantId: string, q: InvoiceListQuery): Prisma.InvoiceWhereInput {
+  const where: Prisma.InvoiceWhereInput = { tenantId }
+  if (q.status   && q.status !== 'ALL') where.status   = q.status
+  if (q.vendorId)                       where.vendorId = q.vendorId
+  if (q.entityId)                       where.entityId = q.entityId
+  if (q.apLane   && q.apLane !== 'ALL') where.apLane   = q.apLane
+  if (q.dateFrom) where.invoiceDate = { gte: new Date(q.dateFrom) }
+  if (q.dateTo)   where.invoiceDate = { ...(where.invoiceDate as object), lte: new Date(q.dateTo) }
+  if (q.search) {
+    where.OR = [
+      { invoiceNumber: { contains: q.search } },
+      { vendor: { legalName: { contains: q.search } } },
+    ]
+  }
+  return where
+}
+
+// Handler body, extracted so the regression tests can hit the same code path
+// the route hits — not a parallel "test version" of the query. The route
+// becomes a thin shim around this.
+export async function listInvoicesForRoute(prisma: PrismaClient, tenantId: string, q: InvoiceListQuery) {
+  const where = buildInvoiceListWhere(tenantId, q)
+  const [data, total] = await Promise.all([
+    prisma.invoice.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take:    50,
+      select:  INVOICE_LIST_SELECT,
+    }),
+    prisma.invoice.count({ where }),
+  ])
+  return { data, total }
+}
 
 // Invoice DateTime? columns surfaced as HTML <input type="date"> on the form —
 // empty input sends `""`, which Prisma rejects with "premature end of input".
@@ -49,29 +124,12 @@ export async function invoiceRoutes(app: FastifyInstance) {
 
   // ── List invoices ──
   app.get('/', auth, async (req, reply) => {
-    const { status, vendorId, entityId, search, apLane, dateFrom, dateTo } = req.query as any
-    const where: any = { tenantId: req.tenant.id }
-    if (status && status !== 'ALL') where.status   = status
-    if (vendorId)                   where.vendorId  = vendorId
-    if (entityId)                   where.entityId  = entityId
-    if (apLane && apLane !== 'ALL') where.apLane    = apLane
-    if (dateFrom) where.invoiceDate = { gte: new Date(dateFrom) }
-    if (dateTo)   where.invoiceDate = { ...where.invoiceDate, lte: new Date(dateTo) }
-    if (search)   where.OR = [
-      { invoiceNumber: { contains: search } },
-      { vendor: { legalName: { contains: search } } },
-    ]
-
-    const [data, total] = await Promise.all([
-      app.prisma.invoice.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        take:    50,
-        include: { vendor: { select: { legalName: true, vendorCode: true, kycPanStatus: true } } },
-      }),
-      app.prisma.invoice.count({ where }),
-    ])
-    return reply.send({ data, total })
+    const result = await listInvoicesForRoute(
+      app.prisma,
+      req.tenant.id,
+      req.query as InvoiceListQuery,
+    )
+    return reply.send(result)
   })
 
   // ── Stats ──
