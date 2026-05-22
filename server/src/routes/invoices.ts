@@ -365,11 +365,37 @@ export async function invoiceRoutes(app: FastifyInstance) {
     const userId   = req.user.sub
     const tenantId = req.tenant.id
 
+    // Admin override — SUPER_ADMIN / TENANT_ADMIN see EVERY pending stage in
+    // their tenant, not just the ones literally assigned to them. Without
+    // this, the resolver picks a regular Finance Manager / CFO when the
+    // workflow stage is role-keyed and admins are invisible to the queue
+    // (the symptom: "invoice X is Pending L1 but my Approval Desk is empty").
+    // Role check consults both legacy User.role and the canonical
+    // UserEntityRole table so either path qualifies.
+    const me = await app.prisma.user.findFirst({
+      where:  { id: userId, tenantId, isActive: true },
+      select: { role: true },
+    })
+    const ADMIN_ROLES = ['SUPER_ADMIN', 'TENANT_ADMIN'] as const
+    let isAdmin = !!me && (ADMIN_ROLES as readonly string[]).includes(me.role)
+    if (!isAdmin) {
+      const adminEntityRole = await app.prisma.userEntityRole.findFirst({
+        where:  { userId, isActive: true, roleCode: { in: [...ADMIN_ROLES] } },
+        select: { id: true },
+      })
+      isAdmin = !!adminEntityRole
+    }
+
     // Future stages of a multi-stage workflow are pre-created with status
     // PENDING (so the timeline is visible upfront). Filter to the CURRENT
     // stage of each instance — instance.currentStageOrder must match.
     const allPending = await app.prisma.workflowInstanceStage.findMany({
-      where:   { tenantId, assignedTo: userId, status: 'PENDING' },
+      where: {
+        tenantId,
+        status: 'PENDING',
+        // Non-admins see only their own assigned stages. Admins see all.
+        ...(isAdmin ? {} : { assignedTo: userId }),
+      },
       include: { instance: true },
     })
     const pendingStages = allPending.filter(

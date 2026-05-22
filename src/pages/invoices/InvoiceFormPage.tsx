@@ -1517,7 +1517,7 @@ export default function InvoiceFormPage() {
     if (filtered.length === 0) return
     // Loading pill while the matcher runs — dismissed on both success and
     // error so the user always sees a state change.
-    const matchToastId = toast.loading('Matching items…')
+    const matchToastId = toast.loading('Matching line items…')
     try {
       const results = await http.post<Array<{
         inputDescription: string
@@ -1554,7 +1554,7 @@ export default function InvoiceFormPage() {
     } catch {
       // Non-blocking — let the user pick manually. Surface the failure so
       // they know auto-match didn't run.
-      toast.error('Item matching unavailable', { id: matchToastId })
+      toast.error('Item matching unavailable — select manually', { id: matchToastId })
     }
   }, [setValue, glCodes, costCentres, applyItemPreset])
 
@@ -1609,7 +1609,7 @@ export default function InvoiceFormPage() {
     setOcrModel(null)
     // Sonner returns the toast id so we can dismiss the "loading" pill once
     // OCR finishes — success / error toasts replace it.
-    const ocrToastId = toast.loading('Extracting data from invoice…')
+    const ocrToastId = toast.loading('Extracting invoice data…')
     try {
       const base64Data = await fileToBase64(file)
       const res        = await http.post<{ ocr: any; matchedVendorId: string | null }>(
@@ -1730,7 +1730,7 @@ export default function InvoiceFormPage() {
           ocr.lineItems.map((l: any, i: number) => ({ idx: i, description: l.description ?? '' })),
         )
       }
-      toast.dismiss(ocrToastId)
+      toast.success('Invoice data extracted successfully', { id: ocrToastId })
     } catch (err: any) {
       // The backend now returns { code, message, detail, details, httpStatus }.
       // Prefer the detail (raw Gemini error string) — it's what an engineer
@@ -1783,10 +1783,10 @@ export default function InvoiceFormPage() {
     return 'Request failed'
   }
 
-  // Navigation is deferred 1.5s after a success toast so the user has time
-  // to read the confirmation before the page transitions. Earlier behaviour
-  // navigated synchronously and felt instantaneous to the point of looking
-  // like nothing happened.
+  // Submit → navigate to the listing after the success toast clears so the
+  // user sees the new row in context. Save-draft does NOT navigate; the form
+  // stays open so editing can continue. For new invoices we still want the
+  // URL to flip to edit-mode so subsequent saves PUT (not duplicate POST).
   const NAV_DELAY_MS = 1500
 
   // ── Mutations ─────────────────────────────────────────────────────────────
@@ -1799,10 +1799,16 @@ export default function InvoiceFormPage() {
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['invoices'] })
-      toast.success(isEdit ? 'Invoice updated' : 'Draft saved successfully')
-      setTimeout(() => navigate(`/invoices/${res.id ?? id}`), NAV_DELAY_MS)
+      toast.success('Invoice draft saved')
+      // Stay on the same page so the user can continue editing. For a
+      // first-time create, swap the URL (replace, no history entry) to the
+      // edit route so subsequent saves PUT the same row instead of creating
+      // duplicates. For an in-flight edit, the URL is already correct.
+      if (!isEdit && res?.id) {
+        navigate(`/invoices/${res.id}/edit`, { replace: true })
+      }
     },
-    onError: (err) => toast.error(`${isEdit ? 'Update' : 'Save'} failed — ${apiMsg(err)}`),
+    onError: (err) => toast.error(`Failed to save — ${apiMsg(err)}`),
   })
 
   const submitForApproval = useMutation({
@@ -1814,12 +1820,12 @@ export default function InvoiceFormPage() {
       await http.post(`/api/invoices/${inv.id}/submit`, {})
       return inv
     },
-    onSuccess: (res) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices'] })
-      toast.success('Submitted for approval')
-      setTimeout(() => navigate(`/invoices/${res.id ?? id}`), NAV_DELAY_MS)
+      toast.success('Invoice submitted for approval')
+      setTimeout(() => navigate('/invoices'), NAV_DELAY_MS)
     },
-    onError: (err) => toast.error(`Submit failed — ${apiMsg(err)}`),
+    onError: (err) => toast.error(`Failed to submit — ${apiMsg(err)}`),
   })
 
   // Smooth-scroll to the first invalid field on submit failure. RHF's default
