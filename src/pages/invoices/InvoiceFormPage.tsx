@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, Trash2, Loader2, Upload, FileText, AlertTriangle, Send, Info, Zap,
   ChevronLeft, ChevronRight, X, ScanLine, Edit3, Sparkles, ChevronDown, ChevronUp,
+  CheckCircle2,
 } from 'lucide-react'
 import { http } from '../../lib/http'
 import { MasterPageHeader, FormInput, FormSelect, FormTextarea } from '../../components/masters/MasterFormLayout'
@@ -172,6 +173,31 @@ const emptyLine = (): LineItem => ({
 // editing fields. Hidden when there's nothing to show.
 interface LlmReviewFlag      { flag: string; reason: string; severity: 'critical' | 'high' | 'medium' | 'low' }
 interface LlmValidationIssue { field: string; severity: 'error' | 'warning'; message: string }
+
+// Item-master match result (one per line). Same shape the
+// /api/items/match endpoint returns, plus a local autoSelected flag tracking
+// whether we already pushed the best candidate into the Item dropdown so the
+// chip can render "Matched" vs "Review" without a re-query.
+interface ItemMatchEntry {
+  itemId:            string
+  itemCode:          string
+  itemName:          string
+  description:       string | null
+  gstRate:           number | null
+  tdsRate:           number | null
+  defaultGlCode:     string | null
+  defaultCostCentre: string | null
+  sacHsnCode:        string | null
+  confidence:        number
+  matchType:         'EXACT' | 'HIGH' | 'FUZZY' | 'PARTIAL'
+}
+interface ItemMatchUI {
+  inputDescription: string
+  matches:          ItemMatchEntry[]
+  bestMatch:        ItemMatchEntry | null
+  autoSelect:       boolean
+  autoSelected:     boolean   // true after we wrote the bestMatch into the form
+}
 interface LlmVendorSuggestion { suggestedName: string | null; gstin: string | null; confidence: number }
 
 // ── Fuzzy duplicate banner ──────────────────────────────────────────────────
@@ -462,6 +488,75 @@ function OcrFieldIndicator({ fieldKey, ocrFields, overriddenFields, ocrOriginalV
 
 /** Stand-alone Auto-filled chip — used on derived fields (PAN, totals, due
  *  date) that aren't OCR-sourced but the system fills in. */
+// Item-master match chip + expandable suggestions. Rendered under the line's
+// Item dropdown after OCR matching runs:
+//   • autoSelected (conf ≥ 0.85) → green "Matched · 92%" chip
+//   • bestMatch but no auto       → amber "Review match · 78%" chip with a
+//                                    "{N} suggestions ›" expandable that lets
+//                                    the user pick a candidate inline.
+//   • no matches                  → muted "No match — pick manually" hint.
+function ItemMatchCell({ data, expanded, onToggle, onPickSuggestion }: {
+  data:             ItemMatchUI
+  expanded:         boolean
+  onToggle:         () => void
+  onPickSuggestion: (itemId: string) => void
+}) {
+  const best = data.bestMatch
+  if (!best) {
+    return (
+      <div className="mt-1 text-[10px] text-muted-foreground">
+        No match — pick manually
+      </div>
+    )
+  }
+  const pct = Math.round(best.confidence * 100)
+  if (data.autoSelected) {
+    return (
+      <div className="mt-1 flex items-center gap-1 text-[10px]">
+        <span
+          title={`OCR: "${data.inputDescription}"`}
+          className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-700 whitespace-nowrap"
+        >
+          <CheckCircle2 className="h-2.5 w-2.5" />
+          Matched · {pct}%
+        </span>
+      </div>
+    )
+  }
+  // Review match — surface suggestions on click.
+  const rest = data.matches.length
+  return (
+    <div className="mt-1 text-[10px]">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700 whitespace-nowrap hover:bg-amber-100"
+      >
+        Review match · {pct}%
+        {rest > 0 && <span className="text-amber-600">· {rest} suggestion{rest === 1 ? '' : 's'} {expanded ? '▾' : '▸'}</span>}
+      </button>
+      {expanded && (
+        <div className="mt-1 rounded-md border border-border bg-popover p-1 space-y-0.5">
+          {data.matches.map(m => (
+            <button
+              key={m.itemId}
+              type="button"
+              onClick={() => onPickSuggestion(m.itemId)}
+              className="flex w-full items-center justify-between gap-2 rounded px-1.5 py-1 text-left hover:bg-muted"
+            >
+              <span className="truncate">{m.itemCode} — {m.itemName}</span>
+              <span className="flex items-center gap-1 shrink-0">
+                <span className="rounded bg-muted px-1 text-[9px] text-muted-foreground">{m.matchType}</span>
+                <span className="text-[10px] font-medium text-foreground">{Math.round(m.confidence * 100)}%</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AutoFilledChip() {
   return (
     <span
@@ -796,6 +891,13 @@ export default function InvoiceFormPage() {
   const [retentionOpen, setRetentionOpen] = useState(false)
   const [jvOpen, setJvOpen]               = useState(true)
 
+  // Per-line item-master match results (response from POST /api/items/match).
+  // Keyed by line index so the cell renderer can fetch its own row's match
+  // without re-running the matcher. `autoSelected` = true means the matcher's
+  // best candidate was already pushed into the Item dropdown for the user.
+  const [itemMatches, setItemMatches]               = useState<Record<number, ItemMatchUI>>({})
+  const [expandedItemMatch, setExpandedItemMatch]   = useState<Set<number>>(new Set())
+
   // Manage object URL lifecycle to avoid leaks
   useEffect(() => {
     if (!file) { setFileURL(null); return }
@@ -1070,7 +1172,20 @@ export default function InvoiceFormPage() {
       costCentreId:       editInvoice.costCentreId     ?? '',
       glCodeId:           editInvoice.glCodeId         ?? '',
       baseAmount:         Number(editInvoice.taxableAmount) || 0,
-      grossAmount:        Number(editInvoice.totalAmount)   || 0,
+      // Gross fallback — for invoices ingested before the n8n mapper learned
+      // to compute base+tax when grossAmount was 0. Sum the line GSTs as a
+      // backup so the cross-check banner doesn't fire on legacy rows.
+      grossAmount:
+        (Number(editInvoice.totalAmount) || 0) > 0
+          ? Number(editInvoice.totalAmount)
+          : (Number(editInvoice.taxableAmount) || 0) +
+            (Array.isArray(editInvoice.lines)
+              ? editInvoice.lines.reduce(
+                  (s: number, l: any) =>
+                    s + (Number(l.cgstAmount) || 0) + (Number(l.sgstAmount) || 0) + (Number(l.igstAmount) || 0),
+                  0,
+                )
+              : 0),
       narration:          editInvoice.narration  ?? '',
       periodFrom:         isoDate(editInvoice.periodFrom),
       periodTo:           isoDate(editInvoice.periodTo),
@@ -1307,6 +1422,73 @@ export default function InvoiceFormPage() {
     update(idx, recalcLine(next, vendorState, entityState))
   }, [items, tdsSections, vendorState, entityState, getValues, update])
 
+  // Item-master fuzzy match — runs after OCR populates line descriptions.
+  // POSTs the descriptions to /api/items/match, then for each line:
+  //   • autoSelect === true (confidence ≥ 0.85)  → write itemId into the form
+  //     and call applyItemPreset() so gstRate/tdsRate/HSN populate too.
+  //   • else                                       → stash matches so the cell
+  //     can render "Review match · N suggestions".
+  // Failures are silent — matching is a nice-to-have, not blocking.
+  const runItemMatching = useCallback(async (rows: Array<{ idx: number; description: string }>) => {
+    const filtered = rows.filter(r => r.description && r.description.trim().length > 0)
+    if (filtered.length === 0) return
+    try {
+      const results = await http.post<Array<{
+        inputDescription: string
+        matches: ItemMatchEntry[]
+        bestMatch: ItemMatchEntry | null
+        autoSelect: boolean
+      }>>('/api/items/match', { descriptions: filtered.map(r => r.description) })
+
+      const next: Record<number, ItemMatchUI> = {}
+      results.forEach((res, i) => {
+        const idx          = filtered[i].idx
+        const autoSelected = !!res.autoSelect && !!res.bestMatch
+        next[idx] = { ...res, autoSelected }
+        if (autoSelected && res.bestMatch) {
+          const b = res.bestMatch
+          setValue(`lines.${idx}.itemId`, b.itemId, { shouldDirty: false })
+          applyItemPreset(idx, b.itemId)
+          // Default GL + CC come back as codes (not ids) from the match
+          // endpoint — resolve via the local masters so we can write the id
+          // into the form.
+          if (b.defaultGlCode) {
+            const gl = (glCodes as any[]).find((g: any) => g.code === b.defaultGlCode)
+            if (gl) setValue(`lines.${idx}.glCodeId`, gl.id, { shouldDirty: false })
+          }
+          if (b.defaultCostCentre) {
+            const cc = (costCentres as any[]).find((c: any) => c.code === b.defaultCostCentre)
+            if (cc) setValue(`lines.${idx}.costCentreId`, cc.id, { shouldDirty: false })
+          }
+        }
+      })
+      setItemMatches(prev => ({ ...prev, ...next }))
+    } catch {
+      // Silent — leave the dropdown unselected for the user to pick.
+    }
+  }, [setValue, glCodes, costCentres, applyItemPreset])
+
+  // For edit-mode OCR-sourced invoices: once the persisted lines hydrate,
+  // fuzzy-match any line that has a description but no itemId. Same matcher
+  // the manual OCR path runs after extraction — keeps behaviour consistent
+  // regardless of channel (manual upload vs email/n8n ingest).
+  const matchTriggeredRef = useRef(false)
+  useEffect(() => {
+    if (!editInvoice || matchTriggeredRef.current) return
+    if (!Array.isArray(editInvoice.lines)) return
+    const wasOcrSourced =
+      editInvoice.channelType === 'EMAIL'
+      || (typeof editInvoice.ocrConfidence === 'number' && editInvoice.ocrConfidence > 0)
+    if (!wasOcrSourced) return
+    const toMatch = editInvoice.lines
+      .map((l: any, i: number) => ({ idx: i, description: l.description ?? '', hasItem: !!l.itemId }))
+      .filter((r: { hasItem: boolean; description: string }) => !r.hasItem && r.description.trim().length > 0)
+      .map((r: { idx: number; description: string }) => ({ idx: r.idx, description: r.description }))
+    if (toMatch.length === 0) return
+    matchTriggeredRef.current = true
+    runItemMatching(toMatch)
+  }, [editInvoice, runItemMatching])
+
   // GL / CC resolvers for the JV preview
   const glLabel = useCallback((glId?: string) => {
     if (!glId) return '—'
@@ -1370,9 +1552,33 @@ export default function InvoiceFormPage() {
           ocrOriginals[`line_${i}_gstRate`]     = Number(l.gstRate)   || 0
         })
       }
+
+      // Header amount fields — OCR's `subtotal` maps to baseAmount and
+      // `totalAmount` to grossAmount. When grossAmount is missing/0 but
+      // subtotal + line GSTs are present, fall back to the computed sum so
+      // the cross-check banner doesn't fire on every OCR'd invoice.
+      const ocrBase  = Number(ocr.subtotal)    || 0
+      const ocrCgst  = Number(ocr.cgst)        || 0
+      const ocrSgst  = Number(ocr.sgst)        || 0
+      const ocrIgst  = Number(ocr.igst)        || 0
+      const ocrTax   = Number(ocr.totalTax)    || (ocrCgst + ocrSgst + ocrIgst)
+      const ocrGross = Number(ocr.totalAmount) || 0
+      if (ocrBase > 0)  { setValue('baseAmount', ocrBase);  ocrOriginals.baseAmount  = ocrBase  }
+      const grossFinal = ocrGross > 0 ? ocrGross : (ocrBase + ocrTax)
+      if (grossFinal > 0) { setValue('grossAmount', grossFinal); ocrOriginals.grossAmount = grossFinal }
+
       if (Object.keys(ocrOriginals).length > 0) markOcrFields(ocrOriginals)
       setOcrConfidence(ocr.overallConfidence ?? null)
       setOcrModel(ocr.model ?? null)
+
+      // Fuzzy-match each OCR line description against the item master so the
+      // form pre-selects items with high confidence (≥0.85) and surfaces
+      // suggestions for the rest. Matches are stored per-line index.
+      if (ocr.lineItems?.length) {
+        await runItemMatching(
+          ocr.lineItems.map((l: any, i: number) => ({ idx: i, description: l.description ?? '' })),
+        )
+      }
     } catch (err: any) {
       // The backend now returns { code, message, detail, details, httpStatus }.
       // Prefer the detail (raw Gemini error string) — it's what an engineer
@@ -1383,7 +1589,7 @@ export default function InvoiceFormPage() {
     } finally {
       setOcrLoading(false)
     }
-  }, [file, setValue, replace, vendorState, entityState, markOcrFields])
+  }, [file, setValue, replace, vendorState, entityState, markOcrFields, runItemMatching])
 
   const dismissOcr = useCallback(() => {
     setOcrError(null)
@@ -1997,23 +2203,58 @@ export default function InvoiceFormPage() {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {fields.map((field, i) => {
-                      const l = lines[i] ?? {}
-                      const itemReg = register(`lines.${i}.itemId`)
+                      const l        = lines[i] ?? {}
+                      const itemReg  = register(`lines.${i}.itemId`)
+                      const matchUI  = itemMatches[i]
+                      const expanded = expandedItemMatch.has(i)
                       return (
-                        <tr key={field.id} className="align-middle h-9 hover:bg-muted/10">
-                          <td className="px-2 py-1.5 text-muted-foreground">{i + 1}</td>
-                          <td className="px-2 py-1">
+                        <tr key={field.id} className="align-top hover:bg-muted/10">
+                          <td className="px-2 py-2 text-muted-foreground">{i + 1}</td>
+                          <td className="px-2 py-1 min-w-[180px]">
                             <FormSelect
                               className={CELL_SELECT}
                               {...itemReg}
                               onChange={(e) => {
                                 itemReg.onChange(e)
                                 applyItemPreset(i, e.target.value)
+                                // User picked manually — clear the match
+                                // banner for this row so we don't keep
+                                // nagging "Review match" after they chose.
+                                setItemMatches(prev => {
+                                  if (!prev[i]) return prev
+                                  const next = { ...prev }
+                                  delete next[i]
+                                  return next
+                                })
                               }}
                             >
                               <option value="">Item…</option>
                               {(items as any[]).map((it: any) => <option key={it.id} value={it.id}>{it.itemCode ?? it.code} — {it.name}</option>)}
                             </FormSelect>
+                            {matchUI && <ItemMatchCell
+                              data     ={matchUI}
+                              expanded ={expanded}
+                              onToggle ={() => setExpandedItemMatch(prev => {
+                                const next = new Set(prev)
+                                if (next.has(i)) next.delete(i)
+                                else             next.add(i)
+                                return next
+                              })}
+                              onPickSuggestion={(itemId) => {
+                                setValue(`lines.${i}.itemId`, itemId, { shouldDirty: true })
+                                applyItemPreset(i, itemId)
+                                setItemMatches(prev => {
+                                  const next = { ...prev }
+                                  delete next[i]
+                                  return next
+                                })
+                                setExpandedItemMatch(prev => {
+                                  const next = new Set(prev)
+                                  next.delete(i)
+                                  return next
+                                })
+                              }}
+                            />}
                           </td>
                           <td className="px-2 py-1 relative">
                             <FormInput className={cn(CELL_INPUT, 'pr-5')} placeholder="Description" {...register(`lines.${i}.description`)} onBlur={() => recalc(i)} />

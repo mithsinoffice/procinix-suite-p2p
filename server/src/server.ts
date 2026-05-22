@@ -15,6 +15,7 @@ import { authRoutes }         from './routes/auth.js'
 import { vendorRoutes }       from './routes/vendors.js'
 import { masterRoutes }       from './routes/masters.js'
 import { invoiceRoutes }      from './routes/invoices.js'
+import { itemRoutes }         from './routes/items.js'
 import { dashboardRoutes }    from './routes/dashboard.js'
 import { workflowRoutes }     from './routes/workflow.js'
 import { adminRoutes }        from './routes/admin.js'
@@ -61,6 +62,7 @@ export async function buildApp() {
   await app.register(vendorRoutes,  { prefix: '/api/masters/vendors' })
   await app.register(masterRoutes,  { prefix: '/api/masters' })
   await app.register(invoiceRoutes,   { prefix: '/api/invoices'   })
+  await app.register(itemRoutes,      { prefix: '/api/items'      })
   await app.register(dashboardRoutes,  { prefix: '/api/dashboard'  })
   await app.register(workflowRoutes,   { prefix: '/api/workflow'   })
   await app.register(adminRoutes,        { prefix: '/api' })

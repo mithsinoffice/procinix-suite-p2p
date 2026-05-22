@@ -320,7 +320,13 @@ export function mapN8nNativePayload(body: N8nNativeInvoice): Partial<OcrInvoiceD
     irn,
     subtotal:          readNestedNumber(amt.baseAmount),
     totalTax:          readNestedNumber(amt.taxAmount),
-    totalAmount:       readNestedNumber(amt.grossAmount),
+    // Gross fallback — n8n sometimes emits grossAmount as 0 when the source
+    // PDF doesn't have a clean total line. If base + tax give a sensible
+    // gross, use that instead so the form's mismatch banner doesn't fire on
+    // every email-ingested invoice.
+    totalAmount:       readNestedNumber(amt.grossAmount) > 0
+                         ? readNestedNumber(amt.grossAmount)
+                         : (readNestedNumber(amt.baseAmount) + readNestedNumber(amt.taxAmount)),
     cgst:              readNestedNumber(amt.cgst),
     sgst:              readNestedNumber(amt.sgst),
     igst:              readNestedNumber(amt.igst),
