@@ -57,7 +57,7 @@ export interface OcrLineItem {
 export type OcrFieldConfidence = Partial<Record<
   | 'invoiceNumber' | 'invoiceDate'  | 'dueDate'
   | 'vendorName'    | 'vendorGstin'  | 'vendorPan'  | 'vendorAddress'
-  | 'buyerName'     | 'buyerGstin'
+  | 'buyerName'     | 'buyerGstin'   | 'placeOfSupply'
   | 'poReference'   | 'irn'
   | 'subtotal'      | 'cgst' | 'sgst' | 'igst'
   | 'tdsRate'       | 'tdsAmount' | 'tdsSection' | 'totalTax' | 'totalAmount'
@@ -76,6 +76,11 @@ export interface OcrInvoiceData {
   vendorAddress:  string | null
   buyerName:      string | null
   buyerGstin:     string | null
+  /** "Place of Supply" line — preserved verbatim so the form can resolve
+   *  either by state name ("Maharashtra") or by 2-digit GST state code
+   *  ("27"). The frontend extracts the code via regex; falls back to
+   *  buyerGstin[0..2] when this is null. */
+  placeOfSupply:  string | null
   poReference:    string | null
   irn:            string | null   // e-invoice IRN
   lineItems:      OcrLineItem[]
@@ -132,6 +137,7 @@ Return this exact structure:
   "vendorAddress": "full address string or null",
   "buyerName": "buyer company name or null",
   "buyerGstin": "buyer GSTIN or null",
+  "placeOfSupply": "verbatim Place of Supply line if printed (e.g. 'Maharashtra (27)' or 'Karnataka' or '27-Maharashtra') or null — look for labels 'Place of Supply', 'State of Supply', 'Bill-To State'",
   "poReference": "PO number if printed on invoice or null",
   "irn": "64-char IRN if present (e-invoice) or null",
   "lineItems": [
@@ -168,6 +174,7 @@ Return this exact structure:
     "vendorGstin":   0-100,
     "vendorPan":     0-100,
     "vendorAddress": 0-100,
+    "placeOfSupply": 0-100,
     "poReference":   0-100,
     "irn":           0-100,
     "subtotal":      0-100,

@@ -699,6 +699,7 @@ async function main() {
     { itemCode:'ITM-0028', name:'ATM Machine',                    itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'84721', gstRate:18, rcmApplicable:false, poRequired:'YES', threeWayMatch:true, grnRequired:true, usefulLifeYears:7,  depreciationMethod:'SLM', depreciationRate:14.29, residualValuePct:5, autoCreateAsset:true, capitalisationLimit:5000,   autoPostDepreciation:true,  depreciationFrequency:'MONTHLY', ocrKeywords:'ATM, cash dispenser, automated teller machine',                 ocrMatchConfidence:90 },
     { itemCode:'ITM-0029', name:'Core Banking Software (CAPEX)',  itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'85234', gstRate:18, rcmApplicable:false, poRequired:'YES', threeWayMatch:false,grnRequired:false,usefulLifeYears:5,  depreciationMethod:'SLM', depreciationRate:20,    residualValuePct:0, autoCreateAsset:true, capitalisationLimit:100000, autoPostDepreciation:false,                                  ocrKeywords:'core banking system, CBS implementation, software implementation',ocrMatchConfidence:85 },
     { itemCode:'ITM-0030', name:'Printing Machine / Copier',      itemType:'GOODS',    expenseType:'CAPEX', nature:'CAPITAL_ASSET',  hsnCode:'84433', gstRate:18, rcmApplicable:false, poRequired:'YES', threeWayMatch:true, grnRequired:true, usefulLifeYears:5,  depreciationMethod:'SLM', depreciationRate:20,    residualValuePct:5, autoCreateAsset:true, capitalisationLimit:5000,   autoPostDepreciation:true,  depreciationFrequency:'MONTHLY', ocrKeywords:'printer, copier, photocopier, MFD, multifunction device',      ocrMatchConfidence:85 },
+    { itemCode:'ITM-0031', name:'Pest Control Services',          itemType:'SERVICES', expenseType:'OPEX',  nature:'MAINTENANCE',   sacCode:'998531', gstRate:18, rcmApplicable:false, poRequired:'YES',  threeWayMatch:false, grnRequired:false, provisionRequired:true,  autoPostProvision:true,  provisionFrequency:'MONTHLY',   ocrKeywords:'pest control, fumigation, rodent control, termite control',     ocrMatchConfidence:85, description:'General pest control and fumigation services' },
   ]
   for (const item of items) {
     const { gstRate, depreciationRate, residualValuePct, poThresholdAmount, capitalisationLimit, ...rest } = item
@@ -755,6 +756,8 @@ async function main() {
       'ITM-0028': { assetGlCodeId: gl('1108'), depreciationGlCodeId: gl('5070'), accumulatedDepnGlCodeId: gl('1109') },
       'ITM-0029': { assetGlCodeId: gl('1100'), depreciationGlCodeId: gl('5070'), accumulatedDepnGlCodeId: gl('1101') },
       'ITM-0030': { assetGlCodeId: gl('1104'), depreciationGlCodeId: gl('5070'), accumulatedDepnGlCodeId: gl('1105') },
+      // Pest Control is facility maintenance — same GL pair as Housekeeping/Security.
+      'ITM-0031': { expenseGlCodeId: gl('5021'), provisionGlCodeId: gl('2001'), tdsPayableGlCodeId: gl('2010') },
     }
 
     const itemMaps = await prisma.itemMaster.findMany({

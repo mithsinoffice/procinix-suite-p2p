@@ -7,13 +7,13 @@ import {
   ChevronLeft, ChevronRight, X, ScanLine, Edit3, Sparkles, ChevronDown, ChevronUp,
   CheckCircle2,
 } from 'lucide-react'
-import { http } from '../../lib/http'
+import { http, HttpError } from '../../lib/http'
 import { MasterPageHeader, FormInput, FormSelect, FormTextarea } from '../../components/masters/MasterFormLayout'
 import { useAuthStore } from '../../stores/auth.store'
 import { formatCurrency, formatDate, formatDateTime, formatStatus } from '../../lib/utils/formatters'
 import { cn } from '../../lib/utils'
 import {
-  pickGl, computeJvEntries, jvTotals, computeCrossCheck, panFromGstin,
+  pickGl, computeJvEntries, jvTotals, computeCrossCheck, panFromGstin, normalizeStateCode, STATE_CODE_TO_NAME,
   type GlCodeRef,
 } from '../../lib/invoice-form'
 
@@ -103,6 +103,10 @@ const fmt = (n: number, ccy: string = 'INR') => formatCurrency(n || 0, ccy)
 // controls render in the tight 36px row height.
 const CELL_INPUT  = 'h-7 px-1.5 py-1 text-xs rounded border border-input bg-background focus:ring-1 focus:ring-ring outline-none w-full'
 const CELL_SELECT = 'h-7 px-1.5 py-1 text-xs rounded border border-input bg-background outline-none w-full'
+// Numeric cells right-align their value and hide the native spinner arrows
+// so the rendered digits aren't clipped by the up/down chevron — that was
+// what made Qty look blank in narrow columns.
+const NUMERIC_INPUT = `${CELL_INPUT} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0`
 
 // Read a file as base64 (sans data: prefix) — used for OCR upload
 function fileToBase64(file: File): Promise<string> {
@@ -123,25 +127,45 @@ function dmyToIso(s: string | null | undefined): string | undefined {
   return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`
 }
 
-function recalcLine(line: LineItem, vendorState: string, entityState: string): LineItem {
-  const qty       = Number(line.quantity)    || 0
-  const unitPrice = Number(line.unitPrice)   || 0
+// Round to N decimal places. JS multiplication accumulates floating-point
+// drift (e.g. 0.1 + 0.2 = 0.30000000000000004) — every monetary step in
+// recalcLine is rounded so the displayed Amount/GST/TDS/Net don't carry
+// "₹1,25,087.50" artefacts when the inputs are clean integers.
+const round2 = (n: number) => Math.round(n * 100) / 100
+const round3 = (n: number) => Math.round(n * 1000) / 1000
+
+// GST split key — Indian GST is intrastate when vendor's GSTIN state code
+// equals the bill-to location's state code. The form previously compared
+// "27" (vendor.stateCode, numeric) to "Maharashtra" (entity.state, free
+// text) and always flagged interstate. Both sides are now normalised to the
+// 2-digit GST code via normalizeStateCode so the comparison is meaningful.
+// Bill-to state — not entity state — drives the split per the GST regime.
+function recalcLine(line: LineItem, vendorState: string, billToState: string): LineItem {
+  // Inputs are normalised before multiplication so a stale floating-point
+  // quantity (e.g. "1.0007") doesn't leak through into the line total.
+  const qty       = round3(parseFloat(String(line.quantity   ?? 0))) || 0
+  const unitPrice = round2(parseFloat(String(line.unitPrice  ?? 0))) || 0
   const discPct   = Number(line.discountPct) || 0
   const gstRate   = Number(line.gstRate)     || 0
   const tdsRate   = Number(line.tdsRate)     || 0
 
-  const lineBase     = qty * unitPrice
-  const discountAmt  = (lineBase * discPct) / 100
-  const taxableAmt   = lineBase - discountAmt
-  const gstAmt       = (taxableAmt * gstRate) / 100
-  const tdsAmt       = (taxableAmt * tdsRate) / 100
-  const isInterstate = vendorState && entityState && vendorState !== entityState
-  const cgst         = isInterstate ? 0 : gstAmt / 2
-  const sgst         = isInterstate ? 0 : gstAmt / 2
+  const lineBase     = round2(qty * unitPrice)
+  const discountAmt  = round2((lineBase * discPct) / 100)
+  const taxableAmt   = round2(lineBase - discountAmt)
+  const gstAmt       = round2((taxableAmt * gstRate) / 100)
+  const tdsAmt       = round2((taxableAmt * tdsRate) / 100)
+  const vCode        = normalizeStateCode(vendorState)
+  const bCode        = normalizeStateCode(billToState)
+  const isInterstate = !!vCode && !!bCode && vCode !== bCode
+  // Split GST so cgst + sgst always equals gstAmt exactly — round the half
+  // once and let sgst pick up the remainder.
+  const halfGst      = round2(gstAmt / 2)
+  const cgst         = isInterstate ? 0 : halfGst
+  const sgst         = isInterstate ? 0 : round2(gstAmt - halfGst)
   const igst         = isInterstate ? gstAmt : 0
-  const total        = taxableAmt + gstAmt - tdsAmt
+  const total        = round2(taxableAmt + gstAmt - tdsAmt)
 
-  return { ...line, discountAmount: discountAmt, taxableAmount: taxableAmt, cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, tdsAmount: tdsAmt, lineTotal: total }
+  return { ...line, quantity: qty, unitPrice, discountAmount: discountAmt, taxableAmount: taxableAmt, cgstAmount: cgst, sgstAmount: sgst, igstAmount: igst, tdsAmount: tdsAmt, lineTotal: total }
 }
 
 function recalcTotals(lines: LineItem[]) {
@@ -868,8 +892,17 @@ export default function InvoiceFormPage() {
   const [ocrError, setOcrError]   = useState<string | null>(null)
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null)
   const [ocrModel,   setOcrModel]   = useState<string | null>(null)
-  const [vendorState, setVendorState] = useState('')
-  const [entityState, setEntityState] = useState('')
+  // State codes (2-digit GST format) drive intra/inter-state GST split. Both
+  // sides feed through normalizeStateCode() so a vendor's "27" can be
+  // compared to a location's "Maharashtra" cleanly.
+  const [vendorState, setVendorState]   = useState('')   // vendor.stateCode (already "27"-style)
+  const [billToState, setBillToState]   = useState('')   // bill-to location.state (free-text name)
+
+  // Suppresses the overriddenFields diff for the next render — set to true
+  // immediately before any programmatic setValue() (auto-calc, OCR prefill,
+  // item-master preset, etc.) so the system's own writes don't get reported
+  // as user overrides. The effect resets it after one diff cycle.
+  const isApplyingPreset = useRef(false)
 
   // OCR provenance tracking. ocrFields lists every form field that was
   // populated from OCR data (manual upload or n8n ingestion). ocrOriginalValues
@@ -1062,6 +1095,13 @@ export default function InvoiceFormPage() {
   // doesn't appear as an override.
   const watchedAll = useWatch({ control })
   useEffect(() => {
+    // System-initiated change (auto-calc, OCR prefill, item preset) just
+    // landed in the form — don't flag it as a user override. Clear the flag
+    // so the next genuine user edit diffs normally.
+    if (isApplyingPreset.current) {
+      isApplyingPreset.current = false
+      return
+    }
     if (ocrFields.size === 0) {
       if (overriddenFields.size > 0) setOverriddenFields(new Set())
       return
@@ -1345,25 +1385,59 @@ export default function InvoiceFormPage() {
   const vendorGstinWatch = useWatch({ control, name: 'vendorGSTIN' })
   useEffect(() => {
     const derived = panFromGstin(vendorGstinWatch ?? '')
+    // PAN auto-derive is a system write, not a user edit — flag it so the
+    // override diff skips this transition.
+    isApplyingPreset.current = true
     if (derived) setValue('vendorPAN', derived)
     else if (selectedVendor?.pan) setValue('vendorPAN', selectedVendor.pan)
     else setValue('vendorPAN', '')
   }, [vendorGstinWatch, selectedVendor?.pan, setValue])
 
-  // Keep entityState in sync
+  // Keep billToState in sync with the selected bill-to location. The GST
+  // split is driven by VENDOR state vs BILL-TO state (not entity state) per
+  // the India GST regime — so the line recalc depends on this value.
+  const billToLocationIdWatch = useWatch({ control, name: 'billToLocationId' })
   useEffect(() => {
-    const e = (entities as any[]).find((x: any) => x.id === entityId)
-    setEntityState(e?.state ?? '')
-  }, [entityId, entities])
+    const loc = (locations as any[]).find((x: any) => x.id === billToLocationIdWatch)
+    setBillToState(loc?.state ?? '')
+  }, [billToLocationIdWatch, locations])
 
-  // Auto-calc due date: invoiceDate + vendor.paymentTerms
+  // Vendor TDS fallback per line — when a vendor with a configured TDS rate
+  // is selected, push that rate onto any line that has no item-specific
+  // override and no rate yet. Item-level rate (via applyItemPreset) wins
+  // when an item is later picked; this just keeps the default sensible.
+  useEffect(() => {
+    if (!selectedVendor) return
+    const vendorTdsRate = Number(selectedVendor.tdsRate) || 0
+    if (vendorTdsRate <= 0) return
+    const currentLines = (getValues('lines') as LineItem[] | undefined) ?? []
+    let changed = false
+    currentLines.forEach((l, i) => {
+      if (!l.itemId && (!l.tdsRate || Number(l.tdsRate) === 0)) {
+        isApplyingPreset.current = true
+        setValue(`lines.${i}.tdsRate`, vendorTdsRate)
+        const next = { ...l, tdsRate: vendorTdsRate }
+        update(i, recalcLine(next, vendorState, billToState))
+        changed = true
+      }
+    })
+    if (!changed) { /* no-op so the lint deps stay honest */ }
+  }, [selectedVendor, getValues, setValue, update, vendorState, billToState])
+
+  // Auto-calc due date: invoiceDate + vendor.paymentTerms. Only fires when
+  // dueDate is currently blank — preserves any value set by OCR or the user.
+  // The isApplyingPreset flag tells the diff effect this is a system write,
+  // so the chip doesn't flip to "Manually overridden".
   useEffect(() => {
     if (!invoiceDate || !selectedVendor?.paymentTerms) return
+    const existing = getValues('dueDate')
+    if (existing && String(existing).trim().length > 0) return
     const d = new Date(invoiceDate)
     if (isNaN(d.getTime())) return
     d.setDate(d.getDate() + Number(selectedVendor.paymentTerms))
+    isApplyingPreset.current = true
     setValue('dueDate', d.toISOString().split('T')[0])
-  }, [invoiceDate, selectedVendor?.id, setValue])
+  }, [invoiceDate, selectedVendor?.id, setValue, getValues])
 
   // Line-level OCR icon — overlay placed top-right of the cell. Co-exists with
   // the existing "auto" badge in the GST/TDS cells (which uses middle-right).
@@ -1386,12 +1460,14 @@ export default function InvoiceFormPage() {
     return null
   }, [ocrFields, overriddenFields])
 
-  // Recalc a line whenever qty/price/rate changes
+  // Recalc a line whenever qty/price/rate changes. Reads from getValues()
+  // (not the lagging useWatch snapshot) so an onChange handler that calls
+  // recalc immediately after setValue sees the latest qty/rate.
   const recalc = useCallback((idx: number) => {
-    const l = lines[idx]
+    const l = getValues(`lines.${idx}`)
     if (!l) return
-    update(idx, recalcLine(l as LineItem, vendorState, entityState))
-  }, [lines, vendorState, entityState, update])
+    update(idx, recalcLine(l as LineItem, vendorState, billToState))
+  }, [getValues, vendorState, billToState, update])
 
   // Item-master auto-fill: when the user picks an Item from the line dropdown,
   // pull gstRate, tdsRate (via tdsSectionId → defaultRate), hsn/sac, uom,
@@ -1405,7 +1481,12 @@ export default function InvoiceFormPage() {
 
     const current = (getValues(`lines.${idx}`) as LineItem | undefined) ?? emptyLine()
     const section = (tdsSections as any[]).find((s: any) => s.id === it.tdsSectionId)
-    const tdsRate = section ? Number(section.defaultRate) || 0 : 0
+    // TDS rate resolution — prefer item-level, fall back to vendor-level so
+    // services without an item-specific section still pick up the standard
+    // vendor TDS (e.g. vendor.tdsRate = 2% for 194C).
+    const itemTdsRate   = section ? Number(section.defaultRate) || 0 : 0
+    const vendorTdsRate = Number(selectedVendor?.tdsRate) || 0
+    const tdsRate       = itemTdsRate > 0 ? itemTdsRate : vendorTdsRate
 
     const next: LineItem = {
       ...current,
@@ -1419,8 +1500,9 @@ export default function InvoiceFormPage() {
       tdsRate,
       rcmApplicable: it.rcmApplicable ?? current.rcmApplicable ?? false,
     }
-    update(idx, recalcLine(next, vendorState, entityState))
-  }, [items, tdsSections, vendorState, entityState, getValues, update])
+    isApplyingPreset.current = true
+    update(idx, recalcLine(next, vendorState, billToState))
+  }, [items, tdsSections, vendorState, billToState, selectedVendor?.tdsRate, getValues, update])
 
   // Item-master fuzzy match — runs after OCR populates line descriptions.
   // POSTs the descriptions to /api/items/match, then for each line:
@@ -1447,6 +1529,7 @@ export default function InvoiceFormPage() {
         next[idx] = { ...res, autoSelected }
         if (autoSelected && res.bestMatch) {
           const b = res.bestMatch
+          isApplyingPreset.current = true
           setValue(`lines.${idx}.itemId`, b.itemId, { shouldDirty: false })
           applyItemPreset(idx, b.itemId)
           // Default GL + CC come back as codes (not ids) from the match
@@ -1454,11 +1537,11 @@ export default function InvoiceFormPage() {
           // into the form.
           if (b.defaultGlCode) {
             const gl = (glCodes as any[]).find((g: any) => g.code === b.defaultGlCode)
-            if (gl) setValue(`lines.${idx}.glCodeId`, gl.id, { shouldDirty: false })
+            if (gl) { isApplyingPreset.current = true; setValue(`lines.${idx}.glCodeId`, gl.id, { shouldDirty: false }) }
           }
           if (b.defaultCostCentre) {
             const cc = (costCentres as any[]).find((c: any) => c.code === b.defaultCostCentre)
-            if (cc) setValue(`lines.${idx}.costCentreId`, cc.id, { shouldDirty: false })
+            if (cc) { isApplyingPreset.current = true; setValue(`lines.${idx}.costCentreId`, cc.id, { shouldDirty: false }) }
           }
         }
       })
@@ -1536,20 +1619,78 @@ export default function InvoiceFormPage() {
       if (ocr.irn)           { setValue('irnNumber', ocr.irn);           ocrOriginals.irnNumber   = ocr.irn }
       if (ocr.poReference)   { setValue('poRef', ocr.poReference) }
 
+      // Resolve bill-to LOCATION from Place of Supply / buyer GSTIN. The OCR
+      // returns "placeOfSupply" verbatim (e.g. "Maharashtra (27)") plus the
+      // buyer's GSTIN; either source can yield the 2-digit state code which
+      // we then match against locations.state.
+      const supplyCode = normalizeStateCode(ocr.placeOfSupply)
+        || (typeof ocr.buyerGstin === 'string' && ocr.buyerGstin.length >= 2
+              ? ocr.buyerGstin.slice(0, 2)
+              : '')
+      if (supplyCode) {
+        const wantName = STATE_CODE_TO_NAME[supplyCode]?.toLowerCase()
+        const match = (locations as any[]).find((l: any) =>
+          normalizeStateCode(l.state) === supplyCode
+          || (wantName && String(l.state ?? '').toLowerCase() === wantName),
+        )
+        if (match && !getValues('billToLocationId')) {
+          setValue('billToLocationId', match.id)
+          ocrOriginals.billToLocationId = match.id
+        }
+      }
+
+      // Resolve ENTITY from buyer GSTIN (exact match) or buyer name (fuzzy
+      // substring). Only fills when the user hasn't already picked one — we
+      // never override an explicit choice.
+      if (!getValues('entityId')) {
+        let entityMatch: any | null = null
+        if (ocr.buyerGstin) {
+          entityMatch = (entities as any[]).find((e: any) => e.gstin && String(e.gstin).toUpperCase() === String(ocr.buyerGstin).toUpperCase()) ?? null
+        }
+        if (!entityMatch && ocr.buyerName) {
+          const lc = String(ocr.buyerName).toLowerCase()
+          entityMatch = (entities as any[]).find((e: any) => {
+            const en = String(e.name ?? '').toLowerCase()
+            if (!en) return false
+            return en === lc || lc.includes(en) || en.includes(lc)
+          }) ?? null
+        }
+        if (entityMatch) {
+          setValue('entityId', entityMatch.id)
+          ocrOriginals.entityId = entityMatch.id
+        }
+      }
+
+      // Snap a noisy OCR qty (e.g. "1.0007") to the nearest integer when it's
+      // within 0.05 — Gemini occasionally reads "1 Month" as a non-integer
+      // and the line total ends up "₹1,25,087.50" instead of "₹1,25,000".
+      // Outside the tolerance, keep up to 3 decimal places.
+      const snapQty = (raw: unknown): number => {
+        const n = Number(raw)
+        if (!Number.isFinite(n) || n <= 0) return 1
+        const r = Math.round(n)
+        if (Math.abs(n - r) < 0.05) return Math.max(1, r)
+        return Math.max(0.001, Math.round(n * 1000) / 1000)
+      }
       if (ocr.lineItems?.length) {
         replace(ocr.lineItems.map((l: any) => recalcLine({
           ...emptyLine(),
           description: l.description ?? '',
-          quantity:    Number(l.quantity)  || 1,
-          unitPrice:   Number(l.unitPrice) || 0,
+          // Accept any of Gemini's possible qty field names; default to 1
+          // when missing so per-line "Net" math doesn't show zero.
+          quantity:    snapQty(l.quantity ?? l.qty ?? l.units ?? l.pieces ?? l.count),
+          unitPrice:   Math.round((Number(l.unitPrice ?? l.rate ?? l.price) || 0) * 100) / 100,
           gstRate:     Number(l.gstRate)   || 0,
+          discountPct: Number(l.discountPct ?? l.discount) || 0,
           hsnCode:     l.hsn ?? undefined,
-        }, vendorState, entityState)))
+        }, vendorState, billToState)))
         ocr.lineItems.forEach((l: any, i: number) => {
-          ocrOriginals[`line_${i}_description`] = l.description       ?? ''
-          ocrOriginals[`line_${i}_quantity`]    = Number(l.quantity)  || 1
-          ocrOriginals[`line_${i}_unitPrice`]   = Number(l.unitPrice) || 0
-          ocrOriginals[`line_${i}_gstRate`]     = Number(l.gstRate)   || 0
+          const qty       = snapQty(l.quantity ?? l.qty ?? l.units ?? l.pieces ?? l.count)
+          const unitPrice = Math.round((Number(l.unitPrice ?? l.rate ?? l.price) || 0) * 100) / 100
+          ocrOriginals[`line_${i}_description`] = l.description ?? ''
+          ocrOriginals[`line_${i}_quantity`]    = qty
+          ocrOriginals[`line_${i}_unitPrice`]   = unitPrice
+          ocrOriginals[`line_${i}_gstRate`]     = Number(l.gstRate) || 0
         })
       }
 
@@ -1589,7 +1730,7 @@ export default function InvoiceFormPage() {
     } finally {
       setOcrLoading(false)
     }
-  }, [file, setValue, replace, vendorState, entityState, markOcrFields, runItemMatching])
+  }, [file, setValue, getValues, locations, entities, replace, vendorState, billToState, markOcrFields, runItemMatching])
 
   const dismissOcr = useCallback(() => {
     setOcrError(null)
@@ -1617,6 +1758,17 @@ export default function InvoiceFormPage() {
     return base
   }, [file, isEdit, totals, mode, selectedPoId, consumptionType, matchType])
 
+  // Banner for inline mutation failures — surfaces 4xx / 5xx errors that
+  // previously swallowed (the mutations had no onError so clicks looked dead).
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const apiMsg = (err: unknown): string => {
+    if (err instanceof HttpError) {
+      return err.error.message ?? `Request failed (${err.error.status})`
+    }
+    if (err instanceof Error) return err.message
+    return 'Request failed'
+  }
+
   // ── Mutations ─────────────────────────────────────────────────────────────
   const saveDraft = useMutation({
     mutationFn: async (data: FormValues) => {
@@ -1626,9 +1778,11 @@ export default function InvoiceFormPage() {
         : http.post<any>('/api/invoices', payload)
     },
     onSuccess: (res) => {
+      setSubmitError(null)
       qc.invalidateQueries({ queryKey: ['invoices'] })
       navigate(`/invoices/${res.id ?? id}`)
     },
+    onError: (err) => setSubmitError(`Save failed — ${apiMsg(err)}`),
   })
 
   const submitForApproval = useMutation({
@@ -1641,9 +1795,11 @@ export default function InvoiceFormPage() {
       return inv
     },
     onSuccess: (res) => {
+      setSubmitError(null)
       qc.invalidateQueries({ queryKey: ['invoices'] })
       navigate(`/invoices/${res.id ?? id}`)
     },
+    onError: (err) => setSubmitError(`Submit failed — ${apiMsg(err)}`),
   })
 
   // Smooth-scroll to the first invalid field on submit failure. RHF's default
@@ -1727,6 +1883,14 @@ export default function InvoiceFormPage() {
           </span>
         ))}
       </div>
+
+      {submitError && (
+        <div className="border-b border-red-200 bg-red-50 px-4 py-2.5 sm:px-6 flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 mt-0.5 text-red-600 flex-shrink-0" />
+          <p className="text-sm text-red-800 flex-1">{submitError}</p>
+          <button onClick={() => setSubmitError(null)} className="text-xs text-red-700 hover:text-red-900">Dismiss</button>
+        </div>
+      )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* LEFT — collapsible upload + preview */}
@@ -2183,7 +2347,7 @@ export default function InvoiceFormPage() {
                       <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[40px]">#</th>
                       <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[120px]">Item</th>
                       <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[150px]">Description</th>
-                      <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[60px]">Qty</th>
+                      <th className="px-2 py-2 text-right font-medium text-muted-foreground whitespace-nowrap min-w-[80px]">Qty</th>
                       <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[70px]">UOM</th>
                       <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[90px]">Unit Price</th>
                       <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[55px]">Disc%</th>
@@ -2192,7 +2356,17 @@ export default function InvoiceFormPage() {
                       <th className="px-2 py-2 text-right font-medium text-muted-foreground whitespace-nowrap min-w-[75px]">CGST</th>
                       <th className="px-2 py-2 text-right font-medium text-muted-foreground whitespace-nowrap min-w-[75px]">SGST</th>
                       <th className="px-2 py-2 text-right font-medium text-muted-foreground whitespace-nowrap min-w-[75px]">IGST</th>
-                      <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[55px]">TDS%</th>
+                      <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[55px]">
+                        TDS%
+                        {selectedVendor && Number(selectedVendor.tdsRate) > 0 && (
+                          <span
+                            className="ml-1 inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-1.5 text-[10px] font-medium text-amber-700"
+                            title={`Vendor TDS default — applies when no item override`}
+                          >
+                            {Number(selectedVendor.tdsRate)}%{selectedVendor.tdsSectionCode ? ` · ${selectedVendor.tdsSectionCode}` : ''}
+                          </span>
+                        )}
+                      </th>
                       <th className="px-2 py-2 text-right font-medium text-muted-foreground whitespace-nowrap min-w-[75px]">TDS</th>
                       <th className="px-2 py-2 text-center font-medium text-muted-foreground whitespace-nowrap min-w-[45px]">RCM</th>
                       <th className="px-2 py-2 text-right font-medium text-muted-foreground whitespace-nowrap min-w-[85px]">Net</th>
@@ -2261,24 +2435,56 @@ export default function InvoiceFormPage() {
                             {lineOcrIcon(i, 'description')}
                           </td>
                           <td className="px-2 py-1 relative">
-                            <FormInput className={cn(CELL_INPUT, 'pr-5')} type="number" step="0.0001" min="0" placeholder="1"
-                              {...register(`lines.${i}.quantity`, { valueAsNumber: true })}
-                              onBlur={() => recalc(i)} />
+                            {(() => {
+                              // Chain RHF's onChange with our recalc so taxable/GST update
+                              // on every keystroke, not just blur. onBlur snaps an empty
+                              // cell back to 1 so the line never reads as ₹0 by mistake.
+                              const qtyReg = register(`lines.${i}.quantity`, { valueAsNumber: true })
+                              return <FormInput
+                                className={cn(NUMERIC_INPUT, 'pr-5')}
+                                type="number" step="0.001" min="0.001" placeholder="1"
+                                {...qtyReg}
+                                onChange={(e) => { qtyReg.onChange(e); recalc(i) }}
+                                onBlur={(e) => {
+                                  qtyReg.onBlur(e)
+                                  const v = e.currentTarget.valueAsNumber
+                                  if (!v || isNaN(v) || v <= 0) {
+                                    isApplyingPreset.current = true
+                                    setValue(`lines.${i}.quantity`, 1)
+                                  }
+                                  recalc(i)
+                                }}
+                              />
+                            })()}
                             {lineOcrIcon(i, 'quantity')}
                           </td>
                           <td className="px-2 py-1">
                             <FormInput className={CELL_INPUT} placeholder="Nos" {...register(`lines.${i}.uom`)} />
                           </td>
                           <td className="px-2 py-1 relative">
-                            <FormInput className={cn(CELL_INPUT, 'pr-5')} type="number" step="0.01" min="0" placeholder="0.00"
-                              {...register(`lines.${i}.unitPrice`, { valueAsNumber: true })}
-                              onBlur={() => recalc(i)} />
+                            {(() => {
+                              const upReg = register(`lines.${i}.unitPrice`, { valueAsNumber: true })
+                              return <FormInput
+                                className={cn(NUMERIC_INPUT, 'pr-5')}
+                                type="number" step="0.01" min="0" placeholder="0.00"
+                                {...upReg}
+                                onChange={(e) => { upReg.onChange(e); recalc(i) }}
+                                onBlur={(e) => { upReg.onBlur(e); recalc(i) }}
+                              />
+                            })()}
                             {lineOcrIcon(i, 'unitPrice')}
                           </td>
                           <td className="px-2 py-1">
-                            <FormInput className={CELL_INPUT} type="number" step="0.01" min="0" max="100" placeholder="0"
-                              {...register(`lines.${i}.discountPct`, { valueAsNumber: true })}
-                              onBlur={() => recalc(i)} />
+                            {(() => {
+                              const discReg = register(`lines.${i}.discountPct`, { valueAsNumber: true })
+                              return <FormInput
+                                className={NUMERIC_INPUT}
+                                type="number" step="0.01" min="0" max="100" placeholder="0"
+                                {...discReg}
+                                onChange={(e) => { discReg.onChange(e); recalc(i) }}
+                                onBlur={(e) => { discReg.onBlur(e); recalc(i) }}
+                              />
+                            })()}
                           </td>
                           <td className="px-2 py-1.5 tabular-nums font-mono text-right whitespace-nowrap">
                             {fmt(l.taxableAmount, currencyCode)}
@@ -2327,7 +2533,7 @@ export default function InvoiceFormPage() {
                             )}
                           </td>
                           <td className="px-2 py-1.5 tabular-nums font-mono text-right text-amber-600 whitespace-nowrap">
-                            {fmt(l.tdsAmount, currencyCode)}
+                            {Number(l.tdsAmount) > 0 ? fmt(l.tdsAmount, currencyCode) : <span className="text-muted-foreground">—</span>}
                           </td>
                           <td className="px-2 py-1.5 text-center">
                             <input type="checkbox" {...register(`lines.${i}.rcmApplicable`)} className="rounded border-input" />

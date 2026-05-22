@@ -650,8 +650,17 @@ export async function invoiceRoutes(app: FastifyInstance) {
       where: { id: invoiceId, tenantId },
     })
     if (!invoice) return reply.code(404).send({ message: 'Invoice not found' })
-    if (!['DRAFT', 'REJECTED'].includes(invoice.status)) {
-      return reply.code(400).send({ message: `Cannot submit invoice in ${invoice.status} status` })
+    // Submittable statuses: anything not yet in approval/payment. Email-
+    // ingested invoices land in ON_HOLD / NEEDS_REVIEW / INGESTED and must
+    // be promotable once a reviewer has cleaned them up. Terminal states
+    // (APPROVED / REJECTED-with-workflow / PAID / CANCELLED) stay blocked.
+    // REJECTED is allowed so a re-edit cycle can re-submit.
+    const SUBMITTABLE = new Set(['DRAFT', 'REJECTED', 'INGESTED', 'NEEDS_REVIEW', 'ON_HOLD'])
+    if (!SUBMITTABLE.has(invoice.status)) {
+      return reply.code(400).send({
+        code:    'INVALID_STATE',
+        message: `Cannot submit invoice in ${invoice.status} status — must be one of ${[...SUBMITTABLE].join(', ')}`,
+      })
     }
 
     const record = {

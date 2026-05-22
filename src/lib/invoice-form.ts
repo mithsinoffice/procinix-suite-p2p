@@ -77,28 +77,35 @@ export interface LineItemTotals {
   total:         number
 }
 
+// Rounding helpers — JS multiplication accumulates floating-point drift
+// (e.g. 0.1 + 0.2 = 0.30000000000000004). Every monetary intermediate value
+// is rounded so "qty=1, rate=125000" doesn't yield "125000.0000001". The
+// same helpers are inlined into the form's local recalcLine.
+const round2 = (n: number) => Math.round(n * 100) / 100
+const round3 = (n: number) => Math.round(n * 1000) / 1000
+
 export function computeLineItemTotals(
   line:    LineItemInput,
   split:   GstSplit,
   tdsRate: number | undefined = undefined,
 ): LineItemTotals {
-  const qty           = Number(line.quantity)    || 0
-  const unitPrice     = Number(line.unitPrice)   || 0
+  const qty           = round3(Number(line.quantity)  || 0)
+  const unitPrice     = round2(Number(line.unitPrice) || 0)
   const discountPct   = Number(line.discountPct) || 0
   const tdsPct        = Number(tdsRate ?? line.tdsRate) || 0
 
-  const lineBase      = qty * unitPrice
-  const discountAmt   = (lineBase * discountPct) / 100
-  const taxableAmount = lineBase - discountAmt
-  const gstTotal      = split.cgst + split.sgst + split.igst
-  const tdsAmount     = (taxableAmount * tdsPct) / 100
-  const total         = taxableAmount + gstTotal - tdsAmount
+  const lineBase      = round2(qty * unitPrice)
+  const discountAmt   = round2((lineBase * discountPct) / 100)
+  const taxableAmount = round2(lineBase - discountAmt)
+  const gstTotal      = round2(split.cgst + split.sgst + split.igst)
+  const tdsAmount     = round2((taxableAmount * tdsPct) / 100)
+  const total         = round2(taxableAmount + gstTotal - tdsAmount)
 
   return {
     taxableAmount,
-    cgst:      split.cgst,
-    sgst:      split.sgst,
-    igst:      split.igst,
+    cgst:      round2(split.cgst),
+    sgst:      round2(split.sgst),
+    igst:      round2(split.igst),
     tdsAmount,
     total,
   }
@@ -342,4 +349,92 @@ export function jvTotals(entries: JvEntry[]): { totalDr: number; totalCr: number
 export function panFromGstin(gstin: string | null | undefined): string | null {
   if (!gstin || gstin.length < 12) return null
   return gstin.slice(2, 12).toUpperCase()
+}
+
+// ── Pure: state-code lookup ─────────────────────────────────────────────────
+// India GST state codes (2-digit) map to canonical state names. Used by the
+// invoice form to align three inconsistent inputs:
+//   - Vendor.stateCode (numeric "27")
+//   - Entity.state (free text "Maharashtra")
+//   - Location.state (free text "Maharashtra")
+// Without normalisation the GST split compares "27" to "Maharashtra" and
+// always reports interstate (wrong CGST/SGST/IGST split).
+export const STATE_CODE_TO_NAME: Record<string, string> = {
+  '01': 'Jammu and Kashmir',
+  '02': 'Himachal Pradesh',
+  '03': 'Punjab',
+  '04': 'Chandigarh',
+  '05': 'Uttarakhand',
+  '06': 'Haryana',
+  '07': 'Delhi',
+  '08': 'Rajasthan',
+  '09': 'Uttar Pradesh',
+  '10': 'Bihar',
+  '11': 'Sikkim',
+  '12': 'Arunachal Pradesh',
+  '13': 'Nagaland',
+  '14': 'Manipur',
+  '15': 'Mizoram',
+  '16': 'Tripura',
+  '17': 'Meghalaya',
+  '18': 'Assam',
+  '19': 'West Bengal',
+  '20': 'Jharkhand',
+  '21': 'Odisha',
+  '22': 'Chhattisgarh',
+  '23': 'Madhya Pradesh',
+  '24': 'Gujarat',
+  '25': 'Daman and Diu',
+  '26': 'Dadra and Nagar Haveli',
+  '27': 'Maharashtra',
+  '28': 'Andhra Pradesh',
+  '29': 'Karnataka',
+  '30': 'Goa',
+  '31': 'Lakshadweep',
+  '32': 'Kerala',
+  '33': 'Tamil Nadu',
+  '34': 'Puducherry',
+  '35': 'Andaman and Nicobar Islands',
+  '36': 'Telangana',
+  '37': 'Andhra Pradesh (New)',
+  '38': 'Ladakh',
+}
+
+const STATE_NAME_TO_CODE: Record<string, string> = Object.fromEntries(
+  Object.entries(STATE_CODE_TO_NAME).map(([code, name]) => [name.toLowerCase(), code]),
+)
+
+// Normalise any state representation to its 2-digit GST code. Accepts:
+//   "27"                          → "27"
+//   "Maharashtra"                 → "27"
+//   "maharashtra"                 → "27"
+//   "Maharashtra (27)"            → "27"   (parses the parenthesised code)
+//   "27-Maharashtra"              → "27"   (prefix code)
+//   "Place of Supply: Maharashtra" → "27"  (suffix lookup)
+//   ""                            → ""
+//   null / undefined / unknown    → ""
+export function normalizeStateCode(s: string | null | undefined): string {
+  if (!s) return ''
+  const str = String(s).trim()
+  if (!str) return ''
+  // Bare 2-digit code
+  const bare = str.match(/^(\d{2})$/)
+  if (bare) return bare[1]
+  // Parenthesised code "Maharashtra (27)"
+  const paren = str.match(/\((\d{2})\)/)
+  if (paren) return paren[1]
+  // Prefix code "27-Maharashtra" / "27 Maharashtra"
+  const prefix = str.match(/^(\d{2})[\s\-–:]/)
+  if (prefix) return prefix[1]
+  // Exact name lookup
+  const lc = str.toLowerCase()
+  if (STATE_NAME_TO_CODE[lc]) return STATE_NAME_TO_CODE[lc]
+  // Last-resort: any known state name appearing as a token in the string.
+  // Catches "Place of Supply: Maharashtra" and similar prefixes.
+  for (const [name, code] of Object.entries(STATE_NAME_TO_CODE)) {
+    // Word-boundary match so "goa" doesn't match "gangtok".
+    const re = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\b`, 'i')
+    if (re.test(str)) return code
+  }
+  return ''
 }

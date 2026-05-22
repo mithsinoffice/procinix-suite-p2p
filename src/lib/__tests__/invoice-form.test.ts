@@ -12,6 +12,7 @@ import {
   jvTotals,
   pickGl,
   panFromGstin,
+  normalizeStateCode,
   type GlCodeRef,
   type JvBuildContext,
 } from '../invoice-form'
@@ -306,5 +307,87 @@ describe('panFromGstin', () => {
     expect(panFromGstin('')).toBeNull()
     expect(panFromGstin(null)).toBeNull()
     expect(panFromGstin('27AB')).toBeNull()
+  })
+})
+
+// ── computeLineItemTotals precision ─────────────────────────────────────────
+// Locks the rounding behaviour the recalcLine chain inherits — every monetary
+// intermediate is rounded so noisy float multiplications don't bleed through
+// (e.g. "1.0007 × 125000" producing "125087.50" in the UI).
+
+describe('computeLineItemTotals — precision', () => {
+  it('qty=1, rate=125000, disc=0, gst=18% → taxable 125000.00 exactly', () => {
+    const out = computeLineItemTotals(
+      { quantity: 1, unitPrice: 125000, discountPct: 0 },
+      { cgst: 11250, sgst: 11250, igst: 0 },
+      0,
+    )
+    expect(out.taxableAmount).toBe(125000)
+    expect(out.total).toBe(125000 + 22500) // 147500.00
+  })
+
+  it('noisy qty (1.0007) is rounded to 3dp before multiplication', () => {
+    const out = computeLineItemTotals(
+      { quantity: 1.0007, unitPrice: 125000, discountPct: 0 },
+      { cgst: 0, sgst: 0, igst: 0 },
+      0,
+    )
+    // 1.001 × 125000 = 125125 (round3 doesn't snap to 1; the OCR layer does).
+    // What matters here is the result is finite & rounded — no 125000.0001 artefacts.
+    expect(Number.isInteger(out.taxableAmount * 100)).toBe(true)
+  })
+
+  it('discount applied to base before tax', () => {
+    const out = computeLineItemTotals(
+      { quantity: 2, unitPrice: 1000, discountPct: 10 },
+      { cgst: 162, sgst: 162, igst: 0 },
+      2,
+    )
+    // base 2000 - 10% = 1800 taxable; tds 2% on taxable = 36; total = 1800 + 324 - 36 = 2088
+    expect(out.taxableAmount).toBe(1800)
+    expect(out.tdsAmount).toBe(36)
+    expect(out.total).toBe(2088)
+  })
+})
+
+// ── normalizeStateCode ──────────────────────────────────────────────────────
+// The OCR / vendor / location data sources are inconsistent: vendor.stateCode
+// is numeric ("27"), location.state is free text ("Maharashtra"), OCR can emit
+// "Maharashtra (27)" or "27-Maharashtra". All must collapse to "27" so the
+// GST split compares apples to apples.
+
+describe('normalizeStateCode', () => {
+  it('returns the 2-digit code unchanged', () => {
+    expect(normalizeStateCode('27')).toBe('27')
+    expect(normalizeStateCode('09')).toBe('09')
+  })
+
+  it('parses parenthesised codes — "Maharashtra (27)" → 27', () => {
+    expect(normalizeStateCode('Maharashtra (27)')).toBe('27')
+    expect(normalizeStateCode('Karnataka (29)')).toBe('29')
+  })
+
+  it('parses prefix codes — "27-Maharashtra" / "27 Maharashtra" → 27', () => {
+    expect(normalizeStateCode('27-Maharashtra')).toBe('27')
+    expect(normalizeStateCode('27 Maharashtra')).toBe('27')
+  })
+
+  it('resolves canonical state names (case-insensitive)', () => {
+    expect(normalizeStateCode('Maharashtra')).toBe('27')
+    expect(normalizeStateCode('maharashtra')).toBe('27')
+    expect(normalizeStateCode('KARNATAKA')).toBe('29')
+    expect(normalizeStateCode('Tamil Nadu')).toBe('33')
+  })
+
+  it('finds a state name embedded in a prefixed string', () => {
+    expect(normalizeStateCode('Place of Supply: Maharashtra')).toBe('27')
+    expect(normalizeStateCode('State: Karnataka')).toBe('29')
+  })
+
+  it('returns empty string for unknown / falsy input', () => {
+    expect(normalizeStateCode('')).toBe('')
+    expect(normalizeStateCode(null)).toBe('')
+    expect(normalizeStateCode(undefined)).toBe('')
+    expect(normalizeStateCode('Atlantis')).toBe('')
   })
 })
