@@ -15,6 +15,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   buildInvoiceListWhere,
   listInvoicesForRoute,
+  getInvoiceSummary,
   INVOICE_LIST_SELECT,
 } from '../invoices'
 
@@ -59,6 +60,86 @@ describe('buildInvoiceListWhere', () => {
     const w = buildInvoiceListWhere(TENANT, {}) as Record<string, unknown>
     expect(w.lifecycleState).toBeUndefined()
     expect((w as Record<string, unknown>)['lifecycle_state']).toBeUndefined()
+  })
+
+  // UNMATCHED is a derived bucket. Filtering for status='UNMATCHED' from the UI
+  // must expand to the OR clause that nav-badges.ts uses — not a literal status
+  // match (which would always return zero rows).
+  it('expands status="UNMATCHED" into the OR clause (explicit UNMATCHED status OR matchScore < 70)', () => {
+    const w = buildInvoiceListWhere(TENANT, { status: 'UNMATCHED' }) as Record<string, unknown>
+    expect(w.tenantId).toBe(TENANT)
+    expect(w.status).toBeUndefined()
+    expect(w.OR).toEqual([
+      { status: 'UNMATCHED' },
+      { AND: [{ matchScore: { lt: 70 } }, { matchScore: { not: null } }] },
+    ])
+  })
+
+  it('applies amountMin / amountMax to totalAmount', () => {
+    const w = buildInvoiceListWhere(TENANT, { amountMin: 1000, amountMax: 50000 })
+    expect(w.totalAmount).toEqual({ gte: 1000, lte: 50000 })
+  })
+})
+
+// ── 4. getInvoiceSummary — the chrome data ────────────────────────────────
+
+describe('getInvoiceSummary', () => {
+  function setupPrisma(opts?: { all?: number; pendingApproval?: number; overdue?: number; totalAmount?: number; netPayable?: number }) {
+    const all             = opts?.all ?? 5
+    const pendingApproval = opts?.pendingApproval ?? 0
+    const overdue         = opts?.overdue ?? 0
+    const totalAmount     = opts?.totalAmount ?? 0
+    const netPayable      = opts?.netPayable ?? 0
+    const callLog: any[] = []
+    const count = vi.fn().mockImplementation(args => {
+      callLog.push(args)
+      const w = args?.where ?? {}
+      if (w.status === 'DRAFT')             return 1
+      if (w.status === 'SUBMITTED')         return 2
+      if (w.status === 'PENDING_L1')        return 3
+      if (w.status === 'PENDING_L2')        return 4
+      if (w.status === 'APPROVED')          return 5
+      if (w.status === 'ON_HOLD')           return 6
+      if (w.status === 'REJECTED')          return 7
+      if (w.status === 'PAYMENT_INITIATED') return 8
+      if (w.status === 'PAID')              return 9
+      if (Array.isArray(w.OR))              return 10  // UNMATCHED bucket
+      if (w.status?.in?.length === 3)       return pendingApproval
+      if (w.dueDate?.lt)                    return overdue
+      return all
+    })
+    const aggregate = vi.fn().mockResolvedValue({ _sum: { totalAmount, netPayable } })
+    const prisma: any = { invoice: { count, aggregate } }
+    return { prisma, count, aggregate, callLog }
+  }
+
+  it('returns status counts for all 11 tabs including the derived UNMATCHED bucket', async () => {
+    const { prisma } = setupPrisma({ all: 15 })
+    const out = await getInvoiceSummary(prisma, TENANT)
+    expect(out.statusCounts).toEqual({
+      ALL: 15, UNMATCHED: 10, DRAFT: 1, SUBMITTED: 2,
+      PENDING_L1: 3, PENDING_L2: 4, APPROVED: 5,
+      ON_HOLD: 6, REJECTED: 7, PAYMENT_INITIATED: 8, PAID: 9,
+    })
+  })
+
+  it('returns footer totals + pending approval + overdue', async () => {
+    const { prisma } = setupPrisma({ all: 128, pendingApproval: 12, overdue: 4, totalAmount: 12_50_000, netPayable: 11_00_000 })
+    const out = await getInvoiceSummary(prisma, TENANT)
+    expect(out.footer).toEqual({
+      totalInvoices:   128,
+      totalAmount:     12_50_000,
+      netPayable:      11_00_000,
+      pendingApproval: 12,
+      overdue:         4,
+    })
+  })
+
+  it('counts overdue using NOT IN [PAID, APPROVED, REJECTED, CANCELLED]', async () => {
+    const { prisma, callLog } = setupPrisma()
+    await getInvoiceSummary(prisma, TENANT, new Date('2026-05-22'))
+    const overdueCall = callLog.find(c => c.where?.dueDate?.lt instanceof Date)
+    expect(overdueCall.where.status.notIn).toEqual(['PAID', 'APPROVED', 'REJECTED', 'CANCELLED'])
   })
 })
 
@@ -209,6 +290,24 @@ describe('listInvoicesForRoute', () => {
       id: { in: ['ent-1'] }, tenantId: TENANT,
     })
     expect(out.data[0]).toMatchObject({ entityName: 'Procinix Mumbai HQ', entityCode: 'PMHQ' })
+  })
+
+  // Pagination — pageSize defaults to 50 (preserved above) but a caller can
+  // override it. Page > 1 attaches `skip`; page === 1 (or absent) does not.
+  it('uses caller-supplied pageSize when provided', async () => {
+    const findMany = vi.fn().mockResolvedValue([])
+    const prisma: any = { invoice: { findMany, count: vi.fn().mockResolvedValue(0) } }
+    await listInvoicesForRoute(prisma, TENANT, { pageSize: 10 })
+    expect(findMany.mock.calls[0][0].take).toBe(10)
+    expect(findMany.mock.calls[0][0].skip).toBeUndefined()
+  })
+
+  it('applies skip = (page-1) * pageSize when page > 1', async () => {
+    const findMany = vi.fn().mockResolvedValue([])
+    const prisma: any = { invoice: { findMany, count: vi.fn().mockResolvedValue(0) } }
+    await listInvoicesForRoute(prisma, TENANT, { pageSize: 10, page: 3 })
+    expect(findMany.mock.calls[0][0].take).toBe(10)
+    expect(findMany.mock.calls[0][0].skip).toBe(20)
   })
 
   it('returns entityName=null without calling entity.findMany when no row has an entityId', async () => {

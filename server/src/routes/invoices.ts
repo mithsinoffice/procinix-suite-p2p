@@ -42,7 +42,21 @@ export interface InvoiceListQuery {
   apLane?:    string
   dateFrom?:  string
   dateTo?:    string
+  amountMin?: string | number
+  amountMax?: string | number
   duplicate?: string         // 'ALL' | 'EXACT' | 'SUSPICIOUS' (any flag set)
+  page?:      string | number
+  pageSize?:  string | number
+}
+
+// "Unmatched" is a derived bucket, not a literal status. Matches both explicit
+// UNMATCHED rows and any 2-/3-way invoice scoring below the 70 threshold.
+// Kept in sync with the nav-badge count in nav-badges.ts.
+const UNMATCHED_WHERE: Prisma.InvoiceWhereInput = {
+  OR: [
+    { status: 'UNMATCHED' },
+    { AND: [{ matchScore: { lt: 70 } }, { matchScore: { not: null } }] },
+  ],
 }
 
 // Pure: builds the Prisma where clause from query params. Exported so the
@@ -50,12 +64,20 @@ export interface InvoiceListQuery {
 // status / channelType filter sneaks in and hides freshly-ingested rows.
 export function buildInvoiceListWhere(tenantId: string, q: InvoiceListQuery): Prisma.InvoiceWhereInput {
   const where: Prisma.InvoiceWhereInput = { tenantId }
-  if (q.status   && q.status !== 'ALL') where.status   = q.status
+  if (q.status === 'UNMATCHED') {
+    Object.assign(where, UNMATCHED_WHERE)
+  } else if (q.status && q.status !== 'ALL') {
+    where.status = q.status
+  }
   if (q.vendorId)                       where.vendorId = q.vendorId
   if (q.entityId)                       where.entityId = q.entityId
   if (q.apLane   && q.apLane !== 'ALL') where.apLane   = q.apLane
   if (q.dateFrom) where.invoiceDate = { gte: new Date(q.dateFrom) }
   if (q.dateTo)   where.invoiceDate = { ...(where.invoiceDate as object), lte: new Date(q.dateTo) }
+  const amtMin = q.amountMin !== undefined && q.amountMin !== '' ? Number(q.amountMin) : undefined
+  const amtMax = q.amountMax !== undefined && q.amountMax !== '' ? Number(q.amountMax) : undefined
+  if (amtMin !== undefined && !Number.isNaN(amtMin)) where.totalAmount = { gte: amtMin }
+  if (amtMax !== undefined && !Number.isNaN(amtMax)) where.totalAmount = { ...(where.totalAmount as object), lte: amtMax }
   if (q.duplicate === 'EXACT')        where.duplicateFlag = 'EXACT'
   if (q.duplicate === 'SUSPICIOUS')   where.duplicateFlag = { in: ['FUZZY_NUMBER', 'FUZZY_AMOUNT', 'FUZZY_VENDOR_DATE', 'LINE_ITEM'] }
   if (q.duplicate === 'ANY')          where.duplicateFlag = { not: null }
@@ -79,13 +101,22 @@ export function buildInvoiceListWhere(tenantId: string, q: InvoiceListQuery): Pr
 // ingested via webhook (no entity selected at ingest time).
 export async function listInvoicesForRoute(prisma: PrismaClient, tenantId: string, q: InvoiceListQuery) {
   const where = buildInvoiceListWhere(tenantId, q)
+  // Pagination — only kicks in when the caller passes pageSize. With no params,
+  // we keep the historical default (take 50 / no skip) so the existing
+  // listInvoicesForRoute regression tests stay green.
+  const pageSize = q.pageSize !== undefined && q.pageSize !== '' ? Math.max(1, Math.min(200, Number(q.pageSize))) : 50
+  const page     = q.page     !== undefined && q.page     !== '' ? Math.max(1, Number(q.page))     : 1
+  const findManyArgs: Prisma.InvoiceFindManyArgs = {
+    where,
+    orderBy: { createdAt: 'desc' },
+    take:    pageSize,
+    select:  INVOICE_LIST_SELECT,
+  }
+  if (q.pageSize !== undefined && q.pageSize !== '' && page > 1) {
+    findManyArgs.skip = (page - 1) * pageSize
+  }
   const [data, total] = await Promise.all([
-    prisma.invoice.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take:    50,
-      select:  INVOICE_LIST_SELECT,
-    }),
+    prisma.invoice.findMany(findManyArgs),
     prisma.invoice.count({ where }),
   ])
 
@@ -105,6 +136,67 @@ export async function listInvoicesForRoute(prisma: PrismaClient, tenantId: strin
   }))
 
   return { data: enriched, total }
+}
+
+// Summary numbers for the InvoiceListPage chrome — counts per status tab
+// (including the derived UNMATCHED bucket) + the 5-card footer strip
+// (totals, pending-approval, overdue). Extracted as a pure function so the
+// regression tests can drive it with a mocked Prisma.
+export interface InvoiceSummary {
+  statusCounts: {
+    ALL: number; UNMATCHED: number; DRAFT: number; SUBMITTED: number;
+    PENDING_L1: number; PENDING_L2: number; APPROVED: number; ON_HOLD: number;
+    REJECTED: number; PAYMENT_INITIATED: number; PAID: number;
+  }
+  footer: {
+    totalInvoices: number; totalAmount: number; netPayable: number;
+    pendingApproval: number; overdue: number;
+  }
+}
+
+export async function getInvoiceSummary(prisma: PrismaClient, tenantId: string, now: Date = new Date()): Promise<InvoiceSummary> {
+  const t = { tenantId }
+  const [
+    all, unmatched, draft, submitted, pendingL1, pendingL2,
+    approved, onHold, rejected, paymentInitiated, paid,
+    aggregates, pendingApproval, overdue,
+  ] = await Promise.all([
+    prisma.invoice.count({ where: t }),
+    prisma.invoice.count({ where: { ...t, ...UNMATCHED_WHERE } }),
+    prisma.invoice.count({ where: { ...t, status: 'DRAFT' } }),
+    prisma.invoice.count({ where: { ...t, status: 'SUBMITTED' } }),
+    prisma.invoice.count({ where: { ...t, status: 'PENDING_L1' } }),
+    prisma.invoice.count({ where: { ...t, status: 'PENDING_L2' } }),
+    prisma.invoice.count({ where: { ...t, status: 'APPROVED' } }),
+    prisma.invoice.count({ where: { ...t, status: 'ON_HOLD' } }),
+    prisma.invoice.count({ where: { ...t, status: 'REJECTED' } }),
+    prisma.invoice.count({ where: { ...t, status: 'PAYMENT_INITIATED' } }),
+    prisma.invoice.count({ where: { ...t, status: 'PAID' } }),
+    prisma.invoice.aggregate({ where: t, _sum: { totalAmount: true, netPayable: true } }),
+    prisma.invoice.count({ where: { ...t, status: { in: ['SUBMITTED', 'PENDING_L1', 'PENDING_L2'] } } }),
+    prisma.invoice.count({
+      where: {
+        ...t,
+        dueDate: { lt: now },
+        status:  { notIn: ['PAID', 'APPROVED', 'REJECTED', 'CANCELLED'] },
+      },
+    }),
+  ])
+  return {
+    statusCounts: {
+      ALL: all, UNMATCHED: unmatched, DRAFT: draft, SUBMITTED: submitted,
+      PENDING_L1: pendingL1, PENDING_L2: pendingL2,
+      APPROVED: approved, ON_HOLD: onHold, REJECTED: rejected,
+      PAYMENT_INITIATED: paymentInitiated, PAID: paid,
+    },
+    footer: {
+      totalInvoices: all,
+      totalAmount:   Number(aggregates._sum.totalAmount ?? 0),
+      netPayable:    Number(aggregates._sum.netPayable  ?? 0),
+      pendingApproval: pendingApproval,
+      overdue:         overdue,
+    },
+  }
 }
 
 // Invoice DateTime? columns surfaced as HTML <input type="date"> on the form —
@@ -157,6 +249,15 @@ export async function invoiceRoutes(app: FastifyInstance) {
       req.query as InvoiceListQuery,
     )
     return reply.send(result)
+  })
+
+  // ── Listing summary ──
+  // Powers the InvoiceListPage chrome — status-tab counts + the 5-card footer
+  // strip. Always reflects the full dataset (not the current page), so callers
+  // can render accurate "23 overdue" badges regardless of pagination state.
+  app.get('/summary', auth, async (req, reply) => {
+    const data = await getInvoiceSummary(app.prisma, req.tenant.id)
+    return reply.send(data)
   })
 
   // ── Stats ──
