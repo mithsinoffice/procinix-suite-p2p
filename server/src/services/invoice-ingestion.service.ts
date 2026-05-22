@@ -7,6 +7,7 @@ import { extractInvoiceFromFile, type OcrInvoiceData } from './gemini-ocr.servic
 import { calculateMatchScore, routeInvoiceToLane, type VendorMatchMethod, type VendorCandidate } from './match-scoring.service.js'
 import { matchOcrLinesToItems } from './item-match.service.js'
 import { saveInvoiceFile } from './invoice-file-storage.service.js'
+import { detectDuplicates } from './duplicate-detector.service.js'
 import { writeAuditLog } from '../lib/audit.js'
 import { ok, err, type Result } from '../lib/result.js'
 import Fuse from 'fuse.js'
@@ -324,6 +325,38 @@ export async function ingestInvoice(
     })
 
     await routeInvoiceToLane(prisma, invoice.id, ctx.tenantId, ctx.userId, scoreResult)
+
+    // 6b. Fuzzy duplicate scan — runs *after* the invoice is persisted so the
+    //     line rows exist (LINE_ITEM rule needs them) and we can exclude self
+    //     via sourceId. Result is stored on duplicateFlag + duplicateMatches.
+    //     An EXACT hit auto-holds the invoice; suspicious matches stay in the
+    //     current lane (lane logic / LLM scorer handle final routing). Never
+    //     throws — duplicate detection is advisory, not gating.
+    try {
+      const dupResult = await detectDuplicates({
+        invoiceNumber: extracted.invoiceNumber,
+        vendorId:      vendorId ?? undefined,
+        vendorGstin:   extracted.vendorGstin,
+        totalAmount,
+        invoiceDate:   ocrInvoiceDate.toISOString().slice(0, 10),
+        lineItems:     (extracted.lineItems ?? []).map(l => ({
+          description: l.description ?? '',
+          amount:      l.amount ?? 0,
+        })),
+        sourceId:      invoice.id,
+      }, ctx.tenantId, prisma)
+      if (dupResult.matches.length > 0) {
+        const flag = dupResult.matches[0].matchType
+        const patch: { duplicateFlag: string; duplicateMatches: unknown; status?: string } = {
+          duplicateFlag:    flag,
+          duplicateMatches: dupResult.matches as unknown,
+        }
+        if (dupResult.isDuplicate) patch.status = 'ON_HOLD'
+        await prisma.invoice.update({ where: { id: invoice.id }, data: patch as never })
+      }
+    } catch {
+      // Duplicate detection is advisory — never sink the ingestion.
+    }
 
     // 7. Update job as done
     await prisma.invoiceIngestionJob.update({

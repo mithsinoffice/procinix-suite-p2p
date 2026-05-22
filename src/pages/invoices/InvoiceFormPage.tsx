@@ -1,15 +1,15 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, Trash2, Loader2, Upload, FileText, AlertTriangle, Send, Info, Zap,
-  ChevronLeft, ChevronRight, X,
+  ChevronLeft, ChevronRight, X, ScanLine, Edit3,
 } from 'lucide-react'
 import { http } from '../../lib/http'
 import { MasterPageHeader, FormInput, FormSelect, FormTextarea } from '../../components/masters/MasterFormLayout'
 import { useAuthStore } from '../../stores/auth.store'
-import { formatCurrency, formatDate } from '../../lib/utils/formatters'
+import { formatCurrency, formatDate, formatDateTime, formatStatus } from '../../lib/utils/formatters'
 import { cn } from '../../lib/utils'
 import {
   pickGl, computeJvEntries, jvTotals, computeCrossCheck, panFromGstin,
@@ -166,6 +166,165 @@ const emptyLine = (): LineItem => ({
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
+// Async LLM scoring runs after n8n ingest (invoice-scorer.service). When the
+// scorer raises flags / validation issues / a vendor-match suggestion, the
+// banner surfaces them on the edit form so the reviewer sees them before
+// editing fields. Hidden when there's nothing to show.
+interface LlmReviewFlag      { flag: string; reason: string; severity: 'critical' | 'high' | 'medium' | 'low' }
+interface LlmValidationIssue { field: string; severity: 'error' | 'warning'; message: string }
+interface LlmVendorSuggestion { suggestedName: string | null; gstin: string | null; confidence: number }
+
+// ── Fuzzy duplicate banner ──────────────────────────────────────────────────
+// Reads { isDuplicate, isSuspicious, matches } from
+// GET /api/invoices/:id/duplicate-check (also returnable from
+// /api/invoices/:id when the field is set during ingestion). EXACT matches
+// render red and block-style; suspicious matches render amber with the rule
+// label, confidence and a deep link to the matched invoice. Never blocks
+// submission — the AP reviewer decides.
+interface DuplicateMatchUI {
+  invoiceId:     string
+  invoiceNumber: string
+  vendorName:    string
+  totalAmount:   number
+  invoiceDate:   string
+  matchType:     'EXACT' | 'FUZZY_NUMBER' | 'FUZZY_AMOUNT' | 'FUZZY_VENDOR_DATE' | 'LINE_ITEM'
+  confidence:    number
+  reason:        string
+}
+interface DuplicateCheckUI {
+  isDuplicate:  boolean
+  isSuspicious: boolean
+  matches:      DuplicateMatchUI[]
+}
+
+const MATCH_TYPE_LABELS: Record<DuplicateMatchUI['matchType'], string> = {
+  EXACT:             'Exact',
+  FUZZY_NUMBER:      'Fuzzy number',
+  FUZZY_AMOUNT:      'Fuzzy amount',
+  FUZZY_VENDOR_DATE: 'Vendor + date',
+  LINE_ITEM:         'Line items',
+}
+
+function DuplicateBanner({ data, currency }: { data: DuplicateCheckUI | null | undefined; currency: string }) {
+  if (!data || !data.matches?.length) return null
+  const isExact = data.isDuplicate
+  return (
+    <div className={cn('rounded-xl border px-5 py-4 space-y-3',
+      isExact ? 'border-red-200 bg-red-50/50' : 'border-amber-200 bg-amber-50/40')}>
+      <div className="flex items-baseline justify-between flex-wrap gap-2">
+        <h3 className={cn('text-sm font-semibold', isExact ? 'text-red-800' : 'text-amber-800')}>
+          {isExact ? '⚠ Exact duplicate detected' : '⚠ Possible duplicate — review required'}
+        </h3>
+        <span className="text-[10px] text-muted-foreground">{data.matches.length} match{data.matches.length === 1 ? '' : 'es'} · doesn&apos;t block submission</span>
+      </div>
+      <p className={cn('text-xs', isExact ? 'text-red-700' : 'text-amber-700')}>
+        {isExact
+          ? 'This invoice appears to already exist. Review before submitting.'
+          : 'These invoices may be the same. Verify before submitting.'}
+      </p>
+      <ul className="space-y-1.5">
+        {data.matches.map(m => (
+          <li key={m.invoiceId} className="flex items-start gap-2 text-xs">
+            <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide flex-shrink-0',
+              m.matchType === 'EXACT' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-amber-100 text-amber-800 border-amber-200')}>
+              {MATCH_TYPE_LABELS[m.matchType]}
+            </span>
+            <span className="flex-1 leading-relaxed">
+              <span className="font-mono font-medium">{m.invoiceNumber}</span>
+              <span className="text-muted-foreground"> · {m.vendorName} · {formatCurrency(m.totalAmount, currency)} · {m.invoiceDate}</span>
+              <br />
+              <span className="text-muted-foreground">Reason: {m.reason} · Confidence: {Math.round(m.confidence * 100)}%</span>
+            </span>
+            <a
+              href={`/invoices/${m.invoiceId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline flex-shrink-0"
+            >
+              View invoice →
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function LlmReviewBanner({ inv }: { inv: any | null | undefined }) {
+  if (!inv) return null
+  const flags   = Array.isArray(inv.reviewFlags)      ? inv.reviewFlags      as LlmReviewFlag[]      : []
+  const issues  = Array.isArray(inv.validationIssues) ? inv.validationIssues as LlmValidationIssue[] : []
+  const sug     = (inv.vendorMatchSuggestion && (inv.vendorMatchSuggestion as LlmVendorSuggestion).confidence > 0.5)
+    ? (inv.vendorMatchSuggestion as LlmVendorSuggestion)
+    : null
+  const showVendorChip = sug && !inv.vendorId
+  const isHold = inv.recommendedAction === 'hold' && flags.length > 0
+  if (!isHold && issues.length === 0 && !showVendorChip) return null
+
+  const severityClass: Record<LlmReviewFlag['severity'], string> = {
+    critical: 'bg-red-50 text-red-700 border-red-200',
+    high:     'bg-amber-50 text-amber-700 border-amber-200',
+    medium:   'bg-gray-100 text-gray-700 border-gray-200',
+    low:      'bg-gray-50 text-gray-600 border-gray-200',
+  }
+  const sortedIssues = [...issues].sort((a, b) => (a.severity === 'error' ? -1 : 1) - (b.severity === 'error' ? -1 : 1))
+
+  return (
+    <div className={cn('rounded-xl border px-5 py-4 space-y-3', isHold ? 'border-red-200 bg-red-50/40' : 'border-amber-200 bg-amber-50/30')}>
+      <div className="flex items-baseline justify-between flex-wrap gap-2">
+        <h3 className={cn('text-sm font-semibold', isHold ? 'text-red-800' : 'text-amber-800')}>
+          {isHold ? 'On hold — AI review flags' : 'AI review notes'}
+        </h3>
+        <span className="text-[10px] text-muted-foreground">Auto-generated by invoice-scorer · resolve before submit</span>
+      </div>
+
+      {flags.length > 0 && (
+        <ul className="space-y-1.5">
+          {flags.map((f, i) => (
+            <li key={i} className="flex items-start gap-2 text-xs">
+              <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide flex-shrink-0', severityClass[f.severity] ?? severityClass.low)}>
+                {f.severity}
+              </span>
+              <span className="leading-relaxed">
+                <span className="font-medium">{f.flag}</span>
+                <span className="text-muted-foreground"> — {f.reason}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {sortedIssues.length > 0 && (
+        <div className="border-t border-current/10 pt-2 space-y-1">
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Validation issues</p>
+          <ul className="space-y-0.5">
+            {sortedIssues.map((it, i) => (
+              <li key={i} className="text-xs flex items-baseline gap-2">
+                <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase', it.severity === 'error' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800')}>
+                  {it.severity}
+                </span>
+                <span className="font-mono text-muted-foreground">{it.field}</span>
+                <span>— {it.message}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {showVendorChip && (
+        <div className="border-t border-current/10 pt-2">
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Suggested vendor</p>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-teal-50 text-teal-800 px-2.5 py-1 text-xs font-medium">
+            {sug!.suggestedName ?? 'Unknown'}
+            {sug!.gstin && <span className="text-[10px] font-mono text-teal-700/80">({sug!.gstin})</span>}
+            <span className="text-[10px] text-teal-700/60">· {Math.round(sug!.confidence * 100)}% confidence</span>
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SectionHeader({ letter, title, subtitle }: { letter: string; title: string; subtitle?: string }) {
   return (
     <div className="flex items-baseline gap-2 border-b border-border pb-2 mb-4">
@@ -179,7 +338,7 @@ function SectionHeader({ letter, title, subtitle }: { letter: string; title: str
 }
 
 function Field({ label, required, error, span, children }: {
-  label: string; required?: boolean; error?: string; span?: boolean; children: React.ReactNode
+  label: React.ReactNode; required?: boolean; error?: string; span?: boolean; children: React.ReactNode
 }) {
   return (
     <div className={cn('space-y-1.5', span && 'col-span-2')}>
@@ -189,6 +348,82 @@ function Field({ label, required, error, span, children }: {
       {children}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
+  )
+}
+
+// ── OCR source / override indicator ─────────────────────────────────────────
+// One icon per OCR-tracked field. Teal scan icon when the value still matches
+// what OCR extracted; amber edit icon once the user overrides it. The pair of
+// Sets (ocrFields + overriddenFields) is maintained by the form root via the
+// markOcrFields helper + a single useEffect that diffs against ocrOriginalValues.
+// Gradient palettes per spec: OCR uses the cool 135° blue→teal, override flips
+// to the warm 135° orange→pink so the reviewer's eye catches every edit.
+const OCR_GRADIENT_BG       = 'linear-gradient(135deg, #0093E9 0%, #80D0C7 100%)'
+const OVERRIDE_GRADIENT_BG  = 'linear-gradient(135deg, #f7971e 0%, #f5576c 100%)'
+
+function OcrFieldIndicator({ fieldKey, ocrFields, overriddenFields, ocrOriginalValues }: {
+  fieldKey:           string
+  ocrFields:          Set<string>
+  overriddenFields:   Set<string>
+  ocrOriginalValues?: Record<string, unknown>
+}) {
+  if (overriddenFields.has(fieldKey)) {
+    const orig = ocrOriginalValues?.[fieldKey]
+    const tip  = orig != null && orig !== ''
+      ? `Manually overridden · OCR read: ${String(orig)}`
+      : 'Manually overridden'
+    return (
+      <span
+        title={tip}
+        aria-label={tip}
+        className="inline-flex items-center justify-center align-text-bottom rounded ml-1 h-4 w-4"
+        style={{ background: OVERRIDE_GRADIENT_BG }}
+      >
+        <Edit3 className="h-2.5 w-2.5 text-white" />
+      </span>
+    )
+  }
+  if (ocrFields.has(fieldKey)) {
+    return (
+      <span
+        title="From OCR · original value preserved"
+        aria-label="From OCR · original value preserved"
+        className="inline-flex items-center justify-center align-text-bottom rounded ml-1 h-4 w-4"
+        style={{ background: OCR_GRADIENT_BG }}
+      >
+        <ScanLine className="h-2.5 w-2.5 text-white" />
+      </span>
+    )
+  }
+  return null
+}
+
+// "Edited" amber chip — appears next to the label after the icon when the
+// reviewer overrides an OCR-populated value. Pair this with OcrOverrideHint
+// below the input.
+function EditedBadge({ fieldKey, overriddenFields }: { fieldKey: string; overriddenFields: Set<string> }) {
+  if (!overriddenFields.has(fieldKey)) return null
+  return (
+    <span className="ml-1 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 align-middle">
+      Edited
+    </span>
+  )
+}
+
+// Hint rendered below an overridden input, showing the original OCR value so
+// the reviewer can audit the diff before submitting.
+function OcrOverrideHint({ fieldKey, overriddenFields, ocrOriginalValues }: {
+  fieldKey:          string
+  overriddenFields:  Set<string>
+  ocrOriginalValues: Record<string, unknown>
+}) {
+  if (!overriddenFields.has(fieldKey)) return null
+  const orig = ocrOriginalValues[fieldKey]
+  if (orig == null || orig === '') return null
+  return (
+    <p className="text-[10px] text-amber-700 mt-1">
+      Manually overridden · OCR read &lsquo;{String(orig)}&rsquo;
+    </p>
   )
 }
 
@@ -206,14 +441,27 @@ interface LeftPanelProps {
   ocrConfidence: number | null
   ocrModel:    string | null
   onDismissOcr: () => void
+  // Server-stored attachment (edit mode). When set and no fresh local file is
+  // chosen, the preview pane renders this URL via iframe / <img>.
+  existingFileURL?:  string | null
+  existingFileName?: string | null
+  existingFileMime?: string | null
 }
 
 function LeftPanel({
   open, onToggle, file, fileURL, onFile, onExtract, ocrLoading, ocrError, ocrConfidence, ocrModel, onDismissOcr,
+  existingFileURL, existingFileName, existingFileMime,
 }: LeftPanelProps) {
   const [drag, setDrag] = useState(false)
   const inputRef        = useRef<HTMLInputElement>(null)
-  const isPdf           = file?.type === 'application/pdf'
+
+  // A fresh local upload trumps the server file. The preview shape (iframe vs
+  // <img>) is decided by mime — both manual uploads and email attachments may
+  // be PDFs or images.
+  const previewURL  = fileURL ?? existingFileURL ?? null
+  const previewMime = file?.type ?? existingFileMime ?? ''
+  const previewIsImage = previewMime.startsWith('image/')
+  const displayName = file?.name ?? existingFileName ?? null
 
   const handle = (f?: File | null) => {
     if (!f) return
@@ -259,6 +507,12 @@ function LeftPanel({
                 <FileText className="h-5 w-5 text-primary" />
                 <span className="font-medium text-center break-all px-2">{file.name}</span>
                 <span className="text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</span>
+              </div>
+            ) : existingFileURL ? (
+              <div className="flex flex-col items-center gap-1 text-xs">
+                <Upload className="h-5 w-5 text-muted-foreground" />
+                <p className="text-xs font-medium">Replace attachment</p>
+                <p className="text-[10px] text-muted-foreground">PDF · PNG · JPG · WEBP</p>
               </div>
             ) : (
               <>
@@ -357,18 +611,28 @@ function LeftPanel({
             )
           })()}
 
+          {/* Saved attachment filename — only when previewing a server-stored
+              file (no fresh local upload). The local-upload filename already
+              renders inside the dropzone above. */}
+          {!file && existingFileURL && displayName && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <FileText className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+              <span className="font-medium truncate" title={displayName}>{displayName}</span>
+            </div>
+          )}
+
           {/* Preview pane — fills remaining vertical space */}
           <div className="flex-1 rounded-lg border border-border bg-muted/20 overflow-hidden min-h-0">
-            {!fileURL ? (
+            {!previewURL ? (
               <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
                 No document uploaded
               </div>
-            ) : isPdf ? (
-              <iframe src={fileURL} className="w-full h-full border-0" title="Invoice preview" />
-            ) : (
+            ) : previewIsImage ? (
               <div className="h-full overflow-auto p-2">
-                <img src={fileURL} className="w-full object-contain" alt="Invoice preview" />
+                <img src={previewURL} className="w-full object-contain" alt="Invoice preview" />
               </div>
+            ) : (
+              <iframe src={previewURL} className="w-full h-full border-0" title="Invoice preview" />
             )}
           </div>
         </div>
@@ -382,15 +646,20 @@ function LeftPanel({
 export default function InvoiceFormPage() {
   const navigate = useNavigate()
   const { id }   = useParams<{ id: string }>()
+  const location = useLocation()
   const isEdit   = !!id
+  // Explicit /:id/edit path always allows editing (within editable statuses).
+  // Bare /:id is a review URL — read-only when status is terminal/post-approval.
+  const isExplicitEdit = location.pathname.endsWith('/edit')
   const qc       = useQueryClient()
   const authUser = useAuthStore(s => s.user)
 
   // Mode is derived from the ?type query param on the /invoices/new route.
   //   ?type=po     → PO selection panel above Section A, poRef populated by picker
-  //   ?type=direct → poRef locked with amber "DIRECT — no PO" chip + costCentre/GL required
+  //   ?type=direct → no PO ref / no header cost-centre / GL / channel — line-level only
   //   no ?type     → modal overlay forcing the choice (only when creating new)
-  //   editing      → ignore query, always render the full form
+  //   editing      → ignore query, render full form; EMAIL-ingested invoices use the
+  //                  same lean A→F layout as direct (no PO ref / no header CC/GL).
   const [searchParams, setSearchParams] = useSearchParams()
   const queryType = searchParams.get('type')
   const mode: 'edit' | 'po' | 'direct' | 'choose' =
@@ -416,6 +685,15 @@ export default function InvoiceFormPage() {
   const [vendorState, setVendorState] = useState('')
   const [entityState, setEntityState] = useState('')
 
+  // OCR provenance tracking. ocrFields lists every form field that was
+  // populated from OCR data (manual upload or n8n ingestion). ocrOriginalValues
+  // captures the exact value extracted by OCR so subsequent user edits flip the
+  // field into overriddenFields. The indicator next to each tracked label
+  // reads both Sets to pick scan-icon (teal) vs edit-icon (amber).
+  const [ocrFields, setOcrFields]                 = useState<Set<string>>(new Set())
+  const [ocrOriginalValues, setOcrOriginalValues] = useState<Record<string, unknown>>({})
+  const [overriddenFields, setOverriddenFields]   = useState<Set<string>>(new Set())
+
   // Manage object URL lifecycle to avoid leaks
   useEffect(() => {
     if (!file) { setFileURL(null); return }
@@ -425,12 +703,63 @@ export default function InvoiceFormPage() {
   }, [file])
 
   // ── Edit-mode load ────────────────────────────────────────────────────────
-  const { isLoading: loadingInv } = useQuery({
+  const { data: editInvoice, isLoading: loadingInv } = useQuery({
     queryKey: ['invoices', id],
     queryFn:  () => http.get<any>(`/api/invoices/${id}`),
     enabled:  isEdit,
     staleTime: 0,
   })
+
+  // Fuzzy duplicate check — on-demand re-run on edit so any new candidates
+  // appearing after ingestion still surface in the banner. The endpoint is
+  // cheap (one indexed findMany, in-memory rules) so 30s staleTime is fine.
+  const { data: duplicateCheck } = useQuery({
+    queryKey: ['invoice-duplicate-check', id],
+    queryFn:  () => http.get<{ isDuplicate: boolean; isSuspicious: boolean; matches: unknown[] }>(`/api/invoices/${id}/duplicate-check`),
+    enabled:  isEdit,
+    staleTime: 30_000,
+  })
+
+  // Banner data resolution. Prefer the live re-check; fall back to the
+  // persisted snapshot stored on the invoice at ingestion time (the LLM/
+  // scorer pipeline runs duplicate-detector and writes duplicateMatches +
+  // duplicateFlag to the row, so even if the on-load rules don't fire we
+  // still surface what the system originally caught).
+  const duplicateBannerData: DuplicateCheckUI | null = useMemo(() => {
+    const liveMatches = (duplicateCheck && Array.isArray(duplicateCheck.matches)) ? duplicateCheck.matches : []
+    if (liveMatches.length > 0) {
+      return {
+        isDuplicate:  !!duplicateCheck?.isDuplicate,
+        isSuspicious: !!duplicateCheck?.isSuspicious,
+        matches:      liveMatches as DuplicateMatchUI[],
+      }
+    }
+    const persisted = editInvoice?.duplicateMatches
+    if (Array.isArray(persisted) && persisted.length > 0) {
+      return {
+        isDuplicate:  editInvoice?.duplicateFlag === 'EXACT',
+        isSuspicious: !!editInvoice?.duplicateFlag && editInvoice.duplicateFlag !== 'EXACT',
+        matches:      persisted as DuplicateMatchUI[],
+      }
+    }
+    return null
+  }, [duplicateCheck, editInvoice])
+
+  // EMAIL-ingested invoices have no PO; surface the clean A→F layout (no PO ref,
+  // no header cost centre / GL code, no channel selector). PO-backed edits keep
+  // the original fields visible so the user can review the linked PO ref.
+  const isDirectLayout = mode === 'direct' || (mode === 'edit' && !editInvoice?.isPOInvoice)
+
+  // Review-mode read-only gating. Bare /:id (no /edit) on a terminal or
+  // in-workflow status renders the same A→F layout with all controls disabled
+  // and submit hidden. /:id/edit always allows editing.
+  const READ_ONLY_STATUSES = new Set([
+    'SUBMITTED', 'PENDING_L1', 'PENDING_L2',
+    'APPROVED', 'PAID', 'PAYMENT_INITIATED', 'REJECTED',
+  ])
+  const isReadOnly = isEdit && !isExplicitEdit
+    && !!editInvoice?.status
+    && READ_ONLY_STATUSES.has(String(editInvoice.status))
 
   // ── Reference data ────────────────────────────────────────────────────────
   const { data: currentUser } = useQuery({
@@ -482,7 +811,7 @@ export default function InvoiceFormPage() {
   })
 
   // ── Form ──────────────────────────────────────────────────────────────────
-  const { register, control, handleSubmit, setValue, getValues, formState: { errors } } =
+  const { register, control, handleSubmit, setValue, getValues, reset, formState: { errors } } =
     useForm<FormValues>({
       defaultValues: {
         channelType:  'MANUAL_UPLOAD',
@@ -502,6 +831,175 @@ export default function InvoiceFormPage() {
 
   const totals         = recalcTotals(lines)
   const selectedVendor = useMemo(() => (vendors as any[]).find((v: any) => v.id === vendorId), [vendorId, vendors])
+
+  // Add (or refresh) OCR-source entries. The "key" matches what
+  // OcrFieldIndicator uses: header fields use the form path directly
+  // ("invoiceNumber"); line-item fields use the user-spec key shape
+  // "line_{i}_{field}". `keyToFormPath` below maps back to an RHF path.
+  const markOcrFields = useCallback((entries: Record<string, unknown>) => {
+    setOcrFields(prev => {
+      const next = new Set(prev)
+      for (const k of Object.keys(entries)) next.add(k)
+      return next
+    })
+    setOcrOriginalValues(prev => ({ ...prev, ...entries }))
+  }, [])
+
+  // Map a tracking key to an RHF form path (dot-separated). Header keys are
+  // identical; line keys "line_3_description" → "lines.3.description".
+  const keyToFormPath = (key: string): string => {
+    const m = key.match(/^line_(\d+)_(.+)$/)
+    return m ? `lines.${m[1]}.${m[2]}` : key
+  }
+
+  // Maintain overriddenFields by watching the entire form and diffing each
+  // tracked field's current value against the captured OCR original. Empty
+  // string vs nullish is treated as equal so a placeholder dropdown reset
+  // doesn't appear as an override.
+  const watchedAll = useWatch({ control })
+  useEffect(() => {
+    if (ocrFields.size === 0) {
+      if (overriddenFields.size > 0) setOverriddenFields(new Set())
+      return
+    }
+    const next = new Set<string>()
+    const resolve = (obj: any, path: string): unknown =>
+      path.split('.').reduce((acc, k) => (acc == null ? acc : acc[k]), obj)
+    for (const key of ocrFields) {
+      const cur  = resolve(watchedAll, keyToFormPath(key))
+      const orig = ocrOriginalValues[key]
+      const blank = (v: unknown) => v === '' || v == null
+      const numericallyEqual = typeof cur === 'number' && typeof orig === 'number' && Math.abs(cur - orig) < 1e-9
+      const equal = Object.is(cur, orig)
+        || (blank(cur) && blank(orig))
+        || numericallyEqual
+      if (!equal) next.add(key)
+    }
+    // Skip setState when the membership is unchanged — avoids a re-render loop.
+    if (next.size !== overriddenFields.size || [...next].some(k => !overriddenFields.has(k))) {
+      setOverriddenFields(next)
+    }
+  }, [watchedAll, ocrFields, ocrOriginalValues, overriddenFields])
+
+  // Closure helpers — capture the three OCR Sets so the JSX call-sites stay
+  // tight. Each tracked field gets: indicator + edited badge in the label,
+  // override hint below the input, and a thin amber border via inputCls.
+  const indicator    = (key: string) => (
+    <OcrFieldIndicator fieldKey={key} ocrFields={ocrFields} overriddenFields={overriddenFields} ocrOriginalValues={ocrOriginalValues} />
+  )
+  const editedBadge  = (key: string) => (
+    <EditedBadge fieldKey={key} overriddenFields={overriddenFields} />
+  )
+  const overrideHint = (key: string) => (
+    <OcrOverrideHint fieldKey={key} overriddenFields={overriddenFields} ocrOriginalValues={ocrOriginalValues} />
+  )
+  // Apply this className alongside the FormInput/FormSelect default so the
+  // input border + bg shift when the reviewer overrides an OCR value.
+  const overrideInputCls = (key: string) =>
+    overriddenFields.has(key) ? 'border-amber-700/60 bg-amber-50/40' : ''
+
+  // Edit-mode hydration — populate form values + OCR banner once the invoice
+  // detail query resolves. Guarded with a ref so user edits aren't clobbered by
+  // a refetch of the same invoice id. Date fields come back as ISO strings; the
+  // <input type="date"> wants YYYY-MM-DD so we slice off the time portion.
+  const hydratedRef = useRef(false)
+  useEffect(() => {
+    if (!isEdit || !editInvoice || hydratedRef.current) return
+    const isoDate = (d: string | null | undefined) => (typeof d === 'string' ? d.slice(0, 10) : undefined)
+    reset({
+      entityId:           editInvoice.entityId         ?? '',
+      departmentId:       editInvoice.departmentId     ?? '',
+      vendorId:           editInvoice.vendorId         ?? '',
+      vendorGSTIN:        editInvoice.vendorGSTIN      ?? '',
+      vendorPAN:          editInvoice.vendorPAN        ?? '',
+      billToLocationId:   editInvoice.billToLocationId ?? '',
+      invoiceNumber:      editInvoice.invoiceNumber    ?? '',
+      invoiceDate:        isoDate(editInvoice.invoiceDate) ?? '',
+      dueDate:            isoDate(editInvoice.dueDate),
+      channelType:        editInvoice.channelType      ?? 'MANUAL_UPLOAD',
+      currencyCode:       editInvoice.currencyCode     ?? 'INR',
+      poRef:              editInvoice.poRef            ?? '',
+      irnNumber:          editInvoice.irnNumber        ?? '',
+      costCentreId:       editInvoice.costCentreId     ?? '',
+      glCodeId:           editInvoice.glCodeId         ?? '',
+      baseAmount:         Number(editInvoice.taxableAmount) || 0,
+      grossAmount:        Number(editInvoice.totalAmount)   || 0,
+      narration:          editInvoice.narration  ?? '',
+      periodFrom:         isoDate(editInvoice.periodFrom),
+      periodTo:           isoDate(editInvoice.periodTo),
+      retentionRequired:  !!editInvoice.retentionRequired,
+      retentionAmount:    Number(editInvoice.retentionAmount) || 0,
+      retentionGlCodeId:  editInvoice.retentionGlCodeId ?? '',
+      lines: Array.isArray(editInvoice.lines) && editInvoice.lines.length > 0
+        ? editInvoice.lines.map((l: any) => ({
+            itemId:         l.itemId         ?? undefined,
+            itemCode:       l.itemCode       ?? undefined,
+            description:    l.description    ?? '',
+            quantity:       Number(l.quantity)       || 0,
+            uom:            l.uom            ?? undefined,
+            unitPrice:      Number(l.unitPrice)      || 0,
+            discountPct:    Number(l.discountPct)    || 0,
+            discountAmount: Number(l.discountAmount) || 0,
+            taxableAmount:  Number(l.taxableAmount)  || 0,
+            gstRate:        Number(l.gstRate)        || 0,
+            cgstAmount:     Number(l.cgstAmount)     || 0,
+            sgstAmount:     Number(l.sgstAmount)     || 0,
+            igstAmount:     Number(l.igstAmount)     || 0,
+            tdsRate:        Number(l.tdsRate)        || 0,
+            tdsAmount:      Number(l.tdsAmount)      || 0,
+            rcmApplicable:  !!l.rcmApplicable,
+            hsnCode:        l.hsnCode        ?? undefined,
+            sacCode:        l.sacCode        ?? undefined,
+            glCodeId:       l.glCodeId       ?? undefined,
+            costCentreId:   l.costCentreId   ?? undefined,
+            profitCentreId: l.profitCentreId ?? undefined,
+            lineTotal:      Number(l.lineTotal)      || 0,
+          }))
+        : [emptyLine()],
+    })
+    if (typeof editInvoice.ocrConfidence === 'number') {
+      setOcrConfidence(editInvoice.ocrConfidence)
+    }
+
+    // OCR provenance: when the invoice came in via email (channelType=EMAIL)
+    // or carries any OCR confidence, treat the persisted fields as the OCR
+    // originals so the scan-icon shows next to each tracked label. The diff
+    // effect above will flip them to overridden once the user edits.
+    const wasOcrSourced =
+      editInvoice.channelType === 'EMAIL'
+      || (typeof editInvoice.ocrConfidence === 'number' && editInvoice.ocrConfidence > 0)
+
+    if (wasOcrSourced) {
+      const isoStrOrEmpty = (d: string | null | undefined) => (typeof d === 'string' ? d.slice(0, 10) : '')
+      const headerOrig: Record<string, unknown> = {
+        invoiceNumber: editInvoice.invoiceNumber ?? '',
+        invoiceDate:   isoStrOrEmpty(editInvoice.invoiceDate),
+        dueDate:       isoStrOrEmpty(editInvoice.dueDate),
+        vendorId:      editInvoice.vendorId    ?? '',
+        vendorGSTIN:   editInvoice.vendorGSTIN ?? '',
+        vendorPAN:     editInvoice.vendorPAN   ?? '',
+        irnNumber:     editInvoice.irnNumber   ?? '',
+        currencyCode:  editInvoice.currencyCode ?? 'INR',
+        baseAmount:    Number(editInvoice.taxableAmount) || 0,
+        grossAmount:   Number(editInvoice.totalAmount)   || 0,
+        narration:     editInvoice.narration   ?? '',
+        periodFrom:    isoStrOrEmpty(editInvoice.periodFrom),
+        periodTo:      isoStrOrEmpty(editInvoice.periodTo),
+      }
+      const lineOrig: Record<string, unknown> = {}
+      if (Array.isArray(editInvoice.lines)) {
+        editInvoice.lines.forEach((l: any, i: number) => {
+          lineOrig[`line_${i}_description`] = l.description       ?? ''
+          lineOrig[`line_${i}_quantity`]    = Number(l.quantity)  || 0
+          lineOrig[`line_${i}_unitPrice`]   = Number(l.unitPrice) || 0
+          lineOrig[`line_${i}_gstRate`]     = Number(l.gstRate)   || 0
+        })
+      }
+      markOcrFields({ ...headerOrig, ...lineOrig })
+    }
+
+    hydratedRef.current = true
+  }, [isEdit, editInvoice, reset, markOcrFields])
 
   // Open POs for PO mode — only fires when vendor + entity are picked. Reuses
   // GET /api/po with hasOpenValue=true so fully-consumed POs are pre-filtered.
@@ -580,6 +1078,27 @@ export default function InvoiceFormPage() {
     setValue('dueDate', d.toISOString().split('T')[0])
   }, [invoiceDate, selectedVendor?.id, setValue])
 
+  // Line-level OCR icon — overlay placed top-right of the cell. Co-exists with
+  // the existing "auto" badge in the GST/TDS cells (which uses middle-right).
+  const lineOcrIcon = useCallback((idx: number, field: string) => {
+    const key = `line_${idx}_${field}`
+    if (overriddenFields.has(key)) {
+      return (
+        <span title="Manually overridden" className="pointer-events-none absolute right-1 top-0.5 inline-flex">
+          <Edit3 className="h-3 w-3 text-amber-600" />
+        </span>
+      )
+    }
+    if (ocrFields.has(key)) {
+      return (
+        <span title="From OCR · click to override" className="pointer-events-none absolute right-1 top-0.5 inline-flex">
+          <ScanLine className="h-3 w-3 text-teal-600" />
+        </span>
+      )
+    }
+    return null
+  }, [ocrFields, overriddenFields])
+
   // Recalc a line whenever qty/price/rate changes
   const recalc = useCallback((idx: number) => {
     const l = lines[idx]
@@ -651,14 +1170,17 @@ export default function InvoiceFormPage() {
         { base64Data, mimeType: file.type },
       )
       const { ocr, matchedVendorId } = res
-      if (ocr.invoiceNumber) setValue('invoiceNumber', ocr.invoiceNumber)
-      const invIso = dmyToIso(ocr.invoiceDate); if (invIso) setValue('invoiceDate', invIso)
-      const dueIso = dmyToIso(ocr.dueDate);     if (dueIso) setValue('dueDate', dueIso)
-      if (matchedVendorId)   setValue('vendorId', matchedVendorId)
-      if (ocr.vendorGstin)   setValue('vendorGSTIN', ocr.vendorGstin)
-      if (ocr.vendorPan)     setValue('vendorPAN', ocr.vendorPan)
-      if (ocr.irn)           setValue('irnNumber', ocr.irn)
-      if (ocr.poReference)   setValue('poRef', ocr.poReference)
+      // Header fields that arrive from OCR — store both the form value and the
+      // OCR original so OcrFieldIndicator can flip teal → amber on override.
+      const ocrOriginals: Record<string, unknown> = {}
+      if (ocr.invoiceNumber) { setValue('invoiceNumber', ocr.invoiceNumber); ocrOriginals.invoiceNumber = ocr.invoiceNumber }
+      const invIso = dmyToIso(ocr.invoiceDate); if (invIso) { setValue('invoiceDate', invIso); ocrOriginals.invoiceDate = invIso }
+      const dueIso = dmyToIso(ocr.dueDate);     if (dueIso) { setValue('dueDate', dueIso);       ocrOriginals.dueDate = dueIso }
+      if (matchedVendorId)   { setValue('vendorId', matchedVendorId); ocrOriginals.vendorId = matchedVendorId }
+      if (ocr.vendorGstin)   { setValue('vendorGSTIN', ocr.vendorGstin); ocrOriginals.vendorGSTIN = ocr.vendorGstin }
+      if (ocr.vendorPan)     { setValue('vendorPAN', ocr.vendorPan);     ocrOriginals.vendorPAN   = ocr.vendorPan }
+      if (ocr.irn)           { setValue('irnNumber', ocr.irn);           ocrOriginals.irnNumber   = ocr.irn }
+      if (ocr.poReference)   { setValue('poRef', ocr.poReference) }
 
       if (ocr.lineItems?.length) {
         replace(ocr.lineItems.map((l: any) => recalcLine({
@@ -669,7 +1191,14 @@ export default function InvoiceFormPage() {
           gstRate:     Number(l.gstRate)   || 0,
           hsnCode:     l.hsn ?? undefined,
         }, vendorState, entityState)))
+        ocr.lineItems.forEach((l: any, i: number) => {
+          ocrOriginals[`line_${i}_description`] = l.description       ?? ''
+          ocrOriginals[`line_${i}_quantity`]    = Number(l.quantity)  || 1
+          ocrOriginals[`line_${i}_unitPrice`]   = Number(l.unitPrice) || 0
+          ocrOriginals[`line_${i}_gstRate`]     = Number(l.gstRate)   || 0
+        })
       }
+      if (Object.keys(ocrOriginals).length > 0) markOcrFields(ocrOriginals)
       setOcrConfidence(ocr.overallConfidence ?? null)
       setOcrModel(ocr.model ?? null)
     } catch (err: any) {
@@ -682,7 +1211,7 @@ export default function InvoiceFormPage() {
     } finally {
       setOcrLoading(false)
     }
-  }, [file, setValue, replace, vendorState, entityState])
+  }, [file, setValue, replace, vendorState, entityState, markOcrFields])
 
   const dismissOcr = useCallback(() => {
     setOcrError(null)
@@ -771,10 +1300,15 @@ export default function InvoiceFormPage() {
   const isPending = saveDraft.isPending || submitForApproval.isPending
 
   // ── Render ────────────────────────────────────────────────────────────────
+  // Header title reflects whether we're in review (read-only), edit, or create mode.
+  const headerTitle = !isEdit
+    ? 'New Invoice'
+    : isReadOnly ? 'Invoice' : 'Edit Invoice'
+
   return (
     <div className="flex flex-col h-full">
       <MasterPageHeader
-        title={isEdit ? 'Edit Invoice' : 'New Invoice'}
+        title={headerTitle}
         description="AP Invoice — OCR · GST auto-calc · 3-way match"
         backLabel="Invoices"
         backTo="/invoices"
@@ -782,20 +1316,24 @@ export default function InvoiceFormPage() {
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => navigate('/invoices')}
               className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted">
-              Cancel
+              {isReadOnly ? 'Back to list' : 'Cancel'}
             </button>
-            <button type="button" disabled={isPending}
-              onClick={handleSubmit(d => saveDraft.mutate(d), scrollToFirstError)}
-              className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60">
-              {saveDraft.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1" /> : null}
-              Save draft
-            </button>
-            <button type="button" disabled={isPending}
-              onClick={handleSubmit(d => submitForApproval.mutate(d), scrollToFirstError)}
-              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
-              <Send className="h-3.5 w-3.5" />
-              Submit for approval
-            </button>
+            {!isReadOnly && (
+              <>
+                <button type="button" disabled={isPending}
+                  onClick={handleSubmit(d => saveDraft.mutate(d), scrollToFirstError)}
+                  className="rounded-lg border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60">
+                  {saveDraft.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1" /> : null}
+                  Save draft
+                </button>
+                <button type="button" disabled={isPending}
+                  onClick={handleSubmit(d => submitForApproval.mutate(d), scrollToFirstError)}
+                  className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
+                  <Send className="h-3.5 w-3.5" />
+                  Submit for approval
+                </button>
+              </>
+            )}
           </div>
         }
       />
@@ -803,17 +1341,20 @@ export default function InvoiceFormPage() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* LEFT — collapsible upload + preview */}
         <LeftPanel
-          open          ={leftOpen}
-          onToggle      ={() => setLeftOpen(v => !v)}
-          file          ={file}
-          fileURL       ={fileURL}
-          onFile        ={setFile}
-          onExtract     ={runOcr}
-          ocrLoading    ={ocrLoading}
-          ocrError      ={ocrError}
-          ocrConfidence ={ocrConfidence}
-          ocrModel      ={ocrModel}
-          onDismissOcr  ={dismissOcr}
+          open             ={leftOpen}
+          onToggle         ={() => setLeftOpen(v => !v)}
+          file             ={file}
+          fileURL          ={fileURL}
+          onFile           ={setFile}
+          onExtract        ={runOcr}
+          ocrLoading       ={ocrLoading}
+          ocrError         ={ocrError}
+          ocrConfidence    ={ocrConfidence}
+          ocrModel         ={ocrModel}
+          onDismissOcr     ={dismissOcr}
+          existingFileURL  ={isEdit && editInvoice?.hasFile ? `/api/invoices/${id}/file` : null}
+          existingFileName ={editInvoice?.fileName ?? null}
+          existingFileMime ={editInvoice?.mimeType ?? null}
         />
 
         {/* RIGHT — scrollable form */}
@@ -865,11 +1406,28 @@ export default function InvoiceFormPage() {
               </div>
             )}
 
-            {/* OCR scoring banner — sticky top of right panel, only after OCR runs.
-                Locked-layout rule: never shifts any section, just appears in
-                its own slot. KYC chips read from the resolved vendor master.
-                LLM review flags don't apply on the create form (scoring runs
-                async after first save) — they show on the detail page. */}
+            {/* Review-mode read-only banner — only on /:id when the invoice is in
+                a terminal/post-workflow status. Tells the user why the form
+                fields are greyed out. /:id/edit suppresses this. */}
+            {isReadOnly && editInvoice && (
+              <div className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5">
+                <Info className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-gray-700">
+                  View only — invoice is <span className="font-semibold">{formatStatus(String(editInvoice.status))}</span>. Open it from the Approval Desk or use a workflow action to change state.
+                </p>
+              </div>
+            )}
+
+            {/* Locked banner order above Section A:
+                  1. OCR confidence + KYC chips (sticky at top)
+                  2. Duplicate banner (live or persisted from ingestion)
+                  3. LLM review flags / validation issues
+                Section A renders immediately below. */}
+
+            {/* (1) OCR scoring banner — sticky top of right panel. Renders
+                after a fresh OCR run, or hydrated from saved
+                invoice.ocrConfidence on edit. KYC chips read from the
+                resolved vendor master. */}
             {ocrConfidence !== null && (
               <div className="sticky top-0 z-10 rounded-xl border border-teal-200 bg-teal-50/40 px-4 py-3 flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2 min-w-[180px]">
@@ -909,6 +1467,24 @@ export default function InvoiceFormPage() {
               </div>
             )}
 
+            {/* (2) Duplicate banner — live re-check OR persisted snapshot from
+                ingestion. Falls back to editInvoice.duplicateMatches so the
+                banner still shows when the on-load rules don't fire (e.g.
+                similarity below threshold) but the system caught a duplicate
+                via a different rule at ingest time. */}
+            {isEdit && <DuplicateBanner data={duplicateBannerData} currency={currencyCode} />}
+
+            {/* (3) LLM review banner — surfaces async invoice-scorer output:
+                review flags, validation issues, vendor-match suggestion.
+                No-ops on create. */}
+            {isEdit && <LlmReviewBanner inv={editInvoice} />}
+
+            {/* Sections A–G live inside a single <fieldset disabled={isReadOnly}>
+                so review-mode (/:id without /edit, on a terminal status) disables
+                every control in one place — RHF state stays intact for re-display
+                without per-input wiring. */}
+            <fieldset disabled={isReadOnly} className="space-y-6 m-0 p-0 border-0 min-w-0 disabled:opacity-95">
+
             {/* A. Invoice Header */}
             <div className="rounded-xl border border-border bg-card p-6">
               <SectionHeader letter="A" title="Invoice Header" subtitle="Core invoice identifiers and dates" />
@@ -933,41 +1509,6 @@ export default function InvoiceFormPage() {
                     ))}
                   </FormSelect>
                 </Field>
-                <div /> {/* future field */}
-
-                <Field label="Vendor" required error={errors.vendorId?.message}>
-                  <FormSelect {...register('vendorId')}>
-                    <option value="">Select vendor…</option>
-                    {(vendors as any[]).map((v: any) => (
-                      <option key={v.id} value={v.id}>{v.legalName} — {v.vendorCode}</option>
-                    ))}
-                  </FormSelect>
-                </Field>
-                <Field label="Vendor GSTIN">
-                  {/* Multi-GSTIN: vendor may have several registrations across states.
-                      Today only the primary `vendor.gstin` is exposed by /api/masters/dropdown;
-                      VendorGstRegistration rows can be wired here once an endpoint surfaces them. */}
-                  <FormSelect {...register('vendorGSTIN')} className="font-mono">
-                    <option value="">Select GSTIN…</option>
-                    {selectedVendor?.gstin && (
-                      <option value={selectedVendor.gstin}>
-                        {selectedVendor.gstin}
-                        {selectedVendor.state ? ` — ${selectedVendor.state}` : ''}
-                      </option>
-                    )}
-                  </FormSelect>
-                  {selectedVendor?.gstin && getValues('vendorGSTIN') === selectedVendor.gstin && (
-                    <p className="text-[10px] text-green-700 mt-1">✓ Matched master</p>
-                  )}
-                </Field>
-
-                <Field label="Vendor PAN">
-                  <FormInput readOnly placeholder="Auto from GSTIN" {...register('vendorPAN')} className="font-mono bg-muted/40" />
-                  <p className="text-[10px] text-teal-700 mt-1">
-                    <span className="rounded-full border border-teal-200 bg-teal-50 px-1.5 py-0.5 mr-1">Auto</span>
-                    Derived from chars 3–12 of GSTIN
-                  </p>
-                </Field>
                 <Field label="Bill-to location">
                   <FormSelect {...register('billToLocationId')}>
                     <option value="">Select location…</option>
@@ -976,10 +1517,8 @@ export default function InvoiceFormPage() {
                     ))}
                   </FormSelect>
                   {(() => {
-                    // Intra-state vs inter-state hint based on vendor GSTIN state vs
-                    // bill-to location state. Imperfect string match (vendor carries a
-                    // stateCode, locations carry a state NAME) — but the existing
-                    // recalcLine uses the same comparison, so this stays consistent.
+                    // Intra-state vs inter-state hint — recalcLine uses the same
+                    // comparison so this stays consistent.
                     const billToId = getValues('billToLocationId')
                     const billTo   = billToId ? (locations as any[]).find((l: any) => l.id === billToId) : null
                     if (!billTo?.state || !vendorState) return null
@@ -992,89 +1531,119 @@ export default function InvoiceFormPage() {
                   })()}
                 </Field>
 
-                <Field label="Invoice number" required error={errors.invoiceNumber?.message}>
-                  <FormInput placeholder="INV-2025-001" {...register('invoiceNumber')} />
+                <Field label={<>Vendor {indicator('vendorId')}{editedBadge('vendorId')}</>} required error={errors.vendorId?.message}>
+                  <FormSelect {...register('vendorId')} className={overrideInputCls('vendorId')}>
+                    <option value="">Select vendor…</option>
+                    {(vendors as any[]).map((v: any) => (
+                      <option key={v.id} value={v.id}>{v.legalName} — {v.vendorCode}</option>
+                    ))}
+                  </FormSelect>
+                  {overrideHint('vendorId')}
                 </Field>
-                <Field label="Invoice date" required>
-                  <FormInput type="date" {...register('invoiceDate')} />
+                <Field label={<>Vendor GSTIN {indicator('vendorGSTIN')}{editedBadge('vendorGSTIN')}</>}>
+                  {/* Multi-GSTIN: vendor may have several registrations across states.
+                      Today only the primary `vendor.gstin` is exposed by /api/masters/dropdown;
+                      VendorGstRegistration rows can be wired here once an endpoint surfaces them. */}
+                  <FormSelect {...register('vendorGSTIN')} className={cn('font-mono', overrideInputCls('vendorGSTIN'))}>
+                    <option value="">Select GSTIN…</option>
+                    {selectedVendor?.gstin && (
+                      <option value={selectedVendor.gstin}>
+                        {selectedVendor.gstin}
+                        {selectedVendor.state ? ` — ${selectedVendor.state}` : ''}
+                      </option>
+                    )}
+                  </FormSelect>
+                  {selectedVendor?.gstin && getValues('vendorGSTIN') === selectedVendor.gstin && (
+                    <p className="text-[10px] text-green-700 mt-1">✓ Matched master</p>
+                  )}
+                  {overrideHint('vendorGSTIN')}
                 </Field>
 
-                <Field label="Due date">
-                  <FormInput type="date" {...register('dueDate')} />
+                <Field label={<>Vendor PAN {indicator('vendorPAN')}{editedBadge('vendorPAN')}</>}>
+                  <FormInput readOnly placeholder="Auto from GSTIN" {...register('vendorPAN')} className={cn('font-mono bg-muted/40', overrideInputCls('vendorPAN'))} />
+                  <p className="text-[10px] text-teal-700 mt-1">
+                    <span className="rounded-full border border-teal-200 bg-teal-50 px-1.5 py-0.5 mr-1">Auto</span>
+                    Derived from chars 3–12 of GSTIN
+                  </p>
+                  {overrideHint('vendorPAN')}
                 </Field>
-                <Field label="Channel">
-                  <FormSelect {...register('channelType')}>
-                    {['MANUAL_UPLOAD','EMAIL','VENDOR_PORTAL','API'].map(c => <option key={c} value={c}>{c.replace('_',' ')}</option>)}
-                  </FormSelect>
+                <Field label={<>IRN (e-Invoice) {indicator('irnNumber')}{editedBadge('irnNumber')}</>}>
+                  <FormInput placeholder="e-Invoice IRN — auto-populated from OCR" {...register('irnNumber')} className={overrideInputCls('irnNumber')} />
+                  {overrideHint('irnNumber')}
                 </Field>
 
-                <Field label="Currency">
-                  <FormSelect {...register('currencyCode')}>
-                    {['INR','USD','EUR','GBP','AED','SGD'].map(c => <option key={c}>{c}</option>)}
-                  </FormSelect>
+                <Field label={<>Invoice number {indicator('invoiceNumber')}{editedBadge('invoiceNumber')}</>} required error={errors.invoiceNumber?.message}>
+                  <FormInput placeholder="INV-2025-001" {...register('invoiceNumber')} className={overrideInputCls('invoiceNumber')} />
+                  {overrideHint('invoiceNumber')}
                 </Field>
-                {/* PO reference — locked with an amber chip in direct mode */}
-                {mode === 'direct' ? (
-                  <div>
-                    <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      PO reference
-                      <span className="rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium">
-                        DIRECT — no PO
-                      </span>
-                    </label>
-                    <div className="mt-1 flex min-h-9 items-center rounded-lg border border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                      Not applicable
-                    </div>
-                    <input type="hidden" {...register('poRef')} value="" />
-                  </div>
-                ) : (
-                  <Field label="PO reference">
-                    <FormInput placeholder="PO-2025-0001" readOnly={mode === 'po' && !!selectedPoId}
-                      className={cn(mode === 'po' && !!selectedPoId && 'bg-muted/40')}
-                      {...register('poRef')} />
+                <Field label={<>Invoice date {indicator('invoiceDate')}{editedBadge('invoiceDate')}</>} required>
+                  <FormInput type="date" {...register('invoiceDate')} className={overrideInputCls('invoiceDate')} />
+                  {overrideHint('invoiceDate')}
+                </Field>
+
+                <Field label={<>Due date {indicator('dueDate')}{editedBadge('dueDate')}</>}>
+                  <FormInput type="date" {...register('dueDate')} className={overrideInputCls('dueDate')} />
+                  {overrideHint('dueDate')}
+                </Field>
+                {/* Channel — hidden on direct + email-edit forms (channelType stays in
+                    form state via defaultValues / loaded invoice). PO-backed edits keep
+                    the selector so the user can re-route a manually-uploaded invoice. */}
+                {!isDirectLayout && (
+                  <Field label="Channel">
+                    <FormSelect {...register('channelType')}>
+                      {['MANUAL_UPLOAD','EMAIL','VENDOR_PORTAL','API'].map(c => <option key={c} value={c}>{c.replace('_',' ')}</option>)}
+                    </FormSelect>
                   </Field>
                 )}
 
-                {/* Cost centre + GL code — required when direct (direct invoices need explicit
-                    cost allocation since they don't ride on a PO's allocation). */}
-                <Field
-                  label="Cost centre"
-                  required={mode === 'direct'}
-                  error={errors.costCentreId?.message as string | undefined}
-                >
-                  <FormSelect
-                    className={cn(errors.costCentreId && 'border-red-500 focus:ring-red-500')}
-                    {...register('costCentreId', {
-                      required: mode === 'direct' ? 'Cost centre is required for direct invoices' : false,
-                    })}
-                  >
-                    <option value="">Select cost centre…</option>
-                    {(costCentres as any[]).filter((c: any) => c.status === 'ACTIVE').map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.code} — {c.name}</option>
-                    ))}
+                <Field label={<>Currency {indicator('currencyCode')}{editedBadge('currencyCode')}</>}>
+                  <FormSelect {...register('currencyCode')} className={overrideInputCls('currencyCode')}>
+                    {['INR','USD','EUR','GBP','AED','SGD'].map(c => <option key={c}>{c}</option>)}
                   </FormSelect>
+                  {overrideHint('currencyCode')}
                 </Field>
-                <Field
-                  label="GL code"
-                  required={mode === 'direct'}
-                  error={errors.glCodeId?.message as string | undefined}
-                >
-                  <FormSelect
-                    className={cn(errors.glCodeId && 'border-red-500 focus:ring-red-500')}
-                    {...register('glCodeId', {
-                      required: mode === 'direct' ? 'GL code is required for direct invoices' : false,
-                    })}
-                  >
-                    <option value="">Select GL code…</option>
-                    {(glCodes as any[]).filter((g: any) => g.status === 'ACTIVE').map((g: any) => (
-                      <option key={g.id} value={g.id}>{g.code} — {g.name}</option>
-                    ))}
-                  </FormSelect>
-                </Field>
+                {/* PO reference / header cost centre / header GL code — only render on
+                    PO-backed flows. Direct + email-edit invoices allocate per-line in
+                    Section C; surfacing these at header level was a duplicate. */}
+                {!isDirectLayout && (
+                  <>
+                    <Field label="PO reference">
+                      <FormInput placeholder="PO-2025-0001" readOnly={mode === 'po' && !!selectedPoId}
+                        className={cn(mode === 'po' && !!selectedPoId && 'bg-muted/40')}
+                        {...register('poRef')} />
+                    </Field>
 
-                <Field label="IRN (e-Invoice)" span>
-                  <FormInput placeholder="e-Invoice IRN — auto-populated from OCR" {...register('irnNumber')} />
-                </Field>
+                    <Field
+                      label="Cost centre"
+                      error={errors.costCentreId?.message as string | undefined}
+                    >
+                      <FormSelect
+                        className={cn(errors.costCentreId && 'border-red-500 focus:ring-red-500')}
+                        {...register('costCentreId')}
+                      >
+                        <option value="">Select cost centre…</option>
+                        {(costCentres as any[]).filter((c: any) => c.status === 'ACTIVE').map((c: any) => (
+                          <option key={c.id} value={c.id}>{c.code} — {c.name}</option>
+                        ))}
+                      </FormSelect>
+                    </Field>
+                    <Field
+                      label="GL code"
+                      error={errors.glCodeId?.message as string | undefined}
+                    >
+                      <FormSelect
+                        className={cn(errors.glCodeId && 'border-red-500 focus:ring-red-500')}
+                        {...register('glCodeId')}
+                      >
+                        <option value="">Select GL code…</option>
+                        {(glCodes as any[]).filter((g: any) => g.status === 'ACTIVE').map((g: any) => (
+                          <option key={g.id} value={g.id}>{g.code} — {g.name}</option>
+                        ))}
+                      </FormSelect>
+                    </Field>
+                  </>
+                )}
+
               </div>
             </div>
 
@@ -1087,11 +1656,13 @@ export default function InvoiceFormPage() {
             <div className="rounded-xl border border-border bg-card p-6">
               <SectionHeader letter="B" title="Financial Summary" subtitle="Invoice-reported amounts — cross-checked against line items" />
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Base amount *">
+                <Field label={<>Base amount * {indicator('baseAmount')}{editedBadge('baseAmount')}</>}>
                   <FormInput
                     type="number" step="0.01" min="0" placeholder="0.00"
                     {...register('baseAmount', { valueAsNumber: true })}
+                    className={overrideInputCls('baseAmount')}
                   />
+                  {overrideHint('baseAmount')}
                 </Field>
                 <Field label="Total taxes (auto from lines)">
                   <div className="flex items-center gap-2">
@@ -1111,11 +1682,13 @@ export default function InvoiceFormPage() {
                     </p>
                   )}
                 </Field>
-                <Field label="Gross amount *" span>
+                <Field label={<>Gross amount * {indicator('grossAmount')}{editedBadge('grossAmount')}</>} span>
                   <FormInput
                     type="number" step="0.01" min="0" placeholder="0.00"
                     {...register('grossAmount', { valueAsNumber: true })}
+                    className={overrideInputCls('grossAmount')}
                   />
+                  {overrideHint('grossAmount')}
                 </Field>
                 {(() => {
                   const xcheck = computeCrossCheck(
@@ -1206,21 +1779,24 @@ export default function InvoiceFormPage() {
                               {(items as any[]).map((it: any) => <option key={it.id} value={it.id}>{it.itemCode ?? it.code} — {it.name}</option>)}
                             </FormSelect>
                           </td>
-                          <td className="px-2 py-1">
-                            <FormInput className={CELL_INPUT} placeholder="Description" {...register(`lines.${i}.description`)} onBlur={() => recalc(i)} />
+                          <td className="px-2 py-1 relative">
+                            <FormInput className={cn(CELL_INPUT, 'pr-5')} placeholder="Description" {...register(`lines.${i}.description`)} onBlur={() => recalc(i)} />
+                            {lineOcrIcon(i, 'description')}
                           </td>
-                          <td className="px-2 py-1">
-                            <FormInput className={CELL_INPUT} type="number" step="0.0001" min="0" placeholder="1"
+                          <td className="px-2 py-1 relative">
+                            <FormInput className={cn(CELL_INPUT, 'pr-5')} type="number" step="0.0001" min="0" placeholder="1"
                               {...register(`lines.${i}.quantity`, { valueAsNumber: true })}
                               onBlur={() => recalc(i)} />
+                            {lineOcrIcon(i, 'quantity')}
                           </td>
                           <td className="px-2 py-1">
                             <FormInput className={CELL_INPUT} placeholder="Nos" {...register(`lines.${i}.uom`)} />
                           </td>
-                          <td className="px-2 py-1">
-                            <FormInput className={CELL_INPUT} type="number" step="0.01" min="0" placeholder="0.00"
+                          <td className="px-2 py-1 relative">
+                            <FormInput className={cn(CELL_INPUT, 'pr-5')} type="number" step="0.01" min="0" placeholder="0.00"
                               {...register(`lines.${i}.unitPrice`, { valueAsNumber: true })}
                               onBlur={() => recalc(i)} />
+                            {lineOcrIcon(i, 'unitPrice')}
                           </td>
                           <td className="px-2 py-1">
                             <FormInput className={CELL_INPUT} type="number" step="0.01" min="0" max="100" placeholder="0"
@@ -1232,18 +1808,20 @@ export default function InvoiceFormPage() {
                           </td>
                           <td className="px-2 py-1 relative">
                             <FormInput
-                              className={cn(CELL_INPUT, l.itemId && 'pr-9')}
+                              className={cn(CELL_INPUT, l.itemId && 'pr-9', !l.itemId && 'pr-5')}
                               type="number" step="0.01" min="0" placeholder="18"
                               {...register(`lines.${i}.gstRate`, { valueAsNumber: true })}
                               onBlur={() => recalc(i)}
                             />
-                            {l.itemId && (
+                            {l.itemId ? (
                               <span
-                                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-blue-200 bg-blue-50 px-1 text-[9px] font-medium text-blue-600"
+                                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-blue-200 bg-blue-50 px-1 text-[10px] font-medium text-blue-600"
                                 title="Auto-filled from item master"
                               >
                                 auto
                               </span>
+                            ) : (
+                              lineOcrIcon(i, 'gstRate')
                             )}
                           </td>
                           <td className="px-2 py-1.5 tabular-nums font-mono text-right text-green-700 whitespace-nowrap">
@@ -1264,7 +1842,7 @@ export default function InvoiceFormPage() {
                             />
                             {l.itemId && (
                               <span
-                                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-blue-200 bg-blue-50 px-1 text-[9px] font-medium text-blue-600"
+                                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-blue-200 bg-blue-50 px-1 text-[10px] font-medium text-blue-600"
                                 title="Auto-filled from item master"
                               >
                                 auto
@@ -1367,14 +1945,17 @@ export default function InvoiceFormPage() {
             <div className="rounded-xl border border-border bg-card p-6">
               <SectionHeader letter="E" title="Narration & Period" subtitle="Free-text narration + billing-period dates" />
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Narration" span>
-                  <FormTextarea rows={2} placeholder="Internal narration / description of expense…" {...register('narration')} />
+                <Field label={<>Narration {indicator('narration')}{editedBadge('narration')}</>} span>
+                  <FormTextarea rows={2} placeholder="Internal narration / description of expense…" {...register('narration')} className={overrideInputCls('narration')} />
+                  {overrideHint('narration')}
                 </Field>
-                <Field label="Period of expense — from">
-                  <FormInput type="date" {...register('periodFrom')} />
+                <Field label={<>Period of expense — from {indicator('periodFrom')}{editedBadge('periodFrom')}</>}>
+                  <FormInput type="date" {...register('periodFrom')} className={overrideInputCls('periodFrom')} />
+                  {overrideHint('periodFrom')}
                 </Field>
-                <Field label="Period of expense — to">
-                  <FormInput type="date" {...register('periodTo')} />
+                <Field label={<>Period of expense — to {indicator('periodTo')}{editedBadge('periodTo')}</>}>
+                  <FormInput type="date" {...register('periodTo')} className={overrideInputCls('periodTo')} />
+                  {overrideHint('periodTo')}
                 </Field>
               </div>
             </div>
@@ -1466,6 +2047,57 @@ export default function InvoiceFormPage() {
               })()}
             </div>
 
+            {/* G. Audit Trail — read-only, only renders when the invoice has audit
+                log entries. Section G stays inside the fieldset for ordering /
+                visual consistency; the controls inside are static <span>/<p>. */}
+            {isEdit && Array.isArray(editInvoice?.auditLogs) && editInvoice.auditLogs.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-6">
+                <SectionHeader letter="G" title="Audit Trail" subtitle="Chronological event history · read-only" />
+                <div className="space-y-3">
+                  {editInvoice.auditLogs.map((log: any) => (
+                    <div key={log.id} className="flex items-start gap-3">
+                      <div className="mt-0.5 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-[10px] font-bold text-primary">{String(log.action).slice(0, 2)}</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold">{formatStatus(String(log.action))}</span>
+                          {log.userName && <span className="text-xs text-muted-foreground">by {log.userName}</span>}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</p>
+                        {log.details && typeof log.details === 'object' && Object.keys(log.details).length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {Object.entries(log.details as Record<string, unknown>).map(([k, v]) => `${k}: ${String(v)}`).join(' · ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {Array.isArray(editInvoice.approvals) && editInvoice.approvals.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border space-y-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Legacy approval steps</p>
+                    {editInvoice.approvals.map((step: any) => (
+                      <div key={step.id} className="flex items-start gap-3">
+                        <div className={cn('mt-0.5 h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold',
+                          step.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                          step.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700')}>
+                          L{step.level}
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold">{formatStatus(String(step.status))}</p>
+                          {step.comments && <p className="text-xs text-muted-foreground">{step.comments}</p>}
+                          {step.actionAt && <p className="text-xs text-muted-foreground">{formatDate(step.actionAt)}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            </fieldset>
+
           </div>
         </div>
       </div>
@@ -1486,7 +2118,7 @@ function InvoiceTypePicker({ onPick, onCancel }: {
       <div className="w-full max-w-2xl mx-4 rounded-2xl border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div>
-            <h2 className="text-base font-semibold">New invoice</h2>
+            <h2 className="text-sm font-semibold">New invoice</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Pick a path</p>
           </div>
           <button onClick={onCancel} className="rounded-md p-1 hover:bg-muted" aria-label="Cancel">

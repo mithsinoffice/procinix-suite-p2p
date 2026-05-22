@@ -388,6 +388,13 @@ model Invoice {
   recommendedAction     String?          @default("needs_review")
                                          // 'auto_process' | 'needs_review' | 'hold'
   llmScoredAt           DateTime?
+  // Fuzzy duplicate detection (populated by duplicate-detector.service after
+  // ingestion / manual upload / vendor portal). duplicateFlag holds the
+  // highest-confidence matchType: EXACT | FUZZY_NUMBER | FUZZY_AMOUNT |
+  // FUZZY_VENDOR_DATE | LINE_ITEM. duplicateMatches stores the full match list
+  // for the form banner + listing badge to surface.
+  duplicateFlag         String?
+  duplicateMatches      Json?
   fileUrl            String?           @db.Text
   fileName           String?
   mimeType           String?

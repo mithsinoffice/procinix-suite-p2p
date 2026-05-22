@@ -130,7 +130,6 @@ const SECTIONS: Section[] = [
           { to: '/invoices',                       label: 'All invoices' },
           { to: '/invoices?status=unmatched',      label: 'Unmatched', badge: 'unmatchedInvoices', tone: 'red' },
           { to: '/invoices?status=pending',        label: 'Pending', badge: 'pendingInvoices', tone: 'amber' },
-          { to: '/invoices/review',                label: 'Review queue' },
           { to: '/invoices?type=debit-note',       label: 'Debit notes' },
         ],
       },

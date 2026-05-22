@@ -8,10 +8,7 @@ const LoginPage          = lazy(() => import('./pages/auth/LoginPage'))
 const DashboardPage      = lazy(() => import('./pages/dashboard/DashboardPage'))
 const AnalyticsPage      = lazy(() => import('./pages/analytics/AnalyticsPage'))
 const InvoiceListPage         = lazy(() => import('./pages/invoices/InvoiceListPage'))
-const InvoiceDetailPage       = lazy(() => import('./pages/invoices/InvoiceDetailPage'))
 const InvoiceFormPage         = lazy(() => import('./pages/invoices/InvoiceFormPage'))
-const InvoiceNewPage          = lazy(() => import('./pages/invoices/InvoiceNewPage'))
-const InvoiceReviewQueuePage  = lazy(() => import('./pages/invoices/InvoiceReviewQueuePage'))
 const PaymentQueuePage        = lazy(() => import('./pages/payments/PaymentQueuePage'))
 const PaymentBatchListPage    = lazy(() => import('./pages/payments/PaymentBatchListPage'))
 const PaymentBatchDetailPage  = lazy(() => import('./pages/payments/PaymentBatchDetailPage'))
@@ -118,15 +115,13 @@ export const router = createBrowserRouter([
         { path: 'vendors/:id',     element: <S><VendorDetailPage /></S>    },
         { path: 'vendors/:id/edit', element: <S><VendorFormPage mode="edit" /></S> },
         { path: 'invoices', children: [
-          { index: true,        element: <S><InvoiceListPage /></S>      },
-          // /invoices/new with no ?type renders the type-selector modal inside
-          // InvoiceFormPage; ?type=po / ?type=direct switch the form into the
-          // matching mode without leaving the route.
-          { path: 'new',        element: <S><InvoiceFormPage /></S>      },
-          { path: 'review',     element: <S><InvoiceReviewQueuePage /></S> },
-          { path: ':id',        element: <S><InvoiceDetailPage /></S>   },
-          { path: ':id/edit',   element: <S><InvoiceFormPage /></S>      },
-          { path: ':id/legacy', element: <S><InvoiceNewPage /></S>       },
+          { index: true,        element: <S><InvoiceListPage /></S> },
+          // Single A→F form drives create / edit / review. /:id renders read-only
+          // when the invoice is in a terminal/post-workflow status; /:id/edit
+          // always allows editing. /new with no ?type shows the type-picker modal.
+          { path: 'new',        element: <S><InvoiceFormPage /></S> },
+          { path: ':id',        element: <S><InvoiceFormPage /></S> },
+          { path: ':id/edit',   element: <S><InvoiceFormPage /></S> },
         ]},
         { path: 'payments', children: [
           { index: true,             element: <S><PaymentQueuePage /></S> },

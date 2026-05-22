@@ -29,18 +29,20 @@ export const INVOICE_LIST_SELECT = {
   paymentStatus: true, paidAmount: true,
   isPOInvoice: true, irnNumber: true, irnVerified: true,
   msmeBreach: true, isUrgent: true,
+  duplicateFlag: true,
   createdAt: true, updatedAt: true,
   vendor: { select: { legalName: true, vendorCode: true, kycPanStatus: true } },
 } satisfies Prisma.InvoiceSelect
 
 export interface InvoiceListQuery {
-  status?:   string
-  vendorId?: string
-  entityId?: string
-  search?:   string
-  apLane?:   string
-  dateFrom?: string
-  dateTo?:   string
+  status?:    string
+  vendorId?:  string
+  entityId?:  string
+  search?:    string
+  apLane?:    string
+  dateFrom?:  string
+  dateTo?:    string
+  duplicate?: string         // 'ALL' | 'EXACT' | 'SUSPICIOUS' (any flag set)
 }
 
 // Pure: builds the Prisma where clause from query params. Exported so the
@@ -54,6 +56,9 @@ export function buildInvoiceListWhere(tenantId: string, q: InvoiceListQuery): Pr
   if (q.apLane   && q.apLane !== 'ALL') where.apLane   = q.apLane
   if (q.dateFrom) where.invoiceDate = { gte: new Date(q.dateFrom) }
   if (q.dateTo)   where.invoiceDate = { ...(where.invoiceDate as object), lte: new Date(q.dateTo) }
+  if (q.duplicate === 'EXACT')        where.duplicateFlag = 'EXACT'
+  if (q.duplicate === 'SUSPICIOUS')   where.duplicateFlag = { in: ['FUZZY_NUMBER', 'FUZZY_AMOUNT', 'FUZZY_VENDOR_DATE', 'LINE_ITEM'] }
+  if (q.duplicate === 'ANY')          where.duplicateFlag = { not: null }
   if (q.search) {
     where.OR = [
       { invoiceNumber: { contains: q.search } },
@@ -667,5 +672,33 @@ export async function invoiceRoutes(app: FastifyInstance) {
     })
     if (!score) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Score not found' })
     return reply.send(score)
+  })
+
+  // ── On-demand duplicate scan ──
+  // Used by the form on edit to surface a "possible duplicate" banner without
+  // having to wait for re-ingestion. Reads the persisted invoice, hands the
+  // header + line shape into detectDuplicates() with sourceId = self.
+  app.get('/:id/duplicate-check', auth, async (req, reply) => {
+    const id = (req.params as { id: string }).id
+    const inv = await app.prisma.invoice.findFirst({
+      where:   { id, tenantId: req.tenant.id },
+      include: { lines: { select: { description: true, lineTotal: true } } },
+    })
+    if (!inv) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Invoice not found' })
+
+    const { detectDuplicates } = await import('../services/duplicate-detector.service.js')
+    const result = await detectDuplicates({
+      invoiceNumber: inv.invoiceNumber,
+      vendorId:      inv.vendorId ?? undefined,
+      vendorGstin:   inv.vendorGSTIN ?? undefined,
+      totalAmount:   Number(inv.totalAmount),
+      invoiceDate:   inv.invoiceDate.toISOString().slice(0, 10),
+      lineItems:     inv.lines.map(l => ({
+        description: l.description ?? '',
+        amount:      Number(l.lineTotal),
+      })),
+      sourceId:      inv.id,
+    }, req.tenant.id, app.prisma)
+    return reply.send(result)
   })
 }

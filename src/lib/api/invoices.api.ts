@@ -19,7 +19,7 @@ export interface InvoiceSummary {
   createdAt: string
 }
 
-export interface InvoiceDetail extends InvoiceSummary {
+export interface InvoiceFullData extends InvoiceSummary {
   lines: InvoiceLine[]
   approvals: { id: string; level: number; approverId: string; status: string; comments?: string; actionAt?: string }[]
   glCodeId?: string; costCentreId?: string; narration?: string
@@ -48,7 +48,7 @@ export function useInvoices(filters: InvoiceFilters = {}) {
 export function useInvoice(id: string) {
   return useQuery({
     queryKey: queryKeys.invoices.detail(id),
-    queryFn:  () => http.get<InvoiceDetail>(`/api/invoices/${id}`),
+    queryFn:  () => http.get<InvoiceFullData>(`/api/invoices/${id}`),
     enabled:  !!id,
     staleTime: STALE_TIMES.DETAIL,
   })
