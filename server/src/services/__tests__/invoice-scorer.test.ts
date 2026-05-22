@@ -220,7 +220,11 @@ describe('scoreAndPersistInvoice', () => {
     const call = updateFn.mock.calls[0][0]
     expect(call.where).toEqual({ id: 'inv-1' })
     expect(call.data.recommendedAction).toBe('auto_process')
-    expect(call.data.ocrConfidence).toBe(95)   // overallScore * 100, rounded
+    // ocrConfidence is the OCR provider's confidence; the LLM's overallScore
+    // belongs in ocrConfidenceMap. Conflating them surfaced as "OCR 0%" badge
+    // despite a high OCR bar when the LLM flagged hold.
+    expect(call.data.ocrConfidence).toBeUndefined()
+    expect(call.data.ocrConfidenceMap).toBeDefined()
     expect(call.data.status).toBeUndefined()    // status NOT overridden
     expect(call.data.llmScoredAt).toBeInstanceOf(Date)
   })

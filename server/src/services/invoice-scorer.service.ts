@@ -249,11 +249,17 @@ export async function scoreAndPersistInvoice(
   const scorer = deps.scorer ?? scoreInvoiceWithLLM
   const result = await scorer(invoiceData)
 
+  // NOTE: do NOT overwrite `ocrConfidence` here. That column is the OCR
+  // provider's confidence (Gemini / n8n upstream) and the UI's confidence
+  // bar + badge both read it. `result.overallScore` is the LLM's
+  // review-flag-aware score (drops to 0 when a critical flag fires) — a
+  // separate semantic. Conflating them surfaced as "OCR 0%" badge despite
+  // a 97% OCR bar. We keep the per-field map under ocrConfidenceMap and
+  // the LLM's recommendation under recommendedAction.
   await prisma.invoice.update({
     where: { id: invoiceId },
     data: {
       ocrConfidenceMap:      result.fieldScores           as unknown as Prisma.InputJsonValue,
-      ocrConfidence:         Math.round(result.overallScore * 100),
       validationIssues:      result.validationIssues      as unknown as Prisma.InputJsonValue,
       reviewFlags:           result.reviewFlags           as unknown as Prisma.InputJsonValue,
       vendorMatchSuggestion: result.vendorMatchSuggestion as unknown as Prisma.InputJsonValue,

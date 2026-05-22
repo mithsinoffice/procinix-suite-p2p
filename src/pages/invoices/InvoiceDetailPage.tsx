@@ -10,6 +10,7 @@ import { MasterPageHeader } from '../../components/masters/MasterFormLayout'
 import { formatDate, formatDateTime, formatCurrency, formatStatus, getStatusColor } from '../../lib/utils/formatters'
 import { ChannelBadge } from '../../components/shared/ChannelBadge'
 import { KycBadge } from '../../components/shared/KycBadge'
+import { useAuthStore } from '../../stores/auth.store'
 import { cn } from '../../lib/utils'
 
 // ── OCR confidence chip ─────────────────────────────────────────────────────
@@ -270,9 +271,25 @@ interface ItemCandidate   { id: string; itemCode: string; name: string; descript
 // TDS section appear as blue "auto" chips because they come from the item
 // master, not the OCR text. A footer row cross-checks the sum against the
 // Section B subtotal — red callout when it diverges.
-function LineItemsTable({ lines, currency, subtotal }: { lines: any[]; currency: string; subtotal: number }) {
-  const lineSum = lines.reduce((s, l) => s + Number(l.lineTotal ?? 0), 0)
-  const match   = Math.abs(lineSum - subtotal) < 0.5
+function LineItemsTable({ lines, currency, subtotal, totalAmount }: {
+  lines: any[]; currency: string; subtotal: number; totalAmount: number
+}) {
+  // Line "Total" is base + GST (not TDS — TDS is a downstream withholding, not
+  // part of the line's gross). When ingestion writes lineTotal=baseAmt we
+  // recompute here so the column reflects the GST-inclusive figure the
+  // reviewer expects on a GST invoice. Footer sum follows the same rule and
+  // is compared to invoice.totalAmount (gross), not subtotal — the previous
+  // base-vs-base comparison broke once the column showed gross.
+  const lineGrosses = lines.map((l: any) => {
+    const gstRate = Number(l.item?.gstRate ?? l.gstRate ?? 0)
+    const baseAmt = Number(l.quantity) * Number(l.unitPrice)
+    return baseAmt * (1 + gstRate / 100)
+  })
+  const lineSum = lineGrosses.reduce((s, n) => s + n, 0)
+  // Tolerance scales with magnitude — paise rounding on multi-line invoices
+  // drifts by a few rupees, not 0.5.
+  const match   = Math.abs(lineSum - totalAmount) < Math.max(1, totalAmount * 0.002)
+  void subtotal  // kept in signature for callers; comparison now uses totalAmount
   return (
     <div className="-mx-5 -mb-5 overflow-x-auto border-t border-border">
       <table className="w-full text-xs">
@@ -378,19 +395,28 @@ function LineItemsTable({ lines, currency, subtotal }: { lines: any[]; currency:
                 <td className="px-3 py-2 tabular-nums font-mono text-amber-700">
                   {formatCurrency(tdsAmt, currency)}
                 </td>
-                <td className="px-3 py-2 tabular-nums font-mono font-semibold">{formatCurrency(line.lineTotal, currency)}</td>
+                <td className="px-3 py-2 tabular-nums font-mono font-semibold">
+                  {formatCurrency(baseAmt + gstAmt, currency)}
+                  {gstRate === 0 && (
+                    <span className="ml-1 rounded-full border border-amber-200 bg-amber-50 text-amber-700 px-1 py-0.5 text-[9px] font-medium" title="No GST rate on item/line — total shown is base only">
+                      + GST
+                    </span>
+                  )}
+                </td>
               </tr>
             )
           })}
           <tr className={cn('border-t border-border', match ? 'bg-green-50/40' : 'bg-red-50/40')}>
-            <td colSpan={4} className="px-3 py-2 text-right text-[11px] font-medium">
-              Line items sum
+            <td colSpan={7} className="px-3 py-2 text-right text-[11px] font-medium">
+              Line items sum (incl. GST)
             </td>
             <td className="px-3 py-2 tabular-nums font-mono font-semibold">{formatCurrency(lineSum, currency)}</td>
-            <td colSpan={3} className={cn('px-3 py-2 text-[11px] font-medium', match ? 'text-green-700' : 'text-red-700')}>
+          </tr>
+          <tr className={cn(match ? 'bg-green-50/40' : 'bg-red-50/40')}>
+            <td colSpan={8} className={cn('px-3 py-2 text-[11px] font-medium', match ? 'text-green-700' : 'text-red-700')}>
               {match
-                ? '= Financial summary subtotal · 100%'
-                : `≠ subtotal ${formatCurrency(subtotal, currency)} (Δ ${formatCurrency(subtotal - lineSum, currency)})`}
+                ? `= Invoice total ${formatCurrency(totalAmount, currency)} · 100%`
+                : `≠ Invoice total ${formatCurrency(totalAmount, currency)} (Δ ${formatCurrency(totalAmount - lineSum, currency)})`}
             </td>
           </tr>
         </tbody>
@@ -464,6 +490,116 @@ function ScoreBanner({
   )
 }
 
+// ── LLM review banner ───────────────────────────────────────────────────────
+// Surfaces the async invoice-scorer output. Shows when the LLM marked the
+// invoice for `hold` (critical reviewFlag present) or when validationIssues
+// were raised. The vendor-match suggestion chip appears when the LLM
+// confidently identifies a vendor and the invoice currently has none. Lives
+// directly below the match-score banner so reviewers see it before the
+// form sections.
+interface ReviewFlag {
+  flag:     string
+  reason:   string
+  severity: 'critical' | 'high' | 'medium' | 'low'
+}
+interface ValidationIssue {
+  field:    string
+  severity: 'error' | 'warning'
+  message:  string
+}
+interface VendorSuggestion {
+  suggestedName: string | null
+  gstin:         string | null
+  confidence:    number
+}
+
+const FLAG_SEVERITY_CLASSES: Record<ReviewFlag['severity'], string> = {
+  critical: 'bg-red-50 text-red-700 border-red-200',
+  high:     'bg-amber-50 text-amber-700 border-amber-200',
+  medium:   'bg-gray-100 text-gray-700 border-gray-200',
+  low:      'bg-gray-50 text-gray-600 border-gray-200',
+}
+
+function LlmReviewBanner({ recommendedAction, reviewFlags, validationIssues, vendorMatchSuggestion, hasVendor }: {
+  recommendedAction:    string | null
+  reviewFlags:          ReviewFlag[] | null | undefined
+  validationIssues:     ValidationIssue[] | null | undefined
+  vendorMatchSuggestion: VendorSuggestion | null | undefined
+  hasVendor:            boolean
+}) {
+  const flags  = Array.isArray(reviewFlags)      ? reviewFlags      : []
+  const issues = Array.isArray(validationIssues) ? validationIssues : []
+  const sug    = vendorMatchSuggestion && vendorMatchSuggestion.confidence > 0.5 ? vendorMatchSuggestion : null
+  const showVendorChip = sug && !hasVendor
+  const isHold = recommendedAction === 'hold' && flags.length > 0
+
+  if (!isHold && issues.length === 0 && !showVendorChip) return null
+
+  // Sort issues so errors render before warnings.
+  const sortedIssues = [...issues].sort((a, b) => (a.severity === 'error' ? -1 : 1) - (b.severity === 'error' ? -1 : 1))
+
+  return (
+    <div className={cn(
+      'rounded-xl border px-5 py-4 space-y-3',
+      isHold ? 'border-red-200 bg-red-50/40' : 'border-amber-200 bg-amber-50/30',
+    )}>
+      <div className="flex items-baseline justify-between flex-wrap gap-2">
+        <h3 className={cn('text-sm font-semibold', isHold ? 'text-red-800' : 'text-amber-800')}>
+          {isHold ? 'On hold — AI review flags' : 'AI review notes'}
+        </h3>
+        <span className="text-[10px] text-muted-foreground">Auto-generated by invoice-scorer · review before approving</span>
+      </div>
+
+      {flags.length > 0 && (
+        <ul className="space-y-1.5">
+          {flags.map((f, i) => (
+            <li key={i} className="flex items-start gap-2 text-xs">
+              <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide flex-shrink-0', FLAG_SEVERITY_CLASSES[f.severity] ?? FLAG_SEVERITY_CLASSES.low)}>
+                {f.severity}
+              </span>
+              <span className="leading-relaxed">
+                <span className="font-medium">{f.flag}</span>
+                <span className="text-muted-foreground"> — {f.reason}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {sortedIssues.length > 0 && (
+        <div className="border-t border-current/10 pt-2 space-y-1">
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Validation issues</p>
+          <ul className="space-y-0.5">
+            {sortedIssues.map((it, i) => (
+              <li key={i} className="text-[11px] flex items-baseline gap-2">
+                <span className={cn(
+                  'rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase',
+                  it.severity === 'error' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800',
+                )}>
+                  {it.severity}
+                </span>
+                <span className="font-mono text-muted-foreground">{it.field}</span>
+                <span>— {it.message}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {showVendorChip && (
+        <div className="border-t border-current/10 pt-2">
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Suggested vendor</p>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-teal-50 text-teal-800 px-2.5 py-1 text-xs font-medium">
+            {sug!.suggestedName ?? 'Unknown'}
+            {sug!.gstin && <span className="text-[10px] font-mono text-teal-700/80">({sug!.gstin})</span>}
+            <span className="text-[10px] text-teal-700/60">· {Math.round(sug!.confidence * 100)}% confidence</span>
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main page ───────────────────────────────────────────────────────────────
 export default function InvoiceDetailPage() {
   const { id }   = useParams<{ id: string }>()
@@ -515,6 +651,15 @@ export default function InvoiceDetailPage() {
   const userName       = (id?: string | null) => (usersList as any[]).find((u: any) => u.id === id)?.name ?? (id ?? '—')
   const locationName   = (id?: string | null) => (locations as any[]).find((l: any) => l.id === id)?.name ?? (id ?? '—')
   const departmentName = (id?: string | null) => (departments as any[]).find((d: any) => d.id === id)?.name ?? (id ?? '—')
+
+  // Logged-in user's profile (from JWT-backed Zustand store) drives the
+  // detail-page pre-fills for webhook-ingested invoices, where the ingest
+  // step picks an arbitrary admin user as createdBy and leaves entity +
+  // department blank. The pre-fills are display-only — the underlying
+  // invoice row isn't mutated until the reviewer saves edits via the form.
+  const authUser       = useAuthStore(s => s.user)
+  const currentUserRow = authUser ? (usersList as any[]).find((u: any) => u.id === authUser.id) : null
+  const currentUserDeptId = currentUserRow?.departmentId ?? null
 
   const mutOpts = (_action: string) => ({
     onSuccess: () => {
@@ -749,16 +894,47 @@ export default function InvoiceDetailPage() {
               />
             )}
 
+            {/* LLM review banner — async invoice-scorer output */}
+            <LlmReviewBanner
+              recommendedAction={inv.recommendedAction ?? null}
+              reviewFlags={inv.reviewFlags as ReviewFlag[] | null}
+              validationIssues={inv.validationIssues as ValidationIssue[] | null}
+              vendorMatchSuggestion={inv.vendorMatchSuggestion as VendorSuggestion | null}
+              hasVendor={!!inv.vendorId}
+            />
+
             {/* Section A — Invoice Header */}
             <Section letter="A" title="Invoice Header" subtitle="Core invoice identifiers and dates">
               <div className="grid grid-cols-2 gap-4">
-                <ReadOnlyField label="Entity"      value={entityName(inv.entityId)} />
-                <ReadOnlyField label="Created by"  value={userName(inv.createdByUserId)} />
+                {/* Entity — show a "Select entity" placeholder for webhook-ingested
+                    rows that don't have one yet (ingestInvoice runs without a
+                    logged-in user, so entityId stays null). User picks one before
+                    submitting for approval. */}
+                <ReadOnlyField
+                  label="Entity"
+                  value={inv.entityId
+                    ? entityName(inv.entityId)
+                    : <span className="italic text-muted-foreground">Select entity</span>}
+                />
+                {/* Created by — for email-channel rows (no human creator at
+                    ingest), display the logged-in viewer's name. Mutable in the
+                    edit form; this is display-only. */}
+                <ReadOnlyField
+                  label="Created by"
+                  value={inv.channelType === 'EMAIL' && authUser
+                    ? authUser.name
+                    : userName(inv.createdByUserId)}
+                />
+                {/* Department — pre-fill from logged-in user's profile when the
+                    invoice has none set. Warning kept for the case where the
+                    viewer also has no department on their profile. */}
                 <ReadOnlyField
                   label="Department"
                   value={inv.departmentId
                     ? departmentName(inv.departmentId)
-                    : <FieldWarning>Not set on user profile — configure in user master</FieldWarning>}
+                    : currentUserDeptId
+                      ? departmentName(currentUserDeptId)
+                      : <FieldWarning>Not set on user profile — configure in user master</FieldWarning>}
                 />
                 <ReadOnlyField label="Bill-to location" value={locationName(inv.billToLocationId)} />
 
@@ -942,7 +1118,12 @@ export default function InvoiceDetailPage() {
             {/* Section C — Line items (mapped to item_master with per-row match scores) */}
             {inv.lines?.length > 0 && (
               <Section letter="C" title="Line Items" subtitle={`${inv.lines.length} line${inv.lines.length === 1 ? '' : 's'} · mapped to item master`}>
-                <LineItemsTable lines={inv.lines} currency={currency} subtotal={Number(inv.subtotal) || 0} />
+                <LineItemsTable
+                  lines={inv.lines}
+                  currency={currency}
+                  subtotal={Number(inv.subtotal) || 0}
+                  totalAmount={Number(inv.totalAmount) || 0}
+                />
               </Section>
             )}
 

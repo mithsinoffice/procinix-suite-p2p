@@ -4,13 +4,17 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, Trash2, Loader2, Upload, FileText, AlertTriangle, Send, Info, Zap,
-  ChevronDown, ChevronLeft, ChevronRight, X,
+  ChevronLeft, ChevronRight, X,
 } from 'lucide-react'
 import { http } from '../../lib/http'
 import { MasterPageHeader, FormInput, FormSelect, FormTextarea } from '../../components/masters/MasterFormLayout'
 import { useAuthStore } from '../../stores/auth.store'
 import { formatCurrency, formatDate } from '../../lib/utils/formatters'
 import { cn } from '../../lib/utils'
+import {
+  pickGl, computeJvEntries, jvTotals, computeCrossCheck, panFromGstin,
+  type GlCodeRef,
+} from '../../lib/invoice-form'
 
 // Direct-invoice L2 threshold — also baked into WF-INV-DIRECT-L2 (prisma/seed.ts).
 // Above this, the L2 approval workflow kicks in for direct (non-PO) invoices.
@@ -61,7 +65,10 @@ interface FormValues {
   // Header-level cost allocation — required when direct (?type=direct), optional otherwise
   costCentreId?:      string
   glCodeId?:          string
-  // Section C — additional
+  // Section B — financial summary (manual override of line-derived totals)
+  baseAmount?:        number    // OCR-extracted or manual; cross-checked vs lines
+  grossAmount?:       number    // OCR-extracted or manual; cross-checked vs base + tax
+  // Section E — additional
   narration?:         string
   periodFrom?:        string
   periodTo?:          string
@@ -406,7 +413,6 @@ export default function InvoiceFormPage() {
   const [ocrError, setOcrError]   = useState<string | null>(null)
   const [ocrConfidence, setOcrConfidence] = useState<number | null>(null)
   const [ocrModel,   setOcrModel]   = useState<string | null>(null)
-  const [jvOpen, setJvOpen]       = useState(false)
   const [vendorState, setVendorState] = useState('')
   const [entityState, setEntityState] = useState('')
 
@@ -533,18 +539,31 @@ export default function InvoiceFormPage() {
     }
   }, [currentUser, entities, departments, getValues, setValue])
 
-  // Keep vendorState in sync with selected vendor (for GST interstate calc) + GSTIN/PAN auto-fill
+  // Keep vendorState in sync with selected vendor (for GST interstate calc) + GSTIN auto-fill.
+  // PAN is intentionally NOT set here — a separate effect derives it from the
+  // GSTIN via panFromGstin so PAN stays consistent if the user picks a
+  // different GSTIN registration in the dropdown.
   useEffect(() => {
     if (selectedVendor) {
       setValue('vendorGSTIN', selectedVendor.gstin ?? '')
-      setValue('vendorPAN',   selectedVendor.pan   ?? '')
       setVendorState(selectedVendor.stateCode ?? selectedVendor.state ?? '')
     } else {
       setValue('vendorGSTIN', '')
-      setValue('vendorPAN',   '')
       setVendorState('')
     }
   }, [selectedVendor?.id, setValue])
+
+  // PAN derives from chars 3-12 of the currently-selected GSTIN. Keeps PAN in
+  // sync when the user picks a different registration from the multi-GSTIN
+  // dropdown. Falls back to the vendor master's `pan` when GSTIN is too short
+  // / not yet selected.
+  const vendorGstinWatch = useWatch({ control, name: 'vendorGSTIN' })
+  useEffect(() => {
+    const derived = panFromGstin(vendorGstinWatch ?? '')
+    if (derived) setValue('vendorPAN', derived)
+    else if (selectedVendor?.pan) setValue('vendorPAN', selectedVendor.pan)
+    else setValue('vendorPAN', '')
+  }, [vendorGstinWatch, selectedVendor?.pan, setValue])
 
   // Keep entityState in sync
   useEffect(() => {
@@ -601,8 +620,23 @@ export default function InvoiceFormPage() {
   const glLabel = useCallback((glId?: string) => {
     if (!glId) return '—'
     const g = (glCodes as any[]).find((x: any) => x.id === glId)
-    return g ? `${g.code ?? ''} ${g.name ?? ''}`.trim() || glId : glId
+    return g ? g.code ?? glId : glId
   }, [glCodes])
+  const glName = useCallback((glId?: string) => {
+    if (!glId) return ''
+    const g = (glCodes as any[]).find((x: any) => x.id === glId)
+    return g?.name ?? ''
+  }, [glCodes])
+  const ccName = useCallback((ccId?: string) => {
+    if (!ccId) return null
+    const c = (costCentres as any[]).find((x: any) => x.id === ccId)
+    return c ? (c.code ?? c.name) : null
+  }, [costCentres])
+
+  // Watch retention so the F-section JV builder re-runs when it changes.
+  const retentionAmountWatch = useWatch({ control, name: 'retentionAmount' }) ?? 0
+  const baseAmountWatch      = useWatch({ control, name: 'baseAmount'      }) ?? 0
+  const grossAmountWatch     = useWatch({ control, name: 'grossAmount'     }) ?? 0
 
   // ── OCR extract ───────────────────────────────────────────────────────────
   const runOcr = useCallback(async () => {
@@ -831,6 +865,50 @@ export default function InvoiceFormPage() {
               </div>
             )}
 
+            {/* OCR scoring banner — sticky top of right panel, only after OCR runs.
+                Locked-layout rule: never shifts any section, just appears in
+                its own slot. KYC chips read from the resolved vendor master.
+                LLM review flags don't apply on the create form (scoring runs
+                async after first save) — they show on the detail page. */}
+            {ocrConfidence !== null && (
+              <div className="sticky top-0 z-10 rounded-xl border border-teal-200 bg-teal-50/40 px-4 py-3 flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2 min-w-[180px]">
+                  <span className="text-xs font-medium text-teal-800">OCR confidence</span>
+                  <div className="flex-1 h-1.5 w-24 rounded-full bg-teal-100 overflow-hidden">
+                    <div
+                      className={cn('h-full rounded-full', ocrConfidence >= 80 ? 'bg-green-500' : ocrConfidence >= 60 ? 'bg-amber-500' : 'bg-red-500')}
+                      style={{ width: `${ocrConfidence}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-teal-800 tabular-nums">{ocrConfidence}%</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="rounded-full border border-blue-200 bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-medium">OCR</span>
+                  {selectedVendor && (
+                    <>
+                      <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                        selectedVendor.kycPanStatus === 'VERIFIED' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>
+                        PAN {selectedVendor.kycPanStatus === 'VERIFIED' ? 'Valid' : 'Unverified'}
+                      </span>
+                      <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                        selectedVendor.kycGstStatus === 'VERIFIED' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>
+                        GST {selectedVendor.kycGstStatus === 'VERIFIED' ? 'Valid' : 'Unverified'}
+                      </span>
+                      {selectedVendor.kycBankStatus && (
+                        <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                          selectedVendor.kycBankStatus === 'VERIFIED' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>
+                          Bank {selectedVendor.kycBankStatus === 'VERIFIED' ? 'Valid' : 'Unverified'}
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {ocrModel && (
+                    <span className="text-[10px] text-muted-foreground">via {ocrModel}</span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* A. Invoice Header */}
             <div className="rounded-xl border border-border bg-card p-6">
               <SectionHeader letter="A" title="Invoice Header" subtitle="Core invoice identifiers and dates" />
@@ -866,11 +944,29 @@ export default function InvoiceFormPage() {
                   </FormSelect>
                 </Field>
                 <Field label="Vendor GSTIN">
-                  <FormInput readOnly placeholder="Auto-filled from vendor" {...register('vendorGSTIN')} className="font-mono bg-muted/40" />
+                  {/* Multi-GSTIN: vendor may have several registrations across states.
+                      Today only the primary `vendor.gstin` is exposed by /api/masters/dropdown;
+                      VendorGstRegistration rows can be wired here once an endpoint surfaces them. */}
+                  <FormSelect {...register('vendorGSTIN')} className="font-mono">
+                    <option value="">Select GSTIN…</option>
+                    {selectedVendor?.gstin && (
+                      <option value={selectedVendor.gstin}>
+                        {selectedVendor.gstin}
+                        {selectedVendor.state ? ` — ${selectedVendor.state}` : ''}
+                      </option>
+                    )}
+                  </FormSelect>
+                  {selectedVendor?.gstin && getValues('vendorGSTIN') === selectedVendor.gstin && (
+                    <p className="text-[10px] text-green-700 mt-1">✓ Matched master</p>
+                  )}
                 </Field>
 
                 <Field label="Vendor PAN">
-                  <FormInput readOnly placeholder="Auto-filled from vendor" {...register('vendorPAN')} className="font-mono bg-muted/40" />
+                  <FormInput readOnly placeholder="Auto from GSTIN" {...register('vendorPAN')} className="font-mono bg-muted/40" />
+                  <p className="text-[10px] text-teal-700 mt-1">
+                    <span className="rounded-full border border-teal-200 bg-teal-50 px-1.5 py-0.5 mr-1">Auto</span>
+                    Derived from chars 3–12 of GSTIN
+                  </p>
                 </Field>
                 <Field label="Bill-to location">
                   <FormSelect {...register('billToLocationId')}>
@@ -879,6 +975,21 @@ export default function InvoiceFormPage() {
                       <option key={l.id} value={l.id}>{l.name}{l.code ? ` — ${l.code}` : ''}</option>
                     ))}
                   </FormSelect>
+                  {(() => {
+                    // Intra-state vs inter-state hint based on vendor GSTIN state vs
+                    // bill-to location state. Imperfect string match (vendor carries a
+                    // stateCode, locations carry a state NAME) — but the existing
+                    // recalcLine uses the same comparison, so this stays consistent.
+                    const billToId = getValues('billToLocationId')
+                    const billTo   = billToId ? (locations as any[]).find((l: any) => l.id === billToId) : null
+                    if (!billTo?.state || !vendorState) return null
+                    const same = String(billTo.state).toLowerCase() === String(vendorState).toLowerCase()
+                    return (
+                      <p className={cn('text-[10px] mt-1', same ? 'text-green-700' : 'text-blue-700')}>
+                        {same ? 'Intra-state → CGST + SGST' : 'Inter-state → IGST'}
+                      </p>
+                    )
+                  })()}
                 </Field>
 
                 <Field label="Invoice number" required error={errors.invoiceNumber?.message}>
@@ -967,9 +1078,89 @@ export default function InvoiceFormPage() {
               </div>
             </div>
 
-            {/* B. Line Items */}
+            {/* B. Financial summary — manual Base + Gross override, with a
+                live cross-check banner against the line-item sums. Helps the
+                reviewer reconcile what the invoice itself reports vs what
+                Section C's lines add up to. Pure helper computeCrossCheck
+                returns signed deltas so the banner can phrase the mismatch
+                directionally. */}
             <div className="rounded-xl border border-border bg-card p-6">
-              <SectionHeader letter="B" title="Line Items" subtitle="One row per product or service — GST auto-calculated" />
+              <SectionHeader letter="B" title="Financial Summary" subtitle="Invoice-reported amounts — cross-checked against line items" />
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Base amount *">
+                  <FormInput
+                    type="number" step="0.01" min="0" placeholder="0.00"
+                    {...register('baseAmount', { valueAsNumber: true })}
+                  />
+                </Field>
+                <Field label="Total taxes (auto from lines)">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono tabular-nums text-sm font-semibold">
+                      {fmt(totals.cgstAmount + totals.sgstAmount + totals.igstAmount, currencyCode)}
+                    </span>
+                    <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-0.5">Auto</span>
+                  </div>
+                  {(totals.cgstAmount + totals.sgstAmount) > 0 && (
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      CGST {fmt(totals.cgstAmount, currencyCode)} + SGST {fmt(totals.sgstAmount, currencyCode)}
+                    </p>
+                  )}
+                  {totals.igstAmount > 0 && (
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      IGST {fmt(totals.igstAmount, currencyCode)}
+                    </p>
+                  )}
+                </Field>
+                <Field label="Gross amount *" span>
+                  <FormInput
+                    type="number" step="0.01" min="0" placeholder="0.00"
+                    {...register('grossAmount', { valueAsNumber: true })}
+                  />
+                </Field>
+                {(() => {
+                  const xcheck = computeCrossCheck(
+                    Number(baseAmountWatch) || 0,
+                    Number(grossAmountWatch) || 0,
+                    lines.map((l: LineItem) => ({
+                      taxableAmount: Number(l.taxableAmount) || (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0),
+                      cgstAmount:    Number(l.cgstAmount) || 0,
+                      sgstAmount:    Number(l.sgstAmount) || 0,
+                      igstAmount:    Number(l.igstAmount) || 0,
+                    })),
+                  )
+                  return (
+                    <div className="col-span-2">
+                      {!xcheck.hasLines ? (
+                        <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                          Add line items to validate
+                        </div>
+                      ) : xcheck.baseMatch && xcheck.grossMatch ? (
+                        <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
+                          ✓ Base {fmt(Number(baseAmountWatch), currencyCode)} + Tax {fmt(totals.cgstAmount + totals.sgstAmount + totals.igstAmount, currencyCode)} = {fmt(Number(grossAmountWatch), currencyCode)} · balanced
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {!xcheck.baseMatch && (
+                            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                              ⚠ Base amount {fmt(Number(baseAmountWatch), currencyCode)} does not match line items sum {fmt(Number(baseAmountWatch) - xcheck.baseDelta, currencyCode)} (Δ {fmt(xcheck.baseDelta, currencyCode)})
+                            </div>
+                          )}
+                          {!xcheck.grossMatch && (
+                            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                              ⚠ Gross {fmt(Number(grossAmountWatch), currencyCode)} does not match Base + Tax {fmt(Number(grossAmountWatch) - xcheck.grossDelta, currencyCode)} (Δ {fmt(xcheck.grossDelta, currencyCode)})
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
+            {/* C. Line Items */}
+            <div className="rounded-xl border border-border bg-card p-6">
+              <SectionHeader letter="C" title="Line Items" subtitle="One row per product or service — GST auto-calculated" />
               <div className="overflow-x-auto w-full -mx-2">
                 <table className="table-auto min-w-[1400px] w-full text-xs border-collapse">
                   <thead>
@@ -1141,21 +1332,12 @@ export default function InvoiceFormPage() {
               )}
             </div>
 
-            {/* C. Additional Details */}
+            {/* D. Retention — split out of the legacy "Additional Details" block.
+                A→F sections are always present in the locked layout; this one
+                stays compact when retention is off. */}
             <div className="rounded-xl border border-border bg-card p-6">
-              <SectionHeader letter="C" title="Additional Details" subtitle="Narration, expense period, retention" />
+              <SectionHeader letter="D" title="Retention" subtitle="Hold back a portion of payment for warranty / quality milestones" />
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Narration" span>
-                  <FormTextarea rows={2} placeholder="Internal narration / description of expense…" {...register('narration')} />
-                </Field>
-
-                <Field label="Period of expense — from">
-                  <FormInput type="date" {...register('periodFrom')} />
-                </Field>
-                <Field label="Period of expense — to">
-                  <FormInput type="date" {...register('periodTo')} />
-                </Field>
-
                 <Field label="Provision / Retention required">
                   <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" {...register('retentionRequired')} className="rounded border-input" />
@@ -1181,79 +1363,107 @@ export default function InvoiceFormPage() {
               </div>
             </div>
 
-            {/* D. Accounting JV Preview (collapsible) */}
-            <div className="rounded-xl border border-border overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setJvOpen(v => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-muted/20 hover:bg-muted/40"
-              >
-                <span className="text-sm font-semibold">D. Accounting JV Preview</span>
-                <ChevronDown className={cn('h-4 w-4 transition-transform', jvOpen && 'rotate-180')} />
-              </button>
-              {jvOpen && (
-                <div className="p-4">
-                  <table className="w-full table-auto text-xs">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">GL Code</th>
-                        <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Description</th>
-                        <th className="text-right py-1.5 px-2 font-medium text-muted-foreground">Debit ₹</th>
-                        <th className="text-right py-1.5 px-2 font-medium text-muted-foreground">Credit ₹</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lines.map((line: LineItem, i: number) => line.glCodeId && (
-                        <tr key={`exp-${i}`} className="border-b border-border/50">
-                          <td className="py-1 px-2 font-mono">{glLabel(line.glCodeId)}</td>
-                          <td className="py-1 px-2">{line.description || `Line ${i + 1}`}</td>
-                          <td className="py-1 px-2 text-right tabular-nums font-mono">{fmt(Number(line.taxableAmount) || 0, currencyCode)}</td>
-                          <td className="py-1 px-2 text-right text-muted-foreground">—</td>
-                        </tr>
-                      ))}
-                      {totals.cgstAmount > 0 && (
-                        <tr className="border-b border-border/50">
-                          <td className="py-1 px-2 font-mono">GST ITC</td>
-                          <td className="py-1 px-2">Input CGST</td>
-                          <td className="py-1 px-2 text-right tabular-nums font-mono text-green-700">{fmt(totals.cgstAmount, currencyCode)}</td>
-                          <td className="py-1 px-2 text-right text-muted-foreground">—</td>
-                        </tr>
-                      )}
-                      {totals.sgstAmount > 0 && (
-                        <tr className="border-b border-border/50">
-                          <td className="py-1 px-2 font-mono">GST ITC</td>
-                          <td className="py-1 px-2">Input SGST</td>
-                          <td className="py-1 px-2 text-right tabular-nums font-mono text-green-700">{fmt(totals.sgstAmount, currencyCode)}</td>
-                          <td className="py-1 px-2 text-right text-muted-foreground">—</td>
-                        </tr>
-                      )}
-                      {totals.igstAmount > 0 && (
-                        <tr className="border-b border-border/50">
-                          <td className="py-1 px-2 font-mono">GST ITC</td>
-                          <td className="py-1 px-2">Input IGST</td>
-                          <td className="py-1 px-2 text-right tabular-nums font-mono text-blue-700">{fmt(totals.igstAmount, currencyCode)}</td>
-                          <td className="py-1 px-2 text-right text-muted-foreground">—</td>
-                        </tr>
-                      )}
-                      {totals.tdsAmount > 0 && (
-                        <tr className="border-b border-border/50">
-                          <td className="py-1 px-2 font-mono">TDS Payable</td>
-                          <td className="py-1 px-2">TDS deducted</td>
-                          <td className="py-1 px-2 text-right text-muted-foreground">—</td>
-                          <td className="py-1 px-2 text-right tabular-nums font-mono text-amber-600">{fmt(totals.tdsAmount, currencyCode)}</td>
-                        </tr>
-                      )}
-                      <tr className="border-t-2 border-border font-semibold">
-                        <td className="py-1.5 px-2 font-mono">Accounts Payable</td>
-                        <td className="py-1.5 px-2">{selectedVendor?.legalName ?? 'Vendor'}</td>
-                        <td className="py-1.5 px-2 text-right text-muted-foreground">—</td>
-                        <td className="py-1.5 px-2 text-right tabular-nums font-mono">{fmt(totals.netPayable, currencyCode)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <p className="text-xs text-muted-foreground mt-2">* Preview only — actual JV posted on approval</p>
-                </div>
-              )}
+            {/* E. Narration & period — split out of the legacy "Additional Details" block. */}
+            <div className="rounded-xl border border-border bg-card p-6">
+              <SectionHeader letter="E" title="Narration & Period" subtitle="Free-text narration + billing-period dates" />
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Narration" span>
+                  <FormTextarea rows={2} placeholder="Internal narration / description of expense…" {...register('narration')} />
+                </Field>
+                <Field label="Period of expense — from">
+                  <FormInput type="date" {...register('periodFrom')} />
+                </Field>
+                <Field label="Period of expense — to">
+                  <FormInput type="date" {...register('periodTo')} />
+                </Field>
+              </div>
+            </div>
+
+            {/* F. Accounting JV Preview — locked-open per the spec.
+                Rebuilt off the pure computeJvEntries + pickGl helpers so the
+                Dr=Cr balance is testable. GL refs resolved by name pattern
+                against the seeded chart (Accounts Payable, CGST/SGST/IGST
+                Payable, TDS Payable, Retention Payable). When a GL isn't in
+                the COA, the row carries glCode=null and the cell flags
+                "GL not configured". */}
+            <div className="rounded-xl border border-border bg-card p-6">
+              <SectionHeader letter="F" title="Accounting JV Preview" subtitle="Auto-built from line items · GL mappings editable before submit" />
+              {(() => {
+                const lineInputs = lines.map((l: LineItem) => ({
+                  description:   l.description,
+                  taxableAmount: Number(l.taxableAmount) || (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0),
+                  cgstAmount:    Number(l.cgstAmount)    || 0,
+                  sgstAmount:    Number(l.sgstAmount)    || 0,
+                  igstAmount:    Number(l.igstAmount)    || 0,
+                  tdsAmount:     Number(l.tdsAmount)     || 0,
+                  glCode:        l.glCodeId ? glLabel(l.glCodeId) : undefined,
+                  glName:        l.glCodeId ? glName(l.glCodeId) : undefined,
+                  costCentre:    l.costCentreId ? ccName(l.costCentreId) : null,
+                }))
+                const jvCtx = {
+                  apGl:        pickGl(glCodes as GlCodeRef[], { contains: ['Accounts', 'Payable'] }),
+                  cgstGl:      pickGl(glCodes as GlCodeRef[], { contains: ['CGST'] }),
+                  sgstGl:      pickGl(glCodes as GlCodeRef[], { contains: ['SGST'] }),
+                  igstGl:      pickGl(glCodes as GlCodeRef[], { contains: ['IGST'] }),
+                  tdsGl:       pickGl(glCodes as GlCodeRef[], { contains: ['TDS', 'Payable'] }),
+                  retentionGl: pickGl(glCodes as GlCodeRef[], { contains: ['Retention'] }),
+                }
+                const entries = computeJvEntries(lineInputs, Number(retentionAmountWatch) || 0, jvCtx)
+                const totalsJv = jvTotals(entries)
+                return (
+                  <>
+                    <div className="overflow-x-auto -mx-2">
+                      <table className="w-full table-auto text-xs">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Type</th>
+                            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">GL Code</th>
+                            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">GL Description</th>
+                            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Cost Centre</th>
+                            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Narration</th>
+                            <th className="text-right py-1.5 px-2 font-medium text-muted-foreground">Amount ₹</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {entries.length === 0 && (
+                            <tr><td colSpan={6} className="py-3 text-center text-muted-foreground">Add line items to preview JV</td></tr>
+                          )}
+                          {entries.map((e, i) => (
+                            <tr key={i} className="border-b border-border/50">
+                              <td className="py-1 px-2">
+                                <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-semibold',
+                                  e.type === 'DR' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700')}>
+                                  {e.type}
+                                </span>
+                              </td>
+                              <td className="py-1 px-2 font-mono">
+                                {e.glCode ?? <span className="text-amber-700 text-[10px]">GL not configured</span>}
+                              </td>
+                              <td className="py-1 px-2">{e.glDescription}</td>
+                              <td className="py-1 px-2 text-muted-foreground">{e.costCentre ?? '—'}</td>
+                              <td className="py-1 px-2 text-muted-foreground">{e.narration || '—'}</td>
+                              <td className="py-1 px-2 text-right tabular-nums font-mono">{fmt(e.amount, currencyCode)}</td>
+                            </tr>
+                          ))}
+                          <tr className={cn('border-t-2 border-border font-semibold', totalsJv.balanced ? 'bg-green-50/40' : 'bg-red-50/40')}>
+                            <td colSpan={5} className="py-2 px-2 text-right">
+                              Total Dr {fmt(totalsJv.totalDr, currencyCode)} · Total Cr {fmt(totalsJv.totalCr, currencyCode)}
+                            </td>
+                            <td className={cn('py-2 px-2 text-right tabular-nums font-mono', totalsJv.balanced ? 'text-green-700' : 'text-red-700')}>
+                              {totalsJv.balanced
+                                ? '✓ Balanced'
+                                : `✗ ${fmt(Math.abs(totalsJv.delta), currencyCode)} difference`}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      GL mappings auto-generated from item master · editable before submit · JV posted on approval
+                    </p>
+                  </>
+                )
+              })()}
             </div>
 
           </div>

@@ -187,4 +187,38 @@ describe('listInvoicesForRoute', () => {
 
     expect(findMany.mock.calls[0][0].where).toEqual({ tenantId: TENANT, status: 'ON_HOLD' })
   })
+
+  // Fix 6: entity name surfaces via Map-by-id (no Prisma relation declared on
+  // Invoice.entity, so include: { entity } would crash at runtime). Listing
+  // column previously rendered the raw UUID for webhook-ingested rows.
+  it('resolves entityName via separate entity.findMany lookup', async () => {
+    const rows = [{ ...fakeRows()[0], entityId: 'ent-1' }]
+    const invoiceFindMany = vi.fn().mockResolvedValue(rows)
+    const entityFindMany  = vi.fn().mockResolvedValue([
+      { id: 'ent-1', name: 'Procinix Mumbai HQ', code: 'PMHQ' },
+    ])
+    const prisma: any = {
+      invoice: { findMany: invoiceFindMany, count: vi.fn().mockResolvedValue(1) },
+      entity:  { findMany: entityFindMany },
+    }
+    const out = await listInvoicesForRoute(prisma, TENANT, {})
+
+    expect(entityFindMany).toHaveBeenCalledTimes(1)
+    // Lookup is filtered by tenant and the distinct ids that appear in the page
+    expect(entityFindMany.mock.calls[0][0].where).toEqual({
+      id: { in: ['ent-1'] }, tenantId: TENANT,
+    })
+    expect(out.data[0]).toMatchObject({ entityName: 'Procinix Mumbai HQ', entityCode: 'PMHQ' })
+  })
+
+  it('returns entityName=null without calling entity.findMany when no row has an entityId', async () => {
+    const entityFindMany = vi.fn()
+    const prisma: any = {
+      invoice: { findMany: vi.fn().mockResolvedValue(fakeRows()), count: vi.fn().mockResolvedValue(1) },
+      entity:  { findMany: entityFindMany },
+    }
+    const out = await listInvoicesForRoute(prisma, TENANT, {})
+    expect(entityFindMany).not.toHaveBeenCalled()
+    expect(out.data[0].entityName).toBeNull()
+  })
 })

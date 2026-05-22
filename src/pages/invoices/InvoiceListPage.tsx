@@ -209,7 +209,7 @@ export default function InvoiceListPage() {
                     <div className="font-medium text-xs">{inv.vendor?.legalName}</div>
                     <div className="text-xs text-muted-foreground">{inv.vendor?.vendorCode}</div>
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{inv.entityId ?? '—'}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{inv.entityName ?? '—'}</td>
                   <td className="px-4 py-3 text-xs">{formatDate(inv.invoiceDate)}</td>
                   <td className="px-4 py-3 text-xs">{inv.dueDate ? formatDate(inv.dueDate) : '—'}</td>
                   <td className="px-4 py-3 text-xs font-mono tabular-nums">{formatCurrency(inv.totalAmount, inv.currencyCode)}</td>

@@ -164,6 +164,48 @@ export async function ingestInvoice(
     const totalAmount = extracted.totalAmount ?? (subtotal + totalTax)
     const tdsAmount   = (extracted as any).tdsAmount ?? 0
 
+    // GST split — OCR providers (especially n8n with a flat-amount payload)
+    // often deliver only the aggregate `totalTax`. We split it based on the
+    // GSTIN state-code comparison:
+    //   same state (intra-state) → CGST + SGST (50/50)
+    //   different state (inter-state) → IGST (full)
+    // When CGST/SGST/IGST already arrive non-zero (OCR provider has split
+    // them) we preserve those exact values. When they're all zero and a
+    // totalTax exists, we split. Defaults to intra-state when either GSTIN
+    // is missing — the reviewer can correct on the form.
+    const explicitCgst = extracted.cgst ?? 0
+    const explicitSgst = extracted.sgst ?? 0
+    const explicitIgst = extracted.igst ?? 0
+    const explicitlySplit = explicitCgst + explicitSgst + explicitIgst > 0
+    let cgstAmount = 0
+    let sgstAmount = 0
+    let igstAmount = 0
+    if (explicitlySplit) {
+      cgstAmount = explicitCgst
+      sgstAmount = explicitSgst
+      igstAmount = explicitIgst
+    } else if (totalTax > 0) {
+      // Resolve entity GSTIN for state-code comparison. ingestInvoice runs
+      // without an entity attached for webhook ingest, so we look up the
+      // tenant's default ACTIVE entity. Falls back to intra-state when no
+      // entity match — the user can correct on the form.
+      const vendorState = extracted.vendorGstin ? extracted.vendorGstin.slice(0, 2) : null
+      const defaultEntity = await prisma.entity.findFirst({
+        where:  { tenantId: ctx.tenantId, status: 'ACTIVE', gstin: { not: null } },
+        select: { gstin: true },
+        orderBy: { createdAt: 'asc' },
+      })
+      const entityState = defaultEntity?.gstin ? defaultEntity.gstin.slice(0, 2) : null
+      const interState  = vendorState !== null && entityState !== null && vendorState !== entityState
+      if (interState) {
+        igstAmount = totalTax
+      } else {
+        cgstAmount = totalTax / 2
+        sgstAmount = totalTax / 2
+      }
+    }
+    const taxableAmount = subtotal
+
     // Resolve due date — prefer OCR value, otherwise auto-compute from the
     // vendor master's paymentTerms. Falls back to null if the vendor has no
     // paymentTerms (frontend renders an amber "configure on vendor master" warning).
@@ -194,6 +236,10 @@ export async function ingestInvoice(
         dueDate,
         currencyCode:      extracted.currency ?? 'INR',
         subtotal,
+        taxableAmount,
+        cgstAmount,
+        sgstAmount,
+        igstAmount,
         tdsAmount,
         totalAmount,
         netPayable:        totalAmount - tdsAmount,

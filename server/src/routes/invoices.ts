@@ -66,6 +66,12 @@ export function buildInvoiceListWhere(tenantId: string, q: InvoiceListQuery): Pr
 // Handler body, extracted so the regression tests can hit the same code path
 // the route hits — not a parallel "test version" of the query. The route
 // becomes a thin shim around this.
+//
+// Entity name is resolved via Map-by-id (Invoice.entity is an FK column with
+// no declared Prisma relation, per the schema's HARD RULE in CLAUDE.md), so
+// each row's entityId is looked up in a separate entities query and the name
+// is merged in. Without this the listing displays a raw UUID for any invoice
+// ingested via webhook (no entity selected at ingest time).
 export async function listInvoicesForRoute(prisma: PrismaClient, tenantId: string, q: InvoiceListQuery) {
   const where = buildInvoiceListWhere(tenantId, q)
   const [data, total] = await Promise.all([
@@ -77,7 +83,23 @@ export async function listInvoicesForRoute(prisma: PrismaClient, tenantId: strin
     }),
     prisma.invoice.count({ where }),
   ])
-  return { data, total }
+
+  const entityIds = Array.from(new Set(data.map(r => r.entityId).filter((id): id is string => !!id)))
+  const entities  = entityIds.length > 0
+    ? await prisma.entity.findMany({
+        where:  { id: { in: entityIds }, tenantId },
+        select: { id: true, name: true, code: true },
+      })
+    : []
+  const entityById = new Map(entities.map(e => [e.id, e]))
+
+  const enriched = data.map(r => ({
+    ...r,
+    entityName: r.entityId ? (entityById.get(r.entityId)?.name ?? null) : null,
+    entityCode: r.entityId ? (entityById.get(r.entityId)?.code ?? null) : null,
+  }))
+
+  return { data: enriched, total }
 }
 
 // Invoice DateTime? columns surfaced as HTML <input type="date"> on the form —
