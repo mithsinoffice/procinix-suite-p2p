@@ -4,7 +4,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, Trash2, Loader2, Upload, FileText, AlertTriangle, Send, Info, Zap,
-  ChevronLeft, ChevronRight, X, ScanLine, Edit3,
+  ChevronLeft, ChevronRight, X, ScanLine, Edit3, Sparkles, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { http } from '../../lib/http'
 import { MasterPageHeader, FormInput, FormSelect, FormTextarea } from '../../components/masters/MasterFormLayout'
@@ -325,14 +325,56 @@ function LlmReviewBanner({ inv }: { inv: any | null | undefined }) {
   )
 }
 
-function SectionHeader({ letter, title, subtitle }: { letter: string; title: string; subtitle?: string }) {
+// Per-section badge colour, matching the Figma palette. Each section gets a
+// circular 28px badge with white letter inside.
+const SECTION_BADGE_BG: Record<string, string> = {
+  A: '#1D9E75', B: '#1D9E75', C: '#E8720C',
+  D: '#7C3AED', E: '#2563EB', F: '#1E293B', G: '#64748B',
+}
+
+function SectionHeader({ letter, title, subtitle, action }: {
+  letter:    string
+  title:     string
+  subtitle?: string
+  action?:   React.ReactNode   // collapse arrow, etc.
+}) {
   return (
-    <div className="flex items-baseline gap-2 border-b border-border pb-2 mb-4">
-      <span className="text-sm font-bold text-primary">{letter}.</span>
-      <div>
-        <p className="text-sm font-semibold">{title}</p>
-        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+    <div className="flex items-start gap-3 border-b border-border pb-2 mb-4">
+      <span
+        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+        style={{ background: SECTION_BADGE_BG[letter] ?? '#1D9E75' }}
+      >
+        {letter}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium leading-tight">{title}</p>
+        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
       </div>
+      {action}
+    </div>
+  )
+}
+
+// Header variant for sections that render with a dark bar (JV preview etc.).
+function DarkSectionHeader({ letter, title, subtitle, action }: {
+  letter:    string
+  title:     string
+  subtitle?: string
+  action?:   React.ReactNode
+}) {
+  return (
+    <div className="flex items-start gap-3 -m-6 mb-4 px-6 py-3 rounded-t-xl" style={{ background: '#1E293B' }}>
+      <span
+        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+        style={{ background: SECTION_BADGE_BG[letter] ?? '#1E293B', boxShadow: '0 0 0 2px rgba(255,255,255,0.12)' }}
+      >
+        {letter}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium leading-tight text-white">{title}</p>
+        {subtitle && <p className="text-xs text-white/70 mt-0.5">{subtitle}</p>}
+      </div>
+      {action}
     </div>
   )
 }
@@ -356,16 +398,38 @@ function Field({ label, required, error, span, children }: {
 // what OCR extracted; amber edit icon once the user overrides it. The pair of
 // Sets (ocrFields + overriddenFields) is maintained by the form root via the
 // markOcrFields helper + a single useEffect that diffs against ocrOriginalValues.
-// Gradient palettes per spec: OCR uses the cool 135° blue→teal, override flips
-// to the warm 135° orange→pink so the reviewer's eye catches every edit.
-const OCR_GRADIENT_BG       = 'linear-gradient(135deg, #0093E9 0%, #80D0C7 100%)'
-const OVERRIDE_GRADIENT_BG  = 'linear-gradient(135deg, #f7971e 0%, #f5576c 100%)'
+// Figma chip palette — text-first, no gradients. The OCR chip carries the
+// per-field confidence percent when known. The Auto-filled chip flags
+// derived values (PAN from GSTIN, due date from credit terms, totals).
+const CHIP_OCR_STYLE      = { background: '#E6F1FB', color: '#185FA5', border: '1px solid #B5D4F4' } as const
+const CHIP_AUTO_STYLE     = { background: '#E1F5EE', color: '#0F6E56', border: '1px solid #9FE1CB' } as const
+const CHIP_OVERRIDE_STYLE = { background: '#FAEEDA', color: '#854F0B', border: '1px solid #FAC775' } as const
 
-function OcrFieldIndicator({ fieldKey, ocrFields, overriddenFields, ocrOriginalValues }: {
-  fieldKey:           string
-  ocrFields:          Set<string>
-  overriddenFields:   Set<string>
-  ocrOriginalValues?: Record<string, unknown>
+/** Small inline chip used in field labels and the OCR banner. */
+function MetaChip({ icon, label, style, title }: {
+  icon?:   React.ReactNode
+  label:   string
+  style:   React.CSSProperties
+  title?:  string
+}) {
+  return (
+    <span
+      title={title}
+      className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 align-middle ml-1 text-[10px] font-medium leading-none whitespace-nowrap"
+      style={style}
+    >
+      {icon}
+      {label}
+    </span>
+  )
+}
+
+function OcrFieldIndicator({ fieldKey, ocrFields, overriddenFields, ocrOriginalValues, ocrFieldConfidence }: {
+  fieldKey:            string
+  ocrFields:           Set<string>
+  overriddenFields:    Set<string>
+  ocrOriginalValues?:  Record<string, unknown>
+  ocrFieldConfidence?: Record<string, number>
 }) {
   if (overriddenFields.has(fieldKey)) {
     const orig = ocrOriginalValues?.[fieldKey]
@@ -373,29 +437,42 @@ function OcrFieldIndicator({ fieldKey, ocrFields, overriddenFields, ocrOriginalV
       ? `Manually overridden · OCR read: ${String(orig)}`
       : 'Manually overridden'
     return (
-      <span
+      <MetaChip
+        icon={<Edit3 className="h-2.5 w-2.5" />}
+        label="Edited"
+        style={CHIP_OVERRIDE_STYLE}
         title={tip}
-        aria-label={tip}
-        className="inline-flex items-center justify-center align-text-bottom rounded ml-1 h-4 w-4"
-        style={{ background: OVERRIDE_GRADIENT_BG }}
-      >
-        <Edit3 className="h-2.5 w-2.5 text-white" />
-      </span>
+      />
     )
   }
   if (ocrFields.has(fieldKey)) {
+    const conf = ocrFieldConfidence?.[fieldKey]
+    const label = typeof conf === 'number' ? `OCR ${Math.round(conf)}%` : 'OCR'
     return (
-      <span
+      <MetaChip
+        icon={<ScanLine className="h-2.5 w-2.5" />}
+        label={label}
+        style={CHIP_OCR_STYLE}
         title="From OCR · original value preserved"
-        aria-label="From OCR · original value preserved"
-        className="inline-flex items-center justify-center align-text-bottom rounded ml-1 h-4 w-4"
-        style={{ background: OCR_GRADIENT_BG }}
-      >
-        <ScanLine className="h-2.5 w-2.5 text-white" />
-      </span>
+      />
     )
   }
   return null
+}
+
+/** Stand-alone Auto-filled chip — used on derived fields (PAN, totals, due
+ *  date) that aren't OCR-sourced but the system fills in. */
+function AutoFilledChip() {
+  return (
+    <span
+      title="Auto-filled by the system"
+      className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 align-middle ml-1 text-[10px] font-medium leading-none whitespace-nowrap"
+      style={CHIP_AUTO_STYLE}
+    >
+      <Sparkles className="h-2.5 w-2.5" />
+      Auto-filled
+    </span>
+  )
 }
 
 // "Edited" amber chip — appears next to the label after the icon when the
@@ -553,25 +630,9 @@ function LeftPanel({
             </div>
           )}
 
-          {ocrConfidence != null && (
-            <div className="flex flex-col gap-1 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">OCR confidence</span>
-                <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className={cn('h-full rounded-full', ocrConfidence >= 80 ? 'bg-green-500' : ocrConfidence >= 60 ? 'bg-amber-500' : 'bg-red-500')}
-                    style={{ width: `${ocrConfidence}%` }}
-                  />
-                </div>
-                <span className={cn('font-medium', ocrConfidence >= 80 ? 'text-green-600' : ocrConfidence >= 60 ? 'text-amber-600' : 'text-red-600')}>
-                  {ocrConfidence}%
-                </span>
-              </div>
-              {ocrModel && (
-                <p className="text-[10px] text-muted-foreground">OCR extracted · <span className="font-mono">{ocrModel}</span></p>
-              )}
-            </div>
-          )}
+          {/* OCR confidence bar moved below the preview pane per Figma. The
+              right-panel banner is the primary readout; this is a compact
+              echo right under the attachment. */}
 
           {ocrError && (() => {
             const isQuotaError = /429|quota|rate limit/i.test(ocrError)
@@ -611,13 +672,22 @@ function LeftPanel({
             )
           })()}
 
-          {/* Saved attachment filename — only when previewing a server-stored
-              file (no fresh local upload). The local-upload filename already
-              renders inside the dropzone above. */}
+          {/* Saved attachment filename row — shown when previewing a
+              server-stored file. Mirrors the Figma "filename · size · pages"
+              line; only filename is known reliably here. */}
           {!file && existingFileURL && displayName && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <FileText className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-              <span className="font-medium truncate" title={displayName}>{displayName}</span>
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <FileText className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                <span className="font-medium truncate" title={displayName}>{displayName}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="rounded-md border border-input px-2 py-1 text-[11px] font-medium hover:bg-muted whitespace-nowrap"
+              >
+                Replace attachment
+              </button>
             </div>
           )}
 
@@ -635,6 +705,27 @@ function LeftPanel({
               <iframe src={previewURL} className="w-full h-full border-0" title="Invoice preview" />
             )}
           </div>
+
+          {/* OCR confidence bar — sits directly under the preview per Figma */}
+          {ocrConfidence != null && (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">OCR Confidence</span>
+                <span className={cn('text-xs font-semibold tabular-nums', ocrConfidence >= 80 ? 'text-teal-700' : ocrConfidence >= 60 ? 'text-amber-700' : 'text-red-700')}>
+                  {ocrConfidence}%
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-amber-100 overflow-hidden">
+                <div
+                  className={cn('h-full rounded-full', ocrConfidence >= 80 ? 'bg-teal-500' : ocrConfidence >= 60 ? 'bg-amber-500' : 'bg-red-500')}
+                  style={{ width: `${ocrConfidence}%` }}
+                />
+              </div>
+              {ocrModel && (
+                <p className="text-[10px] text-muted-foreground">via <span className="font-mono">{ocrModel}</span></p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -690,9 +781,20 @@ export default function InvoiceFormPage() {
   // captures the exact value extracted by OCR so subsequent user edits flip the
   // field into overriddenFields. The indicator next to each tracked label
   // reads both Sets to pick scan-icon (teal) vs edit-icon (amber).
-  const [ocrFields, setOcrFields]                 = useState<Set<string>>(new Set())
-  const [ocrOriginalValues, setOcrOriginalValues] = useState<Record<string, unknown>>({})
-  const [overriddenFields, setOverriddenFields]   = useState<Set<string>>(new Set())
+  const [ocrFields, setOcrFields]                     = useState<Set<string>>(new Set())
+  const [ocrOriginalValues, setOcrOriginalValues]     = useState<Record<string, unknown>>({})
+  const [overriddenFields, setOverriddenFields]       = useState<Set<string>>(new Set())
+  // Per-field OCR confidence (0..100). Populated from editInvoice.ocrConfidenceMap
+  // on edit-mode hydration; manual OCR run uses overallConfidence as a fallback.
+  const [ocrFieldConfidence, setOcrFieldConfidence]   = useState<Record<string, number>>({})
+  // Alternative OCR reads per field (e.g. n8n "suggestions"). When non-empty,
+  // a "{N} nearest OCR reads ›" expandable surfaces below the input.
+  const [ocrSuggestions, setOcrSuggestions]           = useState<Record<string, string[]>>({})
+  const [expandedSuggestions, setExpandedSuggestions] = useState<Set<string>>(new Set())
+  // Section D (Retention) collapses by default — most invoices don't use it.
+  // Section F (JV Preview) starts expanded since reviewers need to confirm it.
+  const [retentionOpen, setRetentionOpen] = useState(false)
+  const [jvOpen, setJvOpen]               = useState(true)
 
   // Manage object URL lifecycle to avoid leaks
   useEffect(() => {
@@ -885,7 +987,13 @@ export default function InvoiceFormPage() {
   // tight. Each tracked field gets: indicator + edited badge in the label,
   // override hint below the input, and a thin amber border via inputCls.
   const indicator    = (key: string) => (
-    <OcrFieldIndicator fieldKey={key} ocrFields={ocrFields} overriddenFields={overriddenFields} ocrOriginalValues={ocrOriginalValues} />
+    <OcrFieldIndicator
+      fieldKey={key}
+      ocrFields={ocrFields}
+      overriddenFields={overriddenFields}
+      ocrOriginalValues={ocrOriginalValues}
+      ocrFieldConfidence={ocrFieldConfidence}
+    />
   )
   const editedBadge  = (key: string) => (
     <EditedBadge fieldKey={key} overriddenFields={overriddenFields} />
@@ -893,6 +1001,45 @@ export default function InvoiceFormPage() {
   const overrideHint = (key: string) => (
     <OcrOverrideHint fieldKey={key} overriddenFields={overriddenFields} ocrOriginalValues={ocrOriginalValues} />
   )
+
+  // "{N} nearest OCR reads ›" expandable. Renders only when the field has
+  // ocrSuggestions entries. Clicking a chip fills the input via setValue —
+  // RHF's setValue triggers the diff effect that toggles overriddenFields.
+  const suggestionsBlock = (key: string) => {
+    const list = ocrSuggestions[key]
+    if (!list || list.length === 0) return null
+    const expanded = expandedSuggestions.has(key)
+    return (
+      <div className="mt-1">
+        <button
+          type="button"
+          onClick={() => setExpandedSuggestions(prev => {
+            const next = new Set(prev)
+            if (expanded) next.delete(key); else next.add(key)
+            return next
+          })}
+          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+        >
+          <X className="h-3 w-3 rotate-45" />
+          {list.length} nearest OCR read{list.length === 1 ? '' : 's'} {expanded ? '▾' : '›'}
+        </button>
+        {expanded && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {list.map((alt, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setValue(key as never, alt as never, { shouldDirty: true })}
+                className="rounded-full border border-input bg-background px-2 py-0.5 text-[11px] hover:bg-muted font-mono"
+              >
+                {alt}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
   // Apply this className alongside the FormInput/FormSelect default so the
   // input border + bg shift when the reviewer overrides an OCR value.
   const overrideInputCls = (key: string) =>
@@ -996,6 +1143,31 @@ export default function InvoiceFormPage() {
         })
       }
       markOcrFields({ ...headerOrig, ...lineOrig })
+
+      // Per-field confidence — keys may match form paths directly (preferred)
+      // or be normalised camelCase variants. We accept any non-null number
+      // and store as 0..100 (Invoice scorer writes 0..1 floats, OCR providers
+      // sometimes write 0..100 ints).
+      const confMap = (editInvoice.ocrConfidenceMap ?? {}) as Record<string, unknown>
+      const conf: Record<string, number> = {}
+      for (const [k, v] of Object.entries(confMap)) {
+        const num = typeof v === 'number' ? v : Number(v)
+        if (!Number.isFinite(num)) continue
+        conf[k] = num <= 1 ? Math.round(num * 100) : Math.round(num)
+      }
+      if (Object.keys(conf).length > 0) setOcrFieldConfidence(prev => ({ ...prev, ...conf }))
+
+      // Suggestions per field — n8n payload writes
+      // ocrRawData.suggestions: Record<string, string[]>. Manual OCR may add
+      // alternatives via Gemini. When empty, the expandable stays hidden.
+      const rawSugg = (editInvoice.ocrRawData as { suggestions?: Record<string, string[]> } | null)?.suggestions
+      if (rawSugg && typeof rawSugg === 'object') {
+        const cleaned: Record<string, string[]> = {}
+        for (const [k, arr] of Object.entries(rawSugg)) {
+          if (Array.isArray(arr) && arr.length > 0) cleaned[k] = arr.map(String).filter(Boolean)
+        }
+        if (Object.keys(cleaned).length > 0) setOcrSuggestions(prev => ({ ...prev, ...cleaned }))
+      }
     }
 
     hydratedRef.current = true
@@ -1309,7 +1481,6 @@ export default function InvoiceFormPage() {
     <div className="flex flex-col h-full">
       <MasterPageHeader
         title={headerTitle}
-        description="AP Invoice — OCR · GST auto-calc · 3-way match"
         backLabel="Invoices"
         backTo="/invoices"
         actions={
@@ -1337,6 +1508,19 @@ export default function InvoiceFormPage() {
           </div>
         }
       />
+
+      {/* Page subtitle chip strip — replaces the legacy single-line description.
+          Sits between the MasterPageHeader and the left/right body. */}
+      <div className="border-b border-border bg-background px-4 sm:px-6 py-2 flex items-center gap-1 flex-wrap">
+        {['AP Invoice', 'OCR', 'GST auto-calc', '3-way match'].map(label => (
+          <span
+            key={label}
+            className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+          >
+            {label}
+          </span>
+        ))}
+      </div>
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* LEFT — collapsible upload + preview */}
@@ -1424,48 +1608,88 @@ export default function InvoiceFormPage() {
                   3. LLM review flags / validation issues
                 Section A renders immediately below. */}
 
-            {/* (1) OCR scoring banner — sticky top of right panel. Renders
-                after a fresh OCR run, or hydrated from saved
-                invoice.ocrConfidence on edit. KYC chips read from the
-                resolved vendor master. */}
-            {ocrConfidence !== null && (
-              <div className="sticky top-0 z-10 rounded-xl border border-teal-200 bg-teal-50/40 px-4 py-3 flex items-center gap-4 flex-wrap">
-                <div className="flex items-center gap-2 min-w-[180px]">
-                  <span className="text-xs font-medium text-teal-800">OCR confidence</span>
-                  <div className="flex-1 h-1.5 w-24 rounded-full bg-teal-100 overflow-hidden">
+            {/* (1) OCR confidence card — left-bordered teal banner with
+                per-field stats. Tracks: total fields extracted, count at
+                ≥85% confidence (auto-processable), count below 85% (needs
+                review). Verified/Review chip switches on overall score. */}
+            {ocrConfidence !== null && (() => {
+              const trackedKeys = Array.from(ocrFields)
+              const fieldsExtracted = trackedKeys.length
+              const highConf = trackedKeys.filter(k => (ocrFieldConfidence[k] ?? ocrConfidence) >= 85).length
+              const needsReview = fieldsExtracted - highConf
+              const reviewRequired = ocrConfidence < 85
+              return (
+                <div
+                  className="rounded-xl bg-teal-50/40 px-4 py-3 flex items-start gap-4 flex-wrap"
+                  style={{ borderLeft: '3px solid #1D9E75', borderTop: '1px solid #B5E5D2', borderRight: '1px solid #B5E5D2', borderBottom: '1px solid #B5E5D2' }}
+                >
+                  <div className="flex items-center gap-2 min-w-[160px]">
+                    <ScanLine className="h-4 w-4 text-teal-700" />
+                    <span className="text-sm font-semibold text-teal-900">OCR Confidence</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={CHIP_OCR_STYLE}>OCR</span>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                      style={reviewRequired ? CHIP_OVERRIDE_STYLE : CHIP_AUTO_STYLE}
+                    >
+                      {ocrConfidence}%
+                    </span>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                      style={reviewRequired ? CHIP_OVERRIDE_STYLE : CHIP_AUTO_STYLE}
+                    >
+                      {reviewRequired ? 'Review required' : 'Verified'}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex items-center gap-5 text-right">
+                    <div>
+                      <p className="text-base font-semibold tabular-nums">{fieldsExtracted}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Fields extracted</p>
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-teal-700 tabular-nums">{highConf}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">High confidence</p>
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-amber-700 tabular-nums">{needsReview}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Needs review</p>
+                    </div>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-amber-100 overflow-hidden">
                     <div
-                      className={cn('h-full rounded-full', ocrConfidence >= 80 ? 'bg-green-500' : ocrConfidence >= 60 ? 'bg-amber-500' : 'bg-red-500')}
+                      className={cn('h-full rounded-full', ocrConfidence >= 80 ? 'bg-teal-500' : ocrConfidence >= 60 ? 'bg-amber-500' : 'bg-red-500')}
                       style={{ width: `${ocrConfidence}%` }}
                     />
                   </div>
-                  <span className="text-xs font-semibold text-teal-800 tabular-nums">{ocrConfidence}%</span>
-                </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="rounded-full border border-blue-200 bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-medium">OCR</span>
-                  {selectedVendor && (
-                    <>
-                      <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium',
-                        selectedVendor.kycPanStatus === 'VERIFIED' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>
-                        PAN {selectedVendor.kycPanStatus === 'VERIFIED' ? 'Valid' : 'Unverified'}
-                      </span>
-                      <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium',
-                        selectedVendor.kycGstStatus === 'VERIFIED' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>
-                        GST {selectedVendor.kycGstStatus === 'VERIFIED' ? 'Valid' : 'Unverified'}
-                      </span>
-                      {selectedVendor.kycBankStatus && (
-                        <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium',
-                          selectedVendor.kycBankStatus === 'VERIFIED' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>
-                          Bank {selectedVendor.kycBankStatus === 'VERIFIED' ? 'Valid' : 'Unverified'}
-                        </span>
+                  {(selectedVendor || ocrModel) && (
+                    <div className="flex items-center gap-1.5 flex-wrap w-full">
+                      {selectedVendor && (
+                        <>
+                          <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                            selectedVendor.kycPanStatus === 'VERIFIED' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>
+                            PAN {selectedVendor.kycPanStatus === 'VERIFIED' ? 'Valid' : 'Unverified'}
+                          </span>
+                          <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                            selectedVendor.kycGstStatus === 'VERIFIED' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>
+                            GST {selectedVendor.kycGstStatus === 'VERIFIED' ? 'Valid' : 'Unverified'}
+                          </span>
+                          {selectedVendor.kycBankStatus && (
+                            <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                              selectedVendor.kycBankStatus === 'VERIFIED' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700')}>
+                              Bank {selectedVendor.kycBankStatus === 'VERIFIED' ? 'Valid' : 'Unverified'}
+                            </span>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                  {ocrModel && (
-                    <span className="text-[10px] text-muted-foreground">via {ocrModel}</span>
+                      {ocrModel && (
+                        <span className="text-[10px] text-muted-foreground">via {ocrModel}</span>
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             {/* (2) Duplicate banner — live re-check OR persisted snapshot from
                 ingestion. Falls back to editInvoice.duplicateMatches so the
@@ -1509,7 +1733,10 @@ export default function InvoiceFormPage() {
                     ))}
                   </FormSelect>
                 </Field>
-                <Field label="Bill-to location">
+                <Field
+                  required
+                  label={<>Bill-to location <MetaChip label="Sets GST type" style={CHIP_OCR_STYLE} title="Intra/inter-state GST split derives from this location" /></>}
+                >
                   <FormSelect {...register('billToLocationId')}>
                     <option value="">Select location…</option>
                     {(locations as any[]).map((l: any) => (
@@ -1539,6 +1766,7 @@ export default function InvoiceFormPage() {
                     ))}
                   </FormSelect>
                   {overrideHint('vendorId')}
+                  {suggestionsBlock('vendorId')}
                 </Field>
                 <Field label={<>Vendor GSTIN {indicator('vendorGSTIN')}{editedBadge('vendorGSTIN')}</>}>
                   {/* Multi-GSTIN: vendor may have several registrations across states.
@@ -1553,28 +1781,34 @@ export default function InvoiceFormPage() {
                       </option>
                     )}
                   </FormSelect>
-                  {selectedVendor?.gstin && getValues('vendorGSTIN') === selectedVendor.gstin && (
-                    <p className="text-[10px] text-green-700 mt-1">✓ Matched master</p>
-                  )}
+                  {(() => {
+                    const currentGstin = getValues('vendorGSTIN')
+                    if (!currentGstin) return null
+                    const matched = selectedVendor?.gstin && currentGstin === selectedVendor.gstin
+                    return matched
+                      ? <p className="text-[10px] text-green-700 mt-1">✓ Matched master</p>
+                      : <p className="text-[10px] text-amber-700 mt-1">⚠ Not in master</p>
+                  })()}
                   {overrideHint('vendorGSTIN')}
                 </Field>
 
-                <Field label={<>Vendor PAN {indicator('vendorPAN')}{editedBadge('vendorPAN')}</>}>
+                <Field label={<>Vendor PAN <AutoFilledChip />{editedBadge('vendorPAN')}</>}>
                   <FormInput readOnly placeholder="Auto from GSTIN" {...register('vendorPAN')} className={cn('font-mono bg-muted/40', overrideInputCls('vendorPAN'))} />
-                  <p className="text-[10px] text-teal-700 mt-1">
-                    <span className="rounded-full border border-teal-200 bg-teal-50 px-1.5 py-0.5 mr-1">Auto</span>
-                    Derived from chars 3–12 of GSTIN
-                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Derived from chars 3–12 of GSTIN</p>
                   {overrideHint('vendorPAN')}
                 </Field>
                 <Field label={<>IRN (e-Invoice) {indicator('irnNumber')}{editedBadge('irnNumber')}</>}>
                   <FormInput placeholder="e-Invoice IRN — auto-populated from OCR" {...register('irnNumber')} className={overrideInputCls('irnNumber')} />
+                  {!!editInvoice?.irnNumber && editInvoice?.irnVerified && (
+                    <p className="text-[10px] text-green-700 mt-1">✓ QR code scanned · IRN verified</p>
+                  )}
                   {overrideHint('irnNumber')}
                 </Field>
 
                 <Field label={<>Invoice number {indicator('invoiceNumber')}{editedBadge('invoiceNumber')}</>} required error={errors.invoiceNumber?.message}>
                   <FormInput placeholder="INV-2025-001" {...register('invoiceNumber')} className={overrideInputCls('invoiceNumber')} />
                   {overrideHint('invoiceNumber')}
+                  {suggestionsBlock('invoiceNumber')}
                 </Field>
                 <Field label={<>Invoice date {indicator('invoiceDate')}{editedBadge('invoiceDate')}</>} required>
                   <FormInput type="date" {...register('invoiceDate')} className={overrideInputCls('invoiceDate')} />
@@ -1663,8 +1897,9 @@ export default function InvoiceFormPage() {
                     className={overrideInputCls('baseAmount')}
                   />
                   {overrideHint('baseAmount')}
+                  {suggestionsBlock('baseAmount')}
                 </Field>
-                <Field label="Total taxes (auto from lines)">
+                <Field label={<>Total taxes <AutoFilledChip /></>}>
                   <div className="flex items-center gap-2">
                     <span className="font-mono tabular-nums text-sm font-semibold">
                       {fmt(totals.cgstAmount + totals.sgstAmount + totals.igstAmount, currencyCode)}
@@ -1689,6 +1924,7 @@ export default function InvoiceFormPage() {
                     className={overrideInputCls('grossAmount')}
                   />
                   {overrideHint('grossAmount')}
+                  {suggestionsBlock('grossAmount')}
                 </Field>
                 {(() => {
                   const xcheck = computeCrossCheck(
@@ -1910,35 +2146,50 @@ export default function InvoiceFormPage() {
               )}
             </div>
 
-            {/* D. Retention — split out of the legacy "Additional Details" block.
-                A→F sections are always present in the locked layout; this one
-                stays compact when retention is off. */}
+            {/* D. Retention — collapsible. Most invoices skip it, so the
+                section stays collapsed by default; expand on click. */}
             <div className="rounded-xl border border-border bg-card p-6">
-              <SectionHeader letter="D" title="Retention" subtitle="Hold back a portion of payment for warranty / quality milestones" />
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Provision / Retention required">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" {...register('retentionRequired')} className="rounded border-input" />
-                    <span className="text-muted-foreground">Retain a portion of payment for warranty / quality holdback</span>
-                  </label>
-                </Field>
-                <div />
+              <SectionHeader
+                letter="D"
+                title="Retention"
+                subtitle="Hold back a portion of payment for warranty / quality milestones"
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setRetentionOpen(v => !v)}
+                    className="ml-auto rounded-md p-1 text-muted-foreground hover:bg-muted"
+                    aria-label={retentionOpen ? 'Collapse Retention' : 'Expand Retention'}
+                  >
+                    {retentionOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                }
+              />
+              {retentionOpen && (
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Provision / Retention required">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" {...register('retentionRequired')} className="rounded border-input" />
+                      <span className="text-muted-foreground">Retain a portion of payment for warranty / quality holdback</span>
+                    </label>
+                  </Field>
+                  <div />
 
-                {retentionOn && (
-                  <>
-                    <Field label="Retention amount">
-                      <FormInput type="number" step="0.01" min="0" placeholder="0.00"
-                        {...register('retentionAmount', { valueAsNumber: true })} />
-                    </Field>
-                    <Field label="Retention GL code">
-                      <FormSelect {...register('retentionGlCodeId')}>
-                        <option value="">Select GL code…</option>
-                        {(glCodes as any[]).map((g: any) => <option key={g.id} value={g.id}>{g.code} — {g.name}</option>)}
-                      </FormSelect>
-                    </Field>
-                  </>
-                )}
-              </div>
+                  {retentionOn && (
+                    <>
+                      <Field label="Retention amount">
+                        <FormInput type="number" step="0.01" min="0" placeholder="0.00"
+                          {...register('retentionAmount', { valueAsNumber: true })} />
+                      </Field>
+                      <Field label="Retention GL code">
+                        <FormSelect {...register('retentionGlCodeId')}>
+                          <option value="">Select GL code…</option>
+                          {(glCodes as any[]).map((g: any) => <option key={g.id} value={g.id}>{g.code} — {g.name}</option>)}
+                        </FormSelect>
+                      </Field>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* E. Narration & period — split out of the legacy "Additional Details" block. */}
@@ -1960,16 +2211,27 @@ export default function InvoiceFormPage() {
               </div>
             </div>
 
-            {/* F. Accounting JV Preview — locked-open per the spec.
-                Rebuilt off the pure computeJvEntries + pickGl helpers so the
-                Dr=Cr balance is testable. GL refs resolved by name pattern
-                against the seeded chart (Accounts Payable, CGST/SGST/IGST
-                Payable, TDS Payable, Retention Payable). When a GL isn't in
-                the COA, the row carries glCode=null and the cell flags
-                "GL not configured". */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <SectionHeader letter="F" title="Accounting JV Preview" subtitle="Auto-built from line items · GL mappings editable before submit" />
-              {(() => {
+            {/* F. Accounting JV Preview — dark header, collapsible.
+                Default expanded since reviewers need to confirm the JV
+                before submission. */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="p-6">
+              <DarkSectionHeader
+                letter="F"
+                title="Accounting JV Preview"
+                subtitle="Auto-built from line items · GL mappings editable before submit"
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setJvOpen(v => !v)}
+                    className="ml-auto rounded-md p-1 text-white/80 hover:bg-white/10"
+                    aria-label={jvOpen ? 'Collapse JV Preview' : 'Expand JV Preview'}
+                  >
+                    {jvOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                }
+              />
+              {jvOpen && (() => {
                 const lineInputs = lines.map((l: LineItem) => ({
                   description:   l.description,
                   taxableAmount: Number(l.taxableAmount) || (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0),
@@ -1995,14 +2257,14 @@ export default function InvoiceFormPage() {
                   <>
                     <div className="overflow-x-auto -mx-2">
                       <table className="w-full table-auto text-xs">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Type</th>
-                            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">GL Code</th>
-                            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">GL Description</th>
-                            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Cost Centre</th>
-                            <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Narration</th>
-                            <th className="text-right py-1.5 px-2 font-medium text-muted-foreground">Amount ₹</th>
+                        <thead style={{ background: '#1E293B' }}>
+                          <tr>
+                            <th className="text-left py-2 px-2 font-medium text-white">Type</th>
+                            <th className="text-left py-2 px-2 font-medium text-white">GL Code</th>
+                            <th className="text-left py-2 px-2 font-medium text-white">GL Description</th>
+                            <th className="text-left py-2 px-2 font-medium text-white">Cost Centre</th>
+                            <th className="text-left py-2 px-2 font-medium text-white">Narration</th>
+                            <th className="text-right py-2 px-2 font-medium text-white">Amount ₹</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -2010,91 +2272,129 @@ export default function InvoiceFormPage() {
                             <tr><td colSpan={6} className="py-3 text-center text-muted-foreground">Add line items to preview JV</td></tr>
                           )}
                           {entries.map((e, i) => (
-                            <tr key={i} className="border-b border-border/50">
-                              <td className="py-1 px-2">
-                                <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-semibold',
-                                  e.type === 'DR' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700')}>
+                            <tr key={i} className={cn('border-b border-border/50', e.type === 'DR' ? 'bg-blue-50/40' : 'bg-teal-50/40')}>
+                              <td className="py-1.5 px-2">
+                                <span
+                                  className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
+                                  style={{ background: e.type === 'DR' ? '#2563EB' : '#1D9E75' }}
+                                >
                                   {e.type}
                                 </span>
                               </td>
-                              <td className="py-1 px-2 font-mono">
-                                {e.glCode ?? <span className="text-amber-700 text-[10px]">GL not configured</span>}
+                              <td className="py-1.5 px-2 font-mono">
+                                {e.glCode ?? (
+                                  <span className="inline-flex items-center gap-1 text-red-700 text-[10px] font-medium">
+                                    <AlertTriangle className="h-3 w-3" /> GL not configured
+                                  </span>
+                                )}
                               </td>
-                              <td className="py-1 px-2">{e.glDescription}</td>
-                              <td className="py-1 px-2 text-muted-foreground">{e.costCentre ?? '—'}</td>
-                              <td className="py-1 px-2 text-muted-foreground">{e.narration || '—'}</td>
-                              <td className="py-1 px-2 text-right tabular-nums font-mono">{fmt(e.amount, currencyCode)}</td>
+                              <td className="py-1.5 px-2">{e.glDescription}</td>
+                              <td className="py-1.5 px-2 text-muted-foreground">{e.costCentre ?? '—'}</td>
+                              <td className="py-1.5 px-2 text-muted-foreground">{e.narration || '—'}</td>
+                              <td className="py-1.5 px-2 text-right tabular-nums font-mono">{fmt(e.amount, currencyCode)}</td>
                             </tr>
                           ))}
-                          <tr className={cn('border-t-2 border-border font-semibold', totalsJv.balanced ? 'bg-green-50/40' : 'bg-red-50/40')}>
+                          <tr className={cn('border-t-2 border-border font-semibold', totalsJv.balanced ? 'bg-green-50/60' : 'bg-red-50/60')}>
                             <td colSpan={5} className="py-2 px-2 text-right">
                               Total Dr {fmt(totalsJv.totalDr, currencyCode)} · Total Cr {fmt(totalsJv.totalCr, currencyCode)}
                             </td>
-                            <td className={cn('py-2 px-2 text-right tabular-nums font-mono', totalsJv.balanced ? 'text-green-700' : 'text-red-700')}>
-                              {totalsJv.balanced
-                                ? '✓ Balanced'
-                                : `✗ ${fmt(Math.abs(totalsJv.delta), currencyCode)} difference`}
+                            <td className="py-2 px-2 text-right tabular-nums font-mono">
+                              {totalsJv.balanced ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-green-600 text-white px-2 py-0.5 text-[10px] font-semibold">
+                                  ✓ Balanced
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-red-600 text-white px-2 py-0.5 text-[10px] font-semibold">
+                                  ✗ {fmt(Math.abs(totalsJv.delta), currencyCode)} difference
+                                </span>
+                              )}
                             </td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="text-xs text-muted-foreground italic mt-2">
                       GL mappings auto-generated from item master · editable before submit · JV posted on approval
                     </p>
                   </>
                 )
               })()}
+              </div>
             </div>
 
-            {/* G. Audit Trail — read-only, only renders when the invoice has audit
-                log entries. Section G stays inside the fieldset for ordering /
-                visual consistency; the controls inside are static <span>/<p>. */}
-            {isEdit && Array.isArray(editInvoice?.auditLogs) && editInvoice.auditLogs.length > 0 && (
-              <div className="rounded-xl border border-border bg-card p-6">
-                <SectionHeader letter="G" title="Audit Trail" subtitle="Chronological event history · read-only" />
-                <div className="space-y-3">
-                  {editInvoice.auditLogs.map((log: any) => (
-                    <div key={log.id} className="flex items-start gap-3">
-                      <div className="mt-0.5 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-[10px] font-bold text-primary">{String(log.action).slice(0, 2)}</span>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold">{formatStatus(String(log.action))}</span>
-                          {log.userName && <span className="text-xs text-muted-foreground">by {log.userName}</span>}
+            {/* G. Audit Trail — event-card layout, only renders when the
+                invoice has audit log entries. Each event card carries a
+                colored icon circle (teal for system/email, purple for AI/OCR,
+                blue for user actions), an action chip, the actor + timestamp,
+                and any structured detail keys. */}
+            {isEdit && Array.isArray(editInvoice?.auditLogs) && editInvoice.auditLogs.length > 0 && (() => {
+              const eventStyle = (action: string): { bg: string; chipBg: string; chipColor: string; icon: React.ReactNode } => {
+                const a = action.toUpperCase()
+                if (a.includes('EMAIL') || a.includes('INGEST') || a.includes('UPLOAD')) {
+                  return { bg: '#E1F5EE', chipBg: '#1D9E75', chipColor: '#fff', icon: <FileText className="h-3 w-3 text-teal-700" /> }
+                }
+                if (a.includes('OCR') || a.includes('AI') || a.includes('SCORE') || a.includes('LLM')) {
+                  return { bg: '#EEE4FB', chipBg: '#7C3AED', chipColor: '#fff', icon: <Sparkles className="h-3 w-3 text-purple-700" /> }
+                }
+                return { bg: '#E6F1FB', chipBg: '#2563EB', chipColor: '#fff', icon: <Edit3 className="h-3 w-3 text-blue-700" /> }
+              }
+              return (
+                <div className="rounded-xl border border-border bg-card p-6">
+                  <SectionHeader letter="G" title="Audit Trail" subtitle="Chronological event history · read-only" />
+                  <div className="space-y-2">
+                    {editInvoice.auditLogs.map((log: any) => {
+                      const st = eventStyle(String(log.action))
+                      return (
+                        <div key={log.id} className="rounded-lg border border-border bg-background/60 px-3 py-2 flex items-start gap-3">
+                          <div
+                            className="mt-0.5 h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0"
+                            style={{ background: st.bg }}
+                          >
+                            {st.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span
+                                className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                                style={{ background: st.chipBg, color: st.chipColor }}
+                              >
+                                {String(log.action)}
+                              </span>
+                              {log.userName && <span className="text-xs text-muted-foreground">by {log.userName}</span>}
+                            </div>
+                            {log.details && typeof log.details === 'object' && Object.keys(log.details).length > 0 && (
+                              <p className="text-xs text-muted-foreground mt-1 font-mono">
+                                {Object.entries(log.details as Record<string, unknown>).map(([k, v]) => `${k}: ${String(v)}`).join(' · ')}
+                              </p>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">{formatDateTime(log.createdAt)}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</p>
-                        {log.details && typeof log.details === 'object' && Object.keys(log.details).length > 0 && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {Object.entries(log.details as Record<string, unknown>).map(([k, v]) => `${k}: ${String(v)}`).join(' · ')}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {Array.isArray(editInvoice.approvals) && editInvoice.approvals.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-border space-y-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Legacy approval steps</p>
-                    {editInvoice.approvals.map((step: any) => (
-                      <div key={step.id} className="flex items-start gap-3">
-                        <div className={cn('mt-0.5 h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold',
-                          step.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                          step.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700')}>
-                          L{step.level}
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold">{formatStatus(String(step.status))}</p>
-                          {step.comments && <p className="text-xs text-muted-foreground">{step.comments}</p>}
-                          {step.actionAt && <p className="text-xs text-muted-foreground">{formatDate(step.actionAt)}</p>}
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
-                )}
-              </div>
-            )}
+                  {Array.isArray(editInvoice.approvals) && editInvoice.approvals.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-border space-y-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Legacy approval steps</p>
+                      {editInvoice.approvals.map((step: any) => (
+                        <div key={step.id} className="rounded-lg border border-border bg-background/60 px-3 py-2 flex items-start gap-3">
+                          <div className={cn('mt-0.5 h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold',
+                            step.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                            step.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700')}>
+                            L{step.level}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold">{formatStatus(String(step.status))}</p>
+                            {step.comments && <p className="text-xs text-muted-foreground">{step.comments}</p>}
+                          </div>
+                          {step.actionAt && <p className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">{formatDate(step.actionAt)}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             </fieldset>
 
