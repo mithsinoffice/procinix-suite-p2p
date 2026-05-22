@@ -208,7 +208,19 @@ const INVOICE_NULLABLE_DATES = ['dueDate', 'periodFrom', 'periodTo'] as const
 // scalar update() rejects ("Unknown argument `vendor`"). Stripped before
 // the payload reaches Prisma so InvoiceFormPage can edit by reading the
 // full record and PUTting it back without per-field surgery on the client.
-const INVOICE_STRIP_FIELDS = ['vendor', 'lines', 'auditLogs', 'approvals', 'poLinks', 'hasFile'] as const
+//
+// `baseAmount` and `grossAmount` are Section-B form-only fields used for
+// cross-validation against the line-item sums — they are NOT columns on the
+// Invoice model (taxableAmount + totalAmount cover those persistently).
+// Without stripping, Prisma rejects the create with "Unknown argument
+// 'baseAmount'" → 500. Same for `entityName` / `entityCode`, which the list
+// endpoint enriches into the GET response via Map-by-id (entity is FK only,
+// no Prisma relation declared) and the form may echo back on edit.
+export const INVOICE_STRIP_FIELDS = [
+  'vendor', 'lines', 'auditLogs', 'approvals', 'poLinks', 'hasFile',
+  'baseAmount', 'grossAmount',
+  'entityName', 'entityCode',
+] as const
 
 export async function invoiceRoutes(app: FastifyInstance) {
   const auth = { preHandler: [app.authenticate] }

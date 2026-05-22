@@ -17,6 +17,7 @@ import {
   listInvoicesForRoute,
   getInvoiceSummary,
   INVOICE_LIST_SELECT,
+  INVOICE_STRIP_FIELDS,
 } from '../invoices'
 
 const TENANT = 'tenant-default-001'
@@ -78,6 +79,33 @@ describe('buildInvoiceListWhere', () => {
   it('applies amountMin / amountMax to totalAmount', () => {
     const w = buildInvoiceListWhere(TENANT, { amountMin: 1000, amountMax: 50000 })
     expect(w.totalAmount).toEqual({ gte: 1000, lte: 50000 })
+  })
+})
+
+// ── INVOICE_STRIP_FIELDS — locks the form-only fields that must NOT reach Prisma
+//
+// The Invoice model has no `baseAmount` / `grossAmount` columns — those are
+// Section-B cross-check inputs that live only on the React form. If they
+// flow into tx.invoice.create({ data: ... }), Prisma rejects with
+// "Unknown argument 'baseAmount'" and POST /api/invoices returns 500. Same
+// for `entityName` / `entityCode` (list-route enrichment that the form
+// echoes back on edit). Lock the strip list against accidental shrinkage.
+
+describe('INVOICE_STRIP_FIELDS', () => {
+  it('strips Section-B form-only fields (baseAmount, grossAmount)', () => {
+    expect(INVOICE_STRIP_FIELDS).toContain('baseAmount')
+    expect(INVOICE_STRIP_FIELDS).toContain('grossAmount')
+  })
+
+  it('strips Map-by-id enrichment fields (entityName, entityCode)', () => {
+    expect(INVOICE_STRIP_FIELDS).toContain('entityName')
+    expect(INVOICE_STRIP_FIELDS).toContain('entityCode')
+  })
+
+  it('strips GET-response relation accessors (vendor, lines, auditLogs, approvals, poLinks, hasFile)', () => {
+    for (const f of ['vendor', 'lines', 'auditLogs', 'approvals', 'poLinks', 'hasFile']) {
+      expect(INVOICE_STRIP_FIELDS).toContain(f)
+    }
   })
 })
 
