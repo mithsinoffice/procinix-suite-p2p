@@ -7,6 +7,7 @@ import {
   ChevronLeft, ChevronRight, X, ScanLine, Edit3, Sparkles, ChevronDown, ChevronUp,
   CheckCircle2,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { http, HttpError } from '../../lib/http'
 import { MasterPageHeader, FormInput, FormSelect, FormTextarea } from '../../components/masters/MasterFormLayout'
 import { useAuthStore } from '../../stores/auth.store'
@@ -1514,6 +1515,9 @@ export default function InvoiceFormPage() {
   const runItemMatching = useCallback(async (rows: Array<{ idx: number; description: string }>) => {
     const filtered = rows.filter(r => r.description && r.description.trim().length > 0)
     if (filtered.length === 0) return
+    // Loading pill while the matcher runs — dismissed on both success and
+    // error so the user always sees a state change.
+    const matchToastId = toast.loading('Matching items…')
     try {
       const results = await http.post<Array<{
         inputDescription: string
@@ -1546,8 +1550,11 @@ export default function InvoiceFormPage() {
         }
       })
       setItemMatches(prev => ({ ...prev, ...next }))
+      toast.dismiss(matchToastId)
     } catch {
-      // Silent — leave the dropdown unselected for the user to pick.
+      // Non-blocking — let the user pick manually. Surface the failure so
+      // they know auto-match didn't run.
+      toast.error('Item matching unavailable', { id: matchToastId })
     }
   }, [setValue, glCodes, costCentres, applyItemPreset])
 
@@ -1600,6 +1607,9 @@ export default function InvoiceFormPage() {
     setOcrLoading(true)
     setOcrError(null)
     setOcrModel(null)
+    // Sonner returns the toast id so we can dismiss the "loading" pill once
+    // OCR finishes — success / error toasts replace it.
+    const ocrToastId = toast.loading('Extracting data from invoice…')
     try {
       const base64Data = await fileToBase64(file)
       const res        = await http.post<{ ocr: any; matchedVendorId: string | null }>(
@@ -1720,13 +1730,17 @@ export default function InvoiceFormPage() {
           ocr.lineItems.map((l: any, i: number) => ({ idx: i, description: l.description ?? '' })),
         )
       }
+      toast.dismiss(ocrToastId)
     } catch (err: any) {
       // The backend now returns { code, message, detail, details, httpStatus }.
       // Prefer the detail (raw Gemini error string) — it's what an engineer
       // needs to debug. Fall back to message, then a generic.
       const apiError = err?.error
       const detail   = apiError?.detail || apiError?.message || err?.message
-      setOcrError(detail ?? 'OCR failed — Gemini returned no error message')
+      const msg      = detail ?? 'OCR failed — Gemini returned no error message'
+      setOcrError(msg)
+      // Replace the loading pill with a red error toast carrying the actual reason.
+      toast.error(`OCR extraction failed — ${msg}`, { id: ocrToastId })
     } finally {
       setOcrLoading(false)
     }
@@ -1758,9 +1772,9 @@ export default function InvoiceFormPage() {
     return base
   }, [file, isEdit, totals, mode, selectedPoId, consumptionType, matchType])
 
-  // Banner for inline mutation failures — surfaces 4xx / 5xx errors that
-  // previously swallowed (the mutations had no onError so clicks looked dead).
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  // Extracts a clean message from HttpError / Error / unknown so the toast
+  // shows the server's actual reason ("Cannot submit invoice in PAID
+  // status") rather than a generic "Request failed".
   const apiMsg = (err: unknown): string => {
     if (err instanceof HttpError) {
       return err.error.message ?? `Request failed (${err.error.status})`
@@ -1768,6 +1782,12 @@ export default function InvoiceFormPage() {
     if (err instanceof Error) return err.message
     return 'Request failed'
   }
+
+  // Navigation is deferred 1.5s after a success toast so the user has time
+  // to read the confirmation before the page transitions. Earlier behaviour
+  // navigated synchronously and felt instantaneous to the point of looking
+  // like nothing happened.
+  const NAV_DELAY_MS = 1500
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const saveDraft = useMutation({
@@ -1778,11 +1798,11 @@ export default function InvoiceFormPage() {
         : http.post<any>('/api/invoices', payload)
     },
     onSuccess: (res) => {
-      setSubmitError(null)
       qc.invalidateQueries({ queryKey: ['invoices'] })
-      navigate(`/invoices/${res.id ?? id}`)
+      toast.success(isEdit ? 'Invoice updated' : 'Draft saved successfully')
+      setTimeout(() => navigate(`/invoices/${res.id ?? id}`), NAV_DELAY_MS)
     },
-    onError: (err) => setSubmitError(`Save failed — ${apiMsg(err)}`),
+    onError: (err) => toast.error(`${isEdit ? 'Update' : 'Save'} failed — ${apiMsg(err)}`),
   })
 
   const submitForApproval = useMutation({
@@ -1795,11 +1815,11 @@ export default function InvoiceFormPage() {
       return inv
     },
     onSuccess: (res) => {
-      setSubmitError(null)
       qc.invalidateQueries({ queryKey: ['invoices'] })
-      navigate(`/invoices/${res.id ?? id}`)
+      toast.success('Submitted for approval')
+      setTimeout(() => navigate(`/invoices/${res.id ?? id}`), NAV_DELAY_MS)
     },
-    onError: (err) => setSubmitError(`Submit failed — ${apiMsg(err)}`),
+    onError: (err) => toast.error(`Submit failed — ${apiMsg(err)}`),
   })
 
   // Smooth-scroll to the first invalid field on submit failure. RHF's default
@@ -1883,14 +1903,6 @@ export default function InvoiceFormPage() {
           </span>
         ))}
       </div>
-
-      {submitError && (
-        <div className="border-b border-red-200 bg-red-50 px-4 py-2.5 sm:px-6 flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 mt-0.5 text-red-600 flex-shrink-0" />
-          <p className="text-sm text-red-800 flex-1">{submitError}</p>
-          <button onClick={() => setSubmitError(null)} className="text-xs text-red-700 hover:text-red-900">Dismiss</button>
-        </div>
-      )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* LEFT — collapsible upload + preview */}
