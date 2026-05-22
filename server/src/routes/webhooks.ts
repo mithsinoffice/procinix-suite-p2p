@@ -184,12 +184,94 @@ export function flatToOcrInvoiceData(body: N8nFlatInvoice): Partial<OcrInvoiceDa
 const nestedScalarSchema = z.object({
   value:      z.union([z.string(), z.number()]).nullable().optional(),
   confidence: z.number().min(0).max(1).optional(),
+  // n8n now emits a `suggestions[]` array per field with alternative OCR
+  // reads. Optional for back-compat with the older shape that doesn't have it.
+  // Values may be numeric on amounts or string on text fields — coerced to
+  // strings when persisted into ocrRawData.suggestions.
+  suggestions: z.array(z.union([z.string(), z.number()])).optional(),
 }).strict()
 type NestedScalar = z.infer<typeof nestedScalarSchema>
+
+// Inner extracted-data envelope. n8n now wraps every OCR field under
+// `extractedData`, plus adds a `customer` block, `payments[]`, and per-line
+// `interval`. The legacy "native" shape (no wrapper, root-level invoice/
+// vendor/etc.) is preserved via `n8nNativeInvoiceSchema` below for backwards
+// compatibility with older workflow configurations.
+const extractedDataSchema = z.object({
+  invoice: z.object({
+    invoiceNumber:   nestedScalarSchema.optional(),
+    invoiceDate:     nestedScalarSchema.optional(),
+    dueDate:         nestedScalarSchema.optional(),
+    irnNumber:       nestedScalarSchema.optional(),
+    poReference:     nestedScalarSchema.optional(),
+    billingId:       nestedScalarSchema.optional(),
+    domainName:      nestedScalarSchema.optional(),
+    billingLocation: nestedScalarSchema.optional(),
+    shipToLocation:  nestedScalarSchema.optional(),
+  }).strict().optional(),
+  vendor: z.object({
+    vendorName:    nestedScalarSchema.optional(),
+    vendorAddress: nestedScalarSchema.optional(),
+    vendorGSTIN:   nestedScalarSchema.optional(),
+    vendorPAN:     nestedScalarSchema.optional(),
+  }).strict().optional(),
+  customer: z.object({
+    billToPerson:    nestedScalarSchema.optional(),
+    billToCompany:   nestedScalarSchema.optional(),
+    customerAddress: nestedScalarSchema.optional(),
+    customerGSTIN:   nestedScalarSchema.optional(),
+    customerPAN:     nestedScalarSchema.optional(),
+    // 2-digit GST state code ("27" for Maharashtra) or state name. The
+    // form's normalizeStateCode handles both representations.
+    stateCode:       nestedScalarSchema.optional(),
+  }).strict().optional(),
+  amounts: z.object({
+    baseAmount:  nestedScalarSchema.optional(),  // subtotal
+    grossAmount: nestedScalarSchema.optional(),  // totalAmount
+    taxAmount:   nestedScalarSchema.optional(),
+    cgst:        nestedScalarSchema.optional(),
+    sgst:        nestedScalarSchema.optional(),
+    igst:        nestedScalarSchema.optional(),
+    currency:    nestedScalarSchema.optional(),
+  }).strict().optional(),
+  lineItems: z.array(z.object({
+    description: nestedScalarSchema.optional(),
+    interval:    nestedScalarSchema.optional(),
+    quantity:    nestedScalarSchema.optional(),
+    rate:        nestedScalarSchema.optional(),
+    amount:      nestedScalarSchema.optional(),
+    hsn:         nestedScalarSchema.optional(),
+  }).strict()).optional(),
+  // payments[] carries any historical payment rows n8n picked up from the
+  // PDF. Not mapped to the Invoice model — kept lenient so unknown shapes
+  // don't fail parsing.
+  payments: z.array(z.record(z.unknown())).optional(),
+  status:   z.string().optional(),
+}).strict()
+type ExtractedData = z.infer<typeof extractedDataSchema>
+
+// Original PDF/image attachment carried alongside extractedData. fileBase64
+// is decoded and persisted via saveInvoiceFile so the left-panel preview
+// works for email-ingested invoices.
+const originalFileSchema = z.object({
+  fileName:   z.string().optional(),
+  mimeType:   z.string().optional(),
+  fileSize:   z.string().optional(),
+  binaryKey:  z.string().optional(),
+  fileBase64: z.string().optional(),
+}).strict()
+type OriginalFile = z.infer<typeof originalFileSchema>
 
 export const n8nNativeInvoiceSchema = z.object({
   // n8n's native shape doesn't carry `source` — accepted if present, ignored.
   source: z.literal('email').optional(),
+  // New wrapped shape — n8n now puts the OCR fields under extractedData and
+  // attaches the original file under originalFile. Both optional so the
+  // legacy root-level layout below still parses cleanly.
+  extractedData: extractedDataSchema.optional(),
+  originalFile:  originalFileSchema.optional(),
+  // Legacy root-level fields. When extractedData is set the new fields take
+  // precedence and these are ignored.
   invoice: z.object({
     invoiceNumber: nestedScalarSchema.optional(),
     invoiceDate:   nestedScalarSchema.optional(),
@@ -203,8 +285,8 @@ export const n8nNativeInvoiceSchema = z.object({
     vendorPAN:   nestedScalarSchema.optional(),
   }).strict().optional(),
   amounts: z.object({
-    baseAmount:  nestedScalarSchema.optional(),  // subtotal
-    grossAmount: nestedScalarSchema.optional(),  // totalAmount
+    baseAmount:  nestedScalarSchema.optional(),
+    grossAmount: nestedScalarSchema.optional(),
     taxAmount:   nestedScalarSchema.optional(),
     cgst:        nestedScalarSchema.optional(),
     sgst:        nestedScalarSchema.optional(),
@@ -214,7 +296,7 @@ export const n8nNativeInvoiceSchema = z.object({
   lineItems: z.array(z.object({
     description: nestedScalarSchema.optional(),
     quantity:    nestedScalarSchema.optional(),
-    rate:        nestedScalarSchema.optional(),  // unitPrice
+    rate:        nestedScalarSchema.optional(),
     amount:      nestedScalarSchema.optional(),
     hsn:         nestedScalarSchema.optional(),
   }).strict()).optional(),
@@ -274,19 +356,44 @@ function parseFlexibleDate(s: string | null): string | null {
   return s
 }
 
+// Reads `suggestions[]` off a nested-scalar field and returns a string array
+// (n8n emits numerics for amount fields — coerced to string so the form's
+// suggestions chips render uniformly).
+function readNestedSuggestions(f: NestedScalar | undefined): string[] {
+  if (!f?.suggestions || !Array.isArray(f.suggestions)) return []
+  return f.suggestions.map(v => String(v)).filter(s => s.length > 0)
+}
+
 // Transformer — exported for unit tests. Same return shape as
 // flatToOcrInvoiceData so the handler can call either and pipe straight into
-// ingestInvoice().
+// ingestInvoice(). Handles both shapes:
+//   • new wrapped — `body.extractedData.{invoice,vendor,customer,amounts,
+//     lineItems}` with `body.originalFile` for the PDF bytes
+//   • legacy native — root-level `body.invoice / vendor / amounts / lineItems`
+// New wrapped wins when `extractedData` is present.
 export function mapN8nNativePayload(body: N8nNativeInvoice): Partial<OcrInvoiceData> & { messageId: string } {
-  const inv   = body.invoice  ?? {}
-  const ven   = body.vendor   ?? {}
-  const amt   = body.amounts  ?? {}
-  const lines = body.lineItems ?? []
+  // Pick the data source. When the new wrapped shape is present, every field
+  // comes from extractedData; the legacy root-level objects are ignored even
+  // if also present (n8n shouldn't send both, but be defensive).
+  const src: ExtractedData = body.extractedData ?? {
+    invoice:   body.invoice,
+    vendor:    body.vendor,
+    amounts:   body.amounts,
+    lineItems: body.lineItems,
+  }
+  const inv   = src.invoice   ?? {}
+  const ven   = src.vendor    ?? {}
+  const cust  = src.customer  ?? {}
+  const amt   = src.amounts   ?? {}
+  const lines = src.lineItems ?? []
 
   const invoiceNumber = readNestedString(inv.invoiceNumber)
   const vendorName    = readNestedString(ven.vendorName)
   const vendorGstin   = readNestedString(ven.vendorGSTIN)
   const irn           = readNestedString(inv.irnNumber)
+  const buyerName     = readNestedString(cust.billToCompany)
+  const buyerGstin    = readNestedString(cust.customerGSTIN)
+  const placeOfSupply = readNestedString(cust.stateCode)
 
   const dedupKey = [
     invoiceNumber ?? '',
@@ -308,6 +415,29 @@ export function mapN8nNativePayload(body: N8nNativeInvoice): Partial<OcrInvoiceD
     ? confidences.reduce((a, b) => a + b, 0) / confidences.length
     : (body.confidence ?? 0)
 
+  // Collect per-field `suggestions[]` keyed by RHF form path. The form's
+  // edit-mode hydration reads invoice.ocrRawData.suggestions and feeds the
+  // "{N} nearest OCR reads" chips. Only emit keys with non-empty arrays so
+  // the UI logic stays tight.
+  const suggestionPairs: Array<[string, string[]]> = [
+    ['invoiceNumber',  readNestedSuggestions(inv.invoiceNumber)],
+    ['invoiceDate',    readNestedSuggestions(inv.invoiceDate)],
+    ['dueDate',        readNestedSuggestions(inv.dueDate)],
+    ['vendorGSTIN',    readNestedSuggestions(ven.vendorGSTIN)],
+    ['vendorPAN',      readNestedSuggestions(ven.vendorPAN)],
+    ['baseAmount',     readNestedSuggestions(amt.baseAmount)],
+    ['grossAmount',    readNestedSuggestions(amt.grossAmount)],
+    ...lines.flatMap((l, i): Array<[string, string[]]> => [
+      [`line_${i}_description`, readNestedSuggestions(l.description)],
+      [`line_${i}_quantity`,    readNestedSuggestions(l.quantity)],
+      [`line_${i}_unitPrice`,   readNestedSuggestions(l.rate)],
+    ]),
+  ]
+  const suggestions: Record<string, string[]> = {}
+  for (const [k, arr] of suggestionPairs) {
+    if (arr.length > 0) suggestions[k] = arr
+  }
+
   return {
     messageId:         dedupKey,
     invoiceNumber,
@@ -316,6 +446,9 @@ export function mapN8nNativePayload(body: N8nNativeInvoice): Partial<OcrInvoiceD
     vendorName,
     vendorGstin,
     vendorPan:         readNestedString(ven.vendorPAN),
+    buyerName,
+    buyerGstin,
+    placeOfSupply,
     poReference:       readNestedString(inv.poReference),
     irn,
     subtotal:          readNestedNumber(amt.baseAmount),
@@ -343,14 +476,29 @@ export function mapN8nNativePayload(body: N8nNativeInvoice): Partial<OcrInvoiceD
       gstRate:     0,
       confidence:  Math.round(readNestedConfidence(l.amount) * 100),
     })),
+    ...(Object.keys(suggestions).length > 0 ? { suggestions } : {}),
   } as Partial<OcrInvoiceData> & { messageId: string }
 }
 
-// Detect which shape the caller sent — n8n's native nested format has a
-// top-level `invoice` object; the flat format has `ocr` (or nothing if just
-// pinging). Tested in webhooks.test.ts to lock the heuristic.
+// Detect which shape the caller sent. Accepts both:
+//   • new wrapped — `body.extractedData` present
+//   • legacy native — root-level `body.invoice` present
+// Anything else falls through to the flat schema. Tested in webhooks.test.ts.
 export function isN8nNativeShape(body: unknown): boolean {
-  return !!body && typeof body === 'object' && body !== null && 'invoice' in (body as Record<string, unknown>)
+  if (!body || typeof body !== 'object' || body === null) return false
+  const obj = body as Record<string, unknown>
+  return 'extractedData' in obj || 'invoice' in obj
+}
+
+// Extracts originalFile (when n8n sends the new wrapped shape) so the route
+// can persist the PDF alongside the invoice. Returns null when absent or
+// when fileBase64 is missing — caller skips storage in that case.
+export function getOriginalFile(body: unknown): OriginalFile | null {
+  if (!body || typeof body !== 'object') return null
+  const of = (body as { originalFile?: unknown }).originalFile
+  if (!of || typeof of !== 'object') return null
+  const parsed = originalFileSchema.safeParse(of)
+  return parsed.success && parsed.data.fileBase64 ? parsed.data : null
 }
 
 // Pure handler — no Fastify dependency, easy to unit test.
@@ -388,6 +536,12 @@ export async function handleN8nFlatInvoice(deps: {
   let emailFrom:      string | undefined
   let emailSubject:   string | undefined
 
+  // Original PDF/image bytes carried alongside the wrapped extractedData
+  // shape. Threaded into ingestInvoice as base64Data so saveInvoiceFile
+  // persists the document — fixes the "Document not available" preview for
+  // email-ingested invoices.
+  let originalFile: OriginalFile | null = null
+
   if (isN8nNativeShape(deps.body)) {
     const parsed = n8nNativeInvoiceSchema.safeParse(deps.body)
     if (!parsed.success) {
@@ -396,6 +550,7 @@ export async function handleN8nFlatInvoice(deps: {
     structuredData = mapN8nNativePayload(parsed.data)
     emailFrom      = parsed.data.rawEmail?.from    ?? undefined
     emailSubject   = parsed.data.rawEmail?.subject ?? undefined
+    originalFile   = getOriginalFile(deps.body)
   } else {
     const parsed = n8nFlatInvoiceSchema.safeParse(deps.body)
     if (!parsed.success) {
@@ -420,6 +575,16 @@ export async function handleN8nFlatInvoice(deps: {
   })
   if (!systemUser) return { status: 409, body: { error: 'no_user_for_tenant' } }
 
+  // If n8n included the original PDF (new wrapped shape), pass it through
+  // so saveInvoiceFile persists it. The mime types we accept must match
+  // ingestInvoice's IngestPayload union — anything else is dropped silently
+  // (n8n shouldn't be sending an unsupported file format anyway).
+  const SUPPORTED_MIMES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] as const
+  type SupportedMime = typeof SUPPORTED_MIMES[number]
+  const safeMime = originalFile?.mimeType && (SUPPORTED_MIMES as readonly string[]).includes(originalFile.mimeType)
+    ? (originalFile.mimeType as SupportedMime)
+    : 'application/pdf'
+
   const result = await ingest(
     deps.prisma,
     {
@@ -427,8 +592,12 @@ export async function handleN8nFlatInvoice(deps: {
       structuredData,
       emailFrom,
       emailSubject,
-      fileName:     'invoice.pdf',
-      mimeType:     'application/pdf',
+      // base64Data + mimeType drive the file-save block in ingestInvoice.
+      // structuredData being present means OCR is skipped — the file bytes
+      // are stored purely for the detail-page preview.
+      base64Data:   originalFile?.fileBase64,
+      fileName:     originalFile?.fileName ?? 'invoice.pdf',
+      mimeType:     safeMime,
     },
     { tenantId: tenant.id, userId: systemUser.id, ip: deps.ip },
   )

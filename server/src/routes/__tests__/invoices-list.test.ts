@@ -18,6 +18,8 @@ import {
   getInvoiceSummary,
   INVOICE_LIST_SELECT,
   INVOICE_STRIP_FIELDS,
+  coerceInvoiceDates,
+  sanitiseLineItemIds,
 } from '../invoices'
 
 const TENANT = 'tenant-default-001'
@@ -79,6 +81,110 @@ describe('buildInvoiceListWhere', () => {
   it('applies amountMin / amountMax to totalAmount', () => {
     const w = buildInvoiceListWhere(TENANT, { amountMin: 1000, amountMax: 50000 })
     expect(w.totalAmount).toEqual({ gte: 1000, lte: 50000 })
+  })
+})
+
+// ── sanitiseLineItemIds — guards the InvoiceLine FK constraint
+//
+// The item-matcher / OCR / hand-crafted payloads can surface non-UUID strings
+// (e.g. an item code "ITM-0008") or stale UUIDs that don't resolve in the
+// current tenant's item master. Either would make invoice_lines.item_id
+// throw a foreign-key violation. Sanitise: drop the bad id, keep the line.
+
+describe('sanitiseLineItemIds', () => {
+  function mockTx(existingIds: string[]) {
+    const findMany = vi.fn().mockResolvedValue(existingIds.map(id => ({ id })))
+    return {
+      tx: { itemMaster: { findMany } } as any,
+      findMany,
+    }
+  }
+
+  it('nulls non-UUID itemIds (e.g. "ITM-0008") without hitting the DB for them', async () => {
+    const { tx, findMany } = mockTx([])
+    const lines = [
+      { itemId: 'ITM-0008', description: 'a' },
+      { itemId: '',         description: 'b' },
+      { itemId: null,       description: 'c' },
+    ]
+    const out = await sanitiseLineItemIds(tx, 't-1', lines)
+    expect(out.map(l => l.itemId)).toEqual([null, null, null])
+    // No UUID candidates surfaced — DB lookup never runs.
+    expect(findMany).not.toHaveBeenCalled()
+  })
+
+  it('keeps UUIDs that resolve in the same tenant', async () => {
+    const uuid = '11111111-1111-1111-1111-111111111111'
+    const { tx, findMany } = mockTx([uuid])
+    const lines = [{ itemId: uuid, description: 'x' }]
+    const out = await sanitiseLineItemIds(tx, 't-1', lines)
+    expect(out[0].itemId).toBe(uuid)
+    expect(findMany).toHaveBeenCalledTimes(1)
+    expect(findMany.mock.calls[0][0].where).toEqual({ id: { in: [uuid] }, tenantId: 't-1' })
+  })
+
+  it('drops UUIDs that do NOT exist in this tenant (stale id or cross-tenant)', async () => {
+    const uuid = '22222222-2222-2222-2222-222222222222'
+    const { tx } = mockTx([])  // DB returns no rows
+    const out = await sanitiseLineItemIds(tx, 't-1', [{ itemId: uuid, description: 'x' }])
+    expect(out[0].itemId).toBeNull()
+  })
+
+  it('handles a mixed batch — keep valid, null bad shape, null missing UUID', async () => {
+    const good   = '33333333-3333-3333-3333-333333333333'
+    const stale  = '44444444-4444-4444-4444-444444444444'
+    const { tx } = mockTx([good])
+    const lines = [
+      { itemId: good,       description: 'keep' },
+      { itemId: stale,      description: 'stale' },
+      { itemId: 'ITM-0008', description: 'shape' },
+      { itemId: undefined,  description: 'blank' },
+    ]
+    const out = await sanitiseLineItemIds(tx, 't-1', lines)
+    expect(out.map(l => l.itemId)).toEqual([good, null, null, null])
+  })
+
+  it('returns the input untouched when the array is empty', async () => {
+    const { tx, findMany } = mockTx([])
+    const out = await sanitiseLineItemIds(tx, 't-1', [])
+    expect(out).toEqual([])
+    expect(findMany).not.toHaveBeenCalled()
+  })
+})
+
+// ── coerceInvoiceDates — promotes "YYYY-MM-DD" to full ISO DateTime
+//
+// Prisma's DateTime columns reject the date-only form the form's
+// <input type="date"> emits. Without this coercion, POST /api/invoices
+// returns 500 with "Got invalid value '2026-05-05' for DateTime".
+
+describe('coerceInvoiceDates', () => {
+  it('promotes a date-only string to ISO DateTime (UTC midnight)', () => {
+    const out = coerceInvoiceDates({ invoiceDate: '2026-05-05', dueDate: '2026-06-04' })
+    expect(out.invoiceDate).toBe('2026-05-05T00:00:00.000Z')
+    expect(out.dueDate).toBe('2026-06-04T00:00:00.000Z')
+  })
+
+  it('passes through a full ISO DateTime unchanged (idempotent)', () => {
+    const out = coerceInvoiceDates({ invoiceDate: '2026-05-05T00:00:00.000Z' })
+    expect(out.invoiceDate).toBe('2026-05-05T00:00:00.000Z')
+  })
+
+  it('keeps null/empty as null', () => {
+    const out = coerceInvoiceDates({ invoiceDate: null, dueDate: '', periodFrom: undefined })
+    expect(out.invoiceDate).toBeNull()
+    expect(out.dueDate).toBeNull()
+    expect(out.periodFrom).toBeUndefined()
+  })
+
+  it('leaves untouched fields not in the date list', () => {
+    const out = coerceInvoiceDates({ invoiceDate: '2026-05-05', notes: '2026-05-05' })
+    expect(out.notes).toBe('2026-05-05')   // not coerced — column is String, not DateTime
+  })
+
+  it('returns invalid strings unchanged so Prisma can raise a clear error', () => {
+    const out = coerceInvoiceDates({ invoiceDate: 'not-a-date' })
+    expect(out.invoiceDate).toBe('not-a-date')
   })
 })
 

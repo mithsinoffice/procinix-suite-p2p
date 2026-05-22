@@ -166,12 +166,49 @@ Do not create `WorkflowManagement.tsx` or `WorkflowConfigurator.tsx` — those a
 
 ### n8n (email ingestion)
 - **n8n is the only path** for email-driven invoice ingestion. It monitors the mailbox, runs OCR, and POSTs structured data to Procinix.
-- **Canonical endpoint:** `POST /api/webhooks/n8n/invoice?tenantId=<id>` — flat payload shape, Bearer auth.
+- **Canonical endpoint:** `POST /api/webhooks/n8n/invoice?tenantId=<id>` — Bearer auth, accepts both shapes below.
 - **Auth:** `Authorization: Bearer <N8N_WEBHOOK_SECRET>` (preferred) or `x-n8n-secret: <secret>` (legacy back-compat). Both compared via `Buffer.timingSafeEqual`. `verifyN8nSecret()` is the single resolver.
 - **Code:** [server/src/routes/webhooks.ts](server/src/routes/webhooks.ts) — `handleN8nFlatInvoice()` is the pure handler (no Fastify dependency, unit-tested). It delegates to `ingestInvoice()` for vendor match + dedup + audit.
 - **Two older n8n endpoints exist** (`/webhooks/n8n/invoice-email`, `/webhooks/n8n/invoice-ingest`) for back-compat with previously-configured workflows. New workflows should target `/api/webhooks/n8n/invoice`.
 - **Idempotency:** built-in via `InvoiceIngestionJob.extractedData.messageId` lookup. n8n retries collide cleanly.
 - **No in-process poller.** The Gmail API poller (`email-poller.service.ts`) and `googleapis` dep were removed 2026-05-21. **Do not re-add.** Manual upload OCR (Gemini) is a separate code path inside `/api/invoices/ocr-extract` and stays.
+
+#### Payload shape (current — n8n wraps under `extractedData`)
+```
+{
+  extractedData: {
+    invoice:   { invoiceNumber, invoiceDate, dueDate, irnNumber, poReference,
+                 billingId?, domainName?, billingLocation?, shipToLocation? },
+    vendor:    { vendorName, vendorAddress, vendorGSTIN, vendorPAN },
+    customer:  { billToPerson, billToCompany, customerAddress,
+                 customerGSTIN, customerPAN, stateCode },
+    amounts:   { baseAmount, taxAmount, cgst, sgst, igst, grossAmount, currency },
+    lineItems: [{ description, interval?, quantity, rate, amount, hsn? }],
+    payments:  [{ /* historical payments, passed through, not mapped */ }],
+    status:    'needs_review' | 'auto_process' | 'hold' | …
+  },
+  originalFile: {                       // PDF/image bytes alongside the structured fields
+    fileName, mimeType, fileSize, binaryKey,
+    fileBase64: '<base64 of the source PDF>'
+  },
+  rawEmail?: { from, subject, receivedAt },
+  source?:    'email',
+  confidence?: 0-1
+}
+```
+Every scalar field is `{ value, confidence, suggestions? }` — `suggestions[]` carries alternative OCR reads and flows into `invoice.ocrRawData.suggestions` for the form's "{N} nearest OCR reads" chips.
+
+#### Legacy shape (still supported)
+Older n8n workflows POST the same fields at the root (`body.invoice`, `body.vendor`, `body.amounts`, `body.lineItems`) with no `originalFile`. `mapN8nNativePayload` reads from `body.extractedData` when present and falls back to the root layout otherwise. `isN8nNativeShape` accepts either.
+
+#### File storage
+`originalFile.fileBase64` is decoded and persisted via `saveInvoiceFile()` ([server/src/services/invoice-file-storage.service.ts](server/src/services/invoice-file-storage.service.ts)). The storage backend is selected at runtime:
+- **`AZURE_STORAGE_CONNECTION_STRING` set** → upload to Azure Blob (container `invoices`, override via `AZURE_STORAGE_INVOICES_CONTAINER`). `Invoice.fileUrl` stores the absolute blob URL.
+- **Unset** → write to local disk under `uploads/invoices/<tenantId>/`. `Invoice.fileUrl` stores the relative path.
+
+`readInvoiceFile()` branches on the URL prefix so a row written via local can be read after Azure is wired (and vice-versa, for migrations). Storage failures never sink the webhook — invoice still ingests; preview shows "Document not available".
+
+When `structuredData` is supplied to `ingestInvoice` (the n8n path), OCR is skipped even if `base64Data` is also present — n8n has already done its own extraction; the file bytes are stored purely for the detail-page preview.
 
 ### LLM invoice scoring (OpenAI)
 - After n8n webhook saves an invoice, **async LLM scoring runs** — webhook always returns 201 fast.

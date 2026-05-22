@@ -102,6 +102,12 @@ export interface OcrInvoiceData {
   periodTo:       string | null   // DD/MM/YYYY — billing period end
   overallConfidence: number       // 0–100 — fallback when fieldConfidence is sparse
   fieldConfidence?: OcrFieldConfidence
+  /** Alternative OCR reads per field — n8n's `suggestions[]` flows through to
+   *  ocrRawData.suggestions and the form's "{N} nearest OCR reads" expandable
+   *  picks it up from there. Keyed by RHF form path (e.g. "invoiceNumber",
+   *  "vendorId", "lines.0.description"). Empty / absent when the OCR provider
+   *  didn't emit alternatives. */
+  suggestions?:   Record<string, string[]>
   rawText:        string
   /** Gemini model id used for this extraction — set by extractInvoiceFromFile. */
   model?:         string

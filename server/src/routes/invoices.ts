@@ -204,6 +204,75 @@ export async function getInvoiceSummary(prisma: PrismaClient, tenantId: string, 
 // Listed once so POST + PUT share the same coercion.
 const INVOICE_NULLABLE_DATES = ['dueDate', 'periodFrom', 'periodTo'] as const
 
+// Prisma's `DateTime` columns require either a Date instance or a full ISO-8601
+// string ("2026-05-05T00:00:00.000Z"). The form's <input type="date"> emits the
+// date-only form ("2026-05-05") which Prisma rejects with
+//   PrismaClientValidationError: Got invalid value '2026-05-05' for DateTime
+// → bare 500 on POST /api/invoices.
+//
+// Convert every invoice DateTime column up-front. Date-only strings are parsed
+// as UTC midnight by `new Date(YYYY-MM-DD)` per the JS spec, so this is
+// timezone-safe — no IST/UTC day-shift surprises.
+const INVOICE_DATE_FIELDS = ['invoiceDate', 'dueDate', 'periodFrom', 'periodTo'] as const
+
+// UUID v4-ish guard. Item-master IDs are UUIDs; the matcher / OCR result can
+// surface non-UUID strings (e.g. the item code "ITM-0008") that fail the FK
+// constraint when inserted into invoice_lines.item_id with a clear 500. This
+// regex collapses anything that isn't a UUID shape to a candidate to drop.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+function isUuid(s: unknown): s is string {
+  return typeof s === 'string' && UUID_RE.test(s)
+}
+
+// Sanitises the itemId on a batch of incoming invoice lines so the
+// downstream `invoiceLine.createMany` never throws a FK-constraint error.
+// Two layers of defence:
+//   (a) drop anything that isn't a UUID shape (catches "ITM-0008", null, "")
+//   (b) for remaining UUIDs, verify they resolve in the current tenant —
+//       cross-tenant ids are silently dropped too, never leaked.
+// Returns a new array of lines with offending itemIds replaced by `null`.
+export async function sanitiseLineItemIds<L extends { itemId?: unknown }>(
+  tx:        { itemMaster: { findMany: (args: { where: { id: { in: string[] }; tenantId: string }; select: { id: true } }) => Promise<{ id: string }[]> } },
+  tenantId:  string,
+  lines:     L[],
+): Promise<L[]> {
+  if (!Array.isArray(lines) || lines.length === 0) return lines
+  // Step 1 — discard non-UUID strings before they even hit the DB.
+  const shapeFiltered = lines.map(l => (isUuid(l.itemId) ? l.itemId : null))
+  const candidateIds  = Array.from(new Set(shapeFiltered.filter((v): v is string => !!v)))
+  // Step 2 — query the tenant's item master for the surviving UUIDs.
+  let validSet = new Set<string>()
+  if (candidateIds.length > 0) {
+    const rows = await tx.itemMaster.findMany({
+      where:  { id: { in: candidateIds }, tenantId },
+      select: { id: true },
+    })
+    validSet = new Set(rows.map(r => r.id))
+  }
+  return lines.map((l, i) => ({
+    ...l,
+    itemId: shapeFiltered[i] && validSet.has(shapeFiltered[i] as string) ? shapeFiltered[i] : null,
+  }))
+}
+
+export function coerceInvoiceDates(data: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...data }
+  for (const f of INVOICE_DATE_FIELDS) {
+    if (!(f in out)) continue
+    const v = out[f]
+    // Preserve undefined — Prisma treats it as "skip this field on update".
+    // Only explicit null / "" gets coerced to null.
+    if (v === undefined) continue
+    if (v === null || v === '') { out[f] = null; continue }
+    if (v instanceof Date) { out[f] = isNaN(v.getTime()) ? null : v.toISOString(); continue }
+    if (typeof v === 'string') {
+      const dt = new Date(v)
+      out[f] = isNaN(dt.getTime()) ? v : dt.toISOString()    // leave gibberish for Prisma to reject loudly
+    }
+  }
+  return out
+}
+
 // Relation / derived fields that the GET response includes but Prisma's
 // scalar update() rejects ("Unknown argument `vendor`"). Stripped before
 // the payload reaches Prisma so InvoiceFormPage can edit by reading the
@@ -523,10 +592,12 @@ export async function invoiceRoutes(app: FastifyInstance) {
 
     // Strip immutable fields + coerce empty-string dates to null. The form's
     // <input type="date"> emits "" for blank fields, which Prisma rejects.
-    const cleanData = sanitisePayload(data, {
+    // Then promote date-only strings ("YYYY-MM-DD") to full ISO DateTime —
+    // Prisma's DateTime columns reject the date-only form.
+    const cleanData = coerceInvoiceDates(sanitisePayload(data, {
       nullableFields: [...INVOICE_NULLABLE_DATES],
       stripFields:    [...INVOICE_STRIP_FIELDS],
-    })
+    }))
 
     const invoice = await app.prisma.$transaction(async tx => {
       const inv = await tx.invoice.create({
@@ -540,8 +611,12 @@ export async function invoiceRoutes(app: FastifyInstance) {
         } as never,
       })
       if (lines.length) {
+        // Item ids from OCR / item-matcher may be item codes or stale UUIDs.
+        // Drop anything that doesn't resolve in this tenant's item master so
+        // the FK constraint can't fail loudly.
+        const safeLines = await sanitiseLineItemIds(tx, req.tenant.id, lines as any[])
         await tx.invoiceLine.createMany({
-          data: lines.map((l: any, i: number) => ({ ...l, invoiceId: inv.id, lineNumber: i + 1 })),
+          data: safeLines.map((l: any, i: number) => ({ ...l, invoiceId: inv.id, lineNumber: i + 1 })),
         })
       }
       if (poRefs.length > 0) {
@@ -622,10 +697,10 @@ export async function invoiceRoutes(app: FastifyInstance) {
     })
     if (!existing) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Invoice not found' })
 
-    const cleanData = sanitisePayload(data, {
+    const cleanData = coerceInvoiceDates(sanitisePayload(data, {
       nullableFields: [...INVOICE_NULLABLE_DATES],
       stripFields:    [...INVOICE_STRIP_FIELDS],
-    })
+    }))
 
     const invoice = await app.prisma.$transaction(async tx => {
       const inv = await tx.invoice.update({ where: { id: invoiceId }, data: cleanData as never })
@@ -636,11 +711,15 @@ export async function invoiceRoutes(app: FastifyInstance) {
           // fields. Real form payloads don't carry these, but if a caller
           // echoes the GET response (which includes them via include:), the
           // createMany would crash.
-          const cleanLines = lines.map((l, i) => {
+          const stripped = lines.map((l) => {
             const raw = l as Record<string, unknown>
             const { id: _id, invoiceId: _iid, item: _it, invoice: _inv, itemMatchScore: _ims, itemCandidates: _ic, createdAt: _ca, updatedAt: _ua, ...rest } = raw
-            return { ...rest, invoiceId: inv.id, lineNumber: i + 1 }
+            return rest
           })
+          // Same itemId guard as the create path — drop non-UUIDs and any
+          // UUID that doesn't resolve in this tenant's item master.
+          const safeLines = await sanitiseLineItemIds(tx, req.tenant.id, stripped as any[])
+          const cleanLines = safeLines.map((l: any, i: number) => ({ ...l, invoiceId: inv.id, lineNumber: i + 1 }))
           await tx.invoiceLine.createMany({ data: cleanLines as never })
         }
       }

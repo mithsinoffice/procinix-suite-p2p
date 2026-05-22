@@ -102,11 +102,17 @@ export async function ingestInvoice(
   })
 
   try {
-    // 2. OCR extraction (skip for structured input)
+    // 2. OCR extraction (skip when structuredData is provided — n8n has
+    //    already done its own extraction and we shouldn't re-OCR the same
+    //    PDF). structuredData wins even when base64Data is also present, so
+    //    callers can pass the file bytes purely for downstream persistence.
     let extracted: OcrInvoiceData | null = null
     let ocrConfidence = 100
 
-    if (payload.base64Data && payload.mimeType) {
+    if (payload.structuredData) {
+      extracted = payload.structuredData as OcrInvoiceData
+      if (typeof extracted.overallConfidence === 'number') ocrConfidence = extracted.overallConfidence
+    } else if (payload.base64Data && payload.mimeType) {
       const ocrResult = await extractInvoiceFromFile(payload.base64Data, payload.mimeType)
       if (!ocrResult.ok) {
         await prisma.invoiceIngestionJob.update({
@@ -118,8 +124,6 @@ export async function ingestInvoice(
       extracted      = ocrResult.data
       ocrConfidence  = extracted.overallConfidence
       await prisma.invoiceIngestionJob.update({ where: { id: job.id }, data: { extractedData: extracted as any } })
-    } else if (payload.structuredData) {
-      extracted = payload.structuredData as OcrInvoiceData
     }
 
     if (!extracted) {

@@ -513,3 +513,150 @@ describe('handleN8nFlatInvoice — native nested shape', () => {
     expect((out.body as { error: string }).error).toBe('invalid_body')
   })
 })
+
+// ── New wrapped shape — body.extractedData + body.originalFile ───────────────
+// n8n now wraps every OCR field under `extractedData` and ships the original
+// PDF as base64 under `originalFile`. The transformer must read from there,
+// surface customer/buyer fields, extract per-field suggestions, and the
+// handler must persist the PDF via saveInvoiceFile.
+
+const WRAPPED_BODY: Record<string, unknown> = {
+  extractedData: {
+    invoice: {
+      invoiceNumber: { value: 'KWE-2026-001', confidence: 0.95, suggestions: ['KWE-2026-001', 'KWE-2026-OO1'] },
+      invoiceDate:   { value: '18 Jul 2026',  confidence: 0.7 },
+    },
+    vendor: {
+      vendorName:  { value: 'KWALITY INDUSTRIAL ELECTRIC SOLUTIONS', confidence: 1 },
+      vendorGSTIN: { value: '27AABCK1234N1Z1',                       confidence: 0.8 },
+    },
+    customer: {
+      billToCompany: { value: 'Procinix Technologies Pvt Ltd', confidence: 0.95 },
+      customerGSTIN: { value: '27AAACP1234Q1ZS',               confidence: 0.95 },
+      stateCode:     { value: 'Maharashtra (27)',              confidence: 0.9 },
+    },
+    amounts: {
+      baseAmount:  { value: '2030', confidence: 1, suggestions: ['2030', '2.030'] },
+      grossAmount: { value: '2030', confidence: 1 },
+      currency:    { value: 'INR',  confidence: 1 },
+    },
+    lineItems: [
+      { description: { value: 'MCB Box',          confidence: 1 },
+        quantity:    { value: '1',                confidence: 1 },
+        rate:        { value: '130',              confidence: 1 },
+        amount:      { value: '130',              confidence: 1 } },
+      { description: { value: '25A 4P MCB Long',  confidence: 1 },
+        quantity:    { value: '1',                confidence: 1 },
+        rate:        { value: '100',              confidence: 1 },
+        amount:      { value: '100',              confidence: 1 } },
+      { description: { value: '23B 4PMoney can',  confidence: 1 },
+        quantity:    { value: '1',                confidence: 1 },
+        rate:        { value: '1800',             confidence: 1 },
+        amount:      { value: '1800',             confidence: 1 } },
+    ],
+    status: 'needs_review',
+  },
+  originalFile: {
+    fileName:   'KWE-invoice.pdf',
+    mimeType:   'application/pdf',
+    fileSize:   '2.01 MB',
+    fileBase64: Buffer.from('%PDF-1.4 fake pdf bytes for test').toString('base64'),
+  },
+}
+
+describe('mapN8nNativePayload — wrapped shape', () => {
+  it('reads fields out of extractedData.{invoice,vendor,amounts,lineItems}', () => {
+    const parsed = n8nNativeInvoiceSchema.parse(WRAPPED_BODY) as N8nNativeInvoice
+    const out = mapN8nNativePayload(parsed)
+    expect(out.invoiceNumber).toBe('KWE-2026-001')
+    expect(out.vendorName).toBe('KWALITY INDUSTRIAL ELECTRIC SOLUTIONS')
+    expect(out.subtotal).toBe(2030)
+    expect(out.totalAmount).toBe(2030)
+    expect(out.lineItems).toHaveLength(3)
+    expect(out.lineItems![0].description).toBe('MCB Box')
+    expect(out.lineItems![2].description).toBe('23B 4PMoney can')
+  })
+
+  it('maps extractedData.customer onto buyerName / buyerGstin / placeOfSupply', () => {
+    const parsed = n8nNativeInvoiceSchema.parse(WRAPPED_BODY) as N8nNativeInvoice
+    const out = mapN8nNativePayload(parsed)
+    expect(out.buyerName).toBe('Procinix Technologies Pvt Ltd')
+    expect(out.buyerGstin).toBe('27AAACP1234Q1ZS')
+    expect(out.placeOfSupply).toBe('Maharashtra (27)')
+  })
+
+  it('collects per-field suggestions[] keyed by RHF form path', () => {
+    const parsed = n8nNativeInvoiceSchema.parse(WRAPPED_BODY) as N8nNativeInvoice
+    const out = mapN8nNativePayload(parsed) as Record<string, unknown> & { suggestions?: Record<string, string[]> }
+    expect(out.suggestions).toBeDefined()
+    expect(out.suggestions!.invoiceNumber).toEqual(['KWE-2026-001', 'KWE-2026-OO1'])
+    expect(out.suggestions!.baseAmount).toEqual(['2030', '2.030'])
+  })
+
+  it('omits the suggestions key entirely when no field carries any', () => {
+    const noSugg = JSON.parse(JSON.stringify(WRAPPED_BODY))
+    delete noSugg.extractedData.invoice.invoiceNumber.suggestions
+    delete noSugg.extractedData.amounts.baseAmount.suggestions
+    const parsed = n8nNativeInvoiceSchema.parse(noSugg) as N8nNativeInvoice
+    const out = mapN8nNativePayload(parsed) as Record<string, unknown>
+    expect(out.suggestions).toBeUndefined()
+  })
+
+  // Backwards-compat — old root-level shape still parses + maps the same way.
+  it('still handles the legacy root-level shape (no extractedData wrapper)', () => {
+    const parsed = n8nNativeInvoiceSchema.parse(NATIVE_BODY) as N8nNativeInvoice
+    const out = mapN8nNativePayload(parsed)
+    expect(out.invoiceNumber).toBe('KWE-2026-001')
+    expect(out.vendorName).toBe('KWALITY INDUSTRIAL ELECTRIC SOLUTIONS')
+    expect(out.totalAmount).toBe(2030)
+  })
+})
+
+describe('isN8nNativeShape — both shapes', () => {
+  it('returns true for the new wrapped shape (body.extractedData)', () => {
+    expect(isN8nNativeShape(WRAPPED_BODY)).toBe(true)
+  })
+  it('returns true for the legacy root-level shape (body.invoice)', () => {
+    expect(isN8nNativeShape(NATIVE_BODY)).toBe(true)
+  })
+})
+
+describe('handleN8nFlatInvoice — wrapped shape with originalFile', () => {
+  it('threads originalFile.fileBase64 into ingestInvoice as base64Data', async () => {
+    const fakeIngest = vi.fn().mockResolvedValue(
+      ok({ jobId: 'job-w', invoiceId: 'inv-wrapped-001', lane: 'auto-stp', score: 88 }),
+    )
+    const out = await handleN8nFlatInvoice({
+      body:     WRAPPED_BODY,
+      tenantId: 'tenant-default-001',
+      headers:  { authorization: `Bearer ${SECRET}` },
+      prisma:   stubPrisma(),
+      secret:   SECRET,
+      ingest:   fakeIngest as never,
+      scoreAndPersist: vi.fn(),
+    })
+    expect(out.status).toBe(201)
+    const ingestPayload = fakeIngest.mock.calls[0][1]
+    expect(ingestPayload.structuredData.invoiceNumber).toBe('KWE-2026-001')
+    expect(ingestPayload.base64Data).toBe((WRAPPED_BODY.originalFile as { fileBase64: string }).fileBase64)
+    expect(ingestPayload.fileName).toBe('KWE-invoice.pdf')
+    expect(ingestPayload.mimeType).toBe('application/pdf')
+  })
+
+  it('omits base64Data when originalFile is absent (legacy shape)', async () => {
+    const fakeIngest = vi.fn().mockResolvedValue(
+      ok({ jobId: 'job-l', invoiceId: 'inv-legacy-001' }),
+    )
+    await handleN8nFlatInvoice({
+      body:     NATIVE_BODY,
+      tenantId: 'tenant-default-001',
+      headers:  { authorization: `Bearer ${SECRET}` },
+      prisma:   stubPrisma(),
+      secret:   SECRET,
+      ingest:   fakeIngest as never,
+      scoreAndPersist: vi.fn(),
+    })
+    const ingestPayload = fakeIngest.mock.calls[0][1]
+    expect(ingestPayload.base64Data).toBeUndefined()
+  })
+})
