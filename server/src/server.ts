@@ -1,4 +1,7 @@
 import Fastify from 'fastify'
+import staticPlugin           from '@fastify/static'
+import { fileURLToPath }      from 'node:url'
+import { dirname, resolve }   from 'node:path'
 import { envPlugin }          from './plugins/env.js'
 import { redisPlugin }        from './lib/redis.js'
 import { prismaPlugin }       from './lib/prisma.js'
@@ -74,6 +77,15 @@ export async function buildApp() {
   await app.register(provisionsRoutes,   { prefix: '/api/provisions' })
 
   app.get('/api/ping', async () => ({ pong: true, ts: Date.now() }))
+
+  // Serve the built SPA. dist/ sits two levels above the compiled server entry
+  // (server/dist/server.js → ../../dist) and one level above in source (server/src → ../../dist).
+  const distRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../dist')
+  await app.register(staticPlugin, {
+    root: distRoot,
+    prefix: '/',
+    wildcard: false,   // don't intercept unknown paths — let setNotFoundHandler decide
+  })
 
   return app
 }

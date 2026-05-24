@@ -54,6 +54,13 @@ export const errorHandlerPlugin = fp(async (app: FastifyInstance) => {
   })
 
   app.setNotFoundHandler((request, reply) => {
+    const isApiPath = /^\/(api|auth|health|webhooks)(\/|$)/.test(request.url)
+    const wantsHtml = !isApiPath
+      && request.method === 'GET'
+      && (request.headers.accept ?? '').includes('text/html')
+    if (wantsHtml) {
+      return reply.type('text/html').sendFile('index.html')
+    }
     reply.code(404).send({ code: ErrorCode.NOT_FOUND, message: `Route ${request.method} ${request.url} not found` })
   })
 })
