@@ -30,59 +30,20 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          VITE_API_URL: https://procinix-s2p.azurewebsites.net
+          VITE_API_URL: https://procinix-s2p-ddh8bhhjbgcxbga2.southindia-01.azurewebsites.net
 
-      - name: Build server
-        run: cd server && npm run build 2>/dev/null || true
-
-      - name: Create deployment package
+      - name: Create startup script
         run: |
-          mkdir -p deploy
-          cp -r dist deploy/
-          cp -r server deploy/
-          cp package.json deploy/
-          cp package-lock.json deploy/
-          cat > deploy/server.js << 'EOF'
-          import { createServer } from './server/src/server.js'
-          EOF
-          cat > deploy/web.config << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <configuration>
-            <system.webServer>
-              <handlers>
-                <add name="iisnode" path="startup.js" verb="*" modules="iisnode"/>
-              </handlers>
-              <rewrite>
-                <rules>
-                  <rule name="NodeInspector" patternSyntax="ECMAScript" stopProcessing="true">
-                    <match url="^startup.js\/debug[\/]?" />
-                  </rule>
-                  <rule name="StaticContent">
-                    <action type="Rewrite" url="public{REQUEST_URI}"/>
-                  </rule>
-                  <rule name="DynamicContent">
-                    <conditions>
-                      <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="True"/>
-                    </conditions>
-                    <action type="Rewrite" url="startup.js"/>
-                  </rule>
-                </rules>
-              </rewrite>
-              <security>
-                <requestFiltering>
-                  <hiddenSegments>
-                    <remove segment="bin"/>
-                  </hiddenSegments>
-                </requestFiltering>
-              </security>
-              <httpErrors existingResponse="PassThrough" />
-            </system.webServer>
-          </configuration>
-          EOF
+          cat > startup.sh << 'STARTUP'
+          #!/bin/bash
+          cd /home/site/wwwroot
+          node server/src/server.js
+          STARTUP
+          chmod +x startup.sh
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: procinix-s2p
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ./deploy
+          package: .
