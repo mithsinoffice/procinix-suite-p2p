@@ -32,16 +32,24 @@ jobs:
       - name: Prune root to production dependencies only
         run: npm prune --omit=dev
 
-      - name: Install server production dependencies
-        run: cd server && npm ci --omit=dev
+      - name: Install server dependencies (with dev for tsc)
+        run: cd server && npm ci
+
+      - name: Compile server TypeScript
+        run: cd server && npx tsc
+
+      - name: Prune server to production dependencies only
+        run: cd server && npm prune --omit=dev
 
       - name: Prepare deployment package
         run: |
-          mkdir -p deploy_pkg
-          cp -r dist         deploy_pkg/dist
-          cp -r server       deploy_pkg/server
-          cp -r node_modules deploy_pkg/node_modules
-          cp    package.json deploy_pkg/package.json
+          mkdir -p deploy_pkg/server
+          cp -r dist                  deploy_pkg/dist
+          cp -r server/dist           deploy_pkg/server/dist
+          cp -r server/node_modules   deploy_pkg/server/node_modules
+          cp    server/package.json   deploy_pkg/server/package.json
+          cp -r node_modules          deploy_pkg/node_modules
+          cp    package.json          deploy_pkg/package.json
 
       - name: Zip deployment package
         run: |
