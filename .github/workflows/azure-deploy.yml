@@ -20,30 +20,41 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install root dependencies
+      - name: Install root dependencies (with dev for Vite build)
         run: npm ci
-
-      - name: Install server dependencies
-        run: cd server && npm ci
 
       - name: Build frontend
         run: npm run build
         env:
           NODE_ENV: production
-          VITE_API_URL: https://procinix-s2p-ddh8bhhjbgcxbga2.southindia-01.azurewebsites.net
+          VITE_API_URL: https://procinix-s2pdemo.procinix.ai
 
-      - name: Create startup script
+      - name: Prune root to production dependencies only
+        run: npm prune --omit=dev
+
+      - name: Install server production dependencies
+        run: cd server && npm ci --omit=dev
+
+      - name: Prepare deployment package
         run: |
-          cat > startup.sh << 'STARTUP'
-          #!/bin/bash
-          cd /home/site/wwwroot
-          node server/src/server.js
-          STARTUP
-          chmod +x startup.sh
+          mkdir -p deploy_pkg
+          cp -r dist         deploy_pkg/dist
+          cp -r server       deploy_pkg/server
+          cp -r node_modules deploy_pkg/node_modules
+          cp    package.json deploy_pkg/package.json
+
+      - name: Zip deployment package
+        run: |
+          cd deploy_pkg
+          zip -r ../deploy.zip . \
+            --exclude "*/node_modules/.cache/*" \
+            --exclude "*/.cache/*"
+          cd ..
+          echo "Package size: $(du -sh deploy.zip | cut -f1)"
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: procinix-s2p
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: .
+          package: deploy.zip
