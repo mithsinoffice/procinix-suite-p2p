@@ -63,6 +63,30 @@ const AmortizationDetailPage        = lazy(() => import('./pages/accounting/Amor
 const ProvisionsPage                = lazy(() => import('./pages/accounting/provisions/ProvisionsPage'))
 const NotFoundPage           = lazy(() => import('./pages/NotFoundPage'))
 
+// Vendor Portal — Governance & Onboarding Module.
+// All page files use NAMED exports (`export function FooPage`), so each lazy
+// import is wrapped with `.then(m => ({ default: m.FooPage }))` to satisfy
+// React.lazy's `{ default: ComponentType }` contract.
+const VendorPortalHomePage          = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorPortalHomePage').then(m => ({ default: m.VendorPortalHomePage })))
+const VendorRequestsPage            = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorRequestsPage').then(m => ({ default: m.VendorRequestsPage })))
+const VendorRequestEditPage         = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorRequestEditPage').then(m => ({ default: m.VendorRequestEditPage })))
+const ApprovalWorkspacePage         = lazy(() => import('./modules/vendor-portal/src/app/pages/ApprovalWorkspacePage').then(m => ({ default: m.ApprovalWorkspacePage })))
+const VendorApprovalPage            = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorApprovalPage').then(m => ({ default: m.VendorApprovalPage })))
+const Vendor360ConsolePage          = lazy(() => import('./modules/vendor-portal/src/app/pages/Vendor360ConsolePage').then(m => ({ default: m.Vendor360ConsolePage })))
+const VendorProfilePage             = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorProfilePage').then(m => ({ default: m.VendorProfilePage })))
+const VendorChangeRequestsPage      = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorChangeRequestsPage').then(m => ({ default: m.VendorChangeRequestsPage })))
+const VendorChangeRequestDetailPage = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorChangeRequestDetailPage').then(m => ({ default: m.VendorChangeRequestDetailPage })))
+const VendorRiskDashboard           = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorRiskDashboard').then(m => ({ default: m.VendorRiskDashboard })))
+const ValidationDashboardPage       = lazy(() => import('./modules/vendor-portal/src/app/pages/ValidationDashboardPage').then(m => ({ default: m.ValidationDashboardPage })))
+const ImplementationConsole         = lazy(() => import('./modules/vendor-portal/src/app/pages/ImplementationConsole').then(m => ({ default: m.ImplementationConsole })))
+const VendorSuccessPage             = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorSuccessPage').then(m => ({ default: m.VendorSuccessPage })))
+const VendorInvitationsPage         = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorInvitationsPage').then(m => ({ default: m.VendorInvitationsPage })))
+const VendorPortalUsersPage         = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorPortalUsersPage').then(m => ({ default: m.VendorPortalUsersPage })))
+const WorkflowConfigConsole         = lazy(() => import('./modules/vendor-portal/src/app/pages/WorkflowConfigConsole').then(m => ({ default: m.WorkflowConfigConsole })))
+const VendorPortalPage              = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorPortalPage').then(m => ({ default: m.VendorPortalPage })))
+const VendorPortalRequestDetailPage = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorPortalRequestDetailPage').then(m => ({ default: m.VendorPortalRequestDetailPage })))
+const VendorSelfServicePortal       = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorSelfServicePortal').then(m => ({ default: m.VendorSelfServicePortal })))
+
 function PageLoader() {
   return (
     <div className="flex items-center justify-center min-h-screen">
@@ -171,9 +195,32 @@ export const router = createBrowserRouter([
         { path: 'admin', children: [
           { path: 'tenants', element: <S><AdminTenantsPage /></S> },
         ]},
+        { path: 'vendor-portal', children: [
+          { index: true,                 element: <S><VendorPortalHomePage /></S>              },
+          { path: 'requests',            element: <S><VendorRequestsPage /></S>                },
+          { path: 'requests/:id',        element: <S><VendorRequestEditPage /></S>             },
+          { path: 'approvals',           element: <S><ApprovalWorkspacePage /></S>             },
+          { path: 'approvals/:id',       element: <S><VendorApprovalPage /></S>                },
+          { path: 'vendors/:id/360',     element: <S><Vendor360ConsolePage /></S>              },
+          { path: 'vendors/:id/profile', element: <S><VendorProfilePage /></S>                 },
+          { path: 'change-requests',     element: <S><VendorChangeRequestsPage /></S>          },
+          { path: 'change-requests/:id', element: <S><VendorChangeRequestDetailPage /></S>     },
+          { path: 'risk',                element: <S><VendorRiskDashboard /></S>               },
+          { path: 'validation',          element: <S><ValidationDashboardPage /></S>           },
+          { path: 'implementation',      element: <S><ImplementationConsole /></S>             },
+          { path: 'success',             element: <S><VendorSuccessPage /></S>                 },
+          { path: 'invitations',         element: <S><VendorInvitationsPage /></S>             },
+          { path: 'users',               element: <S><VendorPortalUsersPage /></S>             },
+          { path: 'workflow-config',     element: <S><WorkflowConfigConsole /></S>             },
+          { path: 'portal',              element: <S><VendorPortalPage /></S>                  },
+          { path: 'portal/:id',          element: <S><VendorPortalRequestDetailPage /></S>     },
+        ]},
       ],
     }],
   },
+  // Unauthenticated vendor self-service onboarding — entered via a tokenised
+  // email link, so it sits OUTSIDE RequireAuth alongside /login.
+  { path: '/portal/onboarding/:token', element: <S><VendorSelfServicePortal /></S>, errorElement: <RouteErrorPage /> },
   { path: '*', element: <S><NotFoundPage /></S>, errorElement: <RouteErrorPage /> },
 ])
 

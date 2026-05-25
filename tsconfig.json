@@ -17,5 +17,21 @@
     }
   },
   "include": ["src", "shared"],
-  "exclude": ["node_modules", "dist", "server"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "server",
+    // Vendor-portal module is a Figma Make export bundled wholesale —
+    // standalone Vite scaffolding, bundled shadcn/ui primitives, and an
+    // in-repo design system that depend on packages not installed at the
+    // root. The 19 page files we wired into src/router.tsx are still
+    // type-checked; only the internal scaffolding + UI library is quarantined.
+    "src/modules/vendor-portal/vite.config.ts",
+    "src/modules/vendor-portal/src/main.tsx",
+    "src/modules/vendor-portal/src/app/App.tsx",
+    "src/modules/vendor-portal/src/app/routes.tsx",
+    "src/modules/vendor-portal/src/app/components/**",
+    "src/modules/vendor-portal/src/app/data/**",
+    "src/modules/vendor-portal/src/app/layout/**"
+  ]
 }
