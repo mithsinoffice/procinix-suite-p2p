@@ -128,7 +128,11 @@ export type N8nFlatInvoice = z.infer<typeof n8nFlatInvoiceSchema>
 // (CGST/SGST/IGST) are not in the source — totalTax carries the aggregate, the
 // reviewer splits it during invoice review. Exported for unit tests.
 export function flatToOcrInvoiceData(body: N8nFlatInvoice): Partial<OcrInvoiceData> & { messageId: string } {
-  const ocr = body.ocr ?? {}
+  // `body.ocr` is Zod-optional; the `{}` fallback widens to `OcrShape | {}`
+  // and TS then refuses every property access. Cast back to the full shape —
+  // every field below is read with `?? <default>` so undefined is handled.
+  const ocr = (body.ocr ?? {}) as NonNullable<N8nFlatInvoice['ocr']>
+
   // Stable per-payload dedup key: prefer invoiceNumber+vendor combo, fall back
   // to a hash-like composite so retries with identical body collide.
   const dedupKey = [

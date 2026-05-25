@@ -31,7 +31,7 @@ interface Ctx { tenantId: string; userId: string; ip?: string }
 
 // ── Totals calculator ──
 
-async function calcTotals(prisma: PrismaClient, _tenantId: string, lines: InvoiceLineInput[], _vendorId: string) {
+async function calcTotals(_prisma: PrismaClient, _tenantId: string, lines: InvoiceLineInput[], _vendorId: string) {
 
   let subtotal = 0, cgstTotal = 0, sgstTotal = 0, igstTotal = 0, tdsAmount = 0
   const enrichedLines = lines.map(line => {

@@ -720,7 +720,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
       // Find invoice for the same item in current period
       const inv = invoices.find(i =>
         i.invoiceDate >= range.from && i.invoiceDate < range.to &&
-        i.lines && i.vendorId === p.vendorId,
+        i.vendorId === p.vendorId,
       )
       const actual = inv ? Number(inv.totalAmount) : 0
       return {

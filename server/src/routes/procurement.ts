@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { startWorkflow } from '../services/workflow-engine.service.js'
 import {
   validatePrEditable, diffPrFields, calcEstimatedTotal, EDITABLE_FIELDS,
+  type PrSnapshot,
 } from '../services/pr-edit.service.js'
 import {
   validateMasterSubmittable, resolveMasterStatusAfterSubmit,
@@ -33,7 +34,7 @@ export async function procurementRoutes(app: FastifyInstance) {
   }
 
   // ── GST TYPE RESOLVER ──
-  async function resolveGSTType(tenantId: string, vendorId: string, entityId: string) {
+  async function resolveGSTType(_tenantId: string, vendorId: string, entityId: string) {
     const vendor = await app.prisma.vendor.findFirst({ where: { id: vendorId }, select: { gstin: true } })
     const entity = await app.prisma.entity.findFirst({ where: { id: entityId }, select: { gstin: true } })
     if (!vendor?.gstin || !entity?.gstin) return 'IGST'
@@ -112,7 +113,7 @@ export async function procurementRoutes(app: FastifyInstance) {
     const incomingLines = Array.isArray(body.lines) ? body.lines as any[] : null
 
     // Compute the changed-fields list for the audit log BEFORE we mutate.
-    const changedFields = diffPrFields(existing, { ...editable, ...(incomingLines ? { lines: incomingLines } : {}) })
+    const changedFields = diffPrFields(existing as unknown as PrSnapshot, { ...editable, ...(incomingLines ? { lines: incomingLines } : {}) })
 
     const pr = await app.prisma.$transaction(async tx => {
       const data: Record<string, unknown> = { ...editable }

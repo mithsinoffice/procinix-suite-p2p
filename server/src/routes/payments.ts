@@ -23,7 +23,7 @@ import {
   buildPaymentJVs, type PaymentGLCodes, type PaymentLineForJv,
 } from '../services/payment-engine.service.js'
 import {
-  computeChallanDueDate, groupLinesByTdsSection, upsertChallans,
+  groupLinesByTdsSection, upsertChallans,
 } from '../services/tds-challan.service.js'
 import { pushJournalEntry } from '../services/erp-push.service.js'
 import { writeAuditLog } from '../lib/audit.js'
@@ -322,7 +322,9 @@ export async function paymentRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string }
     const batch = await app.prisma.paymentBatch.findFirst({
       where: { id, tenantId: req.tenant.id },
-      include: { lines: { orderBy: { createdAt: 'asc' } } },
+      // PaymentBatchLine has no createdAt column; UUID `id` order is the
+      // only stable sort the schema currently supports without a migration.
+      include: { lines: { orderBy: { id: 'asc' } } },
     })
     if (!batch) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Batch not found' })
 

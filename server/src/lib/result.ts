@@ -21,6 +21,7 @@ export const ErrorCode = {
   CONFLICT:               'CONFLICT',
   DATABASE_ERROR:         'DATABASE_ERROR',
   CACHE_ERROR:            'CACHE_ERROR',
+  EXTERNAL_SERVICE_ERROR: 'EXTERNAL_SERVICE_ERROR',
   INTERNAL_ERROR:         'INTERNAL_ERROR',
 } as const
 

@@ -16,11 +16,13 @@ export interface JwtPayload {
 
 // `@fastify/jwt` ships its own module augmentation for FastifyRequest.user
 // (typed `string | object | Buffer`). Augmenting fastify directly collides
-// with that. The supported override path is FastifyJWT — both `payload`
-// (input to sign()) and `user` (request.user) get our concrete shape.
+// with that. The supported override path is FastifyJWT — `user`
+// (request.user) gets the concrete shape; `payload` (input to sign()) is
+// more permissive so both the full access-token payload and the slimmer
+// refresh-token payload `{ sub, tenantId }` typecheck without casts.
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    payload: JwtPayload
+    payload: Partial<Omit<JwtPayload, 'iat' | 'exp'>> & { sub: string }
     user:    JwtPayload
   }
 }

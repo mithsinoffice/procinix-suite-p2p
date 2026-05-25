@@ -338,9 +338,9 @@ export async function ingestInvoice(
     //     throws — duplicate detection is advisory, not gating.
     try {
       const dupResult = await detectDuplicates({
-        invoiceNumber: extracted.invoiceNumber,
+        invoiceNumber: extracted.invoiceNumber ?? undefined,
         vendorId:      vendorId ?? undefined,
-        vendorGstin:   extracted.vendorGstin,
+        vendorGstin:   extracted.vendorGstin ?? undefined,
         totalAmount,
         invoiceDate:   ocrInvoiceDate.toISOString().slice(0, 10),
         lineItems:     (extracted.lineItems ?? []).map(l => ({

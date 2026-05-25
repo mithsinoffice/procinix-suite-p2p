@@ -82,6 +82,21 @@ describe('buildInvoiceListWhere', () => {
     const w = buildInvoiceListWhere(TENANT, { amountMin: 1000, amountMax: 50000 })
     expect(w.totalAmount).toEqual({ gte: 1000, lte: 50000 })
   })
+
+  // The Figma-spec listing tabs ("Pending Approval", "Overdue") map to derived
+  // buckets passed as virtual status values. Both expand here so the route
+  // never has to wire bespoke handlers per tab.
+  it('expands status="PENDING_ALL" into status IN [SUBMITTED, PENDING_L1, PENDING_L2]', () => {
+    const w = buildInvoiceListWhere(TENANT, { status: 'PENDING_ALL' }) as Record<string, unknown>
+    expect(w.status).toEqual({ in: ['SUBMITTED', 'PENDING_L1', 'PENDING_L2'] })
+  })
+
+  it('expands status="OVERDUE" into dueDate<now AND status NOT IN [PAID, APPROVED, REJECTED, CANCELLED]', () => {
+    const fixed = new Date('2026-05-22')
+    const w = buildInvoiceListWhere(TENANT, { status: 'OVERDUE' }, fixed) as Record<string, any>
+    expect(w.dueDate).toEqual({ lt: fixed })
+    expect(w.status.notIn).toEqual(['PAID', 'APPROVED', 'REJECTED', 'CANCELLED'])
+  })
 })
 
 // ── sanitiseLineItemIds — guards the InvoiceLine FK constraint
@@ -218,13 +233,23 @@ describe('INVOICE_STRIP_FIELDS', () => {
 // ── 4. getInvoiceSummary — the chrome data ────────────────────────────────
 
 describe('getInvoiceSummary', () => {
-  function setupPrisma(opts?: { all?: number; pendingApproval?: number; overdue?: number; totalAmount?: number; netPayable?: number }) {
+  function setupPrisma(opts?: {
+    all?: number; pendingApproval?: number; overdue?: number;
+    totalAmount?: number; netPayable?: number;
+    overdueAmount?: number; paidThisMonth?: number;
+    duplicates?: number; trendCounts?: number[];
+  }) {
     const all             = opts?.all ?? 5
     const pendingApproval = opts?.pendingApproval ?? 0
     const overdue         = opts?.overdue ?? 0
     const totalAmount     = opts?.totalAmount ?? 0
     const netPayable      = opts?.netPayable ?? 0
+    const overdueAmount   = opts?.overdueAmount ?? 0
+    const paidThisMonth   = opts?.paidThisMonth ?? 0
+    const duplicates      = opts?.duplicates ?? 0
+    const trendCounts     = opts?.trendCounts ?? [0, 0, 0, 0, 0]
     const callLog: any[] = []
+    let trendIdx = 0
     const count = vi.fn().mockImplementation(args => {
       callLog.push(args)
       const w = args?.where ?? {}
@@ -240,9 +265,25 @@ describe('getInvoiceSummary', () => {
       if (Array.isArray(w.OR))              return 10  // UNMATCHED bucket
       if (w.status?.in?.length === 3)       return pendingApproval
       if (w.dueDate?.lt)                    return overdue
+      if (w.duplicateFlag !== undefined)    return duplicates
+      // The trend-window counts use createdAt: { gte, lt } only. Walk through
+      // the supplied trendCounts in order so each parallel call gets its own
+      // value rather than the catch-all `all`.
+      if (w.createdAt?.gte instanceof Date && w.createdAt?.lt instanceof Date) {
+        const v = trendCounts[trendIdx] ?? 0
+        trendIdx += 1
+        return v
+      }
       return all
     })
-    const aggregate = vi.fn().mockResolvedValue({ _sum: { totalAmount, netPayable } })
+    const aggregate = vi.fn().mockImplementation(args => {
+      const w = args?.where ?? {}
+      // Three aggregates, one each: totals (no status filter), overdue (dueDate.lt),
+      // and paid-this-month (status='PAID' + paidAt.gte). Dispatch by shape.
+      if (w.dueDate?.lt)                 return { _sum: { totalAmount: overdueAmount } }
+      if (w.status === 'PAID' && w.paidAt?.gte) return { _sum: { totalAmount: paidThisMonth } }
+      return { _sum: { totalAmount, netPayable } }
+    })
     const prisma: any = { invoice: { count, aggregate } }
     return { prisma, count, aggregate, callLog }
   }
@@ -257,8 +298,13 @@ describe('getInvoiceSummary', () => {
     })
   })
 
-  it('returns footer totals + pending approval + overdue', async () => {
-    const { prisma } = setupPrisma({ all: 128, pendingApproval: 12, overdue: 4, totalAmount: 12_50_000, netPayable: 11_00_000 })
+  it('returns footer totals + pending approval + overdue (count and amount) + paid-this-month + duplicates', async () => {
+    const { prisma } = setupPrisma({
+      all: 128, pendingApproval: 12, overdue: 4,
+      totalAmount: 12_50_000, netPayable: 11_00_000,
+      overdueAmount: 2_75_000, paidThisMonth: 4_20_000,
+      duplicates: 6,
+    })
     const out = await getInvoiceSummary(prisma, TENANT)
     expect(out.footer).toEqual({
       totalInvoices:   128,
@@ -266,6 +312,9 @@ describe('getInvoiceSummary', () => {
       netPayable:      11_00_000,
       pendingApproval: 12,
       overdue:         4,
+      overdueAmount:   2_75_000,
+      paidThisMonth:   4_20_000,
+      duplicates:      6,
     })
   })
 
@@ -274,6 +323,18 @@ describe('getInvoiceSummary', () => {
     await getInvoiceSummary(prisma, TENANT, new Date('2026-05-22'))
     const overdueCall = callLog.find(c => c.where?.dueDate?.lt instanceof Date)
     expect(overdueCall.where.status.notIn).toEqual(['PAID', 'APPROVED', 'REJECTED', 'CANCELLED'])
+  })
+
+  it('returns 5-month trend with ISO month keys ending in the supplied now-month', async () => {
+    const { prisma } = setupPrisma({ trendCounts: [3, 7, 2, 5, 4] })
+    const out = await getInvoiceSummary(prisma, TENANT, new Date('2026-05-22'))
+    expect(out.trendData.last5months).toEqual([
+      { month: '2026-01', count: 3 },
+      { month: '2026-02', count: 7 },
+      { month: '2026-03', count: 2 },
+      { month: '2026-04', count: 5 },
+      { month: '2026-05', count: 4 },
+    ])
   })
 })
 
@@ -331,11 +392,21 @@ function fakeRows() {
   ]
 }
 
+// Stub for the workflow stage approver lookup — defaults to "no current
+// stage assigned", so approverName ends up null. Tests that care about the
+// approver field override this.
+function emptyApproverMocks() {
+  return {
+    workflowInstanceStage: { findMany: vi.fn().mockResolvedValue([]) },
+    user:                  { findMany: vi.fn().mockResolvedValue([]) },
+  }
+}
+
 describe('listInvoicesForRoute', () => {
   it('returns ON_HOLD + EMAIL invoices when no filter is passed (no default exclusion)', async () => {
     const findMany = vi.fn().mockResolvedValue(fakeRows())
     const count    = vi.fn().mockResolvedValue(1)
-    const prisma: any = { invoice: { findMany, count } }
+    const prisma: any = { invoice: { findMany, count }, ...emptyApproverMocks() }
 
     const out = await listInvoicesForRoute(prisma, TENANT, {})
 
@@ -356,7 +427,7 @@ describe('listInvoicesForRoute', () => {
   // Test 3 (spec): recommendedAction='hold' passes through.
   it('passes recommendedAction=hold rows through unchanged', async () => {
     const findMany = vi.fn().mockResolvedValue(fakeRows())
-    const prisma: any = { invoice: { findMany, count: vi.fn().mockResolvedValue(1) } }
+    const prisma: any = { invoice: { findMany, count: vi.fn().mockResolvedValue(1) }, ...emptyApproverMocks() }
 
     const out = await listInvoicesForRoute(prisma, TENANT, {})
     expect(out.data[0].recommendedAction).toBe('hold')
@@ -415,6 +486,7 @@ describe('listInvoicesForRoute', () => {
     const prisma: any = {
       invoice: { findMany: invoiceFindMany, count: vi.fn().mockResolvedValue(1) },
       entity:  { findMany: entityFindMany },
+      ...emptyApproverMocks(),
     }
     const out = await listInvoicesForRoute(prisma, TENANT, {})
 
@@ -424,6 +496,57 @@ describe('listInvoicesForRoute', () => {
       id: { in: ['ent-1'] }, tenantId: TENANT,
     })
     expect(out.data[0]).toMatchObject({ entityName: 'Procinix Mumbai HQ', entityCode: 'PMHQ' })
+  })
+
+  // Approver name surfaces via Map-by-id on the workflow stage table —
+  // following the same FK-only pattern as entityName (no Prisma include on
+  // WorkflowInstance.entityId, since Invoice has no back-relation).
+  it('resolves approverName via workflowInstanceStage.findMany + user.findMany', async () => {
+    const rows = fakeRows()
+    const invoiceFindMany = vi.fn().mockResolvedValue(rows)
+    const stageFindMany = vi.fn().mockResolvedValue([
+      // Matches currentStageOrder → counted as the current stage.
+      { stageOrder: 1, assignedTo: 'u-priya', instance: { entityId: 'inv-1', currentStageOrder: 1 } },
+      // stageOrder ≠ currentStageOrder → ignored.
+      { stageOrder: 2, assignedTo: 'u-cfo',   instance: { entityId: 'inv-1', currentStageOrder: 1 } },
+    ])
+    const userFindMany = vi.fn().mockResolvedValue([
+      { id: 'u-priya', name: 'Priya Sharma' },
+    ])
+    const prisma: any = {
+      invoice: { findMany: invoiceFindMany, count: vi.fn().mockResolvedValue(1) },
+      workflowInstanceStage: { findMany: stageFindMany },
+      user: { findMany: userFindMany },
+    }
+    const out = await listInvoicesForRoute(prisma, TENANT, {})
+    expect(stageFindMany).toHaveBeenCalledTimes(1)
+    // The stage query must scope by tenant, status=PENDING, and instance entity
+    expect(stageFindMany.mock.calls[0][0].where).toEqual({
+      tenantId: TENANT,
+      status:   'PENDING',
+      instance: { entityType: 'invoice', entityId: { in: ['inv-1'] }, status: 'IN_PROGRESS' },
+    })
+    expect(userFindMany).toHaveBeenCalledTimes(1)
+    expect(userFindMany.mock.calls[0][0].where).toEqual({ id: { in: ['u-priya'] }, tenantId: TENANT })
+    expect(out.data[0]).toMatchObject({ approverName: 'Priya Sharma' })
+  })
+
+  it('returns approverName=null when no pending stage matches the current stage order', async () => {
+    const rows = fakeRows()
+    const invoiceFindMany = vi.fn().mockResolvedValue(rows)
+    const stageFindMany = vi.fn().mockResolvedValue([
+      // The only candidate stage isn't the current one; treat as no approver.
+      { stageOrder: 2, assignedTo: 'u-cfo', instance: { entityId: 'inv-1', currentStageOrder: 1 } },
+    ])
+    const userFindMany = vi.fn().mockResolvedValue([])
+    const prisma: any = {
+      invoice: { findMany: invoiceFindMany, count: vi.fn().mockResolvedValue(1) },
+      workflowInstanceStage: { findMany: stageFindMany },
+      user: { findMany: userFindMany },
+    }
+    const out = await listInvoicesForRoute(prisma, TENANT, {})
+    expect(userFindMany).not.toHaveBeenCalled()
+    expect(out.data[0].approverName).toBeNull()
   })
 
   // Pagination — pageSize defaults to 50 (preserved above) but a caller can
@@ -449,6 +572,7 @@ describe('listInvoicesForRoute', () => {
     const prisma: any = {
       invoice: { findMany: vi.fn().mockResolvedValue(fakeRows()), count: vi.fn().mockResolvedValue(1) },
       entity:  { findMany: entityFindMany },
+      ...emptyApproverMocks(),
     }
     const out = await listInvoicesForRoute(prisma, TENANT, {})
     expect(entityFindMany).not.toHaveBeenCalled()

@@ -36,7 +36,7 @@ jobs:
         run: cd server && npm ci
 
       - name: Compile server TypeScript
-        run: cd server && npx tsc --noEmitOnError false || true
+        run: cd server && npx tsc
 
       - name: Prune server to production dependencies only
         run: cd server && npm prune --omit=dev

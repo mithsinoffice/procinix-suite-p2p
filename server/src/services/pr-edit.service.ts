@@ -62,7 +62,7 @@ export function diffPrFields(existing: PrSnapshot, incoming: Record<string, unkn
       changed.push('lines')
       continue
     }
-    const before = coerce((existing as Record<string, unknown>)[field])
+    const before = coerce((existing as unknown as Record<string, unknown>)[field])
     const after  = coerce(incoming[field])
     if (before !== after) changed.push(field)
   }

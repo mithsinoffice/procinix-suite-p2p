@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import type { PrismaClient, Prisma } from '@prisma/client'
-import { createInvoice, listInvoices, getInvoice, approveInvoice, rejectInvoice } from '../services/invoice.service.js'
+import { getInvoice, approveInvoice, rejectInvoice } from '../services/invoice.service.js'
 import { startWorkflow } from '../services/workflow-engine.service.js'
 import { extractInvoiceFromFile } from '../services/gemini-ocr.service.js'
 import { saveInvoiceFile, readInvoiceFile } from '../services/invoice-file-storage.service.js'
@@ -62,10 +62,22 @@ const UNMATCHED_WHERE: Prisma.InvoiceWhereInput = {
 // Pure: builds the Prisma where clause from query params. Exported so the
 // regression tests can assert defaults — particularly that no implicit
 // status / channelType filter sneaks in and hides freshly-ingested rows.
-export function buildInvoiceListWhere(tenantId: string, q: InvoiceListQuery): Prisma.InvoiceWhereInput {
+// PENDING_ALL bundles the three pre-approval statuses behind the new "Pending
+// Approval" listing tab. OVERDUE composes dueDate.lt(now) + non-terminal status
+// behind the "Overdue" tab. Both are derived buckets that the InvoiceListQuery
+// admits as virtual status values — they expand here so the route stays a
+// thin shim over the listing.
+const PENDING_STATUSES = ['SUBMITTED', 'PENDING_L1', 'PENDING_L2'] as const
+
+export function buildInvoiceListWhere(tenantId: string, q: InvoiceListQuery, now: Date = new Date()): Prisma.InvoiceWhereInput {
   const where: Prisma.InvoiceWhereInput = { tenantId }
   if (q.status === 'UNMATCHED') {
     Object.assign(where, UNMATCHED_WHERE)
+  } else if (q.status === 'PENDING_ALL') {
+    where.status = { in: [...PENDING_STATUSES] }
+  } else if (q.status === 'OVERDUE') {
+    where.dueDate = { lt: now }
+    where.status  = { notIn: ['PAID', 'APPROVED', 'REJECTED', 'CANCELLED'] }
   } else if (q.status && q.status !== 'ALL') {
     where.status = q.status
   }
@@ -121,18 +133,57 @@ export async function listInvoicesForRoute(prisma: PrismaClient, tenantId: strin
   ])
 
   const entityIds = Array.from(new Set(data.map(r => r.entityId).filter((id): id is string => !!id)))
-  const entities  = entityIds.length > 0
-    ? await prisma.entity.findMany({
-        where:  { id: { in: entityIds }, tenantId },
-        select: { id: true, name: true, code: true },
+  const invoiceIds = data.map(r => r.id)
+  const [entities, approverStages] = await Promise.all([
+    entityIds.length > 0
+      ? prisma.entity.findMany({
+          where:  { id: { in: entityIds }, tenantId },
+          select: { id: true, name: true, code: true },
+        })
+      : Promise.resolve([] as { id: string; name: string; code: string }[]),
+    // Approver lookup — fetch every PENDING stage for an in-progress invoice
+    // workflow whose document is on this page. We then keep only the row whose
+    // stageOrder matches the parent instance's currentStageOrder (Prisma can't
+    // express "stage.stageOrder == instance.currentStageOrder" in WHERE).
+    //
+    // `instance` is a declared relation, so include-ing it is safe (the FK-only
+    // hard rule in CLAUDE.md only applies to FK columns without back-relations).
+    invoiceIds.length > 0
+      ? prisma.workflowInstanceStage.findMany({
+          where: {
+            tenantId,
+            status:   'PENDING',
+            instance: { entityType: 'invoice', entityId: { in: invoiceIds }, status: 'IN_PROGRESS' },
+          },
+          select: {
+            stageOrder: true, assignedTo: true,
+            instance: { select: { entityId: true, currentStageOrder: true } },
+          },
+        })
+      : Promise.resolve([] as Array<{ stageOrder: number; assignedTo: string | null; instance: { entityId: string; currentStageOrder: number } }>),
+  ])
+  const entityById = new Map(entities.map(e => [e.id, e]))
+
+  const currentStages = approverStages.filter(s => s.stageOrder === s.instance.currentStageOrder && s.assignedTo)
+  const approverUserIds = Array.from(new Set(currentStages.map(s => s.assignedTo!).filter(Boolean)))
+  const approverUsers = approverUserIds.length > 0
+    ? await prisma.user.findMany({
+        where:  { id: { in: approverUserIds }, tenantId },
+        select: { id: true, name: true },
       })
     : []
-  const entityById = new Map(entities.map(e => [e.id, e]))
+  const approverNameById = new Map(approverUsers.map(u => [u.id, u.name]))
+  const approverByInvoiceId = new Map<string, string | null>()
+  for (const s of currentStages) {
+    const name = s.assignedTo ? approverNameById.get(s.assignedTo) ?? null : null
+    approverByInvoiceId.set(s.instance.entityId, name)
+  }
 
   const enriched = data.map(r => ({
     ...r,
-    entityName: r.entityId ? (entityById.get(r.entityId)?.name ?? null) : null,
-    entityCode: r.entityId ? (entityById.get(r.entityId)?.code ?? null) : null,
+    entityName:   r.entityId ? (entityById.get(r.entityId)?.name ?? null) : null,
+    entityCode:   r.entityId ? (entityById.get(r.entityId)?.code ?? null) : null,
+    approverName: approverByInvoiceId.get(r.id) ?? null,
   }))
 
   return { data: enriched, total }
@@ -151,15 +202,50 @@ export interface InvoiceSummary {
   footer: {
     totalInvoices: number; totalAmount: number; netPayable: number;
     pendingApproval: number; overdue: number;
+    overdueAmount: number; paidThisMonth: number;
+    duplicates: number;
   }
+  trendData: { last5months: Array<{ month: string; count: number }> }
+}
+
+// Returns the first millisecond of `now`'s month, in UTC, without mutating
+// the input. Used as the lower bound for the "paid this month" aggregate.
+function startOfMonth(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1))
+}
+
+// Builds the 5 month-window bounds (lo inclusive, hi exclusive) ending at the
+// month containing `now`, oldest first. Each window is one calendar month in
+// UTC. We label each one with a stable ISO key like "2026-01" so the client
+// can pluck without depending on locale formatting.
+function last5MonthWindows(now: Date): Array<{ month: string; lo: Date; hi: Date }> {
+  const out: Array<{ month: string; lo: Date; hi: Date }> = []
+  const base = startOfMonth(now)
+  for (let i = 4; i >= 0; i--) {
+    const lo = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() - i, 1))
+    const hi = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() - i + 1, 1))
+    const month = `${lo.getUTCFullYear()}-${String(lo.getUTCMonth() + 1).padStart(2, '0')}`
+    out.push({ month, lo, hi })
+  }
+  return out
 }
 
 export async function getInvoiceSummary(prisma: PrismaClient, tenantId: string, now: Date = new Date()): Promise<InvoiceSummary> {
   const t = { tenantId }
+  const overdueWhere = {
+    ...t,
+    dueDate: { lt: now },
+    status:  { notIn: ['PAID', 'APPROVED', 'REJECTED', 'CANCELLED'] },
+  }
+  const monthStart = startOfMonth(now)
+  const trendWindows = last5MonthWindows(now)
+
   const [
     all, unmatched, draft, submitted, pendingL1, pendingL2,
     approved, onHold, rejected, paymentInitiated, paid,
     aggregates, pendingApproval, overdue,
+    overdueAgg, paidThisMonthAgg, duplicates,
+    ...trendCounts
   ] = await Promise.all([
     prisma.invoice.count({ where: t }),
     prisma.invoice.count({ where: { ...t, ...UNMATCHED_WHERE } }),
@@ -174,14 +260,18 @@ export async function getInvoiceSummary(prisma: PrismaClient, tenantId: string, 
     prisma.invoice.count({ where: { ...t, status: 'PAID' } }),
     prisma.invoice.aggregate({ where: t, _sum: { totalAmount: true, netPayable: true } }),
     prisma.invoice.count({ where: { ...t, status: { in: ['SUBMITTED', 'PENDING_L1', 'PENDING_L2'] } } }),
-    prisma.invoice.count({
-      where: {
-        ...t,
-        dueDate: { lt: now },
-        status:  { notIn: ['PAID', 'APPROVED', 'REJECTED', 'CANCELLED'] },
-      },
+    prisma.invoice.count({ where: overdueWhere }),
+    prisma.invoice.aggregate({ where: overdueWhere, _sum: { totalAmount: true } }),
+    prisma.invoice.aggregate({
+      where: { ...t, status: 'PAID', paidAt: { gte: monthStart } },
+      _sum:  { totalAmount: true },
     }),
+    prisma.invoice.count({ where: { ...t, duplicateFlag: { not: null } } }),
+    ...trendWindows.map(w =>
+      prisma.invoice.count({ where: { ...t, createdAt: { gte: w.lo, lt: w.hi } } }),
+    ),
   ])
+
   return {
     statusCounts: {
       ALL: all, UNMATCHED: unmatched, DRAFT: draft, SUBMITTED: submitted,
@@ -193,8 +283,14 @@ export async function getInvoiceSummary(prisma: PrismaClient, tenantId: string, 
       totalInvoices: all,
       totalAmount:   Number(aggregates._sum.totalAmount ?? 0),
       netPayable:    Number(aggregates._sum.netPayable  ?? 0),
-      pendingApproval: pendingApproval,
-      overdue:         overdue,
+      pendingApproval,
+      overdue,
+      overdueAmount: Number(overdueAgg._sum.totalAmount ?? 0),
+      paidThisMonth: Number(paidThisMonthAgg._sum.totalAmount ?? 0),
+      duplicates,
+    },
+    trendData: {
+      last5months: trendWindows.map((w, i) => ({ month: w.month, count: (trendCounts as number[])[i] ?? 0 })),
     },
   }
 }
@@ -435,9 +531,11 @@ export async function invoiceRoutes(app: FastifyInstance) {
         ? app.prisma.purchaseRequisition.findMany({ where: { id: { in: prIds }, tenantId } })
         : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.purchaseRequisition.findMany>>),
       poIds.length
+        // PurchaseOrder has no `vendor` relation declared in schema.prisma —
+        // `vendorId` is a bare FK. Per CLAUDE.md HARD RULE we fetch vendors
+        // separately below and join in code instead of `include`-ing here.
         ? app.prisma.purchaseOrder.findMany({
-            where:   { id: { in: poIds }, tenantId },
-            include: { vendor: { select: { legalName: true, vendorCode: true } } },
+            where: { id: { in: poIds }, tenantId },
           })
         : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.purchaseOrder.findMany>>),
       itemIds.length
@@ -448,7 +546,11 @@ export async function invoiceRoutes(app: FastifyInstance) {
             where:   { id: { in: itemChangeIds }, tenantId },
             include: { item: { select: { itemCode: true, name: true } } },
           })
-        : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.itemMasterChangeRequest.findMany>>),
+        // Empty fallback must match the include shape, otherwise the union
+        // narrows away `item` and downstream `cr.item?.itemCode` errors.
+        : Promise.resolve([] as Prisma.ItemMasterChangeRequestGetPayload<{
+            include: { item: { select: { itemCode: true, name: true } } }
+          }>[]),
       vendorIds.length
         ? app.prisma.vendor.findMany({ where: { id: { in: vendorIds }, tenantId } })
         : Promise.resolve([] as Awaited<ReturnType<typeof app.prisma.vendor.findMany>>),
@@ -481,6 +583,19 @@ export async function invoiceRoutes(app: FastifyInstance) {
         : Promise.resolve([] as Array<{ id: string; batchRef: string; status: string; isUrgent: boolean; containsMsme: boolean; totalNetPayable: unknown; createdAt: Date; _count: { lines: number } }>),
     ])
 
+    // PO vendors — fetched after the main Promise.all because PO.vendor is
+    // not a Prisma relation (FK-only). The existing `vendors` array only
+    // contains vendors that are themselves pending master-approval, so PO
+    // rows would otherwise show `vendor: null` even when the FK is valid.
+    const poVendorIds = [...new Set(pos.map(p => p.vendorId).filter(Boolean) as string[])]
+    const poVendors   = poVendorIds.length
+      ? await app.prisma.vendor.findMany({
+          where:  { id: { in: poVendorIds }, tenantId },
+          select: { id: true, legalName: true, vendorCode: true },
+        })
+      : []
+    const poVendorById = new Map(poVendors.map(v => [v.id, v]))
+
     const rows: unknown[] = []
     for (const stage of pendingStages) {
       const { entityType, entityId } = stage.instance
@@ -500,6 +615,8 @@ export async function invoiceRoutes(app: FastifyInstance) {
         if (po) rows.push({
           ...po, module: 'PO', pendingStage: stage,
           invoiceNumber: po.poRef,
+          // Join the vendor in code since PO.vendor isn't a Prisma relation.
+          vendor: poVendorById.get(po.vendorId) ?? null,
         })
       } else if (entityType === 'item') {
         const it = items.find(i => i.id === entityId)
@@ -880,7 +997,7 @@ export async function invoiceRoutes(app: FastifyInstance) {
   })
 
   // ── OCR ingest (file upload → extract → create draft) ──
-  app.post('/ingest', { ...auth, config: { rawBody: true } }, async (req, reply) => {
+  app.post('/ingest', auth, async (req, reply) => {
     const body = req.body as any
     const { base64Data, mimeType, fileName, channelType = 'MANUAL_UPLOAD' } = body
     if (!base64Data || !mimeType) {

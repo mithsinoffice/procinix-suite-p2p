@@ -1,19 +1,24 @@
 // Pure helpers around PurchaseOrder consumption tracking — extracted from the
 // procurement + invoice routes so they're testable without a live Prisma client.
 
+// Prisma returns Decimal for money columns; Number() coerces it correctly at
+// runtime, but the type system needs to know the field accepts more than just
+// number | string. Anything with a usable `toString()` works.
+export type DecimalLike = number | string | { toString(): string }
+
 export interface POForAugment {
   id:             string
   poRef:          string
-  totalAmount:    number | string
-  consumedAmount: number | string
+  totalAmount:    DecimalLike
+  consumedAmount: DecimalLike
   _count?:        { grns: number }
 }
 
 export interface AugmentedPO {
   id:             string
   poRef:          string
-  totalAmount:    number | string
-  consumedAmount: number | string
+  totalAmount:    DecimalLike
+  consumedAmount: DecimalLike
   openValue:      number
   grnCount:       number
 }

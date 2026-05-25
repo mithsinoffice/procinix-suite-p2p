@@ -9,7 +9,11 @@ export interface InvoiceForKpi {
   createdAt:   Date | string
   approvedAt?: Date | string | null
   matchScore?: number | null
-  totalAmount?: number | string | null
+  // `totalAmount` is intentionally NOT declared here even though callers
+  // (routes/dashboard.ts) select it from Prisma. Adding it would force the
+  // interface to also accept Prisma's `Decimal` type, which leaks decimal.js
+  // into a file that's meant to be a pure helper. None of the calculators
+  // below read it, so dropping it from the public shape is the cleaner fix.
 }
 
 const toDate = (d: Date | string): Date => d instanceof Date ? d : new Date(d)
