@@ -18,18 +18,74 @@ import { Label } from "../components/ui/label";
 import { Card } from "../components/ui/card";
 import { StatusBadge } from "../components/design-system/StatusBadge";
 import {  } from "../components/design-system/ApprovalTimeline";
-import { mockChangeRequests } from "../data/mockData";
+import { toast } from "sonner";
+import { Textarea } from "../components/ui/textarea";
+import {
+  useVendorChangeRequest,
+  useApproveChangeRequest,
+  useRejectChangeRequest,
+} from "../../../../../hooks/vendor-portal/useVendorChangeRequests";
 
 export function VendorChangeRequestDetailPage() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const changeRequest = mockChangeRequests.find((cr) => cr.id === id);
+  const crQuery       = useVendorChangeRequest(id);
+  const approveCR     = useApproveChangeRequest(id);
+  const rejectCR      = useRejectChangeRequest(id);
 
   const [comment, setComment] = useState("");
 
-  if (!changeRequest) {
-    return <div>Change request not found</div>;
+  if (crQuery.isLoading) {
+    return <div className="p-8 text-sm text-[#64748B]">Loading change request…</div>;
   }
+  if (crQuery.error || !crQuery.data) {
+    return <div className="p-8">Change request not found</div>;
+  }
+
+  const detail = crQuery.data;
+
+  // Adapter — the page was authored against a richer mock shape. Map what
+  // the API actually returns; the bits we don't have (requestedBy free-text,
+  // priority enum, vendorName) come off the joined vendor profile.
+  const changeRequest = {
+    id:              detail.id,
+    changeRequestId: detail.requestCode,
+    vendorName:      detail.vendor.legalName,
+    changeType:      detail.changeType,
+    status:          detail.status === 'APPROVED'    ? 'Approved' :
+                     detail.status === 'REJECTED'    ? 'Rejected' :
+                     detail.status === 'IN_PROGRESS' ? 'In Progress' :
+                                                       'Pending',
+    priority:        detail.priority,
+    requestedBy:     detail.requestedByType,
+    requestDate:     detail.requestedAt.slice(0, 10),
+  } as const;
+
+  const anyPending = approveCR.isPending || rejectCR.isPending;
+
+  const handleApprove = async () => {
+    try {
+      await approveCR.mutateAsync({ comments: comment || undefined });
+      toast.success('Change request approved');
+      navigate('/vendor-portal/change-requests');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Approval failed');
+    }
+  };
+
+  const handleReject = async () => {
+    if (!comment.trim()) {
+      toast.error('Please add a rejection reason in the comments');
+      return;
+    }
+    try {
+      await rejectCR.mutateAsync({ comments: comment, reason: comment });
+      toast.success('Change request rejected');
+      navigate('/vendor-portal/change-requests');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Rejection failed');
+    }
+  };
 
   // Mock data for Lower TDS Certificate
   const tdsData = {
@@ -485,24 +541,36 @@ export function VendorChangeRequestDetailPage() {
               </div>
             </Card>
 
-            {/* Actions */}
-            {changeRequest.status === "In Progress" && (
+            {/* Actions — wired to real approve/reject mutations. Action card
+                renders for any non-terminal status so reviewers can act on
+                PENDING and IN_PROGRESS rows alike. */}
+            {(changeRequest.status === "In Progress" || changeRequest.status === "Pending") && (
               <Card className="p-6 border-[#E6EEF2]">
                 <h3 className="text-lg font-semibold text-[#0A0F14] mb-4">
                   Actions
                 </h3>
                 <div className="space-y-3">
-                  <Button className="w-full bg-[#16A34A] hover:bg-[#15803D]">
+                  <Textarea
+                    placeholder="Comments (required for rejection)"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    className="min-h-[80px] resize-none"
+                  />
+                  <Button
+                    className="w-full bg-[#16A34A] hover:bg-[#15803D]"
+                    onClick={handleApprove}
+                    disabled={anyPending}
+                  >
                     <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Approve
+                    {approveCR.isPending ? 'Approving…' : 'Approve'}
                   </Button>
-                  <Button className="w-full bg-[#DC2626] hover:bg-[#B91C1C] text-white">
+                  <Button
+                    className="w-full bg-[#DC2626] hover:bg-[#B91C1C] text-white"
+                    onClick={handleReject}
+                    disabled={anyPending}
+                  >
                     <XCircle className="w-4 h-4 mr-2" />
-                    Reject
-                  </Button>
-                  <Button variant="outline" className="w-full">
-                    <AlertCircle className="w-4 h-4 mr-2" />
-                    Request Clarification
+                    {rejectCR.isPending ? 'Rejecting…' : 'Reject'}
                   </Button>
                 </div>
               </Card>
@@ -541,14 +609,9 @@ export function VendorChangeRequestDetailPage() {
                     {changeRequest.requestDate}
                   </span>
                 </div>
-                {changeRequest.effectiveDate && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-[#64748B]">Effective Date</span>
-                    <span className="text-[#0A0F14] font-medium">
-                      {changeRequest.effectiveDate}
-                    </span>
-                  </div>
-                )}
+                {/* Effective Date isn't part of the current API payload —
+                    will be wired in Sprint 4 when change-request scheduling
+                    lands. The block stays here as a placeholder. */}
               </div>
             </Card>
 

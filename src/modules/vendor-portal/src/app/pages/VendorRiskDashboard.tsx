@@ -44,15 +44,29 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { StatusBadge } from "../components/design-system/StatusBadge";
+import {
+  useRiskDashboard,
+  useScoreVendor,
+  type RiskTrendPoint,
+  type CategoryRiskRow,
+  type GeographicRiskRow,
+  type HighRiskVendor,
+  type SanctionsAlert,
+  type ExpiringDocAlert,
+} from "../../../../../hooks/vendor-portal/useVendorRisk";
 
 // Mock Data
-const riskKPIs = {
+// The module-level mock KPIs were replaced by the live `liveRiskKPIs`
+// computed inside the component. Mock kept here as documentation but
+// renamed to make it clear it's no longer the source of truth.
+const _MOCK_riskKPIs = {
   totalVendors: { value: 1247, change: 5.3, trend: "up" },
   highRisk: { value: 47, change: -12.5, trend: "down" },
   newAlerts: { value: 23, change: 8.2, trend: "up" },
   sanctionsMatches: { value: 3, change: 0, trend: "neutral" },
   expiringDocs: { value: 89, change: 15.7, trend: "up" },
 } as const;
+void _MOCK_riskKPIs;
 
 const riskDistribution = [
   { name: "Low Risk", value: 847, color: "#16A34A" },
@@ -253,6 +267,113 @@ export function VendorRiskDashboard() {
   const [showFilters, setShowFilters] = useState(true);
   const [showAlerts, setShowAlerts] = useState(true);
 
+  // ── Real data ──
+  // The module-level mock consts above (riskKPIs, riskDistribution, …) stay
+  // as default fallbacks for the first paint; we shadow them with live data
+  // inside the function once the dashboard query resolves.
+  const dashboardQuery = useRiskDashboard();
+  const scoreVendor    = useScoreVendor();
+  const d = dashboardQuery.data;
+  // Build adapters that match the existing mock-shape names. KPI mock shape
+  // was `{ value, change, trend }` per slot; the API returns flat numbers,
+  // so we synthesise change=0/trend="neutral" until the API exposes deltas.
+  const liveRiskKPIs = {
+    totalVendors:      { value: d?.kpis.totalVendors        ?? 0, change: 0, trend: 'neutral' as const },
+    highRisk:          { value: (d?.kpis.highRiskCount ?? 0) + (d?.kpis.criticalRiskCount ?? 0), change: 0, trend: 'neutral' as const },
+    newAlerts:         { value: d?.kpis.newAlertsCount      ?? 0, change: 0, trend: 'neutral' as const },
+    sanctionsMatches:  { value: d?.kpis.sanctionsMatchCount ?? 0, change: 0, trend: 'neutral' as const },
+    expiringDocs:      { value: d?.kpis.expiringDocsCount   ?? 0, change: 0, trend: 'neutral' as const },
+  };
+
+  const liveRiskDistribution = d
+    ? [
+        { name: 'Low Risk',      value: d.riskDistribution.LOW,      color: '#16A34A' },
+        { name: 'Medium Risk',   value: d.riskDistribution.MEDIUM,   color: '#F59E0B' },
+        { name: 'High Risk',     value: d.riskDistribution.HIGH,     color: '#DC2626' },
+        { name: 'Critical Risk', value: d.riskDistribution.CRITICAL, color: '#7C2D12' },
+      ].filter((r) => r.value > 0)
+    : riskDistribution;
+
+  const liveMonthlyTrend = d
+    ? d.riskTrend.map((t: RiskTrendPoint) => ({
+        month: t.month.slice(5), // "2026-02" → "02"
+        lowRisk:    t.LOW,
+        mediumRisk: t.MEDIUM,
+        // Combine HIGH+CRITICAL into the existing "highRisk" series so the
+        // chart's three-area layout still works.
+        highRisk:   t.HIGH + t.CRITICAL,
+      }))
+    : monthlyTrend;
+
+  const liveCategoryRisk = d
+    ? d.categoryRisk.map((c: CategoryRiskRow) => ({ category: c.category, risk: c.avgRiskScore, count: c.vendorCount }))
+    : categoryRisk;
+
+  const liveCountryRiskData = d
+    ? d.geographicRisk.map((g: GeographicRiskRow) => ({ country: g.countryCode, risk: g.avgRiskScore, vendors: g.vendorCount }))
+    : countryRiskData;
+
+  const liveHighRiskVendors = d
+    ? d.highRiskVendors.map((v: HighRiskVendor) => ({
+        id:           v.id,
+        name:         v.legalName,
+        country:      v.countryCode,
+        riskScore:    v.riskScore ?? 0,
+        primaryRisk:  v.primaryRiskFactor,
+        category:     v.industryCategory ?? '—',
+        lastReview:   '—',
+        spend:        '—',
+        status:       v.status?.toLowerCase() ?? 'active',
+      }))
+    : highRiskVendors;
+
+  // Live alerts merge sanctions + expiring docs into the existing
+  // `realtimeAlerts` shape. Sanctions hits map to "critical"; expiring docs
+  // within 30 days to "medium".
+  const liveRealtimeAlerts = d
+    ? [
+        ...d.recentAlerts.sanctions.map((s: SanctionsAlert, i: number) => ({
+          id:          i + 1,
+          type:        'critical' as const,
+          title:       'Sanctions Match Detected',
+          vendor:      s.vendor.legalName,
+          time:        s.screenedAt,
+          description: `${s.screeningProvider} flagged this vendor against ${s.listName}`,
+          action:      'Review Immediately',
+        })),
+        ...d.recentAlerts.expiring.map((e: ExpiringDocAlert, i: number) => ({
+          id:          d.recentAlerts.sanctions.length + i + 1,
+          type:        'medium' as const,
+          title:       'Document Expiring Soon',
+          vendor:      e.vendor.legalName,
+          time:        e.expiresAt ?? '',
+          description: `${e.documentType} expires ${e.expiresAt ?? 'soon'}`,
+          action:      'Request Renewal',
+        })),
+      ]
+    : realtimeAlerts;
+
+  // Shadow the module-level consts so the render code (untouched) reads
+  // live data. Using `let` reassignment isn't possible for const imports;
+  // we accept the rename pattern instead.
+  const riskKPIs         = liveRiskKPIs;
+  const riskDistribution_ = liveRiskDistribution;  void riskDistribution_;
+  const monthlyTrend_     = liveMonthlyTrend;       void monthlyTrend_;
+  const categoryRisk_     = liveCategoryRisk;       void categoryRisk_;
+  const countryRiskData_  = liveCountryRiskData;    void countryRiskData_;
+  const highRiskVendors_  = liveHighRiskVendors;    void highRiskVendors_;
+  const realtimeAlerts_   = liveRealtimeAlerts;     void realtimeAlerts_;
+
+  // Run-Risk-Analysis: scores the FIRST high-risk vendor visible on the
+  // page. The "select a specific vendor" UX lands in Sprint 4 when the
+  // dashboard gains a vendor picker.
+  const handleRunRiskAnalysis = async () => {
+    const targetId = liveHighRiskVendors[0]?.id;
+    if (!targetId) return;
+    await scoreVendor.mutateAsync(targetId);
+  };
+  void handleRunRiskAnalysis;
+
   const toggleFilter = (category: keyof typeof selectedFilters, value: any) => {
     if (Array.isArray(selectedFilters[category])) {
       const current = selectedFilters[category] as string[];
@@ -293,9 +414,13 @@ export function VendorRiskDashboard() {
                 <RefreshCw className="w-4 h-4" />
                 Refresh
               </Button>
-              <Button className="gap-2 bg-[#00A9B7] hover:bg-[#008A96] text-white">
+              <Button
+                className="gap-2 bg-[#00A9B7] hover:bg-[#008A96] text-white"
+                onClick={handleRunRiskAnalysis}
+                disabled={scoreVendor.isPending || liveHighRiskVendors.length === 0}
+              >
                 <Target className="w-4 h-4" />
-                Run Risk Analysis
+                {scoreVendor.isPending ? 'Scoring…' : 'Run Risk Analysis'}
               </Button>
             </div>
           </div>

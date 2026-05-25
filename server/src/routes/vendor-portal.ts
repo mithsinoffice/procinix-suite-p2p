@@ -24,6 +24,12 @@ import {
   rejectWorkflow,
   sendBackWorkflow,
 } from '../services/vendor-portal/workflow.service.js'
+import { calculateRiskScore } from '../services/vendor-portal/risk.service.js'
+import {
+  createChangeRequest,
+  approveChangeRequest,
+  rejectChangeRequest,
+} from '../services/vendor-portal/change-request.service.js'
 
 // ── Validation schemas ───────────────────────────────────────────────────
 
@@ -66,6 +72,38 @@ const rejectBodySchema = z.object({
 const sendBackBodySchema = z.object({
   comments: z.string().min(1).max(2000),
 }).strict()
+
+const listChangeRequestsQuerySchema = z.object({
+  status:     z.string().optional(),
+  changeType: z.string().optional(),
+  vendorId:   z.string().optional(),
+  page:       z.coerce.number().int().min(1).default(1),
+  limit:      z.coerce.number().int().min(1).max(100).default(20),
+}).strict()
+
+const createChangeRequestSchema = z.object({
+  vendorId:        z.string().min(1),
+  changeType:      z.string().min(1),
+  // z.unknown() instead of z.any() so the inferred TS type marks these as
+  // required (z.any() optional-widens, which conflicts with the service's
+  // required beforeSnapshot/afterSnapshot input shape).
+  beforeSnapshot:  z.unknown(),
+  afterSnapshot:   z.unknown(),
+  comments:        z.string().optional(),
+  priority:        z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
+  requestedByType: z.enum(['BUYER', 'VENDOR']).optional(),
+}).strict()
+
+const changeRequestActionSchema = z.object({
+  comments: z.string().optional(),
+}).strict()
+
+const changeRequestRejectSchema = z.object({
+  comments: z.string().optional(),
+  reason:   z.string().min(1).max(2000),
+}).strict()
+
+const vendorIdParamSchema = z.object({ vendorId: z.string().min(1) })
 
 const submitOnboardingSchema = z.object({
   profile: z.object({
@@ -350,6 +388,305 @@ export async function vendorPortalRoutes(app: FastifyInstance) {
       return reply.code(status).send(result.error)
     }
     return reply.send(result)
+  })
+
+  // ── Risk scoring (Sprint 3) ─────────────────────────────────────────────
+
+  // POST /api/vendor-portal/risk/score/:vendorId — re-score a vendor on
+  // demand. Always uses trigger=MANUAL; scheduled re-scoring will use a
+  // job runner with trigger=SCHEDULED later.
+  app.post('/risk/score/:vendorId', auth, async (req, reply) => {
+    const params = vendorIdParamSchema.safeParse(req.params)
+    if (!params.success) {
+      return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid vendorId' })
+    }
+    // Tenant gate — the service trusts whatever vendorId it's given, so
+    // verify ownership at the route boundary.
+    const owned = await app.prisma.vendorProfile.findFirst({
+      where:  { id: params.data.vendorId, tenantId: req.tenant.id },
+      select: { id: true },
+    })
+    if (!owned) {
+      return reply.code(404).send({ code: 'NOT_FOUND', message: 'Vendor not found' })
+    }
+    try {
+      const result = await calculateRiskScore(app.prisma, params.data.vendorId, 'MANUAL')
+      return reply.send(result)
+    } catch (err) {
+      app.log.error({ err, vendorId: params.data.vendorId }, 'risk score calculation failed')
+      return reply.code(500).send({ code: 'INTERNAL_ERROR', message: 'Risk score calculation failed' })
+    }
+  })
+
+  // GET /api/vendor-portal/risk/dashboard — aggregate read for the risk
+  // dashboard page. Returns KPIs, distribution, geographic + category
+  // breakouts, top high-risk vendors, recent alerts. All scoped to tenant.
+  app.get('/risk/dashboard', auth, async (req, reply) => {
+    const tenantId = req.tenant.id
+    const now      = new Date()
+    const thirtyDaysAhead = new Date(now.getTime() + 30 * 86_400_000)
+    const sixMonthsAgo    = new Date(now.getTime() - 180 * 86_400_000)
+
+    // Pull everything we need in parallel — keeps the dashboard P95 down.
+    const [
+      allProfiles,
+      hitScreenings,
+      expiringRecords,
+      historyRows,
+    ] = await Promise.all([
+      app.prisma.vendorProfile.findMany({
+        where:  { tenantId },
+        select: {
+          id: true, vendorCode: true, legalName: true, countryCode: true,
+          industryCategory: true, riskScore: true, riskTier: true, status: true,
+          createdAt: true,
+        },
+      }),
+      app.prisma.vendorSanctionScreening.findMany({
+        where: { status: 'HIT', vendor: { tenantId } },
+        orderBy: { screenedAt: 'desc' },
+        take: 10,
+        select: {
+          id: true, screeningProvider: true, listName: true, matchType: true,
+          matchScore: true, screenedAt: true,
+          vendor: { select: { id: true, legalName: true, vendorCode: true } },
+        },
+      }),
+      app.prisma.vendorComplianceRecord.findMany({
+        where: {
+          vendor: { tenantId },
+          expiresAt: { lte: thirtyDaysAhead, gte: new Date(now.getTime() - 30 * 86_400_000) },
+        },
+        orderBy: { expiresAt: 'asc' },
+        take: 10,
+        select: {
+          id: true, documentType: true, documentNumber: true, expiresAt: true,
+          vendor: { select: { id: true, legalName: true, vendorCode: true } },
+        },
+      }),
+      app.prisma.vendorRiskHistory.findMany({
+        where: { vendor: { tenantId }, scoredAt: { gte: sixMonthsAgo } },
+        orderBy: { scoredAt: 'asc' },
+        select: { scoredAt: true, riskTier: true },
+      }),
+    ])
+
+    // KPIs.
+    const kpis = {
+      totalVendors:        allProfiles.length,
+      highRiskCount:       allProfiles.filter((p) => p.riskTier === 'HIGH').length,
+      criticalRiskCount:   allProfiles.filter((p) => p.riskTier === 'CRITICAL').length,
+      newAlertsCount:      hitScreenings.length + expiringRecords.length,
+      sanctionsMatchCount: hitScreenings.length,
+      expiringDocsCount:   expiringRecords.length,
+    }
+
+    // Distribution. Default each bucket to 0 so the donut shows all four
+    // slices even when one's empty.
+    const distribution: Record<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL', number> = {
+      LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0,
+    }
+    for (const p of allProfiles) {
+      const t = (p.riskTier ?? 'LOW') as keyof typeof distribution
+      if (t in distribution) distribution[t]++
+    }
+
+    // 6-month tier trend, grouped by YYYY-MM. Empty months are filled in so
+    // the chart's x-axis stays continuous.
+    const monthKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+    const months: string[] = []
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))
+      months.push(monthKey(d))
+    }
+    const trendByMonth: Record<string, { LOW: number; MEDIUM: number; HIGH: number; CRITICAL: number }> = {}
+    for (const m of months) trendByMonth[m] = { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 }
+    for (const h of historyRows) {
+      const m = monthKey(h.scoredAt)
+      if (trendByMonth[m]) trendByMonth[m][h.riskTier as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL']++
+    }
+    const riskTrend = months.map((m) => ({ month: m, ...trendByMonth[m] }))
+
+    // Geographic + category aggregates. Skip nulls; sort desc by vendor count;
+    // top 10.
+    const geoMap = new Map<string, { vendorCount: number; scoreSum: number }>()
+    const catMap = new Map<string, { vendorCount: number; scoreSum: number }>()
+    for (const p of allProfiles) {
+      const score = p.riskScore ?? 0
+      if (p.countryCode) {
+        const cur = geoMap.get(p.countryCode) ?? { vendorCount: 0, scoreSum: 0 }
+        cur.vendorCount++; cur.scoreSum += score
+        geoMap.set(p.countryCode, cur)
+      }
+      if (p.industryCategory) {
+        const cur = catMap.get(p.industryCategory) ?? { vendorCount: 0, scoreSum: 0 }
+        cur.vendorCount++; cur.scoreSum += score
+        catMap.set(p.industryCategory, cur)
+      }
+    }
+    const geographicRisk = [...geoMap.entries()]
+      .map(([countryCode, v]) => ({
+        countryCode,
+        vendorCount:  v.vendorCount,
+        avgRiskScore: Math.round(v.scoreSum / v.vendorCount),
+        riskPercent:  Math.round((v.scoreSum / v.vendorCount)),
+      }))
+      .sort((a, b) => b.vendorCount - a.vendorCount)
+      .slice(0, 10)
+
+    const categoryRisk = [...catMap.entries()]
+      .map(([category, v]) => ({
+        category,
+        vendorCount:  v.vendorCount,
+        avgRiskScore: Math.round(v.scoreSum / v.vendorCount),
+      }))
+      .sort((a, b) => b.vendorCount - a.vendorCount)
+      .slice(0, 10)
+
+    // Top 20 vendors by current riskScore desc. `primaryRiskFactor` is a
+    // best-effort label derived from the tier — full factor breakdowns are
+    // available via POST /risk/score/:vendorId.
+    const highRiskVendors = [...allProfiles]
+      .filter((p) => (p.riskScore ?? 0) > 0)
+      .sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0))
+      .slice(0, 20)
+      .map((p) => ({
+        id:               p.id,
+        vendorCode:       p.vendorCode,
+        legalName:        p.legalName,
+        countryCode:      p.countryCode,
+        industryCategory: p.industryCategory,
+        riskScore:        p.riskScore,
+        riskTier:         p.riskTier,
+        status:           p.status,
+        primaryRiskFactor:
+          p.riskTier === 'CRITICAL' ? 'Critical exposure' :
+          p.riskTier === 'HIGH'     ? 'Elevated risk profile' :
+          p.riskTier === 'MEDIUM'   ? 'Monitoring required' :
+                                      'Within tolerance',
+      }))
+
+    const recentAlerts = {
+      sanctions: hitScreenings,
+      expiring:  expiringRecords,
+    }
+
+    return reply.send({
+      kpis,
+      riskDistribution: distribution,
+      riskTrend,
+      geographicRisk,
+      categoryRisk,
+      highRiskVendors,
+      recentAlerts,
+    })
+  })
+
+  // ── Change requests (Sprint 3) ──────────────────────────────────────────
+
+  // GET /api/vendor-portal/change-requests — paginated list with filters.
+  app.get('/change-requests', auth, async (req, reply) => {
+    const parsed = listChangeRequestsQuerySchema.safeParse(req.query)
+    if (!parsed.success) {
+      return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid query', issues: parsed.error.flatten() })
+    }
+    const { status, changeType, vendorId, page, limit } = parsed.data
+    const tenantId = req.tenant.id
+
+    const where: any = { vendor: { tenantId } }
+    if (status)     where.status     = status
+    if (changeType) where.changeType = changeType
+    if (vendorId)   where.vendorId   = vendorId
+
+    const [total, rows] = await Promise.all([
+      app.prisma.vendorChangeRequest.count({ where }),
+      app.prisma.vendorChangeRequest.findMany({
+        where,
+        orderBy: { requestedAt: 'desc' },
+        skip:    (page - 1) * limit,
+        take:    limit,
+        select: {
+          id: true, requestCode: true, vendorId: true, changeType: true,
+          priority: true, status: true, approvalStatus: true,
+          requestedByType: true, requestedAt: true,
+          vendor: { select: { id: true, legalName: true, vendorCode: true } },
+        },
+      }),
+    ])
+    return reply.send({ rows, total, page, limit })
+  })
+
+  // POST /api/vendor-portal/change-requests — create.
+  app.post('/change-requests', auth, async (req, reply) => {
+    const parsed = createChangeRequestSchema.safeParse(req.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid payload', issues: parsed.error.flatten() })
+    }
+    const result = await createChangeRequest(
+      app.prisma, req.tenant.id, req.user.sub, parsed.data,
+    )
+    if (result.ok === false) {
+      return reply.code(404).send(result.error)
+    }
+    return reply.code(201).send(result.changeRequest)
+  })
+
+  // GET /api/vendor-portal/change-requests/:id — single detail with full
+  // before/after snapshots + vendor profile context.
+  app.get('/change-requests/:id', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    if (!params.success) {
+      return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid id' })
+    }
+    const cr = await app.prisma.vendorChangeRequest.findFirst({
+      where: { id: params.data.id, vendor: { tenantId: req.tenant.id } },
+      include: {
+        vendor: {
+          select: {
+            id: true, vendorCode: true, legalName: true, tradeName: true,
+            countryCode: true, vendorType: true, riskScore: true, riskTier: true, status: true,
+          },
+        },
+      },
+    })
+    if (!cr) {
+      return reply.code(404).send({ code: 'NOT_FOUND', message: 'Change request not found' })
+    }
+    return reply.send(cr)
+  })
+
+  // POST /api/vendor-portal/change-requests/:id/approve
+  app.post('/change-requests/:id/approve', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    const body   = changeRequestActionSchema.safeParse(req.body)
+    if (!params.success || !body.success) {
+      return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid request' })
+    }
+    const result = await approveChangeRequest(
+      app.prisma, params.data.id, req.tenant.id, req.user.sub, body.data.comments,
+    )
+    if (result.ok === false) {
+      const status = result.error.code === 'NOT_FOUND' ? 404 : 409
+      return reply.code(status).send(result.error)
+    }
+    return reply.send(result.changeRequest)
+  })
+
+  // POST /api/vendor-portal/change-requests/:id/reject
+  app.post('/change-requests/:id/reject', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    const body   = changeRequestRejectSchema.safeParse(req.body)
+    if (!params.success || !body.success) {
+      return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid request' })
+    }
+    const result = await rejectChangeRequest(
+      app.prisma, params.data.id, req.tenant.id, req.user.sub, body.data.comments, body.data.reason,
+    )
+    if (result.ok === false) {
+      const status = result.error.code === 'NOT_FOUND' ? 404 : 409
+      return reply.code(status).send(result.error)
+    }
+    return reply.send(result.changeRequest)
   })
 
   // POST /api/vendor-portal/invitations/:id/resend — refresh the portal

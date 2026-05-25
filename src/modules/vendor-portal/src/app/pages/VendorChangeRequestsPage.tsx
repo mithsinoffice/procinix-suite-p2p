@@ -18,6 +18,52 @@ import { Input } from "../components/ui/input";
 import { StatusBadge } from "../components/design-system/StatusBadge";
 import { mockChangeRequests } from "../data/mockData";
 import {
+  useVendorChangeRequests,
+  useCreateChangeRequest,
+  type ChangeRequestRow,
+} from "../../../../../hooks/vendor-portal/useVendorChangeRequests";
+
+// Adapter — mock had `{ vendorName, changeRequestId, status, priority,
+// changeType, requestedBy, requestedDate, approvalStatus, effectiveDate }`.
+// Map the server's normalised shape to the same field names so the table
+// renderer below keeps working.
+interface UiChangeRequest {
+  id:              string
+  changeRequestId: string
+  vendorName:      string
+  changeType:      string
+  status:          'Pending' | 'In Progress' | 'Approved' | 'Rejected'
+  priority:        'Low' | 'Medium' | 'High'
+  requestedBy:     string
+  requestedDate:   string
+  approvalStatus:  string
+  effectiveDate:   string
+}
+
+function adaptCR(row: ChangeRequestRow): UiChangeRequest {
+  const status: UiChangeRequest['status'] =
+    row.status === 'APPROVED'     ? 'Approved' :
+    row.status === 'REJECTED'     ? 'Rejected' :
+    row.status === 'IN_PROGRESS'  ? 'In Progress' :
+                                    'Pending'
+  const priority: UiChangeRequest['priority'] =
+    row.priority === 'HIGH'   ? 'High' :
+    row.priority === 'LOW'    ? 'Low'  :
+                                'Medium'
+  return {
+    id:              row.id,
+    changeRequestId: row.requestCode,
+    vendorName:      row.vendor.legalName,
+    changeType:      row.changeType,
+    status,
+    priority,
+    requestedBy:     row.requestedByType,
+    requestedDate:   row.requestedAt.slice(0, 10),
+    approvalStatus:  row.approvalStatus ?? row.status,
+    effectiveDate:   '—',
+  }
+}
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -58,24 +104,29 @@ export function VendorChangeRequestsPage() {
     priority: "Medium",
   });
 
-  const filteredRequests = mockChangeRequests.filter((request) => {
+  const crQuery        = useVendorChangeRequests({ limit: 100 });
+  const createCR       = useCreateChangeRequest();
+  const allRequests: UiChangeRequest[] = (crQuery.data?.rows ?? []).map(adaptCR);
+  void mockChangeRequests; // legacy fallback no longer used; keep import for future shape reference
+
+  const filteredRequests = allRequests.filter((request) => {
     const matchesSearch =
       searchQuery === "" ||
       request.vendorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       request.changeRequestId.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesStatus = selectedStatus === "all" || request.status === selectedStatus;
     const matchesType = selectedType === "all" || request.changeType === selectedType;
-    
+
     return matchesSearch && matchesStatus && matchesType;
   });
 
   const stats = {
-    total: mockChangeRequests.length,
-    pending: mockChangeRequests.filter((r) => r.status === "Pending").length,
-    inProgress: mockChangeRequests.filter((r) => r.status === "In Progress").length,
-    approved: mockChangeRequests.filter((r) => r.status === "Approved").length,
-    rejected: mockChangeRequests.filter((r) => r.status === "Rejected").length,
+    total:      allRequests.length,
+    pending:    allRequests.filter((r) => r.status === 'Pending').length,
+    inProgress: allRequests.filter((r) => r.status === 'In Progress').length,
+    approved:   allRequests.filter((r) => r.status === 'Approved').length,
+    rejected:   allRequests.filter((r) => r.status === 'Rejected').length,
   };
 
   const getStatusBadge = (status: string) => {
@@ -91,15 +142,31 @@ export function VendorChangeRequestsPage() {
     return <StatusBadge status="neutral" label="Low" size="sm" />;
   };
 
-  const handleCreateRequest = () => {
-    // Handle create logic here
-    setShowCreateModal(false);
-    setCreateForm({
-      vendorName: "",
-      changeType: "",
-      reason: "",
-      priority: "Medium",
-    });
+  const handleCreateRequest = async () => {
+    // The dialog form captures vendorName free-text; the API needs an actual
+    // vendorId. Until the dialog gains a vendor picker (Sprint 4), we look
+    // up the first matching vendor by name from the existing change-request
+    // rows. If none matches we surface a noop — better than silently failing.
+    const match = (crQuery.data?.rows ?? []).find(
+      (r) => r.vendor.legalName.toLowerCase() === createForm.vendorName.trim().toLowerCase(),
+    );
+    if (!match) return;
+
+    try {
+      await createCR.mutateAsync({
+        vendorId:       match.vendorId,
+        changeType:     createForm.changeType,
+        beforeSnapshot: null,
+        afterSnapshot:  { reason: createForm.reason },
+        comments:       createForm.reason,
+        priority:       (createForm.priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH'),
+      });
+      setShowCreateModal(false);
+      setCreateForm({ vendorName: '', changeType: '', reason: '', priority: 'Medium' });
+    } catch {
+      // Validation issues surface in the mutation state; dialog stays open
+      // so the user can retry.
+    }
   };
 
   return (
@@ -409,7 +476,7 @@ export function VendorChangeRequestsPage() {
                       {request.requestedBy}
                     </td>
                     <td className="px-6 py-4 text-sm text-[#64748B]">
-                      {request.requestDate}
+                      {request.requestedDate}
                     </td>
                     <td className="px-6 py-4">
                       {getPriorityBadge(request.priority)}
