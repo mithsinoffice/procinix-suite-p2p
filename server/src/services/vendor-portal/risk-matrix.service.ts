@@ -60,6 +60,22 @@ export async function findBestMatchingRule(
   tenantId: string,
   req:      RuleDimensions,
 ) {
+  // High-risk-country sentinel: a single seeded rule with
+  // `countryCode = 'HIGH_RISK_COUNTRY_LIST'` stands in for the full list
+  // below. The matcher accepts that sentinel as a valid match when the
+  // request's countryCode is on this list. Kept in sync with the
+  // COUNTRY_RISK factor's lookup in risk.service.ts.
+  const HIGH_RISK_COUNTRIES = new Set(['RU', 'BY', 'IR', 'KP', 'MM', 'CU', 'VE', 'SY'])
+  const isHighRisk = !!req.countryCode && HIGH_RISK_COUNTRIES.has(req.countryCode)
+
+  // Allowed countryCode values for this request:
+  //   - null              (wildcard)
+  //   - exact match       (req.countryCode)
+  //   - the sentinel      (only when the request is in the high-risk set)
+  const countryCodeAllowed: Array<{ countryCode: string | null }> = [{ countryCode: null }]
+  if (req.countryCode) countryCodeAllowed.push({ countryCode: req.countryCode })
+  if (isHighRisk)      countryCodeAllowed.push({ countryCode: 'HIGH_RISK_COUNTRY_LIST' })
+
   // Pull every ACTIVE rule for the tenant whose declared dimensions are
   // compatible with the request — i.e. each rule dimension is either null
   // (wildcard) OR equal to the request's value for that dimension.
@@ -70,7 +86,7 @@ export async function findBestMatchingRule(
       AND: [
         { OR: [{ vendorType:       null }, { vendorType:       req.vendorType       ?? undefined }] },
         { OR: [{ spendTier:        null }, { spendTier:        req.spendTier        ?? undefined }] },
-        { OR: [{ countryCode:      null }, { countryCode:      req.countryCode      ?? undefined }] },
+        { OR: countryCodeAllowed },
         { OR: [{ industryCategory: null }, { industryCategory: req.industryCategory ?? undefined }] },
       ],
     },

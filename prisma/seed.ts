@@ -3,6 +3,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { runVendorGovernanceSeed } from './seeds/vendor-governance-seed'
 
 const prisma = new PrismaClient()
 
@@ -1369,6 +1370,10 @@ async function main() {
     }
     console.log(`✓ ${budgets.length} budgets seeded with monthly periods`)
   }
+
+  // Vendor governance config (Sprint 5) — country configs, matrix rules,
+  // factors. Idempotent; safe to re-run alongside the rest of the demo seed.
+  await runVendorGovernanceSeed(prisma, tenantId)
 
   console.log('\n✅ Seed complete.')
   console.log('   Login: mithilesh@procinix.ai / Demo@123')

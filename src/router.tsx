@@ -98,6 +98,7 @@ const VendorASNPage           = lazy(() => import('./pages/vendor-portal-externa
 const VendorInvoicePortalPage = lazy(() => import('./pages/vendor-portal-external/VendorInvoicePortalPage'))
 const VendorPaymentStatusPage = lazy(() => import('./pages/vendor-portal-external/VendorPaymentStatusPage'))
 const VendorReconPage         = lazy(() => import('./pages/vendor-portal-external/VendorReconPage'))
+const VendorPortalLoginPage   = lazy(() => import('./pages/vendor-portal-external/VendorPortalLoginPage'))
 
 function PageLoader() {
   return (
@@ -233,9 +234,12 @@ export const router = createBrowserRouter([
   // Unauthenticated vendor self-service onboarding — entered via a tokenised
   // email link, so it sits OUTSIDE RequireAuth alongside /login.
   { path: '/portal/onboarding/:token', element: <S><VendorSelfServicePortal /></S>, errorElement: <RouteErrorPage /> },
+  // Sprint 5 — vendor portal sign-in page (no shell, no session gate).
+  // Sits at /portal/vendor/login so it lives next to the post-login surfaces.
+  { path: '/portal/vendor/login', element: <S><VendorPortalLoginPage /></S>, errorElement: <RouteErrorPage /> },
   // Sprint 4 external vendor portal — VendorPortalShell does its own
   // session check via useVendorPortalSession (no buyer JWT). All children
-  // render under the slim portal sidebar.
+  // render under the topbar shell (Sprint 5 redesign).
   {
     path: '/portal/vendor',
     element: <S><VendorPortalShell /></S>,
