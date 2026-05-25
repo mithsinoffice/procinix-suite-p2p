@@ -23,12 +23,21 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'query-vendor': ['@tanstack/react-query', '@tanstack/react-table', '@tanstack/react-virtual'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-select', 'lucide-react'],
-          'form-vendor': ['react-hook-form', 'zod', '@hookform/resolvers'],
-          'chart-vendor': ['recharts'],
+        // Function form so react + react-dom + scheduler + jsx-runtime +
+        // react-router all land in the SAME chunk. The object form misses
+        // `scheduler` and `react/jsx-runtime` (transitive deps), which then
+        // get hoisted into a different chunk and try to read React internals
+        // before React's module body has finished evaluating — surfacing as
+        // `Cannot read properties of undefined (reading '__SECRET_INTERNALS_…')`.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|@remix-run[\\/]router)[\\/]/.test(id)) {
+            return 'react-vendor'
+          }
+          if (/[\\/]node_modules[\\/]@tanstack[\\/]/.test(id)) return 'query-vendor'
+          if (/[\\/]node_modules[\\/](@radix-ui|lucide-react)[\\/]/.test(id)) return 'ui-vendor'
+          if (/[\\/]node_modules[\\/](react-hook-form|zod|@hookform[\\/]resolvers)[\\/]/.test(id)) return 'form-vendor'
+          if (/[\\/]node_modules[\\/]recharts[\\/]/.test(id)) return 'chart-vendor'
         },
       },
     },

@@ -1,4 +1,4 @@
-const CACHE = 'procinix-v2-shell'
+const CACHE = 'procinix-v3-shell'
 const PRECACHE = ['/', '/index.html']
 
 self.addEventListener('install', e => {
