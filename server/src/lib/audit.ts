@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client'
+import { Prisma, type PrismaClient } from '@prisma/client'
 
 export interface AuditEntry {
   tenantId:   string
@@ -14,7 +14,10 @@ export interface AuditEntry {
 
 export async function writeAuditLog(prisma: PrismaClient, entry: AuditEntry): Promise<void> {
   try {
-    await prisma.auditLog.create({ data: entry })
+    // `Record<string, unknown>` is broader than Prisma's `InputJsonValue`
+    // (which excludes `unknown`); narrow at the boundary since callers
+    // already produce JSON-serialisable shapes.
+    await prisma.auditLog.create({ data: entry as Prisma.AuditLogUncheckedCreateInput })
   } catch (err) {
     console.error('[AuditLog] Write failed:', {
       action: entry.action,

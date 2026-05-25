@@ -14,8 +14,21 @@ export interface JwtPayload {
   exp:        number
 }
 
+// `@fastify/jwt` ships its own module augmentation for FastifyRequest.user
+// (typed `string | object | Buffer`). Augmenting fastify directly collides
+// with that. The supported override path is FastifyJWT — both `payload`
+// (input to sign()) and `user` (request.user) get our concrete shape.
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    payload: JwtPayload
+    user:    JwtPayload
+  }
+}
+
 declare module 'fastify' {
-  interface FastifyRequest { user: JwtPayload }
+  interface FastifyInstance {
+    authenticate: (request: FastifyRequest) => Promise<void>
+  }
 }
 
 export const authPlugin = fp(async (app: FastifyInstance) => {
