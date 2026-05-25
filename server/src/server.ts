@@ -32,6 +32,10 @@ import {
   vendorPortalRoutes,
   vendorPortalPublicRoutes,
 } from './routes/vendor-portal.js'
+import {
+  vendorPortalSessionRoutes,
+  vendorPortalTransactionsRoutes,
+} from './routes/vendor-portal-transactions.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -85,6 +89,11 @@ export async function buildApp() {
   // invite link.
   await app.register(vendorPortalRoutes,       { prefix: '/api/vendor-portal' })
   await app.register(vendorPortalPublicRoutes, { prefix: '/api/portal' })
+
+  // Vendor portal transactional layer (Sprint 4). Session login is unauth;
+  // every other route is gated by the requireVendorSession preHandler.
+  await app.register(vendorPortalSessionRoutes,      { prefix: '/api/portal/vendor/session' })
+  await app.register(vendorPortalTransactionsRoutes, { prefix: '/api/portal/vendor' })
 
   app.get('/api/ping', async () => ({ pong: true, ts: Date.now() }))
 

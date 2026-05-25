@@ -87,6 +87,18 @@ const VendorPortalPage              = lazy(() => import('./modules/vendor-portal
 const VendorPortalRequestDetailPage = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorPortalRequestDetailPage').then(m => ({ default: m.VendorPortalRequestDetailPage })))
 const VendorSelfServicePortal       = lazy(() => import('./modules/vendor-portal/src/app/pages/VendorSelfServicePortal').then(m => ({ default: m.VendorSelfServicePortal })))
 
+// External vendor portal (Sprint 4) — vendor self-service surfaces gated
+// by VendorPortalSession (NOT buyer JWT). Mounted under /portal/vendor/*
+// outside the buyer RequireAuth wrapper. Shell is exported as a named
+// component, every page uses default export.
+const VendorPortalShell       = lazy(() => import('./pages/vendor-portal-external/VendorPortalShell').then(m => ({ default: m.VendorPortalShell })))
+const VendorPortalDashboard   = lazy(() => import('./pages/vendor-portal-external/VendorPortalDashboard'))
+const VendorPOListPage        = lazy(() => import('./pages/vendor-portal-external/VendorPOListPage'))
+const VendorASNPage           = lazy(() => import('./pages/vendor-portal-external/VendorASNPage'))
+const VendorInvoicePortalPage = lazy(() => import('./pages/vendor-portal-external/VendorInvoicePortalPage'))
+const VendorPaymentStatusPage = lazy(() => import('./pages/vendor-portal-external/VendorPaymentStatusPage'))
+const VendorReconPage         = lazy(() => import('./pages/vendor-portal-external/VendorReconPage'))
+
 function PageLoader() {
   return (
     <div className="flex items-center justify-center min-h-screen">
@@ -221,6 +233,23 @@ export const router = createBrowserRouter([
   // Unauthenticated vendor self-service onboarding — entered via a tokenised
   // email link, so it sits OUTSIDE RequireAuth alongside /login.
   { path: '/portal/onboarding/:token', element: <S><VendorSelfServicePortal /></S>, errorElement: <RouteErrorPage /> },
+  // Sprint 4 external vendor portal — VendorPortalShell does its own
+  // session check via useVendorPortalSession (no buyer JWT). All children
+  // render under the slim portal sidebar.
+  {
+    path: '/portal/vendor',
+    element: <S><VendorPortalShell /></S>,
+    errorElement: <RouteErrorPage />,
+    children: [
+      { index: true,        element: <S><VendorPortalDashboard /></S>   },
+      { path: 'dashboard',  element: <S><VendorPortalDashboard /></S>   },
+      { path: 'pos',        element: <S><VendorPOListPage /></S>        },
+      { path: 'asn',        element: <S><VendorASNPage /></S>           },
+      { path: 'invoices',   element: <S><VendorInvoicePortalPage /></S> },
+      { path: 'payments',   element: <S><VendorPaymentStatusPage /></S> },
+      { path: 'recon',      element: <S><VendorReconPage /></S>         },
+    ],
+  },
   { path: '*', element: <S><NotFoundPage /></S>, errorElement: <RouteErrorPage /> },
 ])
 

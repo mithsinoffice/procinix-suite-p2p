@@ -1673,50 +1673,52 @@ model PurchaseRequisitionLine {
 
 // ── PURCHASE ORDER ────────────────────────────────────────────────────────────
 model PurchaseOrder {
-  id                 String               @id @default(uuid())
-  tenantId           String
-  poRef              String
-  poType             String               @default("STANDARD")
-  poDate             DateTime             @db.Date
-  poExpiryDate       DateTime?            @db.Date
-  autoExpire         Boolean              @default(false)
-  vendorId           String
-  entityId           String
-  shipToLocationId   String?
-  billToEntityId     String?
-  rateContractId     String?
-  blanketPoId        String?
-  currencyCode       String               @default("INR")
-  exchangeRate       Decimal?             @db.Decimal(18, 8)
-  paymentTermsDays   Int                  @default(30)
-  paymentMode        String               @default("NEFT")
-  deliveryTerms      String?
-  warrantyPeriod     String?
-  taxType            String               @default("EXCLUSIVE")
-  subtotal           Decimal              @default(0) @db.Decimal(15, 2)
-  taxAmount          Decimal              @default(0) @db.Decimal(15, 2)
-  tdsAmount          Decimal              @default(0) @db.Decimal(15, 2)
-  totalAmount        Decimal              @default(0) @db.Decimal(15, 2)
-  consumedAmount     Decimal              @default(0) @db.Decimal(15, 2)
-  advanceAmount      Decimal              @default(0) @db.Decimal(15, 2)
-  advancePct         Decimal?             @db.Decimal(5, 2)
-  budgetId           String?
-  workflowInstanceId String?
-  prRefs             Json?
-  notes              String?              @db.Text
-  status             String               @default("DRAFT")
-  rejectionReason    String?
-  sentToVendorAt     DateTime?
-  closedAt           DateTime?
-  createdByUserId    String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  lines              PurchaseOrderLine[]
-  milestones         POPaymentMilestone[]
-  releases           BlanketPORelease[]
-  grns               GoodsReceiptNote[]
-  advances           VendorAdvance[]
-  invoiceLinks       InvoicePOLink[]
+  id                     String                  @id @default(uuid())
+  tenantId               String
+  poRef                  String
+  poType                 String                  @default("STANDARD")
+  poDate                 DateTime                @db.Date
+  poExpiryDate           DateTime?               @db.Date
+  autoExpire             Boolean                 @default(false)
+  vendorId               String
+  entityId               String
+  shipToLocationId       String?
+  billToEntityId         String?
+  rateContractId         String?
+  blanketPoId            String?
+  currencyCode           String                  @default("INR")
+  exchangeRate           Decimal?                @db.Decimal(18, 8)
+  paymentTermsDays       Int                     @default(30)
+  paymentMode            String                  @default("NEFT")
+  deliveryTerms          String?
+  warrantyPeriod         String?
+  taxType                String                  @default("EXCLUSIVE")
+  subtotal               Decimal                 @default(0) @db.Decimal(15, 2)
+  taxAmount              Decimal                 @default(0) @db.Decimal(15, 2)
+  tdsAmount              Decimal                 @default(0) @db.Decimal(15, 2)
+  totalAmount            Decimal                 @default(0) @db.Decimal(15, 2)
+  consumedAmount         Decimal                 @default(0) @db.Decimal(15, 2)
+  advanceAmount          Decimal                 @default(0) @db.Decimal(15, 2)
+  advancePct             Decimal?                @db.Decimal(5, 2)
+  budgetId               String?
+  workflowInstanceId     String?
+  prRefs                 Json?
+  notes                  String?                 @db.Text
+  status                 String                  @default("DRAFT")
+  rejectionReason        String?
+  sentToVendorAt         DateTime?
+  closedAt               DateTime?
+  createdByUserId        String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  lines                  PurchaseOrderLine[]
+  milestones             POPaymentMilestone[]
+  releases               BlanketPORelease[]
+  grns                   GoodsReceiptNote[]
+  advances               VendorAdvance[]
+  invoiceLinks           InvoicePOLink[]
+  acknowledgements       POAcknowledgement[]
+  advanceShipmentNotices AdvanceShipmentNotice[]
 
   @@unique([tenantId, poRef])
   @@index([tenantId, status])
@@ -2646,4 +2648,94 @@ model VendorRiskHistory {
 
   @@index([vendorId, scoredAt])
   @@map("vendor_risk_history")
+}
+
+// ╔════════════════════════════════════════════════════════════════════════╗
+// ║ VENDOR PORTAL TRANSACTIONAL LAYER (Sprint 4)                           ║
+// ║                                                                        ║
+// ║ Vendor-originated documents that complement the existing buyer-side    ║
+// ║ P2P chain (PR → PO → GRN → Invoice → Payment):                         ║
+// ║   - POAcknowledgement     vendor's "got the PO" event log              ║
+// ║   - AdvanceShipmentNotice vendor-side dispatch notice (sibling of GRN, ║
+// ║                           NOT a GRN variant — GRN remains the buyer's  ║
+// ║                           goods-receipt confirmation)                  ║
+// ║   - VendorDispute         vendor-raised dispute against an Invoice or  ║
+// ║                           Payment (nullable FKs, both can be set when  ║
+// ║                           the dispute spans the linked pair)           ║
+// ║ All three are written by the vendor portal (vendor session, no JWT)    ║
+// ║ and readable by the buyer-side AP team.                                ║
+// ╚════════════════════════════════════════════════════════════════════════╝
+
+model POAcknowledgement {
+  id                   String        @id @default(uuid())
+  tenantId             String
+  purchaseOrderId      String
+  purchaseOrder        PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  vendorId             String
+  acknowledgementType  String // FULL | PARTIAL | REJECTED
+  status               String        @default("PENDING") // PENDING | ACKNOWLEDGED | REJECTED
+  comments             String?       @db.Text
+  expectedDeliveryDate DateTime?
+  acknowledgedAt       DateTime      @default(now())
+  acknowledgedByEmail  String
+
+  @@index([purchaseOrderId])
+  @@index([vendorId])
+  @@map("po_acknowledgements")
+}
+
+model AdvanceShipmentNotice {
+  id                   String                @id @default(uuid())
+  tenantId             String
+  asnNumber            String                @unique
+  purchaseOrderId      String
+  purchaseOrder        PurchaseOrder         @relation(fields: [purchaseOrderId], references: [id])
+  vendorId             String
+  status               String                @default("CREATED") // CREATED | IN_TRANSIT | DELIVERED | CANCELLED
+  dispatchDate         DateTime
+  expectedDeliveryDate DateTime
+  carrierName          String?
+  trackingNumber       String?
+  comments             String?               @db.Text
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  lines                AdvanceShipmentLine[]
+
+  @@index([purchaseOrderId])
+  @@index([vendorId])
+  @@map("advance_shipment_notices")
+}
+
+model AdvanceShipmentLine {
+  id       String                @id @default(uuid())
+  asnId    String
+  asn      AdvanceShipmentNotice @relation(fields: [asnId], references: [id])
+  poLineId String
+  quantity Decimal               @db.Decimal(18, 4)
+  uom      String
+
+  @@index([asnId])
+  @@map("advance_shipment_lines")
+}
+
+model VendorDispute {
+  id                String    @id @default(uuid())
+  tenantId          String
+  disputeNumber     String    @unique
+  vendorId          String
+  invoiceId         String?
+  paymentId         String?
+  disputeType       String // PAYMENT_DELAY | AMOUNT_MISMATCH | DUPLICATE_PAYMENT | WRONG_DEDUCTION | OTHER
+  description       String    @db.Text
+  status            String    @default("OPEN") // OPEN | UNDER_REVIEW | RESOLVED | CLOSED
+  attachmentBlobUrl String?
+  resolvedAt        DateTime?
+  resolutionNote    String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([vendorId])
+  @@index([invoiceId])
+  @@index([paymentId])
+  @@map("vendor_disputes")
 }
