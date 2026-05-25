@@ -11,11 +11,19 @@
 
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { createInvitation } from '../services/vendor-portal/invitation.service.js'
+import {
+  createInvitation,
+  resendInvitation,
+} from '../services/vendor-portal/invitation.service.js'
 import {
   resolveOnboardingToken,
   submitOnboarding,
 } from '../services/vendor-portal/onboarding.service.js'
+import {
+  approveCurrentStep,
+  rejectWorkflow,
+  sendBackWorkflow,
+} from '../services/vendor-portal/workflow.service.js'
 
 // ── Validation schemas ───────────────────────────────────────────────────
 
@@ -41,6 +49,22 @@ const listRequestsQuerySchema = z.object({
   riskTier:     z.string().optional(),
   page:         z.coerce.number().int().min(1).default(1),
   limit:        z.coerce.number().int().min(1).max(100).default(20),
+}).strict()
+
+const idParamSchema     = z.object({ id: z.string().min(1) })
+
+const approveBodySchema = z.object({
+  comments: z.string().max(2000).optional(),
+  decision: z.literal('APPROVED').optional(),
+}).strict()
+
+const rejectBodySchema = z.object({
+  comments: z.string().max(2000).optional(),
+  reason:   z.string().min(1).max(2000),
+}).strict()
+
+const sendBackBodySchema = z.object({
+  comments: z.string().min(1).max(2000),
 }).strict()
 
 const submitOnboardingSchema = z.object({
@@ -230,6 +254,120 @@ export async function vendorPortalRoutes(app: FastifyInstance) {
     ])
 
     return reply.send({ rows, total, page, limit })
+  })
+
+  // GET /api/vendor-portal/requests/:id — full request detail. Surfaces
+  // every child collection in one round-trip so the approval/profile pages
+  // don't have to N+1.
+  app.get('/requests/:id', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    if (!params.success) {
+      return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid id' })
+    }
+    const tenantId = req.tenant.id
+    const detail = await app.prisma.vendorOnboardingRequest.findFirst({
+      where: { id: params.data.id, tenantId },
+      include: {
+        invitations: { orderBy: { sentAt: 'desc' } },
+        profile: {
+          include: {
+            contacts:          true,
+            addresses:         true,
+            bankAccounts:      true,
+            complianceRecords: { include: { documents: true } },
+            documents:         true,
+          },
+        },
+        workflow: {
+          include: { steps: { orderBy: { level: 'asc' } } },
+        },
+      },
+    })
+    if (!detail) {
+      return reply.code(404).send({ code: 'NOT_FOUND', message: 'Request not found' })
+    }
+    return reply.send(detail)
+  })
+
+  // POST /api/vendor-portal/requests/:id/approve — advance the workflow.
+  app.post('/requests/:id/approve', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    const body   = approveBodySchema.safeParse(req.body)
+    if (!params.success || !body.success) {
+      return reply.code(400).send({
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request',
+        issues: !params.success ? params.error.flatten() : body.success ? undefined : body.error.flatten(),
+      })
+    }
+    const result = await approveCurrentStep(
+      app.prisma, params.data.id, req.tenant.id, req.user.sub, body.data.comments,
+    )
+    if (result.ok === false) {
+      const status = result.error.code === 'NOT_FOUND' ? 404 : 409
+      return reply.code(status).send(result.error)
+    }
+    return reply.send(result)
+  })
+
+  // POST /api/vendor-portal/requests/:id/reject — terminate the workflow.
+  app.post('/requests/:id/reject', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    const body   = rejectBodySchema.safeParse(req.body)
+    if (!params.success || !body.success) {
+      return reply.code(400).send({
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request',
+        issues: !params.success ? params.error.flatten() : body.success ? undefined : body.error.flatten(),
+      })
+    }
+    const result = await rejectWorkflow(
+      app.prisma, params.data.id, req.tenant.id, req.user.sub, body.data.comments, body.data.reason,
+    )
+    if (result.ok === false) {
+      const status = result.error.code === 'NOT_FOUND' ? 404 : 409
+      return reply.code(status).send(result.error)
+    }
+    return reply.send(result)
+  })
+
+  // POST /api/vendor-portal/requests/:id/send-back — roll back one level.
+  app.post('/requests/:id/send-back', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    const body   = sendBackBodySchema.safeParse(req.body)
+    if (!params.success || !body.success) {
+      return reply.code(400).send({
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request',
+        issues: !params.success ? params.error.flatten() : body.success ? undefined : body.error.flatten(),
+      })
+    }
+    const result = await sendBackWorkflow(
+      app.prisma, params.data.id, req.tenant.id, req.user.sub, body.data.comments,
+    )
+    if (result.ok === false) {
+      const status = result.error.code === 'NOT_FOUND' ? 404 : 409
+      return reply.code(status).send(result.error)
+    }
+    return reply.send(result)
+  })
+
+  // POST /api/vendor-portal/invitations/:id/resend — refresh the portal
+  // token + expiry. The route returns the new token so the caller can
+  // re-fire the outbound email (email plumbing lands later).
+  app.post('/invitations/:id/resend', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    if (!params.success) {
+      return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid id' })
+    }
+    const result = await resendInvitation(
+      app.prisma, params.data.id, req.tenant.id, req.user.sub,
+    )
+    if ('ok' in result && result.ok === false) {
+      const status = result.error.code === 'NOT_FOUND' ? 404 : 409
+      return reply.code(status).send(result.error)
+    }
+    return reply.send(result)
   })
 }
 

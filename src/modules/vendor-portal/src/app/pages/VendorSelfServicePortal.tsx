@@ -1,5 +1,12 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { toast } from "sonner";
+import {
+  useOnboardingToken,
+  useSubmitOnboarding,
+  PortalError,
+  type SubmitOnboardingPayload,
+} from "../../../../../hooks/vendor-portal/useOnboardingPortal";
 import {
   Building2,
   CheckCircle2,
@@ -96,7 +103,9 @@ interface FormData {
 }
 
 export function VendorSelfServicePortal() {
-  const {  } = useParams();
+  const { token } = useParams<{ token: string }>();
+  const tokenQuery   = useOnboardingToken(token ?? null);
+  const submitQuery  = useSubmitOnboarding(token ?? null);
   const [currentView, setCurrentView] = useState<PortalView>("invitation");
   const [currentStep, setCurrentStep] = useState<OnboardingStep>("basic");
   const [formData, setFormData] = useState<FormData>({
@@ -136,8 +145,82 @@ export function VendorSelfServicePortal() {
   const [validationMessages, setValidationMessages] = useState<Record<string, string>>({});
   const [assistancePanelOpen, setAssistancePanelOpen] = useState(true);
 
-  const buyerCompany = "Acme Corporation";
-  const invitationMessage = "You have been invited to register as a vendor for Acme Corporation. Please complete the onboarding process to start doing business with us.";
+  // Buyer-side context — pulled from the tokenised invite. Falls back to a
+  // generic message while the token query is still in flight.
+  const requestCtx = tokenQuery.data?.request;
+  const countryConfig = tokenQuery.data?.countryConfig ?? null;
+  const buyerCompany = requestCtx?.vendorLegalName ?? "your buyer";
+  const invitationMessage =
+    `You have been invited to register as a vendor${requestCtx?.vendorLegalName ? ` (${requestCtx.vendorLegalName})` : ''}. ` +
+    `Please complete the onboarding process to start doing business with us.`;
+
+  // Build the server payload from the form's flat state. Required ISO-2
+  // countryCode falls back to the country selection from the form when the
+  // request didn't carry one originally.
+  const buildPayload = (): SubmitOnboardingPayload => {
+    const countryCode =
+      requestCtx?.vendorCountryCode
+      ?? (formData.country ? formData.country.slice(0, 2).toUpperCase() : 'US')
+    const currency = 'USD' // The country config will eventually drive this — Sprint 3.
+    const [firstName, ...rest] = (formData.contactPerson || '').split(' ')
+    return {
+      profile: {
+        legalName:          formData.legalName || formData.companyName,
+        tradeName:          formData.companyName || undefined,
+        registrationNumber: formData.registrationNumber || undefined,
+        incorporationDate:  formData.incorporationDate || null,
+        countryCode,
+        vendorType:         requestCtx?.vendorType || formData.businessType || 'SUPPLIER',
+        industryCategory:   formData.industryType || undefined,
+        website:            formData.website || undefined,
+        currency,
+        annualRevenue:      formData.annualRevenue ? Number(formData.annualRevenue) : undefined,
+      },
+      contacts: formData.contactPerson ? [{
+        contactType: 'PRIMARY',
+        firstName:   firstName || formData.contactPerson,
+        lastName:    rest.join(' ') || '—',
+        email:       formData.contactEmail || formData.companyEmail || requestCtx?.vendorEmail || '',
+        phone:       formData.contactPhone || formData.companyPhone || undefined,
+        isPrimary:   true,
+      }] : [],
+      addresses: formData.street ? [{
+        addressType:  'REGISTERED',
+        line1:        formData.street,
+        city:         formData.city || '—',
+        state:        formData.state || undefined,
+        postalCode:   formData.postalCode || undefined,
+        countryCode,
+        isRegistered: true,
+      }] : [],
+      bankAccounts: formData.accountNumber ? [{
+        countryCode,
+        accountName:   formData.accountName || formData.companyName,
+        accountNumber: formData.accountNumber,
+        bankName:      formData.bankName || '—',
+        bankCode:      formData.swiftCode || undefined,
+        ifscSwiftIban: formData.ifscCode || formData.swiftCode || formData.iban || undefined,
+        currency,
+        isPrimary:     true,
+      }] : [],
+      complianceRecords: [
+        ...(formData.taxId     ? [{ countryCode, documentType: 'TAX_ID', documentNumber: formData.taxId }]     : []),
+        ...(formData.gstNumber ? [{ countryCode, documentType: 'GST',    documentNumber: formData.gstNumber }] : []),
+        ...(formData.panNumber ? [{ countryCode, documentType: 'PAN',    documentNumber: formData.panNumber }] : []),
+        ...(formData.vatNumber ? [{ countryCode, documentType: 'VAT',    documentNumber: formData.vatNumber }] : []),
+      ],
+    }
+  }
+
+  const handleSubmit = async () => {
+    try {
+      await submitQuery.mutateAsync(buildPayload())
+      setCurrentView('confirmation')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Submission failed'
+      toast.error(`Could not submit — ${message}`)
+    }
+  }
 
   // Progress calculation
   const calculateProgress = () => {
@@ -211,6 +294,34 @@ export function VendorSelfServicePortal() {
     }));
   };
 
+  // Loading state — the token query is still resolving the server context.
+  if (tokenQuery.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-sm text-[#64748B]">
+        Loading your onboarding session…
+      </div>
+    )
+  }
+
+  // Token-error states — render distinct copy per code so the vendor knows
+  // whether to request a fresh link or contact the buyer.
+  if (tokenQuery.error) {
+    const code = tokenQuery.error instanceof PortalError ? tokenQuery.error.code : 'INVALID_TOKEN'
+    const copy =
+      code === 'TOKEN_EXPIRED' ? 'This invitation link has expired. Please contact your buyer to request a fresh link.' :
+      code === 'TOKEN_USED'    ? 'This invitation has already been used. Reach out to your buyer if you need to make changes.' :
+                                 'This invitation link is invalid. Please double-check the URL or contact your buyer.'
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-3">
+          <h1 className="text-2xl font-semibold text-[#0A0F14]">Onboarding unavailable</h1>
+          <p className="text-sm text-[#64748B]">{copy}</p>
+          <code className="block text-xs text-[#94A3B8]">{code}</code>
+        </div>
+      </div>
+    )
+  }
+
   if (currentView === "invitation") {
     return <InvitationScreen buyerCompany={buyerCompany} message={invitationMessage} onAccept={() => setCurrentView("dashboard")} />;
   }
@@ -238,7 +349,9 @@ export function VendorSelfServicePortal() {
         isStepCompleted={isStepCompleted}
         handleDocumentUpload={handleDocumentUpload}
         onBackToDashboard={() => setCurrentView("dashboard")}
-        onSubmit={() => setCurrentView("confirmation")}
+        onSubmit={handleSubmit}
+        submitting={submitQuery.isPending}
+        countryConfig={countryConfig}
         assistancePanelOpen={assistancePanelOpen}
         setAssistancePanelOpen={setAssistancePanelOpen}
       />
@@ -475,6 +588,8 @@ function OnboardingWizard({
   onSubmit,
   assistancePanelOpen,
   setAssistancePanelOpen,
+  submitting = false,
+  countryConfig: _countryConfig = null,
 }: {
   currentStep: OnboardingStep;
   setCurrentStep: (step: OnboardingStep) => void;
@@ -489,6 +604,13 @@ function OnboardingWizard({
   onSubmit: () => void;
   assistancePanelOpen: boolean;
   setAssistancePanelOpen: (open: boolean) => void;
+  // Sprint 2 additions — `submitting` disables the final-step submit button
+  // while the API call is in flight; `countryConfig` carries the buyer's
+  // per-country document/tax/bank requirements so the wizard can eventually
+  // render conditional fields. Underscore-prefixed because the Sprint 3
+  // wiring to the DocumentsUploadForm sub-component hasn't landed yet.
+  submitting?: boolean;
+  countryConfig?: unknown;
 }) {
   const steps: { id: OnboardingStep; label: string; icon: React.ReactNode }[] = [
     { id: "basic", label: "Basic Information", icon: <Building2 className="w-4 h-4" /> },
@@ -667,9 +789,12 @@ function OnboardingWizard({
             </div>
             <Button
               onClick={handleNext}
+              disabled={submitting}
               className="px-6 bg-[#00A9B7] hover:bg-[#008A96] text-white"
             >
-              {currentStepIndex === steps.length - 1 ? "Submit Application" : "Next Step"}
+              {currentStepIndex === steps.length - 1
+                ? (submitting ? "Submitting…" : "Submit Application")
+                : "Next Step"}
               <ChevronRight className="w-4 h-4 ml-2" />
             </Button>
           </div>

@@ -523,7 +523,7 @@ export function VendorRequestsPage() {
                       </td>
                       <td className="py-4 px-4">
                         <Link
-                          to={`/vendors/requests/${request.id}/edit`}
+                          to={`/vendor-portal/vendors/${request.id}/profile`}
                           className="text-sm font-medium text-[#00A9B7] hover:underline"
                         >
                           {request.requestId}
@@ -547,18 +547,18 @@ export function VendorRequestsPage() {
                       <td className="py-4 px-4">{getSyncBadge(request.erpSyncStatus)}</td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
-                          <Link to={`/vendors/${request.id}/console`}>
+                          <Link to={`/vendor-portal/vendors/${request.id}/360`}>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="360° Console">
                               <Eye className="w-4 h-4" />
                             </Button>
                           </Link>
-                          <Link to={`/vendors/requests/${request.id}/edit`}>
+                          <Link to={`/vendor-portal/vendors/${request.id}/profile`}>
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                               <Edit className="w-4 h-4" />
                             </Button>
                           </Link>
                           {request.validationStatus === "Completed" && request.approvalStatus === "Pending" && (
-                            <Link to={`/vendors/requests/${request.id}/approval`}>
+                            <Link to={`/vendor-portal/approvals/${request.id}`}>
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                 <CheckCheck className="w-4 h-4" />
                               </Button>

@@ -94,16 +94,25 @@ export function useCreateInvitation() {
   })
 }
 
+export interface ResendResponse {
+  invitationId:   string
+  requestId:      string
+  portalToken:    string
+  tokenExpiresAt: string
+  resendCount:    number
+}
+
 /**
- * Resend an existing invitation. The server hasn't shipped the route yet;
- * we keep the mutation here so the page can wire its button — when the
- * endpoint lands, only the mutationFn URL changes.
+ * Resend an existing invitation. Mints a fresh portalToken on the server
+ * and creates a new VendorOnboardingInvitation row; the previous one is
+ * marked EXPIRED. The endpoint refuses on requests past INVITED so an
+ * in-flight vendor session isn't disrupted.
  */
 export function useResendInvitation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) =>
-      http.post<{ resendCount: number }>(`/api/vendor-portal/invitations/${id}/resend`, {}),
+      http.post<ResendResponse>(`/api/vendor-portal/invitations/${id}/resend`, {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: keys.all() })
     },

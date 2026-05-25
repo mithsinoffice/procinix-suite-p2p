@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   CheckCircle2,
   MessageSquare,
@@ -7,23 +7,83 @@ import {
   ThumbsDown,
   AlertCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { RiskMeter } from "../components/design-system/RiskMeter";
 import { ApprovalTimeline } from "../components/design-system/ApprovalTimeline";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
-import { mockVendorRequests, departments } from "../data/mockData";
+import { departments } from "../data/mockData";
+import {
+  useVendorRequest,
+  useApproveRequest,
+  useRejectRequest,
+  useSendBackRequest,
+} from "../../../../../hooks/vendor-portal/useVendorRequests";
+
+// Sprint 2 wiring — this page is the per-request detail reached from the
+// Approval Desk's Review action. The desk passes `?from=approvals` so we
+// route back there on success. Earlier-session decision: the universal
+// /approvals desk is the canonical action surface; ApprovalWorkspacePage
+// (the list at /vendor-portal/approvals) stays read-only.
+//
+// First entry in each nested array is the primary one — bank/contact/etc.
+// arrays come back from the API ordered by isPrimary desc.
+function firstFromArr<T = any>(arr: unknown): T | null {
+  return Array.isArray(arr) && arr.length > 0 ? (arr[0] as T) : null
+}
 
 export function VendorApprovalPage() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const vendor = mockVendorRequests.find((v) => v.id === id);
+  const [searchParams] = useSearchParams();
+  const fromApprovals = searchParams.get('from') === 'approvals';
+
+  const requestQuery = useVendorRequest(id);
+  const approveMutation  = useApproveRequest(id);
+  const rejectMutation   = useRejectRequest(id);
+  const sendBackMutation = useSendBackRequest(id);
+
   const [selectedDept, setSelectedDept] = useState("legal");
   const [comment, setComment] = useState("");
 
-  if (!vendor) {
-    return <div className="p-8">Vendor not found</div>;
+  if (requestQuery.isLoading) {
+    return <div className="p-8 text-sm text-[#64748B]">Loading request…</div>;
   }
+  if (requestQuery.error || !requestQuery.data) {
+    return (
+      <div className="p-8 space-y-2">
+        <h2 className="text-lg font-semibold text-[#0A0F14]">Request not found</h2>
+        <p className="text-sm text-[#64748B]">
+          {requestQuery.error instanceof Error ? requestQuery.error.message : 'Could not load this onboarding request.'}
+        </p>
+      </div>
+    );
+  }
+
+  const detail   = requestQuery.data;
+  const profile  = detail.profile;
+  const workflow = detail.workflow;
+  const bank     = firstFromArr<{ bankName: string; accountNumber: string; ifscSwiftIban: string | null }>(profile?.bankAccounts);
+  const comp     = firstFromArr<{ documentType: string; documentNumber: string | null }>(profile?.complianceRecords);
+
+  // Adapt the real detail back to the mock-shape the existing render block
+  // was authored against. Missing fields fall back to '—' rather than empty
+  // strings so the table cells don't look broken.
+  const vendor = {
+    id:             detail.id,
+    requestId:      detail.requestCode,
+    legalName:      profile?.legalName ?? detail.vendorLegalName ?? '—',
+    email:          detail.vendorEmail,
+    vendorType:     profile?.vendorType ?? detail.vendorType ?? '—',
+    taxId:          comp?.documentNumber ?? '—',
+    bankName:       bank?.bankName ?? '—',
+    accountNumber:  bank?.accountNumber ?? '—',
+    ifscCode:       bank?.ifscSwiftIban ?? '—',
+    validationScore: profile?.riskScore ?? 0,
+    country:        profile?.countryCode ?? detail.vendorCountryCode ?? '—',
+    entity:         '—',
+  };
 
   const approvalHistory = [
     {
@@ -109,18 +169,54 @@ export function VendorApprovalPage() {
 
   const currentDept = deptData[selectedDept as keyof typeof deptData];
 
-  const handleApprove = () => {
-    alert("Vendor approved for " + currentDept.name);
-    navigate(`/vendors/requests/${id}/success`);
-  };
+  // Where to land after a decision. When we came in via the universal desk,
+  // bounce back so the user can act on the next pending approval.
+  const returnTarget = fromApprovals ? '/approvals' : '/vendor-portal/approvals';
 
-  const handleReject = () => {
-    if (comment) {
-      alert("Vendor rejected with comment: " + comment);
-    } else {
-      alert("Please add a comment for rejection");
+  const handleApprove = async () => {
+    try {
+      const result = await approveMutation.mutateAsync({ comments: comment || undefined });
+      toast.success(result.finalized ? 'Vendor approved — workflow complete' : 'Approval recorded — advanced to next level');
+      navigate(returnTarget);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Approval failed');
     }
   };
+
+  const handleReject = async () => {
+    if (!comment.trim()) {
+      toast.error('Please add a comment with the rejection reason');
+      return;
+    }
+    try {
+      await rejectMutation.mutateAsync({ comments: comment, reason: comment });
+      toast.success('Request rejected');
+      navigate(returnTarget);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Rejection failed');
+    }
+  };
+
+  const handleSendBack = async () => {
+    if (!comment.trim()) {
+      toast.error('Please add a comment so the previous approver knows what to revise');
+      return;
+    }
+    try {
+      await sendBackMutation.mutateAsync({ comments: comment });
+      toast.success('Sent back to previous approver');
+      navigate(returnTarget);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Send-back failed');
+    }
+  };
+
+  const anyPending =
+    approveMutation.isPending || rejectMutation.isPending || sendBackMutation.isPending;
+  // `workflow` is referenced by the (existing) UI's level-progress widget
+  // further down. Keep a stable ref so the original render code compiles
+  // even when the optional chain is null on first paint.
+  void workflow;
 
   return (
     <div className="min-h-screen">
@@ -283,17 +379,31 @@ export function VendorApprovalPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="outline" className="gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handleSendBack}
+              disabled={anyPending}
+            >
               <MessageSquare className="w-4 h-4" />
-              Request Clarification
+              Send Back
             </Button>
-            <Button variant="outline" className="gap-2 text-[#DC2626] border-[#DC2626] hover:bg-red-50" onClick={handleReject}>
+            <Button
+              variant="outline"
+              className="gap-2 text-[#DC2626] border-[#DC2626] hover:bg-red-50"
+              onClick={handleReject}
+              disabled={anyPending}
+            >
               <ThumbsDown className="w-4 h-4" />
-              Reject
+              {rejectMutation.isPending ? 'Rejecting…' : 'Reject'}
             </Button>
-            <Button className="gap-2 bg-[#16A34A] hover:bg-[#15803D]" onClick={handleApprove}>
+            <Button
+              className="gap-2 bg-[#16A34A] hover:bg-[#15803D]"
+              onClick={handleApprove}
+              disabled={anyPending}
+            >
               <ThumbsUp className="w-4 h-4" />
-              Approve
+              {approveMutation.isPending ? 'Approving…' : 'Approve'}
             </Button>
           </div>
         </div>

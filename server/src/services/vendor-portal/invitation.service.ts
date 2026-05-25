@@ -133,3 +133,94 @@ export async function createInvitation(
   }
 }
 
+// ── Resend ────────────────────────────────────────────────────────────────
+
+export type ResendError =
+  | { code: 'NOT_FOUND';            message: string }
+  | { code: 'WORKFLOW_INVALID_STATE'; message: string }
+
+export interface ResendInvitationOutput {
+  invitationId:   string
+  requestId:      string
+  portalToken:    string
+  tokenExpiresAt: Date
+  resendCount:    number
+}
+
+/**
+ * Re-issue a fresh token + invitation row for an existing onboarding request.
+ * - Generates a new portalToken and pushes the expiry out by another 72h.
+ * - Marks any previous PENDING invitation row as EXPIRED so the buyer's
+ *   audit trail keeps each send distinct.
+ * - Creates a new VendorOnboardingInvitation row with resendCount = prior + 1.
+ * - Returns the new token so the route can fire the outbound email.
+ *
+ * Refuses on requests that have already moved past INVITED — once a vendor
+ * has started filling the form (IN_PROGRESS) we don't want to invalidate
+ * their in-flight session by minting a competing token.
+ */
+export async function resendInvitation(
+  prisma:        PrismaClient,
+  invitationId:  string,
+  tenantId:      string,
+  userId:        string,
+): Promise<ResendInvitationOutput | { ok: false; error: ResendError }> {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.vendorOnboardingInvitation.findFirst({
+      where:  { id: invitationId, request: { tenantId } },
+      include: { request: true },
+    })
+    if (!existing) return { ok: false as const, error: { code: 'NOT_FOUND', message: 'Invitation not found' } }
+
+    const request = existing.request
+    if (request.status !== 'INVITED' && request.status !== 'DRAFT') {
+      return {
+        ok: false as const,
+        error: {
+          code: 'WORKFLOW_INVALID_STATE',
+          message: `Cannot resend — request is already ${request.status}`,
+        },
+      }
+    }
+
+    const newToken     = randomUUID()
+    const newExpiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000)
+    const now          = new Date()
+
+    // Expire the prior invitation row so only one PENDING invite exists per
+    // request at any moment. Keep `resendCount` cumulative.
+    await tx.vendorOnboardingInvitation.update({
+      where: { id: existing.id },
+      data:  { status: 'EXPIRED', resendCount: existing.resendCount + 1, lastResentAt: now },
+    })
+
+    await tx.vendorOnboardingRequest.update({
+      where: { id: request.id },
+      data:  {
+        portalToken:    newToken,
+        tokenExpiresAt: newExpiresAt,
+        tokenUsedAt:    null,
+      },
+    })
+
+    const fresh = await tx.vendorOnboardingInvitation.create({
+      data: {
+        requestId:    request.id,
+        sentToEmail:  existing.sentToEmail,
+        sentByUserId: userId,
+        expiresAt:    newExpiresAt,
+        status:       'PENDING',
+        resendCount:  existing.resendCount + 1,
+      },
+    })
+
+    return {
+      invitationId:   fresh.id,
+      requestId:      request.id,
+      portalToken:    newToken,
+      tokenExpiresAt: newExpiresAt,
+      resendCount:    fresh.resendCount,
+    }
+  })
+}
+
