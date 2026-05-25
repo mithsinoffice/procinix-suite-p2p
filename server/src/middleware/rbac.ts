@@ -59,6 +59,22 @@ const ROUTE_PERMISSIONS: Record<string, { module: string; action: string }> = {
   'PUT /api/admin/tenants/:id':       { module: 'ADMIN',   action: 'edit'    },
   'POST /api/admin/users':            { module: 'ADMIN',   action: 'create'  },
   'PUT /api/admin/users/:id':         { module: 'ADMIN',   action: 'edit'    },
+
+  // ── Vendor Governance (Sprint 6) ──
+  // VIEW gates the listing + dashboard surfaces; APPROVE gates the
+  // approve/reject/send-back actions on onboarding + change requests.
+  // SUPER_ADMIN short-circuits all checks in rbacHook (line 93 below).
+  // ADMIN-level actions (risk matrix config, country config, workflow
+  // templates) will be gated as those endpoints land; the permission key
+  // is defined so role privilege seeds can grant it ahead of time.
+  'GET /api/vendor-portal/requests':                     { module: 'VENDOR_GOVERNANCE', action: 'view'    },
+  'GET /api/vendor-portal/risk/dashboard':               { module: 'VENDOR_GOVERNANCE', action: 'view'    },
+  'GET /api/vendor-portal/validation':                   { module: 'VENDOR_GOVERNANCE', action: 'view'    },
+  'POST /api/vendor-portal/requests/:id/approve':        { module: 'VENDOR_GOVERNANCE', action: 'approve' },
+  'POST /api/vendor-portal/requests/:id/reject':         { module: 'VENDOR_GOVERNANCE', action: 'approve' },
+  'POST /api/vendor-portal/requests/:id/send-back':      { module: 'VENDOR_GOVERNANCE', action: 'approve' },
+  'POST /api/vendor-portal/change-requests/:id/approve': { module: 'VENDOR_GOVERNANCE', action: 'approve' },
+  'POST /api/vendor-portal/change-requests/:id/reject':  { module: 'VENDOR_GOVERNANCE', action: 'approve' },
 }
 
 // Normalise dynamic path segments so /api/invoices/abc-123/approve →

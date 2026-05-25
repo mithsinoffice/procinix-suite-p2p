@@ -30,6 +30,29 @@ import {
   approveChangeRequest,
   rejectChangeRequest,
 } from '../services/vendor-portal/change-request.service.js'
+import {
+  getValidationQueue,
+  approveDocument,
+  rejectDocument,
+  verifyBankAccount,
+} from '../services/vendor-portal/validation.service.js'
+import { getVendor360 } from '../services/vendor-portal/vendor360.service.js'
+import { sendEmail } from '../services/email.service.js'
+import {
+  vendorInvitationEmail,
+  onboardingApprovedEmail,
+  onboardingRejectedEmail,
+  changeRequestStatusEmail,
+} from '../services/vendor-portal/email-templates/index.js'
+
+// All email dispatches in this file are fire-and-forget: the handler
+// returns to the client first, then the email helper awaits SMTP. Errors
+// log to stderr but don't fail the API response (vendors shouldn't see
+// "invitation created but email failed" — they see "invitation created").
+
+function siteUrl(): string {
+  return process.env.FRONTEND_URL?.replace(/\/$/, '') ?? 'http://localhost:3000'
+}
 
 // ── Validation schemas ───────────────────────────────────────────────────
 
@@ -185,6 +208,22 @@ export async function vendorPortalRoutes(app: FastifyInstance) {
       req.user.sub,
       parsed.data,
     )
+
+    // Fire-and-forget invitation email. Look up tenant name + inviter name
+    // off the request context; if the lookup fails the email helper logs
+    // and moves on without breaking the response.
+    void (async () => {
+      const tenant = await app.prisma.tenant.findUnique({ where: { id: req.tenant.id }, select: { name: true } })
+      const template = vendorInvitationEmail({
+        vendorName:    parsed.data.vendorLegalName ?? parsed.data.vendorEmail,
+        invitedByName: (req.user as { name?: string }).name ?? 'Procurement Team',
+        companyName:   tenant?.name ?? 'Procinix',
+        portalUrl:     `${siteUrl()}/portal/onboarding/${result.portalToken}`,
+        expiresAt:     result.tokenExpiresAt,
+      })
+      await sendEmail({ to: result.vendorEmail, ...template })
+    })().catch((err) => app.log.error({ err, requestCode: result.requestCode }, 'vendor invitation email failed'))
+
     return reply.code(201).send(result)
   })
 
@@ -345,6 +384,30 @@ export async function vendorPortalRoutes(app: FastifyInstance) {
       const status = result.error.code === 'NOT_FOUND' ? 404 : 409
       return reply.code(status).send(result.error)
     }
+
+    // Email only fires on the FINAL approval (workflow.finalized) — the
+    // vendor doesn't need a notification every level. Look up vendor email
+    // + tenant name then send the welcome.
+    if (result.finalized) {
+      void (async () => {
+        const [request, tenant] = await Promise.all([
+          app.prisma.vendorOnboardingRequest.findUnique({
+            where:  { id: params.data.id },
+            select: { vendorEmail: true, vendorLegalName: true, profile: { select: { vendorCode: true } } },
+          }),
+          app.prisma.tenant.findUnique({ where: { id: req.tenant.id }, select: { name: true } }),
+        ])
+        if (!request) return
+        const template = onboardingApprovedEmail({
+          vendorName:     request.vendorLegalName ?? request.vendorEmail,
+          companyName:    tenant?.name ?? 'Procinix',
+          vendorCode:     request.profile?.vendorCode ?? '—',
+          portalLoginUrl: `${siteUrl()}/portal/vendor/login`,
+        })
+        await sendEmail({ to: request.vendorEmail, ...template })
+      })().catch((err) => app.log.error({ err, requestId: params.data.id }, 'onboarding-approved email failed'))
+    }
+
     return reply.send(result)
   })
 
@@ -366,6 +429,25 @@ export async function vendorPortalRoutes(app: FastifyInstance) {
       const status = result.error.code === 'NOT_FOUND' ? 404 : 409
       return reply.code(status).send(result.error)
     }
+
+    void (async () => {
+      const [request, tenant] = await Promise.all([
+        app.prisma.vendorOnboardingRequest.findUnique({
+          where:  { id: params.data.id },
+          select: { vendorEmail: true, vendorLegalName: true },
+        }),
+        app.prisma.tenant.findUnique({ where: { id: req.tenant.id }, select: { name: true } }),
+      ])
+      if (!request) return
+      const template = onboardingRejectedEmail({
+        vendorName:   request.vendorLegalName ?? request.vendorEmail,
+        companyName:  tenant?.name ?? 'Procinix',
+        reason:       body.data.reason,
+        contactEmail: (req.user as { email?: string }).email ?? 'procurement@procinix.com',
+      })
+      await sendEmail({ to: request.vendorEmail, ...template })
+    })().catch((err) => app.log.error({ err, requestId: params.data.id }, 'onboarding-rejected email failed'))
+
     return reply.send(result)
   })
 
@@ -669,6 +751,25 @@ export async function vendorPortalRoutes(app: FastifyInstance) {
       const status = result.error.code === 'NOT_FOUND' ? 404 : 409
       return reply.code(status).send(result.error)
     }
+
+    void (async () => {
+      const cr = await app.prisma.vendorChangeRequest.findUnique({
+        where:  { id: params.data.id },
+        select: {
+          changeType: true, comments: true,
+          vendor: { select: { legalName: true, request: { select: { vendorEmail: true } } } },
+        },
+      })
+      if (!cr) return
+      const template = changeRequestStatusEmail({
+        vendorName:  cr.vendor.legalName,
+        changeType:  cr.changeType,
+        status:      'APPROVED',
+        comments:    body.data.comments,
+      })
+      await sendEmail({ to: cr.vendor.request.vendorEmail, ...template })
+    })().catch((err) => app.log.error({ err, changeRequestId: params.data.id }, 'change-request approved email failed'))
+
     return reply.send(result.changeRequest)
   })
 
@@ -686,6 +787,25 @@ export async function vendorPortalRoutes(app: FastifyInstance) {
       const status = result.error.code === 'NOT_FOUND' ? 404 : 409
       return reply.code(status).send(result.error)
     }
+
+    void (async () => {
+      const cr = await app.prisma.vendorChangeRequest.findUnique({
+        where:  { id: params.data.id },
+        select: {
+          changeType: true,
+          vendor: { select: { legalName: true, request: { select: { vendorEmail: true } } } },
+        },
+      })
+      if (!cr) return
+      const template = changeRequestStatusEmail({
+        vendorName:  cr.vendor.legalName,
+        changeType:  cr.changeType,
+        status:      'REJECTED',
+        comments:    body.data.reason,
+      })
+      await sendEmail({ to: cr.vendor.request.vendorEmail, ...template })
+    })().catch((err) => app.log.error({ err, changeRequestId: params.data.id }, 'change-request rejected email failed'))
+
     return reply.send(result.changeRequest)
   })
 
@@ -704,6 +824,47 @@ export async function vendorPortalRoutes(app: FastifyInstance) {
       const status = result.error.code === 'NOT_FOUND' ? 404 : 409
       return reply.code(status).send(result.error)
     }
+    return reply.send(result)
+  })
+
+  // ── Validation dashboard (Sprint 6B) ────────────────────────────────────
+
+  app.get('/validation', auth, async (req, reply) => {
+    return reply.send(await getValidationQueue(app.prisma, req.tenant.id))
+  })
+
+  app.post('/validation/documents/:id/approve', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    if (!params.success) return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid id' })
+    const result = await approveDocument(app.prisma, params.data.id, req.tenant.id, req.user.sub)
+    if (result.ok === false) return reply.code(404).send(result.error)
+    return reply.send(result.document)
+  })
+
+  app.post('/validation/documents/:id/reject', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    const body   = z.object({ reason: z.string().min(1).max(2000) }).strict().safeParse(req.body)
+    if (!params.success || !body.success) return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'reason required' })
+    const result = await rejectDocument(app.prisma, params.data.id, req.tenant.id, req.user.sub, body.data.reason)
+    if (result.ok === false) return reply.code(404).send(result.error)
+    return reply.send(result.document)
+  })
+
+  app.post('/validation/bank-accounts/:id/verify', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    if (!params.success) return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid id' })
+    const result = await verifyBankAccount(app.prisma, params.data.id, req.tenant.id, req.user.sub)
+    if (result.ok === false) return reply.code(404).send(result.error)
+    return reply.send(result.bankAccount)
+  })
+
+  // ── Vendor 360 console (Sprint 6C) ──────────────────────────────────────
+
+  app.get('/vendors/:id/360', auth, async (req, reply) => {
+    const params = idParamSchema.safeParse(req.params)
+    if (!params.success) return reply.code(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid id' })
+    const result = await getVendor360(app.prisma, params.data.id, req.tenant.id)
+    if (!result) return reply.code(404).send({ code: 'NOT_FOUND', message: 'Vendor not found' })
     return reply.send(result)
   })
 }

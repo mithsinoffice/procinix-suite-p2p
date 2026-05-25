@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useVendor360 } from "../../../../../hooks/vendor-portal/useVendor360";
 import {
   ArrowLeft,
   Ban,
@@ -243,8 +244,29 @@ const erpSyncData = [
 ];
 
 export function Vendor360ConsolePage() {
-  const {  } = useParams();
+  const { id } = useParams<{ id: string }>();
+  const vendor360 = useVendor360(id);
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+
+  // The page was authored against a deeply nested mock vendorData blob.
+  // Sprint 6 swaps in the real /api/vendor-portal/vendors/:id/360 payload
+  // for the top-level identity + risk + spend surfaces; the deeper tab
+  // panels still render against the original mock shapes until each is
+  // individually re-pointed (those rewrites land alongside their specific
+  // detail endpoints in later sprints). The shadow below keeps the
+  // existing JSX compiling: live fields override the mock where the API
+  // provides them, mock fills the rest.
+  const live = vendor360.data;
+  const realIdentity = live ? {
+    legalName:    live.profile.legalName,
+    countryCode:  live.profile.countryCode,
+    vendorCode:   live.profile.vendorCode ?? '—',
+    vendorType:   live.profile.vendorType,
+    riskScore:    live.profile.riskScore ?? 0,
+    riskTier:     live.profile.riskTier ?? 'LOW',
+    status:       live.profile.status,
+    totalSpend:   live.totalSpend,
+  } : null;
 
   const tabs = [
     { id: "overview" as Tab, label: "Overview", icon: <Activity className="w-4 h-4" /> },
@@ -288,12 +310,12 @@ export function Vendor360ConsolePage() {
             <div className="flex items-start gap-6">
               {/* Country Flag */}
               <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#00A9B7] to-[#008A96] flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                {vendorData.countryCode}
+                {(realIdentity?.countryCode ?? vendorData.countryCode)}
               </div>
 
               <div>
                 <h1 className="text-3xl font-semibold text-[#0A0F14] mb-2">
-                  {vendorData.legalName}
+                  {(realIdentity?.legalName ?? vendorData.legalName)}
                 </h1>
                 <div className="flex items-center gap-4 mb-3">
                   <div className="flex items-center gap-2">
