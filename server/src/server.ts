@@ -28,6 +28,10 @@ import { paymentRoutes }      from './routes/payments.js'
 import { analyticsRoutes }    from './routes/analytics.js'
 import { navBadgesRoutes }    from './routes/nav-badges.js'
 import { provisionsRoutes }   from './routes/provisions.js'
+import {
+  vendorPortalRoutes,
+  vendorPortalPublicRoutes,
+} from './routes/vendor-portal.js'
 
 export async function buildApp() {
   const app = Fastify({
@@ -75,6 +79,12 @@ export async function buildApp() {
   await app.register(analyticsRoutes,    { prefix: '/api/analytics' })
   await app.register(navBadgesRoutes,    { prefix: '/api/nav' })
   await app.register(provisionsRoutes,   { prefix: '/api/provisions' })
+
+  // Vendor governance (Sprint 1) — split into auth'd buyer routes and the
+  // unauthenticated self-service portal that vendors hit via a tokenised
+  // invite link.
+  await app.register(vendorPortalRoutes,       { prefix: '/api/vendor-portal' })
+  await app.register(vendorPortalPublicRoutes, { prefix: '/api/portal' })
 
   app.get('/api/ping', async () => ({ pong: true, ts: Date.now() }))
 

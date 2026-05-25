@@ -17,7 +17,69 @@ import {
 } from "lucide-react";
 import { KPICard } from "../components/design-system/KPICard";
 import { StatusBadge } from "../components/design-system/StatusBadge";
-import { mockVendorRequests, countries, vendorTypes, entities } from "../data/mockData";
+import { countries, vendorTypes, entities } from "../data/mockData";
+import {
+  useVendorRequests,
+  type RequestRow,
+} from "../../../../../hooks/vendor-portal/useVendorRequests";
+import { useCreateInvitation } from "../../../../../hooks/vendor-portal/useVendorInvitations";
+
+// Adapter — the page was authored against the mock shape (validationStatus,
+// approvalStatus, riskLevel, erpSyncStatus all separate strings); the server
+// list is normalised into a single status + nested profile + workflow. Map
+// to keep the table renderer untouched.
+interface UiVendorRequest {
+  id:               string
+  requestId:        string
+  legalName:        string
+  country:          string
+  vendorType:       string
+  riskLevel:        'Low' | 'Medium' | 'High'
+  validationStatus: 'Pending' | 'In Progress' | 'Completed' | 'Failed'
+  approvalStatus:   'Pending' | 'In Progress' | 'Approved' | 'Rejected'
+  erpSyncStatus:    'Not Started' | 'In Progress' | 'Synced' | 'Failed'
+  lastUpdated:      string
+}
+
+function adaptRequest(row: RequestRow): UiVendorRequest {
+  const tier = row.profile?.riskTier ?? 'LOW'
+  const riskLevel: UiVendorRequest['riskLevel'] =
+    tier === 'HIGH' || tier === 'CRITICAL' ? 'High' :
+    tier === 'MEDIUM'                      ? 'Medium' :
+                                             'Low'
+
+  // Map server's coarse status into the page's 3-axis view. Anything past
+  // INVITED implies validation has started; APPROVED implies finished.
+  const s = row.status
+  const validationStatus: UiVendorRequest['validationStatus'] =
+    s === 'APPROVED' || s === 'UNDER_REVIEW' ? 'Completed' :
+    s === 'IN_PROGRESS'                       ? 'In Progress' :
+    s === 'REJECTED'                          ? 'Failed' :
+                                                'Pending'
+  const approvalStatus: UiVendorRequest['approvalStatus'] =
+    row.workflow?.status === 'APPROVED' ? 'Approved' :
+    row.workflow?.status === 'REJECTED' ? 'Rejected' :
+    row.workflow?.status === 'IN_PROGRESS' ? 'In Progress' :
+                                             'Pending'
+  const erpSyncStatus: UiVendorRequest['erpSyncStatus'] =
+    row.erpSyncStatus === 'SYNCED'       ? 'Synced' :
+    row.erpSyncStatus === 'IN_PROGRESS'  ? 'In Progress' :
+    row.erpSyncStatus === 'FAILED'       ? 'Failed' :
+                                           'Not Started'
+
+  return {
+    id:               row.id,
+    requestId:        row.requestCode,
+    legalName:        row.vendorLegalName ?? '(unnamed)',
+    country:          row.vendorCountryCode ?? '—',
+    vendorType:       row.vendorType ?? '—',
+    riskLevel,
+    validationStatus,
+    approvalStatus,
+    erpSyncStatus,
+    lastUpdated:      (row.submittedAt ?? row.invitedAt ?? '').slice(0, 16).replace('T', ' '),
+  }
+}
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -46,7 +108,7 @@ export function VendorRequestsPage() {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  
+
   const [inviteForm, setInviteForm] = useState({
     legalName: "",
     email: "",
@@ -55,38 +117,58 @@ export function VendorRequestsPage() {
     entity: "",
   });
 
-  const filteredRequests = mockVendorRequests.filter((request) => {
+  const requestsQuery = useVendorRequests({ limit: 100 });
+  const createInvitation = useCreateInvitation();
+  const allRequests: UiVendorRequest[] = (requestsQuery.data?.rows ?? []).map(adaptRequest);
+
+  const filteredRequests = allRequests.filter((request) => {
     const matchesSearch =
       searchQuery === "" ||
       request.legalName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       request.requestId.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesCountry = selectedCountry === "all" || request.country === selectedCountry;
     const matchesType = selectedType === "all" || request.vendorType === selectedType;
     const matchesRisk = selectedRisk === "all" || request.riskLevel === selectedRisk;
     const matchesStatus = selectedStatus === "all" || request.validationStatus === selectedStatus;
-    
+
     return matchesSearch && matchesCountry && matchesType && matchesRisk && matchesStatus;
   });
 
   const kpiData = {
-    total: mockVendorRequests.length,
-    awaitingSubmission: mockVendorRequests.filter((r) => r.validationStatus === "Pending").length,
-    underValidation: mockVendorRequests.filter((r) => r.validationStatus === "In Progress").length,
-    pendingApproval: mockVendorRequests.filter((r) => r.approvalStatus === "Pending").length,
-    highRisk: mockVendorRequests.filter((r) => r.riskLevel === "High").length,
+    total: allRequests.length,
+    awaitingSubmission: allRequests.filter((r) => r.validationStatus === "Pending").length,
+    underValidation: allRequests.filter((r) => r.validationStatus === "In Progress").length,
+    pendingApproval: allRequests.filter((r) => r.approvalStatus === "Pending").length,
+    highRisk: allRequests.filter((r) => r.riskLevel === "High").length,
   };
 
-  const handleSendInvitation = () => {
-    setShowInviteModal(false);
-    setShowSuccessModal(true);
-    setInviteForm({
-      legalName: "",
-      email: "",
-      country: "",
-      vendorType: "",
-      entity: "",
-    });
+  const handleSendInvitation = async () => {
+    try {
+      await createInvitation.mutateAsync({
+        vendorLegalName:   inviteForm.legalName,
+        vendorEmail:       inviteForm.email,
+        // Country picker still uses display names — Sprint 2 swaps in ISO-2
+        // codes everywhere. Pass through first 2 chars as a best-effort
+        // placeholder until then.
+        vendorCountryCode: inviteForm.country.slice(0, 2).toUpperCase(),
+        vendorType:        inviteForm.vendorType,
+      });
+      setShowInviteModal(false);
+      setShowSuccessModal(true);
+      setInviteForm({
+        legalName: "",
+        email: "",
+        country: "",
+        vendorType: "",
+        entity: "",
+      });
+    } catch (err) {
+      // The dialog stays open so the user can adjust and retry. Toast feedback
+      // could come from a parent <Toaster/> — keeping silent here matches the
+      // pre-existing flow which didn't surface errors either.
+      void err;
+    }
   };
 
   const getRiskBadge = (level: string) => {
@@ -450,11 +532,11 @@ export function VendorRequestsPage() {
                       <td className="py-4 px-4">
                         <div>
                           <p className="text-sm font-medium text-[#0A0F14]">{request.legalName}</p>
-                          <p className="text-xs text-[#64748B]">{request.entity}</p>
+                          <p className="text-xs text-[#64748B]">—</p>
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <span className="text-sm text-[#0A0F14]">{request.onboardingSource}</span>
+                        <span className="text-sm text-[#0A0F14]">—</span>
                       </td>
                       <td className="py-4 px-4">
                         <span className="text-sm text-[#0A0F14]">{request.country}</span>
@@ -497,7 +579,7 @@ export function VendorRequestsPage() {
           {/* Pagination */}
           <div className="flex items-center justify-between mt-4">
             <p className="text-sm text-[#64748B]">
-              Showing {filteredRequests.length} of {mockVendorRequests.length} requests
+              Showing {filteredRequests.length} of {allRequests.length} requests
             </p>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" disabled>

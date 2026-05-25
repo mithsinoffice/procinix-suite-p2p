@@ -1,7 +1,11 @@
 import { useState, useMemo } from "react";
-import {  } from "react-router-dom";
 import { Plus, Mail, Search, Filter, Download, RefreshCw, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import {
+  useVendorInvitations,
+  useCreateInvitation,
+  type InvitationRow,
+} from "../../../../../hooks/vendor-portal/useVendorInvitations";
 import {
   Dialog,
   DialogContent,
@@ -32,60 +36,58 @@ import {
 } from "../components/ui/select";
 import { Textarea } from "../components/ui/textarea";
 
-const initialInvitations = [
-  {
-    id: "INV-2026-001",
-    vendorName: "Acme Global Logistics Ltd.",
-    email: "vendors@acmeglobal.com",
-    invitedBy: "Sarah Chen",
-    invitedDate: "2026-02-18",
-    status: "Pending",
-    statusColor: "text-yellow-600 bg-yellow-50",
-    expiresIn: "5 days",
-    country: "United States",
-    vendorType: "Logistics Provider",
-    category: "Transportation",
-  },
-  {
-    id: "INV-2026-002",
-    vendorName: "TechVision Solutions Inc.",
-    email: "onboarding@techvision.com",
-    invitedBy: "Michael Torres",
-    invitedDate: "2026-02-15",
-    status: "Accepted",
-    statusColor: "text-green-600 bg-green-50",
-    expiresIn: "8 days",
-    country: "India",
-    vendorType: "IT Services",
-    category: "Technology",
-  },
-  {
-    id: "INV-2026-003",
-    vendorName: "Global Supply Partners",
-    email: "contact@globalsupply.com",
-    invitedBy: "Sarah Chen",
-    invitedDate: "2026-02-10",
-    status: "Expired",
-    statusColor: "text-red-600 bg-red-50",
-    expiresIn: "Expired",
-    country: "China",
-    vendorType: "Supplier",
-    category: "Manufacturing",
-  },
-  {
-    id: "INV-2026-004",
-    vendorName: "Premier Manufacturing Corp",
-    email: "vendor@premiermfg.com",
-    invitedBy: "David Kim",
-    invitedDate: "2026-02-19",
-    status: "Pending",
-    statusColor: "text-yellow-600 bg-yellow-50",
-    expiresIn: "6 days",
-    country: "Germany",
-    vendorType: "Manufacturer",
-    category: "Manufacturing",
-  },
-];
+// Adapter: server returns InvitationRow rows; the existing UI was authored
+// against a richer mock shape. Map what we have today, leave the rest as
+// '—'. Country / vendorType / category enrichment lands in Sprint 2 when
+// the list endpoint joins through to the matrix-rule context.
+type UiInvitation = {
+  id:          string
+  vendorName:  string
+  email:       string
+  invitedBy:   string
+  invitedDate: string
+  status:      'Pending' | 'Accepted' | 'Expired'
+  statusColor: string
+  expiresIn:   string
+  country:     string
+  vendorType:  string
+  category:    string
+  // Real keys we keep so other actions (resend, etc.) can target server rows.
+  _serverId:   string
+  _requestId:  string
+}
+
+function adaptInvitation(row: InvitationRow): UiInvitation {
+  const uiStatus =
+    row.status === 'ACCEPTED' ? 'Accepted' :
+    row.status === 'PENDING'  ? 'Pending'  :
+                                'Expired'
+  const statusColor =
+    uiStatus === 'Accepted' ? 'text-green-600 bg-green-50' :
+    uiStatus === 'Pending'  ? 'text-yellow-600 bg-yellow-50' :
+                              'text-red-600 bg-red-50'
+
+  const msRemaining = new Date(row.expiresAt).getTime() - Date.now()
+  const expiresIn = msRemaining <= 0
+    ? 'Expired'
+    : `${Math.ceil(msRemaining / 86_400_000)} days`
+
+  return {
+    id:          row.requestCode,
+    vendorName:  row.vendorLegalName ?? '(unnamed)',
+    email:       row.vendorEmail,
+    invitedBy:   '—',
+    invitedDate: row.sentAt.slice(0, 10),
+    status:      uiStatus,
+    statusColor,
+    expiresIn,
+    country:     '—',
+    vendorType:  '—',
+    category:    '—',
+    _serverId:   row.id,
+    _requestId:  row.requestId,
+  }
+}
 
 const countries = ["United States", "India", "China", "Germany", "United Kingdom", "Singapore", "Japan", "Australia"];
 const vendorTypes = ["Logistics Provider", "IT Services", "Supplier", "Manufacturer", "Consultant", "Service Provider"];
@@ -93,10 +95,16 @@ const categories = ["Transportation", "Technology", "Manufacturing", "Profession
 const entities = ["Procinix USA Inc.", "Procinix EMEA GmbH", "Procinix APAC Pte Ltd", "Procinix Global"];
 
 export function VendorInvitationsPage() {
-  const [invitations, setInvitations] = useState(initialInvitations);
+  const invitationsQuery = useVendorInvitations({ limit: 100 });
+  const createInvitation = useCreateInvitation();
+  const invitations: UiInvitation[] = useMemo(
+    () => (invitationsQuery.data?.rows ?? []).map(adaptInvitation),
+    [invitationsQuery.data],
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const loading = invitationsQuery.isLoading || invitationsQuery.isFetching;
   
   // Modal states
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -160,9 +168,7 @@ export function VendorInvitationsPage() {
   ];
 
   const handleRefresh = async () => {
-    setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setLoading(false);
+    await invitationsQuery.refetch();
     toast.success("Invitations refreshed");
   };
 
@@ -213,56 +219,46 @@ export function VendorInvitationsPage() {
 
   const handleSendInvitation = async () => {
     if (!validateForm()) return;
-    
+
     setSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    
-    const newInvitation = {
-      id: `INV-2026-${String(invitations.length + 1).padStart(3, "0")}`,
-      vendorName: inviteForm.legalName,
-      email: inviteForm.email,
-      invitedBy: "Sarah Mitchell",
-      invitedDate: new Date().toISOString().split("T")[0],
-      status: "Pending",
-      statusColor: "text-yellow-600 bg-yellow-50",
-      expiresIn: `${inviteForm.expiryDays} days`,
-      country: inviteForm.country,
-      vendorType: inviteForm.vendorType,
-      category: inviteForm.category,
-    };
-    
-    setInvitations([newInvitation, ...invitations]);
-    setShowInviteModal(false);
-    setInviteForm({
-      legalName: "",
-      email: "",
-      country: "",
-      vendorType: "",
-      category: "",
-      entity: "",
-      expiryDays: "7",
-      message: "",
-    });
-    setFormErrors({});
-    setSubmitting(false);
-    toast.success(`Invitation sent to ${inviteForm.email}`);
+    try {
+      await createInvitation.mutateAsync({
+        vendorLegalName:   inviteForm.legalName,
+        vendorEmail:       inviteForm.email,
+        // The form takes a country *name*; the API takes ISO-2. We don't have
+        // a name→code lookup wired yet, so passthrough the first 2 chars for
+        // now — Sprint 2 introduces a proper Country picker.
+        vendorCountryCode: inviteForm.country.slice(0, 2).toUpperCase(),
+        vendorType:        inviteForm.vendorType,
+        industryCategory:  inviteForm.category,
+      });
+      setShowInviteModal(false);
+      setInviteForm({
+        legalName: "",
+        email: "",
+        country: "",
+        vendorType: "",
+        category: "",
+        entity: "",
+        expiryDays: "7",
+        message: "",
+      });
+      setFormErrors({});
+      toast.success(`Invitation sent to ${inviteForm.email}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to send invitation';
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleResend = async () => {
     if (!selectedInvitation) return;
-    
+    // The /resend endpoint lands in Sprint 2 — for now we just toast a
+    // notice so the button is wired but doesn't fake server state.
     setShowResendConfirm(false);
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    
-    setInvitations(
-      invitations.map((inv) =>
-        inv.id === selectedInvitation.id
-          ? { ...inv, invitedDate: new Date().toISOString().split("T")[0], expiresIn: "7 days" }
-          : inv
-      )
-    );
-    
-    toast.success(`Invitation resent to ${selectedInvitation.email}`);
+    toast.info("Resend will be available in Sprint 2");
     setSelectedInvitation(null);
   };
 
