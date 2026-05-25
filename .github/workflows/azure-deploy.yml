@@ -29,6 +29,17 @@ jobs:
           NODE_ENV: production
           VITE_API_URL: https://procinix-s2pdemo.procinix.ai
 
+      # Apply pending DB migrations before deploying new code — ensures schema
+      # and app code are always in sync. `prisma migrate deploy` is idempotent
+      # (only applies migrations not already in _prisma_migrations) and is the
+      # production-safe counterpart to `migrate dev` — no shadow DB, no drift
+      # checks, no destructive prompts. Must run BEFORE the dev-dep prune
+      # below, because the `prisma` CLI is a devDependency.
+      - name: Apply Prisma migrations to production DB
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Prune root to production dependencies only
         run: npm prune --omit=dev
 
