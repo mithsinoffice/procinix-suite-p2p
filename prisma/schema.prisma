@@ -3,33 +3,34 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model Tenant {
-  id             String          @id @default(uuid())
-  code           String          @unique
-  name           String
-  gstin          String?
-  pan            String?
-  plan           String          @default("TRIAL")
-  trialExpiresAt DateTime?
-  maxEntities    Int             @default(1)
-  maxUsers       Int             @default(5)
-  maxStorageMb   Int             @default(5120)
-  isActive       Boolean         @default(true)
-  status         String          @default("ACTIVE")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  users          User[]
-  vendors        Vendor[]
-  invoices       Invoice[]
-  payments       Payment[]
-  modules        TenantModule[]
-  features       TenantFeature[]
-  provisionSchedules     ProvisionSchedule[]
-  amortizationSchedules  AmortizationSchedule[]
+  id                    String                 @id @default(uuid())
+  code                  String                 @unique
+  name                  String
+  gstin                 String?
+  pan                   String?
+  plan                  String                 @default("TRIAL")
+  trialExpiresAt        DateTime?
+  maxEntities           Int                    @default(1)
+  maxUsers              Int                    @default(5)
+  maxStorageMb          Int                    @default(5120)
+  isActive              Boolean                @default(true)
+  status                String                 @default("ACTIVE")
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  users                 User[]
+  vendors               Vendor[]
+  invoices              Invoice[]
+  payments              Payment[]
+  modules               TenantModule[]
+  features              TenantFeature[]
+  provisionSchedules    ProvisionSchedule[]
+  amortizationSchedules AmortizationSchedule[]
 
   @@map("tenants")
 }
@@ -346,47 +347,47 @@ model TaxCode {
 }
 
 model Invoice {
-  id                 String            @id @default(uuid())
-  tenantId           String
-  invoiceNumber      String
-  invoiceRef         String?
-  invoiceDate        DateTime          @db.Date
-  dueDate            DateTime?         @db.Date
-  vendorId           String?
-  vendorGSTIN        String?
-  vendorPAN          String?
-  entityId           String?
-  billToLocationId   String?
-  channelType        String            @default("MANUAL_UPLOAD")
-  status             String            @default("DRAFT")
-  apLane             String?
-  matchScore         Int?
-  matchLane          String?
-  isPOInvoice        Boolean           @default(false)
-  poRef              String?
-  grnRef             String?
-  subtotal           Decimal           @default(0) @db.Decimal(15, 2)
-  discountAmount     Decimal           @default(0) @db.Decimal(15, 2)
-  taxableAmount      Decimal           @default(0) @db.Decimal(15, 2)
-  cgstAmount         Decimal           @default(0) @db.Decimal(15, 2)
-  sgstAmount         Decimal           @default(0) @db.Decimal(15, 2)
-  igstAmount         Decimal           @default(0) @db.Decimal(15, 2)
-  tdsAmount          Decimal           @default(0) @db.Decimal(15, 2)
-  totalAmount        Decimal           @default(0) @db.Decimal(15, 2)
-  netPayable         Decimal           @default(0) @db.Decimal(15, 2)
-  currencyCode       String            @default("INR")
-  exchangeRate       Decimal?          @db.Decimal(18, 8)
-  irnNumber          String?
-  irnVerified        Boolean           @default(false)
-  ocrConfidence      Int?
-  ocrRawData         Json?
+  id                    String            @id @default(uuid())
+  tenantId              String
+  invoiceNumber         String
+  invoiceRef            String?
+  invoiceDate           DateTime          @db.Date
+  dueDate               DateTime?         @db.Date
+  vendorId              String?
+  vendorGSTIN           String?
+  vendorPAN             String?
+  entityId              String?
+  billToLocationId      String?
+  channelType           String            @default("MANUAL_UPLOAD")
+  status                String            @default("DRAFT")
+  apLane                String?
+  matchScore            Int?
+  matchLane             String?
+  isPOInvoice           Boolean           @default(false)
+  poRef                 String?
+  grnRef                String?
+  subtotal              Decimal           @default(0) @db.Decimal(15, 2)
+  discountAmount        Decimal           @default(0) @db.Decimal(15, 2)
+  taxableAmount         Decimal           @default(0) @db.Decimal(15, 2)
+  cgstAmount            Decimal           @default(0) @db.Decimal(15, 2)
+  sgstAmount            Decimal           @default(0) @db.Decimal(15, 2)
+  igstAmount            Decimal           @default(0) @db.Decimal(15, 2)
+  tdsAmount             Decimal           @default(0) @db.Decimal(15, 2)
+  totalAmount           Decimal           @default(0) @db.Decimal(15, 2)
+  netPayable            Decimal           @default(0) @db.Decimal(15, 2)
+  currencyCode          String            @default("INR")
+  exchangeRate          Decimal?          @db.Decimal(18, 8)
+  irnNumber             String?
+  irnVerified           Boolean           @default(false)
+  ocrConfidence         Int?
+  ocrRawData            Json?
   // LLM scoring (async, populated by invoice-scorer.service after n8n ingest)
-  ocrConfidenceMap      Json?            // per-field 0–1 confidence map
-  validationIssues      Json?            // [{ field, severity, message }]
-  reviewFlags           Json?            // [{ flag, reason, severity }]
-  vendorMatchSuggestion Json?            // { suggestedName, gstin, confidence }
-  recommendedAction     String?          @default("needs_review")
-                                         // 'auto_process' | 'needs_review' | 'hold'
+  ocrConfidenceMap      Json? // per-field 0–1 confidence map
+  validationIssues      Json? // [{ field, severity, message }]
+  reviewFlags           Json? // [{ flag, reason, severity }]
+  vendorMatchSuggestion Json? // { suggestedName, gstin, confidence }
+  recommendedAction     String?           @default("needs_review")
+  // 'auto_process' | 'needs_review' | 'hold'
   llmScoredAt           DateTime?
   // Fuzzy duplicate detection (populated by duplicate-detector.service after
   // ingestion / manual upload / vendor portal). duplicateFlag holds the
@@ -395,53 +396,53 @@ model Invoice {
   // for the form banner + listing badge to surface.
   duplicateFlag         String?
   duplicateMatches      Json?
-  fileUrl            String?           @db.Text
-  fileName           String?
-  mimeType           String?
-  notes              String?           @db.Text
-  narration          String?           @db.Text
-  periodFrom         DateTime?         @db.Date
-  periodTo           DateTime?         @db.Date
+  fileUrl               String?           @db.Text
+  fileName              String?
+  mimeType              String?
+  notes                 String?           @db.Text
+  narration             String?           @db.Text
+  periodFrom            DateTime?         @db.Date
+  periodTo              DateTime?         @db.Date
   // How the vendor was resolved by the match agent:
   // 'gstin_lookup' | 'fuzzy_name' | 'email_domain' | 'manual' | null
-  vendorMatchMethod  String?
-  retentionRequired  Boolean           @default(false)
-  retentionAmount    Decimal?          @db.Decimal(15, 2)
-  retentionGlCodeId  String?
-  departmentId       String?
-  rejectionReason    String?
-  workflowInstanceId String?
-  createdByUserId    String
-  approvedByUserId   String?
-  approvedAt         DateTime?
-  paidAt             DateTime?
+  vendorMatchMethod     String?
+  retentionRequired     Boolean           @default(false)
+  retentionAmount       Decimal?          @db.Decimal(15, 2)
+  retentionGlCodeId     String?
+  departmentId          String?
+  rejectionReason       String?
+  workflowInstanceId    String?
+  createdByUserId       String
+  approvedByUserId      String?
+  approvedAt            DateTime?
+  paidAt                DateTime?
   // Payment tracking — populated by the payment module on batch execution.
   // paymentStatus drives filtering in the payment queue (UNPAID / PARTIALLY_PAID
   // hide once PAID). paidAmount accumulates across multiple batch lines for
   // partial-payment scenarios.
-  paidAmount         Decimal           @default(0) @db.Decimal(15, 2)
-  paymentStatus      String            @default("UNPAID")
-                                       // UNPAID | PARTIALLY_PAID | PAID
+  paidAmount            Decimal           @default(0) @db.Decimal(15, 2)
+  paymentStatus         String            @default("UNPAID")
+  // UNPAID | PARTIALLY_PAID | PAID
   // MSME compliance — populated when vendor.msmeRegistered=true.
   // msmePaymentDue = invoiceDate + min(45, vendor.paymentTerms) days.
   // msmeBreach + msmeInterest get set by the daily refresh job when overdue.
-  msmePaymentDue     DateTime?         @db.Date
-  msmeDaysRemaining  Int?
-  msmeBreach         Boolean           @default(false)
-  msmeInterest       Decimal?          @db.Decimal(15, 2)
-  isUrgent           Boolean           @default(false)
-  urgentReason       String?
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  matchType          String? // '2way' | '3way' — set when isPOInvoice = true
-  costCentreId       String? // direct-invoice cost allocation
-  glCodeId           String? // direct-invoice GL allocation
-  tenant             Tenant            @relation(fields: [tenantId], references: [id])
-  vendor             Vendor?           @relation(fields: [vendorId], references: [id])
-  lines              InvoiceLine[]
-  auditLogs          InvoiceAuditLog[]
-  approvals          ApprovalStep[]
-  poLinks            InvoicePOLink[]
+  msmePaymentDue        DateTime?         @db.Date
+  msmeDaysRemaining     Int?
+  msmeBreach            Boolean           @default(false)
+  msmeInterest          Decimal?          @db.Decimal(15, 2)
+  isUrgent              Boolean           @default(false)
+  urgentReason          String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  matchType             String? // '2way' | '3way' — set when isPOInvoice = true
+  costCentreId          String? // direct-invoice cost allocation
+  glCodeId              String? // direct-invoice GL allocation
+  tenant                Tenant            @relation(fields: [tenantId], references: [id])
+  vendor                Vendor?           @relation(fields: [vendorId], references: [id])
+  lines                 InvoiceLine[]
+  auditLogs             InvoiceAuditLog[]
+  approvals             ApprovalStep[]
+  poLinks               InvoicePOLink[]
 
   @@unique([tenantId, invoiceNumber, vendorId])
   @@index([tenantId, status])
@@ -450,31 +451,31 @@ model Invoice {
 }
 
 model InvoiceLine {
-  id             String   @id @default(uuid())
+  id             String      @id @default(uuid())
   invoiceId      String
   lineNumber     Int
   itemId         String?
   itemCode       String?
   description    String
-  quantity       Decimal  @db.Decimal(15, 4)
+  quantity       Decimal     @db.Decimal(15, 4)
   uom            String?
-  unitPrice      Decimal  @db.Decimal(15, 4)
-  discountPct    Decimal? @db.Decimal(5, 2)
-  discountAmount Decimal  @default(0) @db.Decimal(15, 2)
-  taxableAmount  Decimal  @default(0) @db.Decimal(15, 2)
-  gstRate        Decimal? @db.Decimal(5, 2)
-  cgstAmount     Decimal  @default(0) @db.Decimal(15, 2)
-  sgstAmount     Decimal  @default(0) @db.Decimal(15, 2)
-  igstAmount     Decimal  @default(0) @db.Decimal(15, 2)
-  tdsRate        Decimal? @db.Decimal(5, 2)
-  tdsAmount      Decimal  @default(0) @db.Decimal(15, 2)
-  rcmApplicable  Boolean  @default(false)
+  unitPrice      Decimal     @db.Decimal(15, 4)
+  discountPct    Decimal?    @db.Decimal(5, 2)
+  discountAmount Decimal     @default(0) @db.Decimal(15, 2)
+  taxableAmount  Decimal     @default(0) @db.Decimal(15, 2)
+  gstRate        Decimal?    @db.Decimal(5, 2)
+  cgstAmount     Decimal     @default(0) @db.Decimal(15, 2)
+  sgstAmount     Decimal     @default(0) @db.Decimal(15, 2)
+  igstAmount     Decimal     @default(0) @db.Decimal(15, 2)
+  tdsRate        Decimal?    @db.Decimal(5, 2)
+  tdsAmount      Decimal     @default(0) @db.Decimal(15, 2)
+  rcmApplicable  Boolean     @default(false)
   hsnCode        String?
   sacCode        String?
   glCodeId       String?
   costCentreId   String?
   profitCentreId String?
-  lineTotal      Decimal  @default(0) @db.Decimal(15, 2)
+  lineTotal      Decimal     @default(0) @db.Decimal(15, 2)
   invoice        Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   item           ItemMaster? @relation(fields: [itemId], references: [id])
 
@@ -1351,11 +1352,11 @@ model ItemCategory {
 }
 
 model ItemMaster {
-  id                    String               @id @default(uuid())
+  id                    String                    @id @default(uuid())
   tenantId              String
   itemCode              String
   name                  String
-  description           String?              @db.Text
+  description           String?                   @db.Text
   itemType              String
   nature                String?
   expenseType           String
@@ -1363,42 +1364,42 @@ model ItemMaster {
   hsnCode               String?
   sacCode               String?
   itemCategoryId        String?
-  gstRate               Decimal?             @db.Decimal(5, 2)
-  rcmApplicable         Boolean              @default(false)
+  gstRate               Decimal?                  @db.Decimal(5, 2)
+  rcmApplicable         Boolean                   @default(false)
   tdsSectionId          String?
   taxCodeId             String?
-  poRequired            String               @default("YES")
-  poThresholdAmount     Decimal?             @db.Decimal(15, 2)
-  poAtLocation          Boolean              @default(false)
-  threeWayMatch         Boolean              @default(true)
-  grnRequired           Boolean              @default(true)
-  advanceAllowed        Boolean              @default(false)
+  poRequired            String                    @default("YES")
+  poThresholdAmount     Decimal?                  @db.Decimal(15, 2)
+  poAtLocation          Boolean                   @default(false)
+  threeWayMatch         Boolean                   @default(true)
+  grnRequired           Boolean                   @default(true)
+  advanceAllowed        Boolean                   @default(false)
   assetCategoryId       String?
   usefulLifeYears       Int?
   depreciationMethod    String?
-  depreciationRate      Decimal?             @db.Decimal(5, 2)
-  residualValuePct      Decimal?             @db.Decimal(5, 2)
-  autoCreateAsset       Boolean              @default(false)
-  capitalisationLimit   Decimal?             @db.Decimal(15, 2)
-  autoPostDepreciation  Boolean              @default(false)
+  depreciationRate      Decimal?                  @db.Decimal(5, 2)
+  residualValuePct      Decimal?                  @db.Decimal(5, 2)
+  autoCreateAsset       Boolean                   @default(false)
+  capitalisationLimit   Decimal?                  @db.Decimal(15, 2)
+  autoPostDepreciation  Boolean                   @default(false)
   depreciationFrequency String?
-  depreciationStartDate DateTime?            @db.Date
-  provisionRequired     Boolean              @default(false)
-  autoPostProvision     Boolean              @default(false)
+  depreciationStartDate DateTime?                 @db.Date
+  provisionRequired     Boolean                   @default(false)
+  autoPostProvision     Boolean                   @default(false)
   provisionFrequency    String?
   provisionBasis        String?
-  provisionAmount       Decimal?             @db.Decimal(15, 2)
-  autoReverse           Boolean              @default(true)
+  provisionAmount       Decimal?                  @db.Decimal(15, 2)
+  autoReverse           Boolean                   @default(true)
   reversalTrigger       String?
-  ocrKeywords           String?              @db.Text
-  ocrSynonyms           String?              @db.Text
-  ocrMatchConfidence    Int                  @default(80)
-  ocrNegativeKeywords   String?              @db.Text
-  approvedVendorsOnly   Boolean              @default(false)
-  status                String               @default("ACTIVE")
+  ocrKeywords           String?                   @db.Text
+  ocrSynonyms           String?                   @db.Text
+  ocrMatchConfidence    Int                       @default(80)
+  ocrNegativeKeywords   String?                   @db.Text
+  approvedVendorsOnly   Boolean                   @default(false)
+  status                String                    @default("ACTIVE")
   createdByUserId       String?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
   entityMappings        ItemEntityMapping[]
   approvedVendors       ItemApprovedVendor[]
   invoiceLines          InvoiceLine[]
@@ -1952,8 +1953,8 @@ model JournalEntry {
   tenantId               String
   entryDate              DateTime  @db.Date
   postingDate            DateTime  @db.Date
-  period                 String    // "YYYY-MM"
-  entryType              String    // PROVISION | PROVISION_REVERSAL | PROVISION_NULLIFIED | ACCRUAL | AMORTIZATION | MANUAL
+  period                 String // "YYYY-MM"
+  entryType              String // PROVISION | PROVISION_REVERSAL | PROVISION_NULLIFIED | ACCRUAL | AMORTIZATION | MANUAL
   status                 String    @default("POSTED") // POSTED | REVERSED | NULLIFIED | SKIP_REVERSAL
   debitGlCode            String
   creditGlCode           String
@@ -1992,9 +1993,9 @@ model ProvisionSchedule {
   tenantId        String
   itemId          String
   vendorId        String?
-  frequency       String    // MONTHLY | QUARTERLY
+  frequency       String // MONTHLY | QUARTERLY
   amount          Decimal   @db.Decimal(15, 2)
-  basis           String    // FIXED_AMOUNT | PERCENTAGE
+  basis           String // FIXED_AMOUNT | PERCENTAGE
   status          String    @default("ACTIVE") // ACTIVE | PAUSED | CLOSED
   lastRunDate     DateTime?
   nextRunDate     DateTime?
@@ -2042,27 +2043,27 @@ model AmortizationSchedule {
 // statutory deadline. Urgent batches route to a separate workflow
 // (WF-PAYMENT-URGENT, 4h SLA) that bypasses the standard finance review.
 model PaymentBatch {
-  id                 String   @id @default(uuid())
+  id                 String             @id @default(uuid())
   tenantId           String
-  batchRef           String   // PAY-2026-001
-  status             String   @default("DRAFT")
-                              // DRAFT | PENDING_APPROVAL | APPROVED |
-                              // EXECUTED | PARTIALLY_EXECUTED | FAILED
-  isUrgent           Boolean  @default(false)
+  batchRef           String // PAY-2026-001
+  status             String             @default("DRAFT")
+  // DRAFT | PENDING_APPROVAL | APPROVED |
+  // EXECUTED | PARTIALLY_EXECUTED | FAILED
+  isUrgent           Boolean            @default(false)
   urgentReason       String?
   urgentFlaggedBy    String?
-  containsMsme       Boolean  @default(false)
-  msmeVendorCount    Int      @default(0)
-  totalAmount        Decimal  @db.Decimal(15, 2)
-  totalTds           Decimal  @db.Decimal(15, 2)
-  totalNetPayable    Decimal  @db.Decimal(15, 2)
+  containsMsme       Boolean            @default(false)
+  msmeVendorCount    Int                @default(0)
+  totalAmount        Decimal            @db.Decimal(15, 2)
+  totalTds           Decimal            @db.Decimal(15, 2)
+  totalNetPayable    Decimal            @db.Decimal(15, 2)
   paymentDate        DateTime?
   entityId           String
   bankAccountId      String?
-  narration          String?  @db.Text
+  narration          String?            @db.Text
   workflowInstanceId String?
   createdBy          String
-  createdAt          DateTime @default(now())
+  createdAt          DateTime           @default(now())
   executedAt         DateTime?
   lines              PaymentBatchLine[]
 
@@ -2082,7 +2083,7 @@ model PaymentBatchLine {
   id                String       @id @default(uuid())
   tenantId          String
   batchId           String
-  lineType          String       // INVOICE | ADVANCE
+  lineType          String // INVOICE | ADVANCE
   invoiceId         String?
   advanceId         String?
   vendorId          String
@@ -2093,14 +2094,14 @@ model PaymentBatchLine {
   tdsAmount         Decimal      @db.Decimal(15, 2)
   advanceAdjusted   Decimal      @default(0) @db.Decimal(15, 2)
   paymentAmount     Decimal      @db.Decimal(15, 2)
-  paymentType       String       // FULL | PARTIAL
-  paymentMethod     String       // NEFT | RTGS | IMPS | CHEQUE
-  tdsSection        String?      // 194C / 194J / 194I — drives challan grouping
+  paymentType       String // FULL | PARTIAL
+  paymentMethod     String // NEFT | RTGS | IMPS | CHEQUE
+  tdsSection        String? // 194C / 194J / 194I — drives challan grouping
   utrNumber         String?
   chequeNumber      String?
   chequeDate        DateTime?
   status            String       @default("PENDING")
-                                  // PENDING | PAID | FAILED
+  // PENDING | PAID | FAILED
   failureReason     String?
   paidAt            DateTime?
   batch             PaymentBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
@@ -2120,12 +2121,12 @@ model PaymentBatchLine {
 model TdsChallan {
   id            String    @id @default(uuid())
   tenantId      String
-  tdsSection    String    // 194C, 194J etc.
-  period        String    // YYYY-MM
+  tdsSection    String // 194C, 194J etc.
+  period        String // YYYY-MM
   amount        Decimal   @db.Decimal(15, 2)
   dueDate       DateTime  @db.Date
   status        String    @default("PENDING")
-                          // PENDING | DEPOSITED | OVERDUE
+  // PENDING | DEPOSITED | OVERDUE
   challanNumber String?
   depositedAt   DateTime?
   depositedBy   String?
@@ -2149,23 +2150,23 @@ model TdsChallan {
 model ProvisionProposal {
   id                 String    @id @default(uuid())
   tenantId           String
-  period             String    // "YYYY-MM"
-  itemId             String?   // null for manual additions
+  period             String // "YYYY-MM"
+  itemId             String? // null for manual additions
   vendorId           String?
   description        String    @db.Text
   proposedAmount     Decimal   @db.Decimal(15, 2)
   approvedAmount     Decimal?  @db.Decimal(15, 2)
   isManual           Boolean   @default(false)
   source             String    @default("ITEM_MASTER")
-                               // ITEM_MASTER | MANUAL | SYSTEM_SUGGESTION
+  // ITEM_MASTER | MANUAL | SYSTEM_SUGGESTION
   expenseGlCode      String
   provisionGlCode    String
   tdsSection         String?
   reversalTrigger    String    @default("FIRST_OF_NEXT_MONTH")
-                               // FIRST_OF_NEXT_MONTH | ON_INVOICE_APPROVAL | MANUAL
+  // FIRST_OF_NEXT_MONTH | ON_INVOICE_APPROVAL | MANUAL
   narration          String?   @db.Text
   status             String    @default("DRAFT")
-                               // DRAFT | SUBMITTED | APPROVED | REJECTED
+  // DRAFT | SUBMITTED | APPROVED | REJECTED
   workflowInstanceId String?
   // Set when an approved invoice for this item+period already exists — the
   // proposal is then surfaced as "Invoice covered" and no JV gets posted.
@@ -2188,9 +2189,9 @@ model ProvisionProposal {
 model ProvisionBatch {
   id                 String    @id @default(uuid())
   tenantId           String
-  period             String    // "YYYY-MM"
+  period             String // "YYYY-MM"
   status             String    @default("DRAFT")
-                               // DRAFT | SUBMITTED | APPROVED | REJECTED
+  // DRAFT | SUBMITTED | APPROVED | REJECTED
   totalAmount        Decimal   @db.Decimal(15, 2)
   // MySQL doesn't have a native string-array type — proposalIds is stored as
   // JSON so the engine can serialise/deserialise the membership list without
@@ -2204,4 +2205,445 @@ model ProvisionBatch {
 
   @@index([tenantId, period, status])
   @@map("provision_batches")
+}
+
+// ╔════════════════════════════════════════════════════════════════════════╗
+// ║ VENDOR GOVERNANCE DOMAIN                                               ║
+// ║                                                                        ║
+// ║ VendorProfile is INTENTIONALLY SEPARATE from the existing `Vendor`     ║
+// ║ master model used by AP / payments / invoice / PO modules.             ║
+// ║   - `Vendor`         = AP/payments master (existing, FK-linked from    ║
+// ║                        Invoice.vendorId, PaymentBatchLine.vendorId,    ║
+// ║                        PurchaseOrder.vendorId, etc.)                   ║
+// ║   - `VendorProfile`  = governance pipeline (new, populated by the      ║
+// ║                        onboarding workflow + change requests)          ║
+// ║ Join key once a vendor is ERP-synced:                                  ║
+// ║   VendorOnboardingRequest.erpVendorCode = Vendor.vendorCode            ║
+// ╚════════════════════════════════════════════════════════════════════════╝
+
+// ── DOMAIN 6: Configuration & Master Data ─────────────────────────────────
+
+model VendorCountryConfig {
+  id                   String   @id @default(uuid())
+  tenantId             String
+  countryCode          String // ISO 3166-1 alpha-2
+  countryName          String
+  requiredDocuments    Json // [{ documentType, label, mandatory, autoVerify }, …]
+  taxIdLabel           String // e.g. GST Number, VAT Number, EIN, CR Number
+  taxIdFormat          String? // regex for validation
+  bankFieldsRequired   Json // required bank fields for this country
+  sanctionListsToCheck Json // list names: OFAC, UN, EU, …
+  status               String   @default("ACTIVE")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([tenantId, countryCode])
+  @@map("vendor_country_configs")
+}
+
+model VendorWorkflowTemplate {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?  @db.Text
+  status      String   @default("ACTIVE")
+  steps       Json // [{ level, role, approverType, slaHours, canDelegate, parallelWith }, …]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  riskMatrixRules VendorRiskMatrixRule[]
+
+  @@map("vendor_workflow_templates")
+}
+
+model VendorNotificationTemplate {
+  id           String   @id @default(uuid())
+  tenantId     String
+  eventType    String // INVITATION_SENT, ONBOARDING_APPROVED, DOC_EXPIRING, …
+  channel      String // EMAIL, PORTAL
+  subjectLine  String?  @db.Text
+  bodyTemplate String   @db.Text // handlebars-style template
+  language     String   @default("en")
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId, eventType, channel, language])
+  @@map("vendor_notification_templates")
+}
+
+// ── DOMAIN 2: Risk Configuration Matrix ──────────────────────────────────
+
+model VendorRiskMatrixRule {
+  id                        String                  @id @default(uuid())
+  tenantId                  String
+  name                      String
+  description               String?                 @db.Text
+  status                    String                  @default("ACTIVE")
+  // Matrix dimensions — null = applies to ALL values of that dimension
+  vendorType                String? // SUPPLIER, CONTRACTOR, MSME, CONSULTANT
+  spendTier                 String? // LOW, MEDIUM, HIGH, STRATEGIC
+  countryCode               String? // ISO 3166-1 alpha-2
+  industryCategory          String?
+  // Outputs
+  riskWeights               Json // { financialRisk, geopoliticalRisk, complianceRisk, operationalRisk } summing to 100
+  riskTierThresholds        Json // { low: 0-39, medium: 40-59, high: 60-79, critical: 80-100 }
+  requiredDocumentOverrides Json? // override VendorCountryConfig docs for this cell
+  workflowTemplateId        String?
+  workflowTemplate          VendorWorkflowTemplate? @relation(fields: [workflowTemplateId], references: [id])
+  screeningFrequencyDays    Int                     @default(365)
+  screeningLists            Json // which sanctions lists to check
+  onboardingSlaHours        Int                     @default(72)
+  autoApproveThreshold      Int? // risk score below this = auto-approve
+  priority                  Int                     @default(0) // higher = evaluated first when multiple rules match
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+
+  @@index([tenantId, vendorType, spendTier, countryCode])
+  @@map("vendor_risk_matrix_rules")
+}
+
+model VendorRiskFactor {
+  id           String   @id @default(uuid())
+  tenantId     String
+  factorKey    String // e.g. COUNTRY_RISK, SPEND_CONCENTRATION, DOC_EXPIRY, SANCTIONS_HIT
+  factorLabel  String
+  factorGroup  String // FINANCIAL, GEOPOLITICAL, COMPLIANCE, OPERATIONAL
+  scoringLogic Json // { type: RANGE|BOOLEAN|LOOKUP, values: [...] }
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId, factorKey])
+  @@map("vendor_risk_factors")
+}
+
+// ── DOMAIN 1: Onboarding & Identity ──────────────────────────────────────
+
+model VendorOnboardingRequest {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  requestCode        String    @unique // VR-2026-0001
+  initiationType     String // INVITE, SELF_REGISTRATION, BULK_IMPORT
+  status             String // DRAFT, INVITED, IN_PROGRESS, UNDER_REVIEW, APPROVED, REJECTED, ON_HOLD
+  // Vendor basic info captured at invite time
+  vendorLegalName    String?
+  vendorEmail        String
+  vendorCountryCode  String?
+  vendorType         String? // SUPPLIER, CONTRACTOR, MSME, CONSULTANT
+  industryCategory   String?
+  estimatedSpend     Decimal?  @db.Decimal(18, 2)
+  spendTier          String? // computed from estimatedSpend
+  // Token for self-service portal access
+  portalToken        String?   @unique
+  tokenExpiresAt     DateTime?
+  tokenUsedAt        DateTime?
+  // Risk config applied (from matrix rule evaluation)
+  riskMatrixRuleId   String?
+  appliedRiskWeights Json?
+  // Tracking
+  invitedByUserId    String?
+  invitedAt          DateTime?
+  submittedAt        DateTime?
+  approvedAt         DateTime?
+  rejectedAt         DateTime?
+  rejectionReason    String?   @db.Text
+  erpSyncStatus      String? // NOT_STARTED, IN_PROGRESS, SYNCED, FAILED
+  erpSyncedAt        DateTime?
+  erpVendorCode      String? // join key into the existing Vendor master
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  profile     VendorProfile?
+  workflow    VendorApprovalWorkflow?
+  invitations VendorOnboardingInvitation[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, vendorCountryCode])
+  @@index([portalToken])
+  @@map("vendor_onboarding_requests")
+}
+
+model VendorOnboardingInvitation {
+  id           String                  @id @default(uuid())
+  requestId    String
+  request      VendorOnboardingRequest @relation(fields: [requestId], references: [id])
+  sentToEmail  String
+  sentByUserId String
+  sentAt       DateTime                @default(now())
+  expiresAt    DateTime
+  status       String // PENDING, ACCEPTED, EXPIRED, BOUNCED
+  resendCount  Int                     @default(0)
+  lastResentAt DateTime?
+
+  @@map("vendor_onboarding_invitations")
+}
+
+model VendorProfile {
+  id                 String                  @id @default(uuid())
+  requestId          String                  @unique
+  request            VendorOnboardingRequest @relation(fields: [requestId], references: [id])
+  tenantId           String
+  vendorCode         String?                 @unique // assigned on ERP sync — matches Vendor.vendorCode
+  // Legal identity
+  legalName          String
+  tradeName          String?
+  registrationNumber String?
+  incorporationDate  DateTime?
+  countryCode        String
+  vendorType         String
+  industryCategory   String?
+  website            String?
+  // Financials
+  currency           String                  @default("USD")
+  annualRevenue      Decimal?                @db.Decimal(18, 2)
+  employeeCount      Int?
+  dunsNumber         String?
+  // Risk
+  riskScore          Int?
+  riskTier           String? // LOW, MEDIUM, HIGH, CRITICAL
+  lastRiskScoredAt   DateTime?
+  // Status
+  status             String // ACTIVE, INACTIVE, SUSPENDED, UNDER_REVIEW, BLACKLISTED
+  isErpSynced        Boolean                 @default(false)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  contacts          VendorContact[]
+  addresses         VendorAddress[]
+  bankAccounts      VendorProfileBankAccount[]
+  complianceRecords VendorComplianceRecord[]
+  documents         VendorProfileDocument[]
+  screenings        VendorSanctionScreening[]
+  changeRequests    VendorChangeRequest[]
+  portalSessions    VendorPortalSession[]
+  riskHistory       VendorRiskHistory[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, riskTier])
+  @@index([countryCode])
+  @@map("vendor_profiles")
+}
+
+model VendorContact {
+  id          String        @id @default(uuid())
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  contactType String // PRIMARY, FINANCE, LEGAL, OPERATIONS, PORTAL_USER
+  firstName   String
+  lastName    String
+  email       String
+  phone       String?
+  designation String?
+  isPrimary   Boolean       @default(false)
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([vendorId])
+  @@map("vendor_contacts")
+}
+
+model VendorAddress {
+  id           String        @id @default(uuid())
+  vendorId     String
+  vendor       VendorProfile @relation(fields: [vendorId], references: [id])
+  addressType  String // REGISTERED, OPERATIONAL, BILLING, SHIPPING
+  line1        String
+  line2        String?
+  city         String
+  state        String?
+  postalCode   String?
+  countryCode  String
+  isRegistered Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("vendor_addresses")
+}
+
+model VendorProfileBankAccount {
+  id                 String        @id @default(uuid())
+  vendorId           String
+  vendor             VendorProfile @relation(fields: [vendorId], references: [id])
+  countryCode        String
+  accountName        String
+  accountNumber      String
+  bankName           String
+  bankCode           String? // SWIFT, routing number, sort code, …
+  ifscSwiftIban      String?
+  currency           String
+  isPrimary          Boolean       @default(false)
+  verificationStatus String        @default("PENDING") // PENDING, VERIFIED, FAILED, MANUAL_REVIEW
+  verifiedAt         DateTime?
+  verifiedByUserId   String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([vendorId])
+  @@map("vendor_profile_bank_accounts")
+}
+
+model VendorComplianceRecord {
+  id                  String        @id @default(uuid())
+  vendorId            String
+  vendor              VendorProfile @relation(fields: [vendorId], references: [id])
+  countryCode         String
+  documentType        String // GST, PAN, VAT, W9, EIN, CR_NUMBER, MSME_CERT, ISO_9001 …
+  documentNumber      String?
+  verificationStatus  String        @default("PENDING") // PENDING, VERIFIED, FAILED, EXPIRED, MANUAL_REVIEW
+  verificationSource  String? // MANUAL, API_GSTIN, API_HMRC, API_IRS …
+  verificationDetails String?       @db.Text // stored as Text per project decision (not Json)
+  expiresAt           DateTime?
+  verifiedAt          DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  documents VendorProfileDocument[]
+
+  @@index([vendorId, documentType])
+  @@index([expiresAt])
+  @@map("vendor_compliance_records")
+}
+
+model VendorProfileDocument {
+  id               String                  @id @default(uuid())
+  vendorId         String
+  vendor           VendorProfile           @relation(fields: [vendorId], references: [id])
+  complianceId     String?
+  compliance       VendorComplianceRecord? @relation(fields: [complianceId], references: [id])
+  documentType     String
+  fileName         String
+  blobUrl          String                  @db.Text // Azure Blob URL can exceed VARCHAR(191)
+  blobContainer    String
+  blobPath         String                  @db.Text
+  mimeType         String
+  sizeBytes        Int
+  uploadedByType   String // VENDOR, BUYER, SYSTEM
+  uploadedById     String?
+  reviewStatus     String                  @default("PENDING") // PENDING, APPROVED, REJECTED
+  rejectionReason  String?                 @db.Text
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  expiresAt        DateTime?
+  uploadedAt       DateTime                @default(now())
+
+  @@index([vendorId])
+  @@index([expiresAt])
+  @@map("vendor_profile_documents")
+}
+
+model VendorApprovalWorkflow {
+  id                 String                  @id @default(uuid())
+  requestId          String                  @unique
+  request            VendorOnboardingRequest @relation(fields: [requestId], references: [id])
+  tenantId           String
+  workflowTemplateId String?
+  status             String // PENDING, IN_PROGRESS, APPROVED, REJECTED, ON_HOLD
+  currentLevel       Int                     @default(1)
+  totalLevels        Int
+  startedAt          DateTime                @default(now())
+  completedAt        DateTime?
+  slaDeadlineAt      DateTime?
+
+  steps VendorApprovalStep[]
+
+  @@index([tenantId, status])
+  @@map("vendor_approval_workflows")
+}
+
+model VendorApprovalStep {
+  id           String                 @id @default(uuid())
+  workflowId   String
+  workflow     VendorApprovalWorkflow @relation(fields: [workflowId], references: [id])
+  level        Int
+  stepName     String // Compliance Review, Finance Review, Legal Review, Final Approval
+  approverId   String?
+  approverRole String
+  status       String                 @default("PENDING") // PENDING, APPROVED, REJECTED, SENT_BACK, ESCALATED
+  decision     String?
+  comments     String?                @db.Text
+  decidedAt    DateTime?
+  dueAt        DateTime?
+  escalatedAt  DateTime?
+  createdAt    DateTime               @default(now())
+
+  @@map("vendor_approval_steps")
+}
+
+model VendorSanctionScreening {
+  id                String        @id @default(uuid())
+  vendorId          String
+  vendor            VendorProfile @relation(fields: [vendorId], references: [id])
+  screeningProvider String // OFAC, UN, EU, WORLD_CHECK, DOWJONES
+  listName          String
+  status            String // CLEAR, HIT, POTENTIAL_MATCH, ERROR
+  matchType         String? // EXACT, FUZZY, ALIAS
+  matchScore        Int?
+  matchDetail       String?       @db.Text // stored as Text per project decision (not Json)
+  screenedAt        DateTime      @default(now())
+  nextScreenAt      DateTime?
+  resolvedAt        DateTime?
+  resolvedByUserId  String?
+  resolutionNote    String?       @db.Text
+
+  @@index([vendorId])
+  @@index([nextScreenAt])
+  @@map("vendor_sanction_screenings")
+}
+
+model VendorChangeRequest {
+  id               String        @id @default(uuid())
+  vendorId         String
+  vendor           VendorProfile @relation(fields: [vendorId], references: [id])
+  requestCode      String        @unique // CR-2026-0001
+  requestedByType  String // VENDOR, BUYER
+  requestedById    String
+  changeType       String // BANK_ACCOUNT, ADDRESS, CONTACT, TAX_DETAILS, DOCUMENT
+  priority         String        @default("MEDIUM") // LOW, MEDIUM, HIGH
+  status           String // PENDING, IN_PROGRESS, APPROVED, REJECTED
+  beforeSnapshot   Json
+  afterSnapshot    Json
+  comments         String?       @db.Text
+  approvalStatus   String? // maps to universal approval desk
+  requestedAt      DateTime      @default(now())
+  approvedAt       DateTime?
+  approvedByUserId String?
+  rejectedAt       DateTime?
+  rejectionReason  String?       @db.Text
+
+  @@index([vendorId, status])
+  @@map("vendor_change_requests")
+}
+
+model VendorPortalSession {
+  id           String        @id @default(uuid())
+  vendorId     String
+  vendor       VendorProfile @relation(fields: [vendorId], references: [id])
+  email        String
+  sessionToken String        @unique
+  authMethod   String // MAGIC_LINK, PASSWORD, SSO
+  ipAddress    String?
+  userAgent    String?       @db.Text
+  expiresAt    DateTime
+  createdAt    DateTime      @default(now())
+  lastActiveAt DateTime      @default(now())
+
+  @@index([sessionToken])
+  @@index([vendorId])
+  @@map("vendor_portal_sessions")
+}
+
+model VendorRiskHistory {
+  id             String        @id @default(uuid())
+  vendorId       String
+  vendor         VendorProfile @relation(fields: [vendorId], references: [id])
+  riskScore      Int
+  riskTier       String
+  scoredAt       DateTime      @default(now())
+  scoreBreakdown String        @db.Text // { financialRisk, geopoliticalRisk, complianceRisk, operationalRisk, factors[] } as JSON string
+  triggeredBy    String // ONBOARDING, SPEND_CHANGE, DOC_EXPIRY, SANCTIONS_HIT, MANUAL, SCHEDULED
+
+  @@index([vendorId, scoredAt])
+  @@map("vendor_risk_history")
 }
