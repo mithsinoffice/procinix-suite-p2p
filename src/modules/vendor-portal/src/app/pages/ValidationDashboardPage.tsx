@@ -1,195 +1,240 @@
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
+  Search,
+  FileCheck,
+  Clock,
+  AlertTriangle,
   CheckCircle2,
   XCircle,
-  AlertTriangle,
-  FileCheck,
-  CreditCard,
+  Eye,
   ShieldAlert,
-  Users,
-  Send,
 } from "lucide-react";
-import { RiskMeter } from "../components/design-system/RiskMeter";
+import { KPICard } from "../components/design-system/KPICard";
 import { StatusBadge } from "../components/design-system/StatusBadge";
+import { RiskMeter } from "../components/design-system/RiskMeter";
 import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import { mockVendorRequests } from "../data/mockData";
 
+// Validation Dashboard — standalone list of every vendor currently in the
+// validation pipeline (regardless of which buyer/department initiated it).
+// Per-vendor drilldown lives on /vendor-portal/vendors/:id/profile; this
+// page is the queue view that surfaces what needs attention across the
+// portfolio.
 export function ValidationDashboardPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const vendor = mockVendorRequests.find((v) => v.id === id);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<"all" | "Pending" | "In Progress" | "Completed" | "Failed">("all");
+  const [selectedRisk, setSelectedRisk] = useState<"all" | "Low" | "Medium" | "High">("all");
 
-  const handleSendForApproval = () => {
-    navigate(`/vendors/requests/${id}/approval`);
+  const inValidation = mockVendorRequests.filter(
+    (v) => v.validationStatus !== undefined,
+  );
+
+  const filtered = inValidation.filter((v) => {
+    const matchesSearch =
+      searchQuery === "" ||
+      v.legalName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.requestId.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = selectedStatus === "all" || v.validationStatus === selectedStatus;
+    const matchesRisk = selectedRisk === "all" || v.riskLevel === selectedRisk;
+    return matchesSearch && matchesStatus && matchesRisk;
+  });
+
+  const kpi = {
+    inProgress: inValidation.filter((v) => v.validationStatus === "In Progress").length,
+    pending: inValidation.filter((v) => v.validationStatus === "Pending").length,
+    completed: inValidation.filter((v) => v.validationStatus === "Completed").length,
+    failed: inValidation.filter((v) => v.validationStatus === "Failed").length,
   };
 
-  if (!vendor) {
-    return <div className="p-8">Vendor not found</div>;
-  }
+  const statusBadge = (s: string) => {
+    if (s === "Completed") return <StatusBadge status="success" label="Completed" size="sm" />;
+    if (s === "In Progress") return <StatusBadge status="info" label="In Progress" size="sm" />;
+    if (s === "Failed") return <StatusBadge status="error" label="Failed" size="sm" />;
+    return <StatusBadge status="neutral" label="Pending" size="sm" />;
+  };
 
-  const validationResults = [
-    {
-      title: "Tax Validation",
-      status: "success" as const,
-      icon: FileCheck,
-      checks: [
-        { name: "GST Number Format", status: "passed", message: "Valid format" },
-        { name: "GST Registration Status", status: "passed", message: "Active registration" },
-        { name: "PAN Verification", status: "passed", message: "Verified with NSDL" },
-        { name: "TAN Verification", status: "passed", message: "Valid TAN number" },
-      ],
-    },
-    {
-      title: "Bank Verification",
-      status: "success" as const,
-      icon: CreditCard,
-      checks: [
-        { name: "Penny Drop Test", status: "passed", message: "Account verified" },
-        { name: "Account Status", status: "passed", message: "Active account" },
-        { name: "Name Match", status: "passed", message: "98% match" },
-        { name: "IFSC Code Validation", status: "passed", message: "Valid IFSC" },
-      ],
-    },
-    {
-      title: "Sanctions Screening",
-      status: "success" as const,
-      icon: ShieldAlert,
-      checks: [
-        { name: "OFAC Screening", status: "passed", message: "No matches found" },
-        { name: "UN Sanctions List", status: "passed", message: "No matches found" },
-        { name: "EU Sanctions List", status: "passed", message: "No matches found" },
-        { name: "PEP Screening", status: "passed", message: "No matches found" },
-      ],
-    },
-    {
-      title: "Duplicate Vendor Detection",
-      status: "warning" as const,
-      icon: Users,
-      checks: [
-        { name: "Name Similarity", status: "warning", message: "Similar vendor found: Tech Innovators LLC" },
-        { name: "Address Match", status: "passed", message: "No duplicate addresses" },
-        { name: "Tax ID Match", status: "passed", message: "No duplicate tax IDs" },
-        { name: "Bank Account Match", status: "passed", message: "No duplicate accounts" },
-      ],
-    },
-    {
-      title: "Document Completeness",
-      status: "warning" as const,
-      icon: FileCheck,
-      checks: [
-        { name: "Incorporation Certificate", status: "passed", message: "Uploaded" },
-        { name: "Tax Certificate", status: "warning", message: "Missing" },
-        { name: "Bank Proof", status: "warning", message: "Missing" },
-        { name: "PAN Card", status: "passed", message: "Uploaded" },
-      ],
-    },
-  ];
+  const riskBadge = (level: string) => {
+    if (level === "Low") return <StatusBadge status="success" label="Low" size="sm" />;
+    if (level === "Medium") return <StatusBadge status="warning" label="Medium" size="sm" />;
+    return <StatusBadge status="error" label="High" size="sm" />;
+  };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#F6F9FC]">
       {/* Header */}
       <div className="bg-white border-b border-[#E6EEF2]">
         <div className="px-8 py-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <Link to={`/vendors/requests/${id}/edit`} className="text-sm text-[#00A9B7] hover:underline mb-2 block">
-                ← Back to Edit
-              </Link>
-              <h1 className="text-2xl font-semibold text-[#0A0F14]">Validation & Risk Intelligence</h1>
-              <p className="text-sm text-[#64748B]">{vendor.legalName} • {vendor.requestId}</p>
+              <h1 className="text-2xl font-semibold text-[#0A0F14]">Validation Dashboard</h1>
+              <p className="text-sm text-[#64748B] mt-1">
+                Real-time view of every vendor in tax, banking, sanctions, and document validation.
+              </p>
             </div>
-
-            <Button
-              onClick={handleSendForApproval}
-              className="gap-2 bg-[#00A9B7] hover:bg-[#008A96]"
-            >
-              <Send className="w-4 h-4" />
-              Send for Department Approval
-            </Button>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Risk Score Card */}
-          <div className="bg-white rounded-lg border border-[#E6EEF2] shadow-sm p-8 mb-6">
-            <h2 className="text-xl font-semibold text-[#0A0F14] mb-6 text-center">Overall Risk Assessment</h2>
-            <div className="flex justify-center">
-              <RiskMeter score={vendor.validationScore || 25} size="lg" />
-            </div>
+      {/* KPI Strip */}
+      <div className="px-8 pt-6">
+        <div className="grid grid-cols-4 gap-4">
+          <KPICard
+            title="In Progress"
+            value={kpi.inProgress}
+            icon={<Clock className="w-5 h-5" />}
+          />
+          <KPICard
+            title="Pending"
+            value={kpi.pending}
+            icon={<FileCheck className="w-5 h-5" />}
+          />
+          <KPICard
+            title="Completed"
+            value={kpi.completed}
+            icon={<CheckCircle2 className="w-5 h-5" />}
+          />
+          <KPICard
+            title="Failed"
+            value={kpi.failed}
+            icon={<XCircle className="w-5 h-5" />}
+          />
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="px-8 py-6">
+        <div className="bg-white rounded-lg border border-[#E6EEF2] p-4 mb-4 flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+            <Input
+              type="search"
+              placeholder="Search by vendor name or request ID…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
 
-          {/* Validation Results Grid */}
-          <div className="grid grid-cols-2 gap-6">
-            {validationResults.map((result, index) => {
-              const Icon = result.icon;
-              const isSuccess = result.status === "success";
-              const isWarning = result.status === "warning";
-              
-              return (
-                <div key={index} className="bg-white rounded-lg border border-[#E6EEF2] shadow-sm overflow-hidden">
-                  <div className={`p-6 ${isSuccess ? 'bg-green-50' : isWarning ? 'bg-amber-50' : 'bg-red-50'}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                        isSuccess ? 'bg-green-100' : isWarning ? 'bg-amber-100' : 'bg-red-100'
-                      }`}>
-                        <Icon className={`w-6 h-6 ${
-                          isSuccess ? 'text-green-600' : isWarning ? 'text-amber-600' : 'text-red-600'
-                        }`} />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-[#0A0F14]">{result.title}</h3>
-                        {isSuccess && <StatusBadge status="success" label="Passed" size="sm" />}
-                        {isWarning && <StatusBadge status="warning" label="Needs Review" size="sm" />}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-6 space-y-4">
-                    {result.checks.map((check, checkIndex) => (
-                      <div key={checkIndex} className="flex items-start gap-3">
-                        {check.status === "passed" ? (
-                          <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                        ) : check.status === "warning" ? (
-                          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                        )}
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-[#0A0F14]">{check.name}</p>
-                          <p className="text-xs text-[#64748B]">{check.message}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedStatus}
+              onChange={(e) =>
+                setSelectedStatus(e.target.value as typeof selectedStatus)
+              }
+              className="border border-[#E6EEF2] rounded-md px-3 py-2 text-sm bg-white"
+            >
+              <option value="all">All statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
+              <option value="Failed">Failed</option>
+            </select>
 
-          {/* Action Section */}
-          <div className="mt-8 bg-[#E0F5F7] border border-[#00A9B7] rounded-lg p-6">
-            <div className="flex items-start gap-4">
-              <CheckCircle2 className="w-6 h-6 text-[#00A9B7] flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-[#0A0F14] mb-2">Validation Complete</h3>
-                <p className="text-sm text-[#64748B] mb-4">
-                  The vendor has passed all critical validations. Some non-critical items need review.
-                  You can now proceed to send this vendor for department approvals.
-                </p>
-                <Button
-                  onClick={handleSendForApproval}
-                  className="gap-2 bg-[#00A9B7] hover:bg-[#008A96]"
-                >
-                  <Send className="w-4 h-4" />
-                  Send for Department Approval
-                </Button>
-              </div>
-            </div>
+            <select
+              value={selectedRisk}
+              onChange={(e) =>
+                setSelectedRisk(e.target.value as typeof selectedRisk)
+              }
+              className="border border-[#E6EEF2] rounded-md px-3 py-2 text-sm bg-white"
+            >
+              <option value="all">All risk levels</option>
+              <option value="Low">Low risk</option>
+              <option value="Medium">Medium risk</option>
+              <option value="High">High risk</option>
+            </select>
           </div>
         </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-lg border border-[#E6EEF2] overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-[#F6F9FC] border-b border-[#E6EEF2]">
+              <tr>
+                <th className="text-left py-3 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                  Vendor
+                </th>
+                <th className="text-left py-3 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                  Request ID
+                </th>
+                <th className="text-left py-3 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                  Validation
+                </th>
+                <th className="text-left py-3 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                  Risk
+                </th>
+                <th className="text-left py-3 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                  Score
+                </th>
+                <th className="text-left py-3 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                  Last Updated
+                </th>
+                <th className="text-right py-3 px-6 text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E6EEF2]">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-[#64748B] text-sm">
+                    No vendors match the current filters.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((vendor) => (
+                  <tr key={vendor.id} className="hover:bg-[#F6F9FC] transition-colors">
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-[#E0F5F7] flex items-center justify-center text-[#00A9B7] text-sm font-semibold flex-shrink-0">
+                          {vendor.legalName[0]}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-[#0A0F14]">{vendor.legalName}</div>
+                          <div className="text-xs text-[#64748B]">{vendor.country} · {vendor.vendorType}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 text-sm text-[#0A0F14] font-mono">{vendor.requestId}</td>
+                    <td className="py-4 px-6">{statusBadge(vendor.validationStatus)}</td>
+                    <td className="py-4 px-6">{riskBadge(vendor.riskLevel)}</td>
+                    <td className="py-4 px-6">
+                      <div className="w-16">
+                        <RiskMeter score={vendor.validationScore ?? 0} size="sm" />
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 text-sm text-[#64748B]">{vendor.lastUpdated}</td>
+                    <td className="py-4 px-6 text-right">
+                      <Link to={`/vendor-portal/vendors/${vendor.id}/profile`}>
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <Eye className="w-3.5 h-3.5" />
+                          Review
+                        </Button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Failed-validation callout */}
+        {kpi.failed > 0 && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-red-900">
+                {kpi.failed} vendor{kpi.failed === 1 ? "" : "s"} failed validation
+              </div>
+              <div className="text-xs text-red-700 mt-1">
+                Sanctions hits, document forgery flags, or KYC mismatch usually require manual review by Compliance.
+              </div>
+            </div>
+            <ShieldAlert className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          </div>
+        )}
       </div>
     </div>
   );

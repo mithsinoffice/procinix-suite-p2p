@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   ChevronRight,
   CheckCircle,
@@ -9,26 +9,14 @@ import {
   Building2,
   Shield,
   Eye,
-  MessageSquare,
-  XCircle,
   AlertCircle,
-  Info,
   Download,
-  TrendingUp,
   X,
   BarChart3,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
-import { Textarea } from "../components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../components/ui/dialog";
 import { Label } from "../components/ui/label";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 import {
@@ -47,15 +35,12 @@ type WorkflowStep = {
   comments?: string;
 };
 
-type ActionType = "approve" | "reject" | "clarify" | "info" | "escalate" | null;
-
+// Read-only workspace — approve / reject / send-back actions live exclusively
+// on the universal Approval Desk (/approvals). This page surfaces the full
+// request context for review but routes the actual decision back there.
 export function ApprovalWorkspacePage() {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
   const [riskDrawerOpen, setRiskDrawerOpen] = useState(false);
-  const [actionDialogOpen, setActionDialogOpen] = useState(false);
-  const [currentAction, setCurrentAction] = useState<ActionType>(null);
-  const [actionComment, setActionComment] = useState("");
 
   // Mock workflow data
   const workflowSteps: WorkflowStep[] = [
@@ -130,68 +115,6 @@ export function ApprovalWorkspacePage() {
     { label: "Bank Verification", value: 1, total: 1, status: "pending" },
   ];
 
-  const handleAction = (action: ActionType) => {
-    setCurrentAction(action);
-    setActionDialogOpen(true);
-  };
-
-  const handleActionSubmit = () => {
-    console.log("Action:", currentAction, "Comment:", actionComment);
-    setActionDialogOpen(false);
-    setActionComment("");
-    // Navigate back to requests list
-    setTimeout(() => {
-      navigate("/vendors/requests");
-    }, 500);
-  };
-
-  const getActionConfig = (action: ActionType) => {
-    switch (action) {
-      case "approve":
-        return {
-          title: "Approve Vendor Request",
-          description: "You are about to approve this vendor onboarding request. Please provide your comments.",
-          buttonLabel: "Approve",
-          buttonClass: "bg-[#16A34A] hover:bg-[#15803D]",
-        };
-      case "reject":
-        return {
-          title: "Reject Vendor Request",
-          description: "You are about to reject this vendor onboarding request. Please provide detailed reasons.",
-          buttonLabel: "Reject",
-          buttonClass: "bg-[#DC2626] hover:bg-[#B91C1C]",
-        };
-      case "clarify":
-        return {
-          title: "Send Back for Clarification",
-          description: "Request clarification from the vendor or previous approver. Specify what information is needed.",
-          buttonLabel: "Send Back",
-          buttonClass: "bg-[#F59E0B] hover:bg-[#D97706]",
-        };
-      case "info":
-        return {
-          title: "Request Additional Information",
-          description: "Request additional documents or information from the vendor.",
-          buttonLabel: "Request Info",
-          buttonClass: "bg-[#3B82F6] hover:bg-[#2563EB]",
-        };
-      case "escalate":
-        return {
-          title: "Escalate to Senior Approver",
-          description: "Escalate this request to your supervisor or senior management. Provide reasons for escalation.",
-          buttonLabel: "Escalate",
-          buttonClass: "bg-[#7C3AED] hover:bg-[#6D28D9]",
-        };
-      default:
-        return {
-          title: "",
-          description: "",
-          buttonLabel: "",
-          buttonClass: "",
-        };
-    }
-  };
-
   const getTierBadgeColor = (tier: string) => {
     switch (tier) {
       case "Low":
@@ -213,8 +136,6 @@ export function ApprovalWorkspacePage() {
     if (score >= 26) return "text-[#3B82F6]";
     return "text-[#16A34A]";
   };
-
-  const actionConfig = getActionConfig(currentAction);
 
   return (
     <div className="min-h-screen bg-[#F6F9FC] flex flex-col">
@@ -852,104 +773,24 @@ export function ApprovalWorkspacePage() {
         )}
       </main>
 
-      {/* Compact Sticky Action Bar */}
-      <div className="sticky bottom-0 bg-white border-t-2 border-[#E6EEF2] px-8 py-3 shadow-2xl">
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <Textarea
-              value={actionComment}
-              onChange={(e) => setActionComment(e.target.value)}
-              placeholder="Add your comments (mandatory before approval action)..."
-              className="min-h-[60px] resize-none"
-            />
+      {/* Read-only banner — actions live on the universal Approval Desk */}
+      <div className="sticky bottom-0 bg-[#F1F5F9] border-t border-[#E6EEF2] px-8 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-[#64748B] flex-shrink-0" />
+            <div className="text-sm text-[#475569]">
+              <span className="font-medium text-[#0A0F14]">Read-only view.</span>{" "}
+              Approve, reject, send back, and escalate actions happen on the universal Approval Desk.
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => handleAction("clarify")}
-              size="sm"
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Send Back
+          <Link to="/approvals">
+            <Button className="bg-[#00A9B7] hover:bg-[#008A96] text-white gap-2">
+              Open Approval Desk
+              <ExternalLink className="w-4 h-4" />
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleAction("info")}
-              size="sm"
-            >
-              <Info className="w-4 h-4 mr-2" />
-              Request Info
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleAction("escalate")}
-              size="sm"
-            >
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Escalate
-            </Button>
-            <Button
-              onClick={() => handleAction("reject")}
-              className="bg-[#DC2626] hover:bg-[#B91C1C] text-white"
-              size="sm"
-            >
-              <XCircle className="w-4 h-4 mr-2" />
-              Reject
-            </Button>
-            <Button
-              onClick={() => handleAction("approve")}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white"
-              size="sm"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Approve
-            </Button>
-          </div>
+          </Link>
         </div>
       </div>
-
-      {/* Action Dialog */}
-      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{actionConfig.title}</DialogTitle>
-            <DialogDescription>{actionConfig.description}</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label className="text-sm font-medium text-[#0A0F14] mb-2 block">
-              Comments <span className="text-[#DC2626]">*</span>
-            </Label>
-            <Textarea
-              value={actionComment}
-              onChange={(e) => setActionComment(e.target.value)}
-              placeholder="Enter your comments here..."
-              className="min-h-[120px]"
-              required
-            />
-            <p className="text-xs text-[#64748B] mt-2">
-              Your comments will be recorded in the audit trail and visible to all stakeholders.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setActionDialogOpen(false);
-                setActionComment("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleActionSubmit}
-              className={`${actionConfig.buttonClass} text-white`}
-              disabled={!actionComment.trim()}
-            >
-              {actionConfig.buttonLabel}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
