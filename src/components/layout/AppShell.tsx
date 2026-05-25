@@ -4,7 +4,7 @@ import {
   FileText, Users, GitBranch, Database,
   Shield, Truck, LogOut, X, PiggyBank, Calculator, BarChart3,
   ChevronDown, Wallet, ReceiptText, FileBarChart, Banknote,
-  ListChecks, AlertTriangle, Building2,
+  ListChecks, AlertTriangle, Building2, GitPullRequest, Mail,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { useAuthStore } from '../../stores/auth.store'
@@ -198,8 +198,11 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id:    'vendor-portal',
-    label: 'Vendor Portal',
+    // Renamed from 'vendor-portal' (id + label) to free up the name for the
+    // governance/onboarding module under /vendor-portal/*. This section still
+    // covers the existing /vendors master data — directory, KYC, MSME, etc.
+    id:    'vendor-master',
+    label: 'Vendor Master',
     items: [
       { to: '/vendors',               icon: Users,    label: 'Vendor directory', module: 'VENDOR' },
       { to: '/vendors?tab=kyc',       icon: Shield,   label: 'KYC status',       module: 'VENDOR', badge: 'kycGaps', tone: 'red' },
@@ -212,6 +215,24 @@ const SECTIONS: Section[] = [
       { to: '/vendors?tab=contracts', icon: FileText, label: 'Contracts',        module: 'VENDOR',
         subItems: [{ to: '/vendors?tab=contracts', label: 'Coming soon', comingSoon: true }],
       },
+    ],
+  },
+  {
+    // Governance & onboarding module (Figma-exported, mounted under
+    // /vendor-portal/*). Lives alongside Vendor Master rather than replacing
+    // it — masters describe existing vendors; governance covers the lifecycle
+    // workflow that produces them.
+    id:    'vendor-governance',
+    label: 'Vendor Governance',
+    items: [
+      { to: '/vendor-portal',                 icon: Building2,       label: 'Onboarding Hub' },
+      { to: '/vendor-portal/requests',        icon: FileText,        label: 'Requests' },
+      { to: '/vendor-portal/approvals',       icon: CheckSquare,     label: 'Approval Workspace' },
+      { to: '/vendor-portal/risk',            icon: AlertTriangle,   label: 'Risk Dashboard' },
+      { to: '/vendor-portal/change-requests', icon: GitPullRequest,  label: 'Change Requests' },
+      { to: '/vendor-portal/validation',      icon: Shield,          label: 'Validation' },
+      { to: '/vendor-portal/implementation',  icon: ListChecks,      label: 'Implementation' },
+      { to: '/vendor-portal/invitations',     icon: Mail,            label: 'Invitations' },
     ],
   },
   {
@@ -438,23 +459,26 @@ export function AppShell() {
         </div>
 
         {/* Sections */}
-        <nav className="flex-1 overflow-y-auto py-2 space-y-1">
+        {/* Linear/Notion-style rhythm: generous py-3 on the scroll container,
+            sections separated by mb-1, section headers in uppercase text-xs
+            with tracking-wider and py-2.5 padding for comfortable scanning. */}
+        <nav className="flex-1 overflow-y-auto py-3">
           {visibleSections.map(section => {
             const isOpen = openSections.has(section.id)
             return (
               <div
                 key={section.id}
-                className="px-2"
+                className="px-2 mb-1"
                 onMouseEnter={() => isOpen && cancelTimer(section.id)}
               >
                 <button
                   type="button"
                   onClick={() => toggleSection(section.id)}
-                  className="flex w-full items-center justify-between px-2 py-1.5 text-[10px] font-semibold tracking-wide text-[#5BA0A3] hover:text-[#D6F7F9]"
+                  className="flex w-full items-center justify-between rounded-md px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#5BA0A3] hover:text-[#D6F7F9]"
                 >
                   <span>{section.label}</span>
                   <ChevronDown
-                    className={cn('h-3 w-3 transition-transform duration-200', isOpen ? 'rotate-0' : '-rotate-90')}
+                    className={cn('h-3.5 w-3.5 transition-transform duration-200', isOpen ? 'rotate-0' : '-rotate-90')}
                   />
                 </button>
                 <div
@@ -481,7 +505,7 @@ export function AppShell() {
           })}
 
           {/* Workflow Engine — standalone, no section group */}
-          <div className="mt-2 border-t border-[#0D3538] px-2 pt-2">
+          <div className="mt-3 border-t border-[#0D3538] px-2 pt-3">
             <NavLink
               to={WORKFLOW_ITEM.to}
               title={WORKFLOW_ITEM.title}
@@ -503,7 +527,7 @@ export function AppShell() {
 
           {/* Admin — only visible to SUPER_ADMIN */}
           {isSuperAdmin && (
-            <div className="mt-2 px-2">
+            <div className="mt-3 px-2">
               <NavLink
                 to="/admin/tenants"
                 onClick={() => setOpen(false)}
